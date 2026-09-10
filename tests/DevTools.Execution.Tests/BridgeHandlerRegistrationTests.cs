@@ -4,7 +4,6 @@ using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Testing;
 using DevTools.Ipc;
 using DevTools.Hosting;
-using DevTools.NUnit.Host;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Host;
@@ -39,8 +38,8 @@ public sealed class BridgeHandlerRegistrationTests
 
         Assert.Contains(
             services,
-            descriptor => descriptor.ServiceType == typeof(IHostTestFrameworkProvider)
-                && descriptor.ImplementationType == typeof(NUnitHostTestFrameworkProvider));
+            descriptor => descriptor.ServiceType == typeof(ITestFrameworkProvider)
+                && descriptor.ImplementationType == typeof(NUnitTestFrameworkProvider));
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType == typeof(TestingProviderRegistry));
@@ -82,20 +81,20 @@ public sealed class BridgeHandlerRegistrationTests
         }
     }
 
-    private sealed class NoOpTestingProvider : IHostTestFrameworkProvider
+    private sealed class NoOpTestingProvider : ITestFrameworkProvider
     {
-        public string FrameworkId => "provider.example";
+        public TestFrameworkId FrameworkId => TestFrameworkId.NUnit;
 
-        public TestingRunResponse Run(
-            TestingRunRequest request,
-            ITestingEventSink eventSink,
+        public TestRunResponse Run(
+            TestRunRequest request,
+            ITestEventSink eventSink,
             CancellationToken cancellationToken) =>
             new(
                 request.RunId,
                 FrameworkId,
                 null,
-                Array.Empty<TestingCaseResult>(),
-                TestingCancellationState.None,
+                Array.Empty<TestCaseResult>(),
+                TestCancellationState.None,
                 null,
                 null);
 

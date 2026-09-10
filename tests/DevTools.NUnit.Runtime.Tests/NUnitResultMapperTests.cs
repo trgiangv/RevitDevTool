@@ -7,17 +7,17 @@ namespace DevTools.NUnit.Runtime.Tests;
 public sealed class NUnitResultMapperTests
 {
     [Theory]
-    [InlineData(nameof(ResultState.Success), TestingOutcomes.Passed)]
-    [InlineData(nameof(ResultState.Warning), TestingOutcomes.Passed)]
-    [InlineData(nameof(ResultState.Inconclusive), TestingOutcomes.Inconclusive)]
-    [InlineData(nameof(ResultState.Cancelled), TestingOutcomes.Cancelled)]
-    [InlineData(nameof(ResultState.Ignored), TestingOutcomes.Skipped)]
-    [InlineData(nameof(ResultState.Explicit), TestingOutcomes.Skipped)]
-    [InlineData(nameof(ResultState.Skipped), TestingOutcomes.Skipped)]
-    [InlineData(nameof(ResultState.Error), TestingOutcomes.Error)]
-    [InlineData(nameof(ResultState.SetUpError), TestingOutcomes.Error)]
-    [InlineData(nameof(ResultState.TearDownError), TestingOutcomes.Error)]
-    [InlineData(nameof(ResultState.NotRunnable), TestingOutcomes.Error)]
+    [InlineData(nameof(ResultState.Success), TestOutcomes.Passed)]
+    [InlineData(nameof(ResultState.Warning), TestOutcomes.Passed)]
+    [InlineData(nameof(ResultState.Inconclusive), TestOutcomes.Inconclusive)]
+    [InlineData(nameof(ResultState.Cancelled), TestOutcomes.Cancelled)]
+    [InlineData(nameof(ResultState.Ignored), TestOutcomes.Skipped)]
+    [InlineData(nameof(ResultState.Explicit), TestOutcomes.Skipped)]
+    [InlineData(nameof(ResultState.Skipped), TestOutcomes.Skipped)]
+    [InlineData(nameof(ResultState.Error), TestOutcomes.Error)]
+    [InlineData(nameof(ResultState.SetUpError), TestOutcomes.Error)]
+    [InlineData(nameof(ResultState.TearDownError), TestOutcomes.Error)]
+    [InlineData(nameof(ResultState.NotRunnable), TestOutcomes.Error)]
     public void MapOutcome_maps_known_result_states(string stateName, string expected)
     {
         var state = typeof(ResultState)

@@ -169,7 +169,7 @@
         Text="RevitDevTool.TestAdapter could not reference $(_MtpSiblingName).dll for $(TargetFramework). The package ships it under build/runtime." />
     <Error
         Condition="'$(IsTestingPlatformApplication)' == 'true' And '$(_AbstractionsHintPath)' != '' And !Exists('$(_AbstractionsHintPath)')"
-        Text="RevitDevTool.TestAdapter could not reference DevTools.Testing.Abstractions.dll. Testhost MTP must share HostTestDiscovery with the adapter." />
+        Text="RevitDevTool.TestAdapter could not reference DevTools.Testing.Abstractions.dll. Testhost MTP must share TestingDiscovery with the adapter." />
   </Target>
 
   <!-- 3. Discovery refs: testhost resolves these paths, no Autodesk DLL copy. -->

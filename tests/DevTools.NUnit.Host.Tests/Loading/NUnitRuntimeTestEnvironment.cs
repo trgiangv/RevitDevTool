@@ -1,5 +1,5 @@
-using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 
@@ -133,12 +133,7 @@ internal static class NUnitRuntimeTestEnvironment
     {
         public TempWorkspace()
         {
-            Root = Path.Combine(
-                Path.GetTempPath(),
-                "DevTools",
-                "NUnit",
-                "RuntimeTests",
-                Guid.NewGuid().ToString("N"));
+            Root = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
         }
 

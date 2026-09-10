@@ -29,28 +29,46 @@ public static class HostLaunchWaiter
 
         while (true)
         {
-            if (cancellationToken.IsCancellationRequested)
-                return HostStatus.Cancelled;
-
-            if (process.HasExited)
-                return HostStatus.Exited;
-
-            if (isReady())
-                return HostStatus.Ready;
-
             var remaining = timeout - clock.Elapsed;
-            if (remaining <= TimeSpan.Zero)
-                return HostStatus.TimedOut;
+            if (CompletedStatus(process, isReady, remaining, cancellationToken) is { } status)
+                return status;
 
-            var delay = remaining < poll ? remaining : poll;
-            try
-            {
-                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
+            if (!await TryWaitAsync(remaining, poll, cancellationToken).ConfigureAwait(false))
                 return HostStatus.Cancelled;
-            }
+        }
+    }
+
+    private static HostStatus? CompletedStatus(
+        Process process,
+        Func<bool> isReady,
+        TimeSpan remaining,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return HostStatus.Cancelled;
+        if (process.HasExited)
+            return HostStatus.Exited;
+        if (isReady())
+            return HostStatus.Ready;
+        if (remaining <= TimeSpan.Zero)
+            return HostStatus.TimedOut;
+        return null;
+    }
+
+    private static async Task<bool> TryWaitAsync(
+        TimeSpan remaining,
+        TimeSpan poll,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var delay = remaining < poll ? remaining : poll;
+            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
         }
     }
 

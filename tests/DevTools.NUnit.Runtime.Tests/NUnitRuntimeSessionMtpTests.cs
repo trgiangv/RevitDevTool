@@ -16,13 +16,13 @@ public sealed class NUnitRuntimeSessionMtpTests
         var sink = new RecordingSink();
         var response = session.Run(CreateRequest(null), sink, TestContext.Current.CancellationToken);
 
-        Assert.Equal("nunit", response.FrameworkId);
+        Assert.Equal(TestFrameworkId.NUnit, response.FrameworkId);
         Assert.Equal(FixtureTestHarness.GenerationId, response.GenerationId);
         Assert.Equal(38, response.Results.Count);
         Assert.Contains(response.Results, result =>
-            result.DisplayName == "PlainTest_Passes" && result.Outcome == TestingOutcomes.Passed);
+            result.DisplayName == "PlainTest_Passes" && result.Outcome == TestOutcomes.Passed);
         Assert.Contains(sink.Events, testingEvent =>
-            testingEvent.Kind == TestingEventKinds.Case && testingEvent.Case is not null);
+            testingEvent.Kind == TestEventKinds.Case && testingEvent.Case is not null);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class NUnitRuntimeSessionMtpTests
         var result = Assert.Single(response.Results);
         Assert.Equal(fullName, result.FullName);
         Assert.Equal(fullName, result.TestId);
-        Assert.Equal(TestingOutcomes.Passed, result.Outcome);
+        Assert.Equal(TestOutcomes.Passed, result.Outcome);
     }
 
     [Fact]
@@ -121,13 +121,13 @@ public sealed class NUnitRuntimeSessionMtpTests
     public void Run_reports_each_leaf_when_display_names_collide()
     {
         using var session = DedicatedTestFixturesHarness.CreateSession();
-        var request = new TestingRunRequest(
+        var request = new TestRunRequest(
             1,
             Guid.NewGuid(),
-            "nunit",
-            new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
-            TestingSelection.FromFrameworkFilter(
-                TestingSelection.XmlFilterFormat,
+            TestFrameworkId.NUnit,
+            new TestAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
+            TestSelection.FromFrameworkFilter(
+                "filter-xml",
                 DedicatedTestFixturesHarness.DuplicateNameFilter));
         var response = session.Run(request, new RecordingSink(), TestContext.Current.CancellationToken);
 
@@ -151,7 +151,7 @@ public sealed class NUnitRuntimeSessionMtpTests
 
         var result = Assert.Single(response.Results);
         Assert.Equal(fullName, result.FullName);
-        Assert.Equal(TestingOutcomes.Passed, result.Outcome);
+        Assert.Equal(TestOutcomes.Passed, result.Outcome);
     }
 
     [Fact]
@@ -160,13 +160,13 @@ public sealed class NUnitRuntimeSessionMtpTests
         DedicatedTestFixturesHarness.ResetBlockingState();
         using var session = DedicatedTestFixturesHarness.CreateSession();
         var runId = Guid.NewGuid();
-        var request = new TestingRunRequest(
+        var request = new TestRunRequest(
             1,
             runId,
-            "nunit",
-            new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
-            TestingSelection.FromFrameworkFilter(
-                TestingSelection.XmlFilterFormat,
+            TestFrameworkId.NUnit,
+            new TestAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
+            TestSelection.FromFrameworkFilter(
+                "filter-xml",
                 DedicatedTestFixturesHarness.BlockingFilter));
         var runTask = Task.Run(() => session.Run(request, new RecordingSink(), CancellationToken.None));
 
@@ -177,25 +177,25 @@ public sealed class NUnitRuntimeSessionMtpTests
         Volatile.Write(ref Fixtures.BlockingRunState.Release, 1);
 
         var response = await runTask.WaitAsync(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken);
-        Assert.Equal(TestingOutcomes.Cancelled, Assert.Single(response.Results).Outcome);
-        Assert.Equal(TestingCancellationState.Completed, response.CancellationState);
+        Assert.Equal(TestOutcomes.Cancelled, Assert.Single(response.Results).Outcome);
+        Assert.Equal(TestCancellationState.Completed, response.CancellationState);
     }
 
-    private static TestingRunRequest CreateRequest(string? filter) => new(
+    private static TestRunRequest CreateRequest(string? filter) => new(
         1,
         Guid.NewGuid(),
-        "nunit",
-        new TestingAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),
+        TestFrameworkId.NUnit,
+        new TestAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),
         SelectionFromFilter(filter));
 
-    private static TestingSelection SelectionFromFilter(string? filter) =>
+    private static TestSelection SelectionFromFilter(string? filter) =>
         string.IsNullOrWhiteSpace(filter)
-            ? TestingSelection.All
-            : TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, filter);
+            ? TestSelection.All
+            : TestSelection.FromFrameworkFilter("filter-xml", filter);
 
     private sealed class RecordingSink : ITestingRuntimeEventSink
     {
-        internal List<TestingEvent> Events { get; } = [];
-        public void Publish(TestingEvent testingEvent) => Events.Add(testingEvent);
+        internal List<TestEvent> Events { get; } = [];
+        public void Publish(TestEvent testingEvent) => Events.Add(testingEvent);
     }
 }

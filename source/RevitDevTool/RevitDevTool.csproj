@@ -56,9 +56,7 @@
             Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
         <ProjectReference Include="..\DevTools.Mcp.Revit\DevTools.Mcp.Revit.csproj" />
-        <ProjectReference Include="..\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
-        <ProjectReference Include="..\DevTools.TUnit.Host\DevTools.TUnit.Host.csproj"
-            SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.Testing.Host\DevTools.Testing.Host.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -13,9 +13,6 @@ internal static class NUnitTestIdentity
     public static string? ParentId(ITest test)
     {
         var parent = test.Parent;
-        if (parent is null || parent.Parent is null)
-            return null;
-
-        return parent.FullName;
+        return parent?.Parent is null ? null : parent.FullName;
     }
 }

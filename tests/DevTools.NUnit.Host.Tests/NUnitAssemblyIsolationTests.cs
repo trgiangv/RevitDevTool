@@ -1,11 +1,13 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DevTools.AssemblyIsolation;
-using DevTools.NUnit.Host.Loading;
 using DevTools.NUnit.Host.Tests.Loading;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.NUnit;
+using DevTools.Testing.Host.NUnit.Loading;
+using DevTools.Testing.Host.Runtime;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.NUnit.Host.Tests;
@@ -20,7 +22,7 @@ public sealed class NUnitAssemblyIsolationTests
 
         var selectedFramework = NUnitFrameworkHostShare.GetOrLoadFromShadow(
             NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest));
-        var plan = NUnitIsolationPlan.Create(manifest, selectedFramework);
+        var plan = NUnitRuntimeSessionFactory.CreateIsolationPlan(manifest, selectedFramework);
 
         Assert.NotSame(conflicting, selectedFramework);
         Assert.Same(selectedFramework, ResolveParent(plan, selectedFramework.GetName()));
@@ -28,8 +30,8 @@ public sealed class NUnitAssemblyIsolationTests
             typeof(ITestingRuntimeSession).Assembly,
             ResolveParent(plan, typeof(ITestingRuntimeSession).Assembly.GetName()));
         Assert.Same(
-            typeof(TestingRunRequest).Assembly,
-            ResolveParent(plan, typeof(TestingRunRequest).Assembly.GetName()));
+            typeof(TestRunRequest).Assembly,
+            ResolveParent(plan, typeof(TestRunRequest).Assembly.GetName()));
         Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
         Assert.False(plan.LoadsFromDistinctFile);
     }
@@ -50,7 +52,7 @@ public sealed class NUnitAssemblyIsolationTests
             .Build(testAssembly);
         var framework = NUnitFrameworkHostShare.GetOrLoadFromShadow(
             NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest));
-        var plan = NUnitIsolationPlan.Create(manifest, framework);
+        var plan = NUnitRuntimeSessionFactory.CreateIsolationPlan(manifest, framework);
 
         var privateName = AssemblyName.GetAssemblyName(NUnitRuntimeUnloadTestHelper.PrivateMicrosoftExtensionsStubPath);
         Assert.NotEqual(typeof(NullLogger).Assembly.GetName().Version, privateName.Version);
@@ -74,10 +76,10 @@ public sealed class NUnitAssemblyIsolationTests
             ManagedAssemblies = manifest.ManagedAssemblies.Append(conflictingFrameworkPath).ToArray(),
         };
 
-        Assert.Throws<InvalidOperationException>(() => NUnitIsolationPlan.Create(ambiguousManaged, framework));
+        Assert.Throws<InvalidOperationException>(() => NUnitRuntimeSessionFactory.CreateIsolationPlan(ambiguousManaged, framework));
 
         var duplicateNative = NUnitRuntimeTestEnvironment.BuildGenerationWithDuplicateNativeAssets(workspace.Root);
-        Assert.Throws<InvalidOperationException>(() => NUnitIsolationPlan.Create(duplicateNative, framework));
+        Assert.Throws<InvalidOperationException>(() => NUnitRuntimeSessionFactory.CreateIsolationPlan(duplicateNative, framework));
     }
 
     [Fact]
@@ -95,7 +97,7 @@ public sealed class NUnitAssemblyIsolationTests
             ManagedAssemblies = manifest.ManagedAssemblies.Append(externalAssemblyPath).ToArray(),
         };
 
-        Assert.Throws<ArgumentException>(() => NUnitIsolationPlan.Create(escapedManifest, framework));
+        Assert.Throws<ArgumentException>(() => NUnitRuntimeSessionFactory.CreateIsolationPlan(escapedManifest, framework));
     }
 
     [Fact]
@@ -108,10 +110,10 @@ public sealed class NUnitAssemblyIsolationTests
             .Build(sourceAssembly);
         var factory = new NUnitRuntimeSessionFactory();
 
-        var session = Assert.IsType<NUnitRuntimeSessionHandle>(factory.Create(manifest));
-        var loadedTestAssembly = session.GetLoadedTestAssembly();
-        var loadedRuntimeAssembly = session.GetLoadedRuntimeAssembly();
-        var loadedFrameworkAssembly = NUnitRuntimeSessionHandle.GetLoadedFrameworkAssembly();
+        var session = Assert.IsType<IsolatedRuntimeSessionHandle>(factory.Create(manifest));
+        var loadedTestAssembly = GetLoadedTestAssembly(session);
+        var loadedRuntimeAssembly = session.RuntimeSession.GetType().Assembly;
+        Assert.True(NUnitFrameworkHostShare.TryGetLoaded(out var loadedFrameworkAssembly));
 
         Assert.Same(NUnitFrameworkHostShare.GetOrLoadFromShadow(
             NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest)), loadedFrameworkAssembly);
@@ -124,13 +126,13 @@ public sealed class NUnitAssemblyIsolationTests
         var sink = new RecordingSink();
         var runId = Guid.NewGuid();
         var response = session.Run(
-            new TestingRunRequest(
+            new TestRunRequest(
                 1,
                 runId,
-                "nunit",
-                new TestingAssemblyReference(manifest.ShadowAssemblyPath),
-                TestingSelection.FromFrameworkFilter(
-                    TestingSelection.XmlFilterFormat,
+                TestFrameworkId.NUnit,
+                new TestAssemblyReference(manifest.ShadowAssemblyPath),
+                TestSelection.FromFrameworkFilter(
+                    NUnitSelectionFilter.XmlFilterFormat,
                     "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>")),
             sink,
             TestContext.Current.CancellationToken);
@@ -176,16 +178,23 @@ public sealed class NUnitAssemblyIsolationTests
     private static DevTools.AssemblyIsolation.Diagnostics.AssemblyUnloadResult CreateDisposeAndVerifyUnload(
         TestingGenerationManifest manifest)
     {
-        var session = (NUnitRuntimeSessionHandle)new NUnitRuntimeSessionFactory().Create(manifest);
+        var session = (IsolatedRuntimeSessionHandle)new NUnitRuntimeSessionFactory().Create(manifest);
         session.Dispose();
         return session.VerifyUnload();
+    }
+
+    private static Assembly GetLoadedTestAssembly(IsolatedRuntimeSessionHandle session)
+    {
+        var field = session.RuntimeSession.GetType().GetField("_testAssembly", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("Runtime session test assembly field not found.");
+        return (Assembly)field.GetValue(session.RuntimeSession)!;
     }
 
     private sealed class TempWorkspace : IDisposable
     {
         public TempWorkspace()
         {
-            Root = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", "IsolationTests", Guid.NewGuid().ToString("N"));
+            Root = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
         }
 
@@ -200,8 +209,8 @@ public sealed class NUnitAssemblyIsolationTests
 
     private sealed class RecordingSink : ITestingRuntimeEventSink
     {
-        internal List<TestingEvent> Events { get; } = [];
+        internal List<TestEvent> Events { get; } = [];
 
-        public void Publish(TestingEvent testingEvent) => Events.Add(testingEvent);
+        public void Publish(TestEvent testingEvent) => Events.Add(testingEvent);
     }
 }

@@ -104,7 +104,7 @@ internal sealed class TUnitEngineOutputDevice : IOutputDevice
         Task.CompletedTask;
 }
 
-internal sealed class TUnitEngineMessageBus(TestingRunTraceScope traceScope) : IMessageBus
+internal sealed class TUnitEngineMessageBus(TestRunTraceScope traceScope) : IMessageBus
 {
     public Dictionary<string, TestNode> Nodes { get; } = new(StringComparer.Ordinal);
 
@@ -123,7 +123,7 @@ internal sealed class TUnitEngineMessageBus(TestingRunTraceScope traceScope) : I
 
         var captured = traceScope.CompleteCase();
         CapturedByUid.TryGetValue(uid, out var previous);
-        CapturedByUid[uid] = TestingRunTraceScope.Merge(previous, captured);
+        CapturedByUid[uid] = TestRunTraceScope.Merge(previous, captured);
 
         var frameworkOutput = TUnitEngineResults.FrameworkOutput(node);
         if (!string.IsNullOrWhiteSpace(frameworkOutput))

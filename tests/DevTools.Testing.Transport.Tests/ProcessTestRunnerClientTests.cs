@@ -7,7 +7,7 @@ namespace DevTools.Testing.Transport.Tests;
 public sealed class ProcessTestRunnerClientTests
 {
     [Fact]
-    public void Run_invokes_machine_run_with_full_invocation_json()
+    public void Run_invokes_run_with_full_execute_json()
     {
         var directory = Path.Combine(Path.GetTempPath(), "DevTools", "TestingTransport", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -16,12 +16,12 @@ public sealed class ProcessTestRunnerClientTests
         var capturePath = Path.Combine(directory, "capture.ps1");
         var runnerPath = Path.Combine(directory, "fake-runner.cmd");
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-        var response = new TestingRunResponse(
+        var response = new TestRunResponse(
             runId,
-            "provider.example",
+            TestFrameworkId.NUnit,
             "gen-1",
             [
-                new TestingCaseResult(
+                new TestCaseResult(
                     "opaque-id",
                     "Pass",
                     "Passed",
@@ -33,10 +33,12 @@ public sealed class ProcessTestRunnerClientTests
                     [],
                     []),
             ],
-            TestingCancellationState.None,
+            TestCancellationState.None,
             null,
             null);
-        var json = JsonSerializer.Serialize(response, TestingJsonContext.Default.TestingRunResponse);
+        var json = JsonSerializer.Serialize(
+            new TestRunnerStreamMessage(Response: response),
+            TestingJsonContext.Default.TestRunnerStreamMessage);
         File.WriteAllText(Path.Combine(directory, "response.json"), json);
         File.WriteAllText(capturePath, """
             $out = Join-Path $PSScriptRoot 'stdin.json'
@@ -52,38 +54,37 @@ public sealed class ProcessTestRunnerClientTests
             type "{Path.Combine(directory, "response.json")}"
             """);
 
-        var observed = new List<TestingEvent>();
+        var observed = new List<TestEvent>();
         using var client = new ProcessTestRunnerClient(runnerPath);
         var result = client.Run(
-            new TestingRunRequest(
+            new TestRunRequest(
                 TestingProtocol.CurrentVersion,
                 runId,
-                "provider.example",
-                new TestingAssemblyReference(@"C:\tests\Sample.dll"),
-                TestingSelection.FromTestIds(["opaque-id"])),
-            new TestingHostOptions("Revit", "2025", false, 60, 180, runnerPath),
+                TestFrameworkId.NUnit,
+                new TestAssemblyReference(@"C:\tests\Sample.dll"),
+                TestSelection.FromTestIds(["opaque-id"])),
+            new TestHostOptions("Revit", "2025", false, 60, 180),
             observed.Add);
 
         Assert.Equal("gen-1", result.GenerationId);
         Assert.Single(observed);
         Assert.Equal("opaque-id", observed[0].Case!.TestId);
         var captured = File.ReadAllText(argsPath);
-        Assert.Contains(TestingRunnerCli.MachineRunCommand, captured, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(TestRunnerCli.RunCommand, captured, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("--framework", captured, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("--test", captured, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("discover", captured, StringComparison.OrdinalIgnoreCase);
 
         var stdin = File.ReadAllText(stdinPath);
-        var invocation = JsonSerializer.Deserialize(stdin, TestingJsonContext.Default.TestingRunInvocation);
-        Assert.NotNull(invocation);
-        Assert.Equal(TestingProtocol.CurrentVersion, invocation.ProtocolVersion);
-        Assert.Equal(runId, invocation.Run.RunId);
-        Assert.Equal("provider.example", invocation.Run.FrameworkId);
-        Assert.Equal(TestingSelectionKind.TestIds, invocation.Run.Selection.Kind);
-        Assert.Equal("Revit", invocation.Host.HostName);
-        Assert.Equal(60, invocation.Host.PerTestTimeoutSeconds);
-        Assert.Null(invocation.Host.FrameworkId);
-        Assert.Null(invocation.Host.RunnerPath);
+        var execute = JsonSerializer.Deserialize(stdin, TestingJsonContext.Default.TestRunExecute);
+        Assert.NotNull(execute);
+        Assert.Equal(TestingProtocol.CurrentVersion, execute.ProtocolVersion);
+        Assert.Equal(runId, execute.Run.RunId);
+        Assert.Equal(TestFrameworkId.NUnit, execute.Run.FrameworkId);
+        Assert.Equal(TestSelectionKind.TestIds, execute.Run.Selection.Kind);
+        Assert.Equal("Revit", execute.Host.HostName);
+        Assert.Equal(60, execute.Host.PerTestTimeoutSeconds);
+        Assert.DoesNotContain("runner_path", stdin, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -92,17 +93,17 @@ public sealed class ProcessTestRunnerClientTests
         var runnerPath = Path.Combine(Path.GetTempPath(), "missing-devtools-testrunner.exe");
         using var client = new ProcessTestRunnerClient(runnerPath);
         var result = client.Run(
-            new TestingRunRequest(
+            new TestRunRequest(
                 1,
                 Guid.NewGuid(),
-                "future-provider",
-                new TestingAssemblyReference(@"C:\tests\Sample.dll"),
-                TestingSelection.All),
-            new TestingHostOptions("Revit", "2025", false, 60, 180, runnerPath),
+                TestFrameworkId.TUnit,
+                new TestAssemblyReference(@"C:\tests\Sample.dll"),
+                TestSelection.All),
+            new TestHostOptions("Revit", "2025", false, 60, 180),
             _ => throw new InvalidOperationException("onEvent must not run for a protocol mismatch."));
 
         Assert.Equal(TestingProtocol.IncompatibleCode, result.DiagnosticCode);
-        Assert.Equal(TestingCancellationState.None, result.CancellationState);
+        Assert.Equal(TestCancellationState.None, result.CancellationState);
     }
 
     [Fact]

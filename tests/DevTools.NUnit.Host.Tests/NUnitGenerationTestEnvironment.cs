@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
-using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.Tests;
 
@@ -31,12 +31,7 @@ internal static class NUnitGenerationTestEnvironment
 
     public static string CreateIsolatedGenerationsRoot()
     {
-        var root = Path.Combine(
-            Path.GetTempPath(),
-            "DevTools",
-            "NUnit",
-            "Generations",
-            Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(root);
         return root;

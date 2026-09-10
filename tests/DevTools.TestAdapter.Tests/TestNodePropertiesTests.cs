@@ -10,19 +10,19 @@ public sealed class TestNodePropertiesTests
     public void AddCommonResultProperties_maps_passed_failed_and_skipped_states()
     {
         var passed = new List<IProperty>();
-        TestNodeProperties.AddCommonResultProperties(passed, CreateResult(TestingOutcomes.Passed, "ok", null));
+        TestNodeProperties.AddCommonResultProperties(passed, CreateResult(TestOutcomes.Passed, "ok", null));
         Assert.Contains(passed, property => property is PassedTestNodeStateProperty);
 
         var failed = new List<IProperty>();
         TestNodeProperties.AddCommonResultProperties(
             failed,
-            CreateResult(TestingOutcomes.Failed, "boom", "at line 1"));
+            CreateResult(TestOutcomes.Failed, "boom", "at line 1"));
         Assert.Contains(failed, property => property is FailedTestNodeStateProperty);
 
         var skipped = new List<IProperty>();
         TestNodeProperties.AddCommonResultProperties(
             skipped,
-            CreateResult(TestingOutcomes.Skipped, "later", null));
+            CreateResult(TestOutcomes.Skipped, "later", null));
         Assert.Contains(skipped, property => property is SkippedTestNodeStateProperty);
     }
 
@@ -32,10 +32,10 @@ public sealed class TestNodePropertiesTests
         var properties = new List<IProperty>();
         TestNodeProperties.AddCommonResultProperties(
             properties,
-            new TestingCaseResult(
+            new TestCaseResult(
                 "case-1",
                 "Display",
-                TestingOutcomes.Skipped,
+                TestOutcomes.Skipped,
                 0,
                 Message: "message",
                 StackTrace: null,
@@ -55,17 +55,17 @@ public sealed class TestNodePropertiesTests
         var properties = new List<IProperty>();
         TestNodeProperties.AddCommonResultProperties(
             properties,
-            new TestingCaseResult(
+            new TestCaseResult(
                 "case-1",
                 "Display",
-                TestingOutcomes.Passed,
+                TestOutcomes.Passed,
                 12.5,
                 null,
                 null,
                 "console",
-                new TestingSourceLocation("Fixture.cs", 0),
-                [new TestingTrait("Category", "Smoke")],
-                [new TestingAttachment(@"C:\temp\trace.txt", "trace")]));
+                new TestSourceLocation("Fixture.cs", 0),
+                [new TestTrait("Category", "Smoke")],
+                [new TestAttachment(@"C:\temp\trace.txt", "trace")]));
 
         Assert.Contains(properties, property => property is TestFileLocationProperty);
         Assert.Contains(properties, property => property is TestMetadataProperty);
@@ -83,7 +83,7 @@ public sealed class TestNodePropertiesTests
             TestNodeProperties.CreateErrorNode("uid", "display", null!));
     }
 
-    static TestingCaseResult CreateResult(string outcome, string? message, string? stackTrace) =>
+    static TestCaseResult CreateResult(string outcome, string? message, string? stackTrace) =>
         new(
             "case-1",
             "Display",

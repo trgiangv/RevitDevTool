@@ -46,9 +46,7 @@
         <ProjectReference Include="..\DevTools.Telemetry\DevTools.Telemetry.csproj" />
         <ProjectReference Include="..\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj" />
         <ProjectReference Include="..\DevTools.Mcp.Acad\DevTools.Mcp.Acad.csproj" />
-        <ProjectReference Include="..\DevTools.NUnit.Host\DevTools.NUnit.Host.csproj" />
-        <ProjectReference Include="..\DevTools.TUnit.Host\DevTools.TUnit.Host.csproj"
-            SetTargetFramework="TargetFramework=$(TargetFramework)" />
+        <ProjectReference Include="..\DevTools.Testing.Host\DevTools.Testing.Host.csproj" />
     </ItemGroup>
 
     <ItemGroup>

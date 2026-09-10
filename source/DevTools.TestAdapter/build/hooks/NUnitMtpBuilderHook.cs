@@ -7,7 +7,7 @@ namespace DevTools.NUnit.MTP;
 /// Microsoft.Testing.Platform builder hook, compiled into the consumer testhost.
 /// The generated entry point requires
 /// <c>AddExtensions(ITestApplicationBuilder, string[])</c>. The arguments
-/// array is unused: this hook only assigns <see cref="HostTestDiscovery"/>.
+/// array is unused: this hook only assigns <see cref="TestingDiscovery"/>.
 /// Source lives in the adapter package, not DevTools.NUnit.MTP.dll, so the
 /// sibling does not reference Microsoft.Testing.Platform.
 /// </summary>
@@ -18,7 +18,7 @@ public static class NUnitMtpBuilderHook
         if (testApplicationBuilder is null)
             throw new ArgumentNullException(nameof(testApplicationBuilder));
         _ = arguments;
-        var discoverer = new NUnitHostTestDiscoverer();
-        HostTestDiscovery.Register(discoverer, new NUnitHostTestRunMapper());
+        var discoverer = new NUnitTestDiscoverer();
+        TestingDiscovery.Register(discoverer, new NUnitTestRunMapper());
     }
 }

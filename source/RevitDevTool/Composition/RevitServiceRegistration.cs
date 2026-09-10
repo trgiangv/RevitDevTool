@@ -9,9 +9,7 @@ using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Mcp.Catalog;
 using DevTools.Mcp.Adapter;
-using DevTools.NUnit.Host;
 using DevTools.Testing.Host;
-using DevTools.TUnit.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
@@ -141,9 +139,7 @@ internal static class RevitServiceRegistration
 
         services.AddExecutionServices(registerDefaultScriptProvider: false);
         services.AddMcpHostAdapter();
-        services.AddNUnitHostServices();
-        services.AddTUnitHostServices();
-        services.AddGenericTestingHostServices();
+        services.AddTestingHostServices();
         services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
         services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);

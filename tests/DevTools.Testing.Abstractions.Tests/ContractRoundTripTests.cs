@@ -21,36 +21,55 @@ public sealed class ContractRoundTripTests
         var result = CreateCase(testId);
         Assert.Equal(testId, result.TestId);
         Assert.DoesNotContain("::", NormalizeAway(testId, result.TestId));
-        Assert.Equal(testId, TestingSelection.FromTestIds([testId]).TestIds[0]);
+        Assert.Equal(testId, TestSelection.FromTestIds([testId]).TestIds[0]);
     }
 
     [Fact]
     public void Empty_test_ids_is_constrained_run_nothing_not_all()
     {
-        var empty = TestingSelection.FromTestIds([]);
-        Assert.Equal(TestingSelectionKind.TestIds, empty.Kind);
+        var empty = TestSelection.FromTestIds([]);
+        Assert.Equal(TestSelectionKind.TestIds, empty.Kind);
         Assert.True(empty.IsConstrained);
         Assert.Empty(empty.TestIds);
-        Assert.NotEqual(TestingSelection.All, empty);
-        Assert.False(TestingSelection.All.IsConstrained);
+        Assert.NotEqual(TestSelection.All, empty);
+        Assert.False(TestSelection.All.IsConstrained);
+    }
+
+    [Fact]
+    public void Unknown_kind_throws_for_constructor_parameter()
+    {
+        var ex = Assert.Throws<ArgumentOutOfRangeException>(
+            () => new TestSelection((TestSelectionKind)99));
+        Assert.Equal("kind", ex.ParamName);
+    }
+
+    [Fact]
+    public void All_rejects_ids_names_and_framework_filter()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new TestSelection(TestSelectionKind.All, testIds: ["id"]));
+        Assert.Throws<ArgumentException>(() =>
+            new TestSelection(TestSelectionKind.All, names: ["name"]));
+        Assert.Throws<ArgumentException>(() =>
+            new TestSelection(TestSelectionKind.All, filterFormat: "nunit", filterData: "<filter/>"));
     }
 
     [Fact]
     public void Every_cancellation_state_round_trips_on_events_and_responses()
     {
-        foreach (TestingCancellationState state in Enum.GetValues<TestingCancellationState>())
+        foreach (TestCancellationState state in Enum.GetValues<TestCancellationState>())
         {
             var runId = Guid.NewGuid();
-            var testingEvent = new TestingEvent(
+            var testingEvent = new TestEvent(
                 runId,
-                TestingEventKinds.Cancellation,
+                TestEventKinds.Cancellation,
                 Case: null,
                 Message: state.ToString(),
                 Attachment: null,
                 CancellationState: state);
-            var response = new TestingRunResponse(
+            var response = new TestRunResponse(
                 runId,
-                "provider.example",
+                TestFrameworkId.NUnit,
                 GenerationId: "gen-1",
                 Results: [],
                 CancellationState: state,
@@ -67,11 +86,11 @@ public sealed class ContractRoundTripTests
     [Fact]
     public void Case_result_round_trips_hierarchy_and_skip_reason()
     {
-        var attachment = new TestingAttachment(
+        var attachment = new TestAttachment(
             Path: @"C:\\temp\\trace.txt",
             Description: "trace",
             ContentType: "text/plain");
-        var result = new TestingCaseResult(
+        var result = new TestCaseResult(
             "case-1",
             "Display case",
             "Skipped",
@@ -79,8 +98,8 @@ public sealed class ContractRoundTripTests
             Message: null,
             StackTrace: null,
             Output: null,
-            Source: new TestingSourceLocation("Fixture.cs", 12),
-            Traits: [new TestingTrait("Category", "Acceptance")],
+            Source: new TestSourceLocation("Fixture.cs", 12),
+            Traits: [new TestTrait("Category", "Acceptance")],
             Attachments: [attachment],
             ParentTestId: "suite-1",
             FullName: "Provider.Fixture.DisplayCase",
@@ -99,55 +118,51 @@ public sealed class ContractRoundTripTests
     public void Event_preserves_case_attachment_and_cancellation_state()
     {
         var runId = Guid.NewGuid();
-        var attachment = new TestingAttachment("trace.txt", "trace", "text/plain");
-        var testingEvent = new TestingEvent(
+        var attachment = new TestAttachment("trace.txt", "trace", "text/plain");
+        var testingEvent = new TestEvent(
             runId,
-            TestingEventKinds.Attachment,
+            TestEventKinds.Attachment,
             CreateCase("case-2"),
             "saved trace",
             attachment,
-            TestingCancellationState.Acknowledged);
+            TestCancellationState.Acknowledged);
 
         Assert.Equal(runId, testingEvent.RunId);
         Assert.Equal("case-2", testingEvent.Case!.TestId);
         Assert.Equal("trace.txt", testingEvent.Attachment!.Path);
-        Assert.Equal(TestingCancellationState.Acknowledged, testingEvent.CancellationState);
+        Assert.Equal(TestCancellationState.Acknowledged, testingEvent.CancellationState);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Run_request_rejects_an_empty_provider_owned_framework_id(string frameworkId)
+    [Fact]
+    public void Run_request_rejects_an_undefined_framework_id()
     {
-        var exception = Assert.Throws<ArgumentException>(() => new TestingRunRequest(
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() => new TestRunRequest(
             ProtocolVersion: 1,
             RunId: Guid.NewGuid(),
-            FrameworkId: frameworkId,
-            Assembly: new TestingAssemblyReference("tests.dll"),
-            Selection: TestingSelection.All));
+            FrameworkId: (TestFrameworkId)42,
+            Assembly: new TestAssemblyReference("tests.dll"),
+            Selection: TestSelection.All));
 
         Assert.Equal("FrameworkId", exception.ParamName);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Run_request_with_expression_rejects_an_empty_provider_owned_framework_id(string frameworkId)
+    [Fact]
+    public void Run_request_with_expression_rejects_an_undefined_framework_id()
     {
-        var request = new TestingRunRequest(
+        var request = new TestRunRequest(
             ProtocolVersion: 1,
             RunId: Guid.NewGuid(),
-            FrameworkId: "provider.example",
-            Assembly: new TestingAssemblyReference("tests.dll"),
-            Selection: TestingSelection.All);
+            FrameworkId: TestFrameworkId.NUnit,
+            Assembly: new TestAssemblyReference("tests.dll"),
+            Selection: TestSelection.All);
 
-        var exception = Assert.Throws<ArgumentException>(() =>
-            request with { FrameworkId = frameworkId });
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            request with { FrameworkId = (TestFrameworkId)42 });
 
         Assert.Equal("FrameworkId", exception.ParamName);
     }
 
-    static TestingCaseResult CreateCase(string testId)
+    static TestCaseResult CreateCase(string testId)
         => new(
             testId,
             DisplayName: "display",
@@ -156,7 +171,7 @@ public sealed class ContractRoundTripTests
             Message: null,
             StackTrace: null,
             Output: null,
-            Source: new TestingSourceLocation("file.cs", 10),
+            Source: new TestSourceLocation("file.cs", 10),
             Traits: [],
             Attachments: []);
 

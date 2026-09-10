@@ -9,7 +9,7 @@ public sealed class HostSessionPolicyTests
         var source = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
-            "DevTools.TestRunner.Core",
+            "DevTools.TestRunner",
             "Services",
             "TestSession.cs"));
 
@@ -57,7 +57,7 @@ public sealed class HostSessionPolicyTests
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",
-            "DevTools.TestRunner.Core",
+            "DevTools.TestRunner",
             "Services",
             "HostLocator.cs"));
 
@@ -88,7 +88,7 @@ public sealed class HostSessionPolicyTests
         var source = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
-            "DevTools.TestRunner.Core",
+            "DevTools.TestRunner",
             "Services",
             "ExecutionCoordinator.cs"));
         var providerSource = File.ReadAllText(Path.Combine(
@@ -101,20 +101,20 @@ public sealed class HostSessionPolicyTests
         var attach = source.IndexOf("debugger.TryAttach", StringComparison.Ordinal);
         var run = source.IndexOf("await operation", StringComparison.Ordinal);
         Assert.True(ensure >= 0 && attach > ensure && run > attach);
-        Assert.Contains("DebugHostLifetime.Link", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DebugHostLifetime", source, StringComparison.Ordinal);
         Assert.Contains("context.DebugParentPid", source, StringComparison.Ordinal);
         Assert.DoesNotContain("TryDetach", source, StringComparison.Ordinal);
         Assert.DoesNotContain("DebugAttachScope", source, StringComparison.Ordinal);
         var attachApi = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
-            "DevTools.TestRunner.Core",
+            "DevTools.TestRunner",
             "Debugging",
             "IDebuggerAttach.cs"));
         var vsAttach = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
-            "DevTools.TestRunner.Core",
+            "DevTools.TestRunner",
             "Debugging",
             "VisualStudioAttach.cs"));
         Assert.DoesNotContain("TryDetach", attachApi, StringComparison.Ordinal);

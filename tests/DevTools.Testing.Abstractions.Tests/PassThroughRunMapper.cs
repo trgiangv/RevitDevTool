@@ -5,25 +5,25 @@ namespace DevTools.Testing.Abstractions.Tests;
 
 internal static class PassThroughRunMapper
 {
-    public static IHostTestRunMapper Instance { get; } = new Mapper();
+    public static ITestRunMapper Instance { get; } = new Mapper();
 
-    private sealed class Mapper : IHostTestRunMapper
+    private sealed class Mapper : ITestRunMapper
     {
-        public TestingSelection ToHostSelection(
-            TestingSelection requested,
-            IReadOnlyList<TestingDiscoveredTest> discovered) =>
+        public TestSelection ToRunSelection(
+            TestSelection requested,
+            IReadOnlyList<TestDiscoveredTest> discovered) =>
             requested;
 
-        public IReadOnlyList<TestingCaseResult> FoldResults(
-            TestingSelection requested,
-            IReadOnlyList<TestingDiscoveredTest> discovered,
-            IReadOnlyList<TestingCaseResult> hostResults) =>
+        public IReadOnlyList<TestCaseResult> FoldResults(
+            TestSelection requested,
+            IReadOnlyList<TestDiscoveredTest> discovered,
+            IReadOnlyList<TestCaseResult> hostResults) =>
             hostResults;
 
-        public IReadOnlyList<TestingCaseResult> ResultsForUnreported(
-            TestingSelection requested,
-            IReadOnlyList<TestingDiscoveredTest> discovered,
-            IReadOnlyList<TestingCaseResult> hostResults) =>
+        public IReadOnlyList<TestCaseResult> ResultsForUnreported(
+            TestSelection requested,
+            IReadOnlyList<TestDiscoveredTest> discovered,
+            IReadOnlyList<TestCaseResult> hostResults) =>
             [];
     }
 }

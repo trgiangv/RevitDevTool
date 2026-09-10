@@ -40,11 +40,11 @@ internal static class TUnitExpansion
         }
         catch (Exception)
         {
-            return new TUnitExpansionResult(null, new[] { DeferredCombination(filter.MethodName) });
+            return new TUnitExpansionResult(null, [DeferredCombination(filter.MethodName)]);
         }
     }
 
-    private static IReadOnlyList<TUnitCombination> Expand(
+    private static List<TUnitCombination> Expand(
         TestMetadata metadata,
         TestEntryFilterData filter,
         string sessionId)
@@ -60,7 +60,7 @@ internal static class TUnitExpansion
     private static List<TUnitCombination> BuildCombinations(
         IReadOnlyList<SourceRow> classRows,
         IReadOnlyList<SourceRow> methodRows,
-        IReadOnlyList<(string Name, object? Value)[]> propertyRows,
+        List<(string Name, object? Value)[]> propertyRows,
         int repeats)
     {
         var combinations = new List<TUnitCombination>(
@@ -90,9 +90,17 @@ internal static class TUnitExpansion
                 methodRow.SourceIndex,
                 methodRow.LoopIndex,
                 repeat),
-            methodRow.DisplayName,
+            CombinationDisplayName(methodRow.DisplayName, classRow.DisplayName),
             Deferred: false,
             properties);
+
+    /// <summary>
+    /// Engine <c>GetDisplayName</c> uses one <c>Arguments.DisplayName</c>.
+    /// Method data wins when both axes set it; class constructor rows
+    /// still need their name or testhost discovery labels every leaf the method.
+    /// </summary>
+    internal static string? CombinationDisplayName(string? methodDisplayName, string? classDisplayName) =>
+        methodDisplayName ?? classDisplayName;
 
     private static TUnitCombination DeferredCombination(string methodName) =>
         new([], DeferredIndices, methodName, Deferred: true, []);
@@ -104,8 +112,10 @@ internal static class TUnitExpansion
         ExpansionSession session)
     {
         var sources = ResolvePropertyDataSources(metadata);
+        // Empty `[]` zeros the cartesian product. One empty assignment keeps
+        // class × method × repeat (same as Collect() for empty data sources).
         if (sources.Length == 0)
-            return new List<(string Name, object? Value)[]> { Array.Empty<(string Name, object? Value)>() };
+            return [[]];
 
         var byName = new Dictionary<string, List<object?>>(StringComparer.Ordinal);
         foreach (var source in sources)
@@ -116,8 +126,9 @@ internal static class TUnitExpansion
                 byName[source.PropertyName] = values;
             }
 
-            foreach (var row in CollectSource(source.DataSource, session.PropertyGenerator, sourceIndex: 0))
-                values.Add(row.Args.Length > 0 ? row.Args[0] : null);
+            values.AddRange(
+                CollectSource(source.DataSource, session.PropertyGenerator, sourceIndex: 0)
+                    .Select(row => row.Args.Length > 0 ? row.Args[0] : null));
         }
 
         return CartesianPropertySets(byName);
@@ -132,7 +143,7 @@ internal static class TUnitExpansion
         };
         foreach (var (name, values) in byName)
         {
-            var propertyValues = values.Count == 0 ? new List<object?> { null } : values;
+            var propertyValues = values.Count == 0 ? [null] : values;
             var next = new List<(string Name, object? Value)[]>(rows.Count * propertyValues.Count);
             foreach (var row in rows)
             {
@@ -180,7 +191,7 @@ internal static class TUnitExpansion
         try
         {
             var loop = 1;
-            while (enumerator.MoveNextAsync().AsTask().GetAwaiter().GetResult())
+            while (Wait(enumerator.MoveNextAsync()))
             {
                 var factory = enumerator.Current;
                 var raw = factory().GetAwaiter().GetResult() ?? [];
@@ -190,10 +201,22 @@ internal static class TUnitExpansion
         }
         finally
         {
-            enumerator.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            Wait(enumerator.DisposeAsync());
         }
 
         return rows;
+    }
+
+    private static T Wait<T>(ValueTask<T> valueTask)
+    {
+        var task = valueTask.AsTask();
+        return task.GetAwaiter().GetResult();
+    }
+
+    private static void Wait(ValueTask valueTask)
+    {
+        var task = valueTask.AsTask();
+        task.GetAwaiter().GetResult();
     }
 
     private static object?[] Normalize(object?[] row)
@@ -217,44 +240,6 @@ internal static class TUnitExpansion
             : filter.RepeatCount;
         return repeatCount > 0 ? repeatCount + 1 : 1;
     }
-
-    private static DataGeneratorMetadata CreateGenerator(
-        TestMetadata metadata,
-        TestBuilderContextAccessor accessor,
-        DataGeneratorType type,
-        string sessionId)
-    {
-        var members = type switch
-        {
-            DataGeneratorType.ClassParameters => CastMembers(metadata.MethodMetadata.Class.Parameters),
-            DataGeneratorType.TestParameters => CastMembers(FilterCancellation(metadata.MethodMetadata.Parameters)),
-            DataGeneratorType.Property => [.. metadata.MethodMetadata.Class.Properties],
-            _ => [],
-        };
-
-        return new DataGeneratorMetadata
-        {
-            TestBuilderContext = accessor,
-            MembersToGenerate = members,
-            TestInformation = metadata.MethodMetadata,
-            Type = type,
-            TestSessionId = sessionId,
-            TestClassInstance = null,
-            ClassInstanceArguments = null,
-        };
-    }
-
-    private static ParameterMetadata[] FilterCancellation(ParameterMetadata[] parameters)
-    {
-        if (parameters.Length == 0)
-            return parameters;
-        var last = parameters[^1];
-        return last.Type == typeof(CancellationToken)
-            ? parameters.Take(parameters.Length - 1).ToArray()
-            : parameters;
-    }
-
-    private static IMemberMetadata[] CastMembers(ParameterMetadata[] parameters) => [.. parameters];
 
     private static PropertyDataSource[] ResolvePropertyDataSources(TestMetadata metadata)
     {
@@ -290,6 +275,44 @@ internal static class TUnitExpansion
         public DataGeneratorMetadata MethodGenerator { get; }
         public DataGeneratorMetadata ClassGenerator { get; }
         public DataGeneratorMetadata PropertyGenerator { get; }
+
+        private static DataGeneratorMetadata CreateGenerator(
+            TestMetadata metadata,
+            TestBuilderContextAccessor accessor,
+            DataGeneratorType type,
+            string sessionId)
+        {
+            var members = type switch
+            {
+                DataGeneratorType.ClassParameters => CastMembers(metadata.MethodMetadata.Class.Parameters),
+                DataGeneratorType.TestParameters => CastMembers(FilterCancellation(metadata.MethodMetadata.Parameters)),
+                DataGeneratorType.Property => [.. metadata.MethodMetadata.Class.Properties],
+                _ => [],
+            };
+
+            return new DataGeneratorMetadata
+            {
+                TestBuilderContext = accessor,
+                MembersToGenerate = members,
+                TestInformation = metadata.MethodMetadata,
+                Type = type,
+                TestSessionId = sessionId,
+                TestClassInstance = null,
+                ClassInstanceArguments = null,
+            };
+        }
+
+        private static ParameterMetadata[] FilterCancellation(ParameterMetadata[] parameters)
+        {
+            if (parameters.Length == 0)
+                return parameters;
+            var last = parameters[^1];
+            return last.Type == typeof(CancellationToken)
+                ? parameters.Take(parameters.Length - 1).ToArray()
+                : parameters;
+        }
+
+        private static IMemberMetadata[] CastMembers(ParameterMetadata[] parameters) => [.. parameters];
     }
 
     private readonly record struct SourceRow(object?[] Args, int SourceIndex, int LoopIndex, string? DisplayName);

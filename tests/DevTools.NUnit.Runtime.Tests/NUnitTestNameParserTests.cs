@@ -21,10 +21,14 @@ public sealed class NUnitTestNameParserTests
     {
         NUnitTestNameParser.SplitIde(
             "DevTools.NUnit.SampleTests.NamedFixtureSourceTests(\"alpha.rvt\").Fixture_argument_is_preserved",
+            out var className,
             out var ns,
             out var typeName,
             out var methodName);
 
+        Assert.Equal(
+            "DevTools.NUnit.SampleTests.NamedFixtureSourceTests(\"alpha.rvt\")",
+            className);
         Assert.Equal("DevTools.NUnit.SampleTests", ns);
         Assert.Equal("NamedFixtureSourceTests(\"alpha.rvt\")", typeName);
         Assert.Equal("Fixture_argument_is_preserved", methodName);
@@ -143,5 +147,21 @@ public sealed class NUnitTestNameParserTests
             NUnitTestNameParser.AppendDisplayArguments(
                 "Method",
                 "GenericClosedTests<Int32>(\"x\")"));
+    }
+
+    [Fact]
+    public void SplitIde_last_dot_ignores_dots_inside_parens_and_closed_generics()
+    {
+        NUnitTestNameParser.SplitIde(
+            "DevTools.NUnit.SampleTests.GenericClosedTests<Int32>.Generic_int_fixture_is_discovered",
+            out var className,
+            out var ns,
+            out var typeName,
+            out var methodName);
+
+        Assert.Equal("DevTools.NUnit.SampleTests.GenericClosedTests<Int32>", className);
+        Assert.Equal("DevTools.NUnit.SampleTests", ns);
+        Assert.Equal("GenericClosedTests<Int32>", typeName);
+        Assert.Equal("Generic_int_fixture_is_discovered", methodName);
     }
 }

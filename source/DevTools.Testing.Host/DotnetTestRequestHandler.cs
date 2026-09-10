@@ -34,7 +34,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         TestingProtocol.Cancel,
     ];
 
-    public TestingCancellationState CancellationState => _cancellation.State;
+    public TestCancellationState CancellationState => _cancellation.State;
 
     public Task<BridgeMessage> HandleAsync(
         string requestId,
@@ -70,10 +70,10 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         if (!TestingProtocol.IsCompatible(request!.ProtocolVersion))
             return TestingProtocol.CreateIncompatibleResponse(requestId, request.ProtocolVersion);
 
-        if (string.IsNullOrWhiteSpace(request!.FrameworkId))
+        if (!Enum.IsDefined(request.FrameworkId))
             return Invalid(requestId, "Framework ID is required.");
 
-        string frameworkId;
+        TestFrameworkId frameworkId;
         try
         {
             frameworkId = _registry.GetRequired(request.FrameworkId).FrameworkId;
@@ -83,7 +83,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
             return Invalid(requestId, ex.Message);
         }
 
-        var response = new TestingHelloResponse(
+        var response = new TestHelloResponse(
             ProtocolVersion: TestingProtocol.CurrentVersion,
             FrameworkId: frameworkId,
             Host: _host,
@@ -93,7 +93,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
         return BridgeMessage.Response(
             requestId,
-            JsonSerializer.SerializeToElement(response, TestingJsonContext.Default.TestingHelloResponse));
+            JsonSerializer.SerializeToElement(response, TestingJsonContext.Default.TestHelloResponse));
     }
 
     private BridgeMessage HandleRun(
@@ -126,7 +126,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
     private bool TryGetPoisonedRunError(string requestId, out BridgeMessage response)
     {
-        if (_cancellation.State != TestingCancellationState.Poisoned)
+        if (_cancellation.State != TestCancellationState.Poisoned)
         {
             response = null!;
             return false;
@@ -140,9 +140,9 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
     }
 
     private bool TryGetProvider(
-        TestingRunRequest request,
+        TestRunRequest request,
         string requestId,
-        out IHostTestFrameworkProvider provider,
+        out ITestFrameworkProvider provider,
         out BridgeMessage? invalid)
     {
         try
@@ -160,8 +160,8 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
     }
 
     private BridgeMessage RunProvider(
-        TestingRunRequest request,
-        IHostTestFrameworkProvider provider,
+        TestRunRequest request,
+        ITestFrameworkProvider provider,
         string requestId,
         CancellationToken cancellationToken)
     {
@@ -173,7 +173,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
             return BridgeMessage.Response(
                 requestId,
-                JsonSerializer.SerializeToElement(response, TestingJsonContext.Default.TestingRunResponse));
+                JsonSerializer.SerializeToElement(response, TestingJsonContext.Default.TestRunResponse));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -193,24 +193,24 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         }
     }
 
-    private void ApplyCancellationState(TestingCancellationState runState)
+    private void ApplyCancellationState(TestCancellationState runState)
     {
-        if (runState == TestingCancellationState.Poisoned)
+        if (runState == TestCancellationState.Poisoned)
         {
-            _cancellation.TryTransition(TestingCancellationState.Poisoned);
+            _cancellation.TryTransition(TestCancellationState.Poisoned);
             return;
         }
 
-        if (_cancellation.State == TestingCancellationState.Acknowledged)
-            _cancellation.TryTransition(TestingCancellationState.Completed);
+        if (_cancellation.State == TestCancellationState.Acknowledged)
+            _cancellation.TryTransition(TestCancellationState.Completed);
     }
 
     private void PoisonSessionAfterProviderFailure()
     {
-        if (_cancellation.State == TestingCancellationState.None)
-            _cancellation.TryTransition(TestingCancellationState.Requested);
+        if (_cancellation.State == TestCancellationState.None)
+            _cancellation.TryTransition(TestCancellationState.Requested);
 
-        _cancellation.TryTransition(TestingCancellationState.Poisoned);
+        _cancellation.TryTransition(TestCancellationState.Poisoned);
     }
 
     private BridgeMessage HandleCancel(string requestId, JsonElement? @params)
@@ -221,22 +221,22 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         var acknowledged = _registry.Cancel(request!.RunId);
         if (acknowledged)
         {
-            if (_cancellation.State == TestingCancellationState.None)
-                _cancellation.Transition(TestingCancellationState.Requested);
+            if (_cancellation.State == TestCancellationState.None)
+                _cancellation.Transition(TestCancellationState.Requested);
 
-            _cancellation.TryTransition(TestingCancellationState.Acknowledged);
+            _cancellation.TryTransition(TestCancellationState.Acknowledged);
         }
 
         return BridgeMessage.Response(
             requestId,
             JsonSerializer.SerializeToElement(
-                new TestingCancelResponse(acknowledged),
-                TestingJsonContext.Default.TestingCancelResponse));
+                new TestCancelResponse(acknowledged),
+                TestingJsonContext.Default.TestCancelResponse));
     }
 
     private static bool TryReadHello(
         JsonElement? @params,
-        out TestingHelloRequest? request,
+        out TestHelloRequest? request,
         out string error)
     {
         request = null;
@@ -249,7 +249,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
         try
         {
-            request = @params.Value.Deserialize(TestingJsonContext.Default.TestingHelloRequest);
+            request = @params.Value.Deserialize(TestingJsonContext.Default.TestHelloRequest);
             if (request is null)
             {
                 error = "Empty hello request.";
@@ -267,7 +267,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
     private static bool TryReadRun(
         JsonElement? @params,
-        out TestingRunRequest? request,
+        out TestRunRequest? request,
         out string error)
     {
         request = null;
@@ -280,7 +280,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
         try
         {
-            request = @params.Value.Deserialize(TestingJsonContext.Default.TestingRunRequest);
+            request = @params.Value.Deserialize(TestingJsonContext.Default.TestRunRequest);
             if (request is null)
             {
                 error = "Empty run request.";
@@ -298,7 +298,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
     private static bool TryReadCancel(
         JsonElement? @params,
-        out TestingCancelRequest? request,
+        out TestCancelRequest? request,
         out string error)
     {
         request = null;
@@ -311,7 +311,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
         try
         {
-            request = @params.Value.Deserialize(TestingJsonContext.Default.TestingCancelRequest);
+            request = @params.Value.Deserialize(TestingJsonContext.Default.TestCancelRequest);
             if (request is null)
             {
                 error = "Empty cancel request.";
@@ -330,12 +330,12 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
     private static BridgeMessage Invalid(string requestId, string error) =>
         BridgeMessage.Error(requestId, TestingErrorCodes.InvalidRequest, error);
 
-    private sealed class HandlerEventSink(DotnetTestRequestHandler owner) : ITestingEventSink
+    private sealed class HandlerEventSink(DotnetTestRequestHandler owner) : ITestEventSink
     {
-        public void Publish(TestingEvent testingEvent)
+        public void Publish(TestEvent testingEvent)
         {
-            if (testingEvent.CancellationState == TestingCancellationState.Acknowledged)
-                owner._cancellation.TryTransition(TestingCancellationState.Acknowledged);
+            if (testingEvent.CancellationState == TestCancellationState.Acknowledged)
+                owner._cancellation.TryTransition(TestCancellationState.Acknowledged);
 
             var sender = owner.NotificationSender;
             if (sender is null)
@@ -343,7 +343,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
 
             sender(
                 TestingProtocol.Progress,
-                JsonSerializer.SerializeToElement(testingEvent, TestingJsonContext.Default.TestingEvent));
+                JsonSerializer.SerializeToElement(testingEvent, TestingJsonContext.Default.TestEvent));
         }
     }
 }

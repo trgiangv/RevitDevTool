@@ -1,5 +1,4 @@
-using DevTools.NUnit.Host;
-using DevTools.TUnit.Host;
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Host;
 using DevTools.Testing.Host.Loading;
@@ -32,30 +31,26 @@ public sealed class ProviderHostingTests
     public void Acad_style_registration_resolves_both_providers()
     {
         var services = new ServiceCollection();
-        services.AddNUnitHostServices();
-        services.AddTUnitHostServices();
-        services.AddGenericTestingHostServices();
+        services.AddTestingHostServices();
 
         using var provider = services.BuildServiceProvider();
         var registry = provider.GetRequiredService<TestingProviderRegistry>();
 
-        Assert.Equal("nunit", registry.GetRequired("nunit").FrameworkId);
-        Assert.Equal("tunit", registry.GetRequired("tunit").FrameworkId);
+        Assert.Equal(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
+        Assert.Equal(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
     }
 
     [Fact]
     public void Revit_style_registration_resolves_both_providers()
     {
         var services = new ServiceCollection();
-        services.AddNUnitHostServices();
-        services.AddTUnitHostServices();
-        services.AddGenericTestingHostServices();
+        services.AddTestingHostServices();
 
         using var provider = services.BuildServiceProvider();
         var registry = provider.GetRequiredService<TestingProviderRegistry>();
 
-        Assert.Equal("nunit", registry.GetRequired("nunit").FrameworkId);
-        Assert.Equal("tunit", registry.GetRequired("tunit").FrameworkId);
+        Assert.Equal(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
+        Assert.Equal(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
     }
 
     [Fact]
@@ -83,6 +78,6 @@ public sealed class ProviderHostingTests
     {
         var services = new ServiceCollection();
         configure(services);
-        return services.Count(descriptor => descriptor.ServiceType == typeof(IHostTestFrameworkProvider));
+        return services.Count(descriptor => descriptor.ServiceType == typeof(ITestFrameworkProvider));
     }
 }

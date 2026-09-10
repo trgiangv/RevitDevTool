@@ -9,11 +9,11 @@ namespace DevTools.TUnit.Runtime;
 
 internal static class TUnitEngineResults
 {
-    public static IReadOnlyList<TestingCaseResult> Map(
+    public static IReadOnlyList<TestCaseResult> Map(
         IEnumerable<TestNode> nodes,
         IReadOnlyDictionary<string, string?>? capturedByUid = null)
     {
-        var results = new List<TestingCaseResult>();
+        var results = new List<TestCaseResult>();
         foreach (var node in nodes)
         {
             var mapped = Map(node);
@@ -23,7 +23,7 @@ internal static class TUnitEngineResults
             if (capturedByUid is not null
                 && capturedByUid.TryGetValue(node.Uid.Value, out var captured))
             {
-                mapped = mapped with { Output = TestingRunTraceScope.Merge(mapped.Output, captured) };
+                mapped = mapped with { Output = TestRunTraceScope.Merge(mapped.Output, captured) };
             }
 
             results.Add(mapped);
@@ -41,7 +41,7 @@ internal static class TUnitEngineResults
         return Combine(stdout, stderr);
     }
 
-    private static TestingCaseResult? Map(TestNode node)
+    private static TestCaseResult? Map(TestNode node)
     {
         var properties = node.Properties;
         var skipped = properties.SingleOrDefault<SkippedTestNodeStateProperty>();
@@ -53,11 +53,11 @@ internal static class TUnitEngineResults
         if (skipped is null && failed is null && error is null && timeout is null && cancelled is null && passed is null)
             return null;
 
-        var outcome = cancelled is not null ? TestingOutcomes.Cancelled
-            : skipped is not null ? TestingOutcomes.Skipped
-            : error is not null ? TestingOutcomes.Error
-            : failed is not null || timeout is not null ? TestingOutcomes.Failed
-            : TestingOutcomes.Passed;
+        var outcome = cancelled is not null ? TestOutcomes.Cancelled
+            : skipped is not null ? TestOutcomes.Skipped
+            : error is not null ? TestOutcomes.Error
+            : failed is not null || timeout is not null ? TestOutcomes.Failed
+            : TestOutcomes.Passed;
         var exception = failed?.Exception ?? error?.Exception ?? timeout?.Exception ?? cancelled?.Exception;
         var message = skipped?.Explanation
             ?? failed?.Explanation
@@ -68,7 +68,7 @@ internal static class TUnitEngineResults
         var timing = properties.SingleOrDefault<TimingProperty>();
         var location = properties.SingleOrDefault<TestFileLocationProperty>();
         var output = FrameworkOutput(node);
-        return new TestingCaseResult(
+        return new TestCaseResult(
             node.Uid.Value,
             node.DisplayName,
             outcome,
@@ -78,7 +78,7 @@ internal static class TUnitEngineResults
             string.IsNullOrWhiteSpace(output) ? null : output,
             location is null
                 ? null
-                : new TestingSourceLocation(location.FilePath, location.LineSpan.Start.Line),
+                : new TestSourceLocation(location.FilePath, location.LineSpan.Start.Line),
             [],
             [],
             FullName: node.Uid.Value,

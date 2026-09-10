@@ -1,12 +1,10 @@
 using System.IO.Pipes;
 using System.Text.Json;
 using DevTools.Hosting;
-using DevTools.Ipc;
-using DevTools.TestRunner;
-using DevTools.TestRunner.Core.Debugging;
-using DevTools.TestRunner.Core.Services;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
+using DevTools.TestRunner.Debugging;
+using DevTools.TestRunner.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.TestRunner.Tests;
@@ -16,54 +14,7 @@ public sealed class ComposedRunCommandTests
     private static readonly SemaphoreSlim ConsoleGate = new(1, 1);
 
     [Fact]
-    public async Task Run_sends_testing_run_with_selection_and_attaches_debugger()
-    {
-        await using var pipe = new FakeHostPipe();
-        var hosts = new FakeTestSession(pipe.PipeName);
-        var debugger = new FakeDebugger();
-        var services = new ServiceCollection();
-        services.AddSingleton<ITestSession>(hosts);
-        services.AddSingleton<IExecutionCoordinator, ExecutionCoordinator>();
-        services.AddSingleton<IDebuggerAttach>(debugger);
-        await using var provider = services.BuildServiceProvider();
-        var commands = new RunnerCommands(
-            provider.GetRequiredService<IExecutionCoordinator>(),
-            debugger,
-            new BufferedMachineRunInput(TextReader.Null));
-
-        await ConsoleGate.WaitAsync(TestContext.Current.CancellationToken);
-        var originalOut = Console.Out;
-        using var stdout = new StringWriter();
-        try
-        {
-            Console.SetOut(stdout);
-            var exitCode = await commands.Run(
-                typeof(ComposedRunCommandTests).Assembly.Location,
-                "Revit",
-                "2026",
-                test: ["Sample.Fixture.PlainTest"],
-                debug: true,
-                framework: "nunit",
-                cancellationToken: TestContext.Current.CancellationToken);
-
-            Assert.Equal(0, exitCode);
-        }
-        finally
-        {
-            Console.SetOut(originalOut);
-            ConsoleGate.Release();
-        }
-
-        var request = await pipe.RunRequest.Task.WaitAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(TestingProtocol.Run, request.Method);
-        Assert.Contains("Sample.Fixture.PlainTest", request.Filter, StringComparison.Ordinal);
-        Assert.Equal(1, hosts.Calls);
-        Assert.Equal((1234, (int?)null), debugger.Attached);
-        Assert.Contains("framework_id", stdout.ToString(), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task MachineRun_sends_the_same_run_id_to_the_host()
+    public async Task Run_sends_the_same_run_id_to_the_host()
     {
         await using var pipe = new FakeHostPipe();
         var hosts = new FakeTestSession(pipe.PipeName);
@@ -74,20 +25,20 @@ public sealed class ComposedRunCommandTests
         services.AddSingleton<IDebuggerAttach>(debugger);
         await using var provider = services.BuildServiceProvider();
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
-        var invocation = new TestingRunInvocation(
+        var execute = new TestRunExecute(
             TestingProtocol.CurrentVersion,
-            new TestingHostOptions("Revit", "2026", false, 60, 180, null),
-            new TestingRunRequest(
+            new TestHostOptions("Revit", "2026", false, 60, 180),
+            new TestRunRequest(
                 TestingProtocol.CurrentVersion,
                 runId,
-                "nunit",
-                new TestingAssemblyReference(typeof(ComposedRunCommandTests).Assembly.Location),
-                TestingSelection.FromTestIds(["Sample.Fixture.PlainTest"])));
-        var json = JsonSerializer.Serialize(invocation, TestingJsonContext.Default.TestingRunInvocation);
+                TestFrameworkId.NUnit,
+                new TestAssemblyReference(typeof(ComposedRunCommandTests).Assembly.Location),
+                TestSelection.FromTestIds(["Sample.Fixture.PlainTest"])));
+        var json = JsonSerializer.Serialize(execute, TestingJsonContext.Default.TestRunExecute);
         var commands = new RunnerCommands(
             provider.GetRequiredService<IExecutionCoordinator>(),
             debugger,
-            new BufferedMachineRunInput(new StringReader(json)));
+            new BufferedRunInput(new StringReader(json)));
 
         await ConsoleGate.WaitAsync(TestContext.Current.CancellationToken);
         var originalOut = Console.Out;
@@ -95,7 +46,7 @@ public sealed class ComposedRunCommandTests
         try
         {
             Console.SetOut(stdout);
-            var exitCode = await commands.MachineRun(TestContext.Current.CancellationToken);
+            var exitCode = await commands.Run(TestContext.Current.CancellationToken);
             Assert.Equal(0, exitCode);
         }
         finally
@@ -109,6 +60,7 @@ public sealed class ComposedRunCommandTests
         Assert.Equal(runId, request.RunId);
         Assert.Contains("Sample.Fixture.PlainTest", request.Filter, StringComparison.Ordinal);
         Assert.Equal(1, hosts.Calls);
+        Assert.Contains("run_id", stdout.ToString(), StringComparison.Ordinal);
     }
 
     private sealed class FakeTestSession(string pipeName) : ITestSession
@@ -182,18 +134,18 @@ public sealed class ComposedRunCommandTests
                 await connection.WriteAsync(BridgeMessage.Response(
                     request.Id,
                     JsonSerializer.SerializeToElement(
-                        new TestingHelloResponse(TestingProtocol.CurrentVersion, "nunit", "Revit", "2026", 1234, false),
-                        TestingJsonContext.Default.TestingHelloResponse)), cancellation.Token);
+                        new TestHelloResponse(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit, "Revit", "2026", 1234, false),
+                        TestingJsonContext.Default.TestHelloResponse)), cancellation.Token);
                 return;
             }
             if (request.Method == TestingProtocol.Run)
             {
-                var run = request.Params!.Value.Deserialize(TestingJsonContext.Default.TestingRunRequest)!;
+                var run = request.Params!.Value.Deserialize(TestingJsonContext.Default.TestRunRequest)!;
                 await connection.WriteAsync(BridgeMessage.Response(
                     request.Id,
                     JsonSerializer.SerializeToElement(
-                        new TestingRunResponse(run.RunId, "nunit", "generation", [], TestingCancellationState.None, null, null),
-                        TestingJsonContext.Default.TestingRunResponse)), cancellation.Token);
+                        new TestRunResponse(run.RunId, TestFrameworkId.NUnit, "generation", [], TestCancellationState.None, null, null),
+                        TestingJsonContext.Default.TestRunResponse)), cancellation.Token);
                 RunRequest.TrySetResult(new WireRequest(
                     request.Method,
                     string.Join(",", run.Selection.TestIds.Concat(

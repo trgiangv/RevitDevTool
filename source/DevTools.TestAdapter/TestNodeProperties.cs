@@ -6,7 +6,7 @@ namespace DevTools.TestAdapter;
 
 internal static class TestNodeProperties
 {
-    public static void AddSource(List<IProperty> properties, TestingSourceLocation? source)
+    public static void AddSource(List<IProperty> properties, TestSourceLocation? source)
     {
         if (source is null || string.IsNullOrWhiteSpace(source.File))
             return;
@@ -14,10 +14,10 @@ internal static class TestNodeProperties
         var line = Math.Max(source.Line, 1);
         properties.Add(new TestFileLocationProperty(
             source.File,
-            new LinePositionSpan(new LinePosition(line, 1), new LinePosition(line, 1))));
+            new LinePositionSpan(new LinePosition(line, 1), new LinePosition(line, 2048))));
     }
 
-    private static void AddTraits(List<IProperty> properties, IReadOnlyList<TestingTrait>? traits)
+    private static void AddTraits(List<IProperty> properties, IReadOnlyList<TestTrait>? traits)
     {
         if (traits is null)
             return;
@@ -40,7 +40,7 @@ internal static class TestNodeProperties
         properties.Add(new StandardOutputProperty(output!));
     }
 
-    private static void AddAttachments(List<IProperty> properties, IReadOnlyList<TestingAttachment>? attachments)
+    private static void AddAttachments(List<IProperty> properties, IReadOnlyList<TestAttachment>? attachments)
     {
         if (attachments is null)
             return;
@@ -57,7 +57,7 @@ internal static class TestNodeProperties
         }
     }
 
-    private static IProperty ToStateProperty(TestingCaseResult result) =>
+    private static IProperty ToStateProperty(TestCaseResult result) =>
         result.Outcome switch
         {
             "Passed" => PassedTestNodeStateProperty.CachedInstance,
@@ -66,7 +66,7 @@ internal static class TestNodeProperties
             _ => new ErrorTestNodeStateProperty(CreateException(result)),
         };
 
-    public static void AddCommonResultProperties(List<IProperty> properties, TestingCaseResult result)
+    public static void AddCommonResultProperties(List<IProperty> properties, TestCaseResult result)
     {
         properties.Add(ToStateProperty(result));
         AddSource(properties, result.Source);
@@ -89,7 +89,7 @@ internal static class TestNodeProperties
         };
     }
 
-    private static Exception CreateException(TestingCaseResult result)
+    private static Exception CreateException(TestCaseResult result)
     {
         if (string.IsNullOrWhiteSpace(result.StackTrace))
             return new InvalidOperationException(result.Message ?? result.Outcome);

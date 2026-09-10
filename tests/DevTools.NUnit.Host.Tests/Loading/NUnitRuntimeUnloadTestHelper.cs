@@ -1,5 +1,5 @@
 using System.Reflection;
-using DevTools.NUnit.Host.Loading;
+using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 
@@ -52,10 +52,7 @@ internal static class NUnitRuntimeUnloadTestHelper
 
         var isolatedCopyDirectory = Path.Combine(
             Path.GetTempPath(),
-            "DevTools",
-            "NUnit",
-            "ConflictingDefault",
-            Guid.NewGuid().ToString("N"));
+            "DevTools.nunit.conflict-" + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(isolatedCopyDirectory);
         var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationPolicy.FrameworkAssemblyFileName);
@@ -78,10 +75,7 @@ internal static class NUnitRuntimeUnloadTestHelper
 
         var isolatedCopyDirectory = Path.Combine(
             Path.GetTempPath(),
-            "DevTools",
-            "NUnit",
-            "PrivateDefault",
-            Guid.NewGuid().ToString("N"));
+            "DevTools.nunit.private-" + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(isolatedCopyDirectory);
         var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, "GenerationPrivateDependency.dll");

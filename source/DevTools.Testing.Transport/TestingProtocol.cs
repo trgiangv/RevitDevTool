@@ -33,29 +33,29 @@ public static class TestingProtocol
             }));
 }
 
-public sealed record TestingHelloRequest(int ProtocolVersion, string FrameworkId);
+public sealed record TestHelloRequest(int ProtocolVersion, TestFrameworkId FrameworkId);
 
-public sealed record TestingHelloResponse(
+public sealed record TestHelloResponse(
     int ProtocolVersion,
-    string FrameworkId,
+    TestFrameworkId FrameworkId,
     string Host,
     string HostVersion,
     int ProcessId,
     bool IsBusy);
 
-public sealed record TestingCancelRequest(Guid RunId);
+public sealed record TestCancelRequest(Guid RunId);
 
-public sealed record TestingCancelResponse(bool Acknowledged);
+public sealed record TestCancelResponse(bool Acknowledged);
 
 /// <summary>
-/// One NDJSON line on <c>machine-run</c> stdout. Human <c>run</c> still
-/// writes a single <see cref="TestingRunResponse"/> document.
+/// One NDJSON line on TestRunner <c>run</c> stdout (event lines, then the
+/// <see cref="TestRunResponse"/>).
 /// </summary>
-public sealed record TestingRunnerStreamMessage(
-    TestingEvent? Event = null,
-    TestingRunResponse? Response = null);
+public sealed record TestRunnerStreamMessage(
+    TestEvent? Event = null,
+    TestRunResponse? Response = null);
 
-public static class TestingCancelSignal
+public static class TestCancelSignal
 {
     public static string Name(Guid runId) => $@"Local\DevTools.TestRunner.Cancel.{runId:N}";
 

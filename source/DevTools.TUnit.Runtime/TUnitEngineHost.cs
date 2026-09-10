@@ -24,13 +24,13 @@ internal static class TUnitEngineHost
     private const string ServiceProviderTypeName = "Microsoft.Testing.Platform.Services.ServiceProvider";
     private const string OutputDeviceTypeName = "Microsoft.Testing.Platform.OutputDevice.NopPlatformOutputDevice";
 
-    public static IReadOnlyList<TestingCaseResult> Run(
+    public static IReadOnlyList<TestCaseResult> Run(
         ReflectionAssembly testAssembly,
-        TestingSelection selection,
+        TestSelection selection,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(testAssembly);
-        if (selection.Kind == TestingSelectionKind.TestIds
+        if (selection.Kind == TestSelectionKind.TestIds
             && selection.TestIds.All(string.IsNullOrWhiteSpace))
             return [];
 
@@ -49,12 +49,12 @@ internal static class TUnitEngineHost
         }
     }
 
-    private static IReadOnlyList<TestingCaseResult> RunEngine(
-        TestingSelection selection,
+    private static IReadOnlyList<TestCaseResult> RunEngine(
+        TestSelection selection,
         CancellationToken cancellationToken)
     {
         var workingDirectory = Directory.GetCurrentDirectory();
-        var resultDirectory = Path.Combine(Path.GetTempPath(), "DevTools", "TUnit", "Results");
+        var resultDirectory = Path.Combine(Path.GetTempPath(), "DevTools.tunit");
         Directory.CreateDirectory(resultDirectory);
 
         var platform = typeof(ICommandLineOptions).Assembly;
@@ -76,7 +76,7 @@ internal static class TUnitEngineHost
             culture: null)!;
         var filter = CreateFilter(selection);
         var request = new RunTestExecutionRequest(session, filter);
-        using var traceScope = new TestingRunTraceScope();
+        using var traceScope = new TestRunTraceScope();
         var messageBus = new TUnitEngineMessageBus(traceScope);
         var executeContext = new ExecuteRequestContext(
             request,
@@ -109,12 +109,12 @@ internal static class TUnitEngineHost
         return TUnitEngineResults.Map(messageBus.Nodes.Values, messageBus.CapturedByUid);
     }
 
-    private static ITestExecutionFilter CreateFilter(TestingSelection selection)
+    private static ITestExecutionFilter CreateFilter(TestSelection selection)
     {
-        if (selection.Kind == TestingSelectionKind.All)
+        if (selection.Kind == TestSelectionKind.All)
             return new NopFilter();
 
-        if (selection.Kind != TestingSelectionKind.TestIds)
+        if (selection.Kind != TestSelectionKind.TestIds)
         {
             throw new ArgumentException(
                 "TUnit runtime expects All or TestIds. Map Names/FrameworkFilter before testing/run.",

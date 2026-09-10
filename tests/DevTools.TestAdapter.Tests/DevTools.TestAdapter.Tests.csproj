@@ -21,6 +21,7 @@
         <ProjectReference Include="..\..\source\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj" SetTargetFramework="TargetFramework=net10.0-windows">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>
+        <Compile Include="..\DevTools.Testing.Abstractions.Tests\PassThroughRunMapper.cs" Link="PassThroughRunMapper.cs" />
     </ItemGroup>
 
     <ItemGroup>

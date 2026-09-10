@@ -76,8 +76,8 @@ public sealed class LoggingAssemblyBoundaryTests
         var csproj = File.ReadAllText(Path.Combine(
             RepositoryRoot.Find(),
             "source",
-            "DevTools.NUnit.Host",
-            "DevTools.NUnit.Host.csproj"));
+            "DevTools.Testing.Host",
+            "DevTools.Testing.Host.csproj"));
 
         Assert.DoesNotContain("DevTools.Logging.csproj", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("ZLogger.Scintilla", csproj, StringComparison.OrdinalIgnoreCase);

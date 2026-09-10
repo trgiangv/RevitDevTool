@@ -92,13 +92,13 @@ public sealed class NUnitRuntimeArchitectureTests
     }
 
     [Fact]
-    public void HostRuntimeUsesTolerantAssemblyBuilderInsteadOfDefaultGetTypes()
+    public void HostRuntimeUsesNUnitAssemblyBuilderInsteadOfDefaultGetTypes()
     {
         var sessionPath = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime", "NUnitRuntimeSession.cs");
-        var builderPath = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime", "NUnitTolerantAssemblyBuilder.cs");
+        var builderPath = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime", "NUnitAssemblyBuilder.cs");
         Assert.True(File.Exists(builderPath));
         var session = File.ReadAllText(sessionPath);
-        Assert.Contains("new NUnitTolerantAssemblyBuilder()", session, StringComparison.Ordinal);
+        Assert.Contains("new NUnitAssemblyBuilder()", session, StringComparison.Ordinal);
         Assert.DoesNotContain("new DefaultTestAssemblyBuilder()", session, StringComparison.Ordinal);
         Assert.Contains("ReflectionTypeLoadException", File.ReadAllText(builderPath), StringComparison.Ordinal);
         Assert.Contains("DefaultWorkDirectory", File.ReadAllText(builderPath), StringComparison.Ordinal);
@@ -107,12 +107,12 @@ public sealed class NUnitRuntimeArchitectureTests
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.MTP");
         Assert.False(File.Exists(Path.Combine(mtpDir, "NUnitLocalAssemblyBuilder.cs")));
         Assert.Contains(
-            "NUnitTolerantAssemblyBuilder.cs",
+            "NUnitAssemblyBuilder.cs",
             File.ReadAllText(Path.Combine(mtpDir, "DevTools.NUnit.MTP.csproj")),
             StringComparison.Ordinal);
         Assert.Contains(
-            "new NUnitTolerantAssemblyBuilder()",
-            File.ReadAllText(Path.Combine(mtpDir, "NUnitHostTestDiscoverer.cs")),
+            "new NUnitAssemblyBuilder()",
+            File.ReadAllText(Path.Combine(mtpDir, "NUnitTestDiscoverer.cs")),
             StringComparison.Ordinal);
     }
 
@@ -124,9 +124,9 @@ public sealed class NUnitRuntimeArchitectureTests
 
         var listener = File.ReadAllText(Path.Combine(runtimeDirectory, "NUnitEventListener.cs"));
         var session = File.ReadAllText(Path.Combine(runtimeDirectory, "NUnitRuntimeSession.cs"));
-        Assert.Contains("TestingRunTraceScope", listener, StringComparison.Ordinal);
-        Assert.Contains("TestingRunTraceScope.Merge", listener, StringComparison.Ordinal);
-        Assert.Contains("new TestingRunTraceScope()", session, StringComparison.Ordinal);
+        Assert.Contains("TestRunTraceScope", listener, StringComparison.Ordinal);
+        Assert.Contains("TestRunTraceScope.Merge", listener, StringComparison.Ordinal);
+        Assert.Contains("new TestRunTraceScope()", session, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitRunTraceScope", listener, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitRunTraceScope", session, StringComparison.Ordinal);
     }
@@ -153,7 +153,7 @@ public sealed class NUnitRuntimeArchitectureTests
     [Fact]
     public void HostManualNUnitExecution_IsNotPresent()
     {
-        var hostDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Host");
+        var hostDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.Testing.Host", "NUnit");
         var forbiddenPatterns = new[]
         {
             "MethodInfo.Invoke(",

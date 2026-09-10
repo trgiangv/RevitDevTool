@@ -3,6 +3,7 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
 using NUnit.Framework.Interfaces;
+using static DevTools.NUnit.Runtime.NUnitNameSyntax;
 
 namespace DevTools.NUnit.Runtime;
 
@@ -232,11 +233,11 @@ internal sealed class NUnitSourceLocationProvider
         if (typeDefinition.IsNested)
         {
             var declaringType = reader.GetTypeDefinition(typeDefinition.GetDeclaringType());
-            return GetTypeFullName(reader, declaringType) + "+" + name;
+            return Nested(GetTypeFullName(reader, declaringType), name);
         }
 
         var namespaceName = reader.GetString(typeDefinition.Namespace);
-        return string.IsNullOrEmpty(namespaceName) ? name : namespaceName + "." + name;
+        return Qualify(namespaceName, name);
     }
 
     private string? NormalizeSourcePath(string path)
@@ -245,10 +246,7 @@ internal sealed class NUnitSourceLocationProvider
             return null;
 
         path = path.Replace('/', Path.DirectorySeparatorChar);
-        if (Path.IsPathRooted(path))
-            return path;
-
-        if (_probeDirectory is null)
+        if (Path.IsPathRooted(path) || _probeDirectory is null)
             return path;
 
         var candidate = Path.GetFullPath(Path.Combine(_probeDirectory, path));

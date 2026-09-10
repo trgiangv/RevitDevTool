@@ -1,4 +1,5 @@
 using System.Text;
+using static DevTools.NUnit.Runtime.NUnitNameSyntax;
 
 namespace DevTools.NUnit.Runtime;
 
@@ -13,13 +14,19 @@ internal static class NUnitTestNameParser
 
     /// <summary>
     /// Last-dot split of NUnit <c>ITest.FullName</c>: fixture constructor
-    /// arguments stay on the display type (<c>Tests("beta.rvt")</c>). MTP
-    /// <c>TestMethodIdentifierProperty.TypeName</c> must not use this string;
+    /// arguments stay on <paramref name="className"/> /
+    /// <paramref name="typeName"/> (<c>Tests("beta.rvt")</c>). MTP
+    /// <c>TestMethodIdentifierProperty.TypeName</c> must not use that string;
     /// strip args (see adapter) so IDEs do not tokenize <c>.</c> inside args.
     /// </summary>
-    public static void SplitIde(string fullTestName, out string namespaceName, out string typeName, out string methodName)
+    public static void SplitIde(
+        string fullTestName,
+        out string className,
+        out string namespaceName,
+        out string typeName,
+        out string methodName)
     {
-        SplitParts(fullTestName, out var className, out methodName);
+        SplitParts(fullTestName, out className, out methodName);
         methodName = StripArgumentLists(methodName);
         SplitNamespace(className, out namespaceName, out typeName);
     }
@@ -33,7 +40,7 @@ internal static class NUnitTestNameParser
     {
         SplitNamespace(StripArgumentLists(displayTypeName), out var namespaceName, out var typeName);
         var metadataType = NormalizeGenericSegment(typeName);
-        return string.IsNullOrEmpty(namespaceName) ? metadataType : namespaceName + "." + metadataType;
+        return Qualify(namespaceName, metadataType);
     }
 
     /// <summary>
@@ -88,17 +95,10 @@ internal static class NUnitTestNameParser
         var depth = 0;
         for (var index = 0; index < typeName.Length; index++)
         {
-            switch (typeName[index])
-            {
-                case '<':
-                    depth++;
-                    break;
-                case '>' when depth > 0:
-                    depth--;
-                    break;
-                case '(' when depth == 0:
-                    return index;
-            }
+            var c = typeName[index];
+            if (c == ArgOpen && depth == 0)
+                return index;
+            depth = GenericDepth(depth, c);
         }
 
         return -1;
@@ -122,27 +122,25 @@ internal static class NUnitTestNameParser
             return displayName ?? fullName;
 
         SplitParts(fullName, out var parsedClass, out var rawMethod);
-        if (string.IsNullOrWhiteSpace(methodName))
-            return fullName;
-        if (IsGeneratedMethodSegment(rawMethod, methodName!))
+        if (string.IsNullOrWhiteSpace(methodName) || IsGeneratedMethodSegment(rawMethod, methodName!))
             return fullName;
 
         var type = string.IsNullOrWhiteSpace(className) ? parsedClass : className!;
         var label = string.IsNullOrWhiteSpace(displayName) ? rawMethod : displayName!;
-        return type + "." + methodName + "(\"" + EscapeDisplay(label) + "\")";
+        return string.Concat(type, MemberDot, methodName, ArgOpen, Quote, EscapeDisplay(label), Quote, ArgClose);
     }
 
     private static bool IsGeneratedMethodSegment(string rawMethod, string methodName) =>
         rawMethod == methodName
-        || rawMethod.StartsWith(methodName + "(", StringComparison.Ordinal)
-        || rawMethod.StartsWith(methodName + "<", StringComparison.Ordinal);
+        || rawMethod.StartsWith(methodName + ArgOpen, StringComparison.Ordinal)
+        || rawMethod.StartsWith(methodName + GenericOpen, StringComparison.Ordinal);
 
     private static string EscapeDisplay(string value) =>
-        value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        value.Replace(Escape.ToString(), @"\\").Replace(Quote.ToString(), "\\\"");
 
-    private static void SplitParts(string fullTestName, out string className, out string methodName)
+    internal static void SplitParts(string fullTestName, out string className, out string methodName)
     {
-        var lastDot = LastSeparatorAtDepthZero(fullTestName, '.');
+        var lastDot = LastAtDepthZero(fullTestName, MemberDot);
         if (lastDot < 0)
         {
             className = fullTestName;
@@ -156,7 +154,7 @@ internal static class NUnitTestNameParser
 
     private static void SplitNamespace(string className, out string namespaceName, out string typeName)
     {
-        var lastDot = LastSeparatorAtDepthZero(className, '.');
+        var lastDot = LastAtDepthZero(className, MemberDot);
         if (lastDot < 0)
         {
             namespaceName = string.Empty;
@@ -168,49 +166,20 @@ internal static class NUnitTestNameParser
         typeName = className[(lastDot + 1)..];
     }
 
-    private static int LastSeparatorAtDepthZero(string value, char separator)
-    {
-        var depth = 0;
-        var last = -1;
-        for (var index = 0; index < value.Length; index++)
-        {
-            switch (value[index])
-            {
-                case '(':
-                case '<':
-                    depth++;
-                    break;
-                case ')':
-                case '>':
-                    if (depth > 0)
-                        depth--;
-                    break;
-                default:
-                    if (value[index] == separator && depth == 0)
-                        last = index;
-                    break;
-            }
-        }
-
-        return last;
-    }
-
     private static string StripArgumentLists(string value)
     {
         var depth = 0;
         var builder = new StringBuilder(value.Length);
         foreach (var c in value)
         {
-            if (c == '(')
+            switch (c)
             {
-                depth++;
-                continue;
-            }
-
-            if (c == ')' && depth > 0)
-            {
-                depth--;
-                continue;
+                case ArgOpen:
+                    depth++;
+                    continue;
+                case ArgClose when depth > 0:
+                    depth--;
+                    continue;
             }
 
             if (depth == 0)
@@ -222,7 +191,7 @@ internal static class NUnitTestNameParser
 
     private static string NormalizeGenericSegment(string segment)
     {
-        if (segment.IndexOf('+') < 0)
+        if (segment.IndexOf(NestedType) < 0)
             return NormalizeOneGeneric(segment);
 
         var parts = new List<string>();
@@ -230,73 +199,79 @@ internal static class NUnitTestNameParser
         var start = 0;
         for (var index = 0; index < segment.Length; index++)
         {
-            switch (segment[index])
+            var c = segment[index];
+            if (c == NestedType && depth == 0)
             {
-                case '<' or '(':
-                    depth++;
-                    break;
-                case '>' or ')' when depth > 0:
-                    depth--;
-                    break;
-                case '+' when depth == 0:
-                    parts.Add(NormalizeOneGeneric(segment[start..index]));
-                    start = index + 1;
-                    break;
+                parts.Add(NormalizeOneGeneric(segment[start..index]));
+                start = index + 1;
             }
+
+            depth = GenericDepth(depth, c);
         }
 
         parts.Add(NormalizeOneGeneric(segment[start..]));
-        return string.Join("+", parts);
+        return string.Join(NestedType.ToString(), parts);
     }
 
     private static string NormalizeOneGeneric(string segment)
     {
-        var genericStart = segment.IndexOf('<');
+        var genericStart = segment.IndexOf(GenericOpen);
         if (genericStart < 0)
             return segment;
 
+        var arity = CountClosedGenericArity(segment, genericStart);
         var baseName = segment[..genericStart];
+        return arity == 0 ? baseName : baseName + Arity + arity;
+    }
+
+    private static int CountClosedGenericArity(string segment, int genericStart)
+    {
         var depth = 0;
-        var typeArgumentCount = 0;
+        var arity = 0;
         for (var index = genericStart; index < segment.Length; index++)
+            AddClosedGenericArity(segment[index], ref depth, ref arity);
+        return arity;
+    }
+
+    private static void AddClosedGenericArity(char c, ref int depth, ref int arity)
+    {
+        if (c == GenericOpen)
         {
-            switch (segment[index])
-            {
-                case '<':
-                    depth++;
-                    if (depth == 1)
-                        typeArgumentCount++;
-                    break;
-                case ',' when depth == 1:
-                    typeArgumentCount++;
-                    break;
-                case '>':
-                    depth--;
-                    break;
-            }
+            depth++;
+            if (depth == 1)
+                arity++;
+            return;
         }
 
-        return typeArgumentCount == 0 ? baseName : baseName + "`" + typeArgumentCount;
+        if (c == TypeArgComma && depth == 1)
+        {
+            arity++;
+            return;
+        }
+
+        if (c == GenericClose)
+            depth--;
     }
 
     private static string StripMetadataArity(string metadataType)
     {
-        if (metadataType.IndexOf('`') < 0)
+        if (metadataType.IndexOf(Arity) < 0)
             return metadataType;
 
         var builder = new StringBuilder(metadataType.Length);
-        for (var index = 0; index < metadataType.Length; index++)
+        var index = 0;
+        while (index < metadataType.Length)
         {
-            if (metadataType[index] == '`')
+            if (metadataType[index] == Arity)
             {
                 index++;
                 while (index < metadataType.Length && char.IsDigit(metadataType[index]))
                     index++;
-                index--;
                 continue;
             }
 
             builder.Append(metadataType[index]);
+            index++;
         }
 
         return builder.ToString();

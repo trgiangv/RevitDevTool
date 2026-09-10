@@ -1,3 +1,5 @@
+using DevTools.Testing.Abstractions.Contracts;
+
 namespace DevTools.Testing.Host.Loading;
 
 public enum TestingGenerationFileKind
@@ -14,14 +16,14 @@ public sealed record TestingGenerationFile(
     TestingGenerationFileKind Kind);
 
 public sealed record TestingGenerationPlan(
-    string FrameworkId,
+    TestFrameworkId FrameworkId,
     string SourceAssemblyPath,
     IReadOnlyList<TestingGenerationFile> Files,
     string RuntimeAssemblyRelativePath)
 {
     public void ValidateShape()
     {
-        if (string.IsNullOrWhiteSpace(FrameworkId))
+        if (!Enum.IsDefined(FrameworkId))
             throw new TestingGenerationBuildException("Generation framework ID is required.");
         if (Files is null || Files.Count == 0)
             throw new TestingGenerationBuildException("Generation plan must contain files.");

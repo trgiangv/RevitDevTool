@@ -2,11 +2,13 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using DevTools.NUnit.Host;
-using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.NUnit;
+using DevTools.Testing.Host.NUnit.Loading;
+using DevTools.Testing.Host.Runtime;
 using NUnit.Framework;
 using FactAttribute = Xunit.FactAttribute;
 
@@ -17,7 +19,7 @@ public sealed class NetFrameworkGenerationTests
     [Fact]
     public void GenerationBuilder_keeps_versioned_system_and_microsoft_dependencies_private()
     {
-        var workspace = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", Guid.NewGuid().ToString("N"));
+        var workspace = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
         try
         {
@@ -51,14 +53,14 @@ public sealed class NetFrameworkGenerationTests
     [Fact]
     public void GenerationBuilder_excludes_loose_testing_abstractions_identity_from_netfx_generation()
     {
-        var workspace = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", Guid.NewGuid().ToString("N"));
+        var workspace = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
         try
         {
             var testAssembly = NetFrameworkGenerationTestEnvironment.CreateGenerationOneAssembly(workspace, "testing-abstractions-shared");
             var outputDirectory = Path.GetDirectoryName(testAssembly)!;
             var renamedPath = Path.Combine(outputDirectory, "PrivateTestingContract.dll");
-            File.Copy(typeof(TestingRunRequest).Assembly.Location, renamedPath, overwrite: true);
+            File.Copy(typeof(TestRunRequest).Assembly.Location, renamedPath, overwrite: true);
 
             var manifest = NetFrameworkGenerationTestEnvironment.CreateBuilder(
                 NetFrameworkGenerationTestEnvironment.CreateIsolatedGenerationsRoot()).Build(testAssembly);
@@ -153,7 +155,7 @@ public sealed class NetFrameworkGenerationTests
             new NoOpEventSink(),
             CancellationToken.None);
 
-        Assert.That(run.Results.Single().Outcome, Is.EqualTo(TestingOutcomes.Passed));
+        Assert.That(run.Results.Single().Outcome, Is.EqualTo(TestOutcomes.Passed));
     }
 
     [Fact]
@@ -168,11 +170,11 @@ public sealed class NetFrameworkGenerationTests
         using var sessionTwo = factory.Create(generationTwo);
 
         var caseOne = RunDependencyProbe(sessionOne, generationOne);
-        Assert.That(caseOne.Outcome, Is.EqualTo(TestingOutcomes.Passed));
+        Assert.That(caseOne.Outcome, Is.EqualTo(TestOutcomes.Passed));
         Assert.That(caseOne.Output, Does.Contain("dependency-behavior=behavior-one"));
 
         var caseTwo = RunDependencyProbe(sessionTwo, generationTwo);
-        Assert.That(caseTwo.Outcome, Is.EqualTo(TestingOutcomes.Passed));
+        Assert.That(caseTwo.Outcome, Is.EqualTo(TestOutcomes.Passed));
         Assert.That(caseTwo.Output, Does.Contain("dependency-behavior=behavior-two"));
     }
 
@@ -255,14 +257,14 @@ public sealed class NetFrameworkGenerationTests
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var factory = new NUnitRuntimeSessionFactory();
         using var session = factory.Create(manifest);
-        var handle = (NUnitRuntimeSessionHandle)session;
-        var runtimeContract = handle.GetLoadedRuntimeAssembly().GetReferencedAssemblies()
+        var handle = (IsolatedRuntimeSessionHandle)session;
+        var runtimeContract = handle.RuntimeSession.GetType().Assembly.GetReferencedAssemblies()
             .Single(reference => string.Equals(
                 reference.Name,
-                typeof(TestingRunRequest).Assembly.GetName().Name,
+                typeof(TestRunRequest).Assembly.GetName().Name,
                 StringComparison.OrdinalIgnoreCase));
 
-        Assert.That(runtimeContract.FullName, Is.EqualTo(typeof(TestingRunRequest).Assembly.FullName));
+        Assert.That(runtimeContract.FullName, Is.EqualTo(typeof(TestRunRequest).Assembly.FullName));
         AssertGenerationMarkerCasePasses(session, manifest);
     }
 
@@ -289,7 +291,7 @@ public sealed class NetFrameworkGenerationTests
             Guid.NewGuid(),
             manifest.ShadowAssemblyPath,
             "<filter><test>DevTools.NUnit.Runtime.Fixtures.CancellationForwardingFixture</test></filter>");
-        Task<TestingRunResponse>? run = null;
+        Task<TestRunResponse>? run = null;
 
         try
         {
@@ -305,7 +307,7 @@ public sealed class NetFrameworkGenerationTests
             Assert.That(run.Wait(TimeSpan.FromSeconds(15)), Is.True, "The cancelled run did not complete.");
             var response = run.GetAwaiter().GetResult();
             Assert.That(remaining.WaitOne(0), Is.False, "The remaining test body ran after cancellation.");
-            Assert.That(response.Results, Has.None.Matches<TestingCaseResult>(testCase =>
+            Assert.That(response.Results, Has.None.Matches<TestCaseResult>(testCase =>
                 testCase.DisplayName == "RemainingTest_MustNotRunAfterCancellation"));
         }
         finally
@@ -328,8 +330,16 @@ public sealed class NetFrameworkGenerationTests
         AppDomain.CurrentDomain.GetAssemblies()
             .FirstOrDefault(assembly =>
                 string.Equals(assembly.GetName().Name, "nunit.framework", StringComparison.OrdinalIgnoreCase)
-                && !assembly.Location.Contains("Generations", StringComparison.OrdinalIgnoreCase)
-                && !assembly.Location.Contains("ConflictingDefault", StringComparison.OrdinalIgnoreCase));
+                && !IsTempNunitGeneration(assembly.Location));
+
+    private static bool IsTempNunitGeneration(string location)
+    {
+        if (string.IsNullOrEmpty(location))
+            return false;
+        var temp = Path.GetTempPath();
+        return location.StartsWith(temp, StringComparison.OrdinalIgnoreCase)
+            && location.IndexOf("DevTools.nunit", StringComparison.OrdinalIgnoreCase) >= 0;
+    }
 
     private static (int ExitCode, string Output) RunGenerationProbe(string scenario)
     {
@@ -386,10 +396,10 @@ public sealed class NetFrameworkGenerationTests
             CancellationToken.None);
 
         Assert.That(run.GenerationId, Is.EqualTo(manifest.GenerationId));
-        Assert.That(run.Results.Single().Outcome, Is.EqualTo(TestingOutcomes.Passed));
+        Assert.That(run.Results.Single().Outcome, Is.EqualTo(TestOutcomes.Passed));
     }
 
-    private static TestingCaseResult RunDependencyProbe(ITestingRuntimeSession session, TestingGenerationManifest manifest)
+    private static TestCaseResult RunDependencyProbe(ITestingRuntimeSession session, TestingGenerationManifest manifest)
     {
         var run = session.Run(
             CreateTestingRequest(
@@ -405,17 +415,17 @@ public sealed class NetFrameworkGenerationTests
 
     private sealed class NoOpEventSink : ITestingRuntimeEventSink
     {
-        public void Publish(TestingEvent runtimeEvent)
+        public void Publish(TestEvent runtimeEvent)
         {
         }
     }
 
-    private static TestingRunRequest CreateTestingRequest(Guid runId, string assemblyPath, string? filter) => new(
+    private static TestRunRequest CreateTestingRequest(Guid runId, string assemblyPath, string? filter) => new(
         1,
         runId,
-        NUnitFramework.Id,
-        new TestingAssemblyReference(assemblyPath),
+        NUnitGenerationPolicy.FrameworkId,
+        new TestAssemblyReference(assemblyPath),
         string.IsNullOrWhiteSpace(filter)
-            ? TestingSelection.All
-            : TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, filter));
+            ? TestSelection.All
+            : TestSelection.FromFrameworkFilter(NUnitSelectionFilter.XmlFilterFormat, filter!));
 }

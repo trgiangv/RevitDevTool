@@ -2,6 +2,8 @@ using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using NUnit.Framework.Interfaces;
+using TestAttachment = DevTools.Testing.Abstractions.Contracts.TestAttachment;
+using TestCaseResult = DevTools.Testing.Abstractions.Contracts.TestCaseResult;
 
 namespace DevTools.NUnit.Runtime;
 
@@ -10,14 +12,14 @@ internal sealed class NUnitEventListener : ITestListener
     private readonly Guid _runId;
     private readonly ITestingRuntimeEventSink _eventSink;
     private readonly NUnitSourceLocationProvider? _sourceLocationProvider;
-    private readonly TestingRunTraceScope _traceScope;
+    private readonly TestRunTraceScope _traceScope;
     private readonly HashSet<ITest> _terminalCases = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<ITest> _startedCases = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<string, string?> _traceByFullName = new(StringComparer.Ordinal);
 
     public NUnitEventListener(Guid runId, ITestingRuntimeEventSink eventSink,
         NUnitSourceLocationProvider? sourceLocationProvider,
-        TestingRunTraceScope traceScope)
+        TestRunTraceScope traceScope)
     {
         _runId = runId;
         _eventSink = eventSink;
@@ -45,37 +47,37 @@ internal sealed class NUnitEventListener : ITestListener
         if (!string.IsNullOrWhiteSpace(result.Output))
         {
             _traceScope.WriteThrough(result.Output);
-            Publish(TestingEventKinds.Output, null, result.Output, null);
+            Publish(TestEventKinds.Output, null, result.Output, null);
         }
         foreach (var attachment in NUnitResultMapper.MapAttachments(result))
-            Publish(TestingEventKinds.Attachment, null, null, attachment);
+            Publish(TestEventKinds.Attachment, null, null, attachment);
 
         var mapped = NUnitResultMapper.MapCaseResult(result, _sourceLocationProvider);
         if (_traceByFullName.TryGetValue(result.Test.FullName, out var captured))
-            mapped = mapped with { Output = TestingRunTraceScope.Merge(mapped.Output, captured) };
-        Publish(TestingEventKinds.Case, mapped, null, null);
+            mapped = mapped with { Output = TestRunTraceScope.Merge(mapped.Output, captured) };
+        Publish(TestEventKinds.Case, mapped, null, null);
     }
 
     public void TestOutput(TestOutput output)
     {
         if (!string.IsNullOrEmpty(output.Text))
-            Publish(TestingEventKinds.Output, null, output.Text, null);
+            Publish(TestEventKinds.Output, null, output.Text, null);
     }
 
     public void SendMessage(TestMessage message) { }
 
-    public IReadOnlyList<TestingCaseResult> GetAbortedCaseResults()
+    public IReadOnlyList<TestCaseResult> GetAbortedCaseResults()
     {
-        var cases = new List<TestingCaseResult>(_startedCases.Count);
+        var cases = new List<TestCaseResult>(_startedCases.Count);
         foreach (var test in _startedCases)
-            cases.Add(new TestingCaseResult(
-                NUnitTestIdentity.Id(test), test.Name, TestingOutcomes.Cancelled, 0,
+            cases.Add(new TestCaseResult(
+                NUnitTestIdentity.Id(test), test.Name, TestOutcomes.Cancelled, 0,
                 null, null, null, NUnitResultMapper.MapSource(test, _sourceLocationProvider), [], [],
                 NUnitTestIdentity.ParentId(test), test.FullName));
         return cases;
     }
 
-    internal IReadOnlyList<TestingCaseResult> ApplyTraceOutput(IReadOnlyList<TestingCaseResult> cases)
+    internal IReadOnlyList<TestCaseResult> ApplyTraceOutput(IReadOnlyList<TestCaseResult> cases)
     {
         if (_traceByFullName.Count == 0)
             return cases;
@@ -83,14 +85,14 @@ internal sealed class NUnitEventListener : ITestListener
         {
             var fullName = testCase.FullName;
             return fullName is not null && _traceByFullName.TryGetValue(fullName, out var traceOutput)
-                ? testCase with { Output = TestingRunTraceScope.Merge(testCase.Output, traceOutput) }
+                ? testCase with { Output = TestRunTraceScope.Merge(testCase.Output, traceOutput) }
                 : testCase;
         }).ToList();
     }
 
-    private void Publish(string kind, TestingCaseResult? testCase, string? message, TestingAttachment? attachment) =>
-        _eventSink.Publish(new TestingEvent(
-            _runId, kind, testCase, message, attachment, TestingCancellationState.None));
+    private void Publish(string kind, TestCaseResult? testCase, string? message, TestAttachment? attachment) =>
+        _eventSink.Publish(new TestEvent(
+            _runId, kind, testCase, message, attachment, TestCancellationState.None));
 
     private sealed class ReferenceEqualityComparer : IEqualityComparer<ITest>
     {

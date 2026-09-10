@@ -82,21 +82,13 @@ internal static class TestingGenerationSnapshot
                 try
                 {
                     CopyDirectory(stagingDirectory, shadowDirectory);
+                    TryDeleteDirectory(stagingDirectory);
                     return;
                 }
-                catch
+                catch (Exception)
                 {
                     if (Directory.Exists(shadowDirectory))
-                    {
-                        try
-                        {
-                            Directory.Delete(shadowDirectory, recursive: true);
-                        }
-                        catch
-                        {
-                            // Best effort; the next Build attempt must not treat a partial tree as published.
-                        }
-                    }
+                        TryDeleteDirectory(shadowDirectory);
 
                     throw;
                 }
@@ -107,10 +99,30 @@ internal static class TestingGenerationSnapshot
     internal static void CopyDirectory(string sourceDirectory, string destinationDirectory)
     {
         Directory.CreateDirectory(destinationDirectory);
+        foreach (var directory in Directory.EnumerateDirectories(sourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            var relative = TestingGenerationPaths.GetRelativePath(sourceDirectory, directory);
+            Directory.CreateDirectory(Path.Combine(destinationDirectory, relative));
+        }
+
         foreach (var file in Directory.EnumerateFiles(sourceDirectory, "*", SearchOption.AllDirectories))
         {
             var relative = TestingGenerationPaths.GetRelativePath(sourceDirectory, file);
             CopyFile(file, Path.Combine(destinationDirectory, relative));
+        }
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch (Exception)
+        {
+            // Best effort; a leftover staging tree is harmless once the shadow exists,
+            // and a leftover partial shadow must not look published on the next Build.
         }
     }
 

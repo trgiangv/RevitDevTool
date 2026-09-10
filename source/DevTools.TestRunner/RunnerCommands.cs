@@ -2,170 +2,88 @@ using System.Text.Json;
 using ConsoleAppFramework;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
-using DevTools.TestRunner.Core.Debugging;
-using DevTools.TestRunner.Core.Parsing;
-using DevTools.TestRunner.Core.Services;
+using DevTools.TestRunner.Debugging;
+using DevTools.TestRunner.Parsing;
+using DevTools.TestRunner.Services;
 
 namespace DevTools.TestRunner;
 
 public sealed class RunnerCommands(
     IExecutionCoordinator execution,
     IDebuggerAttach debugger,
-    IMachineRunInput machineRunInput)
+    IRunInput runInput)
 {
     /// <summary>
-    /// Run tests inside the Autodesk host through <c>testing/run</c>.
-    /// Framework id is an opaque token from the test project (MTP <c>devtools</c> section).
+    /// Adapter → Runner entry. Stdin is one <see cref="TestRunExecute"/>
+    /// JSON document; <see cref="TestRunRequest.RunId"/> is preserved to the host.
     /// </summary>
-    /// <param name="assembly">Test assembly path.</param>
-    /// <param name="host">Host app (Revit, AutoCAD, Civil3D, ...).</param>
-    /// <param name="hostVersion">Autodesk year (2024, 2026, ...).</param>
-    /// <param name="name">Test method names (JSON array or a single name).</param>
-    /// <param name="test">Test ids / full names (JSON array or a single name).</param>
-    /// <param name="filter">Opaque in-host filter payload. Do not mix with --name/--test.</param>
-    /// <param name="forceLaunch">Always launch a new host (skip reuse).</param>
-    /// <param name="perTestTimeout">Per-test budget in seconds. When launched from the adapter this is already scaled by the run's test count.</param>
-    /// <param name="launchTimeout">Wait for host pipe after launch, in seconds.</param>
-    /// <param name="debug">Attach the parent IDE to the Autodesk host (Visual Studio any-instance when --debug-parent-pid is omitted).</param>
-    /// <param name="debugParentPid">MTP/testhost PID. Presence implies --debug and selects the Visual Studio instance debugging that process.</param>
-    /// <param name="framework">In-host engine id from the test project <c>devtools</c> section.</param>
     [Command("run")]
-    public async Task<int> Run(
-        [Argument] string assembly,
-        string host,
-        string hostVersion,
-        string[]? name = null,
-        string[]? test = null,
-        string? filter = null,
-        bool forceLaunch = false,
-        int perTestTimeout = TestingHostTiming.DefaultPerTestTimeoutSeconds,
-        int launchTimeout = TestingHostTiming.DefaultLaunchTimeoutSeconds,
-        bool debug = false,
-        int? debugParentPid = null,
-        string framework = "",
-        CancellationToken cancellationToken = default)
+    public async Task<int> Run(CancellationToken cancellationToken = default)
     {
-        if (!RunnerCommandContext.TryCreate(
-                assembly,
-                host,
-                hostVersion,
-                forceLaunch,
-                perTestTimeout,
-                launchTimeout,
-                debug,
-                debugParentPid,
-                framework,
-                out var context,
-                out var error)
-            || !RunnerCommandLine.TryCreate(context!, name, test, filter, out var options, out error))
-        {
-            await Console.Error.WriteLineAsync(error ?? "Invalid command line.").ConfigureAwait(false);
-            return RunnerExitCode.CliError;
-        }
+        var json = await runInput.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
 
-        if (!File.Exists(options!.AssemblyPath))
-        {
-            await Console.Error.WriteLineAsync($"Assembly not found: {options.AssemblyPath}").ConfigureAwait(false);
-            return RunnerExitCode.CliError;
-        }
-
-        var invocation = new TestingRunInvocation(
-            TestingProtocol.CurrentVersion,
-            new TestingHostOptions(
-                options.Context.HostName,
-                options.Context.HostVersion,
-                options.Context.ForceLaunch,
-                options.Context.PerTestTimeoutSeconds,
-                options.Context.LaunchTimeoutSeconds,
-                RunnerPath: null,
-                DebugParentPid: options.Context.DebugParentPid),
-            new TestingRunRequest(
-                TestingProtocol.CurrentVersion,
-                Guid.NewGuid(),
-                options.FrameworkId,
-                new TestingAssemblyReference(options.AssemblyPath),
-                options.Selection));
-
-        return await ExecuteInvocation(invocation, options.Context, machine: false, cancellationToken)
-            .ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Machine Adapter → Runner entry. Stdin is one <see cref="TestingRunInvocation"/>
-    /// JSON document; <see cref="TestingRunRequest.RunId"/> is preserved to the host.
-    /// </summary>
-    [Command("machine-run")]
-    public async Task<int> MachineRun(CancellationToken cancellationToken = default)
-    {
-        var json = await ReadMachineRunJsonAsync(cancellationToken).ConfigureAwait(false);
-
-        TestingRunInvocation? invocation;
+        TestRunExecute? execute;
         try
         {
-            invocation = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunInvocation);
+            execute = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
         }
         catch (JsonException exception)
         {
-            await Console.Error.WriteLineAsync($"Invalid machine-run JSON: {exception.Message}").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync($"Invalid run JSON: {exception.Message}").ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
 
-        if (invocation is null)
+        if (execute is null)
         {
-            await Console.Error.WriteLineAsync("machine-run stdin was empty.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync("run stdin was empty.").ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
 
-        if (!TestingProtocol.IsCompatible(invocation.ProtocolVersion)
-            || !TestingProtocol.IsCompatible(invocation.Run.ProtocolVersion))
+        if (!TestingProtocol.IsCompatible(execute.ProtocolVersion)
+            || !TestingProtocol.IsCompatible(execute.Run.ProtocolVersion))
         {
-            var version = TestingProtocol.IsCompatible(invocation.ProtocolVersion)
-                ? invocation.Run.ProtocolVersion
-                : invocation.ProtocolVersion;
+            var version = TestingProtocol.IsCompatible(execute.ProtocolVersion)
+                ? execute.Run.ProtocolVersion
+                : execute.ProtocolVersion;
             await Console.Error.WriteLineAsync(TestingProtocol.CreateUnsupportedMessage(version))
                 .ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
 
-        if (!File.Exists(invocation.Run.Assembly.Path))
+        if (!File.Exists(execute.Run.Assembly.Path))
         {
-            await Console.Error.WriteLineAsync($"Assembly not found: {invocation.Run.Assembly.Path}")
+            await Console.Error.WriteLineAsync($"Assembly not found: {execute.Run.Assembly.Path}")
                 .ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
 
         if (!RunnerCommandContext.TryCreate(
-                invocation.Run.Assembly.Path,
-                invocation.Host.HostName,
-                invocation.Host.HostVersion,
-                invocation.Host.ForceLaunch,
-                invocation.Host.PerTestTimeoutSeconds,
-                invocation.Host.LaunchTimeoutSeconds,
-                debug: invocation.Host.DebugParentPid is > 0,
-                invocation.Host.DebugParentPid,
-                invocation.Run.FrameworkId,
-                invocation.Host.EffectiveRequestTimeoutSeconds,
+                execute.Run.Assembly.Path,
+                execute.Host.HostName,
+                execute.Host.HostVersion,
+                execute.Host.ForceLaunch,
+                execute.Host.PerTestTimeoutSeconds,
+                execute.Host.LaunchTimeoutSeconds,
+                debug: execute.Host.DebugParentPid is > 0,
+                execute.Host.DebugParentPid,
+                execute.Run.FrameworkId,
+                execute.Host.EffectiveRequestTimeoutSeconds,
                 out var context,
                 out var error))
         {
-            await Console.Error.WriteLineAsync(error ?? "Invalid machine-run invocation.").ConfigureAwait(false);
+            await Console.Error.WriteLineAsync(error ?? "Invalid run JSON.").ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
 
-        return await ExecuteInvocation(invocation, context!, machine: true, cancellationToken)
-            .ConfigureAwait(false);
+        return await Execute(execute, context!, cancellationToken).ConfigureAwait(false);
     }
 
-    private Task<string> ReadMachineRunJsonAsync(CancellationToken cancellationToken) =>
-        machineRunInput.ReadToEndAsync(cancellationToken);
-
-    private async Task<int> ExecuteInvocation(
-        TestingRunInvocation invocation,
+    private async Task<int> Execute(
+        TestRunExecute execute,
         RunnerCommandContext context,
-        bool machine,
         CancellationToken cancellationToken)
     {
-        using var cancelSignal = TestingCancelSignal.Create(invocation.Run.RunId);
+        using var cancelSignal = TestCancelSignal.Create(execute.Run.RunId);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _ = Task.Run(() =>
         {
@@ -179,19 +97,12 @@ public sealed class RunnerCommands(
             }
         });
 
-        var progress = new Progress<TestingEvent>(testingEvent =>
+        var progress = new Progress<TestEvent>(testingEvent =>
         {
-            if (machine)
-            {
-                Console.WriteLine(
-                    JsonSerializer.Serialize(
-                        new TestingRunnerStreamMessage(Event: testingEvent),
-                        TestingJsonContext.Default.TestingRunnerStreamMessage));
-                return;
-            }
-
-            if (testingEvent.Case is { } result)
-                Console.Error.WriteLine($"[progress] {result.DisplayName} -> {result.Outcome}");
+            Console.WriteLine(
+                JsonSerializer.Serialize(
+                    new TestRunnerStreamMessage(Event: testingEvent),
+                    TestingJsonContext.Default.TestRunnerStreamMessage));
         });
 
         var result = await execution.ExecuteAsync(
@@ -201,13 +112,13 @@ public sealed class RunnerCommands(
                 {
                     await using var client = await TestPipeClient.ConnectAsync(
                             pipe.PipeName,
-                            TimeSpan.FromSeconds(TestingHostTiming.HostPipeConnectTimeoutSeconds),
+                            TimeSpan.FromSeconds(TestHostTiming.HostPipeConnectTimeoutSeconds),
                             requestCancellationToken)
                         .ConfigureAwait(false);
-                    var hello = await client.HelloAsync(invocation.Run.FrameworkId, requestCancellationToken)
+                    var hello = await client.HelloAsync(execute.Run.FrameworkId, requestCancellationToken)
                         .ConfigureAwait(false);
-                    EnsureHelloMatches(hello, invocation);
-                    return await client.RunAsync(invocation.Run, progress, requestCancellationToken)
+                    EnsureHelloMatches(hello, execute);
+                    return await client.RunAsync(execute.Run, progress, requestCancellationToken)
                         .ConfigureAwait(false);
                 },
                 linked.Token)
@@ -224,57 +135,50 @@ public sealed class RunnerCommands(
             };
         }
 
-        if (machine)
-        {
-            Console.WriteLine(
-                JsonSerializer.Serialize(
-                    new TestingRunnerStreamMessage(Response: result.Value),
-                    TestingJsonContext.Default.TestingRunnerStreamMessage));
-        }
-        else
-        {
-            Console.WriteLine(JsonSerializer.Serialize(result.Value, TestingJsonContext.Default.TestingRunResponse));
-        }
+        Console.WriteLine(
+            JsonSerializer.Serialize(
+                new TestRunnerStreamMessage(Response: result.Value),
+                TestingJsonContext.Default.TestRunnerStreamMessage));
 
-        return HasTestingFailure(result.Value!) ? RunnerExitCode.TestFailure : RunnerExitCode.Ok;
+        return HasRunFailure(result.Value!) ? RunnerExitCode.TestFailure : RunnerExitCode.Ok;
     }
 
-    private static void EnsureHelloMatches(TestingHelloResponse hello, TestingRunInvocation invocation)
+    private static void EnsureHelloMatches(TestHelloResponse hello, TestRunExecute execute)
     {
-        if (!string.Equals(hello.FrameworkId, invocation.Run.FrameworkId, StringComparison.OrdinalIgnoreCase))
+        if (hello.FrameworkId != execute.Run.FrameworkId)
         {
             throw new InvalidOperationException(
-                $"Host framework '{hello.FrameworkId}' does not match '{invocation.Run.FrameworkId}'.");
+                $"Host framework '{hello.FrameworkId}' does not match '{execute.Run.FrameworkId}'.");
         }
 
-        if (!string.Equals(hello.Host, invocation.Host.HostName, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(hello.Host, execute.Host.HostName, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                $"Host '{hello.Host}' does not match requested '{invocation.Host.HostName}'.");
+                $"Host '{hello.Host}' does not match requested '{execute.Host.HostName}'.");
         }
 
-        if (!string.Equals(hello.HostVersion, invocation.Host.HostVersion, StringComparison.Ordinal))
+        if (!string.Equals(hello.HostVersion, execute.Host.HostVersion, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
-                $"Host version '{hello.HostVersion}' does not match requested '{invocation.Host.HostVersion}'.");
+                $"Host version '{hello.HostVersion}' does not match requested '{execute.Host.HostVersion}'.");
         }
 
         if (hello.IsBusy)
             throw new InvalidOperationException("Host testing session is busy.");
     }
 
-    private static bool HasTestingFailure(TestingRunResponse response)
+    private static bool HasRunFailure(TestRunResponse response)
     {
         if (!string.IsNullOrWhiteSpace(response.DiagnosticCode))
             return true;
 
-        if (response.CancellationState is TestingCancellationState.Completed
-            or TestingCancellationState.Poisoned)
+        if (response.CancellationState is TestCancellationState.Completed
+            or TestCancellationState.Poisoned)
             return true;
 
         return response.Results.Any(result =>
-            string.Equals(result.Outcome, TestingOutcomes.Failed, StringComparison.Ordinal)
-            || string.Equals(result.Outcome, TestingOutcomes.Error, StringComparison.Ordinal)
-            || string.Equals(result.Outcome, TestingOutcomes.Cancelled, StringComparison.Ordinal));
+            string.Equals(result.Outcome, TestOutcomes.Failed, StringComparison.Ordinal)
+            || string.Equals(result.Outcome, TestOutcomes.Error, StringComparison.Ordinal)
+            || string.Equals(result.Outcome, TestOutcomes.Cancelled, StringComparison.Ordinal));
     }
 }

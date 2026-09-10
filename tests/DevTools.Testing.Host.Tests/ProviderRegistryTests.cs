@@ -7,23 +7,13 @@ namespace DevTools.Testing.Host.Tests;
 public sealed class ProviderRegistryTests
 {
     [Fact]
-    public void GetRequired_normalizes_arbitrary_provider_ids_by_trim_and_invariant_lowercase()
-    {
-        var provider = new FakeProvider("  Provider.Example  ");
-        var registry = new TestingProviderRegistry([provider]);
-
-        Assert.Same(provider, registry.GetRequired("provider.example"));
-        Assert.Same(provider, registry.GetRequired(" PROVIDER.EXAMPLE "));
-    }
-
-    [Fact]
     public void Constructor_rejects_duplicate_ids()
     {
         var ex = Assert.Throws<ArgumentException>(() =>
             new TestingProviderRegistry(
             [
-                new FakeProvider("provider.example"),
-                new FakeProvider(" PROVIDER.EXAMPLE "),
+                new FakeProvider(TestFrameworkId.NUnit),
+                new FakeProvider(TestFrameworkId.NUnit),
             ]));
 
         Assert.Contains("Duplicate", ex.Message, StringComparison.Ordinal);
@@ -32,28 +22,28 @@ public sealed class ProviderRegistryTests
     [Fact]
     public void GetRequired_unknown_id_throws()
     {
-        var registry = new TestingProviderRegistry([new FakeProvider("provider.example")]);
-        Assert.Throws<KeyNotFoundException>(() => registry.GetRequired("unregistered"));
+        var registry = new TestingProviderRegistry([new FakeProvider(TestFrameworkId.NUnit)]);
+        Assert.Throws<KeyNotFoundException>(() => registry.GetRequired(TestFrameworkId.TUnit));
     }
 
     [Fact]
-    public void Cancel_notifies_every_registered_provider_without_framework_hardcoding()
+    public void Cancel_notifies_every_registered_provider()
     {
         var runId = Guid.NewGuid();
-        var observed = new List<(string FrameworkId, Guid RunId)>();
-        var first = new FakeProvider("provider.example")
+        var observed = new List<(TestFrameworkId FrameworkId, Guid RunId)>();
+        var first = new FakeProvider(TestFrameworkId.NUnit)
         {
             OnCancel = id =>
             {
-                observed.Add(("provider.example", id));
+                observed.Add((TestFrameworkId.NUnit, id));
                 return false;
             },
         };
-        var second = new FakeProvider("future-provider")
+        var second = new FakeProvider(TestFrameworkId.TUnit)
         {
             OnCancel = id =>
             {
-                observed.Add(("future-provider", id));
+                observed.Add((TestFrameworkId.TUnit, id));
                 return true;
             },
         };
@@ -63,36 +53,36 @@ public sealed class ProviderRegistryTests
 
         Assert.True(acknowledged);
         Assert.Equal(
-            [("provider.example", runId), ("future-provider", runId)],
+            [(TestFrameworkId.NUnit, runId), (TestFrameworkId.TUnit, runId)],
             observed);
     }
 }
 
-internal sealed class FakeProvider(string frameworkId) : IHostTestFrameworkProvider
+internal sealed class FakeProvider(TestFrameworkId frameworkId) : ITestFrameworkProvider
 {
-    public string FrameworkId { get; } = frameworkId;
+    public TestFrameworkId FrameworkId { get; } = frameworkId;
 
-    public Func<TestingRunRequest, TestingRunResponse>? OnRun { get; set; }
+    public Func<TestRunRequest, TestRunResponse>? OnRun { get; set; }
 
     public Func<Guid, bool>? OnCancel { get; set; }
 
     public Exception? RunException { get; set; }
 
-    public TestingRunResponse Run(
-        TestingRunRequest request,
-        ITestingEventSink eventSink,
+    public TestRunResponse Run(
+        TestRunRequest request,
+        ITestEventSink eventSink,
         CancellationToken cancellationToken)
     {
         if (RunException is not null)
             throw RunException;
 
         return OnRun?.Invoke(request)
-            ?? new TestingRunResponse(
+            ?? new TestRunResponse(
                 request.RunId,
                 FrameworkId,
                 GenerationId: "gen",
                 Results: [],
-                CancellationState: TestingCancellationState.None,
+                CancellationState: TestCancellationState.None,
                 DiagnosticCode: null,
                 DiagnosticMessage: null);
     }

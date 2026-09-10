@@ -18,10 +18,10 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         _runnerPath = runnerPath;
     }
 
-    public TestingRunResponse Run(
-        TestingRunRequest request,
-        TestingHostOptions hostOptions,
-        Action<TestingEvent> onEvent)
+    public TestRunResponse Run(
+        TestRunRequest request,
+        TestHostOptions hostOptions,
+        Action<TestEvent> onEvent)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(hostOptions);
@@ -29,23 +29,23 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 
         if (!TestingProtocol.IsCompatible(request.ProtocolVersion))
         {
-            return new TestingRunResponse(
+            return new TestRunResponse(
                 request.RunId,
                 request.FrameworkId,
                 GenerationId: null,
                 Results: [],
-                CancellationState: TestingCancellationState.None,
+                CancellationState: TestCancellationState.None,
                 DiagnosticCode: TestingProtocol.IncompatibleCode,
                 DiagnosticMessage: TestingProtocol.CreateUnsupportedMessage(request.ProtocolVersion));
         }
 
-        var json = TestingRunnerCli.SerializeInvocation(request, hostOptions);
-        return RunProcess(hostOptions, [TestingRunnerCli.MachineRunCommand], json, request.RunId, onEvent);
+        var json = TestRunnerCli.SerializeExecute(request, hostOptions);
+        return RunProcess(hostOptions, [TestRunnerCli.RunCommand], json, request.RunId, onEvent);
     }
 
     public void Cancel(Guid runId)
     {
-        TestingCancelSignal.TrySignal(runId);
+        TestCancelSignal.TrySignal(runId);
         Process? process;
         lock (_processLock)
         {
@@ -77,6 +77,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         }
         catch (InvalidOperationException)
         {
+            // ignore
         }
     }
 
@@ -93,7 +94,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         }
 
         if (runId is { } id)
-            TestingCancelSignal.TrySignal(id);
+            TestCancelSignal.TrySignal(id);
 
         try
         {
@@ -106,12 +107,12 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         }
     }
 
-    private TestingRunResponse RunProcess(
-        TestingHostOptions hostOptions,
+    private TestRunResponse RunProcess(
+        TestHostOptions hostOptions,
         IReadOnlyList<string> arguments,
         string stdin,
         Guid runId,
-        Action<TestingEvent> onEvent)
+        Action<TestEvent> onEvent)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -147,99 +148,130 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         }
     }
 
-    private static TestingRunResponse ReadRun(
+    private static TestRunResponse ReadRun(
         Process process,
-        TestingHostOptions hostOptions,
+        TestHostOptions hostOptions,
         string stdin,
         Guid runId,
-        Action<TestingEvent> onEvent)
+        Action<TestEvent> onEvent)
     {
         var parsed = new StdoutParseState();
-        var stdoutTask = Task.Run(() =>
-        {
-            while (process.StandardOutput.ReadLine() is { } line)
-            {
-                parsed.Buffer.AppendLine(line);
-                ConsumeStdoutLine(line, onEvent, parsed);
-            }
-        });
+        var stdoutTask = Task.Run(() => DrainStdout(process, onEvent, parsed));
         var stderrTask = process.StandardError.ReadToEndAsync();
+        WriteStdin(process, stdin);
+        WaitForRunnerExit(process, hostOptions, stdoutTask, stderrTask);
+        DrainOutput(stdoutTask, stderrTask);
+        var response = RequireResponse(parsed, process, stderrTask.Result, onEvent);
+        EnsureSameRun(response, runId);
+        ReplayIfBatchOnly(parsed, onEvent);
+        return response;
+    }
+
+    private static void DrainStdout(Process process, Action<TestEvent> onEvent, StdoutParseState parsed)
+    {
+        while (process.StandardOutput.ReadLine() is { } line)
+        {
+            parsed.Buffer.AppendLine(line);
+            ConsumeStdoutLine(line, onEvent, parsed);
+        }
+    }
+
+    private static void WriteStdin(Process process, string stdin)
+    {
         var stdinBytes = Encoding.UTF8.GetBytes(stdin);
         process.StandardInput.BaseStream.Write(stdinBytes, 0, stdinBytes.Length);
         process.StandardInput.BaseStream.Flush();
         process.StandardInput.Close();
+    }
 
-        var timeoutMs = TestingHostTiming.ComputeAdapterRunnerProcessTimeoutSeconds(
+    private static void WaitForRunnerExit(
+        Process process,
+        TestHostOptions hostOptions,
+        Task stdoutTask,
+        Task<string> stderrTask)
+    {
+        var timeoutMs = TestHostTiming.ComputeAdapterRunnerProcessTimeoutSeconds(
             hostOptions.LaunchTimeoutSeconds,
             hostOptions.EffectiveRequestTimeoutSeconds) * 1000;
+        if (process.WaitForExit(timeoutMs))
+            return;
 
-        if (!process.WaitForExit(timeoutMs))
+        try
         {
-            try
-            {
-                process.Kill();
-            }
-            catch
-            {
-                // Best effort.
-            }
-
-            Task.WaitAll([stdoutTask, stderrTask], TestingHostTiming.TimedOutProcessOutputDrainMilliseconds);
-            var stderr = stderrTask.IsCompleted ? stderrTask.Result : string.Empty;
-            var detail = string.IsNullOrWhiteSpace(stderr) ? string.Empty : $"{Environment.NewLine}{stderr.Trim()}";
-            throw new TimeoutException(
-                $"The DevTools TestRunner process did not finish within {timeoutMs / 1000}s.{detail}");
+            process.Kill();
+        }
+        catch
+        {
+            // Best effort.
         }
 
-        if (!Task.WaitAll([stdoutTask, stderrTask], TestingHostTiming.ExitedProcessOutputDrainMilliseconds))
+        Task.WaitAll([stdoutTask, stderrTask], TestHostTiming.TimedOutProcessOutputDrainMilliseconds);
+        var stderr = stderrTask.IsCompleted ? stderrTask.Result : string.Empty;
+        var detail = string.IsNullOrWhiteSpace(stderr) ? string.Empty : $"{Environment.NewLine}{stderr.Trim()}";
+        throw new TimeoutException(
+            $"The DevTools TestRunner process did not finish within {timeoutMs / 1000}s.{detail}");
+    }
+
+    private static void DrainOutput(Task stdoutTask, Task stderrTask)
+    {
+        if (!Task.WaitAll([stdoutTask, stderrTask], TestHostTiming.ExitedProcessOutputDrainMilliseconds))
             throw new TimeoutException("Timed out reading TestRunner output.");
+    }
 
-        var stderrOutput = stderrTask.Result;
-
+    private static TestRunResponse RequireResponse(
+        StdoutParseState parsed,
+        Process process,
+        string stderrOutput,
+        Action<TestEvent> onEvent)
+    {
         if (parsed.Response is null)
             ConsumeStdoutLine(parsed.Buffer.ToString(), onEvent, parsed);
 
-        if (parsed.Response is null)
-        {
-            var details = string.IsNullOrWhiteSpace(stderrOutput)
-                ? $"TestRunner process exited with code {process.ExitCode}."
-                : stderrOutput.Trim();
-            throw new InvalidOperationException(details);
-        }
+        if (parsed.Response is not null)
+            return parsed.Response;
 
-        if (parsed.Response.RunId != runId)
-        {
-            throw new InvalidOperationException(
-                $"TestRunner returned RunId '{parsed.Response.RunId}' but the adapter sent '{runId}'.");
-        }
+        var details = string.IsNullOrWhiteSpace(stderrOutput)
+            ? $"TestRunner process exited with code {process.ExitCode}."
+            : stderrOutput.Trim();
+        throw new InvalidOperationException(details);
+    }
 
-        if (!parsed.SawEvent)
-        {
-            foreach (var result in parsed.Response.Results)
-            {
-                onEvent(new TestingEvent(
-                    parsed.Response.RunId,
-                    TestingEventKinds.Case,
-                    result,
-                    null,
-                    null,
-                    TestingCancellationState.None));
-            }
-        }
+    private static void EnsureSameRun(TestRunResponse response, Guid runId)
+    {
+        if (response.RunId == runId)
+            return;
 
-        return parsed.Response;
+        throw new InvalidOperationException(
+            $"TestRunner returned RunId '{response.RunId}' but the adapter sent '{runId}'.");
+    }
+
+    private static void ReplayIfBatchOnly(StdoutParseState parsed, Action<TestEvent> onEvent)
+    {
+        if (parsed.SawEvent || parsed.Response is null)
+            return;
+
+        foreach (var result in parsed.Response.Results)
+        {
+            onEvent(new TestEvent(
+                parsed.Response.RunId,
+                TestEventKinds.Case,
+                result,
+                null,
+                null,
+                TestCancellationState.None));
+        }
     }
 
     private sealed class StdoutParseState
     {
-        public TestingRunResponse? Response;
+        public TestRunResponse? Response;
         public bool SawEvent;
         public StringBuilder Buffer { get; } = new();
     }
 
     private static void ConsumeStdoutLine(
         string line,
-        Action<TestingEvent> onEvent,
+        Action<TestEvent> onEvent,
         StdoutParseState state)
     {
         if (string.IsNullOrWhiteSpace(line))
@@ -255,34 +287,16 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 
             if (message.Response is { } streamed)
                 state.Response = streamed;
-            return;
         }
-
-        if (TryReadResponse(line, out var parsed) && parsed is not null)
-            state.Response = parsed;
     }
 
-    private static bool TryReadStreamMessage(string json, out TestingRunnerStreamMessage? message)
+    private static bool TryReadStreamMessage(string json, out TestRunnerStreamMessage? message)
     {
         message = null;
         try
         {
-            message = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunnerStreamMessage);
+            message = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunnerStreamMessage);
             return message is { Event: not null } or { Response: not null };
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-    }
-
-    private static bool TryReadResponse(string json, out TestingRunResponse? response)
-    {
-        response = null;
-        try
-        {
-            response = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunResponse);
-            return response is not null;
         }
         catch (JsonException)
         {

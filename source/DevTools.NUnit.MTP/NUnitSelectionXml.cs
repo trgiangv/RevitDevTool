@@ -9,6 +9,8 @@ namespace DevTools.NUnit.MTP;
 /// </summary>
 internal static class NUnitSelectionXml
 {
+    public const string XmlFilterFormat = "filter-xml";
+
     public static string? ToFilterXml(IReadOnlyList<string>? names)
     {
         var cleaned = Clean(names);
@@ -22,7 +24,7 @@ internal static class NUnitSelectionXml
         return new XElement("filter", inner).ToString(SaveOptions.DisableFormatting);
     }
 
-    public static string? ToFilterXml(TestingSelection? selection) =>
+    public static string? ToFilterXml(TestSelection? selection) =>
         ToFilterXml(selection?.Names);
 
     private static List<string> Clean(IReadOnlyList<string>? values)

@@ -1,26 +1,28 @@
 using DevTools.Testing.Abstractions.Contracts;
 using NUnit.Framework.Interfaces;
 using NUnit.Framework.Internal;
+using TestAttachment = DevTools.Testing.Abstractions.Contracts.TestAttachment;
+using TestCaseResult = DevTools.Testing.Abstractions.Contracts.TestCaseResult;
 
 namespace DevTools.NUnit.Runtime;
 
 internal static class NUnitResultMapper
 {
-    public static IReadOnlyList<TestingCaseResult> MapRunResults(
+    public static IReadOnlyList<TestCaseResult> MapRunResults(
         ITestResult root,
         NUnitSourceLocationProvider? sourceLocationProvider)
     {
-        var cases = new List<TestingCaseResult>();
+        var cases = new List<TestCaseResult>();
         CollectCaseResults(root, sourceLocationProvider, cases);
         return cases;
     }
 
-    public static TestingCaseResult MapCaseResult(
+    public static TestCaseResult MapCaseResult(
         ITestResult result,
         NUnitSourceLocationProvider? sourceLocationProvider)
     {
         var test = result.Test;
-        return new TestingCaseResult(
+        return new TestCaseResult(
             NUnitTestIdentity.Id(test),
             test.Name,
             MapOutcome(result.ResultState),
@@ -36,15 +38,15 @@ internal static class NUnitResultMapper
             MapSkipReason(test, result.ResultState));
     }
 
-    internal static IReadOnlyList<TestingAttachment> MapAttachments(ITestResult result)
+    internal static IReadOnlyList<TestAttachment> MapAttachments(ITestResult result)
     {
         if (result.TestAttachments.Count == 0)
             return [];
 
-        var attachments = new List<TestingAttachment>();
-        foreach (TestAttachment attachment in result.TestAttachments)
+        var attachments = new List<TestAttachment>();
+        foreach (var attachment in result.TestAttachments)
         {
-            attachments.Add(new TestingAttachment(
+            attachments.Add(new TestAttachment(
                 attachment.FilePath,
                 attachment.Description ?? Path.GetFileName(attachment.FilePath)));
         }
@@ -55,7 +57,7 @@ internal static class NUnitResultMapper
     private static void CollectCaseResults(
         ITestResult result,
         NUnitSourceLocationProvider? sourceLocationProvider,
-        List<TestingCaseResult> cases)
+        List<TestCaseResult> cases)
     {
         if (!result.Test.IsSuite)
         {
@@ -70,30 +72,30 @@ internal static class NUnitResultMapper
     internal static string MapOutcome(ResultState resultState)
     {
         if (resultState == ResultState.Success || resultState == ResultState.Warning)
-            return TestingOutcomes.Passed;
+            return TestOutcomes.Passed;
 
         if (resultState == ResultState.Inconclusive)
-            return TestingOutcomes.Inconclusive;
+            return TestOutcomes.Inconclusive;
 
         if (resultState == ResultState.Cancelled)
-            return TestingOutcomes.Cancelled;
+            return TestOutcomes.Cancelled;
 
         if (resultState == ResultState.Ignored || resultState == ResultState.Explicit || resultState == ResultState.Skipped)
-            return TestingOutcomes.Skipped;
+            return TestOutcomes.Skipped;
 
         if (resultState == ResultState.Error
             || resultState == ResultState.SetUpError
             || resultState == ResultState.TearDownError
             || resultState == ResultState.NotRunnable)
-            return TestingOutcomes.Error;
+            return TestOutcomes.Error;
 
         return resultState.Status switch
         {
-            TestStatus.Failed => TestingOutcomes.Failed,
-            TestStatus.Skipped => TestingOutcomes.Skipped,
-            TestStatus.Inconclusive => TestingOutcomes.Inconclusive,
-            TestStatus.Passed or TestStatus.Warning => TestingOutcomes.Passed,
-            _ => TestingOutcomes.Failed
+            TestStatus.Failed => TestOutcomes.Failed,
+            TestStatus.Skipped => TestOutcomes.Skipped,
+            TestStatus.Inconclusive => TestOutcomes.Inconclusive,
+            TestStatus.Passed or TestStatus.Warning => TestOutcomes.Passed,
+            _ => TestOutcomes.Failed
         };
 
     }
@@ -139,9 +141,9 @@ internal static class NUnitResultMapper
         };
     }
 
-    private static IReadOnlyList<TestingTrait> MapTraits(ITest test)
+    private static IReadOnlyList<TestTrait> MapTraits(ITest test)
     {
-        var traits = new List<TestingTrait>();
+        var traits = new List<TestTrait>();
         AppendPropertyTraits(test.Properties, traits);
 
         if (traits.Count == 0)
@@ -182,7 +184,7 @@ internal static class NUnitResultMapper
         };
     }
 
-    private static void AppendPropertyTraits(IPropertyBag properties, List<TestingTrait> traits)
+    private static void AppendPropertyTraits(IPropertyBag properties, List<TestTrait> traits)
     {
         foreach (var key in properties.Keys)
         {
@@ -197,7 +199,7 @@ internal static class NUnitResultMapper
                 if (value is null)
                     continue;
 
-                traits.Add(new TestingTrait(
+                traits.Add(new TestTrait(
                     NormalizeTraitName(key),
                     Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty));
             }
@@ -207,7 +209,7 @@ internal static class NUnitResultMapper
     private static string NormalizeTraitName(string key) =>
         string.Equals(key, PropertyNames.Category, StringComparison.Ordinal) ? "Category" : key;
 
-    internal static TestingSourceLocation? MapSource(
+    internal static TestSourceLocation? MapSource(
         ITest test,
         NUnitSourceLocationProvider? sourceLocationProvider)
     {
@@ -217,6 +219,6 @@ internal static class NUnitResultMapper
         if (!sourceLocationProvider.TryGetSourceLocation(test, out var filePath, out var lineNumber))
             return null;
 
-        return new TestingSourceLocation(filePath!, lineNumber);
+        return new TestSourceLocation(filePath!, lineNumber);
     }
 }

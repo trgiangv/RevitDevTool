@@ -16,11 +16,11 @@ public sealed class TestingProtocolGoldenTests
             "1",
             TestingProtocol.Hello,
             JsonSerializer.SerializeToElement(
-                new TestingHelloRequest(TestingProtocol.CurrentVersion, "provider.example"),
-                TestingJsonContext.Default.TestingHelloRequest));
+                new TestHelloRequest(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit),
+                TestingJsonContext.Default.TestHelloRequest));
 
         Assert.Equal(
-            """{"type":"request","id":"1","method":"testing/hello","params":{"protocol_version":2,"framework_id":"provider.example"},"isError":false}""",
+            """{"type":"request","id":"1","method":"testing/hello","params":{"protocol_version":2,"framework_id":"NUnit"},"isError":false}""",
             Serialize(message));
         Assert.DoesNotContain("testing/discover", Serialize(message), StringComparison.Ordinal);
     }
@@ -31,31 +31,31 @@ public sealed class TestingProtocolGoldenTests
         var request = CreateRunRequest(
             TestingProtocol.CurrentVersion,
             ["  spaced id  ", "xunit.v3://method/Theory(input: 1)/0"]);
-        var json = JsonSerializer.Serialize(request, TestingJsonContext.Default.TestingRunRequest);
-        var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunRequest);
+        var json = JsonSerializer.Serialize(request, TestingJsonContext.Default.TestRunRequest);
+        var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunRequest);
 
         Assert.NotNull(roundTrip);
         Assert.Equal(request.Assembly.Path, roundTrip.Assembly.Path);
-        Assert.Equal(TestingSelectionKind.TestIds, roundTrip.Selection.Kind);
+        Assert.Equal(TestSelectionKind.TestIds, roundTrip.Selection.Kind);
         Assert.Equal(request.Selection.TestIds[0], roundTrip.Selection.TestIds[0]);
         Assert.Equal(request.Selection.TestIds[1], roundTrip.Selection.TestIds[1]);
         Assert.Contains("\"protocol_version\":2", json, StringComparison.Ordinal);
-        Assert.Contains("\"framework_id\":\"provider.example\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"framework_id\":\"NUnit\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain("testing/discover", json, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Invocation_round_trips_run_id_and_envelope_version()
+    public void Execute_round_trips_run_id_and_envelope_version()
     {
         var request = CreateRunRequest(
             TestingProtocol.CurrentVersion,
             ["  spaced id  ", "xunit.v3://method/Theory(input: 1)/0"]);
-        var invocation = new TestingRunInvocation(
+        var invocation = new TestRunExecute(
             TestingProtocol.CurrentVersion,
-            new TestingHostOptions("Revit", "2025", true, 60, 180, @"C:\Runner.exe", DebugParentPid: 4242),
+            new TestHostOptions("Revit", "2025", true, 60, 180, DebugParentPid: 4242),
             request);
-        var json = JsonSerializer.Serialize(invocation, TestingJsonContext.Default.TestingRunInvocation);
-        var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestingRunInvocation);
+        var json = JsonSerializer.Serialize(invocation, TestingJsonContext.Default.TestRunExecute);
+        var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
 
         Assert.NotNull(roundTrip);
         Assert.Equal(TestingProtocol.CurrentVersion, roundTrip.ProtocolVersion);
@@ -69,14 +69,14 @@ public sealed class TestingProtocolGoldenTests
     }
 
     [Theory]
-    [InlineData(TestingCancellationState.None)]
-    [InlineData(TestingCancellationState.Requested)]
-    [InlineData(TestingCancellationState.Acknowledged)]
-    [InlineData(TestingCancellationState.Completed)]
-    [InlineData(TestingCancellationState.Poisoned)]
-    public void Event_and_response_round_trip_every_cancellation_state(TestingCancellationState state)
+    [InlineData(TestCancellationState.None)]
+    [InlineData(TestCancellationState.Requested)]
+    [InlineData(TestCancellationState.Acknowledged)]
+    [InlineData(TestCancellationState.Completed)]
+    [InlineData(TestCancellationState.Poisoned)]
+    public void Event_and_response_round_trip_every_cancellation_state(TestCancellationState state)
     {
-        var result = new TestingCaseResult(
+        var result = new TestCaseResult(
             "opaque-id",
             "display",
             "Failed",
@@ -84,29 +84,29 @@ public sealed class TestingProtocolGoldenTests
             "message",
             "stack",
             "output",
-            new TestingSourceLocation("C:\\tests\\Case.cs", 12),
-            [new TestingTrait("Category", "Host")],
-            [new TestingAttachment("C:\\temp\\log.txt", "trace")]);
-        var testingEvent = new TestingEvent(
+            new TestSourceLocation("C:\\tests\\Case.cs", 12),
+            [new TestTrait("Category", "Host")],
+            [new TestAttachment("C:\\temp\\log.txt", "trace")]);
+        var testingEvent = new TestEvent(
             SampleRunId,
-            TestingEventKinds.Cancellation,
+            TestEventKinds.Cancellation,
             result,
             state.ToString(),
             result.Attachments[0],
             state);
-        var response = new TestingRunResponse(
+        var response = new TestRunResponse(
             SampleRunId,
-            "future-provider",
+            TestFrameworkId.TUnit,
             "gen-1",
             [result],
             state,
             "future-provider/runtime_restart_required",
             "restart");
 
-        var eventJson = JsonSerializer.Serialize(testingEvent, TestingJsonContext.Default.TestingEvent);
-        var eventRoundTrip = JsonSerializer.Deserialize(eventJson, TestingJsonContext.Default.TestingEvent);
-        var responseJson = JsonSerializer.Serialize(response, TestingJsonContext.Default.TestingRunResponse);
-        var responseRoundTrip = JsonSerializer.Deserialize(responseJson, TestingJsonContext.Default.TestingRunResponse);
+        var eventJson = JsonSerializer.Serialize(testingEvent, TestingJsonContext.Default.TestEvent);
+        var eventRoundTrip = JsonSerializer.Deserialize(eventJson, TestingJsonContext.Default.TestEvent);
+        var responseJson = JsonSerializer.Serialize(response, TestingJsonContext.Default.TestRunResponse);
+        var responseRoundTrip = JsonSerializer.Deserialize(responseJson, TestingJsonContext.Default.TestRunResponse);
 
         Assert.NotNull(eventRoundTrip);
         Assert.Equal(state, eventRoundTrip.CancellationState);
@@ -150,13 +150,13 @@ public sealed class TestingProtocolGoldenTests
         Assert.Null(typeof(ITestRunnerTransport).GetMethod("Discover"));
     }
 
-    static TestingRunRequest CreateRunRequest(int protocolVersion, IReadOnlyList<string> testIds) =>
+    static TestRunRequest CreateRunRequest(int protocolVersion, IReadOnlyList<string> testIds) =>
         new(
             protocolVersion,
             SampleRunId,
-            "provider.example",
-            new TestingAssemblyReference(@"C:\tests\Sample.dll"),
-            TestingSelection.FromTestIds(testIds));
+            TestFrameworkId.NUnit,
+            new TestAssemblyReference(@"C:\tests\Sample.dll"),
+            TestSelection.FromTestIds(testIds));
 
     static string Serialize(BridgeMessage message) =>
         JsonSerializer.Serialize(message, IpcJsonContext.Default.BridgeMessage);

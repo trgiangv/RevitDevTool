@@ -28,8 +28,8 @@ public sealed class NUnitCollectPushTests
     public void Discover_by_collected_uid_returns_the_same_leaf()
     {
         var stub = CollectStub();
-        var discoverer = new NUnitHostTestDiscoverer();
-        var selected = discoverer.Discover(FixturePath, TestingSelection.FromTestIds([stub.TestId]));
+        var discoverer = new NUnitTestDiscoverer();
+        var selected = discoverer.Discover(FixturePath, TestSelection.FromTestIds([stub.TestId]));
 
         Assert.Equal(stub.TestId, Assert.Single(selected).TestId);
     }
@@ -37,8 +37,8 @@ public sealed class NUnitCollectPushTests
     [Fact]
     public void Display_name_is_not_a_uid_so_discover_misses()
     {
-        var discoverer = new NUnitHostTestDiscoverer();
-        var selected = discoverer.Discover(FixturePath, TestingSelection.FromTestIds(["Stub_leaf"]));
+        var discoverer = new NUnitTestDiscoverer();
+        var selected = discoverer.Discover(FixturePath, TestSelection.FromTestIds(["Stub_leaf"]));
 
         Assert.Empty(selected);
     }
@@ -60,7 +60,7 @@ public sealed class NUnitCollectPushTests
         var stubId =
             "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture.FixtureSource_ValueIsPreserved";
         var xml = NUnitCollapsedSelection.ToFilterXml([stubId]);
-        var filter = NUnitFilterXml.Create(xml);
+        var filter = NUnitFilterFactory.Create(xml);
 
         using var session = NUnitLocalExploration.Load(FixturePath);
         var expanded = session.Leaves
@@ -78,8 +78,8 @@ public sealed class NUnitCollectPushTests
     public void Discover_by_method_fqn_finds_testname_leaves()
     {
         const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
-        var discoverer = new NUnitHostTestDiscoverer();
-        var selected = discoverer.Discover(FixturePath, TestingSelection.FromTestIds([methodId]));
+        var discoverer = new NUnitTestDiscoverer();
+        var selected = discoverer.Discover(FixturePath, TestSelection.FromTestIds([methodId]));
 
         Assert.Equal(2, selected.Count);
         Assert.Equal(
@@ -100,10 +100,10 @@ public sealed class NUnitCollectPushTests
                 StringComparison.Ordinal));
     }
 
-    static TestingDiscoveredTest CollectStub()
+    static TestDiscoveredTest CollectStub()
     {
-        var discoverer = new NUnitHostTestDiscoverer();
-        return discoverer.Discover(FixturePath, TestingSelection.All)
+        var discoverer = new NUnitTestDiscoverer();
+        return discoverer.Discover(FixturePath, TestSelection.All)
             .Single(test => test.MethodName == "Stub_leaf"
                 && test.TestId.Contains("CollapsedSourceStubFixture", StringComparison.Ordinal));
     }

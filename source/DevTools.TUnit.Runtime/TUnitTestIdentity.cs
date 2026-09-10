@@ -1,5 +1,3 @@
-using DevTools.Testing.Abstractions.Contracts;
-
 namespace DevTools.TUnit.Runtime;
 
 internal static class TUnitTestIdentity
@@ -69,15 +67,15 @@ internal static class TUnitTestIdentity
     private static string FormatMethodGenerics(TestMetadata metadata)
     {
         var args = metadata.GenericMethodTypeArguments;
-        if (args is not { Length: > 0 })
-            return string.Empty;
-        return $"<{string.Join(",", args.Select(argument => argument.FullName ?? argument.Name))}>";
+        return args is not { Length: > 0 } 
+            ? string.Empty 
+            : $"<{string.Join(",", args.Select(argument => argument.FullName ?? argument.Name))}>";
     }
 
     private static string FormatParameters(ParameterMetadata[] parameters)
     {
-        if (parameters.Length == 0)
-            return string.Empty;
-        return $"({string.Join(", ", parameters.Select(parameter => parameter.Type.ToString()))})";
+        return parameters.Length == 0 
+            ? string.Empty 
+            : $"({string.Join(", ", parameters.Select(parameter => parameter.Type.ToString()))})";
     }
 }

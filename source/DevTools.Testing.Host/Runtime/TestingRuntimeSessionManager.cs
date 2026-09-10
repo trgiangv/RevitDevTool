@@ -23,7 +23,7 @@ public sealed class NullTestingRuntimeEventSink : ITestingRuntimeEventSink
 {
     public static NullTestingRuntimeEventSink Instance { get; } = new();
     private NullTestingRuntimeEventSink() { }
-    public void Publish(TestingEvent testingEvent) { }
+    public void Publish(TestEvent testingEvent) { }
 }
 
 public sealed class TestingRuntimeSessionManager(TestingGenerationStore generations, ITestingGenerationPolicy policy, ITestingRuntimeSessionFactory factory) : IDisposable
@@ -49,7 +49,7 @@ public sealed class TestingRuntimeSessionManager(TestingGenerationStore generati
         get { lock (_stateLock) return _retainedDiagnostics.ToList(); }
     }
 
-    public TestingRunResponse Run(TestingRunRequest request, ITestingRuntimeEventSink eventSink, CancellationToken cancellationToken = default)
+    public TestRunResponse Run(TestRunRequest request, ITestingRuntimeEventSink eventSink, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(eventSink);
@@ -57,7 +57,7 @@ public sealed class TestingRuntimeSessionManager(TestingGenerationStore generati
         try
         {
             var session = AcquireAndRegister(request.Assembly.Path, request.RunId);
-            TestingRunResponse response;
+            TestRunResponse response;
             try
             {
                 response = session.Session.Run(request, eventSink, cancellationToken);
@@ -195,7 +195,7 @@ public sealed class TestingRuntimeSessionManager(TestingGenerationStore generati
         }
     }
 
-    private TestingRunResponse EnrichWithRetirementDiagnostic(TestingRunResponse response)
+    private TestRunResponse EnrichWithRetirementDiagnostic(TestRunResponse response)
     {
         TestingGenerationRetirementDiagnostic? diagnostic;
         lock (_stateLock)

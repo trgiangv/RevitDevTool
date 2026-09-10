@@ -12,13 +12,13 @@ public sealed class TUnitRuntimeSessionTests
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
         using var session = new TUnitRuntimeSession(assembly, assembly.Location, "gen");
         var response = session.Run(
-            CreateRequest(TestingSelection.FromNames(["DoesNotExist"])),
+            CreateRequest(TestSelection.FromNames(["DoesNotExist"])),
             NullSink.Instance,
             TestContext.Current.CancellationToken);
 
         Assert.Null(response.DiagnosticCode);
         Assert.Empty(response.Results);
-        Assert.Equal(TestingCancellationState.None, response.CancellationState);
+        Assert.Equal(TestCancellationState.None, response.CancellationState);
     }
 
     [Fact]
@@ -27,14 +27,14 @@ public sealed class TUnitRuntimeSessionTests
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
         using var session = new TUnitRuntimeSession(assembly, assembly.Location, "gen");
         var response = session.Run(
-            CreateRequest(TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, "<filter/>")),
+            CreateRequest(TestSelection.FromFrameworkFilter("filter-xml", "<filter/>")),
             NullSink.Instance,
             TestContext.Current.CancellationToken);
 
         Assert.Equal("testing/invalid_request", response.DiagnosticCode);
         Assert.Contains("--name", response.DiagnosticMessage, StringComparison.Ordinal);
         Assert.Empty(response.Results);
-        Assert.Equal(TestingCancellationState.None, response.CancellationState);
+        Assert.Equal(TestCancellationState.None, response.CancellationState);
     }
 
     [Fact]
@@ -46,11 +46,11 @@ public sealed class TUnitRuntimeSessionTests
         session.Cancel(runId);
 
         var response = session.Run(
-            CreateRequest(TestingSelection.FromTestIds([]), runId),
+            CreateRequest(TestSelection.FromTestIds([]), runId),
             NullSink.Instance,
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(TestingCancellationState.Completed, response.CancellationState);
+        Assert.Equal(TestCancellationState.Completed, response.CancellationState);
         Assert.Empty(response.Results);
     }
 
@@ -62,11 +62,11 @@ public sealed class TUnitRuntimeSessionTests
         session.Cancel(Guid.NewGuid());
 
         var response = session.Run(
-            CreateRequest(TestingSelection.FromTestIds([])),
+            CreateRequest(TestSelection.FromTestIds([])),
             NullSink.Instance,
             TestContext.Current.CancellationToken);
 
-        Assert.Equal(TestingCancellationState.None, response.CancellationState);
+        Assert.Equal(TestCancellationState.None, response.CancellationState);
     }
 
     [Fact]
@@ -74,27 +74,27 @@ public sealed class TUnitRuntimeSessionTests
     {
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
         var mapped = TUnitRuntimeSession.MapToEngineSelection(
-            TestingSelection.FromNames(["DoesNotExist"]),
+            TestSelection.FromNames(["DoesNotExist"]),
             assembly.Location,
             assembly);
 
-        Assert.Equal(TestingSelectionKind.TestIds, mapped.Kind);
+        Assert.Equal(TestSelectionKind.TestIds, mapped.Kind);
         Assert.Empty(mapped.TestIds);
     }
 
-    private static TestingRunRequest CreateRequest(TestingSelection selection, Guid? runId = null) =>
+    private static TestRunRequest CreateRequest(TestSelection selection, Guid? runId = null) =>
         new(
             2,
             runId ?? Guid.NewGuid(),
-            "tunit",
-            new TestingAssemblyReference(typeof(TUnitRuntimeSessionTests).Assembly.Location),
+            TestFrameworkId.TUnit,
+            new TestAssemblyReference(typeof(TUnitRuntimeSessionTests).Assembly.Location),
             selection);
 
     private sealed class NullSink : ITestingRuntimeEventSink
     {
         public static NullSink Instance { get; } = new();
 
-        public void Publish(TestingEvent testingEvent)
+        public void Publish(TestEvent testingEvent)
         {
         }
     }

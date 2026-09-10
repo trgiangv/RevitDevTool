@@ -1,3 +1,4 @@
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
 
 namespace DevTools.Testing.Host.Tests.Loading;
@@ -8,7 +9,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
     public void ValidateShape_rejects_empty_framework_id()
     {
         var plan = new TestingGenerationPlan(
-            "",
+            (TestFrameworkId)42,
             @"C:\tests\sample.dll",
             [new TestingGenerationFile(@"C:\tests\sample.dll", "sample.dll", TestingGenerationFileKind.Managed)],
             "sample.dll");
@@ -22,7 +23,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
     public void ValidateShape_rejects_empty_files()
     {
         var plan = new TestingGenerationPlan(
-            "provider.example",
+            TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
             [],
             "sample.dll");
@@ -36,7 +37,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
     public void ValidateShape_rejects_rooted_relative_paths()
     {
         var plan = new TestingGenerationPlan(
-            "provider.example",
+            TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
             [new TestingGenerationFile(@"C:\tests\sample.dll", @"C:\evil.dll", TestingGenerationFileKind.Managed)],
             @"C:\evil.dll");
@@ -48,7 +49,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
     public void ValidateShape_rejects_parent_traversal()
     {
         var plan = new TestingGenerationPlan(
-            "provider.example",
+            TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
             [new TestingGenerationFile(@"C:\tests\sample.dll", "..\\sample.dll", TestingGenerationFileKind.Managed)],
             "..\\sample.dll");
@@ -60,7 +61,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
     public void ValidateShape_rejects_duplicate_normalized_paths()
     {
         var plan = new TestingGenerationPlan(
-            "provider.example",
+            TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
             [
                 new TestingGenerationFile(@"C:\tests\sample.dll", "folder\\sample.dll", TestingGenerationFileKind.Managed),
@@ -77,7 +78,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
     public void ValidateShape_rejects_runtime_path_not_in_files()
     {
         var plan = new TestingGenerationPlan(
-            "provider.example",
+            TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
             [new TestingGenerationFile(@"C:\tests\sample.dll", "sample.dll", TestingGenerationFileKind.Managed)],
             "runtime.dll");

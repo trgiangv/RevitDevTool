@@ -8,25 +8,25 @@ namespace DevTools.TUnit.Runtime;
 
 internal static class TUnitCatalog
 {
-    public static IReadOnlyList<TestingDiscoveredTest> Discover(
+    public static IReadOnlyList<TestDiscoveredTest> Discover(
         string assemblyPath,
-        TestingSelection selection,
+        TestSelection selection,
         ReflectionAssembly? alreadyLoaded = null) =>
         Enumerate(assemblyPath, selection, "discovery", alreadyLoaded);
 
-    private static IReadOnlyList<TestingDiscoveredTest> Enumerate(
+    private static List<TestDiscoveredTest> Enumerate(
         string assemblyPath,
-        TestingSelection selection,
+        TestSelection selection,
         string sessionId,
         ReflectionAssembly? alreadyLoaded)
     {
         EnsureLoaded(assemblyPath, alreadyLoaded);
-        var ids = selection.Kind == TestingSelectionKind.TestIds ? Clean(selection.TestIds) : [];
-        var names = selection.Kind == TestingSelectionKind.Names ? Clean(selection.Names) : [];
-        var tests = EnumerateMatches(sessionId, ids, names, matchAll: selection.Kind == TestingSelectionKind.All).ToList();
+        var ids = selection.Kind == TestSelectionKind.TestIds ? Clean(selection.TestIds) : [];
+        var names = selection.Kind == TestSelectionKind.Names ? Clean(selection.Names) : [];
+        var tests = EnumerateMatches(sessionId, ids, names, matchAll: selection.Kind == TestSelectionKind.All).ToList();
         if (tests.Count == 0 && ShouldReportEmptyRegistrar(selection))
         {
-            throw new HostTestDiscoveryFailedException(
+            throw new TestingDiscoveryFailedException(
                 "TUnit discovery found no SourceRegistrar entries. " +
                 "The test assembly module constructor did not register TestEntry sources.");
         }
@@ -34,7 +34,7 @@ internal static class TUnitCatalog
         return tests;
     }
 
-    private static IEnumerable<TestingDiscoveredTest> EnumerateMatches(
+    private static IEnumerable<TestDiscoveredTest> EnumerateMatches(
         string sessionId,
         HashSet<string> ids,
         HashSet<string> names,
@@ -56,10 +56,10 @@ internal static class TUnitCatalog
         }
     }
 
-    private static bool ShouldReportEmptyRegistrar(TestingSelection selection) =>
-        selection.Kind == TestingSelectionKind.All && Sources.TestEntries.IsEmpty;
+    private static bool ShouldReportEmptyRegistrar(TestSelection selection) =>
+        selection.Kind == TestSelectionKind.All && Sources.TestEntries.IsEmpty;
 
-    private static TestingDiscoveredTest Map(
+    private static TestDiscoveredTest Map(
         ITestEntrySource source,
         TestEntryFilterData filter,
         TestMetadata? metadata,
@@ -71,19 +71,16 @@ internal static class TUnitCatalog
             : filter.ClassName;
         var methodName = metadata?.TestMethodName ?? filter.MethodName;
         var className = string.IsNullOrEmpty(namespaceName) ? typeName : $"{namespaceName}.{typeName}";
-        var testId = combination.Deferred
-            ? metadata is not null
-                ? TUnitTestIdentity.Deferred(metadata)
-                : TUnitTestIdentity.Fallback(namespaceName, typeName, methodName)
-            : metadata is not null
-                ? TUnitTestIdentity.From(metadata, combination)
-                : TUnitTestIdentity.Fallback(namespaceName, typeName, methodName);
+        var testId = TestId(combination, metadata, namespaceName, typeName, methodName);
         var displayName = combination.DisplayName ?? FormatDisplay(methodName, combination);
         var sourceLocation = metadata is { FilePath.Length: > 0 }
-            ? new TestingSourceLocation(metadata.FilePath, metadata.LineNumber)
+            ? new TestSourceLocation(metadata.FilePath, metadata.LineNumber)
             : null;
+        var method = metadata?.MethodMetadata;
+        var parameterTypes = method is null ? null : TUnitMetadataNames.Parameters(method.Parameters);
+        var returnType = method is null ? null : TUnitMetadataNames.ReturnType(method);
 
-        return new TestingDiscoveredTest(
+        return new TestDiscoveredTest(
             testId,
             displayName,
             $"{className}.{methodName}",
@@ -92,8 +89,25 @@ internal static class TUnitCatalog
             sourceLocation,
             namespaceName,
             typeName,
-            MethodArity: metadata?.GenericMethodTypeArguments?.Length ?? 0,
-            Categories: filter.Categories);
+            MethodArity: method?.GenericTypeCount ?? 0,
+            Categories: filter.Categories,
+            ParameterTypeFullNames: parameterTypes,
+            ReturnTypeFullName: returnType);
+    }
+
+    private static string TestId(
+        TUnitCombination combination,
+        TestMetadata? metadata,
+        string namespaceName,
+        string typeName,
+        string methodName)
+    {
+        if (metadata is null)
+            return TUnitTestIdentity.Fallback(namespaceName, typeName, methodName);
+
+        return combination.Deferred
+            ? TUnitTestIdentity.Deferred(metadata)
+            : TUnitTestIdentity.From(metadata, combination);
     }
 
     private static string FormatDisplay(string methodName, TUnitCombination combination)
@@ -131,11 +145,10 @@ internal static class TUnitCatalog
 
         assemblyPath = Path.GetFullPath(assemblyPath);
         if (!File.Exists(assemblyPath))
-            throw new HostTestDiscoveryFailedException($"TUnit test assembly not found: {assemblyPath}");
+            throw new TestingDiscoveryFailedException($"TUnit test assembly not found: {assemblyPath}");
 
         var loaded = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly =>
-            !assembly.IsDynamic
-            && assembly.Location.Length > 0
+            assembly is { IsDynamic: false, Location.Length: > 0 }
             && string.Equals(Path.GetFullPath(assembly.Location), assemblyPath, StringComparison.OrdinalIgnoreCase));
         if (loaded is not null)
         {
@@ -164,7 +177,7 @@ internal static class TUnitCatalog
     }
 
     private static bool MatchesSelection(
-        TestingDiscoveredTest test,
+        TestDiscoveredTest test,
         TestEntryFilterData filter,
         TestMetadata? metadata,
         HashSet<string> ids,

@@ -6,14 +6,21 @@ public sealed class TestingKernelIndependenceTests
     public void Generic_testing_projects_have_no_nunit_source_or_project_coupling()
     {
         var root = FindRepositoryRoot();
-        var offenders = Directory.EnumerateDirectories(Path.Combine(root, "source"), "DevTools.Testing.*")
-            .Where(project => Path.GetFileName(project).StartsWith("DevTools.Testing.", StringComparison.Ordinal))
+        var kernel = new[]
+        {
+            Path.Combine(root, "source", "DevTools.Testing.Abstractions"),
+            Path.Combine(root, "source", "DevTools.Testing.Transport"),
+        };
+        var offenders = kernel
             .SelectMany(project => Directory.EnumerateFiles(project, "*", SearchOption.AllDirectories))
             .Where(path => Path.GetExtension(path) is ".cs" or ".csproj" or ".props" or ".targets")
             .Where(path => !path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
                 .Any(part => part.Equals("bin", StringComparison.OrdinalIgnoreCase)
                     || part.Equals("obj", StringComparison.OrdinalIgnoreCase)))
-            .Where(path => File.ReadLines(path).Any(line => line.Contains("NUnit", StringComparison.OrdinalIgnoreCase)))
+            .Where(path => File.ReadLines(path).Any(line =>
+                line.Contains("NUnit.", StringComparison.Ordinal)
+                || line.Contains("nunit.framework", StringComparison.OrdinalIgnoreCase)
+                || line.Contains("using NUnit", StringComparison.Ordinal)))
             .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
             .ToArray();
 

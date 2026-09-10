@@ -37,8 +37,8 @@
     </Target>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.VisualStudio.Interop"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+        <PackageReference Include="Microsoft.VisualStudio.Interop"/>
         <PackageReference Include="ConsoleAppFramework">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
@@ -46,7 +46,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\DevTools.TestRunner.Core\DevTools.TestRunner.Core.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
+        <Using Include="DevTools.Ipc" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" SetTargetFramework="TargetFramework=net10.0-windows"/>

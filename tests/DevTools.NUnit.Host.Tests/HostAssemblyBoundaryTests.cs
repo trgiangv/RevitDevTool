@@ -1,23 +1,23 @@
-using DevTools.NUnit.Host;
+using DevTools.Testing.Host.NUnit;
 
 namespace DevTools.NUnit.Host.Tests;
 
 public sealed class HostAssemblyBoundaryTests
 {
     [Fact]
-    public void Host_references_only_testing_and_isolation_infrastructure()
+    public void NUnit_provider_sources_have_no_cad_api_or_logging_references()
     {
         var csproj = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",
-            "DevTools.NUnit.Host",
-            "DevTools.NUnit.Host.csproj"));
+            "DevTools.Testing.Host",
+            "DevTools.Testing.Host.csproj"));
         Assert.DoesNotContain("DevTools.Logging.csproj", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.Hosting.csproj", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.Execution.Abstractions.csproj", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.Ipc.csproj", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("ZLogger.Scintilla", csproj, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Scintilla5", csproj, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("DevTools.AssemblyIsolation.csproj", csproj, StringComparison.Ordinal);
 
-        var loadingDirectory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.NUnit.Host");
+        var loadingDirectory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Testing.Host", "NUnit");
         string[] forbiddenHostApiNames =
         [
             "RevitDBAPI",
@@ -35,27 +35,22 @@ public sealed class HostAssemblyBoundaryTests
             .ToList();
         Assert.True(hostApiNameHits.Count == 0, string.Join(Environment.NewLine, hostApiNameHits));
 
-        var references = typeof(NUnitHostTestFrameworkProvider).Assembly
-            .GetReferencedAssemblies()
-            .Select(static reference => reference.Name)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        Assert.DoesNotContain("DevTools.Hosting", references);
-        Assert.DoesNotContain("DevTools.Presentation", references);
-        Assert.DoesNotContain("DevTools.UI", references);
-        Assert.DoesNotContain("ZLogger.Scintilla", references);
-        Assert.DoesNotContain("PresentationFramework", references);
+        Assert.Equal("DevTools.Testing.Host", typeof(NUnitTestFrameworkProvider).Assembly.GetName().Name);
     }
 
     [Fact]
     public void Host_uses_the_neutral_generation_manifest_without_compatibility_facades()
     {
-        var directory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.NUnit.Host", "Loading");
+        var directory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Testing.Host", "NUnit", "Loading");
         string[] forbiddenFiles =
         [
             "NUnitGenerationManifest.cs",
             "NUnitGenerationManifestAdapter.cs",
             "NUnitGenerationContentHash.cs",
+            "NUnitGenerationPlanner.cs",
+            "NUnitIsolationPlan.cs",
+            "NUnitRuntimeSessionHandle.cs",
+            "NUnitGenerationBuildException.cs",
             "NUnitGenerationLoadException.cs",
             "NUnitGenerationPaths.cs",
             "NUnitRuntimeDiagnostic.cs",

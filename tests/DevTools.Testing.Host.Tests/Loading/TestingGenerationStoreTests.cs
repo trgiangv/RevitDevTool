@@ -135,12 +135,38 @@ public sealed class TestingGenerationStoreTests
         var staging = Path.Combine(workspace.GenerationsRoot, ".staging.copy");
         var shadow = Path.Combine(workspace.GenerationsRoot, "copied");
         Directory.CreateDirectory(Path.Combine(staging, "nested"));
+        Directory.CreateDirectory(Path.Combine(staging, "empty"));
         File.WriteAllText(Path.Combine(staging, "nested", "payload.txt"), "ok");
         File.WriteAllText(Path.Combine(staging, TestingGenerationPaths.GenerationCompleteMarkerFileName), string.Empty);
 
         TestingGenerationSnapshot.CopyDirectory(staging, shadow);
 
         Assert.Equal("ok", File.ReadAllText(Path.Combine(shadow, "nested", "payload.txt")));
+        Assert.True(Directory.Exists(Path.Combine(shadow, "empty")));
+        Assert.True(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
+    }
+
+    [Fact]
+    public void Publish_copies_when_directory_move_fails()
+    {
+        using var workspace = new GenerationWorkspace();
+        var staging = Path.Combine(workspace.GenerationsRoot, ".staging.move-fail");
+        var shadow = Path.Combine(workspace.GenerationsRoot, "copied-from-lock");
+        Directory.CreateDirectory(staging);
+        var payload = Path.Combine(staging, "payload.txt");
+        File.WriteAllText(payload, "ok");
+        var generationId = TestingGenerationSnapshot.ComputeGenerationId(
+            staging,
+            TestingGenerationSnapshot.ReadContentRelativePaths(staging));
+
+        using (var stream = new FileStream(payload, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+        {
+            TestingGenerationSnapshot.Publish(staging, shadow, generationId);
+            GC.KeepAlive(stream);
+        }
+
+        Assert.True(Directory.Exists(shadow));
+        Assert.Equal("ok", File.ReadAllText(Path.Combine(shadow, "payload.txt")));
         Assert.True(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
     }
 
@@ -295,9 +321,9 @@ public sealed class TestingGenerationStoreTests
         Assert.Equal("generation.retained", diagnostic.Code);
     }
 
-    private static TestingRunRequest Request(string path) => new(
-        1, Guid.NewGuid(), "provider.example", new TestingAssemblyReference(path),
-        TestingSelection.All);
+    private static TestRunRequest Request(string path) => new(
+        1, Guid.NewGuid(), TestFrameworkId.NUnit, new TestAssemblyReference(path),
+        TestSelection.All);
 
     private sealed class FixedPolicy(TestingGenerationPlan plan) : ITestingGenerationPolicy
     {
@@ -339,7 +365,7 @@ public sealed class TestingGenerationStoreTests
         public string GenerationId { get; } = generationId;
         public bool Cancelled { get; private set; }
         public bool Disposed { get; private set; }
-        public TestingRunResponse Run(TestingRunRequest request, ITestingRuntimeEventSink eventSink, CancellationToken cancellationToken)
+        public TestRunResponse Run(TestRunRequest request, ITestingRuntimeEventSink eventSink, CancellationToken cancellationToken)
         {
             runStarted.Set();
             if (blockRuns)
@@ -349,7 +375,7 @@ public sealed class TestingGenerationStoreTests
                 _cancelled.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
                 allowRunToFinish.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
             }
-            return new TestingRunResponse(request.RunId, request.FrameworkId, GenerationId, [], TestingCancellationState.None, null, null);
+            return new TestRunResponse(request.RunId, request.FrameworkId, GenerationId, [], TestCancellationState.None, null, null);
         }
         public void Cancel(Guid runId)
         {
@@ -391,7 +417,7 @@ public sealed class TestingGenerationStoreTests
             return destination;
         }
         public TestingGenerationPlan Plan(string assembly, IReadOnlyList<TestingGenerationFile> files) =>
-            new("provider.example", assembly, files, files[0].RelativePath);
+            new(TestFrameworkId.NUnit, assembly, files, files[0].RelativePath);
         public void Dispose()
         {
             if (Directory.Exists(Root)) Directory.Delete(Root, true);

@@ -4,10 +4,10 @@ namespace DevTools.Testing.Transport;
 
 public interface ITestRunnerTransport : IDisposable
 {
-    TestingRunResponse Run(
-        TestingRunRequest request,
-        TestingHostOptions hostOptions,
-        Action<TestingEvent> onEvent);
+    TestRunResponse Run(
+        TestRunRequest request,
+        TestHostOptions hostOptions,
+        Action<TestEvent> onEvent);
 
     void Cancel(Guid runId);
 }

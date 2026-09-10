@@ -145,12 +145,11 @@ internal static class TUnitSourceCatalog
         Assembly assembly)
         where TKey : notnull
     {
-        if (!parked.TryGetValue(assembly, out var stash))
-        {
-            stash = new Dictionary<TKey, TValue>();
-            parked[assembly] = stash;
-        }
-
+        if (parked.TryGetValue(assembly, out var stash)) 
+            return stash;
+        
+        stash = new Dictionary<TKey, TValue>();
+        parked[assembly] = stash;
         return stash;
     }
 

@@ -7,7 +7,7 @@
         1. BuildNUnitMTPForPack / BuildTUnitMTPForPack — build the testhost siblings.
         2. ILRepack — merge copy-local (Transport, Ipc, net48 STJ BCL) into
            TestAdapter.dll; keep Testing.Abstractions.dll so testhost MTP shares
-           HostTestDiscovery.
+           TestingDiscovery.
         3. PackNUnitMTP / PackTUnitMTP — MTP siblings + Abstractions to build/runtime/{tfm}.
         4. build/*.props|targets (+ build/netfx source shim) — the consumer build order
            lives in those files. The selected sibling is a normal Reference, not a
@@ -123,7 +123,7 @@
         <Error Condition="!Exists('$(_NUnitMTPDll)')"
                Text="Pack requires DevTools.NUnit.MTP.dll at $(_NUnitMTPDll)."/>
         <Error Condition="!Exists('$(TargetDir)DevTools.Testing.Abstractions.dll')"
-               Text="Pack requires DevTools.Testing.Abstractions.dll beside the adapter so testhost MTP shares HostTestDiscovery."/>
+               Text="Pack requires DevTools.Testing.Abstractions.dll beside the adapter so testhost MTP shares TestingDiscovery."/>
         <ItemGroup>
             <TfmSpecificPackageFile Include="$(_NUnitMTPDll)">
                 <PackagePath>$(_NUnitMTPPackageRuntime)</PackagePath>

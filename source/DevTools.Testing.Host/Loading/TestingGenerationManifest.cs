@@ -1,8 +1,10 @@
+using DevTools.Testing.Abstractions.Contracts;
+
 namespace DevTools.Testing.Host.Loading;
 
 public sealed record TestingGenerationManifest(
     string GenerationId,
-    string FrameworkId,
+    TestFrameworkId FrameworkId,
     string SourceAssemblyPath,
     string ShadowDirectory,
     string ShadowAssemblyPath,

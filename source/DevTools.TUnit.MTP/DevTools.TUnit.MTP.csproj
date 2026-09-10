@@ -23,5 +23,6 @@
     <Compile Include="..\DevTools.TUnit.Runtime\TUnitExpansion.cs" Link="TUnitExpansion.cs" />
     <Compile Include="..\DevTools.TUnit.Runtime\TUnitSourceCatalog.cs" Link="TUnitSourceCatalog.cs" />
     <Compile Include="..\DevTools.TUnit.Runtime\TUnitTestIdentity.cs" Link="TUnitTestIdentity.cs" />
+    <Compile Include="..\DevTools.TUnit.Runtime\TUnitMetadataNames.cs" Link="TUnitMetadataNames.cs" />
   </ItemGroup>
 </Project>

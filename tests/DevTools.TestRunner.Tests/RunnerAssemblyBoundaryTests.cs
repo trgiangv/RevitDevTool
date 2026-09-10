@@ -6,22 +6,23 @@ namespace DevTools.TestRunner.Tests;
 public sealed class RunnerAssemblyBoundaryTests
 {
     [Fact]
-    public void Runner_core_is_framework_neutral()
+    public void Runner_is_framework_neutral()
     {
         var root = FindRepositoryRoot();
-        var coreDirectory = Path.Combine(root, "source", "DevTools.TestRunner.Core");
-        Assert.True(Directory.Exists(coreDirectory), "DevTools.TestRunner.Core must own framework-neutral runner infrastructure.");
-
-        var coreFiles = Directory.EnumerateFiles(coreDirectory, "*.*", SearchOption.AllDirectories)
-            .Where(path => path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
+        var directory = Path.Combine(root, "source", "DevTools.TestRunner");
+        var files = Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
+            .Where(path => !IsBuildArtifact(path)
+                && (path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)))
             .Select(File.ReadAllText)
             .ToList();
 
-        Assert.NotEmpty(coreFiles);
-        Assert.DoesNotContain(coreFiles, text => text.Contains("NUnit", StringComparison.Ordinal));
-        Assert.DoesNotContain(coreFiles, text => text.Contains("nunit/", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(coreFiles, text => text.Contains("nunit.framework", StringComparison.OrdinalIgnoreCase));
+        Assert.NotEmpty(files);
+        Assert.DoesNotContain(files, text => text.Contains("NUnit.", StringComparison.Ordinal)
+            || text.Contains("using NUnit", StringComparison.Ordinal)
+            || text.Contains("DevTools.NUnit", StringComparison.Ordinal)
+            || text.Contains("nunit.framework", StringComparison.OrdinalIgnoreCase)
+            || text.Contains("IRunnerCommandModule", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -37,7 +38,7 @@ public sealed class RunnerAssemblyBoundaryTests
         Assert.DoesNotContain("FileMetadata", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("Microsoft-WindowsAPICodePack-Shell", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.Utilities.csproj", csproj, StringComparison.Ordinal);
-        Assert.Contains("DevTools.TestRunner.Core.csproj", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.TestRunner.Core", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.Runner.csproj", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.Testing.Discovery", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.TestAdapter.csproj", csproj, StringComparison.Ordinal);
@@ -59,17 +60,17 @@ public sealed class RunnerAssemblyBoundaryTests
         Assert.DoesNotContain("DevTools.Logging", references);
         Assert.DoesNotContain("DevTools.FileMetadata.Revit", references);
         Assert.DoesNotContain("DevTools.FileMetadata.Core", references);
+        Assert.DoesNotContain("DevTools.TestRunner.Core", references);
         Assert.Contains("DevTools.Hosting", references);
     }
 
     [Fact]
-    public void Runner_csharp_has_no_nunit_types_or_discover_command()
+    public void Runner_csharp_has_a_single_run_command_and_no_discover()
     {
         var root = FindRepositoryRoot();
         var directory = Path.Combine(root, "source", "DevTools.TestRunner");
         var files = Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                .Any(part => part is "bin" or "obj"))
+            .Where(path => !IsBuildArtifact(path))
             .Select(path => (path, text: File.ReadAllText(path)))
             .ToList();
 
@@ -78,8 +79,13 @@ public sealed class RunnerAssemblyBoundaryTests
             || file.text.Contains("using NUnit", StringComparison.Ordinal)
             || file.text.Contains("DevTools.NUnit", StringComparison.Ordinal));
         Assert.DoesNotContain(files, file => file.text.Contains("[Command(\"discover\")]", StringComparison.Ordinal));
+        Assert.DoesNotContain(files, file => file.text.Contains("[Command(\"machine-run\")]", StringComparison.Ordinal));
         Assert.DoesNotContain(files, file => file.text.Contains("MetadataTestDiscoverer", StringComparison.Ordinal));
         Assert.Contains(files, file => file.text.Contains("[Command(\"run\")]", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            files,
+            file => file.text.Contains("[Command(\"run\")]", StringComparison.Ordinal)
+                && file.text.Contains("[Argument] string assembly", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -92,7 +98,12 @@ public sealed class RunnerAssemblyBoundaryTests
         Assert.DoesNotContain("DevTools.NUnit.Runner.csproj", csproj, StringComparison.Ordinal);
         Assert.False(Directory.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit")));
         Assert.True(File.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "RunnerCommands.cs")));
+        Assert.False(File.Exists(Path.Combine(root, "source", "DevTools.TestRunner.Core", "DevTools.TestRunner.Core.csproj")));
     }
+
+    private static bool IsBuildArtifact(string path) =>
+        path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(part => part is "bin" or "obj");
 
     private static HashSet<string> ReadAssemblyReferences(string dllPath)
     {

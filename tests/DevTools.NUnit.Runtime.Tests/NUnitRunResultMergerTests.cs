@@ -5,8 +5,8 @@ namespace DevTools.NUnit.Runtime.Tests;
 
 public sealed class NUnitRunResultMergerTests
 {
-    static TestingCaseResult Case(string testId) =>
-        new(testId, testId, TestingOutcomes.Passed, 1, null, null, null, null, [], []);
+    static TestCaseResult Case(string testId) =>
+        new(testId, testId, TestOutcomes.Passed, 1, null, null, null, null, [], []);
 
     [Fact]
     public void Merge_returns_framework_cases_when_no_aborted_cases_exist()

@@ -21,7 +21,7 @@ public sealed class AssemblyBoundaryTests
     {
         // net10 Trace/TraceListener facades list System.Diagnostics.Process.
         // Product code must still not name that type (source test below).
-        var names = typeof(TestingRunRequest).Assembly
+        var names = typeof(TestRunRequest).Assembly
             .GetReferencedAssemblies()
             .Select(static assembly => assembly.Name ?? string.Empty)
             .ToArray();
@@ -56,9 +56,8 @@ public sealed class AssemblyBoundaryTests
         string[] forbidden =
         [
             "Microsoft.Testing",
-            "NUnit",
-            "nunit",
             "NUnit.",
+            "nunit",
             "Xunit.",
             "Autodesk.",
             "System.Text.Json",

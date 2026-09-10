@@ -4,9 +4,9 @@ namespace DevTools.Testing.Host;
 
 public sealed class TestingCancellationStateMachine
 {
-    public TestingCancellationState State { get; private set; } = TestingCancellationState.None;
+    public TestCancellationState State { get; private set; } = TestCancellationState.None;
 
-    public bool TryTransition(TestingCancellationState next)
+    public bool TryTransition(TestCancellationState next)
     {
         if (!IsAllowed(State, next))
             return false;
@@ -15,7 +15,7 @@ public sealed class TestingCancellationStateMachine
         return true;
     }
 
-    public void Transition(TestingCancellationState next)
+    public void Transition(TestCancellationState next)
     {
         if (TryTransition(next))
             return;
@@ -24,19 +24,19 @@ public sealed class TestingCancellationStateMachine
             $"Invalid cancellation transition {State} -> {next}.");
     }
 
-    public void Reset() => State = TestingCancellationState.None;
+    public void Reset() => State = TestCancellationState.None;
 
-    public static bool IsTerminal(TestingCancellationState state) =>
-        state is TestingCancellationState.Completed or TestingCancellationState.Poisoned;
+    public static bool IsTerminal(TestCancellationState state) =>
+        state is TestCancellationState.Completed or TestCancellationState.Poisoned;
 
-    private static bool IsAllowed(TestingCancellationState current, TestingCancellationState next) =>
+    private static bool IsAllowed(TestCancellationState current, TestCancellationState next) =>
         current switch
         {
-            TestingCancellationState.None => next == TestingCancellationState.Requested,
-            TestingCancellationState.Requested => next is TestingCancellationState.Acknowledged
-                or TestingCancellationState.Poisoned,
-            TestingCancellationState.Acknowledged => next is TestingCancellationState.Completed
-                or TestingCancellationState.Poisoned,
+            TestCancellationState.None => next == TestCancellationState.Requested,
+            TestCancellationState.Requested => next is TestCancellationState.Acknowledged
+                or TestCancellationState.Poisoned,
+            TestCancellationState.Acknowledged => next is TestCancellationState.Completed
+                or TestCancellationState.Poisoned,
             _ => false,
         };
 }

@@ -38,13 +38,13 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
         GenerationId = generationId;
         _runOnCallingThread = runOnCallingThread;
         _sourceLocationProvider = new NUnitSourceLocationProvider(_assemblyPath);
-        _runner = new NUnitTestAssemblyRunner(new NUnitTolerantAssemblyBuilder());
+        _runner = new NUnitTestAssemblyRunner(new NUnitAssemblyBuilder());
     }
 
     public string GenerationId { get; }
 
-    public TestingRunResponse Run(
-        TestingRunRequest request,
+    public TestRunResponse Run(
+        TestRunRequest request,
         ITestingRuntimeEventSink eventSink,
         CancellationToken cancellationToken)
     {
@@ -59,13 +59,13 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
 
             var filter = request.Selection.Kind switch
             {
-                TestingSelectionKind.All => NUnitFilterFactory.Create(null),
-                TestingSelectionKind.FrameworkFilter => NUnitFilterFactory.Create(request.Selection.FilterData),
+                TestSelectionKind.All => NUnitFilterFactory.Create(null),
+                TestSelectionKind.FrameworkFilter => NUnitFilterFactory.Create(request.Selection.FilterData),
                 _ => throw new ArgumentException(
                     "NUnit runtime expects All or nunit/filter-xml. Map TestIds/Names in the host provider.",
                     nameof(request)),
             };
-            using var traceScope = new TestingRunTraceScope();
+            using var traceScope = new TestRunTraceScope();
             var listener = new NUnitEventListener(
                 request.RunId,
                 eventSink,
@@ -108,20 +108,20 @@ public sealed class NUnitRuntimeSession : ITestingRuntimeSession
 
                 var result = _runner.Result;
                 var frameworkCases = result is null
-                    ? Array.Empty<TestingCaseResult>()
+                    ? Array.Empty<TestCaseResult>()
                     : NUnitResultMapper.MapRunResults(result, _sourceLocationProvider);
 
                 var cases = listener.ApplyTraceOutput(
                     NUnitRunResultMerger.Merge(frameworkCases, listener.GetAbortedCaseResults()));
 
-                return new TestingRunResponse(
+                return new TestRunResponse(
                     request.RunId,
                     request.FrameworkId,
                     GenerationId,
                     cases,
-                    cases.Any(testCase => testCase.Outcome == TestingOutcomes.Cancelled)
-                        ? TestingCancellationState.Completed
-                        : TestingCancellationState.None,
+                    cases.Any(testCase => testCase.Outcome == TestOutcomes.Cancelled)
+                        ? TestCancellationState.Completed
+                        : TestCancellationState.None,
                     null,
                     null);
             }

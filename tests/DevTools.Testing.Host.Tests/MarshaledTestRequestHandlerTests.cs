@@ -21,8 +21,8 @@ public sealed class MarshaledTestRequestHandlerTests
             executor);
 
         var hello = JsonSerializer.SerializeToElement(
-            new TestingHelloRequest(TestingProtocol.CurrentVersion, provider.FrameworkId),
-            TestingJsonContext.Default.TestingHelloRequest);
+            new TestHelloRequest(TestingProtocol.CurrentVersion, provider.FrameworkId),
+            TestingJsonContext.Default.TestHelloRequest);
         var helloResponse = await handler.HandleAsync(
             "hello", TestingProtocol.Hello, hello, TestContext.Current.CancellationToken);
         Assert.False(helloResponse.IsError);
@@ -30,13 +30,13 @@ public sealed class MarshaledTestRequestHandlerTests
 
         var runId = Guid.NewGuid();
         var run = JsonSerializer.SerializeToElement(
-            new TestingRunRequest(
+            new TestRunRequest(
                 TestingProtocol.CurrentVersion,
                 runId,
                 provider.FrameworkId,
-                new TestingAssemblyReference(@"C:\tests\Sample.dll"),
-                TestingSelection.FromTestIds(["opaque-id"])),
-            TestingJsonContext.Default.TestingRunRequest);
+                new TestAssemblyReference(@"C:\tests\Sample.dll"),
+                TestSelection.FromTestIds(["opaque-id"])),
+            TestingJsonContext.Default.TestRunRequest);
         var runResponse = await handler.HandleAsync(
             "run", TestingProtocol.Run, run, TestContext.Current.CancellationToken);
 
@@ -67,17 +67,17 @@ public sealed class MarshaledTestRequestHandlerTests
         }
     }
 
-    private sealed class RecordingProvider : IHostTestFrameworkProvider
+    private sealed class RecordingProvider : ITestFrameworkProvider
     {
-        public string FrameworkId => "example";
+        public TestFrameworkId FrameworkId => TestFrameworkId.NUnit;
         public Guid? LastRunId { get; private set; }
 
-        public TestingRunResponse Run(TestingRunRequest request, ITestingEventSink eventSink,
+        public TestRunResponse Run(TestRunRequest request, ITestEventSink eventSink,
             CancellationToken cancellationToken)
         {
             LastRunId = request.RunId;
-            return new TestingRunResponse(request.RunId, FrameworkId, "generation", [],
-                TestingCancellationState.None, null, null);
+            return new TestRunResponse(request.RunId, FrameworkId, "generation", [],
+                TestCancellationState.None, null, null);
         }
 
         public bool Cancel(Guid runId) => false;

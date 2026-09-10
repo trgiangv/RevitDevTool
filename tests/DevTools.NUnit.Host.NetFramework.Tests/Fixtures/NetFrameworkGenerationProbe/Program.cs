@@ -1,9 +1,10 @@
 using System.Reflection;
 using System.Runtime.InteropServices;
-using DevTools.NUnit.Host.Loading;
 using DevTools.NUnit.Host.NetFramework.Tests;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
+using DevTools.Testing.Host.NUnit;
+using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests.Probe;
 
@@ -54,7 +55,6 @@ internal static class Program
 
         var factory = new NUnitRuntimeSessionFactory();
         using var session = factory.Create(manifest);
-        var handle = (NUnitRuntimeSessionHandle)session;
 
         var run = session.Run(
             CreateRequest(
@@ -67,10 +67,10 @@ internal static class Program
         if (!string.Equals(run.GenerationId, manifest.GenerationId, StringComparison.Ordinal))
             return 4;
 
-        if (!string.Equals(run.Results.Single().Outcome, TestingOutcomes.Passed, StringComparison.Ordinal))
+        if (!string.Equals(run.Results.Single().Outcome, TestOutcomes.Passed, StringComparison.Ordinal))
             return 5;
 
-        var generationFrameworkIdentity = handle.FrameworkAssemblyIdentityForTesting;
+        var generationFrameworkIdentity = HostSharedFrameworkIdentity();
         var expectedFrameworkIdentity = AssemblyName.GetAssemblyName(
             NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest)).FullName;
 
@@ -103,7 +103,6 @@ internal static class Program
             var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
             var factory = new NUnitRuntimeSessionFactory();
             using var session = factory.Create(manifest);
-            var handle = (NUnitRuntimeSessionHandle)session;
 
             var run = session.Run(
                 CreateRequest(
@@ -116,10 +115,10 @@ internal static class Program
             if (!string.Equals(run.GenerationId, manifest.GenerationId, StringComparison.Ordinal))
                 return 4;
 
-            if (!string.Equals(run.Results.Single().Outcome, TestingOutcomes.Passed, StringComparison.Ordinal))
+            if (!string.Equals(run.Results.Single().Outcome, TestOutcomes.Passed, StringComparison.Ordinal))
                 return 5;
 
-            var generationFrameworkIdentity = handle.FrameworkAssemblyIdentityForTesting;
+            var generationFrameworkIdentity = HostSharedFrameworkIdentity();
             var expectedFrameworkIdentity = AssemblyName.GetAssemblyName(
                 NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest)).FullName;
 
@@ -153,19 +152,19 @@ internal static class Program
         if (sessionOne is null || sessionTwo is null)
             return 1;
 
-        var handleOne = (NUnitRuntimeSessionHandle)sessionOne;
-        var handleTwo = (NUnitRuntimeSessionHandle)sessionTwo;
+        var handleOneIdentity = HostSharedFrameworkIdentity();
+        var handleTwoIdentity = HostSharedFrameworkIdentity();
 
         try
         {
-            if (!string.Equals(handleOne.FrameworkAssemblyIdentityForTesting, AssemblyName.GetAssemblyName(NUnitGenerationPolicy.GetFrameworkAssemblyPath(generationOne)).FullName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(handleOneIdentity, AssemblyName.GetAssemblyName(NUnitGenerationPolicy.GetFrameworkAssemblyPath(generationOne)).FullName, StringComparison.OrdinalIgnoreCase))
                 return 2;
 
-            if (!string.Equals(handleTwo.FrameworkAssemblyIdentityForTesting, AssemblyName.GetAssemblyName(NUnitGenerationPolicy.GetFrameworkAssemblyPath(generationTwo)).FullName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(handleTwoIdentity, AssemblyName.GetAssemblyName(NUnitGenerationPolicy.GetFrameworkAssemblyPath(generationTwo)).FullName, StringComparison.OrdinalIgnoreCase))
                 return 3;
 
-            Console.WriteLine($"GenerationOneFramework={handleOne.FrameworkAssemblyIdentityForTesting}");
-            Console.WriteLine($"GenerationTwoFramework={handleTwo.FrameworkAssemblyIdentityForTesting}");
+            Console.WriteLine($"GenerationOneFramework={handleOneIdentity}");
+            Console.WriteLine($"GenerationTwoFramework={handleTwoIdentity}");
 
             return 0;
         }
@@ -174,6 +173,14 @@ internal static class Program
             sessionOne.Dispose();
             sessionTwo.Dispose();
         }
+    }
+
+    private static string HostSharedFrameworkIdentity()
+    {
+        if (!NUnitFrameworkHostShare.TryGetLoaded(out var shared))
+            throw new InvalidOperationException("Host-shared nunit.framework has not been loaded.");
+        return shared.FullName
+            ?? throw new InvalidOperationException("Host-shared nunit.framework has no full name.");
     }
 
     private static Assembly? FindLoadedNUnit(Version version)
@@ -191,18 +198,18 @@ internal static class Program
         return null;
     }
 
-    private static TestingRunRequest CreateRequest(Guid runId, string assemblyPath, string? filter) => new(
+    private static TestRunRequest CreateRequest(Guid runId, string assemblyPath, string? filter) => new(
         1,
         runId,
-        "nunit",
-        new TestingAssemblyReference(assemblyPath),
+        TestFrameworkId.NUnit,
+        new TestAssemblyReference(assemblyPath),
         string.IsNullOrWhiteSpace(filter)
-            ? TestingSelection.All
-            : TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, filter));
+            ? TestSelection.All
+            : TestSelection.FromFrameworkFilter(NUnitSelectionFilter.XmlFilterFormat, filter!));
 
     private sealed class NoOpEventSink : ITestingRuntimeEventSink
     {
-        public void Publish(TestingEvent runtimeEvent)
+        public void Publish(TestEvent runtimeEvent)
         {
         }
     }

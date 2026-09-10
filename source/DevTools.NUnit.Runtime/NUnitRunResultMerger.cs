@@ -4,9 +4,9 @@ namespace DevTools.NUnit.Runtime;
 
 internal static class NUnitRunResultMerger
 {
-    public static IReadOnlyList<TestingCaseResult> Merge(
-        IReadOnlyList<TestingCaseResult> frameworkCases,
-        IReadOnlyList<TestingCaseResult> abortedCases)
+    public static IReadOnlyList<TestCaseResult> Merge(
+        IReadOnlyList<TestCaseResult> frameworkCases,
+        IReadOnlyList<TestCaseResult> abortedCases)
     {
         if (abortedCases.Count == 0)
             return frameworkCases;
@@ -14,7 +14,7 @@ internal static class NUnitRunResultMerger
         if (frameworkCases.Count == 0)
             return abortedCases;
 
-        var merged = new List<TestingCaseResult>(frameworkCases.Count + abortedCases.Count);
+        var merged = new List<TestCaseResult>(frameworkCases.Count + abortedCases.Count);
         var seen = new HashSet<string>(StringComparer.Ordinal);
 
         for (var index = 0; index < frameworkCases.Count; index++)

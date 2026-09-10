@@ -8,7 +8,7 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
     private const int MaxSnapshotAttempts = 3;
     private static readonly ConcurrentDictionary<string, Lock> GenerationLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _generationsRootDirectory = generationsRootDirectory
-                                                        ?? Path.Combine(Path.GetTempPath(), "DevTools", "Testing", "Generations");
+                                                        ?? Path.Combine(Path.GetTempPath(), "DevTools.Testing");
 
     // Deterministic test/diagnostic seam; callers must not mutate source or staging content.
     public Action<string>? AfterFileCopied { get; set; }

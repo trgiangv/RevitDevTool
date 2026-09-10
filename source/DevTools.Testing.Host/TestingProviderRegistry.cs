@@ -1,40 +1,41 @@
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 
 namespace DevTools.Testing.Host;
 
 public sealed class TestingProviderRegistry
 {
-    private readonly Dictionary<string, IHostTestFrameworkProvider> _providers;
+    private readonly Dictionary<TestFrameworkId, ITestFrameworkProvider> _providers;
 
-    public TestingProviderRegistry(IEnumerable<IHostTestFrameworkProvider> providers)
+    public TestingProviderRegistry(IEnumerable<ITestFrameworkProvider> providers)
     {
         ArgumentNullException.ThrowIfNull(providers);
 
-        _providers = new Dictionary<string, IHostTestFrameworkProvider>(StringComparer.OrdinalIgnoreCase);
+        _providers = [];
         foreach (var provider in providers)
         {
             if (provider is null)
                 throw new ArgumentException("Provider list cannot contain null entries.", nameof(providers));
 
-            if (string.IsNullOrWhiteSpace(provider.FrameworkId))
+            if (!Enum.IsDefined(provider.FrameworkId))
                 throw new ArgumentException("Provider framework id is required.", nameof(providers));
 
-            var id = Normalize(provider.FrameworkId);
-            if (_providers.ContainsKey(id))
+            if (_providers.ContainsKey(provider.FrameworkId))
             {
                 throw new ArgumentException(
-                    $"Duplicate host-test framework id '{id}'.",
+                    $"Duplicate host-test framework id '{provider.FrameworkId}'.",
                     nameof(providers));
             }
 
-            _providers[id] = provider;
+            _providers[provider.FrameworkId] = provider;
         }
     }
 
-    public IHostTestFrameworkProvider GetRequired(string frameworkId)
+    public ITestFrameworkProvider GetRequired(TestFrameworkId frameworkId)
     {
-        var id = Normalize(frameworkId);
-        return _providers.TryGetValue(id, out var provider) ? provider : throw new KeyNotFoundException($"No host-test provider is registered for '{id}'.");
+        return _providers.TryGetValue(frameworkId, out var provider)
+            ? provider
+            : throw new KeyNotFoundException($"No host-test provider is registered for '{frameworkId}'.");
     }
 
     public bool Cancel(Guid runId)
@@ -47,11 +48,5 @@ public sealed class TestingProviderRegistry
         }
 
         return acknowledged;
-    }
-
-    private static string Normalize(string? frameworkId)
-    {
-        var trimmed = frameworkId?.Trim() ?? string.Empty;
-        return trimmed.ToLowerInvariant();
     }
 }

@@ -22,7 +22,7 @@ public sealed class NUnitRuntimeSessionOutputTests
 
             var result = Assert.Single(response.Results);
             Assert.Equal(DedicatedTestFixturesHarness.OutputCaptureTestFullName, result.FullName);
-            Assert.Equal(TestingOutcomes.Passed, result.Outcome);
+            Assert.Equal(TestOutcomes.Passed, result.Outcome);
 
             var output = result.Output ?? string.Empty;
             Assert.Contains("spike-output-marker", output, StringComparison.Ordinal);
@@ -66,28 +66,28 @@ public sealed class NUnitRuntimeSessionOutputTests
         }
     }
 
-    private static TestingRunRequest CreateRequest(string? filter) => new(
+    private static TestRunRequest CreateRequest(string? filter) => new(
         1,
         Guid.NewGuid(),
-        "nunit",
-        new TestingAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
+        TestFrameworkId.NUnit,
+        new TestAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
         SelectionFromFilter(filter));
 
-    private static TestingRunRequest CreateFullSemanticsRequest(string? filter) => new(
+    private static TestRunRequest CreateFullSemanticsRequest(string? filter) => new(
         1,
         Guid.NewGuid(),
-        "nunit",
-        new TestingAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),
+        TestFrameworkId.NUnit,
+        new TestAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),
         SelectionFromFilter(filter));
 
-    private static TestingSelection SelectionFromFilter(string? filter) =>
+    private static TestSelection SelectionFromFilter(string? filter) =>
         string.IsNullOrWhiteSpace(filter)
-            ? TestingSelection.All
-            : TestingSelection.FromFrameworkFilter(TestingSelection.XmlFilterFormat, filter);
+            ? TestSelection.All
+            : TestSelection.FromFrameworkFilter("filter-xml", filter);
 
     private sealed class RecordingSink : ITestingRuntimeEventSink
     {
-        public void Publish(TestingEvent testingEvent) { }
+        public void Publish(TestEvent testingEvent) { }
     }
 
     private sealed class RecordingTraceListener : TraceListener

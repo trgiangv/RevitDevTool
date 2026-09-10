@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using static DevTools.NUnit.Runtime.NUnitNameSyntax;
 
 namespace DevTools.NUnit.Runtime;
 
@@ -12,14 +13,24 @@ namespace DevTools.NUnit.Runtime;
 /// </summary>
 internal static class NUnitCollapsedSelection
 {
+    private const string FilterXml = "filter";
+    private const string OrXml = "or";
+    private const string TestXml = "test";
+    private const string AndXml = "and";
+    private const string ClassXml = "class";
+    private const string MethodXml = "method";
+    private const string RegexXml = "re";
+    private const string RegexEnabled = "1";
+    private const string OptionalCtorArgs = @"(\([^)]*\))?";
+
     public static string? ToFilterXml(IReadOnlyList<string>? testIds)
     {
         var nodes = ToTestIdNodes(testIds);
         if (nodes.Count == 0)
             return null;
 
-        var inner = nodes.Count == 1 ? nodes[0] : new XElement("or", nodes);
-        return new XElement("filter", inner).ToString(SaveOptions.DisableFormatting);
+        var inner = nodes.Count == 1 ? nodes[0] : new XElement(OrXml, nodes);
+        return new XElement(FilterXml, inner).ToString(SaveOptions.DisableFormatting);
     }
 
     public static List<XNode> ToTestIdNodes(IReadOnlyList<string>? testIds) =>
@@ -43,7 +54,7 @@ internal static class NUnitCollapsedSelection
         if (!IsDottedLeafWithoutArgs(requestedId))
             return false;
 
-        SplitClassMethod(requestedId, out var className, out var methodName);
+        NUnitTestNameParser.SplitParts(requestedId, out var className, out var methodName);
         var pattern = ExpandedFullNamePattern(className, methodName);
         return IsMatch(testId, pattern) || IsMatch(fullName, pattern);
     }
@@ -52,104 +63,41 @@ internal static class NUnitCollapsedSelection
     {
         if (string.IsNullOrWhiteSpace(fullName))
             return false;
-        if (HasDepthZeroChar(fullName, '('))
+        if (ContainsAtDepthZero(fullName, ArgOpen))
             return false;
-        return LastDotAtDepthZero(fullName) >= 0;
+        return LastAtDepthZero(fullName, MemberDot) >= 0;
     }
 
     private static IEnumerable<XNode> ToNodes(string testId)
     {
-        yield return new XElement("test", testId);
+        yield return new XElement(TestXml, testId);
         if (!IsDottedLeafWithoutArgs(testId))
             yield break;
 
-        SplitClassMethod(testId, out var className, out var methodName);
+        NUnitTestNameParser.SplitParts(testId, out var className, out var methodName);
+        yield return RegexTest(ExpandedFullNamePattern(className, methodName));
         yield return new XElement(
-            "test",
-            new XAttribute("re", "1"),
-            ExpandedFullNamePattern(className, methodName));
-        yield return new XElement(
-            "and",
-            new XElement(
-                "class",
-                new XAttribute("re", "1"),
-                "^" + Regex.Escape(className) + @"(\([^)]*\))?$"),
-            new XElement("method", methodName));
+            AndXml,
+            RegexClass(className),
+            new XElement(MethodXml, methodName));
     }
 
+    private static XElement RegexTest(string pattern) =>
+        new(TestXml, new XAttribute(RegexXml, RegexEnabled), pattern);
+
+    private static XElement RegexClass(string className) =>
+        new(ClassXml, new XAttribute(RegexXml, RegexEnabled),
+            Anchored(Regex.Escape(className) + OptionalCtorArgs));
+
     private static string ExpandedFullNamePattern(string className, string methodName) =>
-        "^" + Regex.Escape(className) + @"(\([^)]*\))?\." + Regex.Escape(methodName) + "$";
+        Anchored(
+            Regex.Escape(className)
+            + OptionalCtorArgs
+            + Regex.Escape(MemberDot.ToString())
+            + Regex.Escape(methodName));
 
     private static bool IsMatch(string? value, string pattern) =>
         !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value, pattern);
-
-    private static void SplitClassMethod(string fullName, out string className, out string methodName)
-    {
-        var lastDot = LastDotAtDepthZero(fullName);
-        if (lastDot < 0)
-        {
-            className = fullName;
-            methodName = fullName;
-            return;
-        }
-
-        className = fullName.Substring(0, lastDot);
-        methodName = fullName.Substring(lastDot + 1);
-    }
-
-    private static bool HasDepthZeroChar(string value, char symbol)
-    {
-        var depth = 0;
-        foreach (var c in value)
-        {
-            switch (c)
-            {
-                case '(':
-                case '<':
-                    if (c == symbol && depth == 0)
-                        return true;
-                    depth++;
-                    break;
-                case ')':
-                case '>':
-                    if (depth > 0)
-                        depth--;
-                    break;
-                default:
-                    if (c == symbol && depth == 0)
-                        return true;
-                    break;
-            }
-        }
-
-        return false;
-    }
-
-    private static int LastDotAtDepthZero(string value)
-    {
-        var depth = 0;
-        var last = -1;
-        for (var index = 0; index < value.Length; index++)
-        {
-            switch (value[index])
-            {
-                case '(':
-                case '<':
-                    depth++;
-                    break;
-                case ')':
-                case '>':
-                    if (depth > 0)
-                        depth--;
-                    break;
-                case '.' when depth == 0:
-                    last = index;
-                    break;
-            }
-        }
-
-        return last;
-    }
 
     private static List<string> Clean(IReadOnlyList<string>? values)
     {

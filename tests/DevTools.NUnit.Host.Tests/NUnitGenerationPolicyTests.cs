@@ -1,6 +1,6 @@
-using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.Tests;
 
@@ -15,7 +15,7 @@ public sealed class NUnitGenerationPolicyTests
 
         var plan = policy.CreatePlan(testAssembly);
 
-        Assert.Equal("nunit", plan.FrameworkId);
+        Assert.Equal(TestFrameworkId.NUnit, plan.FrameworkId);
         Assert.Equal(NUnitGenerationPolicy.RuntimeAssemblyFileName, plan.RuntimeAssemblyRelativePath);
         Assert.Contains(plan.Files, file => string.Equals(
             file.RelativePath, NUnitGenerationPolicy.FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase));
@@ -29,7 +29,7 @@ public sealed class NUnitGenerationPolicyTests
             File.Delete(Path.Combine(output, NUnitGenerationPolicy.FrameworkAssemblyFileName)));
         var missingHarness = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root);
-        Assert.Throws<NUnitGenerationBuildException>(() => missingHarness.Build(missing));
+        Assert.Throws<TestingGenerationBuildException>(() => missingHarness.Build(missing));
 
         var duplicate = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(workspace.Root, "duplicate", output =>
         {
@@ -40,7 +40,7 @@ public sealed class NUnitGenerationPolicyTests
         });
         var duplicateHarness = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root);
-        var exception = Assert.Throws<NUnitGenerationBuildException>(() => duplicateHarness.Build(duplicate));
+        var exception = Assert.Throws<TestingGenerationBuildException>(() => duplicateHarness.Build(duplicate));
         Assert.Contains("found 2", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -51,7 +51,7 @@ public sealed class NUnitGenerationPolicyTests
             NUnitGenerationPolicy.FrameworkAssemblyFileName);
         NUnitGenerationPolicy.ValidateNUnitFrameworkVersion(frameworkPath);
 
-        var exception = Assert.Throws<NUnitGenerationBuildException>(() =>
+        var exception = Assert.Throws<TestingGenerationBuildException>(() =>
             NUnitGenerationPolicy.ValidateNUnitFrameworkVersion(typeof(NUnitGenerationPolicyTests).Assembly.Location));
         Assert.Contains("4.6.1.0", exception.Message, StringComparison.Ordinal);
     }
@@ -82,7 +82,7 @@ public sealed class NUnitGenerationPolicyTests
     {
         using var workspace = new TempWorkspace();
         var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(workspace.Root, "contract", output =>
-            File.Copy(typeof(TestingRunRequest).Assembly.Location,
+            File.Copy(typeof(TestRunRequest).Assembly.Location,
                 Path.Combine(output, "PrivateTestingContract.dll"), true));
 
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
@@ -142,7 +142,7 @@ public sealed class NUnitGenerationPolicyTests
     {
         public TempWorkspace()
         {
-            Root = Path.Combine(Path.GetTempPath(), "DevTools", "NUnit", "PolicyTests", Guid.NewGuid().ToString("N"));
+            Root = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
         }
 

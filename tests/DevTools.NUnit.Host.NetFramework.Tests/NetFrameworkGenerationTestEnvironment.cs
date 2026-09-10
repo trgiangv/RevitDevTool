@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text;
-using DevTools.NUnit.Host.Loading;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests;
 
@@ -63,12 +63,7 @@ public static class NetFrameworkGenerationTestEnvironment
 
     public static string CreateIsolatedGenerationsRoot()
     {
-        var root = Path.Combine(
-            Path.GetTempPath(),
-            "DevTools",
-            "NUnit",
-            "Generations",
-            Guid.NewGuid().ToString("N"));
+        var root = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(root);
         return root;
@@ -171,10 +166,7 @@ public static class NetFrameworkGenerationTestEnvironment
 
         var isolatedCopyDirectory = Path.Combine(
             Path.GetTempPath(),
-            "DevTools",
-            "NUnit",
-            "ConflictingDefault",
-            Guid.NewGuid().ToString("N"));
+            "DevTools.nunit.conflict-" + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(isolatedCopyDirectory);
         var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationPolicy.FrameworkAssemblyFileName);
@@ -318,12 +310,7 @@ public static class NetFrameworkGenerationTestEnvironment
     {
         public TempWorkspace()
         {
-            Root = Path.Combine(
-                Path.GetTempPath(),
-                "DevTools",
-                "NUnit",
-                "NetFrameworkRuntimeTests",
-                Guid.NewGuid().ToString("N"));
+            Root = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
         }
 

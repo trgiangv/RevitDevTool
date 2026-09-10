@@ -19,7 +19,7 @@ public sealed class NUnitSelectionXmlTests
     public void Test_ids_are_not_emitted_from_the_name_filter_helper()
     {
         var xml = NUnitSelectionXml.ToFilterXml(
-            TestingSelection.FromTestIds(["DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes"]));
+            TestSelection.FromTestIds(["DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes"]));
 
         Assert.Null(xml);
     }

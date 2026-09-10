@@ -12,10 +12,14 @@ internal static class NUnitFilterFactory
         if (string.IsNullOrWhiteSpace(filterExpression))
             return TestFilter.Empty;
 
-        var trimmed = filterExpression!.Trim();
-        if (!trimmed.StartsWith("<", StringComparison.Ordinal))
-            throw new ArgumentException(UnsupportedFilterMessage, nameof(filterExpression));
-
-        return TestFilter.FromXml(trimmed);
+        var xml = filterExpression!.Trim();
+        try
+        {
+            return TestFilter.FromXml(xml);
+        }
+        catch (Exception ex) when (ex is not ArgumentException { ParamName: nameof(filterExpression) })
+        {
+            throw new ArgumentException(UnsupportedFilterMessage, nameof(filterExpression), ex);
+        }
     }
 }
