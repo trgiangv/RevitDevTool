@@ -51,6 +51,26 @@ public void Loads_content_from_shadow()
 Mark files `<Content CopyToOutputDirectory="PreserveNewest" />` so they copy
 into the generation shadow.
 
+## 3b. Sample files next to source (no shadow copy)
+
+Leave large models in the test project. Do not `CopyToOutputDirectory`.
+Resolve from the compile-time `.cs` path — not `WorkDirectory` / `TestDirectory`
+(those are the generation shadow). `[CallerFilePath]` is the build machine path.
+
+```csharp
+[Test]
+public void Loads_sample_next_to_source()
+{
+    var path = Sample("model.rvt");
+    Assert.That(File.Exists(path), Is.True, path);
+}
+
+static string Sample(string name, [CallerFilePath] string cs = "") =>
+    Path.GetFullPath(Path.Combine(Path.GetDirectoryName(cs)!, "Testdata", name));
+```
+
+See `samples/DevTools.NUnit.SampleTests/SourceAssetPathTests.cs`.
+
 ## 4. One-shot / Explicit
 
 ```csharp

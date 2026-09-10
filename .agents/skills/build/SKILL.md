@@ -48,7 +48,7 @@ when the project sets `UseRevit=true` or `UseAutoCad=true`; those targets own
 
 ```powershell
 # Shared library — no deploy props
-dotnet build source/DevTools.NUnit.Host/DevTools.NUnit.Host.csproj -c Debug
+dotnet build source/DevTools.Testing.Host/DevTools.Testing.Host.csproj -c Debug
 
 # Host entrypoint — compile only (do not deploy while the host may be running)
 dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false

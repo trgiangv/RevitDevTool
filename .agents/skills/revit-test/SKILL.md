@@ -36,7 +36,6 @@ pin `TUnit` `1.66.27`.
 <PropertyGroup>
   <HostName>Revit</HostName>
   <HostVersion>2025</HostVersion>
-  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>360</LaunchTimeout>
@@ -61,9 +60,6 @@ the tree: scope MTP next to the MTP test project.
 }
 ```
 
-`net48` (host 2024 and older) needs
-`<RuntimeIdentifier>win-x64</RuntimeIdentifier>` (Exe + restore, `NETSDK1047`).
-Keep the RID on a multi-year csproj that still builds 2022–2024.
 If the repo has a central `GlobalPackageReference` to `Polyfill`, remove it on
 the test project (`<GlobalPackageReference Remove="Polyfill" />`). NUnit does
 not need it; net48 TUnit gets `[ModuleInitializer]` from the package.

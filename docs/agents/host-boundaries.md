@@ -6,7 +6,7 @@ The platform is host-agnostic by design. Every feature should be sharable across
 
 Keep these host-neutral — this is the default for all new functionality:
 
-- `source/DevTools.Hosting/` — `HostApp`, `IHostAppInfo`, generic launch engine (`AddHostLaunchCore`, `HostLaunchWaiter`). No Revit/Acad product strings, dialog catalogs, or assembly-load policy. Stays `net48;net8.0-windows;net10.0-windows` because add-ins and NUnit.Host load identity types in-process.
+- `source/DevTools.Hosting/` — `HostApp`, `IHostAppInfo`, generic launch engine (`AddHostLaunchCore`, `HostLaunchWaiter`). No Revit/Acad product strings, dialog catalogs, or assembly-load policy. Stays `net48;net8.0-windows;net10.0-windows` because add-ins and `Testing.Host` load identity types in-process.
 - `source/DevTools.FileMetadata.Core/` — `IFileReader` / `FileInfoResult` (MCP `read_file_info`). Takes `HostApp` as a result field only. `net10.0-windows` only (Daemon / Mcp.Server / Runner).
 - `source/DevTools.Execution/` — execution engine, script providers, MCP in-host runtime
 - `source/DevTools.Execution.Abstractions/` — host-neutral contracts (`IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, `IDocumentBridge`, enums)
@@ -18,7 +18,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Telemetry/`
 - `source/DevTools.UI/`
 - `source/DevTools.Utilities/` — helpers only. Leaf: no Hosting, no Execution.Abstractions, and no assembly-loading ownership.
-- `source/DevTools.Testing.*` / `DevTools.NUnit.*` / `DevTools.TestAdapter` / `DevTools.TestRunner*` — host-API-free testing stack. Testhost (adapter + MTP) vs in-host (`Testing.Host` + NUnit Host/Runtime) vs Runner exe are **separate release artifacts**; see [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md). `Testing.*` must not reference `NUnit.*`.
+- `source/DevTools.Testing.*` / `DevTools.NUnit.*` / `DevTools.TUnit.*` / `DevTools.TestAdapter` / `DevTools.TestRunner*` — host-API-free testing stack. Testhost (adapter + MTP) vs in-host (`Testing.Host` includes first-party NUnit/TUnit providers + Runtime payloads) vs Runner exe are **separate release artifacts**; see [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md). `Testing.Abstractions` must not reference `NUnit.*` / `TUnit.*`.
 
 ## Host Layer
 

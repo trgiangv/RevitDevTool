@@ -9,7 +9,6 @@ in SKILL.md.
 <PropertyGroup>
   <HostName>Revit</HostName>
   <HostVersion>2025</HostVersion>
-  <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>360</LaunchTimeout>
@@ -36,7 +35,6 @@ The adapter package depends on `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do no
 | `PerTestTimeout` | Per-test budget (seconds). The `testing/run` pipe wait is this × tests in the run. 60 is smoke-only |
 | `LaunchTimeout` | Seconds to wait for a launched host pipe |
 | `TestingFramework` | Default `nunit`. Override in the test csproj to change the in-host engine without changing the package |
-| `RuntimeIdentifier` | `win-x64` on net48 (host 2024 and older). Restore does not take a RID from the package (`NETSDK1047`). Keep it if the same csproj also builds 2022–2024 |
 | `NetFxModuleInitializer` | net48 TUnit only. Default on: inject `[ModuleInitializer]`. Leave unset when the project already has `Polyfill` or `ModuleInitializerAttribute.cs`. Set `false` when the attribute lives in a differently named file, PolySharp, or a polyfill package not named `Polyfill` (`CS0436` otherwise) |
 
 `HostName` / `HostVersion` are the runner contract. Include a compile-only

@@ -5,7 +5,7 @@ from MTP version notes.
 
 | Flag | Owner | Arity | What it becomes |
 |------|--------|-------|-----------------|
-| `--filter` | adapter `HostCommandLineProvider` | 1 | `TestingSelection.Names` → NUnit `<name re="1">` (regex on `ITest.Name`) |
+| `--filter` | adapter `TestCommandLineProvider` | 1 | `TestingSelection.Names` → NUnit `<name re="1">` (regex on `ITest.Name`) |
 | `--filter-uid` | Microsoft.Testing.Platform | 1..N | `TestNodeUidListFilter` → `TestingSelection.TestIds` → NUnit `<test>` |
 | `--list-tests` text | platform | — | prints `TestNode.DisplayName` (`ITest.Name`), not the UID |
 | `--list-tests json` | platform | — | `uid` is `TestNode.Uid` from testhost `ExploreTests` |

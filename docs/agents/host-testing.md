@@ -25,7 +25,7 @@ not runtime plugin keys.
 
 ```powershell
 # 1. compile + in-repo tests (adapter unit tests still ProjectReference)
-dotnet build source/DevTools.NUnit.Host/DevTools.NUnit.Host.csproj -c Debug
+dotnet build source/DevTools.Testing.Host/DevTools.Testing.Host.csproj -c Debug
 dotnet run --project tests/DevTools.TestAdapter.Tests/DevTools.TestAdapter.Tests.csproj
 dotnet run --project tests/DevTools.NUnit.MTP.Tests/DevTools.NUnit.MTP.Tests.csproj
 dotnet run --project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj
@@ -44,16 +44,17 @@ Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner:
 `dotnet publish source/DevTools.TestRunner -c Release`. Adapter nupkg:
 `scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`). The pack script
 deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
-so the next sample restore cannot keep a previous extraction of 0.0.6.
+so the next sample restore cannot keep a previous extraction of the packed version.
 
 ## Rules
 
 - Consumer properties: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`,
   `LaunchTimeout`, `TestingFramework` (`nunit` default, `tunit` opt-in). `UseRevit` /
   `UseAutoCad` are this repo's sample compile flags, not package settings.
-- `net48` consumers add `<RuntimeIdentifier>win-x64</RuntimeIdentifier>` (`NETSDK1047`,
-  restore does not read a RID from `build/*.props`). That is the only consumer-side
-  setting the package cannot supply.
+- Do not set `RuntimeIdentifier` on net8 / net10 test projects. The package sets
+  `AppendRuntimeIdentifierToOutputPath=false`. A RID on net8 (Revit 2025)
+  nests testhost output under `win-x64`. Samples set `win-x64` only when
+  `TargetFramework` starts with `net4`.
 - `net48` + TUnit needs no `Polyfill`. The package defaults `EnableTUnitPolyfills=false`
   and compiles `build/netfx/ModuleInitializerAttribute.cs` into the project, skipping it
   when a `Polyfill` reference or another `ModuleInitializerAttribute.cs` is already
@@ -87,7 +88,7 @@ so the next sample restore cannot keep a previous extraction of 0.0.6.
   a matching-version host on **run** when none is open.
 - "Test discovery aborted: 0 Tests found" = the testhost died in static init or Discover.
   Usual cause is a timestamp-stale `DevTools.*.MTP.dll` beside the test exe
-  (`TypeLoadException` on an `IHostTestDiscoverer` member). Rebuild the **test project**,
+  (`TypeLoadException` on an `ITestDiscoverer` member). Rebuild the **test project**,
   not only the host year; the sibling copy runs with `SkipUnchangedFiles=false`.
 - Do not use `NUnit.Engine` in the host, and never add `NUnit3TestAdapter` to a host-test
   project. `samples/ricaun.NUnit.SampleTests` is the third-party VSTest comparison sample
