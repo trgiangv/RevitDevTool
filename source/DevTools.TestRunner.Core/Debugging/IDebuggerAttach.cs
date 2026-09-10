@@ -8,6 +8,4 @@ public readonly record struct AttachTarget(
 public interface IDebuggerAttach
 {
     bool TryAttach(AttachTarget target, TextWriter warnings);
-
-    void TryDetach(int hostProcessId, TextWriter warnings);
 }

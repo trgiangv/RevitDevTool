@@ -23,7 +23,7 @@ public enum ExecutionFailure
 }
 
 /// <summary>
-/// Owns host-pipe acquisition, debugger lifetime and request cancellation.
+/// Owns host-pipe acquisition, optional Visual Studio attach, and request cancellation.
 /// The caller supplies the pipe operation (CLI sends <c>testing/run</c>).
 /// </summary>
 public interface IExecutionCoordinator
@@ -67,16 +67,18 @@ public sealed class ExecutionCoordinator(ITestSession session) : IExecutionCoord
             return ExecutionResult<T>.Failed(ExecutionFailure.NoHost, exception.Message);
         }
 
-        using var debugAttach = DebugAttachScope.TryBegin(
-            context.Debug,
-            new AttachTarget(
-                pipe.ProcessId,
-                context.DebugParentPid,
-                context.AssemblyPath),
-            debugger,
-            Console.Error);
+        if (context.Debug)
+        {
+            debugger.TryAttach(
+                new AttachTarget(
+                    pipe.ProcessId,
+                    context.DebugParentPid,
+                    context.AssemblyPath),
+                Console.Error);
+        }
+
         using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(sessionLifetime.Token);
-        requestTimeout.CancelAfter(TimeSpan.FromSeconds(context.PerTestTimeoutSeconds));
+        requestTimeout.CancelAfter(TimeSpan.FromSeconds(context.EffectiveRequestTimeoutSeconds));
 
         try
         {
@@ -91,7 +93,7 @@ public sealed class ExecutionCoordinator(ITestSession session) : IExecutionCoord
         {
             return ExecutionResult<T>.Failed(
                 ExecutionFailure.TimedOut,
-                $"Host request timed out after {context.PerTestTimeoutSeconds}s.");
+                $"Host request timed out after {context.EffectiveRequestTimeoutSeconds}s.");
         }
         catch (Exception exception)
         {

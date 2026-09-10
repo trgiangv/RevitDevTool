@@ -14,7 +14,8 @@ public sealed class RunnerCommandsTests
         var hosts = new ThrowingTestSession();
         var commands = new RunnerCommands(
             new ExecutionCoordinator(hosts),
-            new ThrowingDebugger());
+            new ThrowingDebugger(),
+            new BufferedMachineRunInput(TextReader.Null));
 
         var exitCode = await commands.Run(
             Path.Combine(Path.GetTempPath(), "missing-devtools-tests.dll"),
@@ -45,8 +46,5 @@ public sealed class RunnerCommandsTests
     {
         public bool TryAttach(AttachTarget target, TextWriter warnings) =>
             throw new InvalidOperationException("A missing assembly must not attach a debugger.");
-
-        public void TryDetach(int hostProcessId, TextWriter warnings) =>
-            throw new InvalidOperationException("A missing assembly must not detach a debugger.");
     }
 }

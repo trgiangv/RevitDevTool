@@ -28,7 +28,8 @@ public sealed class ComposedRunCommandTests
         await using var provider = services.BuildServiceProvider();
         var commands = new RunnerCommands(
             provider.GetRequiredService<IExecutionCoordinator>(),
-            debugger);
+            debugger,
+            new BufferedMachineRunInput(TextReader.Null));
 
         await ConsoleGate.WaitAsync(TestContext.Current.CancellationToken);
         var originalOut = Console.Out;
@@ -58,8 +59,56 @@ public sealed class ComposedRunCommandTests
         Assert.Contains("Sample.Fixture.PlainTest", request.Filter, StringComparison.Ordinal);
         Assert.Equal(1, hosts.Calls);
         Assert.Equal((1234, (int?)null), debugger.Attached);
-        Assert.Equal(1234, debugger.DetachedProcessId);
         Assert.Contains("framework_id", stdout.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MachineRun_sends_the_same_run_id_to_the_host()
+    {
+        await using var pipe = new FakeHostPipe();
+        var hosts = new FakeTestSession(pipe.PipeName);
+        var debugger = new FakeDebugger();
+        var services = new ServiceCollection();
+        services.AddSingleton<ITestSession>(hosts);
+        services.AddSingleton<IExecutionCoordinator, ExecutionCoordinator>();
+        services.AddSingleton<IDebuggerAttach>(debugger);
+        await using var provider = services.BuildServiceProvider();
+        var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        var invocation = new TestingRunInvocation(
+            TestingProtocol.CurrentVersion,
+            new TestingHostOptions("Revit", "2026", false, 60, 180, null),
+            new TestingRunRequest(
+                TestingProtocol.CurrentVersion,
+                runId,
+                "nunit",
+                new TestingAssemblyReference(typeof(ComposedRunCommandTests).Assembly.Location),
+                TestingSelection.FromTestIds(["Sample.Fixture.PlainTest"])));
+        var json = JsonSerializer.Serialize(invocation, TestingJsonContext.Default.TestingRunInvocation);
+        var commands = new RunnerCommands(
+            provider.GetRequiredService<IExecutionCoordinator>(),
+            debugger,
+            new BufferedMachineRunInput(new StringReader(json)));
+
+        await ConsoleGate.WaitAsync(TestContext.Current.CancellationToken);
+        var originalOut = Console.Out;
+        using var stdout = new StringWriter();
+        try
+        {
+            Console.SetOut(stdout);
+            var exitCode = await commands.MachineRun(TestContext.Current.CancellationToken);
+            Assert.Equal(0, exitCode);
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            ConsoleGate.Release();
+        }
+
+        var request = await pipe.RunRequest.Task.WaitAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(TestingProtocol.Run, request.Method);
+        Assert.Equal(runId, request.RunId);
+        Assert.Contains("Sample.Fixture.PlainTest", request.Filter, StringComparison.Ordinal);
+        Assert.Equal(1, hosts.Calls);
     }
 
     private sealed class FakeTestSession(string pipeName) : ITestSession
@@ -79,18 +128,18 @@ public sealed class ComposedRunCommandTests
     private sealed class FakeDebugger : IDebuggerAttach
     {
         public (int HostPid, int? ParentPid)? Attached { get; private set; }
-        public int? DetachedProcessId { get; private set; }
 
         public bool TryAttach(AttachTarget target, TextWriter warnings)
         {
             Attached = (target.HostProcessId, target.ParentProcessId);
             return true;
         }
-
-        public void TryDetach(int hostProcessId, TextWriter warnings) => DetachedProcessId = hostProcessId;
     }
 
-    private sealed record WireRequest(string Method, string Filter);
+    private sealed record WireRequest(
+        string Method,
+        string Filter,
+        Guid RunId);
 
     private sealed class FakeHostPipe : IAsyncDisposable
     {
@@ -148,9 +197,10 @@ public sealed class ComposedRunCommandTests
                 RunRequest.TrySetResult(new WireRequest(
                     request.Method,
                     string.Join(",", run.Selection.TestIds.Concat(
-                        string.IsNullOrWhiteSpace(run.Selection.ProviderPayload)
+                        string.IsNullOrWhiteSpace(run.Selection.FilterData)
                             ? []
-                            : [run.Selection.ProviderPayload]))));
+                            : [run.Selection.FilterData])),
+                    run.RunId));
                 return;
             }
         }

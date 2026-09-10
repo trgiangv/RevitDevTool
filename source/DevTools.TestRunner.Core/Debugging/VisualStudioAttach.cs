@@ -45,20 +45,6 @@ public sealed class VisualStudioAttach : IDebuggerAttach
         }
     }
 
-    public void TryDetach(int hostProcessId, TextWriter warnings)
-    {
-        try
-        {
-            var dte = EnumerateRunningDte().FirstOrDefault(candidate => IsDebugging(candidate, hostProcessId));
-            var process = dte is null ? null : FindLocalProcess(dte, hostProcessId);
-            process?.Detach(false);
-        }
-        catch (Exception ex)
-        {
-            warnings.WriteLine($"Failed to detach Visual Studio from host PID {hostProcessId}: {ex.Message}");
-        }
-    }
-
     private static DTE? FindDte(int? parentProcessId)
     {
         var instances = EnumerateRunningDte();

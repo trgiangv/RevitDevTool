@@ -73,6 +73,5 @@ public sealed class ExecutionCoordinatorFailureTests
     private sealed class RecordingDebugger : IDebuggerAttach
     {
         public bool TryAttach(AttachTarget target, TextWriter warnings) => true;
-        public void TryDetach(int hostProcessId, TextWriter warnings) { }
     }
 }

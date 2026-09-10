@@ -9,7 +9,7 @@ namespace DevTools.TestRunner.Core.Tests;
 public sealed class ExecutionCoordinatorTests
 {
     [Fact]
-    public async Task ExecuteAsync_owns_host_pipe_debug_scope_and_request_lifetime()
+    public async Task ExecuteAsync_owns_host_pipe_attach_and_request_lifetime()
     {
         var session = new RecordingTestSession(new HostPipeInstance("fake-pipe", 4321));
         var debugger = new RecordingDebugger();
@@ -30,7 +30,27 @@ public sealed class ExecutionCoordinatorTests
         Assert.Equal("fake-pipe:True", result.Value);
         Assert.Equal(1, session.Calls);
         Assert.Equal((4321, parentPid), debugger.Attached);
-        Assert.Equal(4321, debugger.DetachedProcessId);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_skips_attach_when_debug_is_disabled()
+    {
+        var session = new RecordingTestSession(new HostPipeInstance("fake-pipe", 4321));
+        var debugger = new RecordingDebugger();
+        var coordinator = new ExecutionCoordinator(session);
+        var context = new RunnerCommandContext(
+            typeof(ExecutionCoordinatorTests).Assembly.Location, "Revit", "2026",
+            ForceLaunch: false, PerTestTimeoutSeconds: 60, LaunchTimeoutSeconds: 180,
+            Debug: false, DebugParentPid: null, FrameworkId: "example");
+
+        var result = await coordinator.ExecuteAsync(
+            context,
+            debugger,
+            static (_, _) => Task.FromResult("ok"),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.Null(debugger.Attached);
     }
 
     [Fact]
@@ -108,14 +128,11 @@ public sealed class ExecutionCoordinatorTests
     private sealed class RecordingDebugger : IDebuggerAttach
     {
         public (int HostPid, int? ParentPid)? Attached { get; private set; }
-        public int? DetachedProcessId { get; private set; }
 
         public bool TryAttach(AttachTarget target, TextWriter warnings)
         {
             Attached = (target.HostProcessId, target.ParentProcessId);
             return true;
         }
-
-        public void TryDetach(int hostProcessId, TextWriter warnings) => DetachedProcessId = hostProcessId;
     }
 }

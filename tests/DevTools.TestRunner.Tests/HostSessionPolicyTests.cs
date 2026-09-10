@@ -98,11 +98,27 @@ public sealed class HostSessionPolicyTests
             "RunnerCommands.cs"));
 
         var ensure = source.IndexOf("EnsurePipeAsync", StringComparison.Ordinal);
-        var attach = source.IndexOf("DebugAttachScope.TryBegin", StringComparison.Ordinal);
+        var attach = source.IndexOf("debugger.TryAttach", StringComparison.Ordinal);
         var run = source.IndexOf("await operation", StringComparison.Ordinal);
         Assert.True(ensure >= 0 && attach > ensure && run > attach);
         Assert.Contains("DebugHostLifetime.Link", source, StringComparison.Ordinal);
         Assert.Contains("context.DebugParentPid", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryDetach", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DebugAttachScope", source, StringComparison.Ordinal);
+        var attachApi = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "source",
+            "DevTools.TestRunner.Core",
+            "Debugging",
+            "IDebuggerAttach.cs"));
+        var vsAttach = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "source",
+            "DevTools.TestRunner.Core",
+            "Debugging",
+            "VisualStudioAttach.cs"));
+        Assert.DoesNotContain("TryDetach", attachApi, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Detach(", vsAttach, StringComparison.Ordinal);
         var attachBlock = source[attach..run];
         Assert.Contains("new AttachTarget", attachBlock, StringComparison.Ordinal);
         Assert.Contains("context.AssemblyPath", attachBlock, StringComparison.Ordinal);
