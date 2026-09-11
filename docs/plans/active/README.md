@@ -50,4 +50,4 @@ Split god project `DevTools.Mcp.Tests` into module-scoped projects:
 NUnit MTP-only ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)) is
 [completed](../completed/2026-08-18-nunit-mtp-only.md).
 
-No active execution plans.
+No active execution plans besides the MCP test split.
