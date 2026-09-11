@@ -54,8 +54,10 @@ Init, backends, host-attach, and native constraints: [python-runtime.md](python-
 ### IronPython
 
 - `IronPythonExecutionStrategy` executes `*_ipy_script.py`.
-- Has independent runtime but prioritizes pyRevit's IronPython engine first (if pyRevit is installed).
+- Has independent runtime but prioritizes pyRevit's IronPython engine first (if pyRevit is installed). Ordinary pyRevit-first Run is not the embedded debug engine ([0026](../../decisions/0026-ironpython-unittest-script-execution.md)). When a PyDev client is attached, `RevitIPyExecutionStrategy` yields to the session engine so breakpoints can hit ([0033](../../decisions/0033-ironpython-pydevd-debugger.md)).
 - Host bridges configure builtins, references, and search paths.
+- Embedded (non-pyRevit) runs use a **session-lifetime** engine created with `Frames`/`FullFrames` so `sys._getframe` works. Do **not** set engine `Tracing`/`Debug` — that breaks `import pydevd` on IronPython 3.4. Do not `Runtime.Shutdown()` after each script. Script Run calls `enable_tracing()` on the host API thread (listen thread ≠ Revit thread) so later-compiled user files are traced. Listen imports pydevd under `cli` then forces `IS_WINDOWS=True` so breakpoint paths stay case-insensitive.
+- PyDev.Debugger **2.8.0** is extracted under `%APPDATA%\RevitDevTool\pydevd\PyDev.Debugger-pydev_debugger_2_8_0`. The host listens with `HTTP_JSON_PROTOCOL` + `pydevd._enable_attach` on **5680** (no `_wait_for_attach`). VS Code attaches with the PyDev extension (`type: pydevd`), not debugpy. Policy: [0033](../../decisions/0033-ironpython-pydevd-debugger.md) (Proposed until live attach).
 
 ### FSharp
 
