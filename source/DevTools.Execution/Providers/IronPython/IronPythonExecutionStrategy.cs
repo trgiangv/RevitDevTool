@@ -13,7 +13,8 @@ public sealed class IronPythonExecutionStrategy(
     string rootPath,
     IIronPythonBridge bridge,
     IHostContextExecutor hostContext,
-    ILogger<IronPythonExecutionStrategy> logger) : IExecutionStrategy
+    ILogger<IronPythonExecutionStrategy> logger,
+    IronPythonDebugger? debugger = null) : IExecutionStrategy
 {
     public async Task<ExecutionResult> ExecuteAsync(IProgress<string>? progress = null, CancellationToken cancellationToken = default)
     {
@@ -25,7 +26,7 @@ public sealed class IronPythonExecutionStrategy(
             var result = await hostContext
                 .ExecuteAsync(() =>
                 {
-                    var run = IronPythonRunner.Execute(scriptPath, rootPath, bridge);
+                    var run = IronPythonRunner.Execute(scriptPath, rootPath, bridge, debugger);
                     stopwatch.Stop();
                     return run.Success
                         ? ExecutionResult.Succeeded(run.Message, stopwatch.ElapsedMilliseconds)

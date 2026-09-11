@@ -7,7 +7,18 @@ using Moq;
 
 namespace DevTools.Execution.Tests;
 
-public sealed class IronPythonExecutionTests
+/// <summary>
+/// Session-engine IronPython facts share <see cref="PythonRuntimeCollection"/> so they
+/// cannot run beside pythonnet init. Dispose shuts the static engine after each fact.
+/// </summary>
+[Collection(nameof(PythonRuntimeCollection))]
+public abstract class IronPythonSessionTestBase : IDisposable
+{
+    public void Dispose() => new IronPythonDebugger().Shutdown();
+}
+
+[Collection(nameof(PythonRuntimeCollection))]
+public sealed class IronPythonExecutionTests : IronPythonSessionTestBase
 {
     [Fact]
     public void IronPythonSearchPaths_IncludesScriptAndLibDirectories()
@@ -55,7 +66,33 @@ public sealed class IronPythonExecutionTests
             var result = IronPythonRunner.Execute(scriptPath, root, bridge.Object);
 
             Assert.True(result.Success);
-            bridge.Verify(b => b.ConfigureEngine(It.IsAny<ScriptEngine>()), Times.Once);
+            bridge.Verify(b => b.ConfigureEngine(It.IsAny<ScriptEngine>()), Times.AtMostOnce);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void IronPythonRunner_CoFilename_IsCanonicalPath()
+    {
+        var root = ExecutionTestHelpers.CreateTempDirectory("ironpython-cofilename");
+        var scriptPath = Path.Combine(root, "name_ipy_script.py");
+        var markerPath = Path.Combine(root, "co.txt");
+        File.WriteAllText(
+            scriptPath,
+            "import sys\nopen(r'" + markerPath.Replace("\\", "\\\\") + "', 'w').write(sys._getframe().f_code.co_filename)\n");
+
+        var bridge = new Mock<IIronPythonBridge>();
+        bridge.Setup(b => b.ConfigureEngine(It.IsAny<ScriptEngine>()));
+
+        try
+        {
+            var result = IronPythonRunner.Execute(scriptPath, root, bridge.Object);
+            Assert.True(result.Success, result.Message);
+            Assert.True(File.Exists(markerPath), result.Message);
+            Assert.Equal(Path.GetFullPath(scriptPath), File.ReadAllText(markerPath));
         }
         finally
         {

@@ -5,6 +5,7 @@ using Microsoft.Scripting.Hosting;
 
 namespace DevTools.Execution.Tests;
 
+[Collection(nameof(PythonRuntimeCollection))]
 public sealed class IronPythonPytestRunningTests
 {
     [Fact]

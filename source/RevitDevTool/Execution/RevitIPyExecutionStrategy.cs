@@ -10,7 +10,8 @@ using ZLogger;
 namespace RevitDevTool.Execution;
 
 /// <summary>
-/// Revit IronPython: pyRevit Labs <c>ScriptRuntime</c> (clean engine) when loaded, otherwise embedded IPy 3.4.2.
+/// Revit IronPython: pyRevit Labs <c>ScriptRuntime</c> when loaded and no
+/// pydevd client is attached; otherwise the embedded IPy 3.4.2 session engine.
 /// </summary>
 public sealed class RevitIPyExecutionStrategy(
     string scriptPath,
@@ -18,17 +19,31 @@ public sealed class RevitIPyExecutionStrategy(
     IIronPythonBridge bridge,
     IHostContextExecutor hostContext,
     ILogger<IronPythonExecutionStrategy> ironPythonLogger,
-    ILogger<RevitIPyExecutionStrategy> logger)
-    : IExecutionStrategy{
+    ILogger<RevitIPyExecutionStrategy> logger,
+    IronPythonDebugger ironPythonDebugger)
+    : IExecutionStrategy
+{
     private readonly IronPythonExecutionStrategy _native =
-        new(scriptPath, rootPath, bridge, hostContext, ironPythonLogger);
+        new(scriptPath, rootPath, bridge, hostContext, ironPythonLogger, ironPythonDebugger);
 
     public Task<ExecutionResult> ExecuteAsync(
         IProgress<string>? progress = null,
-        CancellationToken cancellationToken = default) =>
-        PyRevitLibraryPaths.IsLoaded
-            ? ExecutePyrevitAsync(progress, cancellationToken)
-            : _native.ExecuteAsync(progress, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        // 0026: unattached Run stays pyRevit-first. pydevd lives on the
+        // session engine (Frames), not ScriptExecutor (full_frame: false).
+        // When VS Code is attached, yield so *_ipy_script.py can hit.
+        if (PyRevitLibraryPaths.IsLoaded && !ironPythonDebugger.IsAttached)
+            return ExecutePyrevitAsync(progress, cancellationToken);
+
+        if (PyRevitLibraryPaths.IsLoaded)
+        {
+            logger.ZLogInformation(
+                $"IronPython debugger attached; running '{Path.GetFileName(scriptPath)}' on the embedded engine (not pyRevit).");
+        }
+
+        return _native.ExecuteAsync(progress, cancellationToken);
+    }
 
     private async Task<ExecutionResult> ExecutePyrevitAsync(
         IProgress<string>? progress,

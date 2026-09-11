@@ -7,6 +7,7 @@ using DevTools.Hosting;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Host;
+using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Transport;
 using Microsoft.Extensions.DependencyInjection;
 

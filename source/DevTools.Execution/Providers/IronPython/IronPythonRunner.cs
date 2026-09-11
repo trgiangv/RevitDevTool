@@ -8,7 +8,6 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
-using Ipy = IronPython.Hosting.Python;
 
 namespace DevTools.Execution.Providers.IronPython;
 
@@ -17,55 +16,87 @@ namespace DevTools.Execution.Providers.IronPython;
 /// </summary>
 internal static class IronPythonRunner
 {
-    internal static ExecutionResult Execute(string scriptPath, string rootPath, IIronPythonBridge bridge)
+    internal static ExecutionResult Execute(
+        string scriptPath,
+        string rootPath,
+        IIronPythonBridge bridge,
+        IronPythonDebugger? debugger = null)
     {
-        ScriptEngine? engine = null;
         try
         {
-            engine = CreateEngine(scriptPath, rootPath, bridge);
-            return CompileAndExecute(engine, scriptPath);
+            debugger ??= new IronPythonDebugger();
+            var engine = debugger.GetOrCreateEngine(bridge);
+            RefreshScriptSearchPaths(engine, scriptPath, rootPath);
+
+            var isDriver = IsIpyTestDriverScript(scriptPath);
+            if (isDriver)
+                SetPytestRunning(engine, true);
+
+            try
+            {
+                debugger.EnsureCurrentThreadTraced();
+                return CompileAndExecute(engine, scriptPath);
+            }
+            finally
+            {
+                if (isDriver)
+                    SetPytestRunning(engine, false);
+            }
         }
         catch (Exception ex)
         {
             return ExecutionResult.Failed(FormatExceptionChain(ex), ex);
         }
-        finally
-        {
-            ShutdownEngine(engine);
-        }
-    }
-
-    private static ScriptEngine CreateEngine(string scriptPath, string rootPath, IIronPythonBridge bridge)
-    {
-        var engine = Ipy.CreateEngine();
-        bridge.ConfigureEngine(engine);
-        IronPythonInitializer.AddStdLib(engine);
-
-        if (IsIpyTestDriverScript(scriptPath))
-        {
-            dynamic sys = engine.GetSysModule();
-            sys.__pytest_running__ = true;
-        }
-
-        IronPythonInitializer.Setup(engine);
-
-        var paths = engine.GetSearchPaths();
-        foreach (var dir in IronPythonSearchPaths.ForNativeHost(scriptPath, rootPath))
-            paths.Add(dir);
-
-        engine.SetSearchPaths(paths);
-        return engine;
     }
 
     internal static bool IsIpyTestDriverScript(string scriptPath) =>
         string.Equals(Path.GetFileName(scriptPath), "IpyTestDriver.py", StringComparison.OrdinalIgnoreCase);
 
+    private static void RefreshScriptSearchPaths(ScriptEngine engine, string scriptPath, string rootPath)
+    {
+        var paths = engine.GetSearchPaths().ToList();
+        foreach (var dir in IronPythonSearchPaths.ForNativeHost(scriptPath, rootPath))
+        {
+            if (paths.Any(p => string.Equals(p, dir, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            paths.Add(dir);
+        }
+
+        engine.SetSearchPaths(paths);
+    }
+
+    private static void SetPytestRunning(ScriptEngine engine, bool value)
+    {
+        if (value)
+        {
+            dynamic sys = engine.GetSysModule();
+            sys.__pytest_running__ = true;
+            return;
+        }
+
+        engine.CreateScriptSourceFromString(
+                "import sys\n" +
+                "if hasattr(sys, '__pytest_running__'):\n" +
+                "    del sys.__pytest_running__\n")
+            .Execute(engine.CreateScope());
+    }
+
     private static ExecutionResult CompileAndExecute(ScriptEngine engine, string scriptPath)
     {
-        var scope = engine.CreateScope();
-        scope.SetVariable("__file__", scriptPath);
+        var canonicalPath = Path.GetFullPath(scriptPath);
+        var sourceText = File.ReadAllText(canonicalPath, Encoding.UTF8);
 
-        var script = engine.CreateScriptSourceFromFile(scriptPath, Encoding.UTF8, SourceCodeKind.File);
+        var scope = engine.CreateScope();
+        scope.SetVariable("__file__", canonicalPath);
+        scope.SetVariable("__name__", "__main__");
+
+        // Same contract as CPython: compile(source, __file__, 'exec') so
+        // co_filename is the on-disk path VS Code binds breakpoints to — not
+        // a DLR file URI / <string>.
+        var script = engine.CreateScriptSourceFromString(
+            sourceText,
+            canonicalPath,
+            SourceCodeKind.File);
         var compilerOptions = (PythonCompilerOptions)engine.GetCompilerOptions(scope);
         compilerOptions.ModuleName = "__main__";
         compilerOptions.Module |= ModuleOptions.Initialize;
@@ -115,18 +146,6 @@ internal static class IronPythonRunner
         var ipy = engine.GetService<ExceptionOperations>().FormatException(exception);
         ipy = string.Join("\n", "IronPython traceback:", ipy.Replace("\r\n", "\n"));
         return ipy + "\n\n" + dotnet;
-    }
-
-    private static void ShutdownEngine(ScriptEngine? engine)
-    {
-        try
-        {
-            engine?.Runtime.Shutdown();
-        }
-        catch
-        {
-            // ignored
-        }
     }
 
     private static string FormatExceptionChain(Exception ex)

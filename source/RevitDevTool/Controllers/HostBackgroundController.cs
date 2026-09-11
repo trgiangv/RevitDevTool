@@ -2,6 +2,8 @@ using System.IO;
 using Autodesk.Windows;
 using DevTools.Hosting;
 using Microsoft.Extensions.Hosting;
+using DevTools.Execution.Interfaces;
+using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
 using DevTools.UI;
@@ -14,7 +16,9 @@ namespace RevitDevTool.Controllers;
 public sealed class HostBackgroundController(
     IHostAppInfo hostAppInfo,
     IRevitSettingsService settingsService,
-    PythonInitializer pythonInitializer) : IHostedService
+    PythonInitializer pythonInitializer,
+    IronPythonDebugger ironPythonDebugger,
+    IIronPythonBridge ironPythonBridge) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -27,7 +31,9 @@ public sealed class HostBackgroundController(
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme((AppTheme)settingsService.GeneralConfig.Theme);
         HostUiHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
-        await pythonInitializer.InitializeAsync().ConfigureAwait(false);
+        await Task.WhenAll(
+            pythonInitializer.InitializeAsync(),
+            ironPythonDebugger.InitializeAsync(ironPythonBridge)).ConfigureAwait(false);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -35,6 +41,7 @@ public sealed class HostBackgroundController(
         settingsService.SaveSettings();
         CleanLogFolder();
         await pythonInitializer.ShutdownAsync().ConfigureAwait(false);
+        ironPythonDebugger.Shutdown();
     }
 
     private void CleanLogFolder()

@@ -11,6 +11,17 @@
       }
     },
     {
+      "name": "Attach Host: IronPython",
+      "type": "pydevd",
+      "request": "attach",
+      "host": "127.0.0.1",
+      "port": 5680,
+      "mode": "client",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "pythonExecutable": "C:/Program Files/Python314/python.exe"
+    },
+    {
       "name": "Attach Host: NetFramework",
       "type": "clr",
       "request": "attach",

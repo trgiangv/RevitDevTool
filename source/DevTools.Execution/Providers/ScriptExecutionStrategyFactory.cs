@@ -18,7 +18,8 @@ public sealed class ScriptExecutionStrategyFactory(
     ILogger<CSharpExecutionStrategy> csharpLogger,
     ILogger<FSharpExecutionStrategy> fsharpLogger,
     ILogger<PythonExecutionStrategy> pythonExecutionLogger,
-    ILogger<IronPythonExecutionStrategy> ironPythonLogger) : IScriptExecutionStrategyFactory
+    ILogger<IronPythonExecutionStrategy> ironPythonLogger,
+    IronPythonDebugger ironPythonDebugger) : IScriptExecutionStrategyFactory
 {
     public IExecutionStrategy Create(ExecutionMode mode, string scriptPath, string rootPath) =>
         mode switch
@@ -36,7 +37,8 @@ public sealed class ScriptExecutionStrategyFactory(
                 rootPath,
                 ironPythonBridge,
                 hostContext,
-                ironPythonLogger),
+                ironPythonLogger,
+                ironPythonDebugger),
 
             ExecutionMode.CSharp => new CSharpExecutionStrategy(
                 scriptPath,
