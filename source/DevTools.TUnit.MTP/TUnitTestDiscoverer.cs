@@ -4,6 +4,7 @@ using DevTools.TUnit.Runtime;
 
 namespace DevTools.TUnit.MTP;
 
+[UsedImplicitly]
 public sealed class TUnitTestDiscoverer : ITestDiscoverer, ITestRunMapper
 {
     public IReadOnlyList<TestDiscoveredTest> Discover(string assemblyPath, TestSelection selection) =>
@@ -13,17 +14,22 @@ public sealed class TUnitTestDiscoverer : ITestDiscoverer, ITestRunMapper
         TestSelection requested,
         IReadOnlyList<TestDiscoveredTest> discovered)
     {
-        if (requested.Kind == TestSelectionKind.All)
-            return TestSelection.All;
+        switch (requested.Kind)
+        {
+            case TestSelectionKind.All:
+                return TestSelection.All;
+            case TestSelectionKind.FrameworkFilter:
+                return requested;
+            case TestSelectionKind.TestIds when requested.TestIds.Count == 0:
+                return TestSelection.FromTestIds([]);
+            case TestSelectionKind.Names:
+            default:
+            {
+                var ids = discovered.Select(test => test.TestId).Distinct(StringComparer.Ordinal).ToList();
+                return TestSelection.FromTestIds(ids);
+            }
+        }
 
-        if (requested.Kind == TestSelectionKind.FrameworkFilter)
-            return requested;
-
-        if (requested.Kind == TestSelectionKind.TestIds && requested.TestIds.Count == 0)
-            return TestSelection.FromTestIds([]);
-
-        var ids = discovered.Select(test => test.TestId).Distinct(StringComparer.Ordinal).ToList();
-        return TestSelection.FromTestIds(ids);
     }
 
     public IReadOnlyList<TestCaseResult> FoldResults(

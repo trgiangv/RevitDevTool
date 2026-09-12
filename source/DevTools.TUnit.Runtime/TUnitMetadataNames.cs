@@ -48,7 +48,7 @@ internal static class TUnitMetadataNames
             return;
         }
 
-        if (type.IsGenericType && !type.IsGenericTypeDefinition)
+        if (type is { IsGenericType: true, IsGenericTypeDefinition: false })
         {
             AppendConstructedGeneric(builder, type);
             return;

@@ -34,98 +34,139 @@ public sealed class TUnitRuntimeSession : ITestingRuntimeSession
     {
         lock (_executionGate)
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            cancellationToken.ThrowIfCancellationRequested();
-            ValidateAssembly(request.Assembly.Path);
-
-            CancellationTokenSource linked;
-            lock (_runControl)
-            {
-                ObjectDisposedException.ThrowIf(_disposed, this);
-                linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                _runCts = linked;
-                _activeRunId = request.RunId;
-                if (_pendingCancelRunId == request.RunId)
-                {
-                    _pendingCancelRunId = Guid.Empty;
-                    linked.Cancel();
-                }
-            }
+            ValidateRun(request, cancellationToken);
+            var linked = BeginRun(request.RunId, cancellationToken);
 
             try
             {
-                if (linked.IsCancellationRequested)
-                {
-                    return new TestRunResponse(
-                        request.RunId,
-                        request.FrameworkId,
-                        GenerationId,
-                        [],
-                        TestCancellationState.Completed,
-                        null,
-                        null);
-                }
-
-                if (request.Selection.Kind == TestSelectionKind.FrameworkFilter)
-                {
-                    return new TestRunResponse(
-                        request.RunId,
-                        request.FrameworkId,
-                        GenerationId,
-                        [],
-                        TestCancellationState.None,
-                        "testing/invalid_request",
-                        "TUnit does not accept framework-filter XML. Use --test or --name.");
-                }
-
-                var selection = MapToEngineSelection(request.Selection);
-                var results = TUnitEngineHost.Run(_testAssembly, selection, linked.Token);
-                foreach (var result in results)
-                {
-                    if (!string.IsNullOrWhiteSpace(result.Output))
-                    {
-                        eventSink.Publish(new TestEvent(
-                            request.RunId,
-                            TestEventKinds.Output,
-                            null,
-                            result.Output,
-                            null,
-                            TestCancellationState.None));
-                    }
-
-                    eventSink.Publish(new TestEvent(
-                        request.RunId,
-                        TestEventKinds.Case,
-                        result,
-                        null,
-                        null,
-                        TestCancellationState.None));
-                }
-
-                var cancelled = results.Any(result => result.Outcome == TestOutcomes.Cancelled);
-                return new TestRunResponse(
-                    request.RunId,
-                    request.FrameworkId,
-                    GenerationId,
-                    results,
-                    cancelled ? TestCancellationState.Completed : TestCancellationState.None,
-                    null,
-                    null);
+                return ExecuteRun(request, eventSink, linked.Token);
             }
             finally
             {
-                lock (_runControl)
-                {
-                    linked.Dispose();
-                    if (_runCts == linked)
-                        _runCts = null;
-                    if (_activeRunId == request.RunId)
-                        _activeRunId = Guid.Empty;
-
-                    if (_pendingCancelRunId == request.RunId)
-                        _pendingCancelRunId = Guid.Empty;
-                }
+                EndRun(request.RunId, linked);
             }
+        }
+    }
+
+    private void ValidateRun(TestRunRequest request, CancellationToken cancellationToken)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        cancellationToken.ThrowIfCancellationRequested();
+        ValidateAssembly(request.Assembly.Path);
+    }
+
+    private CancellationTokenSource BeginRun(Guid runId, CancellationToken cancellationToken)
+    {
+        lock (_runControl)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _runCts = linked;
+            _activeRunId = runId;
+
+            if (_pendingCancelRunId != runId) 
+                return linked;
+
+            _pendingCancelRunId = Guid.Empty;
+            linked.Cancel();
+
+            return linked;
+        }
+    }
+
+    private TestRunResponse ExecuteRun(
+        TestRunRequest request,
+        ITestingRuntimeEventSink eventSink,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested)
+            return CreateCancelledResponse(request);
+
+        if (request.Selection.Kind == TestSelectionKind.FrameworkFilter)
+            return CreateInvalidSelectionResponse(request);
+
+        var selection = MapToEngineSelection(request.Selection);
+        var results = TUnitEngineHost.Run(_testAssembly, selection, cancellationToken);
+        PublishResults(request.RunId, results, eventSink);
+
+        var cancelled = results.Any(result => result.Outcome == TestOutcomes.Cancelled);
+        return new TestRunResponse(
+            request.RunId,
+            request.FrameworkId,
+            GenerationId,
+            results,
+            cancelled ? TestCancellationState.Completed : TestCancellationState.None,
+            null,
+            null);
+    }
+
+    private TestRunResponse CreateCancelledResponse(TestRunRequest request) =>
+        new(
+            request.RunId,
+            request.FrameworkId,
+            GenerationId,
+            [],
+            TestCancellationState.Completed,
+            null,
+            null);
+
+    private TestRunResponse CreateInvalidSelectionResponse(TestRunRequest request) =>
+        new(
+            request.RunId,
+            request.FrameworkId,
+            GenerationId,
+            [],
+            TestCancellationState.None,
+            "testing/invalid_request",
+            "TUnit does not accept framework-filter XML. Use --test or --name.");
+
+    private static void PublishResults(
+        Guid runId,
+        IReadOnlyList<TestCaseResult> results,
+        ITestingRuntimeEventSink eventSink)
+    {
+        foreach (var result in results)
+        {
+            PublishOutput(runId, result, eventSink);
+            eventSink.Publish(new TestEvent(
+                runId,
+                TestEventKinds.Case,
+                result,
+                null,
+                null,
+                TestCancellationState.None));
+        }
+    }
+
+    private static void PublishOutput(
+        Guid runId,
+        TestCaseResult result,
+        ITestingRuntimeEventSink eventSink)
+    {
+        if (string.IsNullOrWhiteSpace(result.Output))
+            return;
+
+        eventSink.Publish(new TestEvent(
+            runId,
+            TestEventKinds.Output,
+            null,
+            result.Output,
+            null,
+            TestCancellationState.None));
+    }
+
+    private void EndRun(Guid runId, CancellationTokenSource linked)
+    {
+        lock (_runControl)
+        {
+            linked.Dispose();
+            if (_runCts == linked)
+                _runCts = null;
+            if (_activeRunId == runId)
+                _activeRunId = Guid.Empty;
+
+            if (_pendingCancelRunId == runId)
+                _pendingCancelRunId = Guid.Empty;
         }
     }
 
