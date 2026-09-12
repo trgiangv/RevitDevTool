@@ -40,7 +40,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         }
 
         var json = TestRunnerCli.SerializeExecute(request, hostOptions);
-        return RunProcess(hostOptions, [TestRunnerCli.RunCommand], json, request.RunId, onEvent);
+        return RunProcess(hostOptions, json, request.RunId, onEvent);
     }
 
     public void Cancel(Guid runId)
@@ -54,31 +54,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
             process = _activeProcess;
         }
 
-        try
-        {
-            if (process is not { HasExited: false })
-                return;
-
-            if (!process.WaitForExit(2_000))
-            {
-                try
-                {
-                    process.Kill();
-                }
-                catch
-                {
-                    // Best effort after cooperative cancel.
-                }
-            }
-        }
-        catch (ObjectDisposedException)
-        {
-            // Process was never started or already disposed.
-        }
-        catch (InvalidOperationException)
-        {
-            // ignore
-        }
+        TryTerminate(process, waitForExit: true);
     }
 
     public void Dispose()
@@ -96,20 +72,11 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         if (runId is { } id)
             TestCancelSignal.TrySignal(id);
 
-        try
-        {
-            if (process is { HasExited: false })
-                process.Kill();
-        }
-        catch
-        {
-            // Best effort.
-        }
+        TryTerminate(process, waitForExit: false);
     }
 
     private TestRunResponse RunProcess(
         TestHostOptions hostOptions,
-        IReadOnlyList<string> arguments,
         string stdin,
         Guid runId,
         Action<TestEvent> onEvent)
@@ -123,15 +90,16 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
             RedirectStandardError = true,
             CreateNoWindow = true,
             StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8
         };
 
-        foreach (var argument in arguments)
-            AddArgument(startInfo, argument);
+        AddArgument(startInfo, TestRunnerCli.RunCommand);
 
         using var process = new Process();
         process.StartInfo = startInfo;
-        process.Start();
+        if (!process.Start())
+            throw new InvalidOperationException("Could not start the DevTools TestRunner process.");
+
         lock (_processLock)
         {
             _activeProcess = process;
@@ -140,7 +108,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 
         try
         {
-            return ReadRun(process, hostOptions, stdin, runId, onEvent);
+            return ReadProcessResult(process, hostOptions, stdin, runId, onEvent);
         }
         finally
         {
@@ -148,14 +116,14 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         }
     }
 
-    private static TestRunResponse ReadRun(
+    private static TestRunResponse ReadProcessResult(
         Process process,
         TestHostOptions hostOptions,
         string stdin,
         Guid runId,
         Action<TestEvent> onEvent)
     {
-        var parsed = new StdoutParseState();
+        var parsed = new RunnerOutputState();
         var stdoutTask = Task.Run(() => DrainStdout(process, onEvent, parsed));
         var stderrTask = process.StandardError.ReadToEndAsync();
         WriteStdin(process, stdin);
@@ -163,11 +131,11 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         DrainOutput(stdoutTask, stderrTask);
         var response = RequireResponse(parsed, process, stderrTask.Result, onEvent);
         EnsureSameRun(response, runId);
-        ReplayIfBatchOnly(parsed, onEvent);
+        ReplayResponseCasesIfNoEvents(parsed, onEvent);
         return response;
     }
 
-    private static void DrainStdout(Process process, Action<TestEvent> onEvent, StdoutParseState parsed)
+    private static void DrainStdout(Process process, Action<TestEvent> onEvent, RunnerOutputState parsed)
     {
         while (process.StandardOutput.ReadLine() is { } line)
         {
@@ -198,7 +166,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 
         try
         {
-            process.Kill();
+            TryTerminate(process, waitForExit: false);
         }
         catch
         {
@@ -219,7 +187,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
     }
 
     private static TestRunResponse RequireResponse(
-        StdoutParseState parsed,
+        RunnerOutputState parsed,
         Process process,
         string stderrOutput,
         Action<TestEvent> onEvent)
@@ -245,7 +213,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
             $"TestRunner returned RunId '{response.RunId}' but the adapter sent '{runId}'.");
     }
 
-    private static void ReplayIfBatchOnly(StdoutParseState parsed, Action<TestEvent> onEvent)
+    private static void ReplayResponseCasesIfNoEvents(RunnerOutputState parsed, Action<TestEvent> onEvent)
     {
         if (parsed.SawEvent || parsed.Response is null)
             return;
@@ -262,7 +230,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         }
     }
 
-    private sealed class StdoutParseState
+    private sealed class RunnerOutputState
     {
         public TestRunResponse? Response;
         public bool SawEvent;
@@ -272,22 +240,22 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
     private static void ConsumeStdoutLine(
         string line,
         Action<TestEvent> onEvent,
-        StdoutParseState state)
+        RunnerOutputState state)
     {
         if (string.IsNullOrWhiteSpace(line))
             return;
 
-        if (TryReadStreamMessage(line, out var message) && message is not null)
-        {
-            if (message.Event is { } testingEvent)
-            {
-                state.SawEvent = true;
-                onEvent(testingEvent);
-            }
+        if (!TryReadStreamMessage(line, out var message) || message is null)
+            return;
 
-            if (message.Response is { } streamed)
-                state.Response = streamed;
+        if (message.Event is { } testingEvent)
+        {
+            state.SawEvent = true;
+            onEvent(testingEvent);
         }
+
+        if (message.Response is { } streamed)
+            state.Response = streamed;
     }
 
     private static bool TryReadStreamMessage(string json, out TestRunnerStreamMessage? message)
@@ -314,18 +282,40 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         }
     }
 
+    private static void TryTerminate(Process? process, bool waitForExit)
+    {
+        try
+        {
+            if (process is not { HasExited: false })
+                return;
+
+            if (waitForExit && process.WaitForExit(2_000))
+                return;
+
+            process.Kill();
+        }
+        catch (ObjectDisposedException)
+        {
+            // Process was never started or already disposed.
+        }
+        catch (InvalidOperationException)
+        {
+            // Process exited between the state check and the operation.
+        }
+    }
+
     private static void AddArgument(ProcessStartInfo startInfo, string argument)
     {
-#if NETFRAMEWORK || NETSTANDARD
+#if NETCOREAPP
+        startInfo.ArgumentList.Add(argument);
+#else
         if (startInfo.Arguments.Length > 0)
             startInfo.Arguments += " ";
         startInfo.Arguments += QuoteArgument(argument);
-#else
-        startInfo.ArgumentList.Add(argument);
 #endif
     }
 
-#if NETFRAMEWORK || NETSTANDARD
+#if !NETCOREAPP
     private static string QuoteArgument(string value)
     {
         if (value.Length == 0 || value.IndexOfAny([' ', '\t', '"']) < 0)

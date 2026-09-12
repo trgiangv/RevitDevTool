@@ -11,17 +11,11 @@ namespace DevTools.Testing.Transport;
 /// </summary>
 public static class TestHostTiming
 {
-    /// <summary>Default per-test execution budget, in seconds.</summary>
-    public const int DefaultPerTestTimeoutSeconds = 60;
-
-    /// <summary>Default wait for a host pipe after launch.</summary>
-    public const int DefaultLaunchTimeoutSeconds = 180;
-
     /// <summary>Named-pipe connect timeout before a request.</summary>
     public const int HostPipeConnectTimeoutSeconds = 30;
 
-    /// <summary>Poll interval while waiting for a pipe response or disconnect.</summary>
-    public const int HostRequestPollIntervalMilliseconds = 25;
+    /// <summary>Poll interval while waiting for a TestRunner pipe response.</summary>
+    public const int PipeResponsePollIntervalMilliseconds = 25;
 
     /// <summary>
     /// Extra seconds on adapter <c>WaitForExit</c> after
