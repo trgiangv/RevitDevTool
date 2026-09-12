@@ -21,7 +21,7 @@ public sealed class HostSessionPolicyTests
         var launchCall = source.IndexOf("launchService.Start", StringComparison.Ordinal);
         Assert.True(reuseBlockStart >= 0 && launchCall > reuseBlockStart);
         var reuseBlock = source[reuseBlockStart..launchCall];
-        Assert.Contains("HostLocator.Discover", reuseBlock, StringComparison.Ordinal);
+        Assert.Contains("Discover(hostName, version)", reuseBlock, StringComparison.Ordinal);
         Assert.Contains("return existing", reuseBlock, StringComparison.Ordinal);
         Assert.DoesNotContain("throw new InvalidOperationException", reuseBlock, StringComparison.Ordinal);
         Assert.DoesNotContain("launchService.Start", reuseBlock, StringComparison.Ordinal);
@@ -52,14 +52,14 @@ public sealed class HostSessionPolicyTests
     }
 
     [Fact]
-    public void HostLocator_prefers_oldest_matching_pid()
+    public void TestSession_discovery_prefers_oldest_matching_pid()
     {
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "source",
             "DevTools.TestRunner",
             "Services",
-            "HostLocator.cs"));
+            "TestSession.cs"));
 
         Assert.Contains("OrderBy(instance => instance.ProcessId)", source, StringComparison.Ordinal);
         Assert.DoesNotContain("OrderByDescending", source, StringComparison.Ordinal);
@@ -90,7 +90,7 @@ public sealed class HostSessionPolicyTests
             "source",
             "DevTools.TestRunner",
             "Services",
-            "ExecutionCoordinator.cs"));
+            "TestCoordinator.cs"));
         var providerSource = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "source",
@@ -121,7 +121,6 @@ public sealed class HostSessionPolicyTests
         Assert.DoesNotContain(".Detach(", vsAttach, StringComparison.Ordinal);
         var attachBlock = source[attach..run];
         Assert.Contains("new AttachTarget", attachBlock, StringComparison.Ordinal);
-        Assert.Contains("context.AssemblyPath", attachBlock, StringComparison.Ordinal);
         Assert.DoesNotContain("context.HostVersion", attachBlock, StringComparison.Ordinal);
         Assert.Contains("ExecuteAsync", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("EnsurePipeAsync", providerSource, StringComparison.Ordinal);

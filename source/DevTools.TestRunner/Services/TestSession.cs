@@ -13,7 +13,7 @@ namespace DevTools.TestRunner.Services;
 /// </summary>
 public interface ITestSession
 {
-    Task<HostPipeInstance> EnsurePipeAsync(
+    Task<TestHostPipe> EnsurePipeAsync(
         HostApp hostApp,
         string version,
         bool forceLaunch,
@@ -23,7 +23,7 @@ public interface ITestSession
 
 public sealed class TestSession(IHostLaunchService launchService) : ITestSession
 {
-    public async Task<HostPipeInstance> EnsurePipeAsync(
+    public async Task<TestHostPipe> EnsurePipeAsync(
         HostApp hostApp,
         string version,
         bool forceLaunch,
@@ -33,7 +33,7 @@ public sealed class TestSession(IHostLaunchService launchService) : ITestSession
         var hostName = hostApp.ToString();
         if (!forceLaunch)
         {
-            var existing = HostLocator.Discover(hostName, version).FirstOrDefault();
+            var existing = Discover(hostName, version).FirstOrDefault();
             if (existing is not null)
                 return existing;
         }
@@ -47,7 +47,7 @@ public sealed class TestSession(IHostLaunchService launchService) : ITestSession
         {
             var status = await HostLaunchWaiter.UntilAsync(
                     started.Process,
-                    () => HostLocator.Discover(hostName, version)
+                    () => Discover(hostName, version)
                         .Any(instance => instance.ProcessId == started.Process.Id),
                     launchTimeout,
                     cancellationToken)
@@ -56,7 +56,7 @@ public sealed class TestSession(IHostLaunchService launchService) : ITestSession
 
             return status switch
             {
-                HostStatus.Ready => HostLocator.Discover(hostName, version)
+                HostStatus.Ready => Discover(hostName, version)
                     .First(instance => instance.ProcessId == started.Process.Id),
                 HostStatus.Exited => throw new InvalidOperationException(
                     $"{hostApp} exited before the DevTools control pipe became available (PID={started.Process.Id})."),
@@ -69,5 +69,31 @@ public sealed class TestSession(IHostLaunchService launchService) : ITestSession
         {
             started.DialogResolver?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Finds matching host control pipes, ordered by PID so reuse is deterministic.
+    /// Pipe discovery belongs to the session lifecycle and is not a reusable service.
+    /// </summary>
+    private static List<TestHostPipe> Discover(string host, string version)
+    {
+        var expectedPrefix = $"{IpcConstants.TestPipePrefix}_{host}_{version}_";
+        var instances = new List<TestHostPipe>();
+
+        foreach (var pipePath in Directory.GetFiles(@"\\.\pipe\"))
+        {
+            var pipeName = Path.GetFileName(pipePath);
+            if (!pipeName.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (!HostPipeName.TryParse(pipeName, out _, out _, out var pid))
+                continue;
+
+            instances.Add(new TestHostPipe(pipeName, pid));
+        }
+
+        return instances
+            .OrderBy(instance => instance.ProcessId)
+            .ToList();
     }
 }

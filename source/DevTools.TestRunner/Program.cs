@@ -17,7 +17,7 @@ internal static class Program
         services.AddRevitLaunch(readDocumentYear: null);
         services.AddAcadLaunch();
         services.AddSingleton<ITestSession, TestSession>();
-        services.AddSingleton<IExecutionCoordinator, ExecutionCoordinator>();
+        services.AddSingleton<ITestCoordinator, TestCoordinator>();
         services.AddSingleton<IDebuggerAttach>(VisualStudioAttach.Instance);
         services.AddSingleton<IRunInput, ConsoleRunInput>();
         await using var serviceProvider = services.BuildServiceProvider();

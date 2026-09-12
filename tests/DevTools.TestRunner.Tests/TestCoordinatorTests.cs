@@ -6,19 +6,19 @@ using DevTools.TestRunner.Services;
 
 namespace DevTools.TestRunner.Tests;
 
-public sealed class ExecutionCoordinatorTests
+public sealed class TestCoordinatorTests
 {
     [Fact]
     public async Task ExecuteAsync_owns_host_pipe_attach_and_request_lifetime()
     {
-        var session = new RecordingTestSession(new HostPipeInstance("fake-pipe", 4321));
+        var session = new RecordingTestSession(new TestHostPipe("fake-pipe", 4321));
         var debugger = new RecordingDebugger();
-        var coordinator = new ExecutionCoordinator(session);
+        var coordinator = new TestCoordinator(session);
         var parentPid = Environment.ProcessId;
         var context = new RunnerCommandContext(
-            typeof(ExecutionCoordinatorTests).Assembly.Location, "Revit", "2026",
+            "Revit", "2026",
             ForceLaunch: false, PerTestTimeoutSeconds: 60, LaunchTimeoutSeconds: 180,
-            Debug: true, DebugParentPid: parentPid, FrameworkId: TestFrameworkId.NUnit);
+            Debug: true, DebugParentPid: parentPid);
 
         var result = await coordinator.ExecuteAsync(
             context,
@@ -35,13 +35,13 @@ public sealed class ExecutionCoordinatorTests
     [Fact]
     public async Task ExecuteAsync_skips_attach_when_debug_is_disabled()
     {
-        var session = new RecordingTestSession(new HostPipeInstance("fake-pipe", 4321));
+        var session = new RecordingTestSession(new TestHostPipe("fake-pipe", 4321));
         var debugger = new RecordingDebugger();
-        var coordinator = new ExecutionCoordinator(session);
+        var coordinator = new TestCoordinator(session);
         var context = new RunnerCommandContext(
-            typeof(ExecutionCoordinatorTests).Assembly.Location, "Revit", "2026",
+            "Revit", "2026",
             ForceLaunch: false, PerTestTimeoutSeconds: 60, LaunchTimeoutSeconds: 180,
-            Debug: false, DebugParentPid: null, FrameworkId: TestFrameworkId.NUnit);
+            Debug: false, DebugParentPid: null);
 
         var result = await coordinator.ExecuteAsync(
             context,
@@ -53,11 +53,11 @@ public sealed class ExecutionCoordinatorTests
         Assert.Null(debugger.Attached);
     }
 
-    private sealed class RecordingTestSession(HostPipeInstance pipe) : ITestSession
+    private sealed class RecordingTestSession(TestHostPipe pipe) : ITestSession
     {
         public int Calls { get; private set; }
 
-        public Task<HostPipeInstance> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
+        public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
         {
             Calls++;
             Assert.Equal(HostApp.Revit, hostApp);

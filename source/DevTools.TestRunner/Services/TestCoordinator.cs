@@ -25,21 +25,21 @@ public enum ExecutionFailure
 /// Owns host-pipe acquisition, optional Visual Studio attach, and request cancellation.
 /// The caller supplies the pipe operation (CLI sends <c>testing/run</c>).
 /// </summary>
-public interface IExecutionCoordinator
+public interface ITestCoordinator
 {
     Task<ExecutionResult<T>> ExecuteAsync<T>(
         RunnerCommandContext context,
         IDebuggerAttach debugger,
-        Func<HostPipeInstance, CancellationToken, Task<T>> operation,
+        Func<TestHostPipe, CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken = default);
 }
 
-public sealed class ExecutionCoordinator(ITestSession session) : IExecutionCoordinator
+public sealed class TestCoordinator(ITestSession session) : ITestCoordinator
 {
     public async Task<ExecutionResult<T>> ExecuteAsync<T>(
         RunnerCommandContext context,
         IDebuggerAttach debugger,
-        Func<HostPipeInstance, CancellationToken, Task<T>> operation,
+        Func<TestHostPipe, CancellationToken, Task<T>> operation,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -49,7 +49,7 @@ public sealed class ExecutionCoordinator(ITestSession session) : IExecutionCoord
         if (!Enum.TryParse(context.HostName, ignoreCase: true, out HostApp hostApp))
             return ExecutionResult<T>.Failed(ExecutionFailure.InvalidHost, $"Unsupported host '{context.HostName}'.");
 
-        HostPipeInstance pipe;
+        TestHostPipe pipe;
         try
         {
             pipe = await session.EnsurePipeAsync(
@@ -70,8 +70,7 @@ public sealed class ExecutionCoordinator(ITestSession session) : IExecutionCoord
             debugger.TryAttach(
                 new AttachTarget(
                     pipe.ProcessId,
-                    context.DebugParentPid,
-                    context.AssemblyPath),
+                    context.DebugParentPid),
                 Console.Error);
         }
 

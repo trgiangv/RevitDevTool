@@ -25,7 +25,7 @@ public sealed class RunnerCommandsTests
                 TestSelection.All));
         var json = JsonSerializer.Serialize(execute, TestingJsonContext.Default.TestRunExecute);
         var commands = new RunnerCommands(
-            new ExecutionCoordinator(hosts),
+            new TestCoordinator(hosts),
             new ThrowingDebugger(),
             new BufferedRunInput(new StringReader(json)));
 
@@ -39,7 +39,7 @@ public sealed class RunnerCommandsTests
     {
         public int Calls { get; private set; }
 
-        public Task<HostPipeInstance> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
+        public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
         {
             Calls++;
             throw new InvalidOperationException("A missing assembly must not activate a host.");

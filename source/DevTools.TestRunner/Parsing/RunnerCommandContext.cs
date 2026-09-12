@@ -1,9 +1,7 @@
-using DevTools.Testing.Abstractions.Contracts;
 namespace DevTools.TestRunner.Parsing;
 
-/// <summary>Validated run context. <see cref="FrameworkId"/> is already parsed from user config.</summary>
+/// <summary>Validated host execution context.</summary>
 public sealed record RunnerCommandContext(
-    string AssemblyPath,
     string HostName,
     string HostVersion,
     bool ForceLaunch,
@@ -11,14 +9,12 @@ public sealed record RunnerCommandContext(
     int LaunchTimeoutSeconds,
     bool Debug,
     int? DebugParentPid,
-    TestFrameworkId FrameworkId,
     int RequestTimeoutSeconds = 0)
 {
     public int EffectiveRequestTimeoutSeconds =>
         RequestTimeoutSeconds > 0 ? RequestTimeoutSeconds : PerTestTimeoutSeconds;
 
     public static bool TryCreate(
-        string assemblyPath,
         string hostName,
         string hostVersion,
         bool forceLaunch,
@@ -26,18 +22,12 @@ public sealed record RunnerCommandContext(
         int launchTimeoutSeconds,
         bool debug,
         int? debugParentPid,
-        TestFrameworkId framework,
         int requestTimeoutSeconds,
         out RunnerCommandContext? context,
         out string? error)
     {
         context = null;
         error = null;
-        if (string.IsNullOrWhiteSpace(assemblyPath))
-        {
-            error = "Assembly path is required.";
-            return false;
-        }
         if (string.IsNullOrWhiteSpace(hostName))
         {
             error = "Host name is required.";
@@ -54,14 +44,25 @@ public sealed record RunnerCommandContext(
             return false;
         }
 
-        if (!Enum.IsDefined(framework))
+        if (perTestTimeoutSeconds <= 0)
         {
-            error = "Framework id is required.";
+            error = "Per-test timeout must be positive.";
+            return false;
+        }
+
+        if (launchTimeoutSeconds <= 0)
+        {
+            error = "Launch timeout must be positive.";
+            return false;
+        }
+
+        if (requestTimeoutSeconds < 0)
+        {
+            error = "Request timeout cannot be negative.";
             return false;
         }
 
         context = new RunnerCommandContext(
-            Path.GetFullPath(assemblyPath),
             hostName.Trim(),
             hostVersion.Trim(),
             forceLaunch,
@@ -69,7 +70,6 @@ public sealed record RunnerCommandContext(
             launchTimeoutSeconds,
             debug || debugParentPid is not null,
             debugParentPid,
-            framework,
             requestTimeoutSeconds);
         return true;
     }

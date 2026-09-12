@@ -21,7 +21,7 @@ public sealed class ComposedRunCommandTests
         var debugger = new FakeDebugger();
         var services = new ServiceCollection();
         services.AddSingleton<ITestSession>(hosts);
-        services.AddSingleton<IExecutionCoordinator, ExecutionCoordinator>();
+        services.AddSingleton<ITestCoordinator, TestCoordinator>();
         services.AddSingleton<IDebuggerAttach>(debugger);
         await using var provider = services.BuildServiceProvider();
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
@@ -36,7 +36,7 @@ public sealed class ComposedRunCommandTests
                 TestSelection.FromTestIds(["Sample.Fixture.PlainTest"])));
         var json = JsonSerializer.Serialize(execute, TestingJsonContext.Default.TestRunExecute);
         var commands = new RunnerCommands(
-            provider.GetRequiredService<IExecutionCoordinator>(),
+            provider.GetRequiredService<ITestCoordinator>(),
             debugger,
             new BufferedRunInput(new StringReader(json)));
 
@@ -67,13 +67,13 @@ public sealed class ComposedRunCommandTests
     {
         public int Calls { get; private set; }
 
-        public Task<HostPipeInstance> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
+        public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
         {
             Calls++;
             Assert.Equal(HostApp.Revit, hostApp);
             Assert.Equal("2026", version);
             Assert.False(forceLaunch);
-            return Task.FromResult(new HostPipeInstance(pipeName, 1234));
+            return Task.FromResult(new TestHostPipe(pipeName, 1234));
         }
     }
 

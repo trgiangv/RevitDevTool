@@ -9,7 +9,7 @@ using DevTools.TestRunner.Services;
 namespace DevTools.TestRunner;
 
 public sealed class RunnerCommands(
-    IExecutionCoordinator execution,
+    ITestCoordinator execution,
     IDebuggerAttach debugger,
     IRunInput runInput)
 {
@@ -57,25 +57,21 @@ public sealed class RunnerCommands(
             return RunnerExitCode.CliError;
         }
 
-        if (!RunnerCommandContext.TryCreate(
-                execute.Run.Assembly.Path,
-                execute.Host.HostName,
-                execute.Host.HostVersion,
-                execute.Host.ForceLaunch,
-                execute.Host.PerTestTimeoutSeconds,
-                execute.Host.LaunchTimeoutSeconds,
-                debug: execute.Host.DebugParentPid is > 0,
-                execute.Host.DebugParentPid,
-                execute.Run.FrameworkId,
-                execute.Host.EffectiveRequestTimeoutSeconds,
-                out var context,
-                out var error))
-        {
-            await Console.Error.WriteLineAsync(error ?? "Invalid run JSON.").ConfigureAwait(false);
-            return RunnerExitCode.CliError;
-        }
-
-        return await Execute(execute, context!, cancellationToken).ConfigureAwait(false);
+        if (RunnerCommandContext.TryCreate(
+                execute.Host.HostName, 
+                execute.Host.HostVersion, 
+                execute.Host.ForceLaunch, 
+                execute.Host.PerTestTimeoutSeconds, 
+                execute.Host.LaunchTimeoutSeconds, 
+                execute.Host.DebugParentPid is > 0, 
+                execute.Host.DebugParentPid, 
+                execute.Host.EffectiveRequestTimeoutSeconds, 
+                out var context, 
+                out var error)) 
+            return await Execute(execute, context!, cancellationToken).ConfigureAwait(false);
+        
+        await Console.Error.WriteLineAsync(error ?? "Invalid run JSON.").ConfigureAwait(false);
+        return RunnerExitCode.CliError;
     }
 
     private async Task<int> Execute(
@@ -85,17 +81,8 @@ public sealed class RunnerCommands(
     {
         using var cancelSignal = TestCancelSignal.Create(execute.Run.RunId);
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                if (WaitHandle.WaitAny([cancelSignal, linked.Token.WaitHandle]) == 0)
-                    linked.Cancel();
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-        });
+        using var stopCancelMonitor = new CancellationTokenSource();
+        var cancelMonitor = MonitorCancelSignalAsync(cancelSignal, linked, stopCancelMonitor.Token);
 
         var progress = new Progress<TestEvent>(testingEvent =>
         {
@@ -105,24 +92,33 @@ public sealed class RunnerCommands(
                     TestingJsonContext.Default.TestRunnerStreamMessage));
         });
 
-        var result = await execution.ExecuteAsync(
-                context,
-                debugger,
-                async (pipe, requestCancellationToken) =>
-                {
-                    await using var client = await TestPipeClient.ConnectAsync(
-                            pipe.PipeName,
-                            TimeSpan.FromSeconds(TestHostTiming.HostPipeConnectTimeoutSeconds),
-                            requestCancellationToken)
-                        .ConfigureAwait(false);
-                    var hello = await client.HelloAsync(execute.Run.FrameworkId, requestCancellationToken)
-                        .ConfigureAwait(false);
-                    EnsureHelloMatches(hello, execute);
-                    return await client.RunAsync(execute.Run, progress, requestCancellationToken)
-                        .ConfigureAwait(false);
-                },
-                linked.Token)
-            .ConfigureAwait(false);
+        ExecutionResult<TestRunResponse> result;
+        try
+        {
+            result = await execution.ExecuteAsync(
+                    context,
+                    debugger,
+                    async (pipe, requestCancellationToken) =>
+                    {
+                        await using var client = await TestPipeClient.ConnectAsync(
+                                pipe.PipeName,
+                                TimeSpan.FromSeconds(TestHostTiming.HostPipeConnectTimeoutSeconds),
+                                requestCancellationToken)
+                            .ConfigureAwait(false);
+                        var hello = await client.HelloAsync(execute.Run.FrameworkId, requestCancellationToken)
+                            .ConfigureAwait(false);
+                        EnsureHelloMatches(hello, execute);
+                        return await client.RunAsync(execute.Run, progress, requestCancellationToken)
+                            .ConfigureAwait(false);
+                    },
+                    linked.Token)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            await stopCancelMonitor.CancelAsync().ConfigureAwait(false);
+            await cancelMonitor.ConfigureAwait(false);
+        }
 
         if (!result.Succeeded)
         {
@@ -131,7 +127,7 @@ public sealed class RunnerCommands(
             {
                 ExecutionFailure.InvalidHost => RunnerExitCode.CliError,
                 ExecutionFailure.TimedOut => RunnerExitCode.RequestTimeout,
-                _ => RunnerExitCode.NoHost,
+                _ => RunnerExitCode.NoHost
             };
         }
 
@@ -141,6 +137,34 @@ public sealed class RunnerCommands(
                 TestingJsonContext.Default.TestRunnerStreamMessage));
 
         return HasRunFailure(result.Value!) ? RunnerExitCode.TestFailure : RunnerExitCode.Ok;
+    }
+
+    private static async Task MonitorCancelSignalAsync(
+        EventWaitHandle cancelSignal,
+        CancellationTokenSource linked,
+        CancellationToken stopMonitoring)
+    {
+        var signaled = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var registration = ThreadPool.RegisterWaitForSingleObject(
+            cancelSignal,
+            static (state, _) => ((TaskCompletionSource)state!).TrySetResult(),
+            signaled,
+            Timeout.InfiniteTimeSpan,
+            executeOnlyOnce: true);
+
+        try
+        {
+            await signaled.Task.WaitAsync(stopMonitoring).ConfigureAwait(false);
+            await linked.CancelAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (stopMonitoring.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            registration.Unregister(null);
+        }
     }
 
     private static void EnsureHelloMatches(TestHelloResponse hello, TestRunExecute execute)

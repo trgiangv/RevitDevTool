@@ -36,7 +36,7 @@ Rider and C# Dev Kit **can** attach the Autodesk host and still **Run** tests
 (attach does not block the test-execute flow). That is enough to hit
 breakpoints in host test bodies. Runner does not attach those IDEs.
 
-Code: `ExecutionCoordinator` + `VisualStudioAttach`. MTP/adapter only sets
+Code: `TestCoordinator` + `VisualStudioAttach`. MTP/adapter only sets
 `DebugParentPid` when `Debugger.IsAttached` (`HostTestFramework.ApplyDebugParent`).
 Architecture tests forbid EnvDTE in the adapter.
 

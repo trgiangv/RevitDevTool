@@ -135,7 +135,7 @@ public sealed class TestPipeClient : IAsyncDisposable
 
             if (!_inbox.TryDequeue(out var message))
             {
-                await Task.Delay(RunnerTiming.PipeRequestPollIntervalMilliseconds, ct).ConfigureAwait(false);
+                await Task.Delay(TestHostTiming.PipeResponsePollIntervalMilliseconds, ct).ConfigureAwait(false);
                 continue;
             }
 
@@ -146,7 +146,7 @@ public sealed class TestPipeClient : IAsyncDisposable
                 return response!;
 
             _inbox.Enqueue(message);
-            await Task.Delay(RunnerTiming.PipeRequestPollIntervalMilliseconds, ct).ConfigureAwait(false);
+            await Task.Delay(TestHostTiming.PipeResponsePollIntervalMilliseconds, ct).ConfigureAwait(false);
         }
     }
 
@@ -174,10 +174,9 @@ public sealed class TestPipeClient : IAsyncDisposable
         while (_inbox.TryDequeue(out var message))
             pending.Add(message);
 
-        foreach (var message in pending)
+        foreach (var message in pending.Where(message => !TryConsumeDiscardedResponse(message)))
         {
-            if (!TryConsumeDiscardedResponse(message))
-                _inbox.Enqueue(message);
+            _inbox.Enqueue(message);
         }
     }
 
