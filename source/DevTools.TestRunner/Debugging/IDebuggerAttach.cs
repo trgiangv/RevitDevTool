@@ -2,8 +2,7 @@ namespace DevTools.TestRunner.Debugging;
 
 public readonly record struct AttachTarget(
     int HostProcessId,
-    int? ParentProcessId,
-    string? AssemblyPath);
+    int? ParentProcessId);
 
 public interface IDebuggerAttach
 {

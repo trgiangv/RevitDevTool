@@ -1,6 +1,9 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using EnvDTE;
+using DteProcess = EnvDTE.Process;
+using DteProcesses = EnvDTE.Processes;
 namespace DevTools.TestRunner.Debugging;
 
 public sealed class VisualStudioAttach : IDebuggerAttach
@@ -13,7 +16,8 @@ public sealed class VisualStudioAttach : IDebuggerAttach
     {
         try
         {
-            var dte = FindDte(target.ParentProcessId);
+            var dte = SelectDte(EnumerateRunningDte(), target.ParentProcessId)
+                ?? GetActiveDteFallback();
             if (dte is null)
             {
                 warnings.WriteLine(
@@ -44,61 +48,67 @@ public sealed class VisualStudioAttach : IDebuggerAttach
         }
     }
 
-    private static DTE? FindDte(int? parentProcessId)
+    private static DTE? SelectDte(List<DTE> instances, int? parentProcessId)
     {
-        var instances = EnumerateRunningDte();
-        if (parentProcessId is int pid)
+        if (parentProcessId is null)
+            return instances.Count > 0 ? instances[0] : null;
+
+        foreach (var t in instances.Where(t => IsDebugging(t, parentProcessId.Value)))
         {
-            var match = instances.FirstOrDefault(dte => IsDebugging(dte, pid));
-            if (match is not null)
-                return match;
+            return t;
         }
 
-        return instances.FirstOrDefault() ?? GetActiveDteFallback();
+        return instances.Count > 0 ? instances[0] : null;
     }
 
-    private static IReadOnlyList<DTE> EnumerateRunningDte()
+    private static List<DTE> EnumerateRunningDte()
     {
         var instances = new List<DTE>();
-        if (GetRunningObjectTable(0, out var rot) != 0 || rot is null)
+        if (OleAut32.GetRunningObjectTable(0, out var rot) != 0)
             return instances;
 
         rot.EnumRunning(out var enumerator);
-        if (enumerator is null)
-            return instances;
 
         enumerator.Reset();
         var monikers = new IMoniker[1];
         while (enumerator.Next(1, monikers, IntPtr.Zero) == 0)
         {
-            IBindCtx? ctx = null;
-            try
-            {
-                CreateBindCtx(0, out ctx);
-                if (ctx is null)
-                    continue;
-
-                monikers[0].GetDisplayName(ctx, null, out var name);
-                if (string.IsNullOrWhiteSpace(name)
-                    || name.IndexOf("VisualStudio.DTE", StringComparison.OrdinalIgnoreCase) < 0)
-                    continue;
-
-                rot.GetObject(monikers[0], out var obj);
-                if (obj is DTE dte)
-                    instances.Add(dte);
-            }
-            catch (COMException)
-            {
-                // Skip entries the ROT cannot bind.
-            }
-            finally
-            {
-                if (ctx is not null)
-                    Marshal.ReleaseComObject(ctx);
-            }
+            if (TryGetVisualStudioDte(rot, monikers[0], out var dte) && dte is not null)
+                instances.Add(dte);
         }
 
         return instances;
+    }
+
+    private static bool TryGetVisualStudioDte(
+        IRunningObjectTable rot,
+        IMoniker moniker,
+        out DTE? dte)
+    {
+        dte = null;
+        if (OleAut32.CreateBindCtx(0, out var context) != 0)
+            return false;
+
+        try
+        {
+            moniker.GetDisplayName(context, null, out var name);
+            if (string.IsNullOrWhiteSpace(name)
+                || name.IndexOf("VisualStudio.DTE", StringComparison.OrdinalIgnoreCase) < 0)
+                return false;
+
+            rot.GetObject(moniker, out var obj);
+            dte = obj as DTE;
+            return dte is not null;
+        }
+        catch (COMException)
+        {
+            // Skip entries the ROT cannot bind.
+            return false;
+        }
+        finally
+        {
+            Marshal.ReleaseComObject(context);
+        }
     }
 
     private static DTE? GetActiveDteFallback()
@@ -119,16 +129,14 @@ public sealed class VisualStudioAttach : IDebuggerAttach
         return null;
     }
 
-    private static EnvDTE.Process? FindLocalProcess(DTE dte, int processId) =>
-        dte.Debugger.LocalProcesses.OfType<EnvDTE.Process>()
-            .FirstOrDefault(process => process.ProcessID == processId);
+    private static DteProcess? FindLocalProcess(DTE dte, int processId) =>
+        FindProcess(dte.Debugger.LocalProcesses, processId);
 
     private static bool IsDebugging(DTE dte, int processId)
     {
         try
         {
-            return dte.Debugger.DebuggedProcesses.OfType<EnvDTE.Process>()
-                .Any(process => process.ProcessID == processId);
+            return FindProcess(dte.Debugger.DebuggedProcesses, processId) is not null;
         }
         catch (COMException)
         {
@@ -136,10 +144,22 @@ public sealed class VisualStudioAttach : IDebuggerAttach
         }
     }
 
+    private static DteProcess? FindProcess(DteProcesses processes, int processId)
+    {
+        for (short index = 1; index <= processes.Count; index++)
+        {
+            var process = processes.Item(index);
+            if (process.ProcessID == processId)
+                return process;
+        }
+
+        return null;
+    }
+
     private static bool WaitUntilDebugging(DTE dte, int processId, TimeSpan timeout)
     {
-        var deadline = DateTime.UtcNow + timeout;
-        while (DateTime.UtcNow < deadline)
+        var stopwatch = Stopwatch.StartNew();
+        while (stopwatch.Elapsed < timeout)
         {
             if (IsDebugging(dte, processId))
                 return true;
@@ -149,10 +169,4 @@ public sealed class VisualStudioAttach : IDebuggerAttach
 
         return IsDebugging(dte, processId);
     }
-
-    [DllImport("ole32.dll")]
-    private static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable pprot);
-
-    [DllImport("ole32.dll")]
-    private static extern int CreateBindCtx(int reserved, out IBindCtx ppbc);
 }
