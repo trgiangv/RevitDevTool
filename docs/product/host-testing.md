@@ -52,8 +52,10 @@ NUnit-specific bridge protocol are not part of the supported product on
   `$(TargetName).discovery-refs.txt` from compile-only NuGet `ReferencePath`;
   testhost resolves via `AssemblyResolve` (API DLLs not beside the exe). With
   that file, discovery loads an isolated copy of the test assembly and resolves
-  those paths — no host. If `ExploreTests` cannot build a tree, discovery fails
-  with that NUnit reason; no PE metadata list.
+  those paths — no host. Parameter/return metadata for
+  `TestMethodIdentifier` is omitted when those refs cannot load (`ref/` NuGet
+  path). That must not abort the leaf list. If `ExploreTests` cannot build a tree,
+  discovery fails with that NUnit reason; no PE metadata list.
 - `NUnitAssemblyBuilder` uses types that did load instead of marking the
   whole assembly `NotRunnable` (testhost uses the same builder → assembly-level
   attributes and sort order match the host). Sets `TestContext.WorkDirectory`
@@ -83,11 +85,25 @@ NUnit-specific bridge protocol are not part of the supported product on
   `Class("args").Method` and `TestName` / `SetName` children (`ITest.FullName`);
   results fold back onto the requested UID and onto discovered leaf UIDs. Unfiltered runs (no `--filter` /
   `--filter-uid`) remap `FullName` onto discovered uids; names-only `--filter` keeps per-leaf host identities; `(args)`
-  ids stay exact `<test>`. Result nodes reuse discovered `TestMethodIdentifier`
+  ids stay exact `<test>` (plus a second `<test>` with NUnit 4 numeric
+  suffixes `d`/`f`/`m`/`L` stripped, so testhost `-12.3d` matches in-host
+  `-12.3`). Discovery also strips those suffixes from the TestNode uid so Rider
+  keys one leaf per case. Inbound IDE uids resolve through an identity index of
+  strings this testhost published (`TestId`, `FullName`, DisplayName-with-args,
+  `Ns.Type.Method`, `Class.Method()`). Grouping uids expand to leaves; results
+  publish only those leaf uids. Discover with an empty UID list is discover-all
+  (IDE refresh). The same empty list on a run stays constrained (publish nothing).
+  `TreeNodeFilter` (`--treenode-filter`, `/ns/type/method`)
+  selects those leaves — it does not fall through to the whole assembly.
+  Result nodes reuse discovered `TestMethodIdentifier`
   (C# method name). `--filter` / `Name=` → `Names` / `<name re="1">`.
   `--filter-uid`: json TestNode uid (`ITest.FullName`, or
   `Class.Method("DisplayName")` for `TestName` / `SetName`).
   PowerShell: quote `"` in uids (`--filter-uid 'Ns.Class.Method("Unit_X")'`).
+  Rider MTP uses `--server` and `TestAncestorCriterion`: click on a method group
+  sends `Class.Method` or `Class.Method()` (empty parens), not the five `(args)`
+  leaves. Execution expands to discovered leaves; results publish only those
+  leaf uids. Unreported Failed covers missing leaves, not the grouping uid.
   Unreported uids publish as Failed (same identity) instead of dropped. MTP
   `TestFrameworkCapabilities` stay empty (no VSTest-bridge extras).
 
@@ -148,8 +164,8 @@ the sample does not build, and Test Explorer then shows a source/method tree
 that is not MTP `ExploreTests`.
 
 Canonical `samples/DevTools.NUnit.SampleTests` discovery: test exe
-`--list-tests json` leaf count. Measured **70** for `Debug.Autodesk.2024` and
-`Release.Autodesk.2024` (same UIDs):
+`--list-tests json` leaf count. Measured **71** for `Debug.Autodesk.2025`
+(same UIDs on other Autodesk years):
 
 | Fixture | Leaves |
 |---|---|
@@ -159,8 +175,8 @@ Canonical `samples/DevTools.NUnit.SampleTests` discovery: test exe
 | `LifecycleTests` | 4 |
 | `HostSmokeTests` | 3 |
 | `NamedFixtureSourceTests("alpha.rvt"\|"beta.rvt")` | 2 |
-| stubs (`Box_source`, `Span_is_one`, `Wall_type_id`) | 3 |
 | `InheritedGeometryTests`, `Nested+Inner`, `GenericClosedTests<Int32>` | 1 each |
+| `InheritedGeometryTests`, `Nested+Inner`, `GenericClosedTests<Int32>`, `SourceAssetPathTests` | 1 each |
 | `GenericRevitTypeTests<XYZ\|BoundingBoxXYZ>` | **0** (not ExploreTests) |
 
 Test Explorer counts are not that leaf count. Visual Studio Real-Time Discovery
@@ -172,7 +188,7 @@ NUnit documents the same gap ([nunit3-vs-adapter#1256](https://github.com/nunit/
 [#489](https://github.com/nunit/nunit3-vs-adapter/issues/489)); adapter code
 cannot dedupe RTD nodes. A ~32-node tree (methods, `GenericRevitTypeTests`,
 `TestName` leaves as extra methods) is grouping/source discovery, not the
-70-leaf CLI list; runs from it do not send expanded FullName UIDs.
+71-leaf CLI list; runs from it do not send expanded FullName UIDs.
 
 ## Packaging
 

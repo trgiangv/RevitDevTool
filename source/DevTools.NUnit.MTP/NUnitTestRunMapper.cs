@@ -5,9 +5,9 @@ using DevTools.Testing.Abstractions.Contracts;
 namespace DevTools.NUnit.MTP;
 
 /// <summary>
-/// Maps testhost NUnit identities onto in-host filter XML and folds host
-/// results back onto IDE test-node ids. Discovery stays on
-/// <see cref="NUnitTestDiscoverer"/>.
+/// Maps published testhost identities onto in-host filter XML and folds
+/// host results onto discovered leaf uids. Selection uses
+/// <see cref="NUnitIdentityIndex"/> — grouping uids are not published.
 /// </summary>
 public sealed class NUnitTestRunMapper : ITestRunMapper
 {
@@ -29,9 +29,9 @@ public sealed class NUnitTestRunMapper : ITestRunMapper
         if (requested is { Kind: TestSelectionKind.TestIds, TestIds.Count: 0 })
             return TestSelection.FromTestIds([]);
 
-        var ids = requested.TestIds
-            .Select(id => ToHostFullName(id, discovered))
-            .Concat(discovered.Select(test => test.FullName ?? test.TestId))
+        var ids = (discovered.Count > 0
+                ? discovered.Select(test => test.FullName ?? test.TestId)
+                : requested.TestIds)
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Select(id => id.Trim())
             .Distinct(StringComparer.Ordinal)
@@ -53,16 +53,39 @@ public sealed class NUnitTestRunMapper : ITestRunMapper
         IReadOnlyList<TestDiscoveredTest> discovered,
         IReadOnlyList<TestCaseResult> hostResults)
     {
-        if (requested.Kind == TestSelectionKind.Names)
-            return hostResults;
+        switch (requested.Kind)
+        {
+            case TestSelectionKind.Names:
+                return hostResults;
+            case TestSelectionKind.TestIds when discovered.Count == 0:
+                return FoldUnknown(requested.TestIds, hostResults);
+        }
 
-        var display = DisplayNames(discovered);
+        var index = NUnitIdentityIndex.Build(discovered);
+        var expandStub = requested.Kind == TestSelectionKind.TestIds;
+        var targets = requested.Kind == TestSelectionKind.TestIds
+            ? index.Select(requested.TestIds)
+            : discovered;
         var folded = new List<TestCaseResult>();
         var usedHostIds = new HashSet<string>(StringComparer.Ordinal);
-        FoldRequestedIds(requested.TestIds, discovered, hostResults, display, folded, usedHostIds);
-        FoldDiscoveredLeaves(discovered, hostResults, folded, usedHostIds);
+        var published = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var leaf in targets)
+        {
+            if (string.IsNullOrWhiteSpace(leaf.TestId) || !published.Add(leaf.TestId))
+                continue;
+            var matches = hostResults
+                .Where(result => expandStub
+                    ? index.HostMatches(leaf, result)
+                    : index.ExactIdentity(leaf, result))
+                .ToList();
+            if (matches.Count == 0)
+                continue;
+            RememberUsed(matches, usedHostIds);
+            folded.Add(FoldMatches(leaf.TestId, leaf.DisplayName, matches));
+        }
+
         if (requested.Kind != TestSelectionKind.TestIds)
-            AppendUnusedHostResults(hostResults, folded, usedHostIds);
+            folded.AddRange(hostResults.Where(result => !IsUsed(result, usedHostIds)));
         return folded;
     }
 
@@ -74,19 +97,19 @@ public sealed class NUnitTestRunMapper : ITestRunMapper
         if (requested.Kind != TestSelectionKind.TestIds)
             return [];
 
-        var reported = new HashSet<string>(
-            hostResults.Select(result => result.TestId),
-            StringComparer.Ordinal);
-        var display = DisplayNames(discovered);
+        var index = NUnitIdentityIndex.Build(discovered);
         var missing = new List<TestCaseResult>();
-        foreach (var id in DistinctIds(requested.TestIds))
+        foreach (var id in UnreportedIds(requested, discovered, index))
         {
-            if (reported.Contains(id))
+            if (hostResults.Any(result => HostOrCollapsed(index, discovered, id, result)))
                 continue;
 
+            var display = discovered
+                .FirstOrDefault(test => string.Equals(test.TestId, id, StringComparison.Ordinal))
+                ?.DisplayName ?? id;
             missing.Add(new TestCaseResult(
                 id,
-                display.GetValueOrDefault(id, id),
+                display,
                 TestOutcomes.Failed,
                 0,
                 UnreportedFullNameMessage,
@@ -100,13 +123,52 @@ public sealed class NUnitTestRunMapper : ITestRunMapper
         return missing;
     }
 
-    private static bool HasIds(IReadOnlyList<string>? ids) => ids is { Count: > 0 };
+    private static IEnumerable<string> UnreportedIds(
+        TestSelection requested,
+        IReadOnlyList<TestDiscoveredTest> discovered,
+        NUnitIdentityIndex index)
+    {
+        if (discovered.Count > 0)
+        {
+            var leaves = requested.TestIds.Count > 0 ? index.Select(requested.TestIds) : discovered;
+            if (leaves.Count > 0)
+                return DistinctIds(leaves.Select(test => test.TestId).ToList());
+        }
 
-    private static Dictionary<string, string> DisplayNames(IReadOnlyList<TestDiscoveredTest> discovered) =>
-        discovered
-            .Where(test => !string.IsNullOrWhiteSpace(test.TestId))
-            .GroupBy(test => test.TestId, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First().DisplayName, StringComparer.Ordinal);
+        return DistinctIds(requested.TestIds);
+    }
+
+    private static bool HostOrCollapsed(
+        NUnitIdentityIndex index,
+        IReadOnlyList<TestDiscoveredTest> discovered,
+        string id,
+        TestCaseResult result)
+    {
+        var leaf = discovered.FirstOrDefault(test =>
+            string.Equals(test.TestId, id, StringComparison.Ordinal));
+        if (leaf is not null)
+            return index.HostMatches(leaf, result);
+        return NUnitCollapsedSelection.Matches(id, result.TestId, result.FullName, result.ParentTestId);
+    }
+
+    private static IReadOnlyList<TestCaseResult> FoldUnknown(
+        IReadOnlyList<string> requestedIds,
+        IReadOnlyList<TestCaseResult> hostResults)
+    {
+        var folded = new List<TestCaseResult>();
+        foreach (var id in DistinctIds(requestedIds))
+        {
+            var matches = hostResults
+                .Where(result =>
+                    NUnitCollapsedSelection.Matches(id, result.TestId, result.FullName, result.ParentTestId))
+                .ToList();
+            if (matches.Count == 0)
+                continue;
+            folded.Add(FoldMatches(id, id, matches));
+        }
+
+        return folded;
+    }
 
     private static IEnumerable<string> DistinctIds(IReadOnlyList<string>? ids)
     {
@@ -124,39 +186,6 @@ public sealed class NUnitTestRunMapper : ITestRunMapper
         }
     }
 
-    private static void FoldRequestedIds(
-        IReadOnlyList<string>? requestedIds,
-        IReadOnlyList<TestDiscoveredTest> discovered,
-        IReadOnlyList<TestCaseResult> hostResults,
-        IReadOnlyDictionary<string, string> display,
-        List<TestCaseResult> folded,
-        HashSet<string> usedHostIds)
-    {
-        if (!HasIds(requestedIds))
-            return;
-
-        foreach (var id in DistinctIds(requestedIds))
-        {
-            var matches = HostMatches(id, ToHostFullName(id, discovered), hostResults);
-            if (matches.Count == 0)
-                continue;
-
-            RememberUsed(matches, usedHostIds);
-            folded.Add(FoldMatches(id, display.TryGetValue(id, out var name) ? name : id, matches));
-        }
-    }
-
-    private static List<TestCaseResult> HostMatches(
-        string id,
-        string hostId,
-        IReadOnlyList<TestCaseResult> hostResults)
-    {
-        return hostResults.Where(result => MatchesCollapsed(id, result) || MatchesCollapsed(hostId, result)).ToList();
-    }
-
-    private static bool MatchesCollapsed(string id, TestCaseResult result) =>
-        NUnitCollapsedSelection.Matches(id, result.TestId, result.FullName, result.ParentTestId);
-
     private static TestCaseResult FoldMatches(
         string id,
         string displayName,
@@ -167,90 +196,17 @@ public sealed class NUnitTestRunMapper : ITestRunMapper
         return Collapse(id, displayName, matches);
     }
 
-    private static void FoldDiscoveredLeaves(
-        IReadOnlyList<TestDiscoveredTest> discovered,
-        IReadOnlyList<TestCaseResult> hostResults,
-        List<TestCaseResult> folded,
-        HashSet<string> usedHostIds)
-    {
-        var published = new HashSet<string>(folded.Select(result => result.TestId), StringComparer.Ordinal);
-        foreach (var test in discovered)
-        {
-            if (!TryUnpublishedId(test, published, out var id))
-                continue;
-
-            var match = FindExactHostResult(test, id, hostResults);
-            if (match is null)
-                continue;
-
-            RememberUsed(match, usedHostIds);
-            folded.Add(FoldOnto(id, test.DisplayName, match));
-            published.Add(id);
-        }
-    }
-
-    private static bool TryUnpublishedId(
-        TestDiscoveredTest test,
-        HashSet<string> published,
-        out string id)
-    {
-        id = string.IsNullOrWhiteSpace(test.TestId) ? string.Empty : test.TestId.Trim();
-        return id.Length > 0 && !published.Contains(id);
-    }
-
-    private static TestCaseResult? FindExactHostResult(
-        TestDiscoveredTest test,
-        string id,
-        IReadOnlyList<TestCaseResult> hostResults)
-    {
-        return hostResults.FirstOrDefault(result => SameIdentity(result, id, test.FullName));
-    }
-
-    private static bool SameIdentity(TestCaseResult result, string id, string? fullName) =>
-        string.Equals(result.TestId, id, StringComparison.Ordinal)
-        || string.Equals(result.FullName, id, StringComparison.Ordinal)
-        || string.Equals(result.TestId, fullName, StringComparison.Ordinal)
-        || string.Equals(result.FullName, fullName, StringComparison.Ordinal);
-
-    private static TestCaseResult FoldOnto(string id, string displayName, TestCaseResult match) =>
-        string.Equals(match.TestId, id, StringComparison.Ordinal)
-            ? match
-            : Collapse(id, displayName, [match]);
-
-    private static void RememberUsed(TestCaseResult match, HashSet<string> usedHostIds)
-    {
-        if (!string.IsNullOrWhiteSpace(match.TestId))
-            usedHostIds.Add(match.TestId);
-    }
-
     private static void RememberUsed(IEnumerable<TestCaseResult> matches, HashSet<string> usedHostIds)
     {
         foreach (var match in matches)
-            RememberUsed(match, usedHostIds);
-    }
-
-    private static void AppendUnusedHostResults(
-        IReadOnlyList<TestCaseResult> hostResults,
-        List<TestCaseResult> folded,
-        HashSet<string> usedHostIds)
-    {
-        folded.AddRange(hostResults.Where(result => !IsUsed(result, usedHostIds)));
+        {
+            if (!string.IsNullOrWhiteSpace(match.TestId))
+                usedHostIds.Add(match.TestId);
+        }
     }
 
     private static bool IsUsed(TestCaseResult result, HashSet<string> usedHostIds) =>
         !string.IsNullOrWhiteSpace(result.TestId) && usedHostIds.Contains(result.TestId);
-
-    private static string ToHostFullName(string id, IReadOnlyList<TestDiscoveredTest> discovered)
-    {
-        foreach (var test in discovered)
-        {
-            if (string.Equals(test.TestId, id, StringComparison.Ordinal)
-                && !string.IsNullOrWhiteSpace(test.FullName))
-                return test.FullName!;
-        }
-
-        return id;
-    }
 
     private static TestCaseResult Collapse(
         string testId,

@@ -23,7 +23,7 @@ public sealed class NUnitHostIdentityTests
         Assert.Equal(TestSelectionKind.FrameworkFilter, host.Kind);
         Assert.False(string.IsNullOrWhiteSpace(host.FilterData));
         Assert.Contains(matched[0].TestId, host.FilterData!, StringComparison.Ordinal);
-        Assert.DoesNotContain("re=\"1\"", host.FilterData!, StringComparison.Ordinal);
+        Assert.DoesNotContain("<method>TestCase_Addition</method>", host.FilterData!, StringComparison.Ordinal);
         Assert.Empty(host.TestIds);
         Assert.Empty(host.Names);
     }
@@ -242,11 +242,8 @@ public sealed class NUnitHostIdentityTests
 
         var folded = new NUnitTestRunMapper().FoldResults(TestSelection.FromTestIds([methodId]), discovered, host);
 
-        Assert.Equal(3, folded.Count);
-        Assert.Equal(methodId, folded[0].TestId);
-        Assert.Equal("Passed", folded[0].Outcome);
-        Assert.Equal(5, folded[0].DurationMilliseconds);
-        Assert.Equal([namedOne, namedTwo], folded.Skip(1).Select(result => result.TestId).ToArray());
+        Assert.Equal([namedOne, namedTwo], folded.Select(result => result.TestId).ToArray());
+        Assert.All(folded, result => Assert.Equal("Passed", result.Outcome));
     }
 
     [Fact]
@@ -276,8 +273,49 @@ public sealed class NUnitHostIdentityTests
             [new TestDiscoveredTest(namedOne, "Named_one", namedOne)],
             host);
 
-        Assert.Contains(folded, result => result.TestId == methodId);
+        Assert.DoesNotContain(folded, result => result.TestId == methodId);
         Assert.Contains(folded, result => result.TestId == namedOne);
+    }
+
+    [Fact]
+    public void FoldResults_rider_group_uid_publishes_ide_testname_leaves()
+    {
+        const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
+        const string ideId =
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named(\"Named_one\")";
+        const string nunitName = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one";
+        var discovered = new TestDiscoveredTest(
+            ideId,
+            "Named_one",
+            nunitName,
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture",
+            "Original_named");
+        var host = new[]
+        {
+            new TestCaseResult(
+                nunitName,
+                "Named_one",
+                "Passed",
+                2,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                ParentTestId: methodId,
+                FullName: nunitName),
+        };
+
+        var mapper = new NUnitTestRunMapper();
+        var folded = Assert.Single(
+            mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host));
+
+        Assert.Equal(ideId, folded.TestId);
+        Assert.Empty(mapper.ResultsForUnreported(
+            TestSelection.FromTestIds([methodId]),
+            [discovered],
+            [folded]));
     }
 
     [Fact]
@@ -350,6 +388,228 @@ public sealed class NUnitHostIdentityTests
         Assert.Equal(ideId, folded.TestId);
         Assert.Equal("Named_one", folded.DisplayName);
         Assert.Equal("Passed", folded.Outcome);
+    }
+
+    [Fact]
+    public void FoldResults_maps_host_double_args_without_suffix_onto_testhost_uid()
+    {
+        const string testhostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)";
+        const string hostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
+        var discovered = new TestDiscoveredTest(
+            testhostId,
+            "Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)",
+            testhostId);
+        var host = new[]
+        {
+            new TestCaseResult(
+                hostId,
+                "Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)",
+                "Passed",
+                12,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: hostId),
+        };
+
+        var folded = Assert.Single(
+            new NUnitTestRunMapper().FoldResults(
+                TestSelection.FromTestIds([testhostId]),
+                [discovered],
+                host));
+
+        Assert.Equal(testhostId, folded.TestId);
+        Assert.Equal("Passed", folded.Outcome);
+        Assert.Empty(new NUnitTestRunMapper().ResultsForUnreported(
+            TestSelection.FromTestIds([testhostId]),
+            [discovered],
+            [folded]));
+    }
+
+    [Fact]
+    public void FoldResults_maps_parameterized_cases_onto_method_uid()
+    {
+        const string methodId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z";
+        const string hostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
+        var host = new[]
+        {
+            new TestCaseResult(
+                hostId,
+                "Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)",
+                "Passed",
+                8,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: hostId),
+        };
+
+        var folded = Assert.Single(
+            new NUnitTestRunMapper().FoldResults(
+                TestSelection.FromTestIds([methodId]),
+                [],
+                host));
+
+        Assert.Equal(methodId, folded.TestId);
+        Assert.Equal("Passed", folded.Outcome);
+        Assert.Empty(new NUnitTestRunMapper().ResultsForUnreported(
+            TestSelection.FromTestIds([methodId]),
+            [],
+            [folded]));
+    }
+
+    [Fact]
+    public void FoldResults_rider_group_uid_publishes_discovered_leaves_not_ancestor()
+    {
+        const string methodId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z";
+        const string testhostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)";
+        const string hostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
+        var discovered = new TestDiscoveredTest(
+            testhostId,
+            "Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)",
+            testhostId);
+        var host = new[]
+        {
+            new TestCaseResult(
+                hostId,
+                "Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)",
+                "Passed",
+                8,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: hostId),
+        };
+
+        var mapper = new NUnitTestRunMapper();
+        var folded = Assert.Single(
+            mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host));
+
+        Assert.Equal(testhostId, folded.TestId);
+        Assert.Equal("Passed", folded.Outcome);
+        Assert.Empty(mapper.ResultsForUnreported(
+            TestSelection.FromTestIds([methodId]),
+            [discovered],
+            [folded]));
+    }
+
+    [Fact]
+    public void FoldResults_rider_empty_parens_group_uid_publishes_leaves()
+    {
+        const string methodId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z()";
+        const string testhostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)";
+        const string hostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
+        var discovered = new TestDiscoveredTest(
+            testhostId,
+            "Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)",
+            testhostId);
+        var host = new[]
+        {
+            new TestCaseResult(
+                hostId,
+                "Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)",
+                "Passed",
+                8,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: hostId),
+        };
+
+        var mapper = new NUnitTestRunMapper();
+        var folded = Assert.Single(
+            mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host));
+
+        Assert.Equal(testhostId, folded.TestId);
+        Assert.Equal("Passed", folded.Outcome);
+        Assert.Empty(mapper.ResultsForUnreported(
+            TestSelection.FromTestIds([methodId]),
+            [discovered],
+            [folded]));
+    }
+
+    [Fact]
+    public void FoldResults_visual_studio_display_name_uid_publishes_discovered_leaf()
+    {
+        const string displayName = "Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
+        const string testhostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
+        const string hostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
+        var discovered = new TestDiscoveredTest(
+            testhostId,
+            displayName,
+            testhostId);
+        var host = new[]
+        {
+            new TestCaseResult(
+                hostId,
+                displayName,
+                "Passed",
+                8,
+                null,
+                null,
+                null,
+                null,
+                [],
+                [],
+                FullName: hostId),
+        };
+
+        var mapper = new NUnitTestRunMapper();
+        var folded = Assert.Single(
+            mapper.FoldResults(TestSelection.FromTestIds([displayName]), [discovered], host));
+
+        Assert.Equal(testhostId, folded.TestId);
+        Assert.Equal("Passed", folded.Outcome);
+        Assert.Empty(mapper.ResultsForUnreported(
+            TestSelection.FromTestIds([displayName]),
+            [discovered],
+            [folded]));
+    }
+
+    [Fact]
+    public void ResultsForUnreported_fails_discovered_leaves_not_group_uid()
+    {
+        const string methodId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z";
+        const string testhostId =
+            "DevTools.NUnit.SampleTests.BoundingBoxXyzSampleTests.Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)";
+        var discovered = new TestDiscoveredTest(
+            testhostId,
+            "Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)",
+            testhostId);
+
+        var missing = Assert.Single(
+            new NUnitTestRunMapper().ResultsForUnreported(
+                TestSelection.FromTestIds([methodId]),
+                [discovered],
+                []));
+
+        Assert.Equal(testhostId, missing.TestId);
+        Assert.Equal("Failed", missing.Outcome);
     }
 
     [Fact]

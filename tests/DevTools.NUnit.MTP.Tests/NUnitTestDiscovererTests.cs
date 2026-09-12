@@ -56,6 +56,23 @@ public sealed class NUnitTestDiscovererTests
     }
 
     [Fact]
+    public void Discover_empty_parens_method_uid_selects_parameterized_leaves()
+    {
+        var discoverer = new NUnitTestDiscoverer();
+        var all = discoverer.Discover(FixturePath, TestSelection.All);
+        var one = all.First(test => test.DisplayName.StartsWith("TestCase_Addition", StringComparison.Ordinal));
+        var methodUid = one.TestId[..one.TestId.IndexOf('(')] + "()";
+
+        var selected = discoverer.Discover(
+            FixturePath,
+            TestSelection.FromTestIds([methodUid]));
+
+        Assert.Equal(3, selected.Count);
+        Assert.All(selected, test =>
+            Assert.StartsWith("TestCase_Addition", test.DisplayName, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Discover_testname_uid_keeps_csharp_method_in_the_fqn()
     {
         var named = new NUnitTestDiscoverer().Discover(FixturePath, TestSelection.All)
@@ -79,6 +96,20 @@ public sealed class NUnitTestDiscovererTests
             TestSelection.FromTestIds(["PlainTest_Passes"]));
 
         Assert.Empty(selected);
+    }
+
+    [Fact]
+    public void Discover_display_name_with_args_selects_the_leaf()
+    {
+        var discoverer = new NUnitTestDiscoverer();
+        var all = discoverer.Discover(FixturePath, TestSelection.All);
+        var one = all.First(test => test.DisplayName.StartsWith("TestCase_Addition", StringComparison.Ordinal));
+
+        var selected = discoverer.Discover(
+            FixturePath,
+            TestSelection.FromTestIds([one.DisplayName]));
+
+        Assert.Equal(one.TestId, Assert.Single(selected).TestId);
     }
 
     [Fact]

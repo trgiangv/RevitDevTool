@@ -13,49 +13,56 @@ namespace DevTools.NUnit.MTP;
 /// <summary>
 /// Authoritative local discovery via <see cref="NUnitTestAssemblyRunner"/>.
 /// Test ids are MTP uids (`Class.Method` or `Class.Method("TestName")` for
-/// renamed leaves). Host <c>&lt;test&gt;</c> still uses NUnit
-/// <see cref="ITest.FullName"/>. No host launch.
+/// renamed leaves). NUnit 4 numeric suffixes on args (`12.3d`) are stripped so
+/// the uid matches in-host <c>ITest.FullName</c>. Host <c>&lt;test&gt;</c>
+/// still uses NUnit <see cref="ITest.FullName"/>. No host launch.
 /// </summary>
 public sealed class NUnitTestDiscoverer : ITestDiscoverer
 {
     public IReadOnlyList<TestDiscoveredTest> Discover(string assemblyPath, TestSelection selection)
     {
         using var session = NUnitLocalExploration.Load(assemblyPath);
-        var all = session.Leaves.Select(test => ToDiscovered(test, session.Source)).ToList();
+        var all = MapAll(session);
         if (selection.Kind == TestSelectionKind.All)
             return all;
 
         var testIds = selection.Kind == TestSelectionKind.TestIds ? CleanIds(selection.TestIds) : [];
         var names = selection.Kind == TestSelectionKind.Names ? CleanIds(selection.Names) : [];
-        if (selection.Kind == TestSelectionKind.TestIds && testIds.Count == 0 || testIds.Count == 0 && names.Count == 0)
+        if (testIds.Count == 0 && names.Count == 0)
             return [];
 
         var selected = new List<TestDiscoveredTest>();
         if (testIds.Count > 0)
-        {
-            selected.AddRange(all.Where(test => testIds.Any(id =>
-                string.Equals(id, test.TestId, StringComparison.Ordinal)
-                || string.Equals(id, test.FullName, StringComparison.Ordinal)
-                || test.TestId.StartsWith(id + ArgOpen, StringComparison.Ordinal)
-                || NUnitCollapsedSelection.Matches(id, test.TestId, test.FullName, null))));
-        }
+            selected.AddRange(NUnitIdentityIndex.Build(all).Select(testIds));
 
         if (names.Count > 0)
-        {
-            var xml = NUnitSelectionXml.ToFilterXml(names);
-            var filter = NUnitFilterFactory.Create(xml);
-            var nameHits = new HashSet<string>(
-                session.Leaves.Where(filter.Pass).Select(test => test.FullName),
-                StringComparer.Ordinal);
-            selected.AddRange(all.Where(test =>
-                !string.IsNullOrWhiteSpace(test.FullName) && nameHits.Contains(test.FullName!)));
-        }
+            selected.AddRange(SelectByNames(session, all, names));
 
-        return selected
+        return Deduplicate(selected);
+    }
+
+    private static List<TestDiscoveredTest> MapAll(NUnitLocalExploration session) =>
+        session.Leaves.Select(test => ToDiscovered(test, session.Source)).ToList();
+
+    private static IEnumerable<TestDiscoveredTest> SelectByNames(
+        NUnitLocalExploration session,
+        IReadOnlyList<TestDiscoveredTest> tests,
+        IReadOnlyList<string> names)
+    {
+        var xml = NUnitSelectionXml.ToFilterXml(names);
+        var filter = NUnitFilterFactory.Create(xml);
+        var nameHits = new HashSet<string>(
+            session.Leaves.Where(filter.Pass).Select(test => test.FullName),
+            StringComparer.Ordinal);
+        return tests.Where(test =>
+            !string.IsNullOrWhiteSpace(test.FullName) && nameHits.Contains(test.FullName!));
+    }
+
+    private static List<TestDiscoveredTest> Deduplicate(IEnumerable<TestDiscoveredTest> tests) =>
+        tests
             .GroupBy(test => test.TestId, StringComparer.Ordinal)
             .Select(group => group.First())
             .ToList();
-    }
 
     private static List<string> CleanIds(IReadOnlyList<string>? values)
     {
@@ -78,7 +85,10 @@ public sealed class NUnitTestDiscoverer : ITestDiscoverer
             out var typeName,
             out var parsedMethod);
         var methodName = string.IsNullOrWhiteSpace(test.MethodName) ? parsedMethod : test.MethodName;
-        var testId = NUnitTestNameParser.ToIdeTestId(test.FullName, className, methodName, test.Name);
+        var nunitName = test.FullName;
+        var testId = StripNumericTypeSuffixes(
+            NUnitTestNameParser.ToIdeTestId(nunitName, className, methodName, test.Name));
+        var fullName = StripNumericTypeSuffixes(nunitName);
         TestSourceLocation? location = null;
         if (source is not null
             && source.TryGetSourceLocation(test, out var filePath, out var lineNumber)
@@ -88,15 +98,51 @@ public sealed class NUnitTestDiscoverer : ITestDiscoverer
             location = new TestSourceLocation(filePath!, lineNumber);
         }
 
+        var methodInfo = test.Method?.MethodInfo;
+        ReadMethodSignature(methodInfo, out var parameterTypes, out var returnType);
         return new TestDiscoveredTest(
             testId,
-            NUnitTestNameParser.AppendDisplayArguments(test.Name, typeName),
-            test.FullName,
+            StripNumericTypeSuffixes(
+                NUnitTestNameParser.AppendDisplayArguments(test.Name, typeName)),
+            fullName,
             className,
             methodName,
             location,
             namespaceName,
-            NUnitTestNameParser.ToSourceTypeSegment(typeName));
+            NUnitTestNameParser.ToSourceTypeSegment(typeName),
+            ParameterTypeFullNames: parameterTypes,
+            ReturnTypeFullName: returnType);
+    }
+
+    /// <summary>
+    /// <c>GetParameters</c> / <c>ReturnType</c> load parameter assemblies.
+    /// Compile-only Autodesk refs are often a NuGet <c>ref/</c> path that the
+    /// testhost cannot load — that must not abort ExploreTests mapping.
+    /// </summary>
+    private static void ReadMethodSignature(
+        System.Reflection.MethodInfo? methodInfo,
+        out IReadOnlyList<string>? parameterTypes,
+        out string? returnType)
+    {
+        parameterTypes = null;
+        returnType = null;
+        if (methodInfo is null)
+            return;
+
+        try
+        {
+            parameterTypes = methodInfo.GetParameters()
+                .Select(parameter => parameter.ParameterType.FullName ?? parameter.ParameterType.Name)
+                .ToArray();
+            returnType = methodInfo.ReturnType.FullName;
+        }
+        catch (Exception ex) when (
+            ex is FileNotFoundException
+            or FileLoadException
+            or TypeLoadException
+            or BadImageFormatException)
+        {
+        }
     }
 }
 
