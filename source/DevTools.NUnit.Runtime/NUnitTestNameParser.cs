@@ -13,6 +13,35 @@ internal static class NUnitTestNameParser
     }
 
     /// <summary>
+    /// C# <c>Ns.Type.Method</c> with argument lists stripped. A uid with no
+    /// member dot is not a group key (bare DisplayName). When
+    /// <paramref name="methodName"/> is the C# method (<c>TestName</c> /
+    /// <c>SetName</c> leaves keep a different last segment), it replaces the
+    /// parsed method. <paramref name="typeName"/> is the source type segment
+    /// (no namespace, no ctor args).
+    /// </summary>
+    public static string GroupKey(
+        string testId,
+        string? methodName = null,
+        string? typeName = null,
+        string? namespaceName = null)
+    {
+        testId = testId.Trim();
+        if (!string.IsNullOrWhiteSpace(methodName) && !string.IsNullOrWhiteSpace(typeName))
+            return Qualify(namespaceName, typeName!) + MemberDot + methodName;
+
+        if (LastAtDepthZero(testId, MemberDot) < 0)
+            return Canonicalize(testId);
+
+        Split(testId, out var className, out var parsedMethod);
+        if (!string.IsNullOrWhiteSpace(methodName)
+            && LastAtDepthZero(className, MemberDot) >= 0)
+            return className + MemberDot + methodName;
+
+        return className + MemberDot + parsedMethod;
+    }
+
+    /// <summary>
     /// Last-dot split of NUnit <c>ITest.FullName</c>: fixture constructor
     /// arguments stay on <paramref name="className"/> /
     /// <paramref name="typeName"/> (<c>Tests("beta.rvt")</c>). MTP
@@ -80,7 +109,7 @@ internal static class NUnitTestNameParser
             return displayName;
 
         SplitNamespace(displayTypeName, out _, out var typeName);
-        var suffixStart = IndexOfConstructorArgs(typeName);
+        var suffixStart = IndexOfArgList(typeName);
         if (suffixStart < 0)
             return displayName;
 
@@ -88,20 +117,6 @@ internal static class NUnitTestNameParser
         return displayName.EndsWith(args, StringComparison.Ordinal)
             ? displayName
             : displayName + args;
-    }
-
-    private static int IndexOfConstructorArgs(string typeName)
-    {
-        var depth = 0;
-        for (var index = 0; index < typeName.Length; index++)
-        {
-            var c = typeName[index];
-            if (c == ArgOpen && depth == 0)
-                return index;
-            depth = GenericDepth(depth, c);
-        }
-
-        return -1;
     }
 
     /// <summary>
@@ -140,53 +155,18 @@ internal static class NUnitTestNameParser
 
     internal static void SplitParts(string fullTestName, out string className, out string methodName)
     {
-        var lastDot = LastAtDepthZero(fullTestName, MemberDot);
-        if (lastDot < 0)
-        {
-            className = fullTestName;
-            methodName = fullTestName;
+        if (TrySplitLast(fullTestName, MemberDot, out className, out methodName))
             return;
-        }
-
-        className = fullTestName[..lastDot];
-        methodName = fullTestName[(lastDot + 1)..];
+        className = fullTestName;
+        methodName = fullTestName;
     }
 
     private static void SplitNamespace(string className, out string namespaceName, out string typeName)
     {
-        var lastDot = LastAtDepthZero(className, MemberDot);
-        if (lastDot < 0)
-        {
-            namespaceName = string.Empty;
-            typeName = className;
+        if (TrySplitLast(className, MemberDot, out namespaceName, out typeName))
             return;
-        }
-
-        namespaceName = className[..lastDot];
-        typeName = className[(lastDot + 1)..];
-    }
-
-    private static string StripArgumentLists(string value)
-    {
-        var depth = 0;
-        var builder = new StringBuilder(value.Length);
-        foreach (var c in value)
-        {
-            switch (c)
-            {
-                case ArgOpen:
-                    depth++;
-                    continue;
-                case ArgClose when depth > 0:
-                    depth--;
-                    continue;
-            }
-
-            if (depth == 0)
-                builder.Append(c);
-        }
-
-        return builder.ToString();
+        namespaceName = string.Empty;
+        typeName = className;
     }
 
     private static string NormalizeGenericSegment(string segment)
@@ -235,22 +215,23 @@ internal static class NUnitTestNameParser
 
     private static void AddClosedGenericArity(char c, ref int depth, ref int arity)
     {
-        if (c == GenericOpen)
+        switch (c)
         {
-            depth++;
-            if (depth == 1)
+            case GenericOpen:
+            {
+                depth++;
+                if (depth == 1)
+                    arity++;
+                return;
+            }
+            case TypeArgComma when depth == 1:
                 arity++;
-            return;
+                return;
+            case GenericClose:
+                depth--;
+                break;
         }
 
-        if (c == TypeArgComma && depth == 1)
-        {
-            arity++;
-            return;
-        }
-
-        if (c == GenericClose)
-            depth--;
     }
 
     private static string StripMetadataArity(string metadataType)

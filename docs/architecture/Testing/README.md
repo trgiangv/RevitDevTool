@@ -27,7 +27,8 @@ Last updated: 2026-09-10
 | Published MTP adapter, sibling builder hooks | `source/DevTools.TestAdapter/` |
 | Local NUnit `ExploreTests` + `NUnitTestRunMapper` | `source/DevTools.NUnit.MTP/` |
 | In-host NUnit engine | `source/DevTools.NUnit.Runtime/` |
-| NUnit display-name walk (`ITest.FullName`; last-dot = NUnit MTP parens-only reverse scan) | `source/DevTools.NUnit.Runtime/NUnitNameSyntax.cs` |
+| NUnit display-name walk (`ITest.FullName`; last-dot, quote-aware suffix/whitespace, canonicalize) | `source/DevTools.NUnit.Runtime/NUnitNameSyntax.cs` |
+| NUnit FullName split / IDE uid / group key | `source/DevTools.NUnit.Runtime/NUnitTestNameParser.cs` |
 | Local TUnit catalog (`Sources.TestEntries`) | `source/DevTools.TUnit.MTP/` |
 | In-host TUnit.Engine library call | `source/DevTools.TUnit.Runtime/` |
 | Runner CLI + composition | `source/DevTools.TestRunner/` |

@@ -164,4 +164,33 @@ public sealed class NUnitTestNameParserTests
         Assert.Equal("GenericClosedTests<Int32>", typeName);
         Assert.Equal("Generic_int_fixture_is_discovered", methodName);
     }
+
+    [Fact]
+    public void GroupKey_strips_argument_lists_and_empty_parens()
+    {
+        Assert.Equal(
+            "Ns.Box.Bottom_corners_share_min_z",
+            NUnitTestNameParser.GroupKey(
+                "Ns.Box.Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)"));
+        Assert.Equal(
+            "Ns.Box.Bottom_corners_share_min_z",
+            NUnitTestNameParser.GroupKey("Ns.Box.Bottom_corners_share_min_z()"));
+    }
+
+    [Fact]
+    public void GroupKey_uses_csharp_method_when_testname_renamed_the_leaf()
+    {
+        Assert.Equal(
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named",
+            NUnitTestNameParser.GroupKey(
+                "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one",
+                "Original_named"));
+        Assert.Equal(
+            "Ns.Box.Bottom_corners_share_min_z",
+            NUnitTestNameParser.GroupKey(
+                "Ns.Box.Bottom_corners_share_min_z(-12.3,45.6)",
+                "Bottom_corners_share_min_z",
+                "Box",
+                "Ns"));
+    }
 }

@@ -9,7 +9,10 @@ namespace DevTools.NUnit.Runtime;
 /// while in-host source expansion uses <c>Class("args").Method</c> or
 /// <c>SetName</c> leaves under the original method suite. UID runs keep the
 /// stub identity; the host filter also matches those expansions.
-/// IDs that already contain a depth-0 <c>(</c> stay exact <c>&lt;test&gt;</c>.
+/// Discovery strips NUnit 4 numeric suffixes from the TestNode uid
+/// (<c>12.3d</c> → <c>12.3</c>); the host filter still matches in-host
+/// FullName that kept <c>d</c>. IDE grouping uids are resolved by
+/// <c>NUnitIdentityIndex</c>, not by inbound DisplayName regex.
 /// </summary>
 internal static class NUnitCollapsedSelection
 {
@@ -46,11 +49,12 @@ internal static class NUnitCollapsedSelection
             return false;
 
         requestedId = requestedId.Trim();
-        if (string.Equals(requestedId, testId, StringComparison.Ordinal)
-            || string.Equals(requestedId, fullName, StringComparison.Ordinal)
-            || string.Equals(requestedId, parentTestId, StringComparison.Ordinal))
+        if (Same(requestedId, testId)
+            || Same(requestedId, fullName)
+            || Same(requestedId, parentTestId))
             return true;
 
+        requestedId = TrimEmptyParentheses(requestedId);
         if (!IsDottedLeafWithoutArgs(requestedId))
             return false;
 
@@ -63,6 +67,7 @@ internal static class NUnitCollapsedSelection
     {
         if (string.IsNullOrWhiteSpace(fullName))
             return false;
+        fullName = TrimEmptyParentheses(fullName);
         if (ContainsAtDepthZero(fullName, ArgOpen))
             return false;
         return LastAtDepthZero(fullName, MemberDot) >= 0;
@@ -71,10 +76,31 @@ internal static class NUnitCollapsedSelection
     private static IEnumerable<XNode> ToNodes(string testId)
     {
         yield return new XElement(TestXml, testId);
-        if (!IsDottedLeafWithoutArgs(testId))
+        var unsuffixed = StripNumericTypeSuffixes(testId);
+        if (!string.Equals(unsuffixed, testId, StringComparison.Ordinal))
+            yield return new XElement(TestXml, unsuffixed);
+
+        var canonical = Canonicalize(testId);
+        if (!string.Equals(canonical, testId, StringComparison.Ordinal)
+            && !string.Equals(canonical, unsuffixed, StringComparison.Ordinal))
+            yield return new XElement(TestXml, canonical);
+
+        var grouping = TrimEmptyParentheses(unsuffixed);
+        if (!string.Equals(grouping, testId, StringComparison.Ordinal)
+            && !string.Equals(grouping, unsuffixed, StringComparison.Ordinal)
+            && !string.Equals(grouping, canonical, StringComparison.Ordinal))
+            yield return new XElement(TestXml, grouping);
+
+        if (ContainsAtDepthZero(canonical, ArgOpen))
+        {
+            yield return RegexTest(OptionalNumericSuffixPattern(canonical));
+            yield break;
+        }
+
+        if (!IsDottedLeafWithoutArgs(grouping))
             yield break;
 
-        NUnitTestNameParser.SplitParts(testId, out var className, out var methodName);
+        NUnitTestNameParser.SplitParts(grouping, out var className, out var methodName);
         yield return RegexTest(ExpandedFullNamePattern(className, methodName));
         yield return new XElement(
             AndXml,
@@ -94,10 +120,14 @@ internal static class NUnitCollapsedSelection
             Regex.Escape(className)
             + OptionalCtorArgs
             + Regex.Escape(MemberDot.ToString())
-            + Regex.Escape(methodName));
+            + Regex.Escape(methodName)
+            + OptionalCtorArgs);
 
     private static bool IsMatch(string? value, string pattern) =>
         !string.IsNullOrWhiteSpace(value) && Regex.IsMatch(value, pattern);
+
+    private static string OptionalNumericSuffixPattern(string canonical) =>
+        Anchored(Regex.Replace(Regex.Escape(canonical), @"(\d+(?:\\\.\d+)?)", "$1[dDfFmML]?"));
 
     private static List<string> Clean(IReadOnlyList<string>? values)
     {
