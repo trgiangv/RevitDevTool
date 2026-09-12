@@ -22,7 +22,7 @@ public sealed record TestingDiscoveryBridge(
 /// </summary>
 public static class TestingDiscovery
 {
-    private static readonly object Gate = new();
+    private static readonly Lock Gate = new();
     private static TestingDiscoveryBridge? _current;
 
     public static TestingDiscoveryBridge? Current

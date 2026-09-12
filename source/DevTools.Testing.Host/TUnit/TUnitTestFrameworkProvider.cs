@@ -2,14 +2,11 @@ using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 namespace DevTools.Testing.Host.TUnit;
 
-public sealed class TUnitTestFrameworkProvider : ITestFrameworkProvider, IDisposable
+public sealed class TUnitTestFrameworkProvider(
+    TUnitGenerationPolicy policy, 
+    TUnitRuntimeSessionFactory factory) : ITestFrameworkProvider, IDisposable
 {
-    private readonly FrameworkProvider _inner;
-
-    public TUnitTestFrameworkProvider(TUnitGenerationPolicy policy, TUnitRuntimeSessionFactory factory)
-    {
-        _inner = new FrameworkProvider(TUnitGenerationPolicy.FrameworkId, policy, factory);
-    }
+    private readonly FrameworkProvider _inner = new(TUnitGenerationPolicy.FrameworkId, policy, factory);
 
     public TestFrameworkId FrameworkId => _inner.FrameworkId;
 

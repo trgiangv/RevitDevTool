@@ -17,7 +17,7 @@ internal static class TestingGenerationContentHash
             .ToList();
 
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        hash.AppendData(new[] { FormatVersion });
+        hash.AppendData([FormatVersion]);
 
         foreach (var entry in orderedEntries)
             AppendEntry(hash, entry.CanonicalPath, entry.AbsolutePath);
@@ -49,7 +49,7 @@ internal static class TestingGenerationContentHash
 
     private static void AppendUInt32LittleEndian(IncrementalHash hash, uint value)
     {
-        hash.AppendData(new byte[]
+        hash.AppendData(new[]
         {
             (byte)value,
             (byte)(value >> 8),
@@ -60,7 +60,7 @@ internal static class TestingGenerationContentHash
 
     private static void AppendInt64LittleEndian(IncrementalHash hash, long value)
     {
-        hash.AppendData(new byte[]
+        hash.AppendData(new[]
         {
             (byte)value,
             (byte)(value >> 8),

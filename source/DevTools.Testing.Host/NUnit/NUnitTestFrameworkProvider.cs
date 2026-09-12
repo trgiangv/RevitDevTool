@@ -4,14 +4,11 @@ using DevTools.Testing.Host.NUnit.Loading;
 namespace DevTools.Testing.Host.NUnit;
 
 /// <summary>NUnit provider over the shared in-host runtime session manager.</summary>
-public sealed class NUnitTestFrameworkProvider : ITestFrameworkProvider, IDisposable
+public sealed class NUnitTestFrameworkProvider(
+    NUnitGenerationPolicy policy, 
+    NUnitRuntimeSessionFactory factory) : ITestFrameworkProvider, IDisposable
 {
-    private readonly FrameworkProvider _inner;
-
-    public NUnitTestFrameworkProvider(NUnitGenerationPolicy policy, NUnitRuntimeSessionFactory factory)
-    {
-        _inner = new FrameworkProvider(NUnitGenerationPolicy.FrameworkId, policy, factory, Map);
-    }
+    private readonly FrameworkProvider _inner = new(NUnitGenerationPolicy.FrameworkId, policy, factory, Map);
 
     public TestFrameworkId FrameworkId => _inner.FrameworkId;
 

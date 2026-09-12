@@ -60,7 +60,7 @@ public static class HostRuntimeSources
         string? symbolPath = null;
         if (!string.IsNullOrWhiteSpace(source.SymbolPath))
         {
-            symbolPath = Path.GetFullPath(source.SymbolPath);
+            symbolPath = Path.GetFullPath(source.SymbolPath!);
             if (!File.Exists(symbolPath))
                 throw throwMissing($"Runtime symbol file not found: {symbolPath}");
         }

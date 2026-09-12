@@ -20,14 +20,13 @@ public sealed class TestingProviderRegistry
             if (!Enum.IsDefined(provider.FrameworkId))
                 throw new ArgumentException("Provider framework id is required.", nameof(providers));
 
-            if (_providers.ContainsKey(provider.FrameworkId))
+            if (!_providers.TryAdd(provider.FrameworkId, provider))
             {
                 throw new ArgumentException(
                     $"Duplicate host-test framework id '{provider.FrameworkId}'.",
                     nameof(providers));
             }
 
-            _providers[provider.FrameworkId] = provider;
         }
     }
 

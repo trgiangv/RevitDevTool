@@ -95,13 +95,19 @@ public static class TestingGenerationFiles
     {
         var firstInfo = new FileInfo(firstPath);
         var secondInfo = new FileInfo(secondPath);
-        if (!firstInfo.Exists || !secondInfo.Exists)
-            return false;
-        if (firstInfo.Length != secondInfo.Length)
+        if (!HasSameFileShape(firstInfo, secondInfo))
             return false;
 
         using var first = new FileStream(firstPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         using var second = new FileStream(secondPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        return StreamsEqual(first, second);
+    }
+
+    private static bool HasSameFileShape(FileInfo first, FileInfo second) =>
+        first.Exists && second.Exists && first.Length == second.Length;
+
+    private static bool StreamsEqual(Stream first, Stream second)
+    {
         var buffer = new byte[81920];
         var other = new byte[81920];
         while (true)
@@ -112,12 +118,21 @@ public static class TestingGenerationFiles
                 return false;
             if (firstRead == 0)
                 return true;
-            for (var i = 0; i < firstRead; i++)
-            {
-                if (buffer[i] != other[i])
-                    return false;
-            }
+
+            if (!BuffersEqual(buffer, other, firstRead))
+                return false;
         }
+    }
+
+    private static bool BuffersEqual(byte[] first, byte[] second, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            if (first[i] != second[i])
+                return false;
+        }
+
+        return true;
     }
 
     public static void MergeFile(
@@ -126,14 +141,9 @@ public static class TestingGenerationFiles
         string relativePath)
     {
         relativePath = NormalizeRelativePath(relativePath);
-        if (files.TryGetValue(relativePath, out var existing))
-        {
-            if (ContentEquals(existing.SourcePath, sourcePath))
-                return;
-
-            files[relativePath] = new TestingGenerationFile(sourcePath, relativePath, Classify(sourcePath));
+        if (files.TryGetValue(relativePath, out var existing)
+            && ContentEquals(existing.SourcePath, sourcePath))
             return;
-        }
 
         files[relativePath] = new TestingGenerationFile(sourcePath, relativePath, Classify(sourcePath));
     }

@@ -5,7 +5,7 @@ namespace DevTools.Testing.Abstractions.Tests;
 
 public sealed class TestingDiscoveryTests
 {
-    static readonly object Gate = new();
+    private static readonly Lock Gate = new();
 
     [Fact]
     public void Register_assigns_provider_and_mapper_together()

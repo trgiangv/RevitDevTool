@@ -96,7 +96,7 @@ public sealed class TUnitGenerationPolicy(Func<HostRuntimeSource> runtimeSourceP
         string? sourceOutputDirectory)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        Version? version = null;
+        Version? version;
         try
         {
             version = AssemblyName.GetAssemblyName(path).Version;
