@@ -11,6 +11,8 @@ using Microsoft.Testing.Platform.Requests;
 
 namespace DevTools.TestAdapter.Tests;
 
+#pragma warning disable TPEXP
+
 [Collection(nameof(TestingDiscoveryCollection))]
 public sealed class TestFrameworkTests
 {
@@ -513,6 +515,52 @@ public sealed class TestNodeMapperTests
         var selection = TestFramework.ToRunnerFilter(filter, "Intentional_failure_for_demo");
         Assert.Equal(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
         Assert.Equal(TestSelectionKind.TestIds, selection.Kind);
+    }
+
+    [Fact]
+    public void ToRunnerFilter_unwraps_composite_uid_list()
+    {
+        var uidFilter = new TestNodeUidListFilter([new TestNodeUid("HostSmokeTests.Arithmetic")]);
+        var filter = new CompositeTestExecutionFilter(
+            TestExecutionFilterOperator.And,
+            [uidFilter, new NopFilter()]);
+        var selection = TestFramework.ToRunnerFilter(filter);
+        Assert.Equal(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
+        Assert.Equal(TestSelectionKind.TestIds, selection.Kind);
+    }
+
+    [Fact]
+    public void ToRunnerFilter_empty_uid_list_is_constrained()
+    {
+        var selection = TestFramework.ToRunnerFilter(new TestNodeUidListFilter([]));
+        Assert.Equal(TestSelectionKind.TestIds, selection.Kind);
+        Assert.Empty(selection.TestIds);
+        Assert.True(selection.IsConstrained);
+    }
+
+    [Fact]
+    public void ToDiscoverFilter_empty_uid_list_is_all()
+    {
+        var selection = TestFramework.ToDiscoverFilter(new TestNodeUidListFilter([]));
+        Assert.Equal(TestSelectionKind.All, selection.Kind);
+        Assert.False(selection.IsConstrained);
+    }
+
+    [Fact]
+    public void MtpTreePaths_include_namespace_type_method()
+    {
+        var leaf = new TestDiscoveredTest(
+            "Ns.Box.Bottom_corners_share_min_z(-12.3,45.6)",
+            "Bottom_corners_share_min_z(-12.3,45.6)",
+            "Ns.Box.Bottom_corners_share_min_z(-12.3,45.6)",
+            "Ns.Box",
+            "Bottom_corners_share_min_z",
+            Namespace: "Ns",
+            TypeName: "Box");
+
+        var paths = TestFramework.MtpTreePaths(leaf).ToArray();
+        Assert.Contains("/Ns/Box/Bottom_corners_share_min_z", paths, StringComparer.Ordinal);
+        Assert.Contains("/" + Uri.EscapeDataString(leaf.TestId), paths, StringComparer.Ordinal);
     }
 
     [Fact]

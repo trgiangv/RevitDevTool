@@ -7,6 +7,7 @@ from MTP version notes.
 |------|--------|-------|-----------------|
 | `--filter` | adapter `TestCommandLineProvider` | 1 | `TestingSelection.Names` → NUnit `<name re="1">` (regex on `ITest.Name`) |
 | `--filter-uid` | Microsoft.Testing.Platform | 1..N | `TestNodeUidListFilter` → `TestingSelection.TestIds` → NUnit `<test>` |
+| `--treenode-filter` | Microsoft.Testing.Platform | 1 | `TreeNodeFilter` → discovered leaves whose `/ns/type/method` (or uid) path matches. Never whole-assembly. |
 | `--list-tests` text | platform | — | prints `TestNode.DisplayName` (`ITest.Name`), not the UID |
 | `--list-tests json` | platform | — | `uid` is `TestNode.Uid` from testhost `ExploreTests` |
 

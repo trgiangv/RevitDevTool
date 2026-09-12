@@ -1,4 +1,5 @@
 using System.Reflection;
+using DevTools.NUnit.MTP;
 using DevTools.TestAdapter;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Config;
@@ -75,6 +76,50 @@ public sealed class TestFrameworkPublishRunTests
 
         Assert.NotNull(transport.LastRequest);
         Assert.Empty(bus.Nodes);
+    }
+
+    [Fact]
+    public async Task Streamed_host_id_is_remapped_onto_discovered_uid()
+    {
+        const string testhostId =
+            "Ns.Box.Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)";
+        const string hostId =
+            "Ns.Box.Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
+        var discovered = new TestDiscoveredTest(testhostId, "Bottom_corners", testhostId);
+        var host = new TestCaseResult(
+            hostId, "Bottom_corners", TestOutcomes.Passed, 1, null, null, null, null, [], [], FullName: hostId);
+        var transport = new FakeTestRunnerTransport
+        {
+            Response = new TestRunResponse(
+                Guid.NewGuid(),
+                TestFrameworkId.NUnit,
+                "gen",
+                [host],
+                TestCancellationState.None,
+                null,
+                null),
+            StreamedEvents =
+            [
+                new TestEvent(
+                    Guid.NewGuid(),
+                    TestEventKinds.Case,
+                    host,
+                    null,
+                    null,
+                    TestCancellationState.None),
+            ],
+        };
+        var bus = new CapturingMessageBus();
+        await ExecuteRunAsync(
+            transport,
+            bus,
+            new SelectionAwareDiscoverer([discovered]),
+            new NUnitTestRunMapper(),
+            new TestNodeUidListFilter([new TestNodeUid(testhostId)]),
+            TestContext.Current.CancellationToken);
+
+        var node = Assert.Single(bus.Nodes);
+        Assert.Equal(testhostId, node.Uid.Value);
     }
 
     [Fact]
