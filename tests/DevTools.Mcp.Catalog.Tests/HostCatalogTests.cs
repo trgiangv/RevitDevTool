@@ -8,9 +8,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public class HostCatalogTests
 {
-    [Fact]
+    [TestMethod]
     public async Task AddMcpHostClient_ExposesSameBrokerAsDiscoveryService()
     {
         var services = new ServiceCollection();
@@ -18,10 +19,12 @@ public class HostCatalogTests
         services.AddMcpHostClient();
         await using var provider = services.BuildServiceProvider();
 
-        Assert.Same(provider.GetRequiredService<IHostBroker>(), provider.GetRequiredService<IHostDiscovery>());
+        var broker = provider.GetRequiredService<IHostBroker>();
+        var discovery = provider.GetRequiredService<IHostDiscovery>();
+        Assert.AreSame<object>(broker, discovery);
     }
 
-    [Fact]
+    [TestMethod]
     public void Replace_AtomicallyReplacesEntryForHostKey()
     {
         var catalog = new ConnectedHostCatalog();
@@ -30,11 +33,11 @@ public class HostCatalogTests
         catalog.Replace(Entry(key, tools: ["old_tool"]));
         catalog.Replace(Entry(key, tools: ["new_tool"]));
 
-        Assert.Equal(HostCatalogResolutionState.NotFound, catalog.Resolve(HostCatalogKind.Tool, "old_tool", key.MachineId, key.ProcessId).State);
-        Assert.Equal(HostCatalogResolutionState.Found, catalog.Resolve(HostCatalogKind.Tool, "new_tool", key.MachineId, key.ProcessId).State);
+        Assert.AreEqual(HostCatalogResolutionState.NotFound, catalog.Resolve(HostCatalogKind.Tool, "old_tool", key.MachineId, key.ProcessId).State);
+        Assert.AreEqual(HostCatalogResolutionState.Found, catalog.Resolve(HostCatalogKind.Tool, "new_tool", key.MachineId, key.ProcessId).State);
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_OrdersHitsByKindThenTargetThenPid()
     {
         var catalog = new ConnectedHostCatalog();
@@ -42,12 +45,12 @@ public class HostCatalogTests
 
         var hits = catalog.Search("csharp", [HostCatalogKind.Tool], limit: 10);
 
-        Assert.Equal(2, hits.Count);
-        Assert.Equal("csharp_helper", hits[0].Target);
-        Assert.Equal("execute_csharp_code", hits[1].Target);
+        Assert.AreEqual(2, hits.Count);
+        Assert.AreEqual("csharp_helper", hits[0].Target);
+        Assert.AreEqual("execute_csharp_code", hits[1].Target);
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_FiltersByMachineAndPid()
     {
         var catalog = new ConnectedHostCatalog();
@@ -57,12 +60,12 @@ public class HostCatalogTests
 
         var hits = catalog.Search("shared", machineId: "m1", hostInstanceId: 202);
 
-        Assert.Single(hits);
-        Assert.Equal(202, hits[0].Key.ProcessId);
-        Assert.Equal("m1", hits[0].Key.MachineId);
+        Assert.HasCount(1, hits);
+        Assert.AreEqual(202, hits[0].Key.ProcessId);
+        Assert.AreEqual("m1", hits[0].Key.MachineId);
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_FiltersByKind()
     {
         var catalog = new ConnectedHostCatalog();
@@ -76,15 +79,15 @@ public class HostCatalogTests
         var resources = catalog.Search(null, [HostCatalogKind.Resource]);
         var templates = catalog.Search(null, [HostCatalogKind.ResourceTemplate]);
 
-        Assert.Single(tools);
-        Assert.Equal(HostCatalogKind.Tool, tools[0].Kind);
-        Assert.Single(resources);
-        Assert.Equal(HostCatalogKind.Resource, resources[0].Kind);
-        Assert.Single(templates);
-        Assert.Equal(HostCatalogKind.ResourceTemplate, templates[0].Kind);
+        Assert.HasCount(1, tools);
+        Assert.AreEqual(HostCatalogKind.Tool, tools[0].Kind);
+        Assert.HasCount(1, resources);
+        Assert.AreEqual(HostCatalogKind.Resource, resources[0].Kind);
+        Assert.HasCount(1, templates);
+        Assert.AreEqual(HostCatalogKind.ResourceTemplate, templates[0].Kind);
     }
 
-    [Fact]
+    [TestMethod]
     public void Resolve_RequiresExplicitInstanceWhenAmbiguous()
     {
         var catalog = new ConnectedHostCatalog();
@@ -94,13 +97,13 @@ public class HostCatalogTests
         var ambiguous = catalog.Resolve(HostCatalogKind.Tool, "shared", "m", null);
         var found = catalog.Resolve(HostCatalogKind.Tool, "shared", "m", 202);
 
-        Assert.Equal(HostCatalogResolutionState.Ambiguous, ambiguous.State);
-        Assert.Equal(2, ambiguous.Candidates.Count);
-        Assert.Equal(HostCatalogResolutionState.Found, found.State);
-        Assert.Equal(202, found.Hit!.Key.ProcessId);
+        Assert.AreEqual(HostCatalogResolutionState.Ambiguous, ambiguous.State);
+        Assert.AreEqual(2, ambiguous.Candidates.Count);
+        Assert.AreEqual(HostCatalogResolutionState.Found, found.State);
+        Assert.AreEqual(202, found.Hit!.Key.ProcessId);
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_RanksExactBeforePrefixBeforeDescription()
     {
         var catalog = new ConnectedHostCatalog();
@@ -115,13 +118,13 @@ public class HostCatalogTests
 
         var hits = catalog.Search("find", [HostCatalogKind.Tool], limit: 10);
 
-        Assert.Equal(3, hits.Count);
-        Assert.Equal("find", hits[0].Target);
-        Assert.Equal("find_elements", hits[1].Target);
-        Assert.Equal("revit_list_rooms", hits[2].Target);
+        Assert.AreEqual(3, hits.Count);
+        Assert.AreEqual("find", hits[0].Target);
+        Assert.AreEqual("find_elements", hits[1].Target);
+        Assert.AreEqual("revit_list_rooms", hits[2].Target);
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_DescriptionSubstring_Matches()
     {
         var catalog = new ConnectedHostCatalog();
@@ -135,11 +138,11 @@ public class HostCatalogTests
 
         var hits = catalog.Search("walls", [HostCatalogKind.Tool], limit: 5);
 
-        Assert.Single(hits);
-        Assert.Equal("revit_find_elements", hits[0].Target);
+        Assert.HasCount(1, hits);
+        Assert.AreEqual("revit_find_elements", hits[0].Target);
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_EmptyQuery_ReturnsCatalog()
     {
         var catalog = new ConnectedHostCatalog();
@@ -147,20 +150,20 @@ public class HostCatalogTests
 
         var hits = catalog.Search(null, [HostCatalogKind.Tool]);
 
-        Assert.Single(hits);
-        Assert.Equal("execute_csharp_code", hits[0].Target);
+        Assert.HasCount(1, hits);
+        Assert.AreEqual("execute_csharp_code", hits[0].Target);
     }
 
-    [Fact]
+    [TestMethod]
     public void Remove_InvalidatesHostOnDisconnect()
     {
         var catalog = new ConnectedHostCatalog();
         var key = new HostKey("m", 101);
         catalog.Replace(Entry(key, tools: ["tool"]));
 
-        Assert.True(catalog.Remove(key));
-        Assert.Empty(catalog.List());
-        Assert.Equal(HostCatalogResolutionState.NotFound, catalog.Resolve(HostCatalogKind.Tool, "tool", "m", 101).State);
+        Assert.IsTrue(catalog.Remove(key));
+        Assert.IsEmpty(catalog.List());
+        Assert.AreEqual(HostCatalogResolutionState.NotFound, catalog.Resolve(HostCatalogKind.Tool, "tool", "m", 101).State);
     }
 
     private static HostCatalogEntry Entry(

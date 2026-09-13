@@ -11,24 +11,25 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpToolsetIsolationTests
 {
-    [Fact]
+    [TestMethod]
     public void Isolation_plan_binds_the_exact_parent_mcp_contract_assemblies()
     {
         using var workload = McpToolsetWorkload.Create("contract", "private");
 
         var plan = McpToolsetIsolationPlan.Create(workload.EntryPath);
 
-        Assert.True(plan.TryShare(typeof(McpServer).Assembly.GetName(), out var server));
-        Assert.True(plan.TryShare(typeof(CallToolResult).Assembly.GetName(), out var protocol));
-        Assert.Same(typeof(McpServer).Assembly, server);
-        Assert.Same(typeof(CallToolResult).Assembly, protocol);
-        Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
-        Assert.Equal(2, plan.ManagedSources.Count);
+        Assert.IsTrue(plan.TryShare(typeof(McpServer).Assembly.GetName(), out var server));
+        Assert.IsTrue(plan.TryShare(typeof(CallToolResult).Assembly.GetName(), out var protocol));
+        Assert.AreSame(typeof(McpServer).Assembly, server);
+        Assert.AreSame(typeof(CallToolResult).Assembly, protocol);
+        Assert.AreEqual(AssemblyIsolationKind.Isolated, plan.Kind);
+        Assert.AreEqual(2, plan.ManagedSources.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public void Toolset_loads_its_private_microsoft_extensions_version_instead_of_the_parent_version()
     {
         using var workload = McpToolsetWorkload.Create("version", "private-v1", "parent-v2");
@@ -37,10 +38,10 @@ public sealed class McpToolsetIsolationTests
         using var context = new McpToolsetContext(workload.EntryPath, NullLogger.Instance);
         var value = InvokeValue(context.LoadAssembly());
 
-        Assert.Equal("private-v1", value);
+        Assert.AreEqual("private-v1", value);
     }
 
-    [Fact]
+    [TestMethod]
     public void Toolset_load_does_not_run_an_unrequested_sibling_initializer()
     {
         using var workload = McpToolsetWorkload.Create("lazy", "private");
@@ -48,10 +49,10 @@ public sealed class McpToolsetIsolationTests
         using var context = new McpToolsetContext(workload.EntryPath, NullLogger.Instance);
         _ = context.LoadAssembly();
 
-        Assert.False(File.Exists(workload.SiblingInitializerMarkerPath));
+        Assert.IsFalse(File.Exists(workload.SiblingInitializerMarkerPath));
     }
 
-    [Fact]
+    [TestMethod]
     public void Toolset_missing_private_dependency_fails_when_the_member_is_invoked()
     {
         using var workload = McpToolsetWorkload.Create("diagnostics", "private");
@@ -60,11 +61,11 @@ public sealed class McpToolsetIsolationTests
         using var context = new McpToolsetContext(workload.EntryPath, NullLogger.Instance);
         var assembly = context.LoadAssembly();
 
-        var failure = Assert.Throws<TargetInvocationException>(() => InvokeValue(assembly));
-        Assert.IsType<FileNotFoundException>(failure.InnerException);
+        var failure = Assert.ThrowsExactly<TargetInvocationException>(() => InvokeValue(assembly));
+        Assert.IsInstanceOfType<FileNotFoundException>(failure.InnerException);
     }
 
-    [Fact]
+    [TestMethod]
     public void Toolset_context_manager_releases_collectible_context_after_cached_dispatch_references_are_cleared()
     {
         using var workload = McpToolsetWorkload.Create("unload", "private");
@@ -80,7 +81,7 @@ public sealed class McpToolsetIsolationTests
             GC.Collect();
         }
 
-        Assert.False(contextReference.IsAlive, "The toolset ALC remained alive after cache clear and context disposal.");
+        Assert.IsFalse(contextReference.IsAlive, "The toolset ALC remained alive after cache clear and context disposal.");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -172,6 +173,6 @@ internal sealed class McpToolsetWorkload : IDisposable
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         using var stream = File.Create(path);
         var result = compilation.Emit(stream);
-        Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
+        Assert.IsTrue(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
     }
 }

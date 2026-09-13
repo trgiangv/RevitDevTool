@@ -136,7 +136,7 @@ internal static class DotnetToolsetTestHarness
 
         IServiceProvider? services = null) =>
 
-        Assert.Throws<InputRequiredException>(() =>
+        Assert.ThrowsExactly<InputRequiredException>(() =>
 
             ToolsetInvoker.InvokeRaw(method, null, request, services ?? EmptyServices, CancellationToken.None));
 

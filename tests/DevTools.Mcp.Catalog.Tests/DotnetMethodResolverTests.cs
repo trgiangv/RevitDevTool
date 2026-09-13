@@ -7,9 +7,10 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class DotnetMethodResolverTests
 {
-    [Fact]
+    [TestMethod]
     public void ResolveTool_FindsMethodInLoadedAssembly()
     {
         var resolver = CreateResolver();
@@ -21,11 +22,11 @@ public sealed class DotnetMethodResolverTests
 
         var method = resolver.ResolveTool(tool);
 
-        Assert.NotNull(method);
-        Assert.Equal(nameof(DotnetToolsetMrtrStubs.BindCapture), method!.Name);
+        Assert.IsNotNull(method);
+        Assert.AreEqual(nameof(DotnetToolsetMrtrStubs.BindCapture), method!.Name);
     }
 
-    [Fact]
+    [TestMethod]
     public void ResolveTool_ReturnsNull_WhenContainerDoesNotMatch()
     {
         var resolver = CreateResolver();
@@ -35,15 +36,15 @@ public sealed class DotnetMethodResolverTests
             "Missing.Container",
             nameof(DotnetToolsetMrtrStubs.BindCapture));
 
-        Assert.Null(resolver.ResolveTool(tool));
+        Assert.IsNull(resolver.ResolveTool(tool));
     }
 
-    [Fact]
+    [TestMethod]
     public void ResolveResource_FindsSampleResource_WhenAssemblyPresent()
     {
         var assemblyPath = OptionalArtifact.ResolveMcpToolsetDemoDll(FindRepositoryRoot());
         if (assemblyPath is null)
-            Assert.Skip(OptionalArtifact.McpToolsetDemoHint);
+            Assert.Inconclusive(OptionalArtifact.McpToolsetDemoHint);
 
         var catalog = new McpAssemblyParser(NullLogger<McpAssemblyParser>.Instance).ParseCatalogFromAssembly(assemblyPath);
         var resource = catalog.Resources.Single(item => item.Descriptor?.Name == "demo_status");
@@ -51,10 +52,10 @@ public sealed class DotnetMethodResolverTests
 
         var method = resolver.ResolveResource(resource);
 
-        Assert.NotNull(method);
+        Assert.IsNotNull(method);
     }
 
-    [Fact]
+    [TestMethod]
     public void ResolveTool_LoadsFromToolsetContext_WhenAssemblyNotYetLoaded()
     {
         using var workload = McpResolverWorkload.Create();
@@ -67,9 +68,9 @@ public sealed class DotnetMethodResolverTests
 
         var method = resolver.ResolveTool(tool);
         if (method is null)
-            Assert.Skip("Compiled resolver toolset could not be loaded in this environment.");
+            Assert.Inconclusive("Compiled resolver toolset could not be loaded in this environment.");
 
-        Assert.Equal("Run", method!.Name);
+        Assert.AreEqual("Run", method!.Name);
     }
 
     private static DotnetMethodResolver CreateResolver() =>
@@ -138,7 +139,7 @@ internal sealed class McpResolverWorkload : IDisposable
 
         using var stream = File.Create(workload.EntryPath);
         var result = compilation.Emit(stream);
-        Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
+        Assert.IsTrue(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
 
         return workload;
     }

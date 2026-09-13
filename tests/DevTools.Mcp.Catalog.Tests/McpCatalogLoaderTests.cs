@@ -3,9 +3,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpCatalogLoaderTests
 {
-    [Fact]
+    [TestMethod]
     public void LoadCatalog_LogsOnlyWhenProviderAddsNewTools()
     {
         var builtIn = new StubProvider("built-in", ExecutionMode.CSharp, Tool("execute_csharp_code"));
@@ -16,21 +17,21 @@ public sealed class McpCatalogLoaderTests
         loader.LoadCatalog([], []);
         loader.LoadCatalog([], []);
 
-        Assert.Contains(logger.Messages, message => message.Contains("Provider 'built-in' added 1 tool(s)", StringComparison.Ordinal));
-        Assert.Contains(logger.Messages, message => message.Contains("Tool store added 1 tool(s)", StringComparison.Ordinal));
-        Assert.DoesNotContain(logger.Messages, message => message.Contains("dotnet-mcp", StringComparison.Ordinal));
-        Assert.Equal(2, logger.Messages.Count);
+        Assert.IsTrue(logger.Messages.Any(message => message.Contains("Provider 'built-in' added 1 tool(s)", StringComparison.Ordinal)));
+        Assert.IsTrue(logger.Messages.Any(message => message.Contains("Tool store added 1 tool(s)", StringComparison.Ordinal)));
+        Assert.IsFalse(logger.Messages.Any(message => message.Contains("dotnet-mcp", StringComparison.Ordinal)));
+        Assert.AreEqual(2, logger.Messages.Count);
 
         builtIn.Catalog = CreateCatalog(Tool("execute_csharp_code"), Tool("execute_python_code"));
         logger.Messages.Clear();
         loader.LoadCatalog([], []);
 
-        Assert.Contains(logger.Messages, message => message.Contains("Provider 'built-in' added 1 tool(s)", StringComparison.Ordinal));
-        Assert.Contains(logger.Messages, message => message.Contains("Tool store added 1 tool(s)", StringComparison.Ordinal));
-        Assert.Contains(logger.Messages, message => message.Contains("total 2 tools", StringComparison.Ordinal));
+        Assert.IsTrue(logger.Messages.Any(message => message.Contains("Provider 'built-in' added 1 tool(s)", StringComparison.Ordinal)));
+        Assert.IsTrue(logger.Messages.Any(message => message.Contains("Tool store added 1 tool(s)", StringComparison.Ordinal)));
+        Assert.IsTrue(logger.Messages.Any(message => message.Contains("total 2 tools", StringComparison.Ordinal)));
     }
 
-    [Fact]
+    [TestMethod]
     public void LoadCatalog_DoesNotLogEmptyProviders()
     {
         var logger = new CapturingLogger<McpCatalogLoader>();
@@ -40,11 +41,11 @@ public sealed class McpCatalogLoaderTests
 
         var catalog = loader.LoadCatalog([], []);
 
-        Assert.Empty(catalog.Tools);
-        Assert.Empty(logger.Messages);
+        Assert.IsEmpty(catalog.Tools);
+        Assert.IsEmpty(logger.Messages);
     }
 
-    [Fact]
+    [TestMethod]
     public void LoadCatalog_DropsDuplicateProtocolNamesInsteadOfChoosingFirstAtInvoke()
     {
         var first = new StubProvider("first", ExecutionMode.Dotnet, Tool("same_name"));
@@ -53,8 +54,8 @@ public sealed class McpCatalogLoaderTests
 
         var catalog = loader.LoadCatalog([], []);
 
-        Assert.Single(catalog.Tools);
-        Assert.Equal(ExecutionMode.Dotnet, catalog.Tools[0].Binding.SourceKind);
+        Assert.HasCount(1, catalog.Tools);
+        Assert.AreEqual(ExecutionMode.Dotnet, catalog.Tools[0].Binding.SourceKind);
     }
 
     private static McpRegistryCatalog CreateCatalog(params McpRegisteredTool[] tools) => new()

@@ -4,9 +4,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpCatalogCreateOptionsTests
 {
-    [Fact]
+    [TestMethod]
     public void ForResource_UsesCatalogUriTemplate_NotSdkFallback()
     {
         var resource = new McpRegisteredResource
@@ -27,12 +28,12 @@ public sealed class McpCatalogCreateOptionsTests
 
         var options = McpCatalogCreateOptions.ForResource(resource);
 
-        Assert.Equal("revit://element/{elementId}", options.UriTemplate);
-        Assert.Equal("revit_element", options.Name);
-        Assert.Equal("application/json", options.MimeType);
+        Assert.AreEqual("revit://element/{elementId}", options.UriTemplate);
+        Assert.AreEqual("revit_element", options.Name);
+        Assert.AreEqual("application/json", options.MimeType);
     }
 
-    [Fact]
+    [TestMethod]
     public void ForTool_PropagatesStructuredOutputFlag()
     {
         var tool = new McpRegisteredTool
@@ -54,7 +55,7 @@ public sealed class McpCatalogCreateOptionsTests
 
         var options = McpCatalogCreateOptions.ForTool(tool);
 
-        Assert.Equal("revit_find_elements", options.Name);
-        Assert.True(options.UseStructuredContent);
+        Assert.AreEqual("revit_find_elements", options.Name);
+        Assert.IsTrue(options.UseStructuredContent);
     }
 }

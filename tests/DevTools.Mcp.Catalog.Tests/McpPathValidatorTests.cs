@@ -6,25 +6,26 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpPathValidatorTests
 {
-    [Fact]
+    [TestMethod]
     public void ClassifyInputPath_DetectsDotnetAssembly()
     {
         var dll = typeof(McpPathValidatorTests).Assembly.Location;
 
-        Assert.Equal(ExecutionMode.Dotnet, McpPathValidator.ClassifyInputPath(dll));
+        Assert.AreEqual(ExecutionMode.Dotnet, McpPathValidator.ClassifyInputPath(dll));
     }
 
-    [Fact]
+    [TestMethod]
     public void ClassifyInputPath_DetectsPythonToolset()
     {
         var directory = CreatePythonToolsetDirectory();
 
         try
         {
-            Assert.Equal(ExecutionMode.Python, McpPathValidator.ClassifyInputPath(directory));
-            Assert.True(McpPathValidator.IsValidPythonToolsetPath(directory));
+            Assert.AreEqual(ExecutionMode.Python, McpPathValidator.ClassifyInputPath(directory));
+            Assert.IsTrue(McpPathValidator.IsValidPythonToolsetPath(directory));
         }
         finally
         {
@@ -32,15 +33,15 @@ public sealed class McpPathValidatorTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void ClassifyInputPath_ReturnsUnsupported_ForMissingPath()
     {
-        Assert.Equal(ExecutionMode.Unsupported, McpPathValidator.ClassifyInputPath(@"C:\missing\path.dll"));
-        Assert.False(McpPathValidator.IsValidDotnetAssemblyPath(null));
-        Assert.False(McpPathValidator.IsValidDotnetAssemblyPath("readme.txt"));
+        Assert.AreEqual(ExecutionMode.Unsupported, McpPathValidator.ClassifyInputPath(@"C:\missing\path.dll"));
+        Assert.IsFalse(McpPathValidator.IsValidDotnetAssemblyPath(null));
+        Assert.IsFalse(McpPathValidator.IsValidDotnetAssemblyPath("readme.txt"));
     }
 
-    [Fact]
+    [TestMethod]
     public void PathProducesCatalogItems_MatchesExactAndNestedPaths()
     {
         var root = Path.Combine(Path.GetTempPath(), "DevTools.Mcp.Tests", Guid.NewGuid().ToString("N"));
@@ -60,9 +61,9 @@ public sealed class McpPathValidatorTests
 
         try
         {
-            Assert.True(McpPathValidator.PathProducesCatalogItems(root, ExecutionMode.Python, catalog));
-            Assert.True(McpPathValidator.PathProducesCatalogItems(nested, ExecutionMode.Python, catalog));
-            Assert.False(McpPathValidator.PathProducesCatalogItems(Path.Combine(root, "other"), ExecutionMode.Python, catalog));
+            Assert.IsTrue(McpPathValidator.PathProducesCatalogItems(root, ExecutionMode.Python, catalog));
+            Assert.IsTrue(McpPathValidator.PathProducesCatalogItems(nested, ExecutionMode.Python, catalog));
+            Assert.IsFalse(McpPathValidator.PathProducesCatalogItems(Path.Combine(root, "other"), ExecutionMode.Python, catalog));
         }
         finally
         {
@@ -70,7 +71,7 @@ public sealed class McpPathValidatorTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void AddDistinct_IsCaseInsensitive()
     {
         var paths = new List<string> { @"C:\Toolsets\Demo.dll" };
@@ -78,10 +79,10 @@ public sealed class McpPathValidatorTests
         McpPathValidator.AddDistinct(paths, @"c:\toolsets\demo.dll");
         McpPathValidator.AddDistinct(paths, @"C:\Toolsets\Other.dll");
 
-        Assert.Equal(2, paths.Count);
+        Assert.AreEqual(2, paths.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public void ResolvePaths_FiltersAndNormalizes()
     {
         var dll = typeof(McpPathValidatorTests).Assembly.Location;
@@ -89,11 +90,11 @@ public sealed class McpPathValidatorTests
             [dll, @"C:\missing.dll", dll.ToUpperInvariant()],
             McpPathValidator.IsValidDotnetAssemblyPath);
 
-        Assert.Single(resolved);
-        Assert.Equal(Path.GetFullPath(dll), resolved[0]);
+        Assert.HasCount(1, resolved);
+        Assert.AreEqual(Path.GetFullPath(dll), resolved[0]);
     }
 
-    [Fact]
+    [TestMethod]
     public void PruneInvalidConfiguredPaths_RemovesPathsThatProduceNoCatalogItems()
     {
         var config = new McpRegistryConfig
@@ -109,8 +110,8 @@ public sealed class McpPathValidatorTests
 
         McpPathValidator.PruneInvalidConfiguredPaths(config, catalog, NullLogger.Instance);
 
-        Assert.Empty(config.DotnetPaths);
-        Assert.Empty(config.PythonToolsetPaths);
+        Assert.IsEmpty(config.DotnetPaths);
+        Assert.IsEmpty(config.PythonToolsetPaths);
     }
 
     private static string CreatePythonToolsetDirectory()

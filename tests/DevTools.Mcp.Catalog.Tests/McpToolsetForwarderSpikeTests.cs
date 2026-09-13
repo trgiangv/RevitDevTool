@@ -14,17 +14,18 @@ namespace DevTools.Mcp.Catalog.Tests;
 /// Validates ILRepack MCP-exclude spike on <c>samples/McpToolsetDemo</c>
 /// built as <c>Release.Autodesk.2025</c> (external MCP refs + ALC host resolve).
 /// </summary>
+[TestClass]
 public sealed class McpToolsetForwarderSpikeTests
 {
     private static readonly string ToolsetDllPath = ResolveToolsetDllPath();
 
-    [Fact]
+    [TestMethod]
     public void RepackedToolset_KeepsExternalMcpRefs_AndStripsSiblingDlls()
     {
         OptionalArtifact.RequireFile(ToolsetDllPath, BuildHint);
 
         var toolsetDir = Path.GetDirectoryName(ToolsetDllPath)!;
-        Assert.Empty(Directory.GetFiles(toolsetDir, "ModelContextProtocol*.dll"));
+        Assert.IsEmpty(Directory.GetFiles(toolsetDir, "ModelContextProtocol*.dll"));
 
         var toolsetAsm = Assembly.LoadFrom(ToolsetDllPath);
         var mcpRefs = toolsetAsm.GetReferencedAssemblies()
@@ -33,10 +34,10 @@ public sealed class McpToolsetForwarderSpikeTests
             .ToList();
 
         Assert.Contains("ModelContextProtocol.Core", mcpRefs);
-        Assert.True(mcpRefs.Count >= 1, "Expected external MCP assembly references after ILRepack exclude.");
+        Assert.IsTrue(mcpRefs.Count >= 1, "Expected external MCP assembly references after ILRepack exclude.");
     }
 
-    [Fact]
+    [TestMethod]
     public void LoadedToolset_NativeCallToolResult_IsHostTypeIdentity_WhenHostMcpMatchesToolsetTfm()
     {
         OptionalArtifact.RequireFile(ToolsetDllPath, BuildHint);
@@ -67,11 +68,11 @@ public sealed class McpToolsetForwarderSpikeTests
         var request = DotnetToolsetTestHarness.CreateRequest();
         var raw = DotnetToolsetTestHarness.InvokeRaw(method, request);
 
-        Assert.NotNull(raw);
-        Assert.Same(typeof(CallToolResult), raw.GetType());
+        Assert.IsNotNull(raw);
+        Assert.AreSame(typeof(CallToolResult), raw.GetType());
 
         var mapped = ToolsetResultSerializer.ToInvocationResponse(raw, null);
-        Assert.Equal("forwarder-spike-ok", McpToolInvoke.Text(mapped));
+        Assert.AreEqual("forwarder-spike-ok", McpToolInvoke.Text(mapped));
 
         var sdk = SdkInvocationMapper.ToSdk(mapped);
         var wire = JsonSerializer.Serialize(sdk, McpJsonUtilities.DefaultOptions);

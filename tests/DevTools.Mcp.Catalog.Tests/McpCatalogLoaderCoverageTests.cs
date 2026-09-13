@@ -8,9 +8,10 @@ using Moq;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpCatalogLoaderCoverageTests
 {
-    [Fact]
+    [TestMethod]
     public void LoadCatalog_Continues_WhenProviderThrows()
     {
         var healthy = new StubProvider("built-in", ExecutionMode.CSharp, McpHostTestHarness.CreateRegisteredTool("healthy_tool"));
@@ -20,12 +21,12 @@ public sealed class McpCatalogLoaderCoverageTests
 
         var catalog = loader.LoadCatalog([], []);
 
-        Assert.Single(catalog.Tools);
-        Assert.Contains(logger.Messages, message => message.Contains("dotnet-mcp", StringComparison.Ordinal));
-        Assert.Contains(logger.Messages, message => message.Contains("boom", StringComparison.Ordinal));
+        Assert.HasCount(1, catalog.Tools);
+        Assert.IsTrue(logger.Messages.Any(message => message.Contains("dotnet-mcp", StringComparison.Ordinal)));
+        Assert.IsTrue(logger.Messages.Any(message => message.Contains("boom", StringComparison.Ordinal)));
     }
 
-    [Fact]
+    [TestMethod]
     public void LoadCatalog_SkipsItemsWithEmptyNames()
     {
         var provider = new StubProvider("built-in", ExecutionMode.CSharp, ToolWithEmptyName());
@@ -34,8 +35,8 @@ public sealed class McpCatalogLoaderCoverageTests
 
         var catalog = loader.LoadCatalog([], []);
 
-        Assert.Empty(catalog.Tools);
-        Assert.Contains(logger.Messages, message => message.Contains("empty name", StringComparison.Ordinal));
+        Assert.IsEmpty(catalog.Tools);
+        Assert.IsTrue(logger.Messages.Any(message => message.Contains("empty name", StringComparison.Ordinal)));
     }
 
     private static McpRegisteredTool ToolWithEmptyName() => new()

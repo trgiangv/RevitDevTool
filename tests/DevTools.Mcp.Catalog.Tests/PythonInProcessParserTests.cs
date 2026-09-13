@@ -5,10 +5,7 @@ using Python.Runtime;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
-[CollectionDefinition(nameof(PythonInProcessParserCollection), DisableParallelization = true)]
-public sealed class PythonInProcessParserCollection;
-
-[Collection(nameof(PythonInProcessParserCollection))]
+[TestClass]
 public sealed class PythonInProcessParserTests : IDisposable
 {
     private static readonly PythonToolsetParser Parser = new(NullLogger<PythonToolsetParser>.Instance);
@@ -19,79 +16,79 @@ public sealed class PythonInProcessParserTests : IDisposable
     {
     }
 
-    [Fact]
+    [TestMethod]
     public void InProcess_ParsesAnnotationSample_Tools()
     {
         RequirePythonRuntime();
         var toolsetDirectory = GetToolsetDirectory();
         var result = RunInProcessParser(toolsetDirectory);
 
-        Assert.NotNull(result);
-        Assert.False(string.IsNullOrWhiteSpace(result));
+        Assert.IsNotNull(result);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(result));
 
         var catalog = Parser.ParseDirectoryCatalog(toolsetDirectory, _ => result);
         var tool = catalog.Tools.SingleOrDefault(t => t.Descriptor.Name == "get_parser_sample_status");
 
-        Assert.NotNull(tool);
-        Assert.Equal("Get Parser Sample Status", tool.Descriptor.Annotations!.Title);
-        Assert.True(tool.Descriptor.Annotations.ReadOnlyHint);
-        Assert.True(tool.Descriptor.Annotations.IdempotentHint);
-        Assert.False(tool.Descriptor.Annotations.OpenWorldHint);
+        Assert.IsNotNull(tool);
+        Assert.AreEqual("Get Parser Sample Status", tool.Descriptor.Annotations!.Title);
+        Assert.IsTrue(tool.Descriptor.Annotations.ReadOnlyHint);
+        Assert.IsTrue(tool.Descriptor.Annotations.IdempotentHint);
+        Assert.IsFalse(tool.Descriptor.Annotations.OpenWorldHint);
     }
 
-    [Fact]
+    [TestMethod]
     public void InProcess_ParsesAnnotationSample_Resources()
     {
         RequirePythonRuntime();
         var toolsetDirectory = GetToolsetDirectory();
         var result = RunInProcessParser(toolsetDirectory);
 
-        Assert.NotNull(result);
+        Assert.IsNotNull(result);
 
         var catalog = Parser.ParseDirectoryCatalog(toolsetDirectory, _ => result);
         var direct = catalog.Resources.SingleOrDefault(r => r.Descriptor?.Name == "parser_status_resource");
         var template = catalog.Resources.SingleOrDefault(r => r.TemplateDescriptor?.Name == "parser_view_resource");
 
-        Assert.NotNull(direct);
-        Assert.NotNull(template);
-        Assert.Equal("sample://parser/status", direct.Descriptor!.Uri);
-        Assert.NotNull(template.TemplateDescriptor);
+        Assert.IsNotNull(direct);
+        Assert.IsNotNull(template);
+        Assert.AreEqual("sample://parser/status", direct.Descriptor!.Uri);
+        Assert.IsNotNull(template.TemplateDescriptor);
     }
 
-    [Fact]
+    [TestMethod]
     public void InProcess_ParsesLowLevelSample()
     {
         RequirePythonRuntime();
         var toolsetDirectory = GetToolsetDirectory();
         var result = RunInProcessParser(toolsetDirectory);
 
-        Assert.NotNull(result);
+        Assert.IsNotNull(result);
 
         var catalog = Parser.ParseDirectoryCatalog(toolsetDirectory, _ => result);
         var tool = catalog.Tools.SingleOrDefault(t => t.Descriptor.Name == "parser_lowlevel_tool");
         var resource = catalog.Resources.SingleOrDefault(r => r.Descriptor?.Name == "parser_lowlevel_resource");
 
-        Assert.NotNull(tool);
-        Assert.NotNull(resource);
-        Assert.Equal("Parser Low-Level Tool", tool.Descriptor.Title);
+        Assert.IsNotNull(tool);
+        Assert.IsNotNull(resource);
+        Assert.AreEqual("Parser Low-Level Tool", tool.Descriptor.Title);
     }
 
-    [Fact]
+    [TestMethod]
     public void InProcess_OutputIsValidJson()
     {
         RequirePythonRuntime();
         var toolsetDirectory = GetToolsetDirectory();
         var result = RunInProcessParser(toolsetDirectory);
 
-        Assert.NotNull(result);
+        Assert.IsNotNull(result);
 
         var doc = JsonDocument.Parse(result);
-        Assert.True(doc.RootElement.TryGetProperty("tools", out _));
-        Assert.True(doc.RootElement.TryGetProperty("resources", out _));
-        Assert.False(doc.RootElement.TryGetProperty("prompts", out _));
+        Assert.IsTrue(doc.RootElement.TryGetProperty("tools", out _));
+        Assert.IsTrue(doc.RootElement.TryGetProperty("resources", out _));
+        Assert.IsFalse(doc.RootElement.TryGetProperty("prompts", out _));
     }
 
-    [Fact]
+    [TestMethod]
     public void InProcess_MatchesOutOfProcessOutput()
     {
         RequirePythonRuntime();
@@ -105,19 +102,19 @@ public sealed class PythonInProcessParserTests : IDisposable
         var outOfProcess = Parser.ParseDirectoryCatalog(toolsetDirectory, pythonExe, toolParserScriptPath);
         var inProcessJson = RunInProcessParser(toolsetDirectory);
 
-        Assert.NotNull(inProcessJson);
+        Assert.IsNotNull(inProcessJson);
 
         var inProcess = Parser.ParseDirectoryCatalog(toolsetDirectory, _ => inProcessJson);
 
-        Assert.Equal(outOfProcess.Tools.Count, inProcess.Tools.Count);
-        Assert.Equal(outOfProcess.Resources.Count, inProcess.Resources.Count);
+        Assert.AreEqual(outOfProcess.Tools.Count, inProcess.Tools.Count);
+        Assert.AreEqual(outOfProcess.Resources.Count, inProcess.Resources.Count);
 
         foreach (var oopTool in outOfProcess.Tools)
         {
             var ipTool = inProcess.Tools.SingleOrDefault(t => t.Descriptor.Name == oopTool.Descriptor.Name);
-            Assert.NotNull(ipTool);
-            Assert.Equal(oopTool.Descriptor.Title, ipTool.Descriptor.Title);
-            Assert.Equal(oopTool.Descriptor.Description, ipTool.Descriptor.Description);
+            Assert.IsNotNull(ipTool);
+            Assert.AreEqual(oopTool.Descriptor.Title, ipTool.Descriptor.Title);
+            Assert.AreEqual(oopTool.Descriptor.Description, ipTool.Descriptor.Description);
         }
     }
 
@@ -136,7 +133,7 @@ public sealed class PythonInProcessParserTests : IDisposable
     private static void RequirePythonRuntime()
     {
         if (!TryGetPythonHome(out var pythonHome, out var pythonDll))
-            Assert.Skip(OptionalArtifact.PixiPythonHint);
+            Assert.Inconclusive(OptionalArtifact.PixiPythonHint);
 
         var scriptPath = GetToolParserScriptPath();
         OptionalArtifact.RequireFile(scriptPath, $"ToolParser.py not found at '{scriptPath}'.");
@@ -149,7 +146,7 @@ public sealed class PythonInProcessParserTests : IDisposable
         }
         catch (Exception ex) when (ex is TypeInitializationException or MissingMethodException or DllNotFoundException or BadImageFormatException)
         {
-            Assert.Skip($"pythonnet cannot bind this pixi Python: {ex.GetBaseException().Message}");
+            Assert.Inconclusive($"pythonnet cannot bind this pixi Python: {ex.GetBaseException().Message}");
         }
     }
 

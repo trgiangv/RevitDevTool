@@ -8,51 +8,52 @@ namespace DevTools.Mcp.Catalog.Tests;
 /// CallToolResult identity on repacked host is covered by <see cref="Isolation.McpMergedHostIdentityTests"/>
 /// (skips in xunit when ModelContextProtocol.Core is a separate assembly — false-green guard).
 /// </summary>
+[TestClass]
 public sealed class McpSharedRuntimePackagingTests
 {
-    [Fact]
+    [TestMethod]
     public void HostBuilds_DoNotShipMcpSiblings()
     {
         var dirs = DiscoverHostOutputDirs().ToList();
         if (dirs.Count == 0)
-            Assert.Skip(HostBuildHint);
+            Assert.Inconclusive(HostBuildHint);
 
         foreach (var hostOutputDir in dirs)
             AssertHostEmbeddedMcp(hostOutputDir);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToolsetBuilds_StripMcpSiblings_KeepExternalRef()
     {
         var dlls = DiscoverToolsetDlls().ToList();
         if (dlls.Count == 0)
-            Assert.Skip(ToolsetBuildHint);
+            Assert.Inconclusive(ToolsetBuildHint);
 
         foreach (var toolsetDllPath in dlls)
         {
             var toolsetDir = Path.GetDirectoryName(toolsetDllPath)!;
-            Assert.Empty(Directory.GetFiles(toolsetDir, "ModelContextProtocol*.dll"));
+            Assert.IsEmpty(Directory.GetFiles(toolsetDir, "ModelContextProtocol*.dll"));
 
             using var context = new McpToolsetContext(toolsetDllPath);
             var toolsetAsm = context.LoadAssembly();
-            Assert.Contains(
-                toolsetAsm.GetReferencedAssemblies().Select(static a => a.Name),
-                name => string.Equals(name, "ModelContextProtocol.Core", StringComparison.Ordinal));
+            Assert.IsTrue(toolsetAsm.GetReferencedAssemblies()
+                .Select(static a => a.Name)
+                .Any(name => string.Equals(name, "ModelContextProtocol.Core", StringComparison.Ordinal)));
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void DotnetParser_ParsesCompileOnlyMcpToolset_WithoutMcpSiblings()
     {
         var toolsetDllPath = DiscoverToolsetDlls().FirstOrDefault();
         if (toolsetDllPath is null)
-            Assert.Skip(ToolsetBuildHint);
+            Assert.Inconclusive(ToolsetBuildHint);
 
         var parser = new McpAssemblyParser(Microsoft.Extensions.Logging.Abstractions.NullLogger<McpAssemblyParser>.Instance);
         var catalog = parser.ParseCatalogFromAssembly(toolsetDllPath);
 
-        Assert.Contains(catalog.Tools, t => t.Descriptor.Name == "test_forwarder_calltoolresult");
-        Assert.Contains(catalog.Tools, t => t.Descriptor.Name == "get_demo_status");
+        Assert.IsTrue(catalog.Tools.Any(t => t.Descriptor.Name == "test_forwarder_calltoolresult"));
+        Assert.IsTrue(catalog.Tools.Any(t => t.Descriptor.Name == "get_demo_status"));
     }
 
     private static bool IsRepackedHostLayout(string hostOutputDir)
@@ -69,8 +70,8 @@ public sealed class McpSharedRuntimePackagingTests
     {
         var hostDll = Path.Combine(hostOutputDir, "RevitDevTool.dll");
         OptionalArtifact.RequireFile(hostDll, HostBuildHint);
-        Assert.Empty(Directory.GetFiles(hostOutputDir, "ModelContextProtocol*.dll"));
-        Assert.True(
+        Assert.IsEmpty(Directory.GetFiles(hostOutputDir, "ModelContextProtocol*.dll"));
+        Assert.IsTrue(
             new FileInfo(hostDll).Length > 5_000_000,
             $"Expected ILRepacked host with embedded MCP in {hostOutputDir}.");
     }

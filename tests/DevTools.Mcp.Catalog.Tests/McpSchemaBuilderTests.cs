@@ -3,19 +3,20 @@ using DevTools.Mcp.Catalog.Discovery;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpSchemaBuilderTests
 {
-    [Fact]
+    [TestMethod]
     public void BuildSchema_MapsCollectionsEnumsAndObjectsWithoutFallingBackToString()
     {
         var schema = McpSchemaBuilder.BuildSchema(typeof(Arguments));
 
-        Assert.Equal("object", schema["type"]?.GetValue<string>());
-        Assert.Equal("array", schema["properties"]?["ids"]?["type"]?.GetValue<string>());
-        Assert.Equal("integer", schema["properties"]?["ids"]?["items"]?["type"]?.GetValue<string>());
-        Assert.Equal("string", schema["properties"]?["mode"]?["type"]?.GetValue<string>());
+        Assert.AreEqual("object", schema["type"]?.GetValue<string>());
+        Assert.AreEqual("array", schema["properties"]?["ids"]?["type"]?.GetValue<string>());
+        Assert.AreEqual("integer", schema["properties"]?["ids"]?["items"]?["type"]?.GetValue<string>());
+        Assert.AreEqual("string", schema["properties"]?["mode"]?["type"]?.GetValue<string>());
         Assert.Contains("Fast", schema["properties"]?["mode"]?["enum"]?.AsArray().Select(x => x!.GetValue<string>()) ?? []);
-        Assert.Equal("object", schema["properties"]?["options"]?["type"]?.GetValue<string>());
+        Assert.AreEqual("object", schema["properties"]?["options"]?["type"]?.GetValue<string>());
     }
 
     private sealed class Arguments

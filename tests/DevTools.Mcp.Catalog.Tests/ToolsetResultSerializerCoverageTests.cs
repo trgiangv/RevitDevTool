@@ -6,36 +6,37 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class ToolsetResultSerializerCoverageTests
 {
-    [Fact]
+    [TestMethod]
     public void ToInvocationResponse_NullRaw_ReturnsEmptyContent()
     {
         var result = ToolsetResultSerializer.ToInvocationResponse(null, outputSchema: null);
 
-        Assert.Empty(result.Content);
+        Assert.IsEmpty(result.Content);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToInvocationResponse_BoolResult_MarksErrorState()
     {
         var result = ToolsetResultSerializer.ToInvocationResponse(true, outputSchema: null);
 
-        Assert.True(result.IsError);
-        Assert.Equal("true", McpToolInvoke.Text(result));
+        Assert.IsTrue(result.IsError);
+        Assert.AreEqual("true", McpToolInvoke.Text(result));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToInvocationResponse_ContentBlock_MapsTextBlock()
     {
         var block = new TextContentBlock { Text = "block-text" };
 
         var result = ToolsetResultSerializer.ToInvocationResponse(block, outputSchema: null);
 
-        Assert.Equal("block-text", McpToolInvoke.Text(result));
+        Assert.AreEqual("block-text", McpToolInvoke.Text(result));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToInvocationResponse_ResourceLinkBlock_MapsContent()
     {
         var block = new ResourceLinkBlock
@@ -50,10 +51,11 @@ public sealed class ToolsetResultSerializerCoverageTests
 
         var result = ToolsetResultSerializer.ToInvocationResponse(block, outputSchema: null);
 
-        Assert.IsType<McpResourceLinkContent>(Assert.Single(result.Content));
+        Assert.HasCount(1, result.Content);
+        Assert.IsInstanceOfType<McpResourceLinkContent>(result.Content[0]);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToInvocationResponse_EmbeddedTextResource_MapsContent()
     {
         var block = new EmbeddedResourceBlock
@@ -68,15 +70,16 @@ public sealed class ToolsetResultSerializerCoverageTests
 
         var result = ToolsetResultSerializer.ToInvocationResponse(block, outputSchema: null);
 
-        Assert.IsType<McpEmbeddedTextResourceContent>(Assert.Single(result.Content));
+        Assert.HasCount(1, result.Content);
+        Assert.IsInstanceOfType<McpEmbeddedTextResourceContent>(result.Content[0]);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToInvocationResponse_InvalidCallToolJson_ThrowsInvalidOperation()
     {
         var invalid = JsonSerializer.SerializeToElement(new { content = new[] { new { type = 123 } } });
 
-        var ex = Assert.Throws<InvalidOperationException>(
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
             () => ToolsetResultSerializer.ToInvocationResponse(invalid, outputSchema: null));
 
         Assert.Contains("SDK contract", ex.Message, StringComparison.Ordinal);

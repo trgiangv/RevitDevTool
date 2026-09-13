@@ -3,12 +3,13 @@ using DevTools.Mcp.Catalog.Isolation;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class MetadataAssemblyPathCollectorTests
 {
     private static readonly Type CollectorType =
         typeof(McpToolsetContext).Assembly.GetType("DevTools.Mcp.Catalog.Isolation.MetadataAssemblyPathCollector", throwOnError: true)!;
 
-    [Fact]
+    [TestMethod]
     public void Collect_IncludesEntryDirectoryAndExplicitDependencies()
     {
         var directory = Path.Combine(Path.GetTempPath(), "DevTools.Mcp.Tests", Guid.NewGuid().ToString("N"));
@@ -31,18 +32,18 @@ public sealed class MetadataAssemblyPathCollectorTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Collect_Throws_WhenExplicitDependencyPathMissing()
     {
         var entry = typeof(MetadataAssemblyPathCollectorTests).Assembly.Location;
 
-        var ex = Assert.Throws<TargetInvocationException>(() =>
+        var ex = Assert.ThrowsExactly<TargetInvocationException>(() =>
             InvokeCollect(entry, [@"C:\missing\dependency.dll"]));
 
-        Assert.IsType<FileNotFoundException>(ex.InnerException);
+        Assert.IsInstanceOfType<FileNotFoundException>(ex.InnerException);
     }
 
-    [Fact]
+    [TestMethod]
     public void GetMetadataTypes_ReturnsTypesFromAssembly()
     {
         var method = CollectorType.GetMethod("GetMetadataTypes", BindingFlags.Public | BindingFlags.Static)!;

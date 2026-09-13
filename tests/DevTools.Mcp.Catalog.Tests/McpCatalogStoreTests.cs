@@ -5,9 +5,10 @@ using Moq;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpCatalogStoreTests
 {
-    [Fact]
+    [TestMethod]
     public async Task ReloadAsync_DoesNotRaiseCatalogChanged_WhenIdsUnchanged()
     {
         var catalog = Catalog(Tool("execute_csharp_code"));
@@ -18,11 +19,11 @@ public sealed class McpCatalogStoreTests
         store.EnsureLoaded();
         await store.ReloadAsync();
 
-        Assert.Equal(0, raised);
-        Assert.Single(store.RegisteredTools);
+        Assert.AreEqual(0, raised);
+        Assert.HasCount(1, store.RegisteredTools);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ReloadAsync_RaisesCatalogChanged_WhenNewToolIdAppears()
     {
         var tools = new List<McpRegisteredTool> { Tool("execute_csharp_code") };
@@ -34,11 +35,11 @@ public sealed class McpCatalogStoreTests
         tools.Add(Tool("execute_python_code"));
         await store.ReloadAsync();
 
-        Assert.Equal(1, raised);
-        Assert.Equal(2, store.RegisteredTools.Count);
+        Assert.AreEqual(1, raised);
+        Assert.AreEqual(2, store.RegisteredTools.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ReloadAsync_RaisesCatalogChanged_WhenToolIdRemoved()
     {
         var tools = new List<McpRegisteredTool> { Tool("a"), Tool("b") };
@@ -50,8 +51,8 @@ public sealed class McpCatalogStoreTests
         tools.RemoveAt(1);
         await store.ReloadAsync();
 
-        Assert.Equal(1, raised);
-        Assert.Single(store.RegisteredTools);
+        Assert.AreEqual(1, raised);
+        Assert.HasCount(1, store.RegisteredTools);
     }
 
     private static McpCatalogStore CreateStore(Func<McpRegistryCatalog> catalogFactory)

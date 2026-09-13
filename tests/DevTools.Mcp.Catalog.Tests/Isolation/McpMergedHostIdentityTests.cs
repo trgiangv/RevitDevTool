@@ -9,13 +9,14 @@ namespace DevTools.Mcp.Catalog.Tests.Isolation;
 /// Documents ADR 0019 identity gap: host ILRepack removes <c>ModelContextProtocol.Core</c> assembly
 /// identity; kernel <c>Pin</c> is simple-name keyed only — automatic bind from repacked host is not implemented.
 /// </summary>
+[TestClass]
 public sealed class McpMergedHostIdentityTests
 {
     private const string Adr0019Gap =
         "ADR 0019 §7: Pin keys shares by simple name only; repacked host removes ModelContextProtocol.Core identity. "
         + "Automatic toolset ALC bind from host load context for merged MCP is not implemented in the isolation kernel.";
 
-    [Fact]
+    [TestMethod]
     public void PinShareTable_KeysByCallToolResultAssemblySimpleName()
     {
         var contractAssembly = typeof(CallToolResult).Assembly;
@@ -23,8 +24,8 @@ public sealed class McpMergedHostIdentityTests
             ?? throw new InvalidOperationException("CallToolResult assembly must have a simple name.");
 
         var plan = McpToolsetIsolationPlan.Create(ResolvePlanEntryPath());
-        Assert.True(plan.TryShare(contractAssembly.GetName(), out var pinned));
-        Assert.Same(contractAssembly, pinned);
+        Assert.IsTrue(plan.TryShare(contractAssembly.GetName(), out var pinned));
+        Assert.AreSame(contractAssembly, pinned);
 
         var requestedCore = new AssemblyName("ModelContextProtocol.Core")
         {
@@ -33,28 +34,28 @@ public sealed class McpMergedHostIdentityTests
 
         if (!string.Equals(contractName, "ModelContextProtocol.Core", StringComparison.Ordinal))
         {
-            Assert.False(
+            Assert.IsFalse(
                 plan.TryShare(requestedCore, out _),
                 $"{Adr0019Gap} TryShare('ModelContextProtocol.Core') must not hit when the host contract lives in '{contractName}'.");
         }
         else
         {
-            Assert.True(
+            Assert.IsTrue(
                 plan.TryShare(requestedCore, out var sharedCore),
                 "xunit test host ships ModelContextProtocol.Core as a sibling DLL; Pin masks the ADR 0019 merged-host gap.");
-            Assert.Same(contractAssembly, sharedCore);
+            Assert.AreSame(contractAssembly, sharedCore);
         }
     }
 
-    [Fact]
-    [Trait("Category", "HostIdentity")]
+    [TestMethod]
+    [TestProperty("Category", "HostIdentity")]
     public void LoadedToolset_ResolvesCallToolResult_FromHostMcp()
     {
         // xunit ships ModelContextProtocol.Core beside the test host — Pin shares test-host MCP, not
         // ILRepacked RevitDevTool.dll, so identity assertions here are false-green (architecture review S5-D).
         if (HasSeparateMcpContractAssembly())
         {
-            Assert.Skip(
+            Assert.Inconclusive(
                 $"{Adr0019Gap} This xunit process loads CallToolResult from ModelContextProtocol.Core.dll; "
                 + "toolset ALC Pin would share test-host MCP, not a repacked host. "
                 + "Use live host checklist: docs/agents/mcp-integration-test.md (repacked-host toolset invoke).");
@@ -65,7 +66,7 @@ public sealed class McpMergedHostIdentityTests
             .Where(pair => pair.Toolset is not null)
             .ToList();
         if (pairs.Count == 0)
-            Assert.Skip($"{HostBuildHint} {ToolsetBuildHint}");
+            Assert.Inconclusive($"{HostBuildHint} {ToolsetBuildHint}");
 
         var matched = false;
         foreach (var (hostDir, toolsetDllPath) in pairs)
@@ -93,23 +94,23 @@ public sealed class McpMergedHostIdentityTests
                 continue;
             }
 
-            Assert.NotNull(raw);
-            Assert.Same(typeof(CallToolResult), raw.GetType());
+            Assert.IsNotNull(raw);
+            Assert.AreSame(typeof(CallToolResult), raw.GetType());
             matched = true;
         }
 
         if (!matched)
-            Assert.Skip("No host/toolset year pair shared CallToolResult identity. Build the same Autodesk year for both.");
+            Assert.Inconclusive("No host/toolset year pair shared CallToolResult identity. Build the same Autodesk year for both.");
     }
 
-    [Fact]
-    [Trait("Category", "HostIdentity")]
+    [TestMethod]
+    [TestProperty("Category", "HostIdentity")]
     public void RepackedHost_WhenBuilt_ToolsetLoadDocumentsIdentityGap()
     {
         var hostDir = ResolveDefaultRepackedHostDir();
         if (hostDir is null)
         {
-            Assert.Skip($"{HostBuildHint} Optional fixture: ILRepacked RevitDevTool.dll not present.");
+            Assert.Inconclusive($"{HostBuildHint} Optional fixture: ILRepacked RevitDevTool.dll not present.");
         }
 
         AssertRepackedHostLayout(hostDir);
@@ -117,12 +118,12 @@ public sealed class McpMergedHostIdentityTests
         var toolsetDll = MatchingToolsetDll(hostDir);
         if (toolsetDll is null)
         {
-            Assert.Skip($"{ToolsetBuildHint} Matching McpToolsetDemo build not found for {Path.GetFileName(hostDir)}.");
+            Assert.Inconclusive($"{ToolsetBuildHint} Matching McpToolsetDemo build not found for {Path.GetFileName(hostDir)}.");
         }
 
         if (HasSeparateMcpContractAssembly())
         {
-            Assert.Skip(
+            Assert.Inconclusive(
                 $"{Adr0019Gap} xunit false-green: ModelContextProtocol.Core is a separate assembly in this process. "
                 + "Repacked host layout verified; live invoke belongs in docs/agents/mcp-integration-test.md.");
         }
@@ -133,8 +134,8 @@ public sealed class McpMergedHostIdentityTests
         var method = spikeType.GetMethod("TestForwarderCallToolResult", BindingFlags.Public | BindingFlags.Static)!;
         var raw = DotnetToolsetTestHarness.InvokeRaw(method, DotnetToolsetTestHarness.CreateRequest());
 
-        Assert.NotNull(raw);
-        Assert.False(
+        Assert.IsNotNull(raw);
+        Assert.IsFalse(
             raw is CallToolResult,
             $"{Adr0019Gap} Without ModelContextProtocol.Core share hit, toolset must return a non-host CallToolResult identity.");
     }
@@ -179,8 +180,8 @@ public sealed class McpMergedHostIdentityTests
     {
         var hostDll = Path.Combine(hostOutputDir, "RevitDevTool.dll");
         OptionalArtifact.RequireFile(hostDll, HostBuildHint);
-        Assert.Empty(Directory.GetFiles(hostOutputDir, "ModelContextProtocol*.dll"));
-        Assert.True(
+        Assert.IsEmpty(Directory.GetFiles(hostOutputDir, "ModelContextProtocol*.dll"));
+        Assert.IsTrue(
             new FileInfo(hostDll).Length > 5_000_000,
             $"Expected ILRepacked host with embedded MCP in {hostOutputDir}. {Adr0019Gap}");
     }

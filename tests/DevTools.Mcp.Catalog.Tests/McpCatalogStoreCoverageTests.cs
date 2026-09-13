@@ -8,9 +8,10 @@ using Moq;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpCatalogStoreCoverageTests
 {
-    [Fact]
+    [TestMethod]
     public void GetDescriptors_ReturnLoadedCatalogItems()
     {
         var direct = CreateResource("demo_status", uri: "sample://demo/status");
@@ -21,12 +22,12 @@ public sealed class McpCatalogStoreCoverageTests
 
         store.EnsureLoaded();
 
-        Assert.Single(store.GetToolDescriptors());
-        Assert.Single(store.GetResourceDescriptors());
-        Assert.Single(store.GetResourceTemplateDescriptors());
+        Assert.HasCount(1, store.GetToolDescriptors());
+        Assert.HasCount(1, store.GetResourceDescriptors());
+        Assert.HasCount(1, store.GetResourceTemplateDescriptors());
     }
 
-    [Fact]
+    [TestMethod]
     public void TryGetTool_ResolvesByIdOrName()
     {
         var tool = McpHostTestHarness.CreateRegisteredTool("execute_csharp_code");
@@ -34,14 +35,14 @@ public sealed class McpCatalogStoreCoverageTests
 
         store.EnsureLoaded();
 
-        Assert.True(store.TryGetTool(tool.Id, null, out var byId));
-        Assert.Same(tool, byId);
-        Assert.True(store.TryGetTool(null, "execute_csharp_code", out var byName));
-        Assert.Same(tool, byName);
-        Assert.False(store.TryGetTool("missing", null, out _));
+        Assert.IsTrue(store.TryGetTool(tool.Id, null, out var byId));
+        Assert.AreSame(tool, byId);
+        Assert.IsTrue(store.TryGetTool(null, "execute_csharp_code", out var byName));
+        Assert.AreSame(tool, byName);
+        Assert.IsFalse(store.TryGetTool("missing", null, out _));
     }
 
-    [Fact]
+    [TestMethod]
     public void TryResolveResourceByUri_MatchesDirectAndTemplateUris()
     {
         var direct = CreateResource("demo_status", uri: "sample://demo/status");
@@ -49,15 +50,15 @@ public sealed class McpCatalogStoreCoverageTests
         var store = CreateStore([], [direct, template]);
         store.EnsureLoaded();
 
-        Assert.True(store.TryResolveResourceByUri("sample://demo/status", out var resolvedDirect));
-        Assert.Same(direct, resolvedDirect);
-        Assert.True(store.TryResolveResourceByUri("sample://demo/views/wall-1", out var resolvedTemplate));
-        Assert.Same(template, resolvedTemplate);
-        Assert.False(store.TryResolveResourceByUri("sample://missing", out _));
-        Assert.False(store.TryResolveResourceByUri("", out _));
+        Assert.IsTrue(store.TryResolveResourceByUri("sample://demo/status", out var resolvedDirect));
+        Assert.AreSame(direct, resolvedDirect);
+        Assert.IsTrue(store.TryResolveResourceByUri("sample://demo/views/wall-1", out var resolvedTemplate));
+        Assert.AreSame(template, resolvedTemplate);
+        Assert.IsFalse(store.TryResolveResourceByUri("sample://missing", out _));
+        Assert.IsFalse(store.TryResolveResourceByUri("", out _));
     }
 
-    [Fact]
+    [TestMethod]
     public async Task AddPathAsync_IgnoresUnsupportedPaths()
     {
         var config = new McpRegistryConfig();
@@ -68,17 +69,17 @@ public sealed class McpCatalogStoreCoverageTests
         await store.AddPathAsync(string.Empty);
         await store.AddPathAsync(@"C:\missing\readme.txt");
 
-        Assert.Equal(0, raised);
-        Assert.Empty(config.DotnetPaths);
-        Assert.Empty(config.PythonToolsetPaths);
+        Assert.AreEqual(0, raised);
+        Assert.IsEmpty(config.DotnetPaths);
+        Assert.IsEmpty(config.PythonToolsetPaths);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task AddPathAsync_PersistsValidDotnetPath_WhenCatalogContainsItems()
     {
         var dll = OptionalArtifact.ResolveMcpToolsetDemoDll(FindRepositoryRoot());
         if (dll is null)
-            Assert.Skip(OptionalArtifact.McpToolsetDemoHint);
+            Assert.Inconclusive(OptionalArtifact.McpToolsetDemoHint);
 
         var catalog = new McpAssemblyParser(Microsoft.Extensions.Logging.Abstractions.NullLogger<McpAssemblyParser>.Instance)
             .ParseCatalogFromAssembly(dll);
@@ -87,16 +88,16 @@ public sealed class McpCatalogStoreCoverageTests
 
         await store.AddPathAsync(dll);
 
-        Assert.Contains(config.DotnetPaths, path => string.Equals(Path.GetFullPath(path), Path.GetFullPath(dll), StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue(config.DotnetPaths.Any(path => string.Equals(Path.GetFullPath(path), Path.GetFullPath(dll), StringComparison.OrdinalIgnoreCase)));
     }
 
-    [Fact]
+    [TestMethod]
     public async Task AddPathAsync_PersistsValidPythonPath_WhenCatalogContainsItems()
     {
         var pythonRoot = Path.Combine(FindRepositoryRoot(), "samples", "PythonDemo", "mcp_toolset");
         OptionalArtifact.RequireDirectory(pythonRoot, $"Expected Python sample toolset at '{pythonRoot}'.");
         if (!McpPathValidator.IsValidPythonToolsetPath(pythonRoot))
-            Assert.Skip("Python sample toolset does not contain *mcp.py files.");
+            Assert.Inconclusive("Python sample toolset does not contain *mcp.py files.");
 
         var tool = new McpRegisteredTool
         {
@@ -109,7 +110,7 @@ public sealed class McpCatalogStoreCoverageTests
 
         await store.AddPathAsync(pythonRoot);
 
-        Assert.Contains(config.PythonToolsetPaths, path => string.Equals(Path.GetFullPath(path), Path.GetFullPath(pythonRoot), StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue(config.PythonToolsetPaths.Any(path => string.Equals(Path.GetFullPath(path), Path.GetFullPath(pythonRoot), StringComparison.OrdinalIgnoreCase)));
     }
 
     private static McpCatalogStore CreateStore(

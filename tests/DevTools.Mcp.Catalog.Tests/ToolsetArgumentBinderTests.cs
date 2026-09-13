@@ -10,14 +10,11 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
-[CollectionDefinition(nameof(ToolsetArgumentBinderCollection), DisableParallelization = true)]
-public sealed class ToolsetArgumentBinderCollection;
-
 /// <summary>ToolsetArgumentBinder augmented-parameter parity (T-ALC-02..05).</summary>
-[Collection(nameof(ToolsetArgumentBinderCollection))]
+[TestClass]
 public sealed class ToolsetArgumentBinderTests
 {
-    [Fact]
+    [TestMethod]
     public void T_ALC_02_Invoke_BindsRequestContextIdentity()
     {
         DotnetToolsetMrtrStubs.ResetBindings();
@@ -27,10 +24,10 @@ public sealed class ToolsetArgumentBinderTests
 
         DotnetToolsetTestHarness.InvokeRaw(method, request);
 
-        Assert.Same(request, DotnetToolsetMrtrStubs.LastContext);
+        Assert.AreSame(request, DotnetToolsetMrtrStubs.LastContext);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_03_Invoke_BindsMcpServerFromRequest()
     {
         DotnetToolsetMrtrStubs.ResetBindings();
@@ -42,11 +39,11 @@ public sealed class ToolsetArgumentBinderTests
 
         DotnetToolsetTestHarness.InvokeRaw(method, request);
 
-        Assert.Same(server.Object, DotnetToolsetMrtrStubs.LastServer);
-        Assert.True(DotnetToolsetMrtrStubs.LastServer!.IsMrtrSupported);
+        Assert.AreSame(server.Object, DotnetToolsetMrtrStubs.LastServer);
+        Assert.IsTrue(DotnetToolsetMrtrStubs.LastServer!.IsMrtrSupported);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_04_Invoke_BindsNopProgress_WhenProgressTokenAbsent()
     {
         DotnetToolsetMrtrStubs.ResetBindings();
@@ -56,10 +53,10 @@ public sealed class ToolsetArgumentBinderTests
 
         DotnetToolsetTestHarness.InvokeRaw(method, request);
 
-        Assert.Equal("ToolsetNopProgress", DotnetToolsetMrtrStubs.LastProgress!.GetType().Name);
+        Assert.AreEqual("ToolsetNopProgress", DotnetToolsetMrtrStubs.LastProgress!.GetType().Name);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_04_Invoke_BindsProgressReporter_WhenProgressTokenPresent()
     {
         DotnetToolsetMrtrStubs.ResetBindings();
@@ -70,10 +67,10 @@ public sealed class ToolsetArgumentBinderTests
 
         DotnetToolsetTestHarness.InvokeRaw(method, request);
 
-        Assert.Equal("ToolsetProgressReporter", DotnetToolsetMrtrStubs.LastProgress!.GetType().Name);
+        Assert.AreEqual("ToolsetProgressReporter", DotnetToolsetMrtrStubs.LastProgress!.GetType().Name);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_04_Invoke_BindsClaimsPrincipalFromRequest()
     {
         DotnetToolsetMrtrStubs.ResetBindings();
@@ -81,13 +78,13 @@ public sealed class ToolsetArgumentBinderTests
         var method = typeof(DotnetToolsetMrtrStubs).GetMethod(nameof(DotnetToolsetMrtrStubs.BindUser))!;
         var request = DotnetToolsetTestHarness.CreateRequest(user: principal);
 
-        var result = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(method, request));
+        var result = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(method, request));
 
-        Assert.Equal("has-user", result);
-        Assert.Same(principal, DotnetToolsetMrtrStubs.LastUser);
+        Assert.AreEqual("has-user", result);
+        Assert.AreSame(principal, DotnetToolsetMrtrStubs.LastUser);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_05_Invoke_BindsOrdinaryArgumentsFromParams()
     {
         DotnetToolsetMrtrStubs.ResetBindings();
@@ -97,11 +94,11 @@ public sealed class ToolsetArgumentBinderTests
 
         DotnetToolsetTestHarness.InvokeRaw(method, request);
 
-        Assert.Equal("beam", DotnetToolsetMrtrStubs.LastName);
-        Assert.True(DotnetToolsetMrtrStubs.LastFlag);
+        Assert.AreEqual("beam", DotnetToolsetMrtrStubs.LastName);
+        Assert.IsTrue(DotnetToolsetMrtrStubs.LastFlag);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_05_Invoke_BindsDiRegisteredService()
     {
         DotnetToolsetMrtrStubs.ResetBindings();
@@ -112,7 +109,7 @@ public sealed class ToolsetArgumentBinderTests
         var request = DotnetToolsetTestHarness.CreateRequest(
             arguments: DotnetToolsetTestHarness.Arguments(("label", "x")));
 
-        var result = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(method, request, provider));
+        var result = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(method, request, provider));
 
         Assert.EndsWith(":x", result, StringComparison.Ordinal);
     }

@@ -5,13 +5,13 @@ internal static class OptionalArtifact
     public static void RequireFile(string path, string hint)
     {
         if (!File.Exists(path))
-            Assert.Skip(hint);
+            Assert.Inconclusive(hint);
     }
 
     public static void RequireDirectory(string path, string hint)
     {
         if (!Directory.Exists(path))
-            Assert.Skip(hint);
+            Assert.Inconclusive(hint);
     }
 
     public static string? FirstExistingFile(IEnumerable<string> candidates) =>

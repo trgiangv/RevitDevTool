@@ -5,26 +5,27 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class AlcInputRequiredBridgeTests
 {
-    [Fact]
+    [TestMethod]
     public void IsIsolatedInputRequired_DetectsIdentityMismatch()
     {
         var foreign = new ForeignMrtr.InputRequiredException("state-1");
-        Assert.True(ToolsetMrtrBridge.IsIsolatedInputRequired(foreign));
-        Assert.False(ToolsetMrtrBridge.IsIsolatedInputRequired(
+        Assert.IsTrue(ToolsetMrtrBridge.IsIsolatedInputRequired(foreign));
+        Assert.IsFalse(ToolsetMrtrBridge.IsIsolatedInputRequired(
             new InputRequiredException(requestState: "host")));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToHostException_MapsRequestState()
     {
         var foreign = new ForeignMrtr.InputRequiredException("demo-round1");
         var host = ToolsetMrtrBridge.ToHostException(foreign);
-        Assert.Equal("demo-round1", host.Result.RequestState);
+        Assert.AreEqual("demo-round1", host.Result.RequestState);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToHostException_MapsElicitationInputRequests()
     {
         var elicitParams = JsonSerializer.SerializeToElement(new
@@ -50,22 +51,22 @@ public sealed class AlcInputRequiredBridgeTests
             });
 
         var host = ToolsetMrtrBridge.ToHostException(foreign);
-        Assert.Equal("demo-round1", host.Result.RequestState);
-        Assert.NotNull(host.Result.InputRequests);
-        Assert.True(host.Result.InputRequests!.ContainsKey("confirm"));
-        Assert.Equal("elicitation/create", host.Result.InputRequests["confirm"].Method);
-        Assert.Equal("Confirm?", host.Result.InputRequests["confirm"].ElicitationParams?.Message);
+        Assert.AreEqual("demo-round1", host.Result.RequestState);
+        Assert.IsNotNull(host.Result.InputRequests);
+        Assert.IsTrue(host.Result.InputRequests!.ContainsKey("confirm"));
+        Assert.AreEqual("elicitation/create", host.Result.InputRequests["confirm"].Method);
+        Assert.AreEqual("Confirm?", host.Result.InputRequests["confirm"].ElicitationParams?.Message);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToInputRequiredResponse_SetsInputRequiredField()
     {
         var original = new InputRequiredException(requestState: "field-round1");
         var response = ToolsetMrtrBridge.ToInputRequiredResponse(original);
-        Assert.Equal("field-round1", response.InputRequired?.RequestState);
-        Assert.True(ToolsetMrtrBridge.TryGetInputRequiredResult(response, out var restored));
-        Assert.Equal("field-round1", restored!.RequestState);
-        Assert.Null(response.Meta);
+        Assert.AreEqual("field-round1", response.InputRequired?.RequestState);
+        Assert.IsTrue(ToolsetMrtrBridge.TryGetInputRequiredResult(response, out var restored));
+        Assert.AreEqual("field-round1", restored!.RequestState);
+        Assert.IsNull(response.Meta);
     }
 
 }

@@ -3,9 +3,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class McpAssemblyParserTests
 {
-    [Fact]
+    [TestMethod]
     public void Metadata_session_preserves_the_sample_tool_and_resource_descriptors()
     {
         var catalog = new McpAssemblyParser(NullLogger<McpAssemblyParser>.Instance)
@@ -15,10 +16,10 @@ public sealed class McpAssemblyParserTests
         var resource = catalog.Resources.Single(item => item.Descriptor?.Name == "demo_status").Descriptor!;
         var template = catalog.Resources.Single(item => item.TemplateDescriptor?.Name == "demo_view").TemplateDescriptor!;
 
-        Assert.Equal("Get Demo Status", tool.Title);
-        Assert.True(tool.Annotations?.ReadOnlyHint);
-        Assert.Equal("sample://demo/status", resource.Uri);
-        Assert.Equal("sample://demo/views/{viewId}", template.UriTemplate);
+        Assert.AreEqual("Get Demo Status", tool.Title);
+        Assert.IsTrue(tool.Annotations?.ReadOnlyHint);
+        Assert.AreEqual("sample://demo/status", resource.Uri);
+        Assert.AreEqual("sample://demo/views/{viewId}", template.UriTemplate);
     }
 
     private static string GetSampleAssemblyPath()
@@ -26,7 +27,7 @@ public sealed class McpAssemblyParserTests
         var root = FindRepositoryRoot();
         var sampleAssembly = OptionalArtifact.ResolveMcpToolsetDemoDll(root);
         if (sampleAssembly is null)
-            Assert.Skip(OptionalArtifact.McpToolsetDemoHint);
+            Assert.Inconclusive(OptionalArtifact.McpToolsetDemoHint);
         return sampleAssembly;
     }
 

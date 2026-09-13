@@ -8,25 +8,26 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class ToolsetInvocationServicesTests
 {
     private static readonly Type ServicesType =
         typeof(DotnetMethodResolver).Assembly.GetType("DevTools.Mcp.Catalog.Discovery.ToolsetInvocationServices", throwOnError: true)!;
 
-    [Fact]
+    [TestMethod]
     public void GetService_ResolvesAugmentedContracts()
     {
         var request = DotnetToolsetTestHarness.CreateRequest(progressToken: new ProgressToken("p1"));
         var services = CreateServices(request);
 
-        Assert.Same(request, GetService(services, typeof(RequestContext<CallToolRequestParams>)));
-        Assert.Same(request.Server, GetService(services, typeof(McpServer)));
-        Assert.Equal("ToolsetProgressReporter", GetService(services, typeof(IProgress<ProgressNotificationValue>))!.GetType().Name);
-        Assert.True((bool)Invoke(services, "IsService", typeof(McpServer))!);
-        Assert.True((bool)Invoke(services, "IsKeyedService", typeof(McpServer), null)!);
+        Assert.AreSame(request, GetService(services, typeof(RequestContext<CallToolRequestParams>)));
+        Assert.AreSame(request.Server, GetService(services, typeof(McpServer)));
+        Assert.AreEqual("ToolsetProgressReporter", GetService(services, typeof(IProgress<ProgressNotificationValue>))!.GetType().Name);
+        Assert.IsTrue((bool)Invoke(services, "IsService", typeof(McpServer))!);
+        Assert.IsTrue((bool)Invoke(services, "IsKeyedService", typeof(McpServer), null)!);
     }
 
-    [Fact]
+    [TestMethod]
     public void GetKeyedService_FallsBackToInnerProvider()
     {
         var request = DotnetToolsetTestHarness.CreateRequest();
@@ -35,29 +36,37 @@ public sealed class ToolsetInvocationServicesTests
         request.Services = inner.BuildServiceProvider();
         var services = CreateServices(request);
 
-        Assert.Equal("value", Invoke(services, "GetKeyedService", typeof(string), "probe"));
-        Assert.Equal("value", Invoke(services, "GetRequiredKeyedService", typeof(string), "probe"));
+        Assert.AreEqual("value", Invoke(services, "GetKeyedService", typeof(string), "probe"));
+        Assert.AreEqual("value", Invoke(services, "GetRequiredKeyedService", typeof(string), "probe"));
     }
 
-    [Fact]
+    [TestMethod]
     public void GetRequiredKeyedService_Throws_WhenMissing()
     {
         var services = CreateServices(DotnetToolsetTestHarness.CreateRequest());
 
-        Assert.Throws<TargetInvocationException>(() =>
+        Assert.ThrowsExactly<TargetInvocationException>(() =>
             Invoke(services, "GetRequiredKeyedService", typeof(string), "missing"));
     }
 
-    [Fact]
+    [TestMethod]
     public void ProgressReporter_ReportsWithoutThrowing()
     {
         var request = DotnetToolsetTestHarness.CreateRequest(progressToken: new ProgressToken("p1"));
         var services = CreateServices(request);
         var progress = (IProgress<ProgressNotificationValue>)GetService(services, typeof(IProgress<ProgressNotificationValue>))!;
 
-        var exception = Record.Exception(() => progress.Report(new ProgressNotificationValue { Progress = 0.5f, Total = 1f }));
+        Exception? exception = null;
+        try
+        {
+            progress.Report(new ProgressNotificationValue { Progress = 0.5f, Total = 1f });
+        }
+        catch (Exception ex)
+        {
+            exception = ex;
+        }
 
-        Assert.Null(exception);
+        Assert.IsNull(exception);
     }
 
     private static object CreateServices(RequestContext<CallToolRequestParams> request) =>

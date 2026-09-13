@@ -5,11 +5,12 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class PythonResourceResultParserTests
 {
     private const string ResourceUri = "revit://model/worksets";
 
-    [Fact]
+    [TestMethod]
     public void ParseReadResourceResult_SdkJson_RoundTrips()
     {
         var expected = new ReadResourceResult
@@ -27,33 +28,34 @@ public sealed class PythonResourceResultParserTests
         var json = JsonSerializer.Serialize(expected, McpJsonUtilities.DefaultOptions);
 
         var actual = PythonMcpToolBackend.ReadResourceResult(json);
-        var text = Assert.IsType<TextResourceContents>(Assert.Single(actual.Contents));
+        Assert.HasCount(1, actual.Contents);
+        var text = Assert.IsInstanceOfType<TextResourceContents>(actual.Contents[0]);
 
-        Assert.Equal("ok", text.Text);
-        Assert.Equal("text/plain", text.MimeType);
-        Assert.Equal(ResourceUri, text.Uri);
+        Assert.AreEqual("ok", text.Text);
+        Assert.AreEqual("text/plain", text.MimeType);
+        Assert.AreEqual(ResourceUri, text.Uri);
     }
 
-    [Fact]
+    [TestMethod]
     public void ParseReadResourceResult_HelperContentShape_Throws()
     {
         const string json = """{"contents":[{"content":"hello","mime_type":"text/plain"}]}""";
 
-        var ex = Assert.Throws<InvalidOperationException>(
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
             () => PythonMcpToolBackend.ReadResourceResult(json));
         Assert.Contains("resource", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void ParseReadResourceResult_StringContentEntry_Throws()
     {
         const string json = """{"contents":["hello"]}""";
 
-        Assert.Throws<InvalidOperationException>(
+        Assert.ThrowsExactly<InvalidOperationException>(
             () => PythonMcpToolBackend.ReadResourceResult(json));
     }
 
-    [Fact]
+    [TestMethod]
     public void ParseReadResourceResult_InputRequired_ThrowsWithRequestsAndState()
     {
         var inputRequired = new InputRequiredResult
@@ -66,12 +68,12 @@ public sealed class PythonResourceResultParserTests
         };
         var json = JsonSerializer.Serialize(inputRequired, McpJsonUtilities.DefaultOptions);
 
-        var ex = Assert.Throws<InputRequiredException>(() =>
+        var ex = Assert.ThrowsExactly<InputRequiredException>(() =>
             PythonMcpToolBackend.ReadResourceResult(json));
 
-        Assert.NotNull(ex.Result.InputRequests);
+        Assert.IsNotNull(ex.Result.InputRequests);
         Assert.Contains("confirm", ex.Result.InputRequests!.Keys);
-        Assert.Equal("resource-round-1", ex.Result.RequestState);
-        Assert.Equal("input_required", ex.Result.ResultType);
+        Assert.AreEqual("resource-round-1", ex.Result.RequestState);
+        Assert.AreEqual("input_required", ex.Result.ResultType);
     }
 }

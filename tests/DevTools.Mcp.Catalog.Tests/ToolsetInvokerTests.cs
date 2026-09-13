@@ -15,24 +15,25 @@ using Moq;
 namespace DevTools.Mcp.Catalog.Tests;
 
 /// <summary>ToolsetInvoker MRTR round-trip and catalog propagation (T-ALC-10..15).</summary>
+[TestClass]
 public sealed class ToolsetInvokerTests
 {
     private static MethodInfo MrtrConfirmMethod() =>
         typeof(DotnetToolsetMrtrStubs).GetMethod(nameof(DotnetToolsetMrtrStubs.TestMrtrConfirm))!;
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_10_Round1_NoInputResponses_ThrowsInputRequiredException()
     {
         var request = DotnetToolsetTestHarness.CreateRequest();
 
         var ex = DotnetToolsetTestHarness.InvokeExpectingInputRequired(MrtrConfirmMethod(), request);
 
-        Assert.NotNull(ex.Result.InputRequests);
+        Assert.IsNotNull(ex.Result.InputRequests);
         Assert.Contains("confirm", ex.Result.InputRequests!.Keys);
-        Assert.Equal("demo-round1", ex.Result.RequestState);
+        Assert.AreEqual("demo-round1", ex.Result.RequestState);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_11_Round2_InputResponsesAndRequestState_ReturnsSuccess()
     {
         var request = DotnetToolsetTestHarness.CreateRequest(
@@ -42,12 +43,12 @@ public sealed class ToolsetInvokerTests
             },
             requestState: "demo-round1");
 
-        var result = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(MrtrConfirmMethod(), request));
+        var result = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(MrtrConfirmMethod(), request));
 
-        Assert.Equal("confirmed", result);
+        Assert.AreEqual("confirmed", result);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_12_Round2Result_SurvivesResultSerializerRoundTrip()
     {
         var method = typeof(DotnetToolsetMrtrStubs).GetMethod(nameof(DotnetToolsetMrtrStubs.TestMrtrStructuredSuccess))!;
@@ -61,11 +62,11 @@ public sealed class ToolsetInvokerTests
 
         var result = DotnetToolsetTestHarness.InvokeToResponse(method, request, outputSchema);
 
-        Assert.Equal("structured-confirmed", McpToolInvoke.Text(result));
-        Assert.True(result.StructuredContent!.Value.GetProperty("ok").GetBoolean());
+        Assert.AreEqual("structured-confirmed", McpToolInvoke.Text(result));
+        Assert.IsTrue(result.StructuredContent!.Value.GetProperty("ok").GetBoolean());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task T_ALC_13_Handler_ReturnsInputRequiredJsonShape()
     {
         var inputRequired = new InputRequiredException(requestState: "catalog-round1");
@@ -86,12 +87,12 @@ public sealed class ToolsetInvokerTests
             McpHostTestHarness.CreateRequest(RequestMethods.ToolsCall, new JsonObject { ["name"] = "mrtr_tool" }, id: 2),
             CancellationToken.None);
 
-        Assert.NotNull(response);
-        Assert.Null(response!["error"]);
-        Assert.Equal("catalog-round1", response!["result"]!["requestState"]!.GetValue<string>());
+        Assert.IsNotNull(response);
+        Assert.IsNull(response!["error"]);
+        Assert.AreEqual("catalog-round1", response!["result"]!["requestState"]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_14_RetryMissingInputResponsesKey_ReturnsToolAuthoredPolicy()
     {
         var request = DotnetToolsetTestHarness.CreateRequest(
@@ -101,12 +102,12 @@ public sealed class ToolsetInvokerTests
             },
             requestState: "demo-round1");
 
-        var result = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(MrtrConfirmMethod(), request));
+        var result = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(MrtrConfirmMethod(), request));
 
-        Assert.Equal("missing_confirm_key", result);
+        Assert.AreEqual("missing_confirm_key", result);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_14_EmptyInputResponsesDictionary_ReturnsToolAuthoredPolicy()
     {
         var method = typeof(DotnetToolsetMrtrStubs).GetMethod(nameof(DotnetToolsetMrtrStubs.TestMrtrEmptyResponses))!;
@@ -114,35 +115,35 @@ public sealed class ToolsetInvokerTests
             inputResponses: new Dictionary<string, InputResponse>(),
             requestState: "empty-round1");
 
-        var result = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(method, request));
+        var result = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(method, request));
 
-        Assert.Equal("responses_empty", result);
+        Assert.AreEqual("responses_empty", result);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_14_RequestStateEchoedWithNullInputResponses_ReturnsToolAuthoredPolicy()
     {
         var method = typeof(DotnetToolsetMrtrStubs).GetMethod(nameof(DotnetToolsetMrtrStubs.TestMrtrEmptyResponses))!;
         var request = DotnetToolsetTestHarness.CreateRequest(
             requestState: "empty-round1");
 
-        var result = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(method, request));
+        var result = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(method, request));
 
-        Assert.Equal("responses_null", result);
+        Assert.AreEqual("responses_null", result);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_10_IsMrtrUnsupported_ReturnsSoftStringInsteadOfThrow()
     {
         var request = DotnetToolsetTestHarness.CreateRequest(
             server: DotnetToolsetTestHarness.CreateMrtrServer(isMrtrSupported: false));
 
-        var result = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(MrtrConfirmMethod(), request));
+        var result = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(MrtrConfirmMethod(), request));
 
-        Assert.Equal("mrtr_unsupported", result);
+        Assert.AreEqual("mrtr_unsupported", result);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_11_SequentialMrtrTools_DoNotCrossContaminateRequestState()
     {
         var methodA = typeof(DotnetToolsetMrtrStubs).GetMethod(nameof(DotnetToolsetMrtrStubs.TestMrtrStateA))!;
@@ -155,25 +156,25 @@ public sealed class ToolsetInvokerTests
             methodB,
             DotnetToolsetTestHarness.CreateRequest());
 
-        Assert.Equal("state-a", round1A.Result.RequestState);
-        Assert.Equal("state-b", round1B.Result.RequestState);
+        Assert.AreEqual("state-a", round1A.Result.RequestState);
+        Assert.AreEqual("state-b", round1B.Result.RequestState);
 
-        var resultA = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(
+        var resultA = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(
             methodA,
             DotnetToolsetTestHarness.CreateRequest(
                 inputResponses: new Dictionary<string, InputResponse> { ["x"] = new() },
                 requestState: "state-a")));
-        var resultB = Assert.IsType<string>(DotnetToolsetTestHarness.InvokeRaw(
+        var resultB = Assert.IsInstanceOfType<string>(DotnetToolsetTestHarness.InvokeRaw(
             methodB,
             DotnetToolsetTestHarness.CreateRequest(
                 inputResponses: new Dictionary<string, InputResponse> { ["x"] = new() },
                 requestState: "state-b")));
 
-        Assert.Equal("done-a", resultA);
-        Assert.Equal("done-b", resultB);
+        Assert.AreEqual("done-a", resultA);
+        Assert.AreEqual("done-b", resultB);
     }
 
-    [Fact]
+    [TestMethod]
     public void T_ALC_15_MrtrSuccessCallToolResult_StillMapsThroughResultSerializer()
     {
         var method = typeof(DotnetToolsetMrtrStubs).GetMethod(nameof(DotnetToolsetMrtrStubs.TestMrtrStructuredSuccess))!;
@@ -185,8 +186,8 @@ public sealed class ToolsetInvokerTests
         var raw = DotnetToolsetTestHarness.InvokeRaw(method, request);
         var mapped = ToolsetResultSerializer.ToInvocationResponse(raw, outputSchema);
 
-        Assert.IsType<CallToolResult>(raw);
-        Assert.Equal("structured-confirmed", McpToolInvoke.Text(mapped));
-        Assert.NotNull(mapped.StructuredContent);
+        Assert.IsInstanceOfType<CallToolResult>(raw);
+        Assert.AreEqual("structured-confirmed", McpToolInvoke.Text(mapped));
+        Assert.IsNotNull(mapped.StructuredContent);
     }
 }

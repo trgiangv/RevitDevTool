@@ -8,9 +8,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
+[TestClass]
 public sealed class ToolsetMrtrBridgeCoverageTests
 {
-    [Fact]
+    [TestMethod]
     public void TryGetInputRequiredResult_ReadsFromMeta_WhenFieldMissing()
     {
         var original = new InputRequiredException(requestState: "meta-round1");
@@ -24,21 +25,21 @@ public sealed class ToolsetMrtrBridgeCoverageTests
             },
         };
 
-        Assert.True(ToolsetMrtrBridge.TryGetInputRequiredResult(response, out var restored));
-        Assert.Equal("meta-round1", restored!.RequestState);
+        Assert.IsTrue(ToolsetMrtrBridge.TryGetInputRequiredResult(response, out var restored));
+        Assert.AreEqual("meta-round1", restored!.RequestState);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToHostException_UsesMessage_WhenForeignResultMissing()
     {
         var foreign = new ExceptionWithoutResult("fallback-state");
 
         var host = ToolsetMrtrBridge.ToHostException(foreign);
 
-        Assert.Equal("fallback-state", host.Result.RequestState);
+        Assert.AreEqual("fallback-state", host.Result.RequestState);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToHostException_MapsNonGenericDictionaryInputRequests()
     {
         var foreign = new ForeignDictionaryMrtr.InputRequiredException(
@@ -50,16 +51,16 @@ public sealed class ToolsetMrtrBridgeCoverageTests
 
         var host = ToolsetMrtrBridge.ToHostException(foreign);
 
-        Assert.NotNull(host.Result.InputRequests);
-        Assert.Equal("elicitation/create", host.Result.InputRequests!["confirm"].Method);
+        Assert.IsNotNull(host.Result.InputRequests);
+        Assert.AreEqual("elicitation/create", host.Result.InputRequests!["confirm"].Method);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToHostException_ReturnsHostException_Unchanged()
     {
         var original = new InputRequiredException(requestState: "host");
 
-        Assert.Same(original, ToolsetMrtrBridge.ToHostException(original));
+        Assert.AreSame(original, ToolsetMrtrBridge.ToHostException(original));
     }
 
     private sealed class ExceptionWithoutResult(string message) : Exception(message)
