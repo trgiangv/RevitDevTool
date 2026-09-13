@@ -8,9 +8,10 @@ using DevTools.TestRunner.Services;
 
 namespace DevTools.TestRunner.Tests;
 
-public sealed class RunnerCommandsTests
+[TestClass]
+public sealed class RunnerCommandsTests : RunnerTests
 {
-    [Fact]
+    [TestMethod]
     public async Task Missing_assembly_does_not_use_host_session()
     {
         var hosts = new ThrowingTestSession();
@@ -29,10 +30,10 @@ public sealed class RunnerCommandsTests
             new ThrowingDebugger(),
             new BufferedRunInput(new StringReader(json)));
 
-        var exitCode = await commands.Run(TestContext.Current.CancellationToken);
+        var exitCode = await commands.Run(TestContext.CancellationToken);
 
-        Assert.Equal(RunnerExitCode.CliError, exitCode);
-        Assert.Equal(0, hosts.Calls);
+        Assert.AreEqual(RunnerExitCode.CliError, exitCode);
+        Assert.AreEqual(0, hosts.Calls);
     }
 
     private sealed class ThrowingTestSession : ITestSession

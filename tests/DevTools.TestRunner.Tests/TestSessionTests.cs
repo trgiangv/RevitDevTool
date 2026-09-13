@@ -4,9 +4,10 @@ using DevTools.TestRunner.Services;
 
 namespace DevTools.TestRunner.Tests;
 
-public sealed class TestSessionTests
+[TestClass]
+public sealed class TestSessionTests : RunnerTests
 {
-    [Fact]
+    [TestMethod]
     public async Task EnsurePipeAsync_kills_spawned_process_when_launch_is_cancelled()
     {
         using var process = Process.Start(new ProcessStartInfo
@@ -17,7 +18,7 @@ public sealed class TestSessionTests
             CreateNoWindow = true,
         })!;
         var session = new TestSession(new StubLaunchService(process));
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var wait = session.EnsurePipeAsync(
             HostApp.Revit,
             "2025",
@@ -25,11 +26,11 @@ public sealed class TestSessionTests
             TimeSpan.FromSeconds(30),
             cts.Token);
 
-        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await Task.Delay(200, TestContext.CancellationToken);
         await cts.CancelAsync();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => wait);
-        Assert.True(process.WaitForExit(5000));
+        await Assert.ThrowsAsync<OperationCanceledException>(async () => await wait);
+        Assert.IsTrue(process.WaitForExit(5000));
     }
 
     private sealed class StubLaunchService(Process process) : IHostLaunchService

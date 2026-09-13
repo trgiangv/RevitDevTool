@@ -45,16 +45,8 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
 
     public void Cancel(Guid runId)
     {
+        // Signal only. The in-flight Run WaitForExit collects the process.
         TestCancelSignal.TrySignal(runId);
-        Process? process;
-        lock (_processLock)
-        {
-            if (_activeRunId != runId)
-                return;
-            process = _activeProcess;
-        }
-
-        TryTerminate(process, waitForExit: true);
     }
 
     public void Dispose()
@@ -72,6 +64,16 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         if (runId is { } id)
             TestCancelSignal.TrySignal(id);
 
+        try
+        {
+            if (process is { HasExited: false })
+                process.WaitForExit(TestHostTiming.CancelDetachWaitMilliseconds);
+        }
+        catch (InvalidOperationException)
+        {
+            // Process already exited.
+        }
+
         TryTerminate(process, waitForExit: false);
     }
 
@@ -84,6 +86,7 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         var startInfo = new ProcessStartInfo
         {
             FileName = _runnerPath,
+            Arguments = TestRunnerCli.RunCommand,
             UseShellExecute = false,
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
@@ -92,8 +95,6 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8
         };
-
-        AddArgument(startInfo, TestRunnerCli.RunCommand);
 
         using var process = new Process();
         process.StartInfo = startInfo;
@@ -303,25 +304,4 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
             // Process exited between the state check and the operation.
         }
     }
-
-    private static void AddArgument(ProcessStartInfo startInfo, string argument)
-    {
-#if NETCOREAPP
-        startInfo.ArgumentList.Add(argument);
-#else
-        if (startInfo.Arguments.Length > 0)
-            startInfo.Arguments += " ";
-        startInfo.Arguments += QuoteArgument(argument);
-#endif
-    }
-
-#if !NETCOREAPP
-    private static string QuoteArgument(string value)
-    {
-        if (value.Length == 0 || value.IndexOfAny([' ', '\t', '"']) < 0)
-            return value;
-
-        return "\"" + value.Replace("\"", "\\\"") + "\"";
-    }
-#endif
 }

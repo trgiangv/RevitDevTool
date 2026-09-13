@@ -1,8 +1,9 @@
 namespace DevTools.TestRunner.Tests;
 
+[TestClass]
 public sealed class HostSessionPolicyTests
 {
-    [Fact]
+    [TestMethod]
     public void ForceLaunch_false_reuses_matching_host_then_falls_back_to_spawn()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -19,7 +20,7 @@ public sealed class HostSessionPolicyTests
 
         var reuseBlockStart = source.IndexOf("if (!forceLaunch)", StringComparison.Ordinal);
         var launchCall = source.IndexOf("launchService.Start", StringComparison.Ordinal);
-        Assert.True(reuseBlockStart >= 0 && launchCall > reuseBlockStart);
+        Assert.IsTrue(reuseBlockStart >= 0 && launchCall > reuseBlockStart);
         var reuseBlock = source[reuseBlockStart..launchCall];
         Assert.Contains("Discover(hostName, version)", reuseBlock, StringComparison.Ordinal);
         Assert.Contains("return existing", reuseBlock, StringComparison.Ordinal);
@@ -33,7 +34,7 @@ public sealed class HostSessionPolicyTests
         Assert.DoesNotContain("new HostLaunchService()", source, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestRunner_run_does_not_discover_or_locate_a_host_itself()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -51,7 +52,7 @@ public sealed class HostSessionPolicyTests
         Assert.DoesNotContain("launchService.Start", source, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void TestSession_discovery_prefers_oldest_matching_pid()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -65,7 +66,7 @@ public sealed class HostSessionPolicyTests
         Assert.DoesNotContain("OrderByDescending", source, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void HostLaunch_starts_the_host_exe_as_a_direct_child()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -81,7 +82,7 @@ public sealed class HostSessionPolicyTests
         Assert.Contains("StdioInheritance.Suppress()", source, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Core_execution_coordinator_attaches_after_pipe_ensure_and_before_provider_operation()
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -100,10 +101,15 @@ public sealed class HostSessionPolicyTests
         var ensure = source.IndexOf("EnsurePipeAsync", StringComparison.Ordinal);
         var attach = source.IndexOf("debugger.TryAttach", StringComparison.Ordinal);
         var run = source.IndexOf("await operation", StringComparison.Ordinal);
-        Assert.True(ensure >= 0 && attach > ensure && run > attach);
+        Assert.IsTrue(ensure >= 0 && attach > ensure && run > attach);
         Assert.DoesNotContain("DebugHostLifetime", source, StringComparison.Ordinal);
         Assert.Contains("context.DebugParentPid", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("AttachLog", source, StringComparison.Ordinal);
         Assert.DoesNotContain("TryDetach", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("cancellationToken.Register", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ShouldDetachHost", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("TesthostExited", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetProcessById", source, StringComparison.Ordinal);
         Assert.DoesNotContain("DebugAttachScope", source, StringComparison.Ordinal);
         var attachApi = File.ReadAllText(Path.Combine(
             repositoryRoot,
@@ -118,12 +124,33 @@ public sealed class HostSessionPolicyTests
             "Debugging",
             "VisualStudioAttach.cs"));
         Assert.DoesNotContain("TryDetach", attachApi, StringComparison.Ordinal);
+        Assert.Contains("FindHost", vsAttach, StringComparison.Ordinal);
+        Assert.Contains("StaWorker", vsAttach, StringComparison.Ordinal);
+        Assert.DoesNotContain("CommandEvents", vsAttach, StringComparison.Ordinal);
+        Assert.DoesNotContain("PeekMessage", vsAttach, StringComparison.Ordinal);
+        Assert.DoesNotContain("WaitForDebuggedHost", vsAttach, StringComparison.Ordinal);
+        Assert.DoesNotContain("DetachOtherDebuggees", vsAttach, StringComparison.Ordinal);
         Assert.DoesNotContain(".Detach(", vsAttach, StringComparison.Ordinal);
+        Assert.Contains("LocalProcesses.OfType<Process>()", vsAttach, StringComparison.Ordinal);
+        Assert.DoesNotContain("processes.Item(index)", vsAttach, StringComparison.Ordinal);
+        Assert.Contains("GetActiveObject", vsAttach, StringComparison.Ordinal);
+        Assert.Contains("SetApartmentState", vsAttach, StringComparison.Ordinal);
+        Assert.Contains("OleMessageFilter.Register", vsAttach, StringComparison.Ordinal);
+        Assert.DoesNotContain("FindDteDebugging", vsAttach, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetRunningObjectTable", vsAttach, StringComparison.Ordinal);
         var attachBlock = source[attach..run];
         Assert.Contains("new AttachTarget", attachBlock, StringComparison.Ordinal);
         Assert.DoesNotContain("context.HostVersion", attachBlock, StringComparison.Ordinal);
         Assert.Contains("ExecuteAsync", providerSource, StringComparison.Ordinal);
         Assert.DoesNotContain("EnsurePipeAsync", providerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TestEventKinds.RunFinishing", providerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("bufferedEvents", providerSource, StringComparison.Ordinal);
+        var nunitRuntime = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "source",
+            "DevTools.NUnit.Runtime",
+            "NUnitRuntimeSession.cs"));
+        Assert.DoesNotContain("TestEventKinds.RunFinishing", nunitRuntime, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

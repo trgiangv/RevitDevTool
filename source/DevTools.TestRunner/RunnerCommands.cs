@@ -85,12 +85,7 @@ public sealed class RunnerCommands(
         var cancelMonitor = MonitorCancelSignalAsync(cancelSignal, linked, stopCancelMonitor.Token);
 
         var progress = new Progress<TestEvent>(testingEvent =>
-        {
-            Console.WriteLine(
-                JsonSerializer.Serialize(
-                    new TestRunnerStreamMessage(Event: testingEvent),
-                    TestingJsonContext.Default.TestRunnerStreamMessage));
-        });
+            WriteStream(new TestRunnerStreamMessage(Event: testingEvent)));
 
         ExecutionResult<TestRunResponse> result;
         try
@@ -131,13 +126,14 @@ public sealed class RunnerCommands(
             };
         }
 
-        Console.WriteLine(
-            JsonSerializer.Serialize(
-                new TestRunnerStreamMessage(Response: result.Value),
-                TestingJsonContext.Default.TestRunnerStreamMessage));
+        WriteStream(new TestRunnerStreamMessage(Response: result.Value));
 
         return HasRunFailure(result.Value!) ? RunnerExitCode.TestFailure : RunnerExitCode.Ok;
     }
+
+    private static void WriteStream(TestRunnerStreamMessage message) =>
+        Console.WriteLine(
+            JsonSerializer.Serialize(message, TestingJsonContext.Default.TestRunnerStreamMessage));
 
     private static async Task MonitorCancelSignalAsync(
         EventWaitHandle cancelSignal,

@@ -1,172 +1,175 @@
-using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 using EnvDTE;
-using DteProcess = EnvDTE.Process;
-using DteProcesses = EnvDTE.Processes;
+
 namespace DevTools.TestRunner.Debugging;
 
+/// <summary>
+/// Attaches Visual Studio to the CAD host via EnvDTE <c>LocalProcesses</c>.
+/// Visual Studio owns the session after attach (Stop Debugging Detaches the guest).
+/// </summary>
 public sealed class VisualStudioAttach : IDebuggerAttach
 {
-    public static VisualStudioAttach Instance { get; } = new();
+    private const int RpcServerCallRetryLater = unchecked((int)0x8001010A);
+    private const int RpcCallRejected = unchecked((int)0x80010001);
 
-    internal static TimeSpan AttachTimeout { get; } = TimeSpan.FromSeconds(15);
+    public static VisualStudioAttach Instance { get; } = new();
 
     public bool TryAttach(AttachTarget target, TextWriter warnings)
     {
-        try
+        using var sta = new StaWorker();
+        return sta.Invoke(() => AttachOnSta(target, warnings), warnings);
+    }
+
+    private static bool AttachOnSta(AttachTarget target, TextWriter warnings)
+    {
+        var dte = GetActiveDte(warnings);
+        if (dte is null)
         {
-            var dte = SelectDte(EnumerateRunningDte(), target.ParentProcessId)
-                ?? GetActiveDteFallback();
-            if (dte is null)
-            {
-                warnings.WriteLine(
-                    "Visual Studio debugger was not found; host tests will run without an attached debugger.");
-                return false;
-            }
-
-            var process = FindLocalProcess(dte, target.HostProcessId);
-            if (process is null)
-            {
-                warnings.WriteLine(
-                    $"Visual Studio does not list host process {target.HostProcessId}; skipping debugger attach.");
-                return false;
-            }
-
-            process.Attach();
-            if (WaitUntilDebugging(dte, target.HostProcessId, AttachTimeout))
-                return true;
-
             warnings.WriteLine(
-                $"Visual Studio did not confirm attach to host PID {target.HostProcessId} within {AttachTimeout.TotalSeconds:0}s.");
+                "Visual Studio debugger was not found; host tests will run without an attached debugger.");
             return false;
         }
-        catch (Exception ex)
+
+        var debugger = dte.Debugger;
+        var host = FindHost(debugger, target.HostProcessId, warnings);
+        if (host is null)
         {
-            warnings.WriteLine($"Failed to attach Visual Studio to host PID {target.HostProcessId}: {ex.Message}");
+            warnings.WriteLine(
+                $"Visual Studio does not list host process {target.HostProcessId}; skipping debugger attach.");
             return false;
         }
+
+        if (!IsBeingDebugged(debugger, target.HostProcessId))
+        {
+            RetryBusy(() =>
+            {
+                host.Attach();
+                return true;
+            }, warnings, "Attach()");
+        }
+
+        System.Threading.Thread.Sleep(1_000);
+        return true;
     }
 
-    private static DTE? SelectDte(List<DTE> instances, int? parentProcessId)
+    private static Process? FindHost(Debugger debugger, int hostProcessId, TextWriter warnings) =>
+        RetryBusy(
+            () => debugger.LocalProcesses.OfType<Process>()
+                .FirstOrDefault(candidate => candidate.ProcessID == hostProcessId),
+            warnings,
+            "LocalProcesses");
+
+    private static bool IsBeingDebugged(Debugger debugger, int processId) =>
+        debugger.DebuggedProcesses.OfType<Process>().Any(candidate => candidate.ProcessID == processId);
+
+    private static T RetryBusy<T>(Func<T> action, TextWriter warnings, string what)
     {
-        if (parentProcessId is null)
-            return instances.Count > 0 ? instances[0] : null;
-
-        foreach (var t in instances.Where(t => IsDebugging(t, parentProcessId.Value)))
-        {
-            return t;
-        }
-
-        return instances.Count > 0 ? instances[0] : null;
-    }
-
-    private static List<DTE> EnumerateRunningDte()
-    {
-        var instances = new List<DTE>();
-        if (OleAut32.GetRunningObjectTable(0, out var rot) != 0)
-            return instances;
-
-        rot.EnumRunning(out var enumerator);
-
-        enumerator.Reset();
-        var monikers = new IMoniker[1];
-        while (enumerator.Next(1, monikers, IntPtr.Zero) == 0)
-        {
-            if (TryGetVisualStudioDte(rot, monikers[0], out var dte) && dte is not null)
-                instances.Add(dte);
-        }
-
-        return instances;
-    }
-
-    private static bool TryGetVisualStudioDte(
-        IRunningObjectTable rot,
-        IMoniker moniker,
-        out DTE? dte)
-    {
-        dte = null;
-        if (OleAut32.CreateBindCtx(0, out var context) != 0)
-            return false;
-
-        try
-        {
-            moniker.GetDisplayName(context, null, out var name);
-            if (string.IsNullOrWhiteSpace(name)
-                || name.IndexOf("VisualStudio.DTE", StringComparison.OrdinalIgnoreCase) < 0)
-                return false;
-
-            rot.GetObject(moniker, out var obj);
-            dte = obj as DTE;
-            return dte is not null;
-        }
-        catch (COMException)
-        {
-            // Skip entries the ROT cannot bind.
-            return false;
-        }
-        finally
-        {
-            Marshal.ReleaseComObject(context);
-        }
-    }
-
-    private static DTE? GetActiveDteFallback()
-    {
-        for (var version = 23; version >= 9; version--)
+        for (var attempt = 1; ; attempt++)
         {
             try
             {
-                if (OleAut32.GetActiveObject($"VisualStudio.DTE.{version}.0") is DTE dte)
+                return action();
+            }
+            catch (COMException ex) when (IsBusy(ex) && attempt < 20)
+            {
+                warnings.WriteLine($"{what} busy 0x{ex.HResult:X8} retry {attempt}");
+                System.Threading.Thread.Sleep(150);
+            }
+        }
+    }
+
+    private static bool IsBusy(COMException ex) =>
+        ex.HResult is RpcServerCallRetryLater or RpcCallRejected;
+
+    private static DTE? GetActiveDte(TextWriter warnings)
+    {
+        for (var version = 23; version >= 9; version--)
+        {
+            var progId = $"VisualStudio.DTE.{version}.0";
+            try
+            {
+                if (MarshalUtils.GetActiveObject(progId) is DTE dte)
                     return dte;
             }
             catch (COMException)
             {
-                // Version not running.
+                // ProgId not registered for this VS version.
+            }
+            catch (Exception ex)
+            {
+                warnings.WriteLine($"GetActiveObject({progId}) {ex.GetType().Name}: {ex.Message}");
             }
         }
 
         return null;
     }
 
-    private static DteProcess? FindLocalProcess(DTE dte, int processId) =>
-        FindProcess(dte.Debugger.LocalProcesses, processId);
-
-    private static bool IsDebugging(DTE dte, int processId)
+    private sealed class StaWorker : IDisposable
     {
-        try
-        {
-            return FindProcess(dte.Debugger.DebuggedProcesses, processId) is not null;
-        }
-        catch (COMException)
-        {
-            return false;
-        }
-    }
+        private readonly BlockingCollection<Action> _work = new();
+        private readonly System.Threading.Thread _thread;
 
-    private static DteProcess? FindProcess(DteProcesses processes, int processId)
-    {
-        for (short index = 1; index <= processes.Count; index++)
+        public StaWorker()
         {
-            var process = processes.Item(index);
-            if (process.ProcessID == processId)
-                return process;
-        }
-
-        return null;
-    }
-
-    private static bool WaitUntilDebugging(DTE dte, int processId, TimeSpan timeout)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        while (stopwatch.Elapsed < timeout)
-        {
-            if (IsDebugging(dte, processId))
-                return true;
-
-            System.Threading.Thread.Sleep(200);
+            _thread = new System.Threading.Thread(() =>
+            {
+                OleMessageFilter.Register();
+                try
+                {
+                    foreach (var action in _work.GetConsumingEnumerable())
+                        action();
+                }
+                finally
+                {
+                    OleMessageFilter.Unregister();
+                }
+            })
+            {
+                IsBackground = true,
+                Name = "VS-attach"
+            };
+            _thread.SetApartmentState(ApartmentState.STA);
+            _thread.Start();
         }
 
-        return IsDebugging(dte, processId);
+        public T Invoke<T>(Func<T> action, TextWriter warnings)
+        {
+            var finished = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _work.Add(() =>
+            {
+                try
+                {
+                    finished.TrySetResult(action());
+                }
+                catch (Exception ex)
+                {
+                    finished.TrySetException(ex);
+                }
+            });
+
+            if (!finished.Task.Wait(TimeSpan.FromSeconds(30)))
+            {
+                warnings.WriteLine("STA attach thread did not finish within 30s");
+                return default!;
+            }
+
+            if (!finished.Task.IsCompletedSuccessfully)
+            {
+                var error = finished.Task.Exception?.GetBaseException();
+                if (error is not null)
+                    warnings.WriteLine($"{error.GetType().Name}: {error.Message}");
+                return default!;
+            }
+
+            return finished.Task.Result;
+        }
+
+        public void Dispose()
+        {
+            _work.CompleteAdding();
+            _thread.Join(TimeSpan.FromSeconds(5));
+            _work.Dispose();
+        }
     }
 }

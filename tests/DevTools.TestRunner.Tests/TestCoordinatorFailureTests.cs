@@ -6,9 +6,10 @@ using DevTools.TestRunner.Services;
 
 namespace DevTools.TestRunner.Tests;
 
-public sealed class TestCoordinatorFailureTests
+[TestClass]
+public sealed class TestCoordinatorFailureTests : RunnerTests
 {
-    [Fact]
+    [TestMethod]
     public async Task ExecuteAsync_returns_invalid_host_for_unknown_host_name()
     {
         var coordinator = new TestCoordinator(new ThrowingTestSession());
@@ -25,14 +26,15 @@ public sealed class TestCoordinatorFailureTests
             context,
             new NoOpDebugger(),
             static (_, _) => Task.FromResult("unused"),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.False(result.Succeeded);
-        Assert.Equal(ExecutionFailure.InvalidHost, result.Failure);
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual(ExecutionFailure.InvalidHost, result.Failure);
+        Assert.IsNotNull(result.Error);
         Assert.Contains("Unsupported host", result.Error, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ExecuteAsync_maps_session_failures_to_no_host()
     {
         var coordinator = new TestCoordinator(new ThrowingTestSession());
@@ -49,11 +51,11 @@ public sealed class TestCoordinatorFailureTests
             context,
             new NoOpDebugger(),
             static (_, _) => Task.FromResult("unused"),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.False(result.Succeeded);
-        Assert.Equal(ExecutionFailure.NoHost, result.Failure);
-        Assert.Equal("pipe unavailable", result.Error);
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual(ExecutionFailure.NoHost, result.Failure);
+        Assert.AreEqual("pipe unavailable", result.Error);
     }
 
     private sealed class ThrowingTestSession : ITestSession

@@ -3,9 +3,10 @@ using System.Reflection.PortableExecutable;
 
 namespace DevTools.TestRunner.Tests;
 
+[TestClass]
 public sealed class RunnerAssemblyBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Runner_is_framework_neutral()
     {
         var root = FindRepositoryRoot();
@@ -17,15 +18,15 @@ public sealed class RunnerAssemblyBoundaryTests
             .Select(File.ReadAllText)
             .ToList();
 
-        Assert.NotEmpty(files);
-        Assert.DoesNotContain(files, text => text.Contains("NUnit.", StringComparison.Ordinal)
+        Assert.IsNotEmpty(files);
+        Assert.DoesNotContain(text => text.Contains("NUnit.", StringComparison.Ordinal)
             || text.Contains("using NUnit", StringComparison.Ordinal)
             || text.Contains("DevTools.NUnit", StringComparison.Ordinal)
             || text.Contains("nunit.framework", StringComparison.OrdinalIgnoreCase)
-            || text.Contains("IRunnerCommandModule", StringComparison.Ordinal));
+            || text.Contains("IRunnerCommandModule", StringComparison.Ordinal), files);
     }
 
-    [Fact]
+    [TestMethod]
     public void Runner_does_not_reference_logging()
     {
         var root = FindRepositoryRoot();
@@ -54,7 +55,7 @@ public sealed class RunnerAssemblyBoundaryTests
                 SearchOption.AllDirectories)
             .OrderByDescending(File.GetLastWriteTimeUtc)
             .FirstOrDefault();
-        Assert.False(string.IsNullOrEmpty(dll), "DevTools.TestRunner.dll was not built.");
+        Assert.IsFalse(string.IsNullOrEmpty(dll), "DevTools.TestRunner.dll was not built.");
 
         var references = ReadAssemblyReferences(dll!);
         Assert.DoesNotContain("DevTools.Logging", references);
@@ -64,7 +65,7 @@ public sealed class RunnerAssemblyBoundaryTests
         Assert.Contains("DevTools.Hosting", references);
     }
 
-    [Fact]
+    [TestMethod]
     public void Runner_csharp_has_a_single_run_command_and_no_discover()
     {
         var root = FindRepositoryRoot();
@@ -74,21 +75,21 @@ public sealed class RunnerAssemblyBoundaryTests
             .Select(path => (path, text: File.ReadAllText(path)))
             .ToList();
 
-        Assert.NotEmpty(files);
-        Assert.DoesNotContain(files, file => file.text.Contains("NUnit.", StringComparison.Ordinal)
+        Assert.IsNotEmpty(files);
+        Assert.DoesNotContain(file => file.text.Contains("NUnit.", StringComparison.Ordinal)
             || file.text.Contains("using NUnit", StringComparison.Ordinal)
-            || file.text.Contains("DevTools.NUnit", StringComparison.Ordinal));
-        Assert.DoesNotContain(files, file => file.text.Contains("[Command(\"discover\")]", StringComparison.Ordinal));
-        Assert.DoesNotContain(files, file => file.text.Contains("[Command(\"machine-run\")]", StringComparison.Ordinal));
-        Assert.DoesNotContain(files, file => file.text.Contains("MetadataTestDiscoverer", StringComparison.Ordinal));
-        Assert.Contains(files, file => file.text.Contains("[Command(\"run\")]", StringComparison.Ordinal));
+            || file.text.Contains("DevTools.NUnit", StringComparison.Ordinal), files);
+        Assert.DoesNotContain(file => file.text.Contains("[Command(\"discover\")]", StringComparison.Ordinal), files);
+        Assert.DoesNotContain(file => file.text.Contains("[Command(\"machine-run\")]", StringComparison.Ordinal), files);
+        Assert.DoesNotContain(file => file.text.Contains("MetadataTestDiscoverer", StringComparison.Ordinal), files);
+        Assert.Contains(file => file.text.Contains("[Command(\"run\")]", StringComparison.Ordinal), files);
         Assert.DoesNotContain(
-            files,
             file => file.text.Contains("[Command(\"run\")]", StringComparison.Ordinal)
-                && file.text.Contains("[Argument] string assembly", StringComparison.Ordinal));
+                && file.text.Contains("[Argument] string assembly", StringComparison.Ordinal),
+            files);
     }
 
-    [Fact]
+    [TestMethod]
     public void Installed_runner_keeps_TestRunner_exe_identity()
     {
         var root = FindRepositoryRoot();
@@ -96,9 +97,9 @@ public sealed class RunnerAssemblyBoundaryTests
         Assert.Contains("DevTools.TestRunner.exe", csproj, StringComparison.Ordinal);
         Assert.Contains("<AssemblyName>DevTools.TestRunner</AssemblyName>", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.Runner.csproj", csproj, StringComparison.Ordinal);
-        Assert.False(Directory.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit")));
-        Assert.True(File.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "RunnerCommands.cs")));
-        Assert.False(File.Exists(Path.Combine(root, "source", "DevTools.TestRunner.Core", "DevTools.TestRunner.Core.csproj")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit")));
+        Assert.IsTrue(File.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "RunnerCommands.cs")));
+        Assert.IsFalse(File.Exists(Path.Combine(root, "source", "DevTools.TestRunner.Core", "DevTools.TestRunner.Core.csproj")));
     }
 
     private static bool IsBuildArtifact(string path) =>

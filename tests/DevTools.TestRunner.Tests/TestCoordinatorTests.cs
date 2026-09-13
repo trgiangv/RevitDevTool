@@ -6,9 +6,10 @@ using DevTools.TestRunner.Services;
 
 namespace DevTools.TestRunner.Tests;
 
-public sealed class TestCoordinatorTests
+[TestClass]
+public sealed class TestCoordinatorTests : RunnerTests
 {
-    [Fact]
+    [TestMethod]
     public async Task ExecuteAsync_owns_host_pipe_attach_and_request_lifetime()
     {
         var session = new RecordingTestSession(new TestHostPipe("fake-pipe", 4321));
@@ -23,16 +24,43 @@ public sealed class TestCoordinatorTests
         var result = await coordinator.ExecuteAsync(
             context,
             debugger,
-            (pipe, cancellationToken) => Task.FromResult($"{pipe.PipeName}:{cancellationToken.CanBeCanceled}"),
-            TestContext.Current.CancellationToken);
+            (pipe, token) => Task.FromResult($"{pipe.PipeName}:{token.CanBeCanceled}"),
+            TestContext.CancellationToken);
 
-        Assert.True(result.Succeeded);
-        Assert.Equal("fake-pipe:True", result.Value);
-        Assert.Equal(1, session.Calls);
-        Assert.Equal((4321, parentPid), debugger.Attached);
+        Assert.IsTrue(result.Succeeded);
+        Assert.AreEqual("fake-pipe:True", result.Value);
+        Assert.AreEqual(1, session.Calls);
+        Assert.AreEqual((4321, (int?)parentPid), debugger.Attached);
     }
 
-    [Fact]
+    [TestMethod]
+    public async Task ExecuteAsync_cancel_does_not_detach()
+    {
+        var session = new RecordingTestSession(new TestHostPipe("fake-pipe", 4321));
+        var debugger = new RecordingDebugger();
+        var coordinator = new TestCoordinator(session);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        var context = new RunnerCommandContext(
+            "Revit", "2026",
+            ForceLaunch: false, PerTestTimeoutSeconds: 60, LaunchTimeoutSeconds: 180,
+            Debug: true, DebugParentPid: Environment.ProcessId);
+
+        var result = await coordinator.ExecuteAsync(
+            context,
+            debugger,
+            async (_, token) =>
+            {
+                await cts.CancelAsync();
+                token.ThrowIfCancellationRequested();
+                return "nope";
+            },
+            cts.Token);
+
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual((4321, (int?)Environment.ProcessId), debugger.Attached);
+    }
+
+    [TestMethod]
     public async Task ExecuteAsync_skips_attach_when_debug_is_disabled()
     {
         var session = new RecordingTestSession(new TestHostPipe("fake-pipe", 4321));
@@ -47,10 +75,10 @@ public sealed class TestCoordinatorTests
             context,
             debugger,
             static (_, _) => Task.FromResult("ok"),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.True(result.Succeeded);
-        Assert.Null(debugger.Attached);
+        Assert.IsTrue(result.Succeeded);
+        Assert.IsNull(debugger.Attached);
     }
 
     private sealed class RecordingTestSession(TestHostPipe pipe) : ITestSession
@@ -60,10 +88,10 @@ public sealed class TestCoordinatorTests
         public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
         {
             Calls++;
-            Assert.Equal(HostApp.Revit, hostApp);
-            Assert.Equal("2026", version);
-            Assert.False(forceLaunch);
-            Assert.Equal(TimeSpan.FromSeconds(180), launchTimeout);
+            Assert.AreEqual(HostApp.Revit, hostApp);
+            Assert.AreEqual("2026", version);
+            Assert.IsFalse(forceLaunch);
+            Assert.AreEqual(TimeSpan.FromSeconds(180), launchTimeout);
             return Task.FromResult(pipe);
         }
     }

@@ -6,9 +6,10 @@ using DevTools.TestRunner.Parsing;
 
 namespace DevTools.TestRunner.Tests;
 
-public sealed class ComposedCliTests
+[TestClass]
+public sealed class ComposedCliTests : RunnerTests
 {
-    [Fact]
+    [TestMethod]
     public async Task Run_missing_assembly_exits_before_host_contact()
     {
         var execute = new TestRunExecute(
@@ -21,16 +22,17 @@ public sealed class ComposedCliTests
                 new TestAssemblyReference(Path.Combine(Path.GetTempPath(), "missing-devtools-tests.dll")),
                 TestSelection.All));
         var json = JsonSerializer.Serialize(execute, TestingJsonContext.Default.TestRunExecute);
-        var result = await RunAsync(FindRunnerPath(), ["run"], json);
+        var result = await RunAsync(FindRunnerPath(), ["run"], json, TestContext.CancellationToken);
 
-        Assert.Equal(RunnerExitCode.CliError, result.ExitCode);
+        Assert.AreEqual(RunnerExitCode.CliError, result.ExitCode);
         Assert.Contains("Assembly not found", result.StandardError, StringComparison.Ordinal);
     }
 
     private static async Task<(int ExitCode, string StandardError)> RunAsync(
         string executable,
         IReadOnlyList<string> arguments,
-        string stdin)
+        string stdin,
+        CancellationToken cancellationToken)
     {
         var start = new ProcessStartInfo(executable)
         {
@@ -44,9 +46,9 @@ public sealed class ComposedCliTests
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Failed to start TestRunner.");
         await process.StandardInput.WriteAsync(stdin);
         process.StandardInput.Close();
-        var stdout = process.StandardOutput.ReadToEndAsync();
-        var stderr = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync(TestContext.Current.CancellationToken);
+        var stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
         _ = await stdout;
         return (process.ExitCode, await stderr);
     }

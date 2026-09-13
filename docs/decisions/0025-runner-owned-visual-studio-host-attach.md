@@ -1,7 +1,9 @@
 # 0025 Runner-Owned Visual Studio Host Attach
 
 Date: 2026-08-27
-Amended: 2026-09-10 — EnvDTE attach only; operator owns detach.
+Amended: 2026-09-13 — Runner attaches the Autodesk host and does not Detach.
+Visual Studio owns the debug session after attach (Stop Debugging Detaches
+the guest). Testhost stays attached. No AttachLog.
 
 ## Status
 
@@ -23,14 +25,20 @@ Test Explorer Debug
     → DevTools.TestRunner machine-run (DebugParentPid = testhost)
       → EnsurePipe
       → EnvDTE Process.Attach(hostPid)
+      → testhost stays attached (VS launched it)
       → testing/run
 ```
 
 Visual Studio cannot **Run** tests while the operator is already attached to
 the host — Test Explorer **Debug** is the only VS path, and it attaches the
-testhost. That is why Runner EnvDTE-attaches VS to the host PID. After the
-run, the host stays in that debug session. Detach is the operator’s job
-(Debug → Detach All / Stop Debugging), same as Rider and C# Dev Kit.
+testhost. That is why Runner EnvDTE-attaches VS to the host PID. Testhost is
+the process VS launched; Stop Debugging ends that session and Detaches
+attached guests (Revit stays alive). EnvDTE lives in TestRunner (always
+net10) because testhost may be net48 and the adapter nupkg must not
+reference EnvDTE. Attach runs on a short STA with `IOleMessageFilter`.
+Testhost stays in `DebuggedProcesses`. Runner does not Detach — EnvDTE
+`Detach` while a breakpoint is hit cannot unload the XAML in-app toolbar
+(frozen WPF UI). That teardown belongs to Visual Studio’s session end.
 
 Rider and C# Dev Kit **can** attach the Autodesk host and still **Run** tests
 (attach does not block the test-execute flow). That is enough to hit
@@ -40,10 +48,14 @@ Code: `TestCoordinator` + `VisualStudioAttach`. MTP/adapter only sets
 `DebugParentPid` when `Debugger.IsAttached` (`HostTestFramework.ApplyDebugParent`).
 Architecture tests forbid EnvDTE in the adapter.
 
-`FindDte` returns the first DTE debugging `parentProcessId`, **else any DTE**,
-**else** `GetActiveObject`. Narrowing (parent PID with no match ⇒ skip)
-broke Test Explorer Debug and is withdrawn. `samples/ricaun.NUnit.SampleTests`
-does not match parent PID — `GetActiveObject` then `LocalProcesses.Attach`.
+`VisualStudioAttach` follows ricaun.RevitTest `VisualStudioDebugUtils`:
+`GetActiveObject(VisualStudio.DTE)` (the last-activated devenv), then
+`LocalProcesses.OfType<Process>()` for the host PID, then `Attach()`.
+After attach, do **not** Detach testhost — that ends VS's session and
+Output reports the host "has exited" while the process is still running.
+Do **not** Detach the host from Runner. Same as ricaun: Attach before the
+run, leave session teardown to Visual Studio. No ROT walk. Enumerate
+with `OfType`, not `Item(short)`.
 
 ## Decision
 
@@ -56,13 +68,15 @@ MCP daemon, and MTP adapter must not `Process.Start` an IDE, mutate
 
 - Adapter/MTP: if `Debugger.IsAttached`, pass `DebugParentPid` (testhost
   PID) on the machine-run JSON. That field still implies debug.
-- CLI: `--debug` and `--debug-parent-pid` stay. Presence of parent PID
-  implies debug.
-- Timing: `EnsurePipeAsync` → attach → provider `testing/run`.
+- `--debug` and `--debug-parent-pid` stay. Presence of parent PID
+  implies debug (adapter sets it when `Debugger.IsAttached`).
+- Timing: `EnsurePipeAsync` → attach → `testing/run`. No host
+  `run-finishing` event. No Runner Detach on Cancel, Stop Debugging, or
+  end of run.
 - Attach failure warns on stderr and the run continues.
-- Runner does not EnvDTE-detach. Two or more Visual Studio instances make
-  “find DTE by host PID and Detach” miss or detach the wrong window; the
-  operator already detaches by hand. The VS-only gap is attach-before-run.
+- After a successful host attach, leave testhost attached. Detach of
+  testhost ends VS's debug session and Output reports the host "has exited"
+  while the process is still running.
 - No `debug-ready` handshake on the host pipe.
 - File-backed generations (0016 decision 12) stay the symbol story.
 
@@ -72,13 +86,12 @@ MCP daemon, and MTP adapter must not `Process.Start` an IDE, mutate
 (keep `VisualStudioAttach.cs`). It is not a wire protocol and not an
 abstraction for Python or for other IDEs.
 
-`FindDte` prefers a DTE whose `DebuggedProcesses` contains the testhost
-PID, then any ROT DTE, then `GetActiveObject` (`VisualStudio.DTE` 23→9).
-Test Explorer always passes `DebugParentPid`, and `DebuggedProcesses`
-often does **not** list the testhost.
+`GetActiveObject` (`VisualStudio.DTE` 23→9) is the DTE. Attach the host
+PID from `LocalProcesses`. `DebugParentPid` only means “this run is Debug”;
+it does not select which devenv.
 
 ```text
-AttachTarget(int HostProcessId, int? ParentProcessId, string? AssemblyPath)
+AttachTarget(int HostProcessId, int? ParentProcessId)
 
 IDebuggerAttach
   TryAttach(AttachTarget, warnings) : bool
@@ -89,7 +102,7 @@ register a composite for other IDEs.
 
 | Backend | Mechanism | Confirm | Detach |
 |---------|-----------|---------|--------|
-| `VisualStudioAttach` | ROT + EnvDTE `Process.Attach`. Prefer DTE debugging `parentProcessId`, else any ROT DTE, else `GetActiveObject`. | EnvDTE `DebuggedProcesses` (15s) | Operator (IDE session) |
+| `VisualStudioAttach` | `GetActiveObject` + EnvDTE `Process.Attach` | Operator (IDE session) | Visual Studio (session end / Stop Debugging) |
 
 ### 3. Operator attach is the product path outside Visual Studio
 
@@ -110,8 +123,8 @@ JetBrains SDK for these paths.
 ### 4. Confirmation is Visual Studio EnvDTE; detach is the IDE session
 
 Do not replace VS confirmation with `CheckRemoteDebuggerPresent` (cannot
-name which IDE attached). After a successful attach, leave the host in that
-session. Stop Debugging after a run targets the reused host.
+name which IDE attached). After Debug, Visual Studio Detaches the host when
+the testhost session ends.
 
 ### 5. What this does not decide
 
@@ -119,6 +132,8 @@ session. Stop Debugging after a run targets the reused host.
 - Host-side `IDebugController`.
 - MCP execute / interactive C# script attach (no testhost, no Runner).
 - Changing VS warn-and-continue.
+- Unloading the XAML in-app toolbar while the host UI thread is frozen at a
+  breakpoint (Visual Studio XAML diagnostics, not EnvDTE).
 
 ## Alternatives Considered
 
@@ -126,27 +141,33 @@ session. Stop Debugging after a run targets the reused host.
 2. **Unify with Python `debugpy.listen`.** Rejected: different runtime / DAP.
 3. **Generic host-pipe `debug-ready`.** Rejected (0016 alternative 6).
 4. **Fail the test run when attach fails.** Rejected: warn-and-continue.
-5. **Narrow `FindDte` so a parent PID never falls through to any DTE.**
-   Withdrawn: Test Explorer Debug always sets the testhost PID;
-   `DebuggedProcesses` frequently omits the testhost, so the narrowing
-   skipped attach entirely. Restore prefer-match-then-any / `GetActiveObject`.
-6. **EnvDTE `Detach` after `testing/run`.** Rejected 2026-09-10: with two or
-   more Visual Studio instances, detach by host PID misses or detaches the
-   wrong DTE. The leftover “Revit.exe has exited with code 0” was that
-   Detach, not a host exit. Operator detach matches Rider / C# Dev Kit.
+5. **Require testhost PID in `DebuggedProcesses` before attach.** Rejected:
+   Test Explorer’s testhost is often missing there, so attach never ran.
+   ricaun’s `GetActiveObject` + `LocalProcesses.Attach(hostPid)` is the
+   path that hits breakpoints. Two Visual Studio windows still risk the
+   last-activated devenv; that is the same tradeoff ricaun accepted.
+6. **Runner EnvDTE `Detach` (Cancel, `run-finishing`, or Stop
+   `CommandEvents`).** Rejected: Detach at breakpoint returns success but
+   does not unload the XAML toolbar; intercepting Stop Debugging removes
+   Revit from `DebuggedProcesses` before Visual Studio can tear down XAML.
+   ricaun Attachs and never Detaches from the helper process.
 
 ## Consequences
 
 Positive:
 
-- VS Test Explorer Debug still attaches before `testing/run`.
+- VS Test Explorer Debug attaches the host and leaves testhost attached so
+  VS does not end the session mid-run.
 - Multiple Visual Studio windows are not auto-detached by the Runner.
 - Rider / C# Dev Kit keep operator attach + **Run**; Python keeps listen-on-port.
 - MTP, host pipe, and MCP stay unchanged.
 
 Tradeoffs:
 
-- `--debug` CLI without parent PID remains VS-any-instance.
-- After Debug, the host remains a debuggee until the operator detaches.
-  Stop Debugging can hit a reused host.
+- `--debug` CLI without parent PID still attaches via `GetActiveObject`.
+- After Debug, the host stays a debuggee until Visual Studio ends the
+  testhost session. Stop Debugging at a breakpoint may leave the XAML
+  in-app toolbar (frozen WPF UI). Continue then Stop, or disable VS UI
+  Debugging Tools for XAML.
+- Two Visual Studio windows: `GetActiveObject` is the last-activated devenv.
 - Interactive C# / MCP execute debug remains a named gap.

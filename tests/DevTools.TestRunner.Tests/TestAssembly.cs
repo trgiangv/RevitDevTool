@@ -1,4 +1,1 @@
-using Xunit.Sdk;
-using Xunit.v3;
-
-[assembly: Parallelization(Mode = ParallelMode.None)]
+[assembly: Parallelize(Scope = ExecutionScope.ClassLevel, Workers = 0)]

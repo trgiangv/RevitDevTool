@@ -28,6 +28,7 @@ not runtime plugin keys.
 dotnet build source/DevTools.Testing.Host/DevTools.Testing.Host.csproj -c Debug
 dotnet run --project tests/DevTools.TestAdapter.Tests/DevTools.TestAdapter.Tests.csproj
 dotnet run --project tests/DevTools.NUnit.MTP.Tests/DevTools.NUnit.MTP.Tests.csproj
+# TestRunner.Tests is MSTest.Sdk 4.4 (MTP testhost), not xunit
 dotnet run --project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj
 
 # 2. pack to output/nuget + drop stale global-packages extraction (default)

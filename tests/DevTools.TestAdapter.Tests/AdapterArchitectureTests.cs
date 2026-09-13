@@ -260,6 +260,10 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("TestRunnerCli.SerializeExecute", client, StringComparison.Ordinal);
         Assert.Contains("TestRunnerCli.RunCommand", client, StringComparison.Ordinal);
         Assert.DoesNotContain("TestRunnerCli.BuildRunArguments", client, StringComparison.Ordinal);
+        var cancel = client[client.IndexOf("public void Cancel(", StringComparison.Ordinal)
+            ..client.IndexOf("public void Dispose(", StringComparison.Ordinal)];
+        Assert.Contains("TestCancelSignal.TrySignal", cancel, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryTerminate", cancel, StringComparison.Ordinal);
 
         var transport = File.ReadAllText(Path.Combine(
             RepositoryRoot,

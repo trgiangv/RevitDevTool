@@ -11,6 +11,12 @@ namespace DevTools.Testing.Transport;
 /// </summary>
 public static class TestHostTiming
 {
+    /// <summary>
+    /// After Test Explorer Cancel, wait for TestRunner to Detach the host
+    /// before killing the process.
+    /// </summary>
+    public const int CancelDetachWaitMilliseconds = 5_000;
+
     /// <summary>Named-pipe connect timeout before a request.</summary>
     public const int HostPipeConnectTimeoutSeconds = 30;
 

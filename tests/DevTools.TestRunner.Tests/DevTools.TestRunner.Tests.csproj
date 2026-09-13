@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="MSTest.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
@@ -8,10 +8,12 @@
              against that reference is NETSDK1150. -->
         <SelfContained>false</SelfContained>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <!-- Repo collector is coverlet.MTP; do not also pull MS Code Coverage. -->
+        <TestingExtensionsProfile>None</TestingExtensionsProfile>
+        <EnableMicrosoftTestingExtensionsCodeCoverage>false</EnableMicrosoftTestingExtensionsCodeCoverage>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="xunit.v3"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
     </ItemGroup>
 
@@ -25,7 +27,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Xunit"/>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
         <Using Include="DevTools.Ipc"/>
         <Using Include="DevTools.TestRunner"/>
     </ItemGroup>

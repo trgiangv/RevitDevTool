@@ -9,11 +9,11 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.TestRunner.Tests;
 
-public sealed class ComposedRunCommandTests
+[TestClass]
+public sealed class ComposedRunCommandTests : RunnerTests
 {
-    private static readonly SemaphoreSlim ConsoleGate = new(1, 1);
-
-    [Fact]
+    [TestMethod]
+    [ResourceLock(WellKnownResources.Console)]
     public async Task Run_sends_the_same_run_id_to_the_host()
     {
         await using var pipe = new FakeHostPipe();
@@ -40,26 +40,24 @@ public sealed class ComposedRunCommandTests
             debugger,
             new BufferedRunInput(new StringReader(json)));
 
-        await ConsoleGate.WaitAsync(TestContext.Current.CancellationToken);
         var originalOut = Console.Out;
         using var stdout = new StringWriter();
         try
         {
             Console.SetOut(stdout);
-            var exitCode = await commands.Run(TestContext.Current.CancellationToken);
-            Assert.Equal(0, exitCode);
+            var exitCode = await commands.Run(TestContext.CancellationToken);
+            Assert.AreEqual(0, exitCode);
         }
         finally
         {
             Console.SetOut(originalOut);
-            ConsoleGate.Release();
         }
 
-        var request = await pipe.RunRequest.Task.WaitAsync(TestContext.Current.CancellationToken);
-        Assert.Equal(TestingProtocol.Run, request.Method);
-        Assert.Equal(runId, request.RunId);
+        var request = await pipe.RunRequest.Task.WaitAsync(TestContext.CancellationToken);
+        Assert.AreEqual(TestingProtocol.Run, request.Method);
+        Assert.AreEqual(runId, request.RunId);
         Assert.Contains("Sample.Fixture.PlainTest", request.Filter, StringComparison.Ordinal);
-        Assert.Equal(1, hosts.Calls);
+        Assert.AreEqual(1, hosts.Calls);
         Assert.Contains("run_id", stdout.ToString(), StringComparison.Ordinal);
     }
 
@@ -70,9 +68,9 @@ public sealed class ComposedRunCommandTests
         public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
         {
             Calls++;
-            Assert.Equal(HostApp.Revit, hostApp);
-            Assert.Equal("2026", version);
-            Assert.False(forceLaunch);
+            Assert.AreEqual(HostApp.Revit, hostApp);
+            Assert.AreEqual("2026", version);
+            Assert.IsFalse(forceLaunch);
             return Task.FromResult(new TestHostPipe(pipeName, 1234));
         }
     }
