@@ -8,9 +8,7 @@
              against that reference is NETSDK1150. -->
         <SelfContained>false</SelfContained>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-        <!-- Repo collector is coverlet.MTP; do not also pull MS Code Coverage. -->
-        <TestingExtensionsProfile>None</TestingExtensionsProfile>
-        <EnableMicrosoftTestingExtensionsCodeCoverage>false</EnableMicrosoftTestingExtensionsCodeCoverage>
+        <UseMicrosoftCodeCoverage>true</UseMicrosoftCodeCoverage>
     </PropertyGroup>
 
     <ItemGroup>

@@ -4,9 +4,10 @@ using DevTools.Testing.Transport;
 
 namespace DevTools.Testing.Transport.Tests;
 
+[TestClass]
 public sealed class ProcessTestRunnerClientTests
 {
-    [Fact]
+    [TestMethod]
     public void Run_invokes_run_with_full_execute_json()
     {
         var directory = Path.Combine(Path.GetTempPath(), "DevTools", "TestingTransport", Guid.NewGuid().ToString("N"));
@@ -66,9 +67,9 @@ public sealed class ProcessTestRunnerClientTests
             new TestHostOptions("Revit", "2025", false, 60, 180),
             observed.Add);
 
-        Assert.Equal("gen-1", result.GenerationId);
-        Assert.Single(observed);
-        Assert.Equal("opaque-id", observed[0].Case!.TestId);
+        Assert.AreEqual("gen-1", result.GenerationId);
+        Assert.ContainsSingle(observed);
+        Assert.AreEqual("opaque-id", observed[0].Case!.TestId);
         var captured = File.ReadAllText(argsPath);
         Assert.Contains(TestRunnerCli.RunCommand, captured, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("--framework", captured, StringComparison.OrdinalIgnoreCase);
@@ -77,17 +78,17 @@ public sealed class ProcessTestRunnerClientTests
 
         var stdin = File.ReadAllText(stdinPath);
         var execute = JsonSerializer.Deserialize(stdin, TestingJsonContext.Default.TestRunExecute);
-        Assert.NotNull(execute);
-        Assert.Equal(TestingProtocol.CurrentVersion, execute.ProtocolVersion);
-        Assert.Equal(runId, execute.Run.RunId);
-        Assert.Equal(TestFrameworkId.NUnit, execute.Run.FrameworkId);
-        Assert.Equal(TestSelectionKind.TestIds, execute.Run.Selection.Kind);
-        Assert.Equal("Revit", execute.Host.HostName);
-        Assert.Equal(60, execute.Host.PerTestTimeoutSeconds);
+        Assert.IsNotNull(execute);
+        Assert.AreEqual(TestingProtocol.CurrentVersion, execute.ProtocolVersion);
+        Assert.AreEqual(runId, execute.Run.RunId);
+        Assert.AreEqual(TestFrameworkId.NUnit, execute.Run.FrameworkId);
+        Assert.AreEqual(TestSelectionKind.TestIds, execute.Run.Selection.Kind);
+        Assert.AreEqual("Revit", execute.Host.HostName);
+        Assert.AreEqual(60, execute.Host.PerTestTimeoutSeconds);
         Assert.DoesNotContain("runner_path", stdin, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Run_returns_protocol_mismatch_without_starting_the_executable()
     {
         var runnerPath = Path.Combine(Path.GetTempPath(), "missing-devtools-testrunner.exe");
@@ -102,11 +103,11 @@ public sealed class ProcessTestRunnerClientTests
             new TestHostOptions("Revit", "2025", false, 60, 180),
             _ => throw new InvalidOperationException("onEvent must not run for a protocol mismatch."));
 
-        Assert.Equal(TestingProtocol.IncompatibleCode, result.DiagnosticCode);
-        Assert.Equal(TestCancellationState.None, result.CancellationState);
+        Assert.AreEqual(TestingProtocol.IncompatibleCode, result.DiagnosticCode);
+        Assert.AreEqual(TestCancellationState.None, result.CancellationState);
     }
 
-    [Fact]
+    [TestMethod]
     public void Cancel_after_dispose_does_not_throw()
     {
         var client = new ProcessTestRunnerClient(
@@ -115,11 +116,11 @@ public sealed class ProcessTestRunnerClientTests
         client.Cancel(Guid.NewGuid());
     }
 
-    [Fact]
+    [TestMethod]
     public void ITestRunnerTransport_has_no_discover_method()
     {
-        Assert.DoesNotContain(
-            typeof(ITestRunnerTransport).GetMethods(),
-            static method => method.Name.Contains("Discover", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(
+            typeof(ITestRunnerTransport).GetMethods()
+                .Any(static method => method.Name.Contains("Discover", StringComparison.OrdinalIgnoreCase)));
     }
 }

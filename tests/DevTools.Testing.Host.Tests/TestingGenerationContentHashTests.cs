@@ -2,9 +2,10 @@ using DevTools.Testing.Host.Loading;
 
 namespace DevTools.Testing.Host.Tests;
 
+[TestClass]
 public sealed class TestingGenerationContentHashTests
 {
-    [Fact]
+    [TestMethod]
     public void ComputeGenerationId_is_stable_for_the_same_content()
     {
         var directory = Directory.CreateTempSubdirectory("generation-hash-").FullName;
@@ -23,8 +24,8 @@ public sealed class TestingGenerationContentHashTests
             var first = TestingGenerationContentHash.ComputeGenerationId(entries);
             var second = TestingGenerationContentHash.ComputeGenerationId(entries.Reverse());
 
-            Assert.Equal(first, second);
-            Assert.Matches("^[0-9a-f]{64}$", first);
+            Assert.AreEqual(first, second);
+            Assert.IsTrue(System.Text.RegularExpressions.Regex.IsMatch(first, "^[0-9a-f]{64}$"));
         }
         finally
         {
@@ -32,7 +33,7 @@ public sealed class TestingGenerationContentHashTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void ComputeGenerationId_changes_when_file_content_changes()
     {
         var directory = Directory.CreateTempSubdirectory("generation-hash-").FullName;
@@ -44,7 +45,7 @@ public sealed class TestingGenerationContentHashTests
             File.WriteAllText(path, "v2");
             var after = TestingGenerationContentHash.ComputeGenerationId([("payload.txt", path)]);
 
-            Assert.NotEqual(before, after);
+            Assert.AreNotEqual(before, after);
         }
         finally
         {

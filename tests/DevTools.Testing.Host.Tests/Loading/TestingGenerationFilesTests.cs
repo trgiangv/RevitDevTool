@@ -2,31 +2,32 @@ using DevTools.Testing.Host.Loading;
 
 namespace DevTools.Testing.Host.Tests.Loading;
 
+[TestClass]
 public sealed class TestingGenerationFilesTests
 {
-    [Theory]
-    [InlineData("sample.pdb", TestingGenerationFileKind.Symbols)]
-    [InlineData("native.dll", TestingGenerationFileKind.Native)]
-    [InlineData("readme.txt", TestingGenerationFileKind.Other)]
+    [TestMethod]
+    [DataRow("sample.pdb", TestingGenerationFileKind.Symbols)]
+    [DataRow("native.dll", TestingGenerationFileKind.Native)]
+    [DataRow("readme.txt", TestingGenerationFileKind.Other)]
     public void Classify_handles_non_managed_outputs(string fileName, TestingGenerationFileKind expected)
     {
         using var workspace = new TemporaryDirectory();
         var path = Path.Combine(workspace.Path, fileName);
         File.WriteAllText(path, "not-a-pe");
 
-        Assert.Equal(expected, TestingGenerationFiles.Classify(path));
+        Assert.AreEqual(expected, TestingGenerationFiles.Classify(path));
     }
 
-    [Fact]
+    [TestMethod]
     public void Public_path_helpers_match_internal_generation_paths()
     {
-        Assert.True(TestingGenerationFiles.IsVolatileGenerationOutput(@"TestResults\out.trx"));
-        Assert.True(TestingGenerationFiles.IsVolatileGenerationOutput(@"Log\host.log"));
-        Assert.False(TestingGenerationFiles.IsVolatileGenerationOutput(@"bin\sample.dll"));
-        Assert.Equal(@"folder\file.dll", TestingGenerationFiles.NormalizeRelativePath("folder/file.dll"));
+        Assert.IsTrue(TestingGenerationFiles.IsVolatileGenerationOutput(@"TestResults\out.trx"));
+        Assert.IsTrue(TestingGenerationFiles.IsVolatileGenerationOutput(@"Log\host.log"));
+        Assert.IsFalse(TestingGenerationFiles.IsVolatileGenerationOutput(@"bin\sample.dll"));
+        Assert.AreEqual(@"folder\file.dll", TestingGenerationFiles.NormalizeRelativePath("folder/file.dll"));
     }
 
-    [Fact]
+    [TestMethod]
     public void GetRelativePath_returns_a_path_under_the_root()
     {
         using var workspace = new TemporaryDirectory();
@@ -36,11 +37,11 @@ public sealed class TestingGenerationFilesTests
         File.WriteAllText(file, "x");
 
         var relative = TestingGenerationFiles.GetRelativePath(workspace.Path, file);
-        Assert.False(Path.IsPathRooted(relative));
+        Assert.IsFalse(Path.IsPathRooted(relative));
         Assert.Contains("sample.dll", relative, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void ContentEquals_returns_true_for_identical_files()
     {
         using var workspace = new TemporaryDirectory();
@@ -49,10 +50,10 @@ public sealed class TestingGenerationFilesTests
         File.WriteAllText(first, "same-content");
         File.WriteAllText(second, "same-content");
 
-        Assert.True(TestingGenerationFiles.ContentEquals(first, second));
+        Assert.IsTrue(TestingGenerationFiles.ContentEquals(first, second));
     }
 
-    [Fact]
+    [TestMethod]
     public void ContentEquals_returns_false_for_different_files()
     {
         using var workspace = new TemporaryDirectory();
@@ -61,10 +62,10 @@ public sealed class TestingGenerationFilesTests
         File.WriteAllText(first, "left");
         File.WriteAllText(second, "right");
 
-        Assert.False(TestingGenerationFiles.ContentEquals(first, second));
+        Assert.IsFalse(TestingGenerationFiles.ContentEquals(first, second));
     }
 
-    [Fact]
+    [TestMethod]
     public void MergeFile_replaces_existing_entry_only_when_content_differs()
     {
         using var workspace = new TemporaryDirectory();
@@ -81,11 +82,11 @@ public sealed class TestingGenerationFilesTests
         };
 
         TestingGenerationFiles.MergeFile(files, unchanged, "asset.bin");
-        Assert.Equal(original, files["asset.bin"].SourcePath);
+        Assert.AreEqual(original, files["asset.bin"].SourcePath);
 
         TestingGenerationFiles.MergeFile(files, replacement, "asset.bin");
-        Assert.Equal(replacement, files["asset.bin"].SourcePath);
-        Assert.Equal(TestingGenerationFileKind.Other, files["asset.bin"].Kind);
+        Assert.AreEqual(replacement, files["asset.bin"].SourcePath);
+        Assert.AreEqual(TestingGenerationFileKind.Other, files["asset.bin"].Kind);
     }
 
     sealed class TemporaryDirectory : IDisposable

@@ -13,22 +13,23 @@ namespace DevTools.TestAdapter.Tests;
 
 #pragma warning disable TPEXP
 
-[Collection(nameof(TestingDiscoveryCollection))]
+[TestClass]
+[DoNotParallelize]
 public sealed class TestFrameworkTests
 {
     private static readonly object DiscoveryProviderLock = new();
 
-    [Fact]
+    [TestMethod]
     public void ScaleForRun_multiplies_per_test_timeout()
     {
         var options = new TestHostOptions("Revit", "2026", false, 60, 180);
         var scaled = TestFramework.ScaleForRun(options, testCount: 3);
-        Assert.Equal(60, scaled.PerTestTimeoutSeconds);
-        Assert.Equal(180, scaled.RequestTimeoutSeconds);
-        Assert.Equal(60, options.PerTestTimeoutSeconds);
+        Assert.AreEqual(60, scaled.PerTestTimeoutSeconds);
+        Assert.AreEqual(180, scaled.RequestTimeoutSeconds);
+        Assert.AreEqual(60, options.PerTestTimeoutSeconds);
     }
 
-    [Fact]
+    [TestMethod]
     public void SelectCases_throws_when_provider_is_not_registered()
     {
         lock (DiscoveryProviderLock)
@@ -38,7 +39,7 @@ public sealed class TestFrameworkTests
             TestingDiscovery.Clear();
             try
             {
-                var ex = Assert.Throws<InvalidOperationException>(
+                var ex = Assert.ThrowsExactly<InvalidOperationException>(
                     () => TestFramework.SelectCases(
                         typeof(TestFrameworkTests).Assembly.Location,
                         TestSelection.All));
@@ -51,7 +52,7 @@ public sealed class TestFrameworkTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Run_returns_pass_fail_skip_and_error_from_transport()
     {
         var transport = new FakeTestRunnerTransport
@@ -78,11 +79,11 @@ public sealed class TestFrameworkTests
             TestFrameworkId.NUnit,
             TestSelection.All);
 
-        Assert.Equal(TestFrameworkId.NUnit, transport.LastRequest!.FrameworkId);
-        Assert.Equal(["Passed", "Failed", "Skipped", "Error"], response.Results.Select(result => result.Outcome).ToArray());
+        Assert.AreEqual(TestFrameworkId.NUnit, transport.LastRequest!.FrameworkId);
+        Assert.AreSequenceEqual(["Passed", "Failed", "Skipped", "Error"], response.Results.Select(result => result.Outcome).ToArray());
     }
 
-    [Fact]
+    [TestMethod]
     public void DiscoverNodes_completes_when_runner_path_cannot_be_read()
     {
         var runnerPath = Path.Combine(Path.GetTempPath(), "devtools-mtp-locked-runner-" + Guid.NewGuid().ToString("N") + ".exe");
@@ -101,8 +102,8 @@ public sealed class TestFrameworkTests
                         var nodes = TestFramework.DiscoverNodes(
                             typeof(TestFrameworkTests).Assembly.Location,
                             TestSelection.All);
-                        Assert.NotNull(nodes);
-                        Assert.NotEmpty(nodes);
+                        Assert.IsNotNull(nodes);
+                        Assert.IsNotEmpty(nodes);
                     }
                     finally
                     {
@@ -117,7 +118,7 @@ public sealed class TestFrameworkTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Run_sends_nunit_framework_id_to_generic_transport()
     {
         var transport = new FakeTestRunnerTransport();
@@ -129,29 +130,29 @@ public sealed class TestFrameworkTests
             TestFrameworkId.NUnit,
             TestSelection.FromTestIds(["HostSmokeTests.Arithmetic"]));
 
-        Assert.Equal(TestFrameworkId.NUnit, transport.LastRequest!.FrameworkId);
-        Assert.Equal(["HostSmokeTests.Arithmetic"], transport.LastRequest.Selection.TestIds.ToArray());
+        Assert.AreEqual(TestFrameworkId.NUnit, transport.LastRequest!.FrameworkId);
+        Assert.AreSequenceEqual(["HostSmokeTests.Arithmetic"], transport.LastRequest.Selection.TestIds.ToArray());
     }
 
-    [Fact]
+    [TestMethod]
     public void Run_throws_when_framework_id_is_undefined()
     {
         var session = new TestRunSession(new FakeTestRunnerTransport());
-        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => session.Run(
+        var ex = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => session.Run(
             "C:\\tests\\a.dll",
             new TestHostOptions("Revit", "2026", false, 60, 180),
             (TestFrameworkId)42,
             TestSelection.All));
-        Assert.Equal("FrameworkId", ex.ParamName);
+        Assert.AreEqual("FrameworkId", ex.ParamName);
     }
 
-    [Fact]
+    [TestMethod]
     public void Name_filter_round_trips_through_generic_selection()
     {
         var selection = TestFramework.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
 
-        Assert.Equal(TestSelectionKind.Names, selection.Kind);
-        Assert.Equal(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
+        Assert.AreEqual(TestSelectionKind.Names, selection.Kind);
+        Assert.AreSequenceEqual(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
     }
 
     private static void RestoreDiscovery(ITestDiscoverer? provider, ITestRunMapper? mapper)
@@ -163,9 +164,10 @@ public sealed class TestFrameworkTests
     }
 }
 
+[TestClass]
 public sealed class ProcessTestRunnerCliTests
 {
-    [Fact]
+    [TestMethod]
     public void SerializeExecute_sends_framework_and_test_ids()
     {
         var json = TestRunnerCli.SerializeExecute(
@@ -185,7 +187,7 @@ public sealed class ProcessTestRunnerCliTests
         Assert.DoesNotContain("runner_path", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeExecute_includes_debug_parent_pid()
     {
         var json = TestRunnerCli.SerializeExecute(
@@ -200,7 +202,7 @@ public sealed class ProcessTestRunnerCliTests
         Assert.Contains("\"debug_parent_pid\":4242", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeExecute_omits_debug_parent_pid_when_absent()
     {
         var json = TestRunnerCli.SerializeExecute(
@@ -215,7 +217,7 @@ public sealed class ProcessTestRunnerCliTests
         Assert.DoesNotContain("debug_parent_pid", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeExecute_preserves_run_id()
     {
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
@@ -231,13 +233,16 @@ public sealed class ProcessTestRunnerCliTests
         Assert.Contains("\"run_id\":\"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\"", json, StringComparison.Ordinal);
         Assert.Contains("\"framework_id\":\"NUnit\"", json, StringComparison.Ordinal);
         Assert.Contains("HostSmokeTests.Arithmetic", json, StringComparison.Ordinal);
-        Assert.Equal(TestRunnerCli.RunCommand, "run");
+#pragma warning disable MSTEST0032 // const command name documents the CLI contract.
+        Assert.AreEqual(TestRunnerCli.RunCommand, "run");
+#pragma warning restore MSTEST0032
     }
 }
 
+[TestClass]
 public sealed class TestRunSettingsLoaderTests
 {
-    [Fact]
+    [TestMethod]
     public void Load_reads_mtp_iconfiguration_keys()
     {
         IConfiguration configuration = new StubConfiguration(new Dictionary<string, string?>
@@ -253,16 +258,16 @@ public sealed class TestRunSettingsLoaderTests
 
         var options = TestRunSettingsLoader.Load(configuration);
 
-        Assert.Equal("Civil3D", options.Host.HostName);
-        Assert.Equal("2026", options.Host.HostVersion);
-        Assert.True(options.Host.ForceLaunch);
-        Assert.Equal(90, options.Host.PerTestTimeoutSeconds);
-        Assert.Equal(240, options.Host.LaunchTimeoutSeconds);
-        Assert.Equal(TestFrameworkId.NUnit, options.FrameworkId);
-        Assert.Equal(@"C:\Runner.exe", options.RunnerPath);
+        Assert.AreEqual("Civil3D", options.Host.HostName);
+        Assert.AreEqual("2026", options.Host.HostVersion);
+        Assert.IsTrue(options.Host.ForceLaunch);
+        Assert.AreEqual(90, options.Host.PerTestTimeoutSeconds);
+        Assert.AreEqual(240, options.Host.LaunchTimeoutSeconds);
+        Assert.AreEqual(TestFrameworkId.NUnit, options.FrameworkId);
+        Assert.AreEqual(@"C:\Runner.exe", options.RunnerPath);
     }
 
-    [Fact]
+    [TestMethod]
     public void Load_throws_when_framework_id_is_empty()
     {
         IConfiguration configuration = new StubConfiguration(new Dictionary<string, string?>
@@ -274,32 +279,33 @@ public sealed class TestRunSettingsLoaderTests
             [TestConfig.Keys.Configuration(TestConfig.Keys.FrameworkId)] = "",
         });
 
-        var ex = Assert.Throws<InvalidOperationException>(() => TestRunSettingsLoader.Load(configuration));
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(() => TestRunSettingsLoader.Load(configuration));
         Assert.Contains("frameworkId", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void Load_throws_when_devtools_section_is_missing()
     {
-        var ex = Assert.Throws<InvalidOperationException>(
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
             () => TestRunSettingsLoader.Load(new StubConfiguration(new Dictionary<string, string?>())));
         Assert.Contains(TestConfig.FileName, ex.Message, StringComparison.Ordinal);
         Assert.Contains(TestConfig.SectionName, ex.Message, StringComparison.Ordinal);
     }
 }
 
+[TestClass]
 public sealed class TestNodeMapperTests
 {
-    [Fact]
+    [TestMethod]
     public void CreateErrorNode_sets_error_state()
     {
         var node = TestNodeProperties.CreateErrorNode("uid", "display", new InvalidOperationException("boom"));
-        Assert.Equal("uid", node.Uid.Value);
-        Assert.Equal("display", node.DisplayName);
-        Assert.NotNull(node.Properties.SingleOrDefault<ErrorTestNodeStateProperty>());
+        Assert.AreEqual("uid", node.Uid.Value);
+        Assert.AreEqual("display", node.DisplayName);
+        Assert.IsNotNull(node.Properties.SingleOrDefault<ErrorTestNodeStateProperty>());
     }
 
-    [Fact]
+    [TestMethod]
     public void ToDiscoveredNode_uses_test_id_as_uid()
     {
         var node = TestFramework.ToDiscoveredNode(
@@ -312,17 +318,17 @@ public sealed class TestNodeMapperTests
                 Namespace: "",
                 TypeName: "HostSmokeTests"));
 
-        Assert.Equal("HostSmokeTests.Arithmetic", node.Uid.Value);
-        Assert.Equal("Arithmetic", node.DisplayName);
-        Assert.NotNull(node.Properties.SingleOrDefault<DiscoveredTestNodeStateProperty>());
+        Assert.AreEqual("HostSmokeTests.Arithmetic", node.Uid.Value);
+        Assert.AreEqual("Arithmetic", node.DisplayName);
+        Assert.IsNotNull(node.Properties.SingleOrDefault<DiscoveredTestNodeStateProperty>());
         var identity = node.Properties.Single<TestMethodIdentifierProperty>();
-        Assert.Equal("HostSmokeTests", identity.TypeName);
-        Assert.Equal("Arithmetic", identity.MethodName);
-        Assert.Empty(identity.ParameterTypeFullNames);
-        Assert.Equal("System.Void", identity.ReturnTypeFullName);
+        Assert.AreEqual("HostSmokeTests", identity.TypeName);
+        Assert.AreEqual("Arithmetic", identity.MethodName);
+        Assert.IsEmpty(identity.ParameterTypeFullNames);
+        Assert.AreEqual("System.Void", identity.ReturnTypeFullName);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToDiscoveredNode_copies_parameter_and_return_types()
     {
         var node = TestFramework.ToDiscoveredNode(
@@ -338,12 +344,12 @@ public sealed class TestNodeMapperTests
                 ReturnTypeFullName: "System.Threading.Tasks.Task"));
 
         var identity = node.Properties.Single<TestMethodIdentifierProperty>();
-        Assert.Equal("Named_basis_length_is_one", identity.MethodName);
-        Assert.Equal(["System.Double", "System.Double", "System.Double"], identity.ParameterTypeFullNames);
-        Assert.Equal("System.Threading.Tasks.Task", identity.ReturnTypeFullName);
+        Assert.AreEqual("Named_basis_length_is_one", identity.MethodName);
+        Assert.AreSequenceEqual(["System.Double", "System.Double", "System.Double"], identity.ParameterTypeFullNames);
+        Assert.AreEqual("System.Threading.Tasks.Task", identity.ReturnTypeFullName);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToDiscoveredNode_copies_provider_metadata_type_name()
     {
         var fullName =
@@ -359,43 +365,43 @@ public sealed class TestNodeMapperTests
                 "DevTools.NUnit.SampleTests",
                 "NamedFixtureSourceTests"));
 
-        Assert.Equal(fullName, node.Uid.Value);
-        Assert.Equal("Fixture_argument_is_preserved(\"alpha.rvt\")", node.DisplayName);
+        Assert.AreEqual(fullName, node.Uid.Value);
+        Assert.AreEqual("Fixture_argument_is_preserved(\"alpha.rvt\")", node.DisplayName);
         var identity = node.Properties.Single<TestMethodIdentifierProperty>();
-        Assert.Equal("DevTools.NUnit.SampleTests", identity.Namespace);
-        Assert.Equal("NamedFixtureSourceTests", identity.TypeName);
-        Assert.Equal("Fixture_argument_is_preserved", identity.MethodName);
+        Assert.AreEqual("DevTools.NUnit.SampleTests", identity.Namespace);
+        Assert.AreEqual("NamedFixtureSourceTests", identity.TypeName);
+        Assert.AreEqual("Fixture_argument_is_preserved", identity.MethodName);
         var location = node.Properties.Single<TestFileLocationProperty>();
-        Assert.Equal(@"C:\src\FixtureShapeTests.cs", location.FilePath);
-        Assert.Equal(55, location.LineSpan.Start.Line);
+        Assert.AreEqual(@"C:\src\FixtureShapeTests.cs", location.FilePath);
+        Assert.AreEqual(55, location.LineSpan.Start.Line);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToDiscoveredNode_omits_identifier_when_provider_did_not_supply_metadata()
     {
         var node = TestFramework.ToDiscoveredNode(
             new TestDiscoveredTest("HostSmokeTests.Arithmetic", "Arithmetic", "HostSmokeTests.Arithmetic"));
 
-        Assert.Equal("HostSmokeTests.Arithmetic", node.Uid.Value);
-        Assert.Null(node.Properties.SingleOrDefault<TestMethodIdentifierProperty>());
+        Assert.AreEqual("HostSmokeTests.Arithmetic", node.Uid.Value);
+        Assert.IsNull(node.Properties.SingleOrDefault<TestMethodIdentifierProperty>());
     }
 
-    [Theory]
-    [InlineData("Passed", typeof(PassedTestNodeStateProperty))]
-    [InlineData("Failed", typeof(FailedTestNodeStateProperty))]
-    [InlineData("Skipped", typeof(SkippedTestNodeStateProperty))]
-    [InlineData("Error", typeof(ErrorTestNodeStateProperty))]
+    [TestMethod]
+    [DataRow("Passed", typeof(PassedTestNodeStateProperty))]
+    [DataRow("Failed", typeof(FailedTestNodeStateProperty))]
+    [DataRow("Skipped", typeof(SkippedTestNodeStateProperty))]
+    [DataRow("Error", typeof(ErrorTestNodeStateProperty))]
     public void ToResultNode_maps_outcomes(string outcome, Type stateType)
     {
         var node = TestFramework.ToResultNode(
             new TestCaseResult("id", "Case", outcome, 12, "msg", null, null, null, [], [], SkipReason: "ignored"));
 
-        Assert.Equal("Case", node.DisplayName);
-        Assert.Equal("id", node.Uid.Value);
-        Assert.Contains(node.Properties.AsEnumerable(), property => property.GetType() == stateType);
+        Assert.AreEqual("Case", node.DisplayName);
+        Assert.AreEqual("id", node.Uid.Value);
+        Assert.IsTrue(node.Properties.AsEnumerable().Any(property => property.GetType() == stateType));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToResultNode_uses_test_id_as_uid()
     {
         var discovered = new TestDiscoveredTest(
@@ -422,13 +428,13 @@ public sealed class TestNodeMapperTests
             assemblyPath: null,
             [discovered]);
 
-        Assert.Equal("HostSmokeTests.Arithmetic", node.Uid.Value);
+        Assert.AreEqual("HostSmokeTests.Arithmetic", node.Uid.Value);
         var identity = node.Properties.Single<TestMethodIdentifierProperty>();
-        Assert.Equal("HostSmokeTests", identity.TypeName);
-        Assert.Equal("Arithmetic", identity.MethodName);
+        Assert.AreEqual("HostSmokeTests", identity.TypeName);
+        Assert.AreEqual("Arithmetic", identity.MethodName);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToResultNode_copies_discovered_method_identifier()
     {
         const string uid = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one";
@@ -460,13 +466,13 @@ public sealed class TestNodeMapperTests
                 [discovered])
             .Properties.Single<TestMethodIdentifierProperty>();
 
-        Assert.Equal("Original_named", discoveredId.MethodName);
-        Assert.Equal(discoveredId.Namespace, resultId.Namespace);
-        Assert.Equal(discoveredId.TypeName, resultId.TypeName);
-        Assert.Equal(discoveredId.MethodName, resultId.MethodName);
+        Assert.AreEqual("Original_named", discoveredId.MethodName);
+        Assert.AreEqual(discoveredId.Namespace, resultId.Namespace);
+        Assert.AreEqual(discoveredId.TypeName, resultId.TypeName);
+        Assert.AreEqual(discoveredId.MethodName, resultId.MethodName);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToResultNode_without_discovery_omits_method_identifier()
     {
         var identity = TestFramework.ToResultNode(
@@ -484,10 +490,10 @@ public sealed class TestNodeMapperTests
                     FullName: "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one"))
             .Properties.SingleOrDefault<TestMethodIdentifierProperty>();
 
-        Assert.Null(identity);
+        Assert.IsNull(identity);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToResultNode_maps_standard_output()
     {
         var node = TestFramework.ToResultNode(
@@ -508,16 +514,16 @@ public sealed class TestNodeMapperTests
         Assert.Contains("devtools-nunit-sample-debug", stdout.StandardOutput, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToRunnerFilter_prefers_selected_uids()
     {
         var filter = new TestNodeUidListFilter([new TestNodeUid("HostSmokeTests.Arithmetic")]);
         var selection = TestFramework.ToRunnerFilter(filter, "Intentional_failure_for_demo");
-        Assert.Equal(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
-        Assert.Equal(TestSelectionKind.TestIds, selection.Kind);
+        Assert.AreSequenceEqual(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
+        Assert.AreEqual(TestSelectionKind.TestIds, selection.Kind);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToRunnerFilter_unwraps_composite_uid_list()
     {
         var uidFilter = new TestNodeUidListFilter([new TestNodeUid("HostSmokeTests.Arithmetic")]);
@@ -525,28 +531,28 @@ public sealed class TestNodeMapperTests
             TestExecutionFilterOperator.And,
             [uidFilter, new NopFilter()]);
         var selection = TestFramework.ToRunnerFilter(filter);
-        Assert.Equal(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
-        Assert.Equal(TestSelectionKind.TestIds, selection.Kind);
+        Assert.AreSequenceEqual(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
+        Assert.AreEqual(TestSelectionKind.TestIds, selection.Kind);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToRunnerFilter_empty_uid_list_is_constrained()
     {
         var selection = TestFramework.ToRunnerFilter(new TestNodeUidListFilter([]));
-        Assert.Equal(TestSelectionKind.TestIds, selection.Kind);
-        Assert.Empty(selection.TestIds);
-        Assert.True(selection.IsConstrained);
+        Assert.AreEqual(TestSelectionKind.TestIds, selection.Kind);
+        Assert.IsEmpty(selection.TestIds);
+        Assert.IsTrue(selection.IsConstrained);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToDiscoverFilter_empty_uid_list_is_all()
     {
         var selection = TestFramework.ToDiscoverFilter(new TestNodeUidListFilter([]));
-        Assert.Equal(TestSelectionKind.All, selection.Kind);
-        Assert.False(selection.IsConstrained);
+        Assert.AreEqual(TestSelectionKind.All, selection.Kind);
+        Assert.IsFalse(selection.IsConstrained);
     }
 
-    [Fact]
+    [TestMethod]
     public void MtpTreePaths_include_namespace_type_method()
     {
         var leaf = new TestDiscoveredTest(
@@ -563,13 +569,13 @@ public sealed class TestNodeMapperTests
         Assert.Contains("/" + Uri.EscapeDataString(leaf.TestId), paths, StringComparer.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToRunnerFilter_uses_method_name_when_no_uid_list()
     {
         var selection = TestFramework.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
-        Assert.Equal(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
-        Assert.Empty(selection.TestIds);
-        Assert.Equal(TestSelectionKind.Names, selection.Kind);
+        Assert.AreSequenceEqual(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
+        Assert.IsEmpty(selection.TestIds);
+        Assert.AreEqual(TestSelectionKind.Names, selection.Kind);
     }
 }
 

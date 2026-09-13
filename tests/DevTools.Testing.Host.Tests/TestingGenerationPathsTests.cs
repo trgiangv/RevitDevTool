@@ -2,33 +2,34 @@ using DevTools.Testing.Host.Loading;
 
 namespace DevTools.Testing.Host.Tests;
 
+[TestClass]
 public sealed class TestingGenerationPathsTests
 {
-    [Theory]
-    [InlineData("Log/trace.log")]
-    [InlineData("TestResults/output.trx")]
-    [InlineData("bin/Debug/net10.0/app.diag")]
-    [InlineData("artifacts/build.log")]
+    [TestMethod]
+    [DataRow("Log/trace.log")]
+    [DataRow("TestResults/output.trx")]
+    [DataRow("bin/Debug/net10.0/app.diag")]
+    [DataRow("artifacts/build.log")]
     public void IsVolatileGenerationOutput_detects_logs_and_diagnostics(string relativePath)
     {
-        Assert.True(TestingGenerationPaths.IsVolatileGenerationOutput(relativePath));
+        Assert.IsTrue(TestingGenerationPaths.IsVolatileGenerationOutput(relativePath));
     }
 
-    [Theory]
-    [InlineData("lib/Provider.dll")]
-    [InlineData("content/config.json")]
+    [TestMethod]
+    [DataRow("lib/Provider.dll")]
+    [DataRow("content/config.json")]
     public void IsVolatileGenerationOutput_ignores_stable_outputs(string relativePath)
     {
-        Assert.False(TestingGenerationPaths.IsVolatileGenerationOutput(relativePath));
+        Assert.IsFalse(TestingGenerationPaths.IsVolatileGenerationOutput(relativePath));
     }
 
-    [Fact]
+    [TestMethod]
     public void NormalizeRelativePath_converts_forward_slashes()
     {
-        Assert.Equal("a\\b\\c.dll", TestingGenerationPaths.NormalizeRelativePath("a/b/c.dll"));
+        Assert.AreEqual("a\\b\\c.dll", TestingGenerationPaths.NormalizeRelativePath("a/b/c.dll"));
     }
 
-    [Fact]
+    [TestMethod]
     public void GetRelativePath_returns_path_relative_to_root()
     {
         var root = Path.Combine(Path.GetTempPath(), "generation-root-" + Guid.NewGuid().ToString("N"));
@@ -38,7 +39,7 @@ public sealed class TestingGenerationPathsTests
         try
         {
             var relative = TestingGenerationPaths.GetRelativePath(root, nested);
-            Assert.Equal(Path.Combine("nested", "file.dll"), relative);
+            Assert.AreEqual(Path.Combine("nested", "file.dll"), relative);
         }
         finally
         {

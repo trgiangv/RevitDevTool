@@ -18,12 +18,15 @@ namespace DevTools.TestAdapter.Tests;
 
 #pragma warning disable TPEXP
 
-[Collection(nameof(TestingDiscoveryCollection))]
+[DoNotParallelize]
+[TestClass]
 public sealed class TestFrameworkPublishRunTests
 {
+    public TestContext TestContext { get; set; } = null!;
+
     private static readonly object DiscoveryProviderLock = new();
 
-    [Fact]
+    [TestMethod]
     public async Task Empty_uid_filter_publishes_nothing_and_does_not_call_transport()
     {
         var transport = new FakeTestRunnerTransport();
@@ -34,13 +37,13 @@ public sealed class TestFrameworkPublishRunTests
             new SelectionAwareDiscoverer([]),
             PassThroughRunMapper.Instance,
             new TestNodeUidListFilter([]),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.Null(transport.LastRequest);
-        Assert.Empty(bus.Nodes);
+        Assert.IsNull(transport.LastRequest);
+        Assert.IsEmpty(bus.Nodes);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Streamed_case_with_unknown_test_id_publishes_no_node()
     {
         var known = new TestDiscoveredTest("known", "Known", "known");
@@ -72,13 +75,13 @@ public sealed class TestFrameworkPublishRunTests
             new SelectionAwareDiscoverer([known]),
             PassThroughRunMapper.Instance,
             new TestNodeUidListFilter([new TestNodeUid("known")]),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(transport.LastRequest);
-        Assert.Empty(bus.Nodes);
+        Assert.IsNotNull(transport.LastRequest);
+        Assert.IsEmpty(bus.Nodes);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Streamed_host_id_is_remapped_onto_discovered_uid()
     {
         const string testhostId =
@@ -116,13 +119,13 @@ public sealed class TestFrameworkPublishRunTests
             new SelectionAwareDiscoverer([discovered]),
             new NUnitTestRunMapper(),
             new TestNodeUidListFilter([new TestNodeUid(testhostId)]),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        var node = Assert.Single(bus.Nodes);
-        Assert.Equal(testhostId, node.Uid.Value);
+        var node = Assert.ContainsSingle(bus.Nodes);
+        Assert.AreEqual(testhostId, node.Uid.Value);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Streamed_case_is_not_published_again_from_fold()
     {
         var known = new TestDiscoveredTest("known", "Known", "known");
@@ -146,13 +149,13 @@ public sealed class TestFrameworkPublishRunTests
             new SelectionAwareDiscoverer([known]),
             PassThroughRunMapper.Instance,
             new TestNodeUidListFilter([new TestNodeUid("known")]),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        var node = Assert.Single(bus.Nodes);
-        Assert.Equal("known", node.Uid.Value);
+        var node = Assert.ContainsSingle(bus.Nodes);
+        Assert.AreEqual("known", node.Uid.Value);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Fold_still_publishes_when_the_case_was_not_streamed()
     {
         var known = new TestDiscoveredTest("known", "Known", "known");
@@ -177,13 +180,13 @@ public sealed class TestFrameworkPublishRunTests
             new SelectionAwareDiscoverer([known]),
             PassThroughRunMapper.Instance,
             new TestNodeUidListFilter([new TestNodeUid("known")]),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        var node = Assert.Single(bus.Nodes);
-        Assert.Equal("known", node.Uid.Value);
+        var node = Assert.ContainsSingle(bus.Nodes);
+        Assert.AreEqual("known", node.Uid.Value);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Overlay_message_lands_on_unreported_cases()
     {
         var known = new TestDiscoveredTest("known", "Known", "known");
@@ -205,16 +208,16 @@ public sealed class TestFrameworkPublishRunTests
             new SelectionAwareDiscoverer([known]),
             new UnreportedMapper(),
             new TestNodeUidListFilter([new TestNodeUid("known")]),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        var node = Assert.Single(bus.Nodes);
-        Assert.Equal("known", node.Uid.Value);
+        var node = Assert.ContainsSingle(bus.Nodes);
+        Assert.AreEqual("known", node.Uid.Value);
         var error = node.Properties.Single<ErrorTestNodeStateProperty>();
         var overlay = error.Explanation ?? error.Exception?.Message ?? string.Empty;
         Assert.Contains("host overlay", overlay, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Unconstrained_transport_failure_publishes_a_run_error_node()
     {
         var known = new TestDiscoveredTest("known", "Known", "known");
@@ -229,14 +232,14 @@ public sealed class TestFrameworkPublishRunTests
             new SelectionAwareDiscoverer([known]),
             PassThroughRunMapper.Instance,
             filter: null,
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        var node = Assert.Single(bus.Nodes);
-        Assert.Equal("devtools.testadapter.run", node.Uid.Value);
-        Assert.NotNull(node.Properties.SingleOrDefault<ErrorTestNodeStateProperty>());
+        var node = Assert.ContainsSingle(bus.Nodes);
+        Assert.AreEqual("devtools.testadapter.run", node.Uid.Value);
+        Assert.IsNotNull(node.Properties.SingleOrDefault<ErrorTestNodeStateProperty>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Cancelled_request_does_not_start_the_transport()
     {
         var transport = new FakeTestRunnerTransport();
@@ -251,12 +254,12 @@ public sealed class TestFrameworkPublishRunTests
             filter: null,
             cts.Token);
 
-        Assert.Null(transport.LastRequest);
-        var node = Assert.Single(bus.Nodes);
-        Assert.Equal("devtools.testadapter.run", node.Uid.Value);
+        Assert.IsNull(transport.LastRequest);
+        var node = Assert.ContainsSingle(bus.Nodes);
+        Assert.AreEqual("devtools.testadapter.run", node.Uid.Value);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Cancellation_token_cancels_the_active_transport()
     {
         using var runEntered = new ManualResetEventSlim();
@@ -276,14 +279,14 @@ public sealed class TestFrameworkPublishRunTests
                 PassThroughRunMapper.Instance,
                 filter: null,
                 cts.Token),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.True(runEntered.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        Assert.IsTrue(runEntered.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
         cts.Cancel();
         blockRun.Set();
-        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
 
-        Assert.True(transport.Cancelled);
+        Assert.IsTrue(transport.Cancelled);
     }
 
     private static Task ExecuteRunAsync(

@@ -6,9 +6,12 @@ using DevTools.Testing.Transport;
 
 namespace DevTools.Testing.Host.Tests;
 
+[TestClass]
 public sealed class RequestHandlerTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task Hello_uses_testing_envelope()
     {
         var handler = CreateHandler(out _);
@@ -19,24 +22,24 @@ public sealed class RequestHandlerTests
                 new TestHelloRequest(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit),
                 TestingJsonContext.Default.TestHelloRequest));
 
-        Assert.False(response.IsError);
+        Assert.IsFalse(response.IsError);
         var hello = response.Result!.Value.Deserialize(TestingJsonContext.Default.TestHelloResponse);
-        Assert.Equal(TestFrameworkId.NUnit, hello!.FrameworkId);
-        Assert.Equal("Revit", hello.Host);
+        Assert.AreEqual(TestFrameworkId.NUnit, hello!.FrameworkId);
+        Assert.AreEqual("Revit", hello.Host);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Legacy_nunit_hello_is_not_routed_by_the_generic_handler()
     {
         var handler = CreateHandler(out _);
         using var document = JsonDocument.Parse("""{"protocol_version":2}""");
         var response = await Handle(handler,"1", "nunit/hello", document.RootElement);
 
-        Assert.True(response.IsError);
-        Assert.Equal(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);
+        Assert.IsTrue(response.IsError);
+        Assert.AreEqual(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Hello_does_not_default_a_missing_provider_id()
     {
         var handler = new DotnetTestRequestHandler(
@@ -47,22 +50,22 @@ public sealed class RequestHandlerTests
 
         var response = await Handle(handler, "1", TestingProtocol.Hello, document.RootElement);
 
-        Assert.True(response.IsError);
-        Assert.Equal(TestingErrorCodes.InvalidRequest, response.ErrorDetail!.Code);
+        Assert.IsTrue(response.IsError);
+        Assert.AreEqual(TestingErrorCodes.InvalidRequest, response.ErrorDetail!.Code);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Discover_methods_are_rejected()
     {
         var handler = CreateHandler(out _);
         var testing = await Handle(handler, "2", "testing/discover", null);
 
-        Assert.True(testing.IsError);
-        Assert.Equal(IpcErrorCodes.MethodNotFound, testing.ErrorDetail!.Code);
+        Assert.IsTrue(testing.IsError);
+        Assert.AreEqual(IpcErrorCodes.MethodNotFound, testing.ErrorDetail!.Code);
         Assert.DoesNotContain("testing/discover", handler.SupportedMethods);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Legacy_nunit_run_is_not_routed_by_the_generic_handler()
     {
         var handler = CreateHandler(out var provider);
@@ -86,12 +89,12 @@ public sealed class RequestHandlerTests
             "provider/run",
             JsonSerializer.SerializeToElement(request, TestingJsonContext.Default.TestRunRequest));
 
-        Assert.True(response.IsError);
-        Assert.Equal(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);
-        Assert.Null(seen);
+        Assert.IsTrue(response.IsError);
+        Assert.AreEqual(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);
+        Assert.IsNull(seen);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ArgumentException_is_invalid_request_and_does_not_poison()
     {
         var handler = CreateHandler(out var provider);
@@ -105,9 +108,9 @@ public sealed class RequestHandlerTests
                 CreateRunRequest(),
                 TestingJsonContext.Default.TestRunRequest));
 
-        Assert.True(failed.IsError);
-        Assert.Equal(TestingErrorCodes.InvalidRequest, failed.ErrorDetail!.Code);
-        Assert.NotEqual(TestCancellationState.Poisoned, handler.CancellationState);
+        Assert.IsTrue(failed.IsError);
+        Assert.AreEqual(TestingErrorCodes.InvalidRequest, failed.ErrorDetail!.Code);
+        Assert.AreNotEqual(TestCancellationState.Poisoned, handler.CancellationState);
 
         provider.RunException = null;
         var run = await Handle(
@@ -117,10 +120,10 @@ public sealed class RequestHandlerTests
             JsonSerializer.SerializeToElement(
                 CreateRunRequest(),
                 TestingJsonContext.Default.TestRunRequest));
-        Assert.False(run.IsError);
+        Assert.IsFalse(run.IsError);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Provider_exception_poisons_session()
     {
         var handler = CreateHandler(out var provider);
@@ -134,9 +137,9 @@ public sealed class RequestHandlerTests
                 CreateRunRequest(),
                 TestingJsonContext.Default.TestRunRequest));
 
-        Assert.True(failed.IsError);
-        Assert.Equal(TestingErrorCodes.ProviderFailed, failed.ErrorDetail!.Code);
-        Assert.Equal(TestCancellationState.Poisoned, handler.CancellationState);
+        Assert.IsTrue(failed.IsError);
+        Assert.AreEqual(TestingErrorCodes.ProviderFailed, failed.ErrorDetail!.Code);
+        Assert.AreEqual(TestCancellationState.Poisoned, handler.CancellationState);
 
         var poisoned = await Handle(
             handler,
@@ -146,11 +149,11 @@ public sealed class RequestHandlerTests
                 CreateRunRequest(),
                 TestingJsonContext.Default.TestRunRequest));
 
-        Assert.True(poisoned.IsError);
-        Assert.Equal(TestingErrorCodes.SessionPoisoned, poisoned.ErrorDetail!.Code);
+        Assert.IsTrue(poisoned.IsError);
+        Assert.AreEqual(TestingErrorCodes.SessionPoisoned, poisoned.ErrorDetail!.Code);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Hello_resets_a_poisoned_session_for_the_next_run()
     {
         var handler = CreateHandler(out var provider);
@@ -163,7 +166,7 @@ public sealed class RequestHandlerTests
             JsonSerializer.SerializeToElement(
                 CreateRunRequest(),
                 TestingJsonContext.Default.TestRunRequest));
-        Assert.Equal(TestCancellationState.Poisoned, handler.CancellationState);
+        Assert.AreEqual(TestCancellationState.Poisoned, handler.CancellationState);
 
         provider.RunException = null;
         var hello = await Handle(
@@ -173,8 +176,8 @@ public sealed class RequestHandlerTests
             JsonSerializer.SerializeToElement(
                 new TestHelloRequest(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit),
                 TestingJsonContext.Default.TestHelloRequest));
-        Assert.False(hello.IsError);
-        Assert.Equal(TestCancellationState.None, handler.CancellationState);
+        Assert.IsFalse(hello.IsError);
+        Assert.AreEqual(TestCancellationState.None, handler.CancellationState);
 
         var run = await Handle(
             handler,
@@ -183,10 +186,10 @@ public sealed class RequestHandlerTests
             JsonSerializer.SerializeToElement(
                 CreateRunRequest(),
                 TestingJsonContext.Default.TestRunRequest));
-        Assert.False(run.IsError);
+        Assert.IsFalse(run.IsError);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Run_client_disconnect_does_not_poison_the_session()
     {
         var handler = CreateHandler(out var provider);
@@ -202,9 +205,9 @@ public sealed class RequestHandlerTests
                 TestingJsonContext.Default.TestRunRequest),
             cts.Token);
 
-        Assert.True(cancelled.IsError);
-        Assert.Equal(IpcErrorCodes.InternalError, cancelled.ErrorDetail!.Code);
-        Assert.NotEqual(TestCancellationState.Poisoned, handler.CancellationState);
+        Assert.IsTrue(cancelled.IsError);
+        Assert.AreEqual(IpcErrorCodes.InternalError, cancelled.ErrorDetail!.Code);
+        Assert.AreNotEqual(TestCancellationState.Poisoned, handler.CancellationState);
 
         provider.RunException = null;
         var run = await Handle(
@@ -214,10 +217,10 @@ public sealed class RequestHandlerTests
             JsonSerializer.SerializeToElement(
                 CreateRunRequest(),
                 TestingJsonContext.Default.TestRunRequest));
-        Assert.False(run.IsError);
+        Assert.IsFalse(run.IsError);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Cancel_acknowledges_through_provider()
     {
         var handler = CreateHandler(out var provider);
@@ -236,12 +239,12 @@ public sealed class RequestHandlerTests
                 new TestCancelRequest(runId),
                 TestingJsonContext.Default.TestCancelRequest));
 
-        Assert.False(response.IsError);
-        Assert.Equal(runId, cancelled);
-        Assert.Equal(TestCancellationState.Acknowledged, handler.CancellationState);
+        Assert.IsFalse(response.IsError);
+        Assert.AreEqual(runId, cancelled);
+        Assert.AreEqual(TestCancellationState.Acknowledged, handler.CancellationState);
     }
 
-    [Fact]
+    [TestMethod]
     public void Supported_methods_are_testing_only()
     {
         var handler = new DotnetTestRequestHandler(
@@ -249,7 +252,7 @@ public sealed class RequestHandlerTests
             "Revit",
             "2025");
 
-        Assert.Equal(
+        Assert.AreSequenceEqual(
             new[] { TestingProtocol.Hello, TestingProtocol.Run, TestingProtocol.Cancel },
             handler.SupportedMethods.ToArray());
     }
@@ -276,5 +279,5 @@ public sealed class RequestHandlerTests
         string requestId,
         string method,
         JsonElement? @params) =>
-        handler.HandleAsync(requestId, method, @params, TestContext.Current.CancellationToken);
+        handler.HandleAsync(requestId, method, @params, CancellationToken.None);
 }

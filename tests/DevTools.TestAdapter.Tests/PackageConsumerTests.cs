@@ -3,10 +3,11 @@ using System.IO.Compression;
 
 namespace DevTools.TestAdapter.Tests;
 
-[Collection(nameof(PackageConsumerCollection))]
+[TestClass]
+[DoNotParallelize]
 public sealed class PackageConsumerTests
 {
-    [Fact]
+    [TestMethod]
     public void Packed_package_keeps_internal_runtime_closure_private_and_bootstraps_from_a_clean_consumer()
     {
         var root = FindRepositoryRoot();
@@ -62,7 +63,7 @@ public sealed class PackageConsumerTests
             Run("dotnet", "build NUnitTesthost.csproj -c Release --no-restore", testhost, globalPackages);
             foreach (var tfm in new[] { "net48", "net8.0-windows" })
             {
-                Assert.True(
+                Assert.IsTrue(
                     File.Exists(Path.Combine(testhost, "bin", "Release", tfm, "NUnitTesthost.exe")),
                     $"NUnit-only consumer should get a testhost Main from Microsoft.Testing.Platform.MSBuild ({tfm}).");
             }
@@ -138,7 +139,7 @@ public sealed class PackageConsumerTests
                 Run("dotnet", $"build CleanConsumer.csproj -c Release --no-restore -f {tfm}", consumer, globalPackages);
                 var output = Path.Combine(consumer, "bin", "Release", tfm);
                 AssertKeptRuntime(output);
-                Assert.True(
+                Assert.IsTrue(
                     File.Exists(Path.Combine(output, "DevTools.NUnit.MTP.dll")),
                     $"Missing DevTools.NUnit.MTP.dll for {tfm}.{Environment.NewLine}"
                     + string.Join(Environment.NewLine, Directory.GetFiles(output, "*.dll").Select(Path.GetFileName)));
@@ -159,7 +160,7 @@ public sealed class PackageConsumerTests
     /// DevTools.Testing.Abstractions (resolver read discovery refs before hooking), and a
     /// TUnit project that got the NUnit plugin because the map lived in the .props.
     /// </summary>
-    [Fact]
+    [TestMethod]
     public void Packed_package_discovers_tests_for_both_nunit_and_tunit_consumers()
     {
         var root = FindRepositoryRoot();
@@ -272,7 +273,7 @@ public sealed class PackageConsumerTests
             .Select(Path.GetDirectoryName)
             .Single()!;
         Assert.DoesNotContain("win-x64", output, StringComparison.OrdinalIgnoreCase);
-        Assert.True(
+        Assert.IsTrue(
             File.Exists(Path.Combine(output, expectedMtpAssembly)),
             $"{name} should copy {expectedMtpAssembly} ({tfm}).");
         Assert.Contains(
@@ -288,11 +289,11 @@ public sealed class PackageConsumerTests
         var discovery = netFx
             ? RunProcess(Path.Combine(output, $"{name}.exe"), "--list-tests", output, globalPackages)
             : RunProcess("dotnet", $"{name}.dll --list-tests", output, globalPackages);
-        Assert.True(discovery.ExitCode == 0, $"{name} discovery failed ({tfm}):{Environment.NewLine}{discovery.Text}");
+        Assert.IsTrue(discovery.ExitCode == 0, $"{name} discovery failed ({tfm}):{Environment.NewLine}{discovery.Text}");
         Assert.Contains("Runs_in_host", discovery.Text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Framework_id_only_testconfig_does_not_throw_from_hook_static_ctor()
     {
         var root = FindRepositoryRoot();
@@ -397,9 +398,8 @@ public sealed class PackageConsumerTests
         // or this repo's Autodesk configuration names.
         Assert.DoesNotContain("build/RevitDevTool.TestAdapter.Local.targets", entries, StringComparer.OrdinalIgnoreCase);
 
-        Assert.All(
-            entries.Where(entry => entry.StartsWith("lib/", StringComparison.OrdinalIgnoreCase)),
-            entry => Assert.EndsWith("/DevTools.TestAdapter.dll", entry, StringComparison.OrdinalIgnoreCase));
+        foreach (var entry in entries.Where(entry => entry.StartsWith("lib/", StringComparison.OrdinalIgnoreCase)))
+            Assert.EndsWith("/DevTools.TestAdapter.dll", entry, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("lib/net48/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("lib/net48/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
         Assert.DoesNotContain("lib/net48/DevTools.Testing.Abstractions.dll", entries, StringComparer.OrdinalIgnoreCase);
@@ -424,12 +424,12 @@ public sealed class PackageConsumerTests
             Assert.DoesNotContain($"build/runtime/{tfm}/System.Threading.Tasks.Extensions.dll", entries, StringComparer.OrdinalIgnoreCase);
         }
 
-        Assert.DoesNotContain(entries, entry => entry.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(entries, entry => entry.EndsWith("/DevTools.AssemblyIsolation.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(entries.Any(entry => entry.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(entries.Any(entry => entry.EndsWith("/DevTools.AssemblyIsolation.dll", StringComparison.OrdinalIgnoreCase)));
         Assert.DoesNotContain("DevTools.AssemblyIsolation", nuspecText, StringComparison.Ordinal);
-        Assert.DoesNotContain(entries, entry => entry.Contains("DevTools.NUnit.Core", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(entries, entry => entry.Contains("DevTools.Testing.Discovery", StringComparison.OrdinalIgnoreCase));
-        Assert.Equal(entries.Length, entries.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.IsFalse(entries.Any(entry => entry.Contains("DevTools.NUnit.Core", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(entries.Any(entry => entry.Contains("DevTools.Testing.Discovery", StringComparison.OrdinalIgnoreCase)));
+        Assert.AreEqual(entries.Length, entries.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     private static readonly string[] MergedRuntimeAssemblies =
@@ -441,15 +441,15 @@ public sealed class PackageConsumerTests
     private static void AssertKeptRuntime(string outputDirectory)
     {
         var names = Directory.GetFiles(outputDirectory, "*.dll").Select(Path.GetFileName).ToArray();
-        Assert.True(
+        Assert.IsTrue(
             File.Exists(Path.Combine(outputDirectory, "DevTools.Testing.Abstractions.dll")),
             $"Missing DevTools.Testing.Abstractions.dll.{Environment.NewLine}{string.Join(Environment.NewLine, names)}");
-        Assert.True(
+        Assert.IsTrue(
             File.Exists(Path.Combine(outputDirectory, "DevTools.TestAdapter.dll")),
             $"Missing DevTools.TestAdapter.dll.{Environment.NewLine}{string.Join(Environment.NewLine, names)}");
         foreach (var merged in MergedRuntimeAssemblies)
         {
-            Assert.False(
+            Assert.IsFalse(
                 File.Exists(Path.Combine(outputDirectory, merged)),
                 $"Merged assembly should not be copied loose: {merged}");
         }
@@ -460,7 +460,7 @@ public sealed class PackageConsumerTests
         foreach (var internalAssembly in MergedRuntimeAssemblies.Append("DevTools.Testing.Abstractions.dll"))
         {
             var packageDirectory = Path.Combine(globalPackages, Path.GetFileNameWithoutExtension(internalAssembly).ToLowerInvariant());
-            Assert.False(Directory.Exists(packageDirectory), $"Internal package unexpectedly restored: {packageDirectory}");
+            Assert.IsFalse(Directory.Exists(packageDirectory), $"Internal package unexpectedly restored: {packageDirectory}");
         }
     }
 
@@ -517,13 +517,13 @@ public sealed class PackageConsumerTests
     private static void Run(string fileName, string arguments, string? workingDirectory = null, string? globalPackages = null)
     {
         var output = RunProcess(fileName, arguments, workingDirectory, globalPackages);
-        Assert.True(output.ExitCode == 0, $"{fileName} {arguments} failed:{Environment.NewLine}{output.Text}");
+        Assert.IsTrue(output.ExitCode == 0, $"{fileName} {arguments} failed:{Environment.NewLine}{output.Text}");
     }
 
     private static void RunExpectFailure(string fileName, string arguments, string workingDirectory, string globalPackages, string expectedText)
     {
         var output = RunProcess(fileName, arguments, workingDirectory, globalPackages);
-        Assert.True(output.ExitCode != 0, $"{fileName} {arguments} unexpectedly succeeded.");
+        Assert.IsTrue(output.ExitCode != 0, $"{fileName} {arguments} unexpectedly succeeded.");
         Assert.Contains(expectedText, output.Text, StringComparison.Ordinal);
     }
 

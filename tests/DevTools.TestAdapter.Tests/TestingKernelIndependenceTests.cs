@@ -1,8 +1,9 @@
 namespace DevTools.TestAdapter.Tests;
 
+[TestClass]
 public sealed class TestingKernelIndependenceTests
 {
-    [Fact]
+    [TestMethod]
     public void Generic_testing_projects_have_no_nunit_source_or_project_coupling()
     {
         var root = FindRepositoryRoot();
@@ -24,10 +25,10 @@ public sealed class TestingKernelIndependenceTests
             .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
             .ToArray();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void Published_adapter_csharp_has_no_nunit_types()
     {
         var root = FindRepositoryRoot();
@@ -43,19 +44,19 @@ public sealed class TestingKernelIndependenceTests
             .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
             .ToArray();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void Repository_has_no_standalone_testing_mtp_project()
     {
         var root = FindRepositoryRoot();
-        Assert.False(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing.Mtp")));
-        Assert.False(Directory.Exists(Path.Combine(root, "tests", "DevTools.Testing.Mtp.Tests")));
-        Assert.False(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing")));
-        Assert.True(Directory.Exists(Path.Combine(root, "source", "DevTools.TestAdapter")));
-        Assert.False(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing.Discovery")));
-        Assert.False(Directory.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing.Mtp")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(root, "tests", "DevTools.Testing.Mtp.Tests")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing")));
+        Assert.IsTrue(Directory.Exists(Path.Combine(root, "source", "DevTools.TestAdapter")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing.Discovery")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit")));
     }
 
     private static string FindRepositoryRoot()

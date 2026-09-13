@@ -4,6 +4,7 @@ using DevTools.Testing.Transport;
 
 namespace DevTools.Testing.Transport.Tests;
 
+[TestClass]
 public sealed class TestRunnerCliTests
 {
     static TestRunRequest CreateRequest(TestSelection selection) =>
@@ -14,7 +15,7 @@ public sealed class TestRunnerCliTests
             new TestAssemblyReference(@"C:\tests\Sample.dll"),
             selection);
 
-    [Fact]
+    [TestMethod]
     public void SerializeExecute_strips_adapter_owned_host_fields()
     {
         var json = TestRunnerCli.SerializeExecute(
@@ -28,17 +29,17 @@ public sealed class TestRunnerCliTests
                 DebugParentPid: 4242));
         var invocation = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
 
-        Assert.NotNull(invocation);
-        Assert.Equal(TestingProtocol.CurrentVersion, invocation.ProtocolVersion);
-        Assert.True(invocation.Host.ForceLaunch);
-        Assert.Equal(4242, invocation.Host.DebugParentPid);
+        Assert.IsNotNull(invocation);
+        Assert.AreEqual(TestingProtocol.CurrentVersion, invocation.ProtocolVersion);
+        Assert.IsTrue(invocation.Host.ForceLaunch);
+        Assert.AreEqual(4242, invocation.Host.DebugParentPid);
         Assert.DoesNotContain("framework_id\":\"nunit", json.Replace(" ", ""), StringComparison.Ordinal);
         Assert.DoesNotContain("runner_path", json, StringComparison.Ordinal);
         Assert.DoesNotContain("machine-run", json, StringComparison.Ordinal);
         Assert.DoesNotContain("--framework", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeExecute_preserves_run_id_and_selection_kind()
     {
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
@@ -52,16 +53,16 @@ public sealed class TestRunnerCliTests
             new TestHostOptions("Revit", "2025", false, 60, 180, RequestTimeoutSeconds: 180));
         var invocation = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
 
-        Assert.NotNull(invocation);
-        Assert.Equal(runId, invocation.Run.RunId);
-        Assert.Equal(TestSelectionKind.TestIds, invocation.Run.Selection.Kind);
-        Assert.Equal(["opaque-id"], invocation.Run.Selection.TestIds);
-        Assert.Equal(60, invocation.Host.PerTestTimeoutSeconds);
-        Assert.Equal(180, invocation.Host.RequestTimeoutSeconds);
-        Assert.Equal(180, invocation.Host.EffectiveRequestTimeoutSeconds);
+        Assert.IsNotNull(invocation);
+        Assert.AreEqual(runId, invocation.Run.RunId);
+        Assert.AreEqual(TestSelectionKind.TestIds, invocation.Run.Selection.Kind);
+        Assert.AreSequenceEqual(["opaque-id"], invocation.Run.Selection.TestIds);
+        Assert.AreEqual(60, invocation.Host.PerTestTimeoutSeconds);
+        Assert.AreEqual(180, invocation.Host.RequestTimeoutSeconds);
+        Assert.AreEqual(180, invocation.Host.EffectiveRequestTimeoutSeconds);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeExecute_empty_test_ids_is_not_all()
     {
         var json = TestRunnerCli.SerializeExecute(
@@ -69,9 +70,9 @@ public sealed class TestRunnerCliTests
             new TestHostOptions("Revit", "2025", false, 60, 180));
         var invocation = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
 
-        Assert.NotNull(invocation);
-        Assert.Equal(TestSelectionKind.TestIds, invocation.Run.Selection.Kind);
-        Assert.Empty(invocation.Run.Selection.TestIds);
-        Assert.True(invocation.Run.Selection.IsConstrained);
+        Assert.IsNotNull(invocation);
+        Assert.AreEqual(TestSelectionKind.TestIds, invocation.Run.Selection.Kind);
+        Assert.IsEmpty(invocation.Run.Selection.TestIds);
+        Assert.IsTrue(invocation.Run.Selection.IsConstrained);
     }
 }

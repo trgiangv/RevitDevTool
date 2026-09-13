@@ -3,24 +3,22 @@ using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.Testing.Abstractions.Tests;
 
-[CollectionDefinition(nameof(TestRunTraceScopeTests), DisableParallelization = true)]
-public sealed class TestRunTraceScopeCollection;
-
-[Collection(nameof(TestRunTraceScopeTests))]
+[DoNotParallelize]
+[TestClass]
 public sealed class TestRunTraceScopeTests
 {
-    [Fact]
+    [TestMethod]
     public void CompleteCase_captures_trace()
     {
         using var scope = new TestRunTraceScope();
         Trace.WriteLine("trace-marker");
         var captured = scope.CompleteCase();
 
-        Assert.Contains("trace-marker", captured, StringComparison.Ordinal);
-        Assert.Null(scope.CompleteCase());
+        Assert.Contains("trace-marker", captured!, StringComparison.Ordinal);
+        Assert.IsNull(scope.CompleteCase());
     }
 
-    [Fact]
+    [TestMethod]
     public void CompleteCase_captures_trace_and_debug_when_extra_listeners_exist()
     {
         var front = new RecordingTraceListener();
@@ -32,8 +30,8 @@ public sealed class TestRunTraceScopeTests
             Debug.WriteLine("debug-marker");
             var captured = scope.CompleteCase();
 
-            Assert.Contains("trace-marker", captured, StringComparison.Ordinal);
-            Assert.Contains("debug-marker", captured, StringComparison.Ordinal);
+            Assert.Contains("trace-marker", captured!, StringComparison.Ordinal);
+            Assert.Contains("debug-marker", captured!, StringComparison.Ordinal);
         }
         finally
         {
@@ -41,7 +39,7 @@ public sealed class TestRunTraceScopeTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Dispose_restores_trace_listeners_from_before_scope()
     {
         var front = new RecordingTraceListener();
@@ -51,11 +49,11 @@ public sealed class TestRunTraceScopeTests
         {
             using (var scope = new TestRunTraceScope())
             {
-                Assert.True(Trace.Listeners.Contains(front));
+                Assert.IsTrue(Trace.Listeners.Contains(front));
             }
 
-            Assert.True(Trace.Listeners.Contains(front));
-            Assert.Equal(beforeCount + 1, Trace.Listeners.Count);
+            Assert.IsTrue(Trace.Listeners.Contains(front));
+            Assert.AreEqual(beforeCount + 1, Trace.Listeners.Count);
         }
         finally
         {
@@ -63,7 +61,7 @@ public sealed class TestRunTraceScopeTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void WriteThrough_reaches_trace_without_refilling_the_ide_buffer()
     {
         using var scope = new TestRunTraceScope();
@@ -72,7 +70,7 @@ public sealed class TestRunTraceScopeTests
         try
         {
             scope.WriteThrough("console-marker\r\n");
-            Assert.Null(scope.CompleteCase());
+            Assert.IsNull(scope.CompleteCase());
             Assert.Contains("console-marker", pane.Text, StringComparison.Ordinal);
         }
         finally
@@ -81,21 +79,21 @@ public sealed class TestRunTraceScopeTests
         }
     }
 
-    [Theory]
-    [InlineData("console", "trace", "console\ntrace")]
-    [InlineData("console", null, "console")]
-    [InlineData(null, "trace", "trace")]
+    [TestMethod]
+    [DataRow("console", "trace", "console\ntrace")]
+    [DataRow("console", null, "console")]
+    [DataRow(null, "trace", "trace")]
     public void Merge_joins_framework_console_then_trace(string? framework, string? trace, string expected)
     {
         var merged = TestRunTraceScope.Merge(framework, trace);
-        Assert.Equal(expected.Replace("\n", Environment.NewLine), merged);
+        Assert.AreEqual(expected.Replace("\n", Environment.NewLine), merged);
     }
 
-    [Fact]
+    [TestMethod]
     public void Merge_returns_null_when_both_blank()
     {
-        Assert.Null(TestRunTraceScope.Merge(null, "  "));
-        Assert.Null(TestRunTraceScope.Merge(" ", null));
+        Assert.IsNull(TestRunTraceScope.Merge(null, "  "));
+        Assert.IsNull(TestRunTraceScope.Merge(" ", null));
     }
 
     private sealed class RecordingTraceListener : TraceListener

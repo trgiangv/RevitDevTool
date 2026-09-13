@@ -1,11 +1,12 @@
 namespace DevTools.TestAdapter.Tests;
 
+[TestClass]
 public sealed class AdapterOnlyArchitectureTests
 {
     private static readonly string RepositoryRoot = Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
-    [Fact]
+    [TestMethod]
     public void Repository_has_no_NUnit_VSTest_product_surface()
     {
         var forbiddenPaths = new[]
@@ -30,10 +31,10 @@ public sealed class AdapterOnlyArchitectureTests
             "DevTools.NUnit.VSTest.SampleTests",
             "DevTools.NUnit.VSTest.Civil3D.SampleTests"));
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void Repository_test_projects_use_MTP_without_VSTest_packages()
     {
         var forbiddenPackages = new[]
@@ -48,10 +49,10 @@ public sealed class AdapterOnlyArchitectureTests
         var offenders = FindTextReferences(forbiddenPackages)
             .Where(line => !IsRicaunComparisonSample(line))
             .ToList();
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void NUnit_host_stack_has_no_legacy_protocol_or_transport()
     {
         var transport = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Transport");
@@ -67,10 +68,10 @@ public sealed class AdapterOnlyArchitectureTests
             "NUnitPipeClient",
             "INUnitRuntimeSession"));
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void Testing_stack_has_no_netstandard_compatibility_target()
     {
         var projects = new[]
@@ -86,7 +87,7 @@ public sealed class AdapterOnlyArchitectureTests
                 .Contains("netstandard", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
     private static List<string> FindTextReferences(params string[] values)

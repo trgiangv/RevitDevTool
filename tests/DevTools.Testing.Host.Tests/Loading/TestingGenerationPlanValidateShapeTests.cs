@@ -3,9 +3,10 @@ using DevTools.Testing.Host.Loading;
 
 namespace DevTools.Testing.Host.Tests.Loading;
 
+[TestClass]
 public sealed class TestingGenerationPlanValidateShapeTests
 {
-    [Fact]
+    [TestMethod]
     public void ValidateShape_rejects_empty_framework_id()
     {
         var plan = new TestingGenerationPlan(
@@ -14,12 +15,12 @@ public sealed class TestingGenerationPlanValidateShapeTests
             [new TestingGenerationFile(@"C:\tests\sample.dll", "sample.dll", TestingGenerationFileKind.Managed)],
             "sample.dll");
 
-        var exception = Assert.Throws<TestingGenerationBuildException>(() => plan.ValidateShape());
+        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
 
         Assert.Contains("framework ID", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void ValidateShape_rejects_empty_files()
     {
         var plan = new TestingGenerationPlan(
@@ -28,12 +29,12 @@ public sealed class TestingGenerationPlanValidateShapeTests
             [],
             "sample.dll");
 
-        var exception = Assert.Throws<TestingGenerationBuildException>(() => plan.ValidateShape());
+        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
 
         Assert.Contains("must contain files", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void ValidateShape_rejects_rooted_relative_paths()
     {
         var plan = new TestingGenerationPlan(
@@ -42,10 +43,10 @@ public sealed class TestingGenerationPlanValidateShapeTests
             [new TestingGenerationFile(@"C:\tests\sample.dll", @"C:\evil.dll", TestingGenerationFileKind.Managed)],
             @"C:\evil.dll");
 
-        Assert.Throws<TestingGenerationBuildException>(() => plan.ValidateShape());
+        Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
     }
 
-    [Fact]
+    [TestMethod]
     public void ValidateShape_rejects_parent_traversal()
     {
         var plan = new TestingGenerationPlan(
@@ -54,10 +55,10 @@ public sealed class TestingGenerationPlanValidateShapeTests
             [new TestingGenerationFile(@"C:\tests\sample.dll", "..\\sample.dll", TestingGenerationFileKind.Managed)],
             "..\\sample.dll");
 
-        Assert.Throws<TestingGenerationBuildException>(() => plan.ValidateShape());
+        Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
     }
 
-    [Fact]
+    [TestMethod]
     public void ValidateShape_rejects_duplicate_normalized_paths()
     {
         var plan = new TestingGenerationPlan(
@@ -69,12 +70,12 @@ public sealed class TestingGenerationPlanValidateShapeTests
             ],
             "folder\\sample.dll");
 
-        var exception = Assert.Throws<TestingGenerationBuildException>(() => plan.ValidateShape());
+        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
 
         Assert.Contains("duplicate path", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void ValidateShape_rejects_runtime_path_not_in_files()
     {
         var plan = new TestingGenerationPlan(
@@ -83,7 +84,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
             [new TestingGenerationFile(@"C:\tests\sample.dll", "sample.dll", TestingGenerationFileKind.Managed)],
             "runtime.dll");
 
-        var exception = Assert.Throws<TestingGenerationBuildException>(() => plan.ValidateShape());
+        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
 
         Assert.Contains("runtime assembly path", exception.Message, StringComparison.OrdinalIgnoreCase);
     }

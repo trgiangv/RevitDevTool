@@ -5,11 +5,12 @@ using DevTools.Testing.Transport;
 
 namespace DevTools.Testing.Transport.Tests;
 
+[TestClass]
 public sealed class TestingProtocolGoldenTests
 {
     static readonly Guid SampleRunId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
 
-    [Fact]
+    [TestMethod]
     public void Hello_request_uses_testing_envelope()
     {
         var message = BridgeMessage.Request(
@@ -19,13 +20,13 @@ public sealed class TestingProtocolGoldenTests
                 new TestHelloRequest(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit),
                 TestingJsonContext.Default.TestHelloRequest));
 
-        Assert.Equal(
+        Assert.AreEqual(
             """{"type":"request","id":"1","method":"testing/hello","params":{"protocol_version":2,"framework_id":"NUnit"},"isError":false}""",
             Serialize(message));
         Assert.DoesNotContain("testing/discover", Serialize(message), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Run_request_round_trips_opaque_ids_and_selection_kind()
     {
         var request = CreateRunRequest(
@@ -34,17 +35,17 @@ public sealed class TestingProtocolGoldenTests
         var json = JsonSerializer.Serialize(request, TestingJsonContext.Default.TestRunRequest);
         var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunRequest);
 
-        Assert.NotNull(roundTrip);
-        Assert.Equal(request.Assembly.Path, roundTrip.Assembly.Path);
-        Assert.Equal(TestSelectionKind.TestIds, roundTrip.Selection.Kind);
-        Assert.Equal(request.Selection.TestIds[0], roundTrip.Selection.TestIds[0]);
-        Assert.Equal(request.Selection.TestIds[1], roundTrip.Selection.TestIds[1]);
+        Assert.IsNotNull(roundTrip);
+        Assert.AreEqual(request.Assembly.Path, roundTrip.Assembly.Path);
+        Assert.AreEqual(TestSelectionKind.TestIds, roundTrip.Selection.Kind);
+        Assert.AreEqual(request.Selection.TestIds[0], roundTrip.Selection.TestIds[0]);
+        Assert.AreEqual(request.Selection.TestIds[1], roundTrip.Selection.TestIds[1]);
         Assert.Contains("\"protocol_version\":2", json, StringComparison.Ordinal);
         Assert.Contains("\"framework_id\":\"NUnit\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain("testing/discover", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Execute_round_trips_run_id_and_envelope_version()
     {
         var request = CreateRunRequest(
@@ -57,23 +58,23 @@ public sealed class TestingProtocolGoldenTests
         var json = JsonSerializer.Serialize(invocation, TestingJsonContext.Default.TestRunExecute);
         var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
 
-        Assert.NotNull(roundTrip);
-        Assert.Equal(TestingProtocol.CurrentVersion, roundTrip.ProtocolVersion);
-        Assert.Equal(request.RunId, roundTrip.Run.RunId);
-        Assert.Equal(request.Selection.TestIds[0], roundTrip.Run.Selection.TestIds[0]);
-        Assert.Equal("Revit", roundTrip.Host.HostName);
-        Assert.Equal(60, roundTrip.Host.PerTestTimeoutSeconds);
-        Assert.Equal(4242, roundTrip.Host.DebugParentPid);
+        Assert.IsNotNull(roundTrip);
+        Assert.AreEqual(TestingProtocol.CurrentVersion, roundTrip.ProtocolVersion);
+        Assert.AreEqual(request.RunId, roundTrip.Run.RunId);
+        Assert.AreEqual(request.Selection.TestIds[0], roundTrip.Run.Selection.TestIds[0]);
+        Assert.AreEqual("Revit", roundTrip.Host.HostName);
+        Assert.AreEqual(60, roundTrip.Host.PerTestTimeoutSeconds);
+        Assert.AreEqual(4242, roundTrip.Host.DebugParentPid);
         Assert.Contains("\"run_id\":\"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain("testing/discover", json, StringComparison.Ordinal);
     }
 
-    [Theory]
-    [InlineData(TestCancellationState.None)]
-    [InlineData(TestCancellationState.Requested)]
-    [InlineData(TestCancellationState.Acknowledged)]
-    [InlineData(TestCancellationState.Completed)]
-    [InlineData(TestCancellationState.Poisoned)]
+    [TestMethod]
+    [DataRow(TestCancellationState.None)]
+    [DataRow(TestCancellationState.Requested)]
+    [DataRow(TestCancellationState.Acknowledged)]
+    [DataRow(TestCancellationState.Completed)]
+    [DataRow(TestCancellationState.Poisoned)]
     public void Event_and_response_round_trip_every_cancellation_state(TestCancellationState state)
     {
         var result = new TestCaseResult(
@@ -108,21 +109,21 @@ public sealed class TestingProtocolGoldenTests
         var responseJson = JsonSerializer.Serialize(response, TestingJsonContext.Default.TestRunResponse);
         var responseRoundTrip = JsonSerializer.Deserialize(responseJson, TestingJsonContext.Default.TestRunResponse);
 
-        Assert.NotNull(eventRoundTrip);
-        Assert.Equal(state, eventRoundTrip.CancellationState);
-        Assert.Equal("opaque-id", eventRoundTrip.Case?.TestId);
-        Assert.NotNull(responseRoundTrip);
-        Assert.Equal(state, responseRoundTrip.CancellationState);
-        Assert.Equal("gen-1", responseRoundTrip.GenerationId);
-        Assert.Equal("future-provider/runtime_restart_required", responseRoundTrip.DiagnosticCode);
+        Assert.IsNotNull(eventRoundTrip);
+        Assert.AreEqual(state, eventRoundTrip.CancellationState);
+        Assert.AreEqual("opaque-id", eventRoundTrip.Case?.TestId);
+        Assert.IsNotNull(responseRoundTrip);
+        Assert.AreEqual(state, responseRoundTrip.CancellationState);
+        Assert.AreEqual("gen-1", responseRoundTrip.GenerationId);
+        Assert.AreEqual("future-provider/runtime_restart_required", responseRoundTrip.DiagnosticCode);
         Assert.Contains("cancellation_state", eventJson, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Protocol_mismatch_rejects_version_1()
     {
-        Assert.False(TestingProtocol.IsCompatible(1));
-        Assert.True(TestingProtocol.IsCompatible(TestingProtocol.CurrentVersion));
+        Assert.IsFalse(TestingProtocol.IsCompatible(1));
+        Assert.IsTrue(TestingProtocol.IsCompatible(TestingProtocol.CurrentVersion));
 
         var error = TestingProtocol.CreateIncompatibleResponse("9", 1);
         var json = Serialize(error);
@@ -132,13 +133,15 @@ public sealed class TestingProtocolGoldenTests
         Assert.DoesNotContain("nunit/protocol_incompatible", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Transport_has_no_discover_endpoint()
     {
-        Assert.Equal("testing/hello", TestingProtocol.Hello);
-        Assert.Equal("testing/run", TestingProtocol.Run);
-        Assert.Equal("testing/cancel", TestingProtocol.Cancel);
-        Assert.Equal("testing/progress", TestingProtocol.Progress);
+#pragma warning disable MSTEST0032 // const endpoint names document the transport contract.
+        Assert.AreEqual("testing/hello", TestingProtocol.Hello);
+        Assert.AreEqual("testing/run", TestingProtocol.Run);
+        Assert.AreEqual("testing/cancel", TestingProtocol.Cancel);
+        Assert.AreEqual("testing/progress", TestingProtocol.Progress);
+#pragma warning restore MSTEST0032
 
         var directory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Testing.Transport");
         foreach (var path in Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories))
@@ -147,7 +150,7 @@ public sealed class TestingProtocolGoldenTests
             Assert.DoesNotContain("testing/discover", text, StringComparison.Ordinal);
         }
 
-        Assert.Null(typeof(ITestRunnerTransport).GetMethod("Discover"));
+        Assert.IsNull(typeof(ITestRunnerTransport).GetMethod("Discover"));
     }
 
     static TestRunRequest CreateRunRequest(int protocolVersion, IReadOnlyList<string> testIds) =>

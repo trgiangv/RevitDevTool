@@ -8,9 +8,12 @@ using DevTools.Testing.Transport;
 
 namespace DevTools.Testing.Host.Tests;
 
+[TestClass]
 public sealed class MarshaledTestRequestHandlerTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task Run_is_marshaled_but_hello_is_not()
     {
         var executor = new TrackingExecutor();
@@ -24,9 +27,9 @@ public sealed class MarshaledTestRequestHandlerTests
             new TestHelloRequest(TestingProtocol.CurrentVersion, provider.FrameworkId),
             TestingJsonContext.Default.TestHelloRequest);
         var helloResponse = await handler.HandleAsync(
-            "hello", TestingProtocol.Hello, hello, TestContext.Current.CancellationToken);
-        Assert.False(helloResponse.IsError);
-        Assert.Equal(0, executor.ExecutionCount);
+            "hello", TestingProtocol.Hello, hello, TestContext.CancellationToken);
+        Assert.IsFalse(helloResponse.IsError);
+        Assert.AreEqual(0, executor.ExecutionCount);
 
         var runId = Guid.NewGuid();
         var run = JsonSerializer.SerializeToElement(
@@ -38,12 +41,12 @@ public sealed class MarshaledTestRequestHandlerTests
                 TestSelection.FromTestIds(["opaque-id"])),
             TestingJsonContext.Default.TestRunRequest);
         var runResponse = await handler.HandleAsync(
-            "run", TestingProtocol.Run, run, TestContext.Current.CancellationToken);
+            "run", TestingProtocol.Run, run, TestContext.CancellationToken);
 
-        Assert.False(runResponse.IsError);
-        Assert.Equal(1, executor.ExecutionCount);
-        Assert.False(executor.LastToken.CanBeCanceled);
-        Assert.Equal(runId, provider.LastRunId);
+        Assert.IsFalse(runResponse.IsError);
+        Assert.AreEqual(1, executor.ExecutionCount);
+        Assert.IsFalse(executor.LastToken.CanBeCanceled);
+        Assert.AreEqual(runId, provider.LastRunId);
     }
 
     private sealed class TrackingExecutor : IHostContextExecutor

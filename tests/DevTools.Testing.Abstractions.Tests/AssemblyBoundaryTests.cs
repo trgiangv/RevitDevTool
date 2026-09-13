@@ -3,6 +3,7 @@ using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.Testing.Abstractions.Tests;
 
+[TestClass]
 public sealed class AssemblyBoundaryTests
 {
     static readonly string[] ForbiddenAssemblyPrefixes =
@@ -16,7 +17,7 @@ public sealed class AssemblyBoundaryTests
         "DevTools.Ipc",
     ];
 
-    [Fact]
+    [TestMethod]
     public void Abstractions_assembly_has_no_platform_or_framework_dependencies()
     {
         // net10 Trace/TraceListener facades list System.Diagnostics.Process.
@@ -31,10 +32,10 @@ public sealed class AssemblyBoundaryTests
             .Select(name => $"referenced {name}")
             .ToList();
 
-        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
+        Assert.IsTrue(violations.Count == 0, string.Join(Environment.NewLine, violations));
     }
 
-    [Fact]
+    [TestMethod]
     public void Abstractions_project_has_no_implementation_package_references()
     {
         var csproj = XDocument.Load(Path.Combine(FindRepositoryRoot(),
@@ -46,10 +47,10 @@ public sealed class AssemblyBoundaryTests
             .Where(static identity => !string.IsNullOrWhiteSpace(identity))
             .ToArray();
 
-        Assert.Empty(packages);
+        Assert.IsEmpty(packages);
     }
 
-    [Fact]
+    [TestMethod]
     public void Abstractions_source_does_not_mention_forbidden_implementation_types()
     {
         var directory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Testing.Abstractions");
@@ -69,7 +70,7 @@ public sealed class AssemblyBoundaryTests
         var sources = Directory.GetFiles(directory, "*.cs", SearchOption.AllDirectories)
             .Where(path => !IsBuildArtifact(path, directory))
             .ToArray();
-        Assert.NotEmpty(sources);
+        Assert.IsNotEmpty(sources);
 
         var violations = new List<string>();
         foreach (var path in sources)
@@ -82,10 +83,10 @@ public sealed class AssemblyBoundaryTests
             }
         }
 
-        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
+        Assert.IsTrue(violations.Count == 0, string.Join(Environment.NewLine, violations));
     }
 
-    [Fact]
+    [TestMethod]
     public void Abstractions_source_does_not_name_first_party_mtp_dlls()
     {
         var directory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Testing.Abstractions");
@@ -96,7 +97,7 @@ public sealed class AssemblyBoundaryTests
                 || text.Contains("TUnit.MTP", StringComparison.Ordinal))
             .ToArray();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
     static bool IsForbidden(string assemblyName)

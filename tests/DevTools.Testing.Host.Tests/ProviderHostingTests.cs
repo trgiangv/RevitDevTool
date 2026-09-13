@@ -7,9 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.Testing.Host.Tests;
 
+[TestClass]
 public sealed class ProviderHostingTests
 {
-    [Fact]
+    [TestMethod]
     public void Provider_descriptor_count_is_independent_of_registration_order()
     {
         var nunitFirst = CountProviderDescriptors(services =>
@@ -23,11 +24,11 @@ public sealed class ProviderHostingTests
             services.AddNUnitHostServices();
         });
 
-        Assert.Equal(2, nunitFirst);
-        Assert.Equal(2, tunitFirst);
+        Assert.AreEqual(2, nunitFirst);
+        Assert.AreEqual(2, tunitFirst);
     }
 
-    [Fact]
+    [TestMethod]
     public void Acad_style_registration_resolves_both_providers()
     {
         var services = new ServiceCollection();
@@ -36,11 +37,11 @@ public sealed class ProviderHostingTests
         using var provider = services.BuildServiceProvider();
         var registry = provider.GetRequiredService<TestingProviderRegistry>();
 
-        Assert.Equal(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
-        Assert.Equal(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
+        Assert.AreEqual(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
+        Assert.AreEqual(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
     }
 
-    [Fact]
+    [TestMethod]
     public void Revit_style_registration_resolves_both_providers()
     {
         var services = new ServiceCollection();
@@ -49,29 +50,21 @@ public sealed class ProviderHostingTests
         using var provider = services.BuildServiceProvider();
         var registry = provider.GetRequiredService<TestingProviderRegistry>();
 
-        Assert.Equal(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
-        Assert.Equal(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
+        Assert.AreEqual(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
+        Assert.AreEqual(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
     }
 
-    [Fact]
+    [TestMethod]
     public void Provider_registration_does_not_expose_unkeyed_kernel_singletons()
     {
         var services = new ServiceCollection();
         services.AddNUnitHostServices();
         services.AddTUnitHostServices();
 
-        Assert.DoesNotContain(
-            services,
-            descriptor => descriptor.ServiceType == typeof(TestingGenerationStore));
-        Assert.DoesNotContain(
-            services,
-            descriptor => descriptor.ServiceType == typeof(ITestingGenerationPolicy));
-        Assert.DoesNotContain(
-            services,
-            descriptor => descriptor.ServiceType == typeof(TestingRuntimeSessionManager));
-        Assert.DoesNotContain(
-            services,
-            descriptor => descriptor.ServiceType == typeof(ITestingRuntimeSessionFactory));
+        Assert.IsFalse(services.Any(descriptor => descriptor.ServiceType == typeof(TestingGenerationStore)));
+        Assert.IsFalse(services.Any(descriptor => descriptor.ServiceType == typeof(ITestingGenerationPolicy)));
+        Assert.IsFalse(services.Any(descriptor => descriptor.ServiceType == typeof(TestingRuntimeSessionManager)));
+        Assert.IsFalse(services.Any(descriptor => descriptor.ServiceType == typeof(ITestingRuntimeSessionFactory)));
     }
 
     private static int CountProviderDescriptors(Action<IServiceCollection> configure)

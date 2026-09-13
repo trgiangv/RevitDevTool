@@ -4,12 +4,13 @@ using DevTools.Testing.Host;
 
 namespace DevTools.Testing.Host.Tests;
 
+[TestClass]
 public sealed class ProviderRegistryTests
 {
-    [Fact]
+    [TestMethod]
     public void Constructor_rejects_duplicate_ids()
     {
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var ex = Assert.ThrowsExactly<ArgumentException>(() =>
             new TestingProviderRegistry(
             [
                 new FakeProvider(TestFrameworkId.NUnit),
@@ -19,14 +20,14 @@ public sealed class ProviderRegistryTests
         Assert.Contains("Duplicate", ex.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void GetRequired_unknown_id_throws()
     {
         var registry = new TestingProviderRegistry([new FakeProvider(TestFrameworkId.NUnit)]);
-        Assert.Throws<KeyNotFoundException>(() => registry.GetRequired(TestFrameworkId.TUnit));
+        Assert.ThrowsExactly<KeyNotFoundException>(() => registry.GetRequired(TestFrameworkId.TUnit));
     }
 
-    [Fact]
+    [TestMethod]
     public void Cancel_notifies_every_registered_provider()
     {
         var runId = Guid.NewGuid();
@@ -51,8 +52,8 @@ public sealed class ProviderRegistryTests
 
         var acknowledged = registry.Cancel(runId);
 
-        Assert.True(acknowledged);
-        Assert.Equal(
+        Assert.IsTrue(acknowledged);
+        Assert.AreSequenceEqual(
             [(TestFrameworkId.NUnit, runId), (TestFrameworkId.TUnit, runId)],
             observed);
     }

@@ -2,6 +2,7 @@ using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.Testing.Abstractions.Tests;
 
+[TestClass]
 public sealed class TestRunMappersTests
 {
     static readonly TestSelection Requested = TestSelection.FromTestIds(["case-1", "case-2"]);
@@ -16,26 +17,26 @@ public sealed class TestRunMappersTests
         CreateResult("case-2", "Failed"),
     ];
 
-    [Fact]
+    [TestMethod]
     public void PassThrough_returns_requested_selection_unchanged()
     {
         var mapped = PassThroughRunMapper.Instance.ToRunSelection(Requested, Discovered);
-        Assert.Same(Requested, mapped);
-        Assert.Equal(Requested.TestIds, mapped.TestIds);
+        Assert.AreSame(Requested, mapped);
+        Assert.AreSequenceEqual(Requested.TestIds, mapped.TestIds);
     }
 
-    [Fact]
+    [TestMethod]
     public void PassThrough_returns_host_results_unchanged()
     {
         var folded = PassThroughRunMapper.Instance.FoldResults(Requested, Discovered, HostResults);
-        Assert.Same(HostResults, folded);
+        Assert.AreSame(HostResults, folded);
     }
 
-    [Fact]
+    [TestMethod]
     public void PassThrough_reports_no_unreported_cases()
     {
         var unreported = PassThroughRunMapper.Instance.ResultsForUnreported(Requested, Discovered, HostResults);
-        Assert.Empty(unreported);
+        Assert.IsEmpty(unreported);
     }
 
     static TestCaseResult CreateResult(string testId, string outcome) =>

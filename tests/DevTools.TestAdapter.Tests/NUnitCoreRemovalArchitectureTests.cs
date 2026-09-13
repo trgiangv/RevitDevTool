@@ -1,5 +1,6 @@
 namespace DevTools.TestAdapter.Tests;
 
+[TestClass]
 public sealed class NUnitCoreRemovalArchitectureTests
 {
     private static readonly string RepositoryRoot = Path.GetFullPath(
@@ -12,7 +13,7 @@ public sealed class NUnitCoreRemovalArchitectureTests
         ".cs", ".csproj", ".props", ".targets", ".slnx", ".nuspec", ".ps1", ".psm1", ".json",
     };
 
-    [Fact]
+    [TestMethod]
     public void Repository_has_no_active_DevTools_NUnit_Core_coupling()
     {
         var offenders = new List<string>();
@@ -30,7 +31,7 @@ public sealed class NUnitCoreRemovalArchitectureTests
             }
         }
 
-        Assert.True(
+        Assert.IsTrue(
             offenders.Count == 0,
             "DevTools.NUnit.Core must be fully removed from active repository inputs:" + Environment.NewLine
             + string.Join(Environment.NewLine, offenders));

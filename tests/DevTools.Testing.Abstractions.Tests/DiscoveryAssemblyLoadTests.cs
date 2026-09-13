@@ -2,19 +2,20 @@ using DevTools.Testing.Abstractions.Loading;
 
 namespace DevTools.Testing.Abstractions.Tests;
 
+[TestClass]
 public sealed class DiscoveryAssemblyLoadTests
 {
-    [Fact]
+    [TestMethod]
     public void Open_without_refs_reuses_already_loaded_assembly()
     {
         var path = typeof(DiscoveryAssemblyLoadTests).Assembly.Location;
 
         using var load = DiscoveryAssemblyLoad.Open(path);
 
-        Assert.Same(typeof(DiscoveryAssemblyLoadTests).Assembly, load.Assembly);
+        Assert.AreSame(typeof(DiscoveryAssemblyLoadTests).Assembly, load.Assembly);
     }
 
-    [Fact]
+    [TestMethod]
     public void Open_with_refs_loads_from_the_copied_assembly_path()
     {
         var directory = Directory.CreateTempSubdirectory("abstractions-discovery-load-").FullName;
@@ -30,7 +31,7 @@ public sealed class DiscoveryAssemblyLoadTests
 
             using (var load = DiscoveryAssemblyLoad.Open(assemblyPath))
             {
-                Assert.Equal(Path.GetFullPath(assemblyPath), Path.GetFullPath(load.Assembly.Location));
+                Assert.AreEqual(Path.GetFullPath(assemblyPath), Path.GetFullPath(load.Assembly.Location));
             }
         }
         finally
@@ -48,7 +49,7 @@ public sealed class DiscoveryAssemblyLoadTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Dispose_can_be_called_multiple_times()
     {
         var load = DiscoveryAssemblyLoad.Open(typeof(DiscoveryAssemblyLoadTests).Assembly.Location);

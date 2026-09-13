@@ -3,9 +3,10 @@ using DevTools.Testing.Host;
 
 namespace DevTools.Testing.Host.Tests;
 
+[TestClass]
 public sealed class AssemblyBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Host_project_does_not_reference_nunit_xunit_or_autodesk()
     {
         var csproj = XDocument.Load(Path.Combine(
@@ -26,30 +27,31 @@ public sealed class AssemblyBoundaryTests
             .Select(static element => element.Attribute("Include")?.Value ?? string.Empty)
             .ToList();
 
-        Assert.DoesNotContain(packageReferences, value => value.Contains("NUnit", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(packageReferences, value => value.Contains("TUnit", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(packageReferences, value => value.Contains("xunit", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(packageReferences, value => value.Contains("Autodesk", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(projectIncludes, value => value.Contains("DevTools.Testing.Abstractions", StringComparison.Ordinal));
-        Assert.Contains(projectIncludes, value => value.Contains("DevTools.Testing.Transport", StringComparison.Ordinal));
-        Assert.Contains(projectIncludes, value => value.Contains("DevTools.Hosting", StringComparison.Ordinal));
-        Assert.Contains(projectIncludes, value => value.Contains("DevTools.Execution.Abstractions", StringComparison.Ordinal));
-        Assert.Contains(projectIncludes, value => value.Contains("DevTools.NUnit.Runtime", StringComparison.Ordinal));
-        Assert.Contains(projectIncludes, value => value.Contains("DevTools.TUnit.Runtime", StringComparison.Ordinal));
-        Assert.All(
-            projectReferences.Where(static element =>
-            {
-                var include = element.Attribute("Include")?.Value ?? string.Empty;
-                return include.Contains("DevTools.NUnit.Runtime", StringComparison.Ordinal)
-                    || include.Contains("DevTools.TUnit.Runtime", StringComparison.Ordinal);
-            }),
-            element => Assert.Equal(
+        Assert.IsFalse(packageReferences.Any(value => value.Contains("NUnit", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(packageReferences.Any(value => value.Contains("TUnit", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(packageReferences.Any(value => value.Contains("xunit", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(packageReferences.Any(value => value.Contains("Autodesk", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.Testing.Abstractions", StringComparison.Ordinal)));
+        Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.Testing.Transport", StringComparison.Ordinal)));
+        Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.Hosting", StringComparison.Ordinal)));
+        Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.Execution.Abstractions", StringComparison.Ordinal)));
+        Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.NUnit.Runtime", StringComparison.Ordinal)));
+        Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.TUnit.Runtime", StringComparison.Ordinal)));
+        foreach (var element in projectReferences.Where(static element =>
+                 {
+                     var include = element.Attribute("Include")?.Value ?? string.Empty;
+                     return include.Contains("DevTools.NUnit.Runtime", StringComparison.Ordinal)
+                         || include.Contains("DevTools.TUnit.Runtime", StringComparison.Ordinal);
+                 }))
+        {
+            Assert.AreEqual(
                 "false",
                 element.Attribute("ReferenceOutputAssembly")?.Value,
-                StringComparer.OrdinalIgnoreCase));
+                ignoreCase: true);
+        }
     }
 
-    [Fact]
+    [TestMethod]
     public void Host_source_has_no_discovery_or_host_locate_api()
     {
         var directory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Testing.Host");
@@ -71,7 +73,7 @@ public sealed class AssemblyBoundaryTests
             }
         }
 
-        Assert.True(violations.Count == 0, string.Join(Environment.NewLine, violations));
+        Assert.IsTrue(violations.Count == 0, string.Join(Environment.NewLine, violations));
     }
 
     static string FindRepositoryRoot()

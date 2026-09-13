@@ -2,16 +2,17 @@ using DevTools.Testing.Abstractions;
 
 namespace DevTools.Testing.Abstractions.Tests;
 
+[TestClass]
 public sealed class DiscoveryRefsTests
 {
-    [Fact]
+    [TestMethod]
     public void FilePathFor_uses_assembly_name_suffix()
     {
         var path = DiscoveryRefs.FilePathFor(@"C:\tests\Host.Tests.dll");
-        Assert.Equal(@"C:\tests\Host.Tests.discovery-refs.txt", path);
+        Assert.AreEqual(@"C:\tests\Host.Tests.discovery-refs.txt", path);
     }
 
-    [Fact]
+    [TestMethod]
     public void Read_maps_simple_name_to_existing_paths()
     {
         var directory = Directory.CreateTempSubdirectory("abstractions-discovery-refs-").FullName;
@@ -28,7 +29,7 @@ public sealed class DiscoveryRefsTests
 
             var map = DiscoveryRefs.Read(assemblyPath);
 
-            Assert.Equal(apiPath, Assert.Single(map, pair => pair.Key == "RevitAPI").Value);
+            Assert.AreEqual(apiPath, map.Single(pair => pair.Key == "RevitAPI").Value);
         }
         finally
         {
@@ -36,7 +37,7 @@ public sealed class DiscoveryRefsTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Read_skips_blank_lines_and_missing_files()
     {
         var directory = Directory.CreateTempSubdirectory("abstractions-discovery-refs-").FullName;
@@ -48,7 +49,7 @@ public sealed class DiscoveryRefsTests
                 DiscoveryRefs.FilePathFor(assemblyPath),
                 "   " + Environment.NewLine + Path.Combine(directory, "gone.dll"));
 
-            Assert.Empty(DiscoveryRefs.Read(assemblyPath));
+            Assert.IsEmpty(DiscoveryRefs.Read(assemblyPath));
         }
         finally
         {
@@ -56,7 +57,7 @@ public sealed class DiscoveryRefsTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Read_skips_framework_targeting_packs()
     {
         var directory = Directory.CreateTempSubdirectory("abstractions-discovery-refs-").FullName;
@@ -70,7 +71,7 @@ public sealed class DiscoveryRefsTests
             File.WriteAllBytes(packPath, [1]);
             File.WriteAllText(DiscoveryRefs.FilePathFor(assemblyPath), packPath);
 
-            Assert.Empty(DiscoveryRefs.Read(assemblyPath));
+            Assert.IsEmpty(DiscoveryRefs.Read(assemblyPath));
         }
         finally
         {
@@ -78,7 +79,7 @@ public sealed class DiscoveryRefsTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Read_skips_nuget_cached_targeting_packs()
     {
         var directory = Directory.CreateTempSubdirectory("abstractions-discovery-refs-").FullName;
@@ -100,8 +101,8 @@ public sealed class DiscoveryRefsTests
                 packPath + Environment.NewLine + apiPath);
 
             var map = DiscoveryRefs.Read(assemblyPath);
-            Assert.Equal(apiPath, Assert.Single(map, pair => pair.Key == "RevitAPI").Value);
-            Assert.False(map.ContainsKey("System.Runtime"));
+            Assert.AreEqual(apiPath, map.Single(pair => pair.Key == "RevitAPI").Value);
+            Assert.IsFalse(map.ContainsKey("System.Runtime"));
         }
         finally
         {
@@ -109,9 +110,9 @@ public sealed class DiscoveryRefsTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Read_missing_file_is_empty()
     {
-        Assert.Empty(DiscoveryRefs.Read(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".dll")));
+        Assert.IsEmpty(DiscoveryRefs.Read(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".dll")));
     }
 }

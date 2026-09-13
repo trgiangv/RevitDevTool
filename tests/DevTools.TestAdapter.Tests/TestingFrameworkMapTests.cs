@@ -2,9 +2,10 @@ using System.Diagnostics;
 
 namespace DevTools.TestAdapter.Tests;
 
+[TestClass]
 public sealed class TestingFrameworkMapTests
 {
-    [Fact]
+    [TestMethod]
     public void Unknown_TestingFramework_fails_the_testhost_build()
     {
         var root = FindRepositoryRoot();
@@ -38,7 +39,7 @@ public sealed class TestingFrameworkMapTests
             var stdout = process.StandardOutput.ReadToEnd();
             var stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
-            Assert.True(process.ExitCode != 0, stdout + stderr);
+            Assert.IsTrue(process.ExitCode != 0, stdout + stderr);
             Assert.Contains("nunit or tunit", stdout + stderr, StringComparison.OrdinalIgnoreCase);
         }
         finally
@@ -48,7 +49,7 @@ public sealed class TestingFrameworkMapTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Consumer_TestingFramework_wins_when_props_are_imported_before_the_project_body()
     {
         var root = FindRepositoryRoot();
@@ -83,7 +84,7 @@ public sealed class TestingFrameworkMapTests
             var stdout = process.StandardOutput.ReadToEnd();
             var stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
-            Assert.True(process.ExitCode == 0, stdout + stderr);
+            Assert.IsTrue(process.ExitCode == 0, stdout + stderr);
             Assert.Contains("DevTools.TUnit.MTP", stdout, StringComparison.Ordinal);
             Assert.Contains("DevTools.TUnit.MTP.TUnitMtpBuilderHook", stdout, StringComparison.Ordinal);
             Assert.DoesNotContain("DevTools.NUnit.MTP", stdout, StringComparison.Ordinal);

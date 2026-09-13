@@ -2,25 +2,28 @@ using DevTools.Testing.Abstractions.Config;
 
 namespace DevTools.Testing.Abstractions.Tests;
 
+[TestClass]
 public sealed class TestConfigTests
 {
-    [Fact]
+    [TestMethod]
     public void File_and_section_names_match_testconfig_contract()
     {
-        Assert.Equal("testconfig.json", TestConfig.FileName);
-        Assert.Equal("devtools", TestConfig.SectionName);
+#pragma warning disable MSTEST0032 // const contract assertions document the file/section names.
+        Assert.AreEqual("testconfig.json", TestConfig.FileName);
+        Assert.AreEqual("devtools", TestConfig.SectionName);
+#pragma warning restore MSTEST0032
     }
 
-    [Theory]
-    [InlineData("hostName", "devtools:hostName")]
-    [InlineData("hostVersion", "devtools:hostVersion")]
-    [InlineData("forceLaunch", "devtools:forceLaunch")]
-    [InlineData("perTestTimeoutSeconds", "devtools:perTestTimeoutSeconds")]
-    [InlineData("launchTimeoutSeconds", "devtools:launchTimeoutSeconds")]
-    [InlineData("runnerPath", "devtools:runnerPath")]
-    [InlineData("frameworkId", "devtools:frameworkId")]
+    [TestMethod]
+    [DataRow("hostName", "devtools:hostName")]
+    [DataRow("hostVersion", "devtools:hostVersion")]
+    [DataRow("forceLaunch", "devtools:forceLaunch")]
+    [DataRow("perTestTimeoutSeconds", "devtools:perTestTimeoutSeconds")]
+    [DataRow("launchTimeoutSeconds", "devtools:launchTimeoutSeconds")]
+    [DataRow("runnerPath", "devtools:runnerPath")]
+    [DataRow("frameworkId", "devtools:frameworkId")]
     public void Configuration_keys_prefix_devtools_section(string key, string expected)
     {
-        Assert.Equal(expected, TestConfig.Keys.Configuration(key));
+        Assert.AreEqual(expected, TestConfig.Keys.Configuration(key));
     }
 }

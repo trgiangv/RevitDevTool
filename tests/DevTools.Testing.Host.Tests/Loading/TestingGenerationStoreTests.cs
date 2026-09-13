@@ -5,9 +5,12 @@ using DevTools.Testing.Host.Runtime;
 
 namespace DevTools.Testing.Host.Tests.Loading;
 
+[TestClass]
 public sealed class TestingGenerationStoreTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void Build_uses_a_deterministic_content_generation_id()
     {
         using var workspace = new GenerationWorkspace();
@@ -21,10 +24,10 @@ public sealed class TestingGenerationStoreTests
         var first = workspace.Store.Build(new FixedPolicy(plan), assembly);
         var second = workspace.Store.Build(new FixedPolicy(plan with { Files = plan.Files.Reverse().ToList() }), assembly);
 
-        Assert.Equal(first.GenerationId, second.GenerationId);
+        Assert.AreEqual(first.GenerationId, second.GenerationId);
     }
 
-    [Fact]
+    [TestMethod]
     public void Build_retries_when_a_source_changes_during_snapshot()
     {
         using var workspace = new GenerationWorkspace();
@@ -46,11 +49,11 @@ public sealed class TestingGenerationStoreTests
 
         var manifest = workspace.Store.Build(new FixedPolicy(plan), assembly);
 
-        Assert.True(changed);
-        Assert.Equal("after", File.ReadAllText(Path.Combine(manifest.ShadowDirectory, "content", "changing.txt")));
+        Assert.IsTrue(changed);
+        Assert.AreEqual("after", File.ReadAllText(Path.Combine(manifest.ShadowDirectory, "content", "changing.txt")));
     }
 
-    [Fact]
+    [TestMethod]
     public void Build_retries_when_a_same_length_source_change_preserves_its_timestamp()
     {
         using var workspace = new GenerationWorkspace();
@@ -74,11 +77,11 @@ public sealed class TestingGenerationStoreTests
 
         var manifest = workspace.Store.Build(new FixedPolicy(plan), assembly);
 
-        Assert.True(changed);
-        Assert.Equal("after!", File.ReadAllText(Path.Combine(manifest.ShadowDirectory, "content", "changing.txt")));
+        Assert.IsTrue(changed);
+        Assert.AreEqual("after!", File.ReadAllText(Path.Combine(manifest.ShadowDirectory, "content", "changing.txt")));
     }
 
-    [Fact]
+    [TestMethod]
     public void Build_rejects_a_corrupt_published_generation()
     {
         using var workspace = new GenerationWorkspace();
@@ -88,10 +91,10 @@ public sealed class TestingGenerationStoreTests
         var published = workspace.Store.Build(policy, assembly);
         File.AppendAllText(published.ShadowAssemblyPath, "corrupt");
 
-        Assert.Throws<TestingGenerationCorruptionException>(() => workspace.Store.Build(policy, assembly));
+        Assert.ThrowsExactly<TestingGenerationCorruptionException>(() => workspace.Store.Build(policy, assembly));
     }
 
-    [Fact]
+    [TestMethod]
     public void Build_rejects_an_incomplete_existing_generation_directory()
     {
         using var workspace = new GenerationWorkspace();
@@ -102,12 +105,12 @@ public sealed class TestingGenerationStoreTests
         ]);
         Directory.CreateDirectory(Path.Combine(workspace.GenerationsRoot, generationId));
 
-        var exception = Assert.Throws<TestingGenerationBuildException>(() => workspace.Store.Build(new FixedPolicy(plan), assembly));
+        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => workspace.Store.Build(new FixedPolicy(plan), assembly));
 
         Assert.Contains("complete published generation", exception.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Build_publishes_only_complete_generations_when_concurrent_callers_share_content()
     {
         using var workspace = new GenerationWorkspace();
@@ -123,12 +126,13 @@ public sealed class TestingGenerationStoreTests
             .Select(_ => workspace.Store.Build(new FixedPolicy(plan), assembly))
             .ToList();
 
-        var manifest = Assert.Single(manifests.DistinctBy(item => item.GenerationId));
-        Assert.True(File.Exists(Path.Combine(manifest.ShadowDirectory, ".generation-complete")));
-        Assert.DoesNotContain(Directory.EnumerateDirectories(workspace.GenerationsRoot), path => Path.GetFileName(path).StartsWith(".staging.", StringComparison.Ordinal));
+        var manifest = Assert.ContainsSingle(manifests.DistinctBy(item => item.GenerationId));
+        Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, ".generation-complete")));
+        Assert.IsFalse(Directory.EnumerateDirectories(workspace.GenerationsRoot)
+            .Any(path => Path.GetFileName(path).StartsWith(".staging.", StringComparison.Ordinal)));
     }
 
-    [Fact]
+    [TestMethod]
     public void CopyDirectory_publishes_nested_files_when_move_is_unavailable()
     {
         using var workspace = new GenerationWorkspace();
@@ -141,12 +145,12 @@ public sealed class TestingGenerationStoreTests
 
         TestingGenerationSnapshot.CopyDirectory(staging, shadow);
 
-        Assert.Equal("ok", File.ReadAllText(Path.Combine(shadow, "nested", "payload.txt")));
-        Assert.True(Directory.Exists(Path.Combine(shadow, "empty")));
-        Assert.True(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
+        Assert.AreEqual("ok", File.ReadAllText(Path.Combine(shadow, "nested", "payload.txt")));
+        Assert.IsTrue(Directory.Exists(Path.Combine(shadow, "empty")));
+        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Publish_copies_when_directory_move_fails()
     {
         using var workspace = new GenerationWorkspace();
@@ -165,12 +169,12 @@ public sealed class TestingGenerationStoreTests
             GC.KeepAlive(stream);
         }
 
-        Assert.True(Directory.Exists(shadow));
-        Assert.Equal("ok", File.ReadAllText(Path.Combine(shadow, "payload.txt")));
-        Assert.True(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
+        Assert.IsTrue(Directory.Exists(shadow));
+        Assert.AreEqual("ok", File.ReadAllText(Path.Combine(shadow, "payload.txt")));
+        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Build_indexes_each_declared_file_kind_without_filename_policy()
     {
         using var workspace = new GenerationWorkspace();
@@ -187,13 +191,13 @@ public sealed class TestingGenerationStoreTests
 
         var manifest = workspace.Store.Build(new FixedPolicy(plan), managed);
 
-        Assert.Single(manifest.ManagedAssemblies);
-        Assert.Single(manifest.NativeAssets);
-        Assert.Single(manifest.SymbolFiles);
-        Assert.Single(manifest.OtherFiles);
+        Assert.ContainsSingle(manifest.ManagedAssemblies);
+        Assert.ContainsSingle(manifest.NativeAssets);
+        Assert.ContainsSingle(manifest.SymbolFiles);
+        Assert.ContainsSingle(manifest.OtherFiles);
     }
 
-    [Fact]
+    [TestMethod]
     public void Runtime_manager_retires_an_obsolete_session_after_the_current_generation_changes()
     {
         using var workspace = new GenerationWorkspace();
@@ -204,14 +208,14 @@ public sealed class TestingGenerationStoreTests
         var factory = new RecordingSessionFactory();
         using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
 
-        manager.Run(Request(first), NullTestingRuntimeEventSink.Instance, TestContext.Current.CancellationToken);
-        manager.Run(Request(second), NullTestingRuntimeEventSink.Instance, TestContext.Current.CancellationToken);
+        manager.Run(Request(first), NullTestingRuntimeEventSink.Instance, TestContext.CancellationToken);
+        manager.Run(Request(second), NullTestingRuntimeEventSink.Instance, TestContext.CancellationToken);
 
-        Assert.True(factory.Sessions.Single(session => session.GenerationId != manager.CurrentGenerationId).Disposed);
-        Assert.Equal(0, manager.RetainedGenerationCount);
+        Assert.IsTrue(factory.Sessions.Single(session => session.GenerationId != manager.CurrentGenerationId).Disposed);
+        Assert.AreEqual(0, manager.RetainedGenerationCount);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Runtime_manager_forwards_cancel_to_the_active_neutral_session()
     {
         using var workspace = new GenerationWorkspace();
@@ -221,15 +225,15 @@ public sealed class TestingGenerationStoreTests
         using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
         var request = Request(assembly);
 
-        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.Current.CancellationToken);
-        Assert.True(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.CancellationToken);
+        Assert.IsTrue(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
         manager.Cancel(request.RunId);
-        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
 
-        Assert.True(factory.Sessions.Single().Cancelled);
+        Assert.IsTrue(factory.Sessions.Single().Cancelled);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Cancel_returns_false_when_the_session_is_already_disposed()
     {
         using var workspace = new GenerationWorkspace();
@@ -239,13 +243,13 @@ public sealed class TestingGenerationStoreTests
         using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
         var request = Request(assembly);
 
-        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.Current.CancellationToken);
-        Assert.True(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
-        Assert.False(manager.Cancel(request.RunId));
-        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.CancellationToken);
+        Assert.IsTrue(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
+        Assert.IsFalse(manager.Cancel(request.RunId));
+        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Runtime_manager_dispose_cancels_and_waits_for_an_active_run_before_retiring_its_session()
     {
         using var workspace = new GenerationWorkspace();
@@ -255,22 +259,22 @@ public sealed class TestingGenerationStoreTests
         var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
         var request = Request(assembly);
 
-        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.Current.CancellationToken);
-        Assert.True(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
-        var disposing = Task.Run(manager.Dispose, TestContext.Current.CancellationToken);
-        Assert.True(factory.CancelObserved.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
-        Assert.False(factory.Sessions.Single().Disposed);
-        Assert.False(disposing.IsCompleted);
+        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.CancellationToken);
+        Assert.IsTrue(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
+        var disposing = Task.Run(manager.Dispose, TestContext.CancellationToken);
+        Assert.IsTrue(factory.CancelObserved.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
+        Assert.IsFalse(factory.Sessions.Single().Disposed);
+        Assert.IsFalse(disposing.IsCompleted);
 
         factory.AllowRunToFinish.Set();
-        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-        await disposing.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
+        await disposing.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
 
-        Assert.True(factory.Sessions.Single().Disposed);
-        Assert.Equal("generation.retained", Assert.Single(manager.RetainedGenerationDiagnostics).Code);
+        Assert.IsTrue(factory.Sessions.Single().Disposed);
+        Assert.AreEqual("generation.retained", Assert.ContainsSingle(manager.RetainedGenerationDiagnostics).Code);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Runtime_manager_dispose_does_not_miss_a_run_paused_before_active_registration()
     {
         using var workspace = new GenerationWorkspace();
@@ -284,26 +288,26 @@ public sealed class TestingGenerationStoreTests
         manager.AfterDisposedCheckBeforeRegistration = () =>
         {
             registrationGateReached.Set();
-            allowRegistration.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            allowRegistration.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
         };
 
-        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.Current.CancellationToken);
-        Assert.True(registrationGateReached.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
-        var disposing = Task.Run(manager.Dispose, TestContext.Current.CancellationToken);
-        Assert.False(disposing.IsCompleted);
+        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.CancellationToken);
+        Assert.IsTrue(registrationGateReached.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
+        var disposing = Task.Run(manager.Dispose, TestContext.CancellationToken);
+        Assert.IsFalse(disposing.IsCompleted);
 
         allowRegistration.Set();
-        Assert.True(factory.CancelObserved.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
-        Assert.False(factory.Sessions.Single().Disposed);
+        Assert.IsTrue(factory.CancelObserved.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
+        Assert.IsFalse(factory.Sessions.Single().Disposed);
         factory.AllowRunToFinish.Set();
-        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-        await disposing.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
+        await disposing.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
 
-        Assert.True(factory.Sessions.Single().Disposed);
-        Assert.Equal("generation.retained", Assert.Single(manager.RetainedGenerationDiagnostics).Code);
+        Assert.IsTrue(factory.Sessions.Single().Disposed);
+        Assert.AreEqual("generation.retained", Assert.ContainsSingle(manager.RetainedGenerationDiagnostics).Code);
     }
 
-    [Fact]
+    [TestMethod]
     public void Runtime_manager_exposes_provider_retained_generation_diagnostics()
     {
         using var workspace = new GenerationWorkspace();
@@ -314,11 +318,11 @@ public sealed class TestingGenerationStoreTests
         var factory = new RecordingSessionFactory(retainOnDispose: true);
         using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
 
-        manager.Run(Request(first), NullTestingRuntimeEventSink.Instance, TestContext.Current.CancellationToken);
-        manager.Run(Request(second), NullTestingRuntimeEventSink.Instance, TestContext.Current.CancellationToken);
+        manager.Run(Request(first), NullTestingRuntimeEventSink.Instance, TestContext.CancellationToken);
+        manager.Run(Request(second), NullTestingRuntimeEventSink.Instance, TestContext.CancellationToken);
 
-        var diagnostic = Assert.Single(manager.RetainedGenerationDiagnostics);
-        Assert.Equal("generation.retained", diagnostic.Code);
+        var diagnostic = Assert.ContainsSingle(manager.RetainedGenerationDiagnostics);
+        Assert.AreEqual("generation.retained", diagnostic.Code);
     }
 
     private static TestRunRequest Request(string path) => new(
@@ -369,11 +373,11 @@ public sealed class TestingGenerationStoreTests
         {
             runStarted.Set();
             if (blockRuns)
-                _cancelled.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+                _cancelled.Wait(TimeSpan.FromSeconds(5), cancellationToken);
             if (blockUntilReleasedAfterCancel)
             {
-                _cancelled.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-                allowRunToFinish.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+                _cancelled.Wait(TimeSpan.FromSeconds(5), cancellationToken);
+                allowRunToFinish.Wait(TimeSpan.FromSeconds(5), cancellationToken);
             }
             return new TestRunResponse(request.RunId, request.FrameworkId, GenerationId, [], TestCancellationState.None, null, null);
         }
