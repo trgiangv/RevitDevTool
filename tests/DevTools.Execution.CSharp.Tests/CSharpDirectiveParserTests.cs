@@ -1,0 +1,46 @@
+using DevTools.Execution.Providers.CSharp;
+
+namespace DevTools.Execution.Tests;
+
+[TestClass]
+public sealed class CSharpDirectiveParserTests
+{
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
+    public void ResolveGraph_EntryWithNugetAndLoad_IncludesDependencies()
+    {
+        var tempDirectory = Path.Combine(Path.GetTempPath(), $"csharp-directive-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDirectory);
+
+        var dependencyPath = Path.Combine(tempDirectory, "dep.csx");
+        var entryPath = Path.Combine(tempDirectory, "entry.csx");
+        File.WriteAllText(dependencyPath, "// dependency");
+        File.WriteAllText(
+            entryPath,
+            """
+            #r "nuget: Newtonsoft.Json, 13.0.3"
+            #load "dep.csx"
+            Console.WriteLine("entry");
+            """);
+
+        try
+        {
+            var graph = CSharpDirectiveParser.ResolveGraph(entryPath);
+
+            Assert.AreEqual(2, graph.SourceFiles.Count);
+            Assert.AreEqual(dependencyPath, graph.SourceFiles[0].Path, ignoreCase: true);
+            Assert.AreEqual(entryPath, graph.SourceFiles[1].Path, ignoreCase: true);
+            Assert.IsTrue(graph.Packages.Any(
+                package => package is { PackageId: "Newtonsoft.Json", Version: "13.0.3" }));
+            Assert.Contains("// #r \"nuget: Newtonsoft.Json, 13.0.3\"", graph.SourceFiles[1].CleanSource, StringComparison.Ordinal);
+            Assert.Contains("// #load \"dep.csx\"", graph.SourceFiles[1].CleanSource, StringComparison.Ordinal);
+            Assert.Contains("Console.WriteLine(\"entry\");", graph.SourceFiles[1].CleanSource, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(tempDirectory, recursive: true);
+        }
+    }
+
+}

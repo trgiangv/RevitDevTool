@@ -1,0 +1,25 @@
+<Project Sdk="MSTest.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <IsPackable>false</IsPackable>
+        <UseMicrosoftCodeCoverage>true</UseMicrosoftCodeCoverage>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Moq"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Execution.Abstractions\DevTools.Execution.Abstractions.csproj"/>
+        <ProjectReference Include="..\DevTools.Execution.Tests.Shared\DevTools.Execution.Tests.Shared.csproj"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
+    </ItemGroup>
+
+</Project>

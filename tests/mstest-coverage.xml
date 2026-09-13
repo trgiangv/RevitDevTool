@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Configuration>
+  <CodeCoverage>
+    <ModulePaths>
+      <Include>
+        <ModulePath>.*DevTools\..*</ModulePath>
+      </Include>
+      <Exclude>
+        <ModulePath>.*\.Tests\.</ModulePath>
+        <ModulePath>.*Tests\.Shared.*</ModulePath>
+        <ModulePath>.*\.Fixtures\.</ModulePath>
+        <ModulePath>.*MahApps\.Metro.*</ModulePath>
+        <ModulePath>.*ControlzEx.*</ModulePath>
+        <ModulePath>.*Xaml\.Behaviors.*</ModulePath>
+      </Exclude>
+    </ModulePaths>
+    <UseVerifiableInstrumentation>True</UseVerifiableInstrumentation>
+    <AllowLowIntegrityProcesses>True</AllowLowIntegrityProcesses>
+    <CollectFromChildProcesses>True</CollectFromChildProcesses>
+    <CollectAspDotNet>False</CollectAspDotNet>
+  </CodeCoverage>
+</Configuration>

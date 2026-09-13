@@ -157,5 +157,5 @@ Tradeoffs:
 - Source: `source/DevTools.Execution/Providers/Python/` (`PythonInitializer`,
   `UvEnvironmentProvider`, `PixiEnvironmentProvider`, `PipEnvironmentProvider`,
   `PythonNativeEnvironment`, `PythonDepsManager`)
-- Tests: `tests/DevTools.Execution.Tests/UvHostCaptureTests.cs`, `UvArgsTests.cs`,
+- Tests: `tests/DevTools.Execution.Python.Tests/UvHostCaptureTests.cs`, `UvArgsTests.cs`,
   `PipCengineTests.cs`
