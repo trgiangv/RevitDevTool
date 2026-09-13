@@ -2,72 +2,73 @@ using DevTools.Hosting;
 
 namespace DevTools.Hosting.Tests;
 
+[TestClass]
 public sealed class HostAppExtensionsTests
 {
-    [Theory]
-    [InlineData(".rvt", HostApp.Revit)]
-    [InlineData(".rfa", HostApp.Revit)]
-    [InlineData(".rft", HostApp.Revit)]
-    [InlineData(".rte", HostApp.Revit)]
-    [InlineData(".dwg", HostApp.AutoCad)]
-    [InlineData(".dxf", HostApp.AutoCad)]
-    [InlineData(".dwf", HostApp.AutoCad)]
-    [InlineData(".dwt", HostApp.AutoCad)]
-    [InlineData(".nwd", HostApp.Navisworks)]
-    [InlineData(".nwc", HostApp.Navisworks)]
-    [InlineData(".nwf", HostApp.Navisworks)]
+    [TestMethod]
+    [DataRow(".rvt", HostApp.Revit)]
+    [DataRow(".rfa", HostApp.Revit)]
+    [DataRow(".rft", HostApp.Revit)]
+    [DataRow(".rte", HostApp.Revit)]
+    [DataRow(".dwg", HostApp.AutoCad)]
+    [DataRow(".dxf", HostApp.AutoCad)]
+    [DataRow(".dwf", HostApp.AutoCad)]
+    [DataRow(".dwt", HostApp.AutoCad)]
+    [DataRow(".nwd", HostApp.Navisworks)]
+    [DataRow(".nwc", HostApp.Navisworks)]
+    [DataRow(".nwf", HostApp.Navisworks)]
     public void FromExtension_maps_known_extensions(string extension, HostApp expected)
     {
-        Assert.Equal(expected, HostAppExtensions.FromExtension(extension));
+        Assert.AreEqual(expected, HostAppExtensions.FromExtension(extension));
     }
 
-    [Theory]
-    [InlineData(".RVT", HostApp.Revit)]
-    [InlineData(".DwG", HostApp.AutoCad)]
-    [InlineData(".NWD", HostApp.Navisworks)]
+    [TestMethod]
+    [DataRow(".RVT", HostApp.Revit)]
+    [DataRow(".DwG", HostApp.AutoCad)]
+    [DataRow(".NWD", HostApp.Navisworks)]
     public void FromExtension_is_case_insensitive(string extension, HostApp expected)
     {
-        Assert.Equal(expected, HostAppExtensions.FromExtension(extension));
+        Assert.AreEqual(expected, HostAppExtensions.FromExtension(extension));
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(".unknown")]
-    [InlineData("rvt")]
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow(".unknown")]
+    [DataRow("rvt")]
     public void FromExtension_returns_null_for_unknown_or_empty(string? extension)
     {
-        Assert.Null(HostAppExtensions.FromExtension(extension));
+        Assert.IsNull(HostAppExtensions.FromExtension(extension));
     }
 
-    [Fact]
+    [TestMethod]
     public void FromExtension_dwg_is_never_civil3d()
     {
-        Assert.Equal(HostApp.AutoCad, HostAppExtensions.FromExtension(".dwg"));
-        Assert.NotEqual(HostApp.Civil3D, HostAppExtensions.FromExtension(".dwg"));
+        Assert.AreEqual(HostApp.AutoCad, HostAppExtensions.FromExtension(".dwg"));
+        Assert.AreNotEqual(HostApp.Civil3D, HostAppExtensions.FromExtension(".dwg"));
     }
 
-    [Theory]
-    [InlineData(HostApp.AutoCad)]
-    [InlineData(HostApp.Civil3D)]
-    [InlineData(HostApp.Plant3D)]
-    [InlineData(HostApp.AcadArch)]
-    [InlineData(HostApp.AcadMech)]
-    [InlineData(HostApp.AcadElec)]
-    [InlineData(HostApp.AcadMep)]
-    [InlineData(HostApp.AcadMap3D)]
+    [TestMethod]
+    [DataRow(HostApp.AutoCad)]
+    [DataRow(HostApp.Civil3D)]
+    [DataRow(HostApp.Plant3D)]
+    [DataRow(HostApp.AcadArch)]
+    [DataRow(HostApp.AcadMech)]
+    [DataRow(HostApp.AcadElec)]
+    [DataRow(HostApp.AcadMep)]
+    [DataRow(HostApp.AcadMap3D)]
     public void IsAcadFamily_is_true_for_autocad_family(HostApp host)
     {
-        Assert.True(host.IsAcadFamily());
+        Assert.IsTrue(host.IsAcadFamily());
     }
 
-    [Theory]
-    [InlineData(HostApp.Revit)]
-    [InlineData(HostApp.Navisworks)]
-    [InlineData(HostApp.Rhino)]
-    [InlineData(HostApp.Tekla)]
+    [TestMethod]
+    [DataRow(HostApp.Revit)]
+    [DataRow(HostApp.Navisworks)]
+    [DataRow(HostApp.Rhino)]
+    [DataRow(HostApp.Tekla)]
     public void IsAcadFamily_is_false_outside_autocad_family(HostApp host)
     {
-        Assert.False(host.IsAcadFamily());
+        Assert.IsFalse(host.IsAcadFamily());
     }
 }

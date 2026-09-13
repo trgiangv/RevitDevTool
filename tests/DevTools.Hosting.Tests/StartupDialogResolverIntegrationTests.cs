@@ -4,16 +4,19 @@ using DevTools.Hosting;
 
 namespace DevTools.Hosting.Tests;
 
+[TestClass]
 public sealed class StartupDialogResolverIntegrationTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task RunAsync_clicks_matching_startup_dialog()
     {
         using var window = FakeStartupDialog.Create(
             title: "Test unsigned add-in warning",
             buttonText: "OK");
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(3));
 
         var result = await StartupDialogResolver.RunAsync(
@@ -30,7 +33,7 @@ public sealed class StartupDialogResolverIntegrationTests
             },
             cts.Token);
 
-        Assert.True(result.ClickCount >= 1, $"clicked={string.Join(',', result.Clicked)} remaining={string.Join(',', result.Remaining)}");
+        Assert.IsTrue(result.ClickCount >= 1, $"clicked={string.Join(',', result.Clicked)} remaining={string.Join(',', result.Remaining)}");
     }
 
     private static class FakeStartupDialog
@@ -77,7 +80,7 @@ public sealed class StartupDialogResolverIntegrationTests
                 IntPtr.Zero,
                 instance,
                 IntPtr.Zero);
-            Assert.NotEqual(IntPtr.Zero, dialog);
+            Assert.AreNotEqual(IntPtr.Zero, dialog);
 
             var button = CreateWindowEx(
                 0,
@@ -92,7 +95,7 @@ public sealed class StartupDialogResolverIntegrationTests
                 IntPtr.Zero,
                 instance,
                 IntPtr.Zero);
-            Assert.NotEqual(IntPtr.Zero, button);
+            Assert.AreNotEqual(IntPtr.Zero, button);
 
             return new Handle(dialog);
         }

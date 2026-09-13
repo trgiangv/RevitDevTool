@@ -1,14 +1,15 @@
 namespace DevTools.Hosting.Tests;
 
+[TestClass]
 public sealed class AssemblyIsolationAddinBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Revit_addin_uses_kernel_metadata_discovery_and_owns_one_resolver_lifecycle()
     {
         AssertAddinBoundary("RevitDevTool", "RevitCommandDiscovery.cs");
     }
 
-    [Fact]
+    [TestMethod]
     public void Acad_addin_uses_kernel_metadata_discovery_and_owns_one_resolver_lifecycle()
     {
         AssertAddinBoundary("ACadDevTool", "AcadCommandDiscovery.cs");

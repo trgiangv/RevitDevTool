@@ -3,39 +3,42 @@ using DevTools.Hosting;
 
 namespace DevTools.Hosting.Tests;
 
+[TestClass]
 public sealed class HostLaunchServiceStartTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void SingleFor_returns_default_when_no_match()
     {
-        Assert.Null(HostLaunchService.SingleFor(Array.Empty<StubPathResolver>(), HostApp.Revit, static r => r.Supports(HostApp.Revit)));
+        Assert.IsNull(HostLaunchService.SingleFor(Array.Empty<StubPathResolver>(), HostApp.Revit, static r => r.Supports(HostApp.Revit)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Start_throws_when_file_path_missing()
     {
         var service = new HostLaunchService([new StubPathResolver()], [new StubArgumentBuilder()], []);
         var request = new HostLaunchRequest(HostApp.Revit, "2025", @"C:\missing\file.rvt", null);
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => service.Start(request, TestContext.Current.CancellationToken));
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
+            () => service.Start(request, TestContext.CancellationToken));
         Assert.Contains("File not found", ex.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Start_launches_process_with_resolved_version()
     {
         var service = new HostLaunchService([new StubPathResolver()], [new StubArgumentBuilder()], []);
         var request = new HostLaunchRequest(HostApp.Revit, "", null, null);
-        var started = service.Start(request, TestContext.Current.CancellationToken);
+        var started = service.Start(request, TestContext.CancellationToken);
 
         try
         {
-            Assert.Equal("2025", started.Version);
-            Assert.Equal(@"C:\Windows\System32\cmd.exe", started.ExePath, StringComparer.OrdinalIgnoreCase);
-            Assert.Equal(HostLaunchRequest.DefaultLanguageCulture, started.LanguageCulture);
-            Assert.NotEmpty(started.Arguments);
-            Assert.True(started.Process.WaitForExit(5000));
-            Assert.True(started.Process.HasExited);
+            Assert.AreEqual("2025", started.Version);
+            Assert.AreEqual(@"C:\Windows\System32\cmd.exe", started.ExePath, StringComparer.OrdinalIgnoreCase);
+            Assert.AreEqual(HostLaunchRequest.DefaultLanguageCulture, started.LanguageCulture);
+            Assert.IsNotEmpty(started.Arguments);
+            Assert.IsTrue(started.Process.WaitForExit(5000));
+            Assert.IsTrue(started.Process.HasExited);
         }
         finally
         {
@@ -43,7 +46,7 @@ public sealed class HostLaunchServiceStartTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Start_throws_when_no_compatible_version()
     {
         var service = new HostLaunchService(
@@ -51,12 +54,12 @@ public sealed class HostLaunchServiceStartTests
             [new StubArgumentBuilder()],
             []);
         var request = new HostLaunchRequest(HostApp.Revit, "", null, null);
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => service.Start(request, TestContext.Current.CancellationToken));
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
+            () => service.Start(request, TestContext.CancellationToken));
         Assert.Contains("No compatible", ex.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Start_throws_when_executable_not_found()
     {
         var service = new HostLaunchService(
@@ -64,12 +67,12 @@ public sealed class HostLaunchServiceStartTests
             [new StubArgumentBuilder()],
             []);
         var request = new HostLaunchRequest(HostApp.Revit, "2025", null, null);
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => service.Start(request, TestContext.Current.CancellationToken));
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
+            () => service.Start(request, TestContext.CancellationToken));
         Assert.Contains("installation not found", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void Start_wraps_process_start_failures()
     {
         var service = new HostLaunchService(
@@ -77,12 +80,12 @@ public sealed class HostLaunchServiceStartTests
             [new StubArgumentBuilder()],
             []);
         var request = new HostLaunchRequest(HostApp.Revit, "2025", null, null);
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => service.Start(request, TestContext.Current.CancellationToken));
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
+            () => service.Start(request, TestContext.CancellationToken));
         Assert.Contains("Failed to launch", ex.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void TerminateIfIncomplete_kills_on_timed_out()
     {
         using var process = Process.Start(new ProcessStartInfo
@@ -93,7 +96,7 @@ public sealed class HostLaunchServiceStartTests
             CreateNoWindow = true,
         })!;
         HostLaunchWaiter.TerminateIfIncomplete(process, HostStatus.TimedOut);
-        Assert.True(process.WaitForExit(5000));
+        Assert.IsTrue(process.WaitForExit(5000));
     }
 
     private sealed class StubPathResolver : IHostPathResolver

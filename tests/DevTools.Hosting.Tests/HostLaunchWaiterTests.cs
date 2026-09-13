@@ -3,21 +3,24 @@ using DevTools.Hosting;
 
 namespace DevTools.Hosting.Tests;
 
+[TestClass]
 public sealed class HostLaunchWaiterTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task UntilAsync_returns_Ready_when_probe_succeeds()
     {
         var status = await HostLaunchWaiter.UntilAsync(
             Process.GetCurrentProcess(),
             static () => true,
             TimeSpan.FromSeconds(2),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.Equal(HostStatus.Ready, status);
+        Assert.AreEqual(HostStatus.Ready, status);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task UntilAsync_returns_Exited_when_process_has_exited()
     {
         using var process = Process.Start(new ProcessStartInfo
@@ -27,34 +30,34 @@ public sealed class HostLaunchWaiterTests
             UseShellExecute = false,
             CreateNoWindow = true,
         })!;
-        Assert.True(process.WaitForExit(5000));
+        Assert.IsTrue(process.WaitForExit(5000));
 
         var status = await HostLaunchWaiter.UntilAsync(
             process,
             static () => false,
             TimeSpan.FromSeconds(2),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.Equal(HostStatus.Exited, status);
+        Assert.AreEqual(HostStatus.Exited, status);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task UntilAsync_returns_TimedOut_when_probe_never_succeeds()
     {
         var status = await HostLaunchWaiter.UntilAsync(
             Process.GetCurrentProcess(),
             static () => false,
             TimeSpan.FromMilliseconds(40),
-            TestContext.Current.CancellationToken,
+            TestContext.CancellationToken,
             pollInterval: TimeSpan.FromMilliseconds(10));
 
-        Assert.Equal(HostStatus.TimedOut, status);
+        Assert.AreEqual(HostStatus.TimedOut, status);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task UntilAsync_returns_Cancelled_when_token_is_cancelled()
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         await cts.CancelAsync();
 
         var status = await HostLaunchWaiter.UntilAsync(
@@ -63,23 +66,23 @@ public sealed class HostLaunchWaiterTests
             TimeSpan.FromSeconds(5),
             cts.Token);
 
-        Assert.Equal(HostStatus.Cancelled, status);
+        Assert.AreEqual(HostStatus.Cancelled, status);
     }
 
-    [Fact]
+    [TestMethod]
     public void TerminateIfIncomplete_kills_on_cancelled()
     {
         using var process = StartLongLived();
         HostLaunchWaiter.TerminateIfIncomplete(process, HostStatus.Cancelled);
-        Assert.True(process.WaitForExit(5000));
+        Assert.IsTrue(process.WaitForExit(5000));
     }
 
-    [Fact]
+    [TestMethod]
     public void TerminateIfIncomplete_leaves_current_process_on_ready()
     {
         var process = Process.GetCurrentProcess();
         HostLaunchWaiter.TerminateIfIncomplete(process, HostStatus.Ready);
-        Assert.False(process.HasExited);
+        Assert.IsFalse(process.HasExited);
     }
 
     private static Process StartLongLived() =>

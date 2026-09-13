@@ -2,9 +2,10 @@ using DevTools.Hosting.Revit;
 
 namespace DevTools.Hosting.Revit.Tests;
 
+[TestClass]
 public sealed class RevitHostingBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Hosting_Revit_forbids_file_metadata_openmcdf_and_ui()
     {
         var root = FindRepositoryRoot();

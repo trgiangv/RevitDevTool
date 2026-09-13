@@ -3,33 +3,37 @@ using DevTools.Hosting.Revit;
 
 namespace DevTools.Hosting.Revit.Tests;
 
+[TestClass]
 public sealed class RevitVersionSelectorTests
 {
-    [Fact]
+    [TestMethod]
     public void File_year_is_a_minimum_oldest_installed_greater_or_equal_wins()
     {
         var selected = RevitVersionSelector.FindCompatibleVersion("2025", ["2026"]);
-        Assert.Equal("2026", selected);
+        Assert.AreEqual("2026", selected);
     }
 
-    [Fact]
+    [TestMethod]
     public void Oldest_compatible_is_chosen_when_several_are_installed()
     {
         var selected = RevitVersionSelector.FindCompatibleVersion("2025", ["2027", "2025", "2026"]);
-        Assert.Equal("2025", selected);
+        Assert.AreEqual("2025", selected);
     }
 
-    [Fact]
+    [TestMethod]
     public void Missing_document_year_picks_newest_installed()
     {
         var selected = RevitVersionSelector.FindCompatibleVersion(null, ["2024", "2026"]);
-        Assert.Equal("2026", selected);
+        Assert.AreEqual("2026", selected);
     }
 }
 
+[TestClass]
 public sealed class RevitFileAwareHostLaunchServiceTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void Explicit_version_skips_metadata()
     {
         var inner = new CapturingLaunchService();
@@ -45,13 +49,13 @@ public sealed class RevitFileAwareHostLaunchServiceTests
 
         decorator.Start(
             new HostLaunchRequest(HostApp.Revit, "2026", @"C:\missing-is-ok-for-skip.rvt", null),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.False(readerCalled);
-        Assert.Equal("2026", inner.LastRequest?.Version);
+        Assert.IsFalse(readerCalled);
+        Assert.AreEqual("2026", inner.LastRequest?.Version);
     }
 
-    [Fact]
+    [TestMethod]
     public void File_2025_with_only_2026_installed_selects_2026()
     {
         var inner = new CapturingLaunchService();
@@ -66,9 +70,9 @@ public sealed class RevitFileAwareHostLaunchServiceTests
 
             decorator.Start(
                 new HostLaunchRequest(HostApp.Revit, "", temp, null),
-                TestContext.Current.CancellationToken);
+                TestContext.CancellationToken);
 
-            Assert.Equal("2026", inner.LastRequest?.Version);
+            Assert.AreEqual("2026", inner.LastRequest?.Version);
         }
         finally
         {

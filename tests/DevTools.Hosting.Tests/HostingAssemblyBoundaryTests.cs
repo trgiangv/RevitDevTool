@@ -2,9 +2,10 @@ using DevTools.Hosting;
 
 namespace DevTools.Hosting.Tests;
 
+[TestClass]
 public sealed class HostingAssemblyBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Hosting_does_not_reference_ui_logging_or_file_metadata()
     {
         var references = typeof(HostApp).Assembly
@@ -21,12 +22,12 @@ public sealed class HostingAssemblyBoundaryTests
         Assert.DoesNotContain("MahApps.Metro", references);
     }
 
-    [Fact]
+    [TestMethod]
     public void Generic_Hosting_source_has_no_product_dialog_or_api_keywords()
     {
         var hostingDir = Path.Combine(RepositoryRoot.Find(), "source", "DevTools.Hosting");
         var sources = Directory.GetFiles(hostingDir, "*.cs", SearchOption.AllDirectories);
-        Assert.NotEmpty(sources);
+        Assert.IsNotEmpty(sources);
 
         string[] forbidden =
         [

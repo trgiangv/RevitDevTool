@@ -5,9 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.Hosting.Tests;
 
+[TestClass]
 public sealed class HostLaunchSupportTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void SingleFor_returns_the_only_match()
     {
         var items = new[]
@@ -17,10 +20,10 @@ public sealed class HostLaunchSupportTests
         };
 
         var match = HostLaunchService.SingleFor(items, HostApp.Revit, item => item.Supports(HostApp.Revit));
-        Assert.Same(items[0], match);
+        Assert.AreSame(items[0], match);
     }
 
-    [Fact]
+    [TestMethod]
     public void SingleFor_throws_when_two_contracts_support_the_same_host()
     {
         var items = new[]
@@ -29,11 +32,11 @@ public sealed class HostLaunchSupportTests
             new FakeSupport(HostApp.Revit),
         };
 
-        Assert.Throws<InvalidOperationException>(
+        Assert.ThrowsExactly<InvalidOperationException>(
             () => HostLaunchService.SingleFor(items, HostApp.Revit, item => item.Supports(HostApp.Revit)));
     }
 
-    [Fact]
+    [TestMethod]
     public void AddLaunch_helpers_register_at_most_one_Supports_per_host_per_contract()
     {
         var services = new ServiceCollection();
@@ -44,33 +47,36 @@ public sealed class HostLaunchSupportTests
 
         foreach (var host in Enum.GetValues<HostApp>())
         {
-            Assert.InRange(provider.GetServices<IHostPathResolver>().Count(r => r.Supports(host)), 0, 1);
-            Assert.InRange(provider.GetServices<IHostArgumentBuilder>().Count(b => b.Supports(host)), 0, 1);
-            Assert.InRange(provider.GetServices<IHostStartupDialogSpec>().Count(s => s.Supports(host)), 0, 1);
+            var resolverCount = provider.GetServices<IHostPathResolver>().Count(r => r.Supports(host));
+            Assert.IsTrue(resolverCount is >= 0 and <= 1);
+            var argumentBuilderCount = provider.GetServices<IHostArgumentBuilder>().Count(b => b.Supports(host));
+            Assert.IsTrue(argumentBuilderCount is >= 0 and <= 1);
+            var dialogSpecCount = provider.GetServices<IHostStartupDialogSpec>().Count(s => s.Supports(host));
+            Assert.IsTrue(dialogSpecCount is >= 0 and <= 1);
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void AddAutocadFamilyLaunch_registers_core_engine()
     {
         var services = new ServiceCollection();
         services.AddAcadLaunch();
         using var provider = services.BuildServiceProvider();
-        Assert.NotNull(provider.GetService<IHostLaunchService>());
-        Assert.NotNull(provider.GetService<HostLaunchService>());
+        Assert.IsNotNull(provider.GetService<IHostLaunchService>());
+        Assert.IsNotNull(provider.GetService<HostLaunchService>());
     }
 
-    [Fact]
+    [TestMethod]
     public void HostLaunchService_throws_when_path_or_args_are_missing()
     {
         var service = new HostLaunchService([], [], []);
         var request = new HostLaunchRequest(HostApp.Navisworks, "2026", null, null);
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => service.Start(request, TestContext.Current.CancellationToken));
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
+            () => service.Start(request, TestContext.CancellationToken));
         Assert.Contains("not yet supported", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void HostLaunchService_throws_when_argument_builder_returns_empty_argv()
     {
         var service = new HostLaunchService(
@@ -78,12 +84,12 @@ public sealed class HostLaunchSupportTests
             [new EmptyArgumentBuilder()],
             []);
         var request = new HostLaunchRequest(HostApp.Revit, "2025", null, null);
-        var ex = Assert.Throws<InvalidOperationException>(
-            () => service.Start(request, TestContext.Current.CancellationToken));
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
+            () => service.Start(request, TestContext.CancellationToken));
         Assert.Contains("not yet supported", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void HostLaunchService_source_has_no_host_switch()
     {
         var source = File.ReadAllText(Path.Combine(
