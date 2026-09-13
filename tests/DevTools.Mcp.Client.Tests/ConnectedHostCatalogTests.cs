@@ -5,29 +5,30 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Client.Tests;
 
+[TestClass]
 public sealed class ConnectedHostCatalogTests
 {
     private static readonly HostKey MachineA = new("machine-a", 100);
     private static readonly HostKey MachineB = new("machine-b", 200);
 
-    [Fact]
+    [TestMethod]
     public void ReplaceRemoveClear_ManageEntries()
     {
         var catalog = new ConnectedHostCatalog();
         var entry = CreateEntry(MachineA, "ping", "sample://demo/status");
 
         catalog.Replace(entry);
-        Assert.Single(catalog.List());
+        Assert.HasCount(1, catalog.List());
 
-        Assert.True(catalog.Remove(MachineA));
-        Assert.Empty(catalog.List());
+        Assert.IsTrue(catalog.Remove(MachineA));
+        Assert.IsEmpty(catalog.List());
 
         catalog.Replace(entry);
         catalog.Clear();
-        Assert.Empty(catalog.List());
+        Assert.IsEmpty(catalog.List());
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_WithoutQuery_ReturnsSortedHits()
     {
         var catalog = new ConnectedHostCatalog();
@@ -36,12 +37,12 @@ public sealed class ConnectedHostCatalogTests
 
         var hits = catalog.Search(null);
 
-        Assert.Equal(6, hits.Count);
-        Assert.Equal("alpha_tool", hits.First(hit => hit.Kind == HostCatalogKind.Tool && hit.Key == MachineB).Target);
-        Assert.Equal("zebra_tool", hits.First(hit => hit.Kind == HostCatalogKind.Tool && hit.Key == MachineA).Target);
+        Assert.AreEqual(6, hits.Count);
+        Assert.AreEqual("alpha_tool", hits.First(hit => hit.Kind == HostCatalogKind.Tool && hit.Key == MachineB).Target);
+        Assert.AreEqual("zebra_tool", hits.First(hit => hit.Kind == HostCatalogKind.Tool && hit.Key == MachineA).Target);
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_WithQuery_RanksExactTargetFirst()
     {
         var catalog = new ConnectedHostCatalog();
@@ -50,12 +51,12 @@ public sealed class ConnectedHostCatalogTests
 
         var hits = catalog.Search("read_file_info");
 
-        Assert.Single(hits);
-        Assert.Equal(HostCatalogKind.Tool, hits[0].Kind);
-        Assert.Equal("read_file_info", hits[0].Target);
+        Assert.HasCount(1, hits);
+        Assert.AreEqual(HostCatalogKind.Tool, hits[0].Kind);
+        Assert.AreEqual("read_file_info", hits[0].Target);
     }
 
-    [Fact]
+    [TestMethod]
     public void Search_FiltersByMachineAndProcess()
     {
         var catalog = new ConnectedHostCatalog();
@@ -64,11 +65,12 @@ public sealed class ConnectedHostCatalogTests
 
         var hits = catalog.Search(null, machineId: "machine-a", hostInstanceId: 100);
 
-        Assert.Equal(3, hits.Count);
-        Assert.All(hits, hit => Assert.Equal(MachineA, hit.Key));
+        Assert.AreEqual(3, hits.Count);
+        foreach (var hit in hits)
+            Assert.AreEqual(MachineA, hit.Key);
     }
 
-    [Fact]
+    [TestMethod]
     public void Resolve_FoundNotFoundAndAmbiguous()
     {
         var catalog = new ConnectedHostCatalog();
@@ -76,16 +78,16 @@ public sealed class ConnectedHostCatalogTests
         catalog.Replace(CreateEntry(MachineB, "ping", "sample://b/ping"));
 
         var notFound = catalog.Resolve(HostCatalogKind.Tool, "missing", null, null);
-        Assert.Equal(HostCatalogResolutionState.NotFound, notFound.State);
-        Assert.Null(notFound.Hit);
+        Assert.AreEqual(HostCatalogResolutionState.NotFound, notFound.State);
+        Assert.IsNull(notFound.Hit);
 
         var found = catalog.Resolve(HostCatalogKind.Resource, "sample://a/ping", "machine-a", 100);
-        Assert.Equal(HostCatalogResolutionState.Found, found.State);
-        Assert.NotNull(found.Hit);
+        Assert.AreEqual(HostCatalogResolutionState.Found, found.State);
+        Assert.IsNotNull(found.Hit);
 
         var ambiguous = catalog.Resolve(HostCatalogKind.Tool, "ping", null, null);
-        Assert.Equal(HostCatalogResolutionState.Ambiguous, ambiguous.State);
-        Assert.Equal(2, ambiguous.Candidates.Count);
+        Assert.AreEqual(HostCatalogResolutionState.Ambiguous, ambiguous.State);
+        Assert.AreEqual(2, ambiguous.Candidates.Count);
     }
 
     private static HostCatalogEntry CreateEntry(HostKey key, string toolName, string resourceUri) => new()

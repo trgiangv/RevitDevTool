@@ -2,14 +2,15 @@ using DevTools.Mcp.Client;
 
 namespace DevTools.Mcp.Client.Tests;
 
+[TestClass]
 public sealed class DeviceMetadataTests
 {
-    [Fact]
+    [TestMethod]
     public void Collect_ReturnsNonEmptyMachineIdAndName()
     {
         var metadata = DeviceMetadata.Collect();
 
-        Assert.False(string.IsNullOrWhiteSpace(metadata.MachineId));
-        Assert.Equal(Environment.MachineName, metadata.MachineName);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(metadata.MachineId));
+        Assert.AreEqual(Environment.MachineName, metadata.MachineName);
     }
 }

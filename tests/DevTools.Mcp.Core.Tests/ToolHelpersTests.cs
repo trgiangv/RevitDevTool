@@ -5,105 +5,106 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class ToolHelpersTests
 {
-    [Fact]
+    [TestMethod]
     public void RuntimeJsonOptions_UsesCamelCaseAndReflectionResolver()
     {
         var options = ToolHelpers.RuntimeJsonOptions;
 
-        Assert.Same(JsonNamingPolicy.CamelCase, options.PropertyNamingPolicy);
-        Assert.NotNull(options.TypeInfoResolver);
+        Assert.AreSame(JsonNamingPolicy.CamelCase, options.PropertyNamingPolicy);
+        Assert.IsNotNull(options.TypeInfoResolver);
     }
 
-    [Fact]
+    [TestMethod]
     public void ErrorResult_String_SetsIsErrorAndTextContent()
     {
         var result = ToolHelpers.ErrorResult("boom");
 
-        Assert.True(result.IsError);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
-        Assert.Equal("boom", text);
+        Assert.IsTrue(result.IsError);
+        var text = Assert.IsInstanceOfType<TextContentBlock>(result.Content.Single()).Text;
+        Assert.AreEqual("boom", text);
     }
 
-    [Fact]
+    [TestMethod]
     public void ErrorResult_Generic_SerializesPayload()
     {
         var result = ToolHelpers.ErrorResult(new { code = 42 });
 
-        Assert.True(result.IsError);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        Assert.IsTrue(result.IsError);
+        var text = Assert.IsInstanceOfType<TextContentBlock>(result.Content.Single()).Text;
         Assert.Contains("\"code\":42", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Result_String_WrapsPlainText()
     {
         var result = ToolHelpers.Result("hello");
 
-        Assert.Null(result.IsError);
-        Assert.Equal("hello", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+        Assert.IsNull(result.IsError);
+        Assert.AreEqual("hello", Assert.IsInstanceOfType<TextContentBlock>(result.Content.Single()).Text);
     }
 
-    [Fact]
+    [TestMethod]
     public void Result_Generic_SerializesPayload()
     {
         var result = ToolHelpers.Result(new { ok = true });
 
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text;
+        var text = Assert.IsInstanceOfType<TextContentBlock>(result.Content.Single()).Text;
         Assert.Contains("\"ok\":true", text, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Result_WithTypeInfo_UsesProvidedSerializer()
     {
         var typeInfo = (JsonTypeInfo<string>)ToolHelpers.ProtocolOptions.GetTypeInfo(typeof(string))!;
         var result = ToolHelpers.Result("typed", typeInfo);
 
-        Assert.Equal("\"typed\"", Assert.IsType<TextContentBlock>(Assert.Single(result.Content)).Text);
+        Assert.AreEqual("\"typed\"", Assert.IsInstanceOfType<TextContentBlock>(result.Content.Single()).Text);
     }
 
-    [Fact]
+    [TestMethod]
     public void ImageResult_EncodesBinaryContent()
     {
         var bytes = new byte[] { 0x01, 0x02, 0x03 };
         var result = ToolHelpers.ImageResult(bytes, "image/png");
 
-        var image = Assert.IsType<ImageContentBlock>(Assert.Single(result.Content));
-        Assert.Equal("image/png", image.MimeType);
-        Assert.Equal(bytes, image.DecodedData.ToArray());
+        var image = Assert.IsInstanceOfType<ImageContentBlock>(result.Content.Single());
+        Assert.AreEqual("image/png", image.MimeType);
+        Assert.AreSequenceEqual(bytes, image.DecodedData.ToArray());
     }
 
-    [Fact]
+    [TestMethod]
     public void Serialize_Null_UsesDeclaredType()
     {
         string? value = null;
-        Assert.Equal("null", ToolHelpers.Serialize(value));
+        Assert.AreEqual("null", ToolHelpers.Serialize(value));
     }
 
-    [Fact]
+    [TestMethod]
     public void Serialize_WithExplicitType_UsesTypeArgument()
     {
         object value = 7;
         var json = ToolHelpers.Serialize(value, typeof(int));
-        Assert.Equal("7", json);
+        Assert.AreEqual("7", json);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToElement_Null_ReturnsNullElement()
     {
         string? value = null;
         var element = ToolHelpers.ToElement(value);
-        Assert.Equal(JsonValueKind.Null, element.ValueKind);
+        Assert.AreEqual(JsonValueKind.Null, element.ValueKind);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToElement_DerivedInstance_PreservesRuntimeShape()
     {
         object value = new { baseField = "base", extra = "extra" };
         var element = ToolHelpers.ToElement(value);
 
-        Assert.Equal("extra", element.GetProperty("extra").GetString());
-        Assert.Equal("base", element.GetProperty("baseField").GetString());
+        Assert.AreEqual("extra", element.GetProperty("extra").GetString());
+        Assert.AreEqual("base", element.GetProperty("baseField").GetString());
     }
 }

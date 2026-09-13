@@ -1,12 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="MSTest.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
+        <UseMicrosoftCodeCoverage>true</UseMicrosoftCodeCoverage>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="xunit.v3"/>
         <PackageReference Include="ModelContextProtocol"/>
         <PackageReference Include="ModelContextProtocol.Extensions.Tasks"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Xunit"/>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
         <Using Include="DevTools.Ipc"/>
         <Using Include="DevTools.Mcp.Core"/>
         <Using Include="DevTools.Mcp.Core.Catalog"/>

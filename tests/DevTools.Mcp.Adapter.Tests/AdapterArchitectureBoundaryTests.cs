@@ -2,14 +2,15 @@ using System.Reflection;
 
 namespace DevTools.Mcp.Adapter.Tests;
 
+[TestClass]
 public sealed class AdapterArchitectureBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Execution_DoesNotReferenceHostMcpAdapter()
     {
         var executionReferences = Assembly.Load("DevTools.Execution").GetReferencedAssemblies();
 
-        Assert.DoesNotContain(executionReferences, reference =>
-            string.Equals(reference.Name, "DevTools.Mcp.Adapter", StringComparison.Ordinal));
+        Assert.IsFalse(executionReferences.Any(reference =>
+            string.Equals(reference.Name, "DevTools.Mcp.Adapter", StringComparison.Ordinal)));
     }
 }

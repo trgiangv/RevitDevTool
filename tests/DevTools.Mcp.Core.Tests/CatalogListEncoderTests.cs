@@ -6,9 +6,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class CatalogListEncoderTests
 {
-    [Fact]
+    [TestMethod]
     public void ListToolsResult_SerializesToolDescriptors()
     {
         var tools = new List<Tool>
@@ -31,14 +32,14 @@ public sealed class CatalogListEncoderTests
         var json = JsonSerializer.SerializeToNode(new ListToolsResult { Tools = tools }, McpJsonUtilities.DefaultOptions)!.AsObject();
         var item = json["tools"]!.AsArray()[0]!.AsObject();
 
-        Assert.Equal("ping", item["name"]!.GetValue<string>());
-        Assert.Equal("Ping", item["title"]!.GetValue<string>());
-        Assert.Equal("Health check", item["description"]!.GetValue<string>());
-        Assert.True(item["annotations"]!["readOnlyHint"]!.GetValue<bool>());
-        Assert.True(item["annotations"]!["idempotentHint"]!.GetValue<bool>());
+        Assert.AreEqual("ping", item["name"]!.GetValue<string>());
+        Assert.AreEqual("Ping", item["title"]!.GetValue<string>());
+        Assert.AreEqual("Health check", item["description"]!.GetValue<string>());
+        Assert.IsTrue(item["annotations"]!["readOnlyHint"]!.GetValue<bool>());
+        Assert.IsTrue(item["annotations"]!["idempotentHint"]!.GetValue<bool>());
     }
 
-    [Fact]
+    [TestMethod]
     public void ListResourcesResult_SerializesResourceDescriptors()
     {
         var resources = new List<Resource>
@@ -57,13 +58,13 @@ public sealed class CatalogListEncoderTests
         var json = JsonSerializer.SerializeToNode(new ListResourcesResult { Resources = resources }, McpJsonUtilities.DefaultOptions)!.AsObject();
         var item = json["resources"]!.AsArray()[0]!.AsObject();
 
-        Assert.Equal("sample://demo/status", item["uri"]!.GetValue<string>());
-        Assert.Equal("demo_status", item["name"]!.GetValue<string>());
-        Assert.Equal(128, item["size"]!.GetValue<long>());
-        Assert.Equal(0.9, item["annotations"]!["priority"]!.GetValue<double>(), 3);
+        Assert.AreEqual("sample://demo/status", item["uri"]!.GetValue<string>());
+        Assert.AreEqual("demo_status", item["name"]!.GetValue<string>());
+        Assert.AreEqual(128, item["size"]!.GetValue<long>());
+        Assert.AreEqual(0.9, item["annotations"]!["priority"]!.GetValue<double>(), 3);
     }
 
-    [Fact]
+    [TestMethod]
     public void Tool_MatchesSdkShape_ForSimpleTool()
     {
         var sdk = new Tool
@@ -86,15 +87,15 @@ public sealed class CatalogListEncoderTests
 
         using var sdkDoc = JsonDocument.Parse(sdkJson);
         using var coreDoc = JsonDocument.Parse(coreJson);
-        Assert.Equal(
+        Assert.AreEqual(
             sdkDoc.RootElement.GetProperty("name").GetString(),
             coreDoc.RootElement.GetProperty("name").GetString());
-        Assert.Equal(
+        Assert.AreEqual(
             sdkDoc.RootElement.GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean(),
             coreDoc.RootElement.GetProperty("annotations").GetProperty("readOnlyHint").GetBoolean());
     }
 
-    [Fact]
+    [TestMethod]
     public void Resource_MatchesSdkShape_ForDirectResource()
     {
         var sdk = new Resource
@@ -114,26 +115,26 @@ public sealed class CatalogListEncoderTests
 
         using var sdkDoc = JsonDocument.Parse(sdkJson);
         using var coreDoc = JsonDocument.Parse(coreJson);
-        Assert.Equal(
+        Assert.AreEqual(
             sdkDoc.RootElement.GetProperty("uri").GetString(),
             coreDoc.RootElement.GetProperty("uri").GetString());
-        Assert.Equal(
+        Assert.AreEqual(
             sdkDoc.RootElement.GetProperty("annotations").GetProperty("priority").GetDouble(),
             coreDoc.RootElement.GetProperty("annotations").GetProperty("priority").GetDouble(),
             3);
     }
 
-    [Fact]
+    [TestMethod]
     public void CoerceInputSchema_InvalidSchema_FallsBackToDefaultObject()
     {
         var invalid = JsonSerializer.SerializeToElement(new { type = "string" });
         var coerced = DescriptorFactory.CoerceInputSchema(invalid);
 
-        Assert.Equal(JsonValueKind.Object, coerced.ValueKind);
-        Assert.Equal("object", coerced.GetProperty("type").GetString());
+        Assert.AreEqual(JsonValueKind.Object, coerced.ValueKind);
+        Assert.AreEqual("object", coerced.GetProperty("type").GetString());
     }
 
-    [Fact]
+    [TestMethod]
     public void NormalizeTool_InvalidInputSchema_DoesNotThrow()
     {
         var tool = new Tool
@@ -144,7 +145,7 @@ public sealed class CatalogListEncoderTests
 
         var normalized = DescriptorFactory.NormalizeTool(tool);
 
-        Assert.Equal("safe_tool", normalized.Name);
-        Assert.Equal("object", normalized.InputSchema.GetProperty("type").GetString());
+        Assert.AreEqual("safe_tool", normalized.Name);
+        Assert.AreEqual("object", normalized.InputSchema.GetProperty("type").GetString());
     }
 }

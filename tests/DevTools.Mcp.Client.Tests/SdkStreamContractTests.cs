@@ -7,12 +7,16 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Client.Tests;
 
+[TestClass]
 public class SdkStreamContractTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task InMemorySdk_InitializeListCallResourceAndErrors()
     {
         await using var harness = await SdkTestHarness.StartAsync(
+            cancellationToken: TestContext.CancellationToken,
             tools:
             [
                 McpServerTool.Create(
@@ -53,40 +57,42 @@ public class SdkStreamContractTests
 
         var client = harness.Client;
 
-        var tools = await client.ListToolsAsync(cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Contains(tools, t => t.Name == "echo");
-        Assert.Contains(tools, t => t.Name == "fail");
+        var tools = await client.ListToolsAsync(cancellationToken: TestContext.CancellationToken);
+        Assert.IsTrue(tools.Any(t => t.Name == "echo"));
+        Assert.IsTrue(tools.Any(t => t.Name == "fail"));
 
         var call = await client.CallToolAsync(
             "echo",
             new Dictionary<string, object?> { ["message"] = "hi" },
-            cancellationToken: TestContext.Current.CancellationToken);
-        Assert.NotEqual(true, call.IsError);
+            cancellationToken: TestContext.CancellationToken);
+        Assert.AreNotEqual(true, call.IsError);
         Assert.Contains("echo:hi", call.Content.OfType<TextContentBlock>().Select(c => c.Text));
 
-        var fail = await client.CallToolAsync("fail", cancellationToken: TestContext.Current.CancellationToken);
-        Assert.True(fail.IsError == true);
+        var fail = await client.CallToolAsync("fail", cancellationToken: TestContext.CancellationToken);
+        Assert.IsTrue(fail.IsError == true);
 
-        var resources = await client.ListResourcesAsync(cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Contains(resources, r => r.Uri == "revit://version");
+        var resources = await client.ListResourcesAsync(cancellationToken: TestContext.CancellationToken);
+        Assert.IsTrue(resources.Any(r => r.Uri == "revit://version"));
 
-        var direct = await client.ReadResourceAsync("revit://version", cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Contains(direct.Contents.OfType<TextResourceContents>(), c => c.Text == "2025");
+        var direct = await client.ReadResourceAsync("revit://version", cancellationToken: TestContext.CancellationToken);
+        Assert.IsTrue(direct.Contents.OfType<TextResourceContents>().Any(c => c.Text == "2025"));
 
-        var templates = await client.ListResourceTemplatesAsync(cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Contains(templates, t => t.UriTemplate == "revit://element/{id}");
+        var templates = await client.ListResourceTemplatesAsync(cancellationToken: TestContext.CancellationToken);
+        Assert.IsTrue(templates.Any(t => t.UriTemplate == "revit://element/{id}"));
 
         var templated = await client.ReadResourceAsync(
             "revit://element/{id}",
             new Dictionary<string, object?> { ["id"] = "42" },
-            cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Contains(templated.Contents.OfType<TextResourceContents>(), c => c.Text == "element-42");
+            cancellationToken: TestContext.CancellationToken);
+        Assert.IsTrue(templated.Contents.OfType<TextResourceContents>().Any(c => c.Text == "element-42"));
     }
 
-    [Fact]
+    [TestMethod]
     public async Task InMemorySdk_PropagatesCancellation()
     {
         await using var harness = await SdkTestHarness.StartAsync(
+            cancellationToken: TestContext.CancellationToken,
+            tools:
         [
             McpServerTool.Create(
                 async (CancellationToken ct) =>
@@ -97,10 +103,10 @@ public class SdkStreamContractTests
                 new McpServerToolCreateOptions { Name = "slow", Description = "Slow tool" })
         ]);
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromMilliseconds(200));
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        await Assert.ThrowsAsync<OperationCanceledException>(async () =>
             await harness.Client.CallToolAsync("slow", cancellationToken: cts.Token));
     }
 }
@@ -135,6 +141,7 @@ internal sealed class SdkTestHarness : IAsyncDisposable
     public McpClient Client { get; }
 
     public static async Task<SdkTestHarness> StartAsync(
+        CancellationToken cancellationToken = default,
         IEnumerable<McpServerTool>? tools = null,
         IEnumerable<McpServerResource>? resources = null)
     {
@@ -177,7 +184,7 @@ internal sealed class SdkTestHarness : IAsyncDisposable
                 serverToClient.Reader.AsStream(),
                 NullLoggerFactory.Instance),
             loggerFactory: NullLoggerFactory.Instance,
-            cancellationToken: TestContext.Current.CancellationToken);
+            cancellationToken: cancellationToken);
 
         return new SdkTestHarness(client, server, serverTask, clientToServer, serverToClient, cts, appServices);
     }

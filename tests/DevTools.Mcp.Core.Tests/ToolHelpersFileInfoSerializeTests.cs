@@ -8,9 +8,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class ToolHelpersFileInfoSerializeTests
 {
-    [Fact]
+    [TestMethod]
     public void ToolHelpers_Serialize_PreservesDerivedFileInfoFieldsWhenDeclaredAsBase()
     {
         FileInfoResult result = new RevitFileInfoSummaryResult
@@ -33,7 +34,7 @@ public sealed class ToolHelpersFileInfoSerializeTests
 
         var json = ToolHelpers.Serialize(result);
         var toolResult = ToolHelpers.Result(result);
-        var text = Assert.IsType<TextContentBlock>(Assert.Single(toolResult.Content)).Text;
+        var text = Assert.IsInstanceOfType<TextContentBlock>(toolResult.Content.Single()).Text;
 
         Assert.Contains("\"hostApp\":\"Revit\"", json, StringComparison.Ordinal);
         Assert.Contains("\"basicInfo\"", json, StringComparison.Ordinal);
@@ -44,7 +45,7 @@ public sealed class ToolHelpersFileInfoSerializeTests
         Assert.DoesNotContain("\"hostApp\":\"Civil3D\"", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToolHelpers_Serialize_PreservesAutoCadHostAppWireNameForDwg()
     {
         FileInfoResult result = new DwgFileInfoSummaryResult

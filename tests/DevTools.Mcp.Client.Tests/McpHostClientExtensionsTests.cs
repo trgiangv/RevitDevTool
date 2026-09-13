@@ -5,9 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Mcp.Client.Tests;
 
+[TestClass]
 public sealed class McpHostClientExtensionsTests
 {
-    [Fact]
+    [TestMethod]
     public void AddMcpHostClient_RegistersBrokerScannerAndDiscovery()
     {
         var services = new ServiceCollection();
@@ -15,9 +16,9 @@ public sealed class McpHostClientExtensionsTests
         services.AddMcpHostClient();
         var provider = services.BuildServiceProvider();
 
-        Assert.IsType<McpPipeScanner>(provider.GetRequiredService<IMcpPipeScanner>());
-        Assert.IsType<HostBroker>(provider.GetRequiredService<HostBroker>());
-        Assert.Same(provider.GetRequiredService<HostBroker>(), provider.GetRequiredService<IHostBroker>());
-        Assert.Same(provider.GetRequiredService<HostBroker>(), provider.GetRequiredService<IHostDiscovery>());
+        Assert.IsInstanceOfType<McpPipeScanner>(provider.GetRequiredService<IMcpPipeScanner>());
+        Assert.IsInstanceOfType<HostBroker>(provider.GetRequiredService<HostBroker>());
+        Assert.AreSame(provider.GetRequiredService<HostBroker>(), provider.GetRequiredService<IHostBroker>());
+        Assert.AreSame(provider.GetRequiredService<HostBroker>(), provider.GetRequiredService<IHostDiscovery>());
     }
 }

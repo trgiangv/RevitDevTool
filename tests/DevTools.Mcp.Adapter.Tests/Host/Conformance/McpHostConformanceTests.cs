@@ -8,9 +8,10 @@ using ModelContextProtocol.Protocol;
 namespace DevTools.Mcp.Adapter.Tests.Host.Conformance;
 
 /// <summary>Golden JSON shape checks for host spec writers (Phase 5).</summary>
+[TestClass]
 public sealed class McpHostConformanceTests
 {
-    [Fact]
+    [TestMethod]
     public void ToolsList_MatchesGoldenEnvelope()
     {
         var json = JsonSerializer.SerializeToNode(
@@ -28,14 +29,14 @@ public sealed class McpHostConformanceTests
             },
             McpJsonUtilities.DefaultOptions)!;
 
-        Assert.Equal(
+        Assert.AreEqual(
             """
             {"tools":[{"name":"ping","title":"Ping","inputSchema":{"type":"object","properties":{}}}]}
             """.Trim(),
             json.ToJsonString());
     }
 
-    [Fact]
+    [TestMethod]
     public void ResourcesList_MatchesGoldenEnvelope()
     {
         var json = JsonSerializer.SerializeToNode(
@@ -55,12 +56,12 @@ public sealed class McpHostConformanceTests
 
         using var doc = JsonDocument.Parse(json.ToJsonString());
         var item = doc.RootElement.GetProperty("resources")[0];
-        Assert.Equal("sample://status", item.GetProperty("uri").GetString());
-        Assert.Equal("status", item.GetProperty("name").GetString());
-        Assert.Equal("text/plain", item.GetProperty("mimeType").GetString());
+        Assert.AreEqual("sample://status", item.GetProperty("uri").GetString());
+        Assert.AreEqual("status", item.GetProperty("name").GetString());
+        Assert.AreEqual("text/plain", item.GetProperty("mimeType").GetString());
     }
 
-    [Fact]
+    [TestMethod]
     public void ToolCallResult_MatchesGoldenTextContent()
     {
         var json = HostToolResultJson.ToNode(new McpInvocationResponse
@@ -68,12 +69,12 @@ public sealed class McpHostConformanceTests
             Content = [new McpTextContent("ok")],
         });
 
-        Assert.Equal(
+        Assert.AreEqual(
             """{"content":[{"type":"text","text":"ok"}]}""",
             json.ToJsonString());
     }
 
-    [Fact]
+    [TestMethod]
     public void ResourceRead_MatchesGoldenTextContent()
     {
         var json = JsonSerializer.SerializeToNode(
@@ -91,12 +92,12 @@ public sealed class McpHostConformanceTests
             },
             McpJsonUtilities.DefaultOptions)!;
 
-        Assert.Equal(
+        Assert.AreEqual(
             """{"contents":[{"uri":"sample://status","mimeType":"text/plain","text":"ok"}]}""",
             json.ToJsonString());
     }
 
-    [Fact]
+    [TestMethod]
     public void ResourceTemplatesList_MatchesGoldenEnvelope()
     {
         var json = JsonSerializer.SerializeToNode(
@@ -116,8 +117,8 @@ public sealed class McpHostConformanceTests
 
         using var doc = JsonDocument.Parse(json.ToJsonString());
         var item = doc.RootElement.GetProperty("resourceTemplates")[0];
-        Assert.Equal("sample://views/{viewId}", item.GetProperty("uriTemplate").GetString());
-        Assert.Equal("view", item.GetProperty("name").GetString());
-        Assert.Equal("application/json", item.GetProperty("mimeType").GetString());
+        Assert.AreEqual("sample://views/{viewId}", item.GetProperty("uriTemplate").GetString());
+        Assert.AreEqual("view", item.GetProperty("name").GetString());
+        Assert.AreEqual("application/json", item.GetProperty("mimeType").GetString());
     }
 }

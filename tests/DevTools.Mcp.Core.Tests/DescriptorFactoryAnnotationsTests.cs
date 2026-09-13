@@ -3,16 +3,17 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class DescriptorFactoryAnnotationsTests
 {
-    [Fact]
+    [TestMethod]
     public void BuildToolAnnotations_AllNull_ReturnsNull()
     {
-        Assert.Null(DescriptorFactory.BuildToolAnnotations(null));
-        Assert.Null(DescriptorFactory.BuildToolAnnotations("  "));
+        Assert.IsNull(DescriptorFactory.BuildToolAnnotations(null));
+        Assert.IsNull(DescriptorFactory.BuildToolAnnotations("  "));
     }
 
-    [Fact]
+    [TestMethod]
     public void BuildToolAnnotations_WithHints_ReturnsAnnotations()
     {
         var annotations = DescriptorFactory.BuildToolAnnotations(
@@ -22,29 +23,29 @@ public sealed class DescriptorFactoryAnnotationsTests
             idempotent: true,
             openWorld: false);
 
-        Assert.NotNull(annotations);
-        Assert.Equal("Demo", annotations!.Title);
-        Assert.True(annotations.ReadOnlyHint);
-        Assert.False(annotations.DestructiveHint);
-        Assert.True(annotations.IdempotentHint);
-        Assert.False(annotations.OpenWorldHint);
+        Assert.IsNotNull(annotations);
+        Assert.AreEqual("Demo", annotations!.Title);
+        Assert.IsTrue(annotations.ReadOnlyHint);
+        Assert.IsFalse(annotations.DestructiveHint);
+        Assert.IsTrue(annotations.IdempotentHint);
+        Assert.IsFalse(annotations.OpenWorldHint);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow("   ")]
     public void ParseIcons_BlankSource_ReturnsNull(string? iconSource)
     {
-        Assert.Null(DescriptorFactory.ParseIcons(iconSource));
+        Assert.IsNull(DescriptorFactory.ParseIcons(iconSource));
     }
 
-    [Fact]
+    [TestMethod]
     public void ParseIcons_TrimsSource()
     {
         var icons = DescriptorFactory.ParseIcons("  https://example/icon.png  ");
 
-        var icon = Assert.Single(icons!);
-        Assert.Equal("https://example/icon.png", icon.Source);
+        var icon = icons!.Single();
+        Assert.AreEqual("https://example/icon.png", icon.Source);
     }
 }

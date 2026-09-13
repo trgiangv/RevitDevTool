@@ -3,9 +3,10 @@ using DevTools.Mcp.Adapter.Host;
 
 namespace DevTools.Mcp.Adapter.Tests.Host;
 
+[TestClass]
 public sealed class McpJsonRpcTests
 {
-    [Fact]
+    [TestMethod]
     public void RequestEnvelope_RoundTrips_ThroughParseAndSerialize()
     {
         const string json = """
@@ -16,13 +17,13 @@ public sealed class McpJsonRpcTests
         var serialized = McpJsonRpc.Serialize(request);
         var roundTrip = McpJsonRpc.ParseRequest(serialized);
 
-        Assert.Equal("2.0", roundTrip["jsonrpc"]!.GetValue<string>());
-        Assert.Equal(42, roundTrip["id"]!.GetValue<int>());
-        Assert.Equal("tools/list", roundTrip["method"]!.GetValue<string>());
-        Assert.Equal("abc", roundTrip["params"]!["cursor"]!.GetValue<string>());
+        Assert.AreEqual("2.0", roundTrip["jsonrpc"]!.GetValue<string>());
+        Assert.AreEqual(42, roundTrip["id"]!.GetValue<int>());
+        Assert.AreEqual("tools/list", roundTrip["method"]!.GetValue<string>());
+        Assert.AreEqual("abc", roundTrip["params"]!["cursor"]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public void SuccessEnvelope_RoundTrips_WithResultPayload()
     {
         var result = new JsonObject
@@ -37,26 +38,26 @@ public sealed class McpJsonRpcTests
         var serialized = McpJsonRpc.Serialize(response);
         var roundTrip = McpJsonRpc.ParseRequest(serialized);
 
-        Assert.Equal("2.0", roundTrip["jsonrpc"]!.GetValue<string>());
-        Assert.Equal(7, roundTrip["id"]!.GetValue<int>());
-        Assert.Equal("ping", roundTrip["result"]!["tools"]![0]!["name"]!.GetValue<string>());
-        Assert.Null(roundTrip["error"]);
+        Assert.AreEqual("2.0", roundTrip["jsonrpc"]!.GetValue<string>());
+        Assert.AreEqual(7, roundTrip["id"]!.GetValue<int>());
+        Assert.AreEqual("ping", roundTrip["result"]!["tools"]![0]!["name"]!.GetValue<string>());
+        Assert.IsNull(roundTrip["error"]);
     }
 
-    [Fact]
+    [TestMethod]
     public void ErrorEnvelope_RoundTrips_WithCodeAndMessage()
     {
         var response = McpJsonRpc.CreateError("req-1", ModelContextProtocol.McpErrorCode.MethodNotFound, "Method not found: foo");
         var serialized = McpJsonRpc.Serialize(response);
         var roundTrip = McpJsonRpc.ParseRequest(serialized);
 
-        Assert.Equal("req-1", roundTrip["id"]!.GetValue<string>());
-        Assert.Equal((int)ModelContextProtocol.McpErrorCode.MethodNotFound, roundTrip["error"]!["code"]!.GetValue<int>());
-        Assert.Equal("Method not found: foo", roundTrip["error"]!["message"]!.GetValue<string>());
-        Assert.Null(roundTrip["result"]);
+        Assert.AreEqual("req-1", roundTrip["id"]!.GetValue<string>());
+        Assert.AreEqual((int)ModelContextProtocol.McpErrorCode.MethodNotFound, roundTrip["error"]!["code"]!.GetValue<int>());
+        Assert.AreEqual("Method not found: foo", roundTrip["error"]!["message"]!.GetValue<string>());
+        Assert.IsNull(roundTrip["result"]);
     }
 
-    [Fact]
+    [TestMethod]
     public void NotificationEnvelope_HasNoId_AndSerializesMethodOnly()
     {
         var notification = McpJsonRpc.CreateNotification("notifications/initialized");
@@ -64,11 +65,11 @@ public sealed class McpJsonRpcTests
         var serialized = McpJsonRpc.Serialize(notification);
         var roundTrip = McpJsonRpc.ParseRequest(serialized);
 
-        Assert.False(McpJsonRpc.HasId(roundTrip));
-        Assert.Equal("notifications/initialized", roundTrip["method"]!.GetValue<string>());
+        Assert.IsFalse(McpJsonRpc.HasId(roundTrip));
+        Assert.AreEqual("notifications/initialized", roundTrip["method"]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public void CreateNotification_RoundTrips_WithoutId()
     {
         var notification = McpJsonRpc.CreateNotification(
@@ -77,8 +78,8 @@ public sealed class McpJsonRpcTests
         var serialized = McpJsonRpc.Serialize(notification);
         var roundTrip = McpJsonRpc.ParseRequest(serialized);
 
-        Assert.False(McpJsonRpc.HasId(roundTrip));
-        Assert.Equal("notifications/tools/list_changed", roundTrip["method"]!.GetValue<string>());
-        Assert.Equal("abc", roundTrip["params"]!["cursor"]!.GetValue<string>());
+        Assert.IsFalse(McpJsonRpc.HasId(roundTrip));
+        Assert.AreEqual("notifications/tools/list_changed", roundTrip["method"]!.GetValue<string>());
+        Assert.AreEqual("abc", roundTrip["params"]!["cursor"]!.GetValue<string>());
     }
 }

@@ -4,9 +4,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class McpProtocolVersionTests
 {
-    [Fact]
+    [TestMethod]
     public void GetVersion_ReadsMetaProtocolVersion()
     {
         var parameters = new JsonObject
@@ -17,22 +18,22 @@ public sealed class McpProtocolVersionTests
             },
         };
 
-        Assert.Equal("2026-07-28", McpProtocol.GetVersion(parameters));
+        Assert.AreEqual("2026-07-28", McpProtocol.GetVersion(parameters));
     }
 
-    [Fact]
+    [TestMethod]
     public void GetVersion_MissingMeta_ReturnsNull()
     {
-        Assert.Null(McpProtocol.GetVersion(new JsonObject()));
-        Assert.Null(McpProtocol.GetVersion(null));
+        Assert.IsNull(McpProtocol.GetVersion(new JsonObject()));
+        Assert.IsNull(McpProtocol.GetVersion(null));
     }
 
-    [Theory]
-    [InlineData("2026-07-28", true)]
-    [InlineData("2025-11-25", false)]
-    [InlineData(null, false)]
+    [TestMethod]
+    [DataRow("2026-07-28", true)]
+    [DataRow("2025-11-25", false)]
+    [DataRow(null, false)]
     public void IsCurrent_MatchesExpectedVersion(string? version, bool expected)
     {
-        Assert.Equal(expected, McpProtocol.IsCurrent(version));
+        Assert.AreEqual(expected, McpProtocol.IsCurrent(version));
     }
 }

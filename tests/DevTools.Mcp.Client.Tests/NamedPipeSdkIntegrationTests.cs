@@ -8,13 +8,16 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Client.Tests;
 
+[TestClass]
 public class NamedPipeSdkIntegrationTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task NamedPipe_DaemonClientTalksToHostSdkServer()
     {
         var pipeName = HostPipeName.FormatMcp("TestHost", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(20));
 
         var tools = new McpServerPrimitiveCollection<McpServerTool>
@@ -52,10 +55,10 @@ public class NamedPipeSdkIntegrationTests
             cancellationToken: cts.Token);
 
         var listed = await client.ListToolsAsync(cancellationToken: cts.Token);
-        Assert.Contains(listed, t => t.Name == "ping");
+        Assert.IsTrue(listed.Any(t => t.Name == "ping"));
 
         var result = await client.CallToolAsync("ping", cancellationToken: cts.Token);
-        Assert.NotEqual(true, result.IsError);
+        Assert.AreNotEqual(true, result.IsError);
         Assert.Contains("pong", result.Content.OfType<TextContentBlock>().Select(c => c.Text));
 
         await client.DisposeAsync();
@@ -67,7 +70,7 @@ public class NamedPipeSdkIntegrationTests
     {
         var security = new PipeSecurity();
         var currentUser = WindowsIdentity.GetCurrent();
-        Assert.NotNull(currentUser.User);
+        Assert.IsNotNull(currentUser.User);
         security.AddAccessRule(new PipeAccessRule(
             currentUser.User,
             PipeAccessRights.FullControl,

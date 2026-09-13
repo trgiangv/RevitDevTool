@@ -4,9 +4,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class McpRegistryModelsTests
 {
-    [Fact]
+    [TestMethod]
     public void McpRegistryCatalog_Merge_CombinesToolsAndResources()
     {
         var left = new McpRegistryCatalog
@@ -22,18 +23,18 @@ public sealed class McpRegistryModelsTests
 
         var merged = left.Merge(right);
 
-        Assert.Equal(["left", "right"], merged.Tools.Select(tool => tool.Id));
-        Assert.Equal(["left://resource", "right://resource"], merged.Resources.Select(resource => resource.Id));
+        Assert.AreSequenceEqual(["left", "right"], merged.Tools.Select(tool => tool.Id));
+        Assert.AreSequenceEqual(["left://resource", "right://resource"], merged.Resources.Select(resource => resource.Id));
     }
 
-    [Fact]
+    [TestMethod]
     public void McpRegistryCatalog_Empty_IsSingleton()
     {
-        Assert.Empty(McpRegistryCatalog.Empty.Tools);
-        Assert.Empty(McpRegistryCatalog.Empty.Resources);
+        Assert.IsEmpty(McpRegistryCatalog.Empty.Tools);
+        Assert.IsEmpty(McpRegistryCatalog.Empty.Resources);
     }
 
-    [Fact]
+    [TestMethod]
     public void McpPrimitiveBinding_Create_BuildsFallbackAddressAndGroup()
     {
         var binding = McpPrimitiveBinding.Create(
@@ -42,20 +43,20 @@ public sealed class McpRegistryModelsTests
             containerType: "DemoTools",
             methodName: "ping");
 
-        Assert.Equal(ExecutionMode.Python, binding.SourceKind);
-        Assert.Equal("tools:DemoTools.ping", binding.SourceAddress);
-        Assert.Equal("demo", binding.GroupName);
+        Assert.AreEqual(ExecutionMode.Python, binding.SourceKind);
+        Assert.AreEqual("tools:DemoTools.ping", binding.SourceAddress);
+        Assert.AreEqual("demo", binding.GroupName);
     }
 
-    [Fact]
+    [TestMethod]
     public void McpPrimitiveBinding_CreatePrimitiveId_NormalizesSegments()
     {
         var id = McpPrimitiveBinding.CreatePrimitiveId("My Tool", @"pkg\tool.py:Main.run");
 
-        Assert.Equal("My-Tool_[pkg/tool.py:Main.run]", id);
+        Assert.AreEqual("My-Tool_[pkg/tool.py:Main.run]", id);
     }
 
-    [Fact]
+    [TestMethod]
     public void McpRegisteredResource_DisplayName_PrefersDescriptorName()
     {
         var fromDescriptor = new McpRegisteredResource
@@ -71,8 +72,8 @@ public sealed class McpRegistryModelsTests
             Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, "x.dll", "X", "Read"),
         };
 
-        Assert.Equal("demo_status", fromDescriptor.DisplayName);
-        Assert.Equal("template_name", fromTemplate.DisplayName);
+        Assert.AreEqual("demo_status", fromDescriptor.DisplayName);
+        Assert.AreEqual("template_name", fromTemplate.DisplayName);
     }
 
     private static McpRegisteredTool CreateTool(string id) => new()

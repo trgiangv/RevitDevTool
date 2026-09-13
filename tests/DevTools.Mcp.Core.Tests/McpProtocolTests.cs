@@ -3,22 +3,23 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class McpProtocolTests
 {
-    [Fact]
+    [TestMethod]
     public void EnsureCurrentProtocolMeta_AddsCurrentVersionWhenMissing()
     {
         var parameters = new CallToolRequestParams { Name = "ping" };
 
         McpProtocol.EnsureCurrentProtocolMeta(parameters);
 
-        Assert.NotNull(parameters.Meta);
-        Assert.Equal(
+        Assert.IsNotNull(parameters.Meta);
+        Assert.AreEqual(
             McpSpecKeys.ProtocolVersions.Current,
             parameters.Meta![MetaKeys.ProtocolVersion]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public void EnsureCurrentProtocolMeta_PreservesExistingVersion()
     {
         var parameters = new CallToolRequestParams { Name = "ping" };
@@ -29,6 +30,6 @@ public sealed class McpProtocolTests
 
         McpProtocol.EnsureCurrentProtocolMeta(parameters);
 
-        Assert.Equal("custom-version", parameters.Meta[MetaKeys.ProtocolVersion]!.GetValue<string>());
+        Assert.AreEqual("custom-version", parameters.Meta[MetaKeys.ProtocolVersion]!.GetValue<string>());
     }
 }

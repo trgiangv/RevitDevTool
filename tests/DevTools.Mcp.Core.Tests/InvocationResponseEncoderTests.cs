@@ -6,9 +6,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class InvocationResponseEncoderTests
 {
-    [Fact]
+    [TestMethod]
     public void ToNode_WritesTextContentAndStructuredContent()
     {
         var response = new McpInvocationResponse
@@ -19,11 +20,11 @@ public sealed class InvocationResponseEncoderTests
 
         var json = SerializeForWire(response).AsObject();
 
-        Assert.Equal("ok", json["content"]!.AsArray()[0]!["text"]!.GetValue<string>());
-        Assert.True(json["structuredContent"]!.AsObject()["healthy"]!.GetValue<bool>());
+        Assert.AreEqual("ok", json["content"]!.AsArray()[0]!["text"]!.GetValue<string>());
+        Assert.IsTrue(json["structuredContent"]!.AsObject()["healthy"]!.GetValue<bool>());
     }
 
-    [Fact]
+    [TestMethod]
     public void ToNode_WritesIsErrorFlag()
     {
         var response = new McpInvocationResponse
@@ -34,11 +35,11 @@ public sealed class InvocationResponseEncoderTests
 
         var json = SerializeForWire(response).AsObject();
 
-        Assert.True(json["isError"]!.GetValue<bool>());
-        Assert.Equal("failed", json["content"]![0]!["text"]!.GetValue<string>());
+        Assert.IsTrue(json["isError"]!.GetValue<bool>());
+        Assert.AreEqual("failed", json["content"]![0]!["text"]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public void ToNode_MatchesSdkShape_ForSimpleTextResult()
     {
         var sdk = new CallToolResult
@@ -55,12 +56,12 @@ public sealed class InvocationResponseEncoderTests
 
         using var sdkDoc = JsonDocument.Parse(sdkJson);
         using var coreDoc = JsonDocument.Parse(json);
-        Assert.Equal(
+        Assert.AreEqual(
             sdkDoc.RootElement.GetProperty("content")[0].GetProperty("text").GetString(),
             coreDoc.RootElement.GetProperty("content")[0].GetProperty("text").GetString());
     }
 
-    [Fact]
+    [TestMethod]
     public void ToNode_WritesAnnotationsWithCamelCaseKeys()
     {
         var response = new McpInvocationResponse
@@ -75,12 +76,12 @@ public sealed class InvocationResponseEncoderTests
 
         using var doc = JsonDocument.Parse(json);
         var annotations = doc.RootElement.GetProperty("content")[0].GetProperty("annotations");
-        Assert.True(annotations.TryGetProperty("priority", out var priority));
-        Assert.Equal(0.5f, priority.GetSingle());
-        Assert.False(annotations.TryGetProperty("Priority", out _));
+        Assert.IsTrue(annotations.TryGetProperty("priority", out var priority));
+        Assert.AreEqual(0.5f, priority.GetSingle());
+        Assert.IsFalse(annotations.TryGetProperty("Priority", out _));
     }
 
-    [Fact]
+    [TestMethod]
     public void PrepareForWire_EmptyTextWithStructured_UsesPreview()
     {
         var response = new McpInvocationResponse
@@ -92,10 +93,10 @@ public sealed class InvocationResponseEncoderTests
         var prepared = InvocationResponseEncoder.PrepareForWire(response);
 
         Assert.Contains("healthy", Text(prepared), StringComparison.Ordinal);
-        Assert.False(string.IsNullOrEmpty(Text(prepared)));
+        Assert.IsFalse(string.IsNullOrEmpty(Text(prepared)));
     }
 
-    [Fact]
+    [TestMethod]
     public void PrepareForWire_EmptyTextWithoutStructured_DropsBlock()
     {
         var response = new McpInvocationResponse
@@ -105,10 +106,10 @@ public sealed class InvocationResponseEncoderTests
 
         var prepared = InvocationResponseEncoder.PrepareForWire(response);
 
-        Assert.Empty(prepared.Content);
+        Assert.IsEmpty(prepared.Content);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToNode_EmptyTextWithoutStructured_WritesEmptyContentArray()
     {
         var response = new McpInvocationResponse
@@ -118,22 +119,22 @@ public sealed class InvocationResponseEncoderTests
 
         var json = SerializeForWire(response).AsObject();
 
-        Assert.Empty(json["content"]!.AsArray());
+        Assert.IsEmpty(json["content"]!.AsArray());
         Assert.DoesNotContain("{}", json.ToJsonString(), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void PreviewStructured_LongPayload_TruncatesWithEllipsis()
     {
         var structured = JsonSerializer.SerializeToElement(new { payload = new string('x', 300) });
 
         var preview = InvocationResponseEncoder.PreviewStructured(structured);
 
-        Assert.True(preview.Length <= 240);
+        Assert.IsTrue(preview.Length <= 240);
         Assert.EndsWith("...", preview);
     }
 
-    [Fact]
+    [TestMethod]
     public void PrepareForWire_StructuredOnly_AddsPreviewTextBlock()
     {
         var response = new McpInvocationResponse
@@ -143,7 +144,7 @@ public sealed class InvocationResponseEncoderTests
 
         var prepared = InvocationResponseEncoder.PrepareForWire(response);
 
-        Assert.Single(prepared.Content);
+        Assert.HasCount(1, prepared.Content);
         Assert.Contains("healthy", Text(prepared), StringComparison.Ordinal);
     }
 

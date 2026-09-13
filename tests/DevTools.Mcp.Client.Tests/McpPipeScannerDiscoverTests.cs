@@ -7,9 +7,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Mcp.Client.Tests;
 
+[TestClass]
 public sealed class McpPipeScannerDiscoverTests
 {
-    [Fact]
+    [TestMethod]
     public void Discover_FindsLiveMcpPipeForCurrentProcess()
     {
         var pipeName = HostPipeName.FormatMcp("Revit", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
@@ -25,7 +26,7 @@ public sealed class McpPipeScannerDiscoverTests
     {
         var security = new PipeSecurity();
         var currentUser = WindowsIdentity.GetCurrent();
-        Assert.NotNull(currentUser.User);
+        Assert.IsNotNull(currentUser.User);
         security.AddAccessRule(new PipeAccessRule(
             currentUser.User,
             PipeAccessRights.FullControl,

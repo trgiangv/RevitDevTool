@@ -8,9 +8,12 @@ using Moq;
 
 namespace DevTools.Mcp.Adapter.Tests;
 
+[TestClass]
 public class HostCallLoggingFilterTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task CallToolFilter_LogsToolsCallWithArgsAndResult()
     {
         var logger = new CapturingCategoryLogger("DevTools.Mcp.ToolCall");
@@ -18,7 +21,7 @@ public class HostCallLoggingFilterTests
         var options = new McpServerOptions();
         McpLogFilters.Attach(options, factory);
 
-        Assert.NotEmpty(options.Filters.Request.CallToolFilters);
+        Assert.IsNotEmpty(options.Filters.Request.CallToolFilters);
 
         McpRequestHandler<CallToolRequestParams, CallToolResult> terminal = (_, _) =>
             new ValueTask<CallToolResult>(new CallToolResult
@@ -32,9 +35,9 @@ public class HostCallLoggingFilterTests
             {
                 ["message"] = JsonSerializer.SerializeToElement("hi")
             }),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        var log = Assert.Single(logger.Messages);
+        var log = logger.Messages.Single();
         Assert.Contains("tools/call", log, StringComparison.Ordinal);
         Assert.Contains(" ok ", log, StringComparison.Ordinal);
         Assert.Contains("target=echo", log, StringComparison.Ordinal);
@@ -45,7 +48,7 @@ public class HostCallLoggingFilterTests
         Assert.Contains("pong", log, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ReadResourceFilter_LogsResourcesReadWithResult()
     {
         var logger = new CapturingCategoryLogger("DevTools.Mcp.ResourceRead");
@@ -53,7 +56,7 @@ public class HostCallLoggingFilterTests
         var options = new McpServerOptions();
         McpLogFilters.Attach(options, factory);
 
-        Assert.NotEmpty(options.Filters.Request.ReadResourceFilters);
+        Assert.IsNotEmpty(options.Filters.Request.ReadResourceFilters);
 
         McpRequestHandler<ReadResourceRequestParams, ReadResourceResult> terminal = (_, _) =>
             new ValueTask<ReadResourceResult>(new ReadResourceResult
@@ -64,9 +67,9 @@ public class HostCallLoggingFilterTests
         var handler = options.Filters.Request.ReadResourceFilters[0](terminal);
         await handler(
             CreateReadResourceRequest("revit://model/context"),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        var log = Assert.Single(logger.Messages);
+        var log = logger.Messages.Single();
         Assert.Contains("resources/read", log, StringComparison.Ordinal);
         Assert.Contains(" ok ", log, StringComparison.Ordinal);
         Assert.Contains("target=revit://model/context", log, StringComparison.Ordinal);

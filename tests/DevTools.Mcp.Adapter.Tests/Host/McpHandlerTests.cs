@@ -13,27 +13,30 @@ using Moq;
 
 namespace DevTools.Mcp.Adapter.Tests.Host;
 
+[TestClass]
 public sealed class McpHandlerTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task ServerDiscover_ReturnsServerInfoCapabilitiesAndCurrentVersion()
     {
         var handler = McpHostTestHarness.CreateHandler(McpHostTestHarness.CreateCatalogStore());
         var response = await handler.HandleAsync(
             McpHostTestHarness.CreateDiscoverRequest(),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(response);
-        Assert.Null(response!["error"]);
+        Assert.IsNotNull(response);
+        Assert.IsNull(response!["error"]);
         var result = response!["result"]!.AsObject();
         var supported = result["supportedVersions"]!.AsArray();
-        Assert.Single(supported);
-        Assert.Equal(McpSpecKeys.ProtocolVersions.Current, supported[0]!.GetValue<string>());
-        Assert.Equal("DevTools.Host", result["serverInfo"]!["name"]!.GetValue<string>());
-        Assert.True(result["capabilities"]!["tools"]!["listChanged"]!.GetValue<bool>());
+        Assert.HasCount(1, supported);
+        Assert.AreEqual(McpSpecKeys.ProtocolVersions.Current, supported[0]!.GetValue<string>());
+        Assert.AreEqual("DevTools.Host", result["serverInfo"]!["name"]!.GetValue<string>());
+        Assert.IsTrue(result["capabilities"]!["tools"]!["listChanged"]!.GetValue<bool>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Initialize_ReturnsMethodNotFound()
     {
         var handler = McpHostTestHarness.CreateHandler(McpHostTestHarness.CreateCatalogStore());
@@ -48,15 +51,15 @@ public sealed class McpHandlerTests
                 ["capabilities"] = new JsonObject(),
                 ["clientInfo"] = new JsonObject { ["name"] = "test", ["version"] = "1.0.0" },
             },
-        }, TestContext.Current.CancellationToken);
+        }, TestContext.CancellationToken);
 
-        Assert.NotNull(response);
+        Assert.IsNotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal((int)ModelContextProtocol.McpErrorCode.MethodNotFound, error["code"]!.GetValue<int>());
+        Assert.AreEqual((int)ModelContextProtocol.McpErrorCode.MethodNotFound, error["code"]!.GetValue<int>());
         Assert.Contains(RequestMethods.ServerDiscover, error["message"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ToolsList_WithoutProtocolMetadata_ReturnsInvalidParams()
     {
         var handler = McpHostTestHarness.CreateHandler(McpHostTestHarness.CreateCatalogStore());
@@ -66,14 +69,14 @@ public sealed class McpHandlerTests
             ["id"] = 1,
             ["method"] = RequestMethods.ToolsList,
             ["params"] = new JsonObject(),
-        }, TestContext.Current.CancellationToken);
+        }, TestContext.CancellationToken);
 
-        Assert.NotNull(response);
+        Assert.IsNotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal((int)ModelContextProtocol.McpErrorCode.InvalidParams, error["code"]!.GetValue<int>());
+        Assert.AreEqual((int)ModelContextProtocol.McpErrorCode.InvalidParams, error["code"]!.GetValue<int>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ToolsList_WithUnsupportedVersion_ReturnsUnsupportedProtocolVersion()
     {
         var handler = McpHostTestHarness.CreateHandler(McpHostTestHarness.CreateCatalogStore());
@@ -89,15 +92,15 @@ public sealed class McpHandlerTests
                     [MetaKeys.ProtocolVersion] = "2025-11-25",
                 },
             },
-        }, TestContext.Current.CancellationToken);
+        }, TestContext.CancellationToken);
 
-        Assert.NotNull(response);
+        Assert.IsNotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal((int)ModelContextProtocol.McpErrorCode.UnsupportedProtocolVersion, error["code"]!.GetValue<int>());
-        Assert.Equal("2025-11-25", error["data"]!["requested"]!.GetValue<string>());
+        Assert.AreEqual((int)ModelContextProtocol.McpErrorCode.UnsupportedProtocolVersion, error["code"]!.GetValue<int>());
+        Assert.AreEqual("2025-11-25", error["data"]!["requested"]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ToolsList_ReturnsCatalogTools()
     {
         var catalogStore = McpHostTestHarness.CreateCatalogStore(McpHostTestHarness.CreateRegisteredTool("ping", "Ping tool"));
@@ -105,16 +108,16 @@ public sealed class McpHandlerTests
 
         var response = await handler.HandleAsync(
             McpHostTestHarness.CreateRequest(RequestMethods.ToolsList),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(response);
+        Assert.IsNotNull(response);
         var tools = response!["result"]!["tools"]!.AsArray();
-        Assert.Single(tools);
-        Assert.Equal("ping", tools[0]!["name"]!.GetValue<string>());
-        Assert.Equal("Ping tool", tools[0]!["description"]!.GetValue<string>());
+        Assert.HasCount(1, tools);
+        Assert.AreEqual("ping", tools[0]!["name"]!.GetValue<string>());
+        Assert.AreEqual("Ping tool", tools[0]!["description"]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ToolsCall_DispatchesAndReturnsTextContent()
     {
         var (handler, dispatcher) = McpHostTestHarness.CreateWithTool("ping", "pong");
@@ -125,13 +128,13 @@ public sealed class McpHandlerTests
                 ["name"] = "ping",
                 ["arguments"] = new JsonObject(),
             }),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(response);
-        Assert.Null(response!["error"]);
+        Assert.IsNotNull(response);
+        Assert.IsNull(response!["error"]);
         var content = response!["result"]!["content"]!.AsArray();
-        Assert.Equal("text", content[0]!["type"]!.GetValue<string>());
-        Assert.Equal("pong", content[0]!["text"]!.GetValue<string>());
+        Assert.AreEqual("text", content[0]!["type"]!.GetValue<string>());
+        Assert.AreEqual("pong", content[0]!["text"]!.GetValue<string>());
 
         dispatcher.Verify(d => d.DispatchToolAsync(
             It.Is<McpRegisteredTool>(tool => tool.Descriptor.Name == "ping"),
@@ -140,49 +143,49 @@ public sealed class McpHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ToolsCall_UnknownTool_ReturnsJsonRpcError()
     {
         var handler = McpHostTestHarness.CreateHandler(McpHostTestHarness.CreateCatalogStore(McpHostTestHarness.CreateRegisteredTool("ping")));
 
         var response = await handler.HandleAsync(
             McpHostTestHarness.CreateRequest(RequestMethods.ToolsCall, new JsonObject { ["name"] = "missing_tool" }),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(response);
+        Assert.IsNotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal((int)ModelContextProtocol.McpErrorCode.InvalidParams, error["code"]!.GetValue<int>());
+        Assert.AreEqual((int)ModelContextProtocol.McpErrorCode.InvalidParams, error["code"]!.GetValue<int>());
         Assert.Contains("missing_tool", error["message"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task UnknownMethod_ReturnsMethodNotFound()
     {
         var handler = McpHostTestHarness.CreateHandler(McpHostTestHarness.CreateCatalogStore());
 
         var response = await handler.HandleAsync(
             McpHostTestHarness.CreateRequest("does/not/exist"),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(response);
+        Assert.IsNotNull(response);
         var error = response!["error"]!.AsObject();
-        Assert.Equal((int)ModelContextProtocol.McpErrorCode.MethodNotFound, error["code"]!.GetValue<int>());
+        Assert.AreEqual((int)ModelContextProtocol.McpErrorCode.MethodNotFound, error["code"]!.GetValue<int>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Ping_WithCurrentProtocol_ReturnsEmptyResult()
     {
         var handler = McpHostTestHarness.CreateHandler(McpHostTestHarness.CreateCatalogStore());
         var response = await handler.HandleAsync(
             McpHostTestHarness.CreateRequest(RequestMethods.Ping),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(response);
-        Assert.Null(response!["error"]);
-        Assert.NotNull(response["result"]);
+        Assert.IsNotNull(response);
+        Assert.IsNull(response!["error"]);
+        Assert.IsNotNull(response["result"]);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ResourcesList_ReturnsCatalogResources()
     {
         var catalogStore = McpHostTestHarness.CreateCatalogStore();
@@ -209,15 +212,15 @@ public sealed class McpHandlerTests
 
         var response = await handler.HandleAsync(
             McpHostTestHarness.CreateRequest(RequestMethods.ResourcesList),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(response);
+        Assert.IsNotNull(response);
         var resources = response!["result"]!["resources"]!.AsArray();
-        Assert.Single(resources);
-        Assert.Equal("sample://demo/status", resources[0]!["uri"]!.GetValue<string>());
+        Assert.HasCount(1, resources);
+        Assert.AreEqual("sample://demo/status", resources[0]!["uri"]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ResourceTemplatesList_ReturnsCatalogTemplates()
     {
         var loader = new Mock<IMcpCatalogLoader>();
@@ -247,11 +250,11 @@ public sealed class McpHandlerTests
 
         var response = await handler.HandleAsync(
             McpHostTestHarness.CreateRequest(RequestMethods.ResourcesTemplatesList),
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.NotNull(response);
+        Assert.IsNotNull(response);
         var templates = response!["result"]!["resourceTemplates"]!.AsArray();
-        Assert.Single(templates);
-        Assert.Equal("sample://{id}", templates[0]!["uriTemplate"]!.GetValue<string>());
+        Assert.HasCount(1, templates);
+        Assert.AreEqual("sample://{id}", templates[0]!["uriTemplate"]!.GetValue<string>());
     }
 }

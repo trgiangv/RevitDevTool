@@ -2,20 +2,21 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class HostToolCallOutcomeTests
 {
-    [Fact]
+    [TestMethod]
     public void FromToolResult_ExposesResult()
     {
         var toolResult = new CallToolResult { Content = [new TextContentBlock { Text = "ok" }] };
         var outcome = HostToolCallOutcome.FromToolResult(toolResult);
 
-        Assert.False(outcome.IsInputRequired);
-        Assert.Same(toolResult, outcome.ToolResult);
-        Assert.Null(outcome.InputRequired);
+        Assert.IsFalse(outcome.IsInputRequired);
+        Assert.AreSame(toolResult, outcome.ToolResult);
+        Assert.IsNull(outcome.InputRequired);
     }
 
-    [Fact]
+    [TestMethod]
     public void FromInputRequired_ExposesInputRequired()
     {
         var inputRequired = new InputRequiredResult
@@ -28,8 +29,8 @@ public sealed class HostToolCallOutcomeTests
         };
         var outcome = HostToolCallOutcome.FromInputRequired(inputRequired);
 
-        Assert.True(outcome.IsInputRequired);
-        Assert.Same(inputRequired, outcome.InputRequired);
-        Assert.Null(outcome.ToolResult);
+        Assert.IsTrue(outcome.IsInputRequired);
+        Assert.AreSame(inputRequired, outcome.InputRequired);
+        Assert.IsNull(outcome.ToolResult);
     }
 }

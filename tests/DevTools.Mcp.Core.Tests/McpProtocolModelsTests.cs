@@ -7,9 +7,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 
+[TestClass]
 public sealed class McpProtocolModelsTests
 {
-    [Fact]
+    [TestMethod]
     public void SdkTool_RoundTrips_ThroughSdkJsonOptions()
     {
         var descriptor = new Tool
@@ -24,13 +25,13 @@ public sealed class McpProtocolModelsTests
         var json = JsonSerializer.Serialize(descriptor, McpJsonUtilities.DefaultOptions);
         var roundTrip = JsonSerializer.Deserialize<Tool>(json, McpJsonUtilities.DefaultOptions);
 
-        Assert.NotNull(roundTrip);
-        Assert.Equal(descriptor.Name, roundTrip.Name);
-        Assert.Equal(descriptor.Title, roundTrip.Title);
-        Assert.True(roundTrip.Annotations?.IdempotentHint);
+        Assert.IsNotNull(roundTrip);
+        Assert.AreEqual(descriptor.Name, roundTrip.Name);
+        Assert.AreEqual(descriptor.Title, roundTrip.Title);
+        Assert.IsTrue(roundTrip.Annotations?.IdempotentHint);
     }
 
-    [Fact]
+    [TestMethod]
     public void InvocationRequestReader_Deserializes_MrtrFields()
     {
         var parameters = JsonNode.Parse(
@@ -45,17 +46,17 @@ public sealed class McpProtocolModelsTests
 
         var request = InvocationRequestReader.FromWire(parameters);
 
-        Assert.Equal("get_demo_status", request.Name);
-        Assert.NotNull(request.Arguments);
-        Assert.Equal("demo", request.Arguments["topic"].GetString());
-        Assert.NotNull(request.InputResponses);
+        Assert.AreEqual("get_demo_status", request.Name);
+        Assert.IsNotNull(request.Arguments);
+        Assert.AreEqual("demo", request.Arguments["topic"].GetString());
+        Assert.IsNotNull(request.InputResponses);
         Assert.Contains("confirm", request.InputResponses.Keys);
         var elicitResult = request.InputResponses["confirm"].Deserialize(InputResponse.ElicitResultJsonTypeInfo);
-        Assert.Equal("accept", elicitResult?.Action);
-        Assert.Equal("round-2", request.RequestState);
+        Assert.AreEqual("accept", elicitResult?.Action);
+        Assert.AreEqual("round-2", request.RequestState);
     }
 
-    [Fact]
+    [TestMethod]
     public void InvocationRequestReader_Deserializes_ProgressToken_FromMetaString()
     {
         var parameters = JsonNode.Parse(
@@ -68,12 +69,12 @@ public sealed class McpProtocolModelsTests
 
         var request = InvocationRequestReader.FromWire(parameters);
 
-        Assert.NotNull(request.ProgressToken);
-        Assert.Equal("token-42", request.ProgressToken.Value.ToString());
-        Assert.Equal("token-42", request.Meta!["progressToken"]!.GetValue<string>());
+        Assert.IsNotNull(request.ProgressToken);
+        Assert.AreEqual("token-42", request.ProgressToken.Value.ToString());
+        Assert.AreEqual("token-42", request.Meta!["progressToken"]!.GetValue<string>());
     }
 
-    [Fact]
+    [TestMethod]
     public void InvocationRequestReader_Deserializes_ProgressToken_FromMetaNumber()
     {
         var parameters = JsonNode.Parse(
@@ -86,12 +87,12 @@ public sealed class McpProtocolModelsTests
 
         var request = InvocationRequestReader.FromWire(parameters);
 
-        Assert.NotNull(request.ProgressToken);
-        Assert.Equal(42L, request.ProgressToken.Value.Token);
-        Assert.Equal(42, request.Meta!["progressToken"]!.GetValue<long>());
+        Assert.IsNotNull(request.ProgressToken);
+        Assert.AreEqual(42L, request.ProgressToken.Value.Token);
+        Assert.AreEqual(42, request.Meta!["progressToken"]!.GetValue<long>());
     }
 
-    [Fact]
+    [TestMethod]
     public void InvocationRequestReader_Ignores_TopLevelProgressToken()
     {
         var parameters = JsonNode.Parse(
@@ -104,19 +105,19 @@ public sealed class McpProtocolModelsTests
 
         var request = InvocationRequestReader.FromWire(parameters);
 
-        Assert.Null(request.ProgressToken);
-        Assert.Null(request.Meta);
+        Assert.IsNull(request.ProgressToken);
+        Assert.IsNull(request.Meta);
     }
 
-    [Fact]
+    [TestMethod]
     public void InvocationRequestReader_NullOrEmptyParams_ReturnsEmptyRequest()
     {
         var empty = InvocationRequestReader.FromWire(new JsonObject());
-        Assert.Equal(string.Empty, empty.Name);
-        Assert.Null(empty.Arguments);
+        Assert.AreEqual(string.Empty, empty.Name);
+        Assert.IsNull(empty.Arguments);
 
         var nullParams = InvocationRequestReader.FromWire(null);
-        Assert.Equal(string.Empty, nullParams.Name);
-        Assert.Null(nullParams.Arguments);
+        Assert.AreEqual(string.Empty, nullParams.Name);
+        Assert.IsNull(nullParams.Arguments);
     }
 }

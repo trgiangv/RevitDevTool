@@ -140,7 +140,7 @@ internal sealed class FakeMcpHostPipe : IAsyncDisposable
     {
         var security = new PipeSecurity();
         var currentUser = WindowsIdentity.GetCurrent();
-        Assert.NotNull(currentUser.User);
+        Assert.IsNotNull(currentUser.User);
         security.AddAccessRule(new PipeAccessRule(
             currentUser.User,
             PipeAccessRights.FullControl,

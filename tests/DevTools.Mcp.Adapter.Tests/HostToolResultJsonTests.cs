@@ -9,9 +9,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Adapter.Tests;
 
+[TestClass]
 public sealed class HostToolResultJsonTests
 {
-    [Fact]
+    [TestMethod]
     public void ToNode_InputRequired_MatchesCanonicalSdkJson()
     {
         var elicitParams = JsonSerializer.SerializeToElement(new
@@ -49,10 +50,10 @@ public sealed class HostToolResultJsonTests
         var actual = Encoding.UTF8.GetBytes(
             HostToolResultJson.ToNode(response).ToJsonString());
 
-        Assert.Equal(expected, actual);
+        Assert.AreSequenceEqual(expected, actual);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToNode_StandardResponse_EncodesAsCallToolResult()
     {
         var response = new McpInvocationResponse
@@ -62,7 +63,7 @@ public sealed class HostToolResultJsonTests
 
         var json = HostToolResultJson.ToNode(response).AsObject();
 
-        Assert.False(json.ContainsKey(McpSpecKeys.ResultType.Key));
-        Assert.Equal("ok", json["content"]!.AsArray()[0]!["text"]!.GetValue<string>());
+        Assert.IsFalse(json.ContainsKey(McpSpecKeys.ResultType.Key));
+        Assert.AreEqual("ok", json["content"]!.AsArray()[0]!["text"]!.GetValue<string>());
     }
 }

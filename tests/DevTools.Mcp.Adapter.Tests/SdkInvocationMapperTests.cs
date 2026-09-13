@@ -6,9 +6,10 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Adapter.Tests;
 
+[TestClass]
 public sealed class SdkInvocationMapperTests
 {
-    [Fact]
+    [TestMethod]
     public void SdkInvocationMapper_ToSdk_PreservesEverySupportedContentShape()
     {
         var annotations = new Annotations { Priority = 0.5f };
@@ -32,30 +33,30 @@ public sealed class SdkInvocationMapperTests
 
         var sdk = SdkInvocationMapper.ToSdk(response);
 
-        Assert.True(sdk.IsError);
-        Assert.Equal("meta", sdk.Meta!["response"]!.GetValue<string>());
-        Assert.Equal("{\"answer\":42}", sdk.StructuredContent!.Value.GetRawText());
-        Assert.Equal(6, sdk.Content.Count);
-        Assert.Equal(0.5f, sdk.Content[0].Annotations!.Priority);
-        Assert.Equal("text", ((TextContentBlock)sdk.Content[0]).Text);
-        Assert.Equal([1, 2, 3], ((ImageContentBlock)sdk.Content[1]).DecodedData.ToArray());
-        Assert.Equal([4, 5], ((AudioContentBlock)sdk.Content[2]).DecodedData.ToArray());
-        var textResource = Assert.IsType<TextResourceContents>(((EmbeddedResourceBlock)sdk.Content[3]).Resource);
-        Assert.Equal("test://text", textResource.Uri);
-        Assert.Equal("resource", textResource.Text);
-        Assert.Equal("text", textResource.Meta!["resource"]!.GetValue<string>());
-        var blobResource = Assert.IsType<BlobResourceContents>(((EmbeddedResourceBlock)sdk.Content[4]).Resource);
-        Assert.Equal("test://blob", blobResource.Uri);
-        Assert.Equal("application/octet-stream", blobResource.MimeType);
-        Assert.Equal([6, 7], blobResource.DecodedData.ToArray());
-        Assert.Equal("blob", blobResource.Meta!["resource"]!.GetValue<string>());
-        var resourceLink = Assert.IsType<ResourceLinkBlock>(sdk.Content[5]);
-        Assert.Equal("test://link", resourceLink.Uri);
-        Assert.Equal("link", resourceLink.Name);
-        Assert.Equal("Link title", resourceLink.Title);
-        Assert.Equal("A linked resource", resourceLink.Description);
-        Assert.Equal("text/plain", resourceLink.MimeType);
-        Assert.Equal(42, resourceLink.Size);
-        Assert.Equal(1, resourceLink.Meta!["link"]!.GetValue<int>());
+        Assert.IsTrue(sdk.IsError);
+        Assert.AreEqual("meta", sdk.Meta!["response"]!.GetValue<string>());
+        Assert.AreEqual("{\"answer\":42}", sdk.StructuredContent!.Value.GetRawText());
+        Assert.AreEqual(6, sdk.Content.Count);
+        Assert.AreEqual(0.5f, sdk.Content[0].Annotations!.Priority);
+        Assert.AreEqual("text", ((TextContentBlock)sdk.Content[0]).Text);
+        Assert.AreSequenceEqual(new byte[] { 1, 2, 3 }, ((ImageContentBlock)sdk.Content[1]).DecodedData.ToArray());
+        Assert.AreSequenceEqual(new byte[] { 4, 5 }, ((AudioContentBlock)sdk.Content[2]).DecodedData.ToArray());
+        var textResource = Assert.IsInstanceOfType<TextResourceContents>(((EmbeddedResourceBlock)sdk.Content[3]).Resource);
+        Assert.AreEqual("test://text", textResource.Uri);
+        Assert.AreEqual("resource", textResource.Text);
+        Assert.AreEqual("text", textResource.Meta!["resource"]!.GetValue<string>());
+        var blobResource = Assert.IsInstanceOfType<BlobResourceContents>(((EmbeddedResourceBlock)sdk.Content[4]).Resource);
+        Assert.AreEqual("test://blob", blobResource.Uri);
+        Assert.AreEqual("application/octet-stream", blobResource.MimeType);
+        Assert.AreSequenceEqual(new byte[] { 6, 7 }, blobResource.DecodedData.ToArray());
+        Assert.AreEqual("blob", blobResource.Meta!["resource"]!.GetValue<string>());
+        var resourceLink = Assert.IsInstanceOfType<ResourceLinkBlock>(sdk.Content[5]);
+        Assert.AreEqual("test://link", resourceLink.Uri);
+        Assert.AreEqual("link", resourceLink.Name);
+        Assert.AreEqual("Link title", resourceLink.Title);
+        Assert.AreEqual("A linked resource", resourceLink.Description);
+        Assert.AreEqual("text/plain", resourceLink.MimeType);
+        Assert.AreEqual(42, resourceLink.Size);
+        Assert.AreEqual(1, resourceLink.Meta!["link"]!.GetValue<int>());
     }
 }

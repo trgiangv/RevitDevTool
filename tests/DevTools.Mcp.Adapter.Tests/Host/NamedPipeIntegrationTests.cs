@@ -11,13 +11,16 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Adapter.Tests.Host;
 
+[TestClass]
 public sealed class NamedPipeIntegrationTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task NamedPipe_McpClientTalksToHostHandler()
     {
         var pipeName = HostPipeName.FormatMcp("TestHost", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(20));
 
         var (handler, _) = McpHostTestHarness.CreateWithTool("ping", "pong", "Ping");
@@ -37,21 +40,21 @@ public sealed class NamedPipeIntegrationTests
             cancellationToken: cts.Token);
 
         var listed = await client.ListToolsAsync(cancellationToken: cts.Token);
-        Assert.Contains(listed, tool => tool.Name == "ping");
+        Assert.IsTrue(listed.Any(tool => tool.Name == "ping"));
 
         var result = await client.CallToolAsync("ping", cancellationToken: cts.Token);
-        Assert.NotEqual(true, result.IsError);
+        Assert.AreNotEqual(true, result.IsError);
         Assert.Contains("pong", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
 
         await client.DisposeAsync();
         await cts.CancelAsync();
     }
 
-    [Fact]
+    [TestMethod]
     public async Task NamedPipe_ClientReceivesToolListChangedNotification()
     {
         var pipeName = HostPipeName.FormatMcp("TestHost", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(20));
 
         var (handler, _) = McpHostTestHarness.CreateWithTool("ping", "pong", "Ping");
@@ -86,11 +89,11 @@ public sealed class NamedPipeIntegrationTests
         await cts.CancelAsync();
     }
 
-    [Fact]
+    [TestMethod]
     public async Task NamedPipe_HandlerException_ReturnsJsonRpcInternalError()
     {
         var pipeName = HostPipeName.FormatMcp("TestHost", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(20));
 
         await using var serverPipe = CreateServerPipe(pipeName);
@@ -114,11 +117,11 @@ public sealed class NamedPipeIntegrationTests
             bufferSize: 1024,
             leaveOpen: true);
         var line = await reader.ReadLineAsync(cts.Token);
-        Assert.NotNull(line);
+        Assert.IsNotNull(line);
 
         var json = JsonNode.Parse(line)!.AsObject();
-        Assert.Equal(7, json["id"]!.GetValue<int>());
-        Assert.Equal((int)ModelContextProtocol.McpErrorCode.InternalError, json["error"]!["code"]!.GetValue<int>());
+        Assert.AreEqual(7, json["id"]!.GetValue<int>());
+        Assert.AreEqual((int)ModelContextProtocol.McpErrorCode.InternalError, json["error"]!["code"]!.GetValue<int>());
         Assert.Contains("boom", json["error"]!["message"]!.GetValue<string>(), StringComparison.Ordinal);
 
         await cts.CancelAsync();
@@ -128,7 +131,7 @@ public sealed class NamedPipeIntegrationTests
     {
         var security = new PipeSecurity();
         var currentUser = WindowsIdentity.GetCurrent();
-        Assert.NotNull(currentUser.User);
+        Assert.IsNotNull(currentUser.User);
         security.AddAccessRule(new PipeAccessRule(
             currentUser.User,
             PipeAccessRights.FullControl,

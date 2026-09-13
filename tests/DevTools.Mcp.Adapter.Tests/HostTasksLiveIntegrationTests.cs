@@ -8,19 +8,22 @@ using ModelContextProtocol.Protocol;
 namespace DevTools.Mcp.Adapter.Tests;
 
 /// <summary>Live host-pipe checks (requires deployed host with tasks/get handlers).</summary>
+[TestClass]
 public sealed class HostTasksLiveIntegrationTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task LiveHost_ExecuteCsharp_SyncAndTasksOptIn()
     {
         var pipeName = DiscoverRevitMcpPipe();
         if (pipeName is null)
         {
-            Assert.Skip("No live Revit MCP pipe. Launch Revit with DevTools loaded.");
+            Assert.Inconclusive("No live Revit MCP pipe. Launch Revit with DevTools loaded.");
             return;
         }
 
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(90));
 
         var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
@@ -42,7 +45,7 @@ public sealed class HostTasksLiveIntegrationTests
         var request = new CallToolRequestParams { Name = "execute_csharp_code", Arguments = arguments };
 
         var syncResult = await client.CallToolAsync(request, cancellationToken: cts.Token);
-        Assert.NotEqual(true, syncResult.IsError);
+        Assert.AreNotEqual(true, syncResult.IsError);
         Assert.Contains("tasks-live-ok", Text(syncResult), StringComparison.Ordinal);
 
         var taskOrResult = await client.CallToolAsTaskAsync(request, cancellationToken: cts.Token);
@@ -50,7 +53,7 @@ public sealed class HostTasksLiveIntegrationTests
         if (taskOrResult.IsTask)
         {
             var polled = await client.CallToolWithPollingAsync(request, cancellationToken: cts.Token);
-            Assert.NotEqual(true, polled.IsError);
+            Assert.AreNotEqual(true, polled.IsError);
             Assert.Contains("tasks-live-ok", Text(polled), StringComparison.Ordinal);
         }
         else
