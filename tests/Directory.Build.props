@@ -6,11 +6,14 @@
         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     </PropertyGroup>
 
-    <!-- coverlet.MTP is net8+ only. net48 hosts (*.NetFramework.Tests) stay without it. -->
-    <ItemGroup Condition="$([System.String]::Copy('$(MSBuildProjectName)').EndsWith('.Tests')) AND !$([System.String]::Copy('$(MSBuildProjectName)').Contains('NetFramework'))">
-        <PackageReference Include="coverlet.MTP" />
-        <None Include="$(MSBuildThisFileDirectory)testconfig.json"
+    <PropertyGroup Condition="'$(UseMicrosoftCodeCoverage)' == 'true'">
+        <TestingExtensionsProfile>Default</TestingExtensionsProfile>
+        <EnableMicrosoftTestingExtensionsCodeCoverage>true</EnableMicrosoftTestingExtensionsCodeCoverage>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(UseMicrosoftCodeCoverage)' == 'true'">
+        <None Include="$(MSBuildThisFileDirectory)mstest-coverage.xml"
               CopyToOutputDirectory="PreserveNewest"
-              Link="testconfig.json" />
+              Link="coverage.xml" />
     </ItemGroup>
 </Project>

@@ -23,6 +23,10 @@ here.
   [0033](0033-ironpython-pydevd-debugger.md) is **Accepted** IronPython DAP
   (in-process PyDev.Debugger 2.8.0; VS Code client is `debugpy` on 4567).
   CPython stays `debugpy` on 5678 (0025).
+  [0034](0034-execution-mstest-sdk-scoped-tests.md) is **Accepted** Execution
+  unit tests: scoped MSTest.Sdk 4.4.0 projects + first-party `--coverage`.
+  [0035](0035-mstest-sdk-repo-tests.md) is **Accepted** remaining in-repo
+  `tests/*.Tests` on the same SDK and collector (no xUnit, no Coverlet).
 
 ## Index
 
@@ -58,3 +62,5 @@ here.
 | [0031](0031-daemon-json-source-gen.md) | Daemon JSON source-gen (supports 0032 AOT) | Accepted — support for 0032 |
 | [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is MewUI; Native AOT is the target | Accepted — UI shipped; AOT not production |
 | [0033](0033-ironpython-pydevd-debugger.md) | IronPython debug via vendored PyDev.Debugger 2.8.0 | Accepted |
+| [0034](0034-execution-mstest-sdk-scoped-tests.md) | Execution tests: scoped MSTest.Sdk + first-party coverage | Accepted |
+| [0035](0035-mstest-sdk-repo-tests.md) | In-repo tests: MSTest.Sdk 4.4.0 + first-party coverage | Accepted |

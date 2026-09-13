@@ -63,7 +63,7 @@ syntax (`FullyQualifiedName~`) on MTP projects.
 
 | Surface | Command |
 |---------|---------|
-| In-repo `tests/*.Tests.csproj` | `dotnet run --project tests/<proj>/<proj>.csproj` then optional `-- --filter ClassName`. Line coverage: `-- --coverlet` (see `docs/agents/test-matrix.md`). `dotnet test --project` from repo root also works (MTP). |
+| In-repo `tests/*.Tests.csproj` | `dotnet run --project tests/<proj>/<proj>.csproj` then optional `-- --filter ClassName`. Line coverage (net10): `-- --coverage --coverage-output-format cobertura --coverage-settings coverage.xml` (see `docs/agents/test-matrix.md`). `dotnet test --project` from repo root also works (MTP). |
 | Product samples (`samples/DevTools.*.SampleTests`) | `dotnet test --project samples/…` from repo root |
 | `samples/ricaun.NUnit.SampleTests` | Comparison only. `cd` that folder first. Not a verify path. |
 

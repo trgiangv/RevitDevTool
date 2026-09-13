@@ -37,6 +37,8 @@ Rename an active plan when its ADR number or workstream id changed.
 
 | Plan | Completed |
 |------|-----------|
+| [2026-09-13-mstest-sdk-repo-migration.md](completed/2026-09-13-mstest-sdk-repo-migration.md) | 2026-09-13 (all in-repo testhosts MSTest.Sdk; [0035](../decisions/0035-mstest-sdk-repo-tests.md) Accepted) |
+| [2026-09-13-execution-test-project-split.md](completed/2026-09-13-execution-test-project-split.md) | 2026-09-13 (god project gone; [0034](../decisions/0034-execution-mstest-sdk-scoped-tests.md) Accepted) |
 | [2026-09-11-ironpython-pydevd.md](completed/2026-09-11-ironpython-pydevd.md) | 2026-09-11 (live attach; [0033](../decisions/0033-ironpython-pydevd-debugger.md) Accepted) |
 | [2026-08-21-tunit-revit-testhost.md](completed/2026-08-21-tunit-revit-testhost.md) | 2026-09-04 (spike closed; not a production track) |
 | [2026-09-03-stj-facade-0028.md](completed/2026-09-03-stj-facade-0028.md) | 2026-09-04 (P0 landed; `object?` is 0031 AOT follow-up) |

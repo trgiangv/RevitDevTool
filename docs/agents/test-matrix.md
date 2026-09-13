@@ -1,8 +1,8 @@
 # Test Matrix
 
-**Read this before adding tests, raising Coverlet %, or refactoring Execution / MCP / Daemon / Ipc.**
+**Read this before adding tests, raising coverage %, or refactoring Execution / MCP / Daemon / Ipc.**
 Gaps and untestable limits below are the source of truth. Do not invent Skip gates,
-reset pythonnet, swap `HostDispatcher`, spawn a second Coverlet on a live testhost,
+reset pythonnet, swap `HostDispatcher`, spawn a second testhost on a live `bin/`,
 or treat merged HTML **Total %** as the product gate.
 
 Relative coverage of **this repo's** `tests/` — by product area, not by file.
@@ -21,10 +21,10 @@ Ipc, Settings, Logging, Telemetry, Utilities, FileMetadata.Core.
 
 | Gap | Why it is still open | What agents must not do |
 |-----|----------------------|-------------------------|
-| **`DevTools.Execution` Coverlet not in the HTML merge** | MTP Coverlet instruments DLLs in `tests/DevTools.Execution.Tests/bin/`. A second testhost (`--coverlet`) holds those files; the next run fails in seconds (`MSB3027` / `[Coverlet] Coverage instrumentation failed`). Tests exist (pixi, pipe, compilers, pytest bridge). Last merge omitted this assembly. | Do not spawn another Coverlet while a testhost is on that `bin/`. Do not kill the owner. Wait, then **one** `dotnet run --no-build … --coverlet`. Do not treat HTML Execution **1.5%** as the suite (that is Catalog touching `PythonMcpToolBackend`). |
+| **`DevTools.Execution` coverage** | Closed by [0034](../decisions/0034-execution-mstest-sdk-scoped-tests.md) / [0035](../decisions/0035-mstest-sdk-repo-tests.md): in-repo testhosts are MSTest.Sdk. Collect `--coverage`, not `--coverlet`. | Use `--coverage --coverage-output-format cobertura --coverage-settings coverage.xml`. Do not add Coverlet. Do not treat old HTML Execution **1.5%** as the suite. |
 | **`DevTools.Ipc` ~21% merged** | No dedicated `*.Tests` project. Merge only sees `HostPipeName`. `BridgeMessage` / pytest framing is exercised from Execution + `Testing.Transport`. | Do not add a fake Ipc test project “for %”. Cover Ipc via Execution/Transport contract tests, or a real Ipc test project if the wire changes. |
 | **Catalog sample / live-pipe Skip (~9)** | Optional `McpToolsetDemo` / `RevitMcpToolSet` DLLs, pixi bind, live `DevToolsMcp_*`. | Skip, do not Fail. Do not fake packed layouts. |
-| **pythonnet one engine / process** | Uninitialized serializer/debugger Skip if `PythonEngine.IsInitialized`. Collection order vs pixi is undefined. | Do not `PythonEngine.Shutdown`. Any fact that calls `EnsurePixiPythonInitializedAsync` / `InitializeAsync` / `PytestDependencyService.PrepareRunAsync` **must** use `[Collection(nameof(PythonRuntimeCollection))]`. Nested collection classes are OK; a class *outside* the collection that inits Python is not. |
+| **pythonnet one engine / process** | Uninitialized serializer/debugger Skip (`Assert.Inconclusive`) if `PythonEngine.IsInitialized`. pythonnet lives in `DevTools.Execution.Python.Tests` (and pytest-run tests in `Pytest.Tests` may init their own process). | Do not `PythonEngine.Shutdown`. Do not put uninitialized-engine facts in Pytest.Tests. |
 | **`HostDispatcher` process-static** | `HostUiHelperTests` / file-change orchestrator Skip if dispatcher already set. | Do not clear the static. Headless path is inline when dispatcher is null. |
 | **Testing.Abstractions 79.9%** | 0.1% under 80% on the last owned run. | Not a product bug. Do not dump duplicate “coverage boost” files for 0.1%. |
 | **In-host / packaging** | Live `execute_*`, in-host `PytestRunner.py`, ILRepack year matrix, daemon hot-reload. | `mcp-integration-test.md` / host pytest. Out of headless CI. |
@@ -43,7 +43,7 @@ Sequential `dotnet run … --coverlet` 2026-09-04 16:28–16:37 + Daemon retry 1
 | `DevTools.Mcp.Server` | **91.6%** | 61 pass |
 | `DevTools.Mcp.Client` | **90.5%** | 20 pass |
 | `DevTools.Daemon` | **80.4%** | 76 pass |
-| `DevTools.Execution` | **not measured** | testhost lock |
+| `DevTools.Execution` | **not in last Coverlet merge** | MSTest.Sdk `--coverage` (0034); run scoped projects |
 | `DevTools.Testing.Abstractions` | 79.9% | 57 pass |
 | `DevTools.Utilities` | **94.9%** | 18 pass |
 | `DevTools.Settings` | **93.3%** | 12 pass |
@@ -57,31 +57,32 @@ Sequential `dotnet run … --coverlet` 2026-09-04 16:28–16:37 + Daemon retry 1
 
 These are process or environment constraints. Tests **Skip** with a reason, or
 the fact is simply out of this repo. Do **not** reset pythonnet, swap dispatchers,
-or fake packed layouts just to raise Coverlet %.
+or fake packed layouts just to raise coverage %.
 
 | Limit | What tests do | What not to do |
 |-------|----------------|----------------|
-| **pythonnet: one engine per process** | `PythonJsonSerializerUninitializedTests` / `PythonDebuggerUninitializedTests` Skip if `PythonEngine.IsInitialized`. Pixi/python facts share `[Collection(nameof(PythonRuntimeCollection))]` (no parallelization). Collection order is undefined, so uninitialized facts may Skip after a pixi run. | Do not `PythonEngine.Shutdown` / re-init to force the uninitialized path. |
+| **pythonnet: one engine per process** | Uninitialized serializer/debugger Inconclusive if `PythonEngine.IsInitialized`. pythonnet lives in `Python.Tests` / Catalog; Pytest.Tests may init in its own process. | Do not `PythonEngine.Shutdown` / re-init to force the uninitialized path. |
 | **`HostUiHelper.HostDispatcher` is process-static** | `HostUiHelperTests` and `ExecutionOrchestratorFileChangeTests` Skip if a dispatcher is already set. Inline dispatch when dispatcher is null is the headless path. | Do not clear/replace the static dispatcher from tests. This is not “needs Revit.exe”. |
 | **Optional artifacts / live pipe** | Sample `McpToolsetDemo` / `RevitMcpToolSet` DLLs, live `DevToolsMcp_*` pipe, ILRepack host layout, pythonnet bind failure on a given pixi: **Skip** with `OptionalArtifact` / packaging hints. | Do not Fail CI when samples or Revit are absent. Do not treat Skip as coverage debt to hack around. |
-| **coverlet.MTP is net8+** | `*.NetFramework.Tests` (net48) have no Coverlet package. | Do not add `coverlet.collector` / VSTest collectors. |
-| **Coverlet + a live testhost on the same `bin/`** | MTP Coverlet instruments DLLs in the test output folder. A second `dotnet run` / testhost on the same project fails in seconds (`CS2012` / `MSB3027` / `[Coverlet] Coverage instrumentation failed`). That is not a hung test. | Do not spawn a second Coverlet, do not kill the other testhost, do not wait 25m. Wait for the owner to finish, or omit that project from the merge. |
+| **coverlet.MTP is gone** | In-repo testhosts use MSTest.Sdk ([0035](../decisions/0035-mstest-sdk-repo-tests.md)). net48 has no collector. | Do not add `coverlet.MTP`, `coverlet.collector`, or VSTest collectors. |
+| **Two testhosts on the same `bin/`** | A second `dotnet run` on the same project can fail in seconds (`MSB3027`). That is not a hung test. | Do not spawn a second coverage run on a live testhost. Wait for the owner, or omit that project. |
 | **Daemon desktop is MewUI** | STA `Application.Create().UseWin32().UseDirect2D()` session (`MewUiSession`). Not WPF / FlaUI / WPF-MCP. | Do not Skip Daemon UI as “WPF tray”. A headless box without Win32/Direct2D is a real env gap. |
 | **In-host product** | `execute_*` on a live Revit/AutoCAD thread, `PytestRunner.py` inside the host, ILRepack year matrix, daemon hot-reload. | Out of `tests/` CI. Use `mcp-integration-test.md` / host pytest. |
 | **Pip embed vs pixi product default** | Pip facts still download a python.org embed zip. Product default Python is `%AppData%/RevitDevTool/pixi-env`. Pixi CLI is asserted via `PixiInstaller.SetupPixiAsync` (Skip only if download throws). | Do not re-gate pixi/pip behind `RUN_PIXI_SMOKE` / host-absent Skip. |
 
-**Coverlet reading:** `--coverlet-include '[DevTools.*]*'` also instruments unused
-transitive `DevTools.*` at 0%. **Owned-module row is the truth**; Total % is
-misleading. Parallel `dotnet run` can lock `DevTools.Mcp.Catalog.dll` — run
-Coverlet **one project at a time**. If instrumentation fails immediately, stop —
+**Coverage reading:** `--coverage-settings coverage.xml` includes `DevTools.*` and
+excludes `*.Tests`. **Owned-module row is the truth**; Total % is misleading.
+Run coverage **one project at a time**. If instrumentation fails immediately, stop —
 do not wait for `--timeout`.
+
+Last Coverlet snapshot below is historical (2026-09-04). New runs use `--coverage`.
 
 ## Summary
 
 | Area | Relative coverage | Notes |
 |------|-------------------|-------|
 | MCP Core/Catalog/Server/Client + Daemon | **≥80% line** (last snapshot) | Daemon is **MewUI**, not WPF. Adapter/live pipe is host-process (out of gate). |
-| Execution | Tests exist; **Coverlet not in last merge** | Independent of Revit.exe — mock `IHostContextExecutor`. See Current gaps. |
+| Execution | Tests exist in scoped MSTest.Sdk projects; measure with `--coverage` | Independent of Revit.exe — mock `IHostContextExecutor`. See Current gaps. |
 | Ipc | **Low in merge (~21%)** | No dedicated test project; framing covered via Execution / Testing.Transport. |
 | NUnit / Testing | **Medium–high** | In-host product; xUnit harness is out of process. |
 | Settings / Logging / Telemetry / Utilities / FileMetadata.Core / Hosting | **≥80% line** | Hosting.Revit/Acad remain out of the out-of-host gate. |
@@ -90,7 +91,7 @@ do not wait for `--timeout`.
 
 ## Line coverage (how to measure)
 
-Do **not** treat Coverlet as a replacement for this matrix. Snapshot and gate list: **Current gaps** above.
+Do **not** treat a coverage HTML merge as a replacement for this matrix. Snapshot and gate list: **Current gaps** above.
 
 Do **not** call Daemon “WPF tray” — desktop is MewUI Direct2D + `H.NotifyIcon.Core` (ADR 0032).
 Do **not** Skip pixi/pip because a host app is absent.
@@ -101,31 +102,33 @@ Do **not** Skip pixi/pip because a host app is absent.
 Need a collector **only** when you want line/branch numbers. This repo is MTP
 (`dotnet run --project tests/<proj>/<proj>.csproj`). VSTest collectors do not apply.
 
-`coverlet.MTP` **10.0.1** is referenced centrally for every `*.Tests` executable except
-`*.NetFramework.Tests` (net48). Shared settings: `tests/testconfig.json`. Collection is
-**opt-in per run** (`--coverlet`), not a CI gate.
+In-repo testhosts are MSTest.Sdk ([0035](../decisions/0035-mstest-sdk-repo-tests.md)).
+net10 projects set `UseMicrosoftCodeCoverage=true` (SDK Default profile).
+net48 `*.NetFramework.Tests` have no collector. Settings:
+`tests/mstest-coverage.xml` (copied as `coverage.xml`). Collection is **opt-in
+per run**, not a CI gate.
 
 | Tool | Flag | Use when |
 |------|------|----------|
-| **`coverlet.MTP`** | `--coverlet` | Wired. Cobertura + json under MTP `--results-directory`. |
-| `Microsoft.Testing.Extensions.CodeCoverage` | `--coverage` | Official Microsoft collector — do not add alongside Coverlet. |
+| **`Microsoft.Testing.Extensions.CodeCoverage`** | `--coverage` | net10 testhosts. Cobertura under MTP `--results-directory`. |
+| `coverlet.MTP` / `--coverlet` | — | **No.** Removed from `tests/`. |
 | `coverlet.collector` / `coverlet.msbuild` | `--collect` | **No.** VSTest-only. |
 
 ```powershell
-dotnet run --project tests/DevTools.Execution.Tests/DevTools.Execution.Tests.csproj -c Debug -- --coverlet
+dotnet run --project tests/DevTools.Execution.CSharp.Tests/DevTools.Execution.CSharp.Tests.csproj -c Debug -- --coverage --coverage-output-format cobertura --coverage-settings coverage.xml
 ```
 
 Sequential merge (one project at a time; shared `--results-directory`):
 
 ```powershell
 $out = "$PWD\artifacts\coverage"
-# then for each out-of-host *.Tests.csproj:
-dotnet run --project tests/<proj>/<proj>.csproj -c Debug -- --coverlet --results-directory $out --coverlet-file-prefix <proj>
+# then for each out-of-host net10 *.Tests.csproj:
+dotnet run --project tests/<proj>/<proj>.csproj -c Debug -- --coverage --results-directory $out --coverage-output-format cobertura --coverage-settings coverage.xml
 ```
 
 HTML: ReportGenerator on `artifacts/coverage/coverage.cobertura*.xml` (gitignored). Check **Current gaps** before claiming a new Total %.
 
-Include filter is `[DevTools.*]*`. Threshold fail is MTP exit `14`. If Coverlet prints `instrumentation failed` or MSBuild `MSB3027` on `tests/*/bin`, **stop that project** — testhost lock, not a hung test.
+Include filter is `DevTools.*` (see `coverage.xml`). If MSBuild `MSB3027` on `tests/*/bin`, **stop that project** — testhost lock, not a hung test.
 
 ---
 
@@ -150,7 +153,7 @@ Split by source module. Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, 
 - **Built-in registry** — `BuiltInMcpRegistryProvider` name/bindings; `DotnetMcpRegistryProvider` empty/missing paths (sample DLL Skip)
 - **Toolset discovery** — .NET + Python parsers, argument binding, result/MRTR mapping, ALC bridges
 - **SDK integration** — stream transport contracts, in-process named-pipe round-trip (mock host)
-- **Connection tracking** — `McpConnectState` headless via `HostUiHelper.RunOnMainThread` inline when no dispatcher (`DevTools.Execution.Tests`)
+- **Connection tracking** — `McpConnectState` headless via `HostUiHelper.RunOnMainThread` inline when no dispatcher (`DevTools.Execution.Mcp.Tests` / `Services.Tests`)
 
 ### Partial / fragile
 
@@ -170,7 +173,7 @@ Split by source module. Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, 
 
 ## NUnit host
 
-`tests/DevTools.NUnit.Host.Tests` — parallelization off (`CollectionBehavior`) because
+`tests/DevTools.NUnit.Host.Tests` — `[assembly: DoNotParallelize]` because
 `TestingRunTraceScope` mutates process-wide `Trace.Listeners`.
 
 ### Well covered
@@ -182,7 +185,7 @@ Split by source module. Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, 
 
 - **Packed host output** — `HostPackagingOwnershipTests.Packed_host_output_*` **Skips** unless the layout is actually ILRepacked (unpackaged Debug still copies `NUnitRuntime` and leaves `DevTools.Testing.Host.dll` loose). Build host with ILRepack, or set `DEVTOOLS_PACKED_HOST_OUTPUT`.
 
-xUnit v3 tests are MTP executables (`tests/Directory.Build.props`). Run
+In-repo testhosts are MTP executables (`tests/Directory.Build.props`). Run
 `dotnet run --project tests/<project>/<project>.csproj` (optional
 `-- --filter ClassName`) or `dotnet test --project` from the repo root (root
 `global.json` is MTP). Product samples use the same root runner.
@@ -213,9 +216,15 @@ Host pipe (`DevTools_*`) is separate from MCP pipe (`DevToolsMcp_*`).
 
 ## Execution
 
-Unit layer in `tests/DevTools.Execution.Tests` (python runtime / host-attach, pytest bridge, package stores). Pixi/pip **run** in the same process (download allowed). Skip only on download/bind failure.
+Scoped MSTest.Sdk projects ([0034](../decisions/0034-execution-mstest-sdk-scoped-tests.md)):
+`CSharp`, `FSharp`, `Python`, `IronPython`, `Pytest`, `Mcp`, `Services` plus
+`Tests.Shared`. Pixi/pip **run** in Python.Tests / Pytest.Tests (download allowed).
+Skip (`Assert.Inconclusive`) only on download/bind failure.
 
-Any fact that initializes pythonnet **must** be `[Collection(nameof(PythonRuntimeCollection))]`. Last Coverlet merge **did not include** this project (testhost lock) — see Current gaps.
+pythonnet init belongs in **Python.Tests** (Pytest.Tests may init in its own
+process for run/prepare). Uninitialized-engine facts stay in Python.Tests.
+
+Measure Execution (and other net10 testhosts) with `--coverage`.
 
 ### Well covered
 

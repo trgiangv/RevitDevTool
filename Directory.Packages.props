@@ -71,8 +71,6 @@
         <PackageVersion Include="ACadSharp" Version="3.7.1" />
         <PackageVersion Include="ricaun.AutoCAD.UI" Version="0.5.0" />
         <!--Tests-->
-        <PackageVersion Include="xunit.v3" Version="4.0.0" />
-        <PackageVersion Include="coverlet.MTP" Version="10.0.1" />
         <PackageVersion Include="NUnit" Version="4.6.1" />
         <PackageVersion Include="TUnit" Version="1.66.27" />
         <PackageVersion Include="TUnit.Core" Version="1.66.27" />

@@ -33,6 +33,7 @@ Host API matrix (all years): `build-matrix.md`.
 | File lock / deploy failed | `scripts/kill-host.ps1 -HostApp Revit -Year <year>` |
 | Build + deploy one year | Stop only that year; `scripts/build-host.ps1 -Year 2025` |
 | .NET tests | `dotnet run --project tests/<project>/<project>.csproj` |
+| Execution tests | `dotnet run --project tests/DevTools.Execution.<Scope>.Tests/DevTools.Execution.<Scope>.Tests.csproj` (CSharp, FSharp, Python, IronPython, Pytest, Mcp, Services). Coverage: `-- --coverage --coverage-output-format cobertura --coverage-settings coverage.xml` |
 | MCP tests | `dotnet run --project tests/DevTools.Mcp.<Module>.Tests/DevTools.Mcp.<Module>.Tests.csproj` (Core, Catalog, Adapter, Client, Server) |
 | Python parser (this repo) | `scripts/test-python.ps1` |
 | Installer / bundle | `scripts/pack.ps1` |

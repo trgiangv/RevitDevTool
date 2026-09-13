@@ -25,6 +25,13 @@ Remaining live-host / year-matrix / pixi-opt-in stay in `test-matrix.md`.
 Split god project `DevTools.Mcp.Tests` into module-scoped projects:
 [2026-09-04-mcp-test-project-split](2026-09-04-mcp-test-project-split.md).
 
+## Execution / MSTest.Sdk tests (closed)
+
+- Execution god project split: [completed](../completed/2026-09-13-execution-test-project-split.md)
+  ([0034](../../decisions/0034-execution-mstest-sdk-scoped-tests.md)).
+- Remaining testhosts: [completed](../completed/2026-09-13-mstest-sdk-repo-migration.md)
+  ([0035](../../decisions/0035-mstest-sdk-repo-tests.md)).
+
 ## MCP (closed)
 
 - Product: [0027](../../decisions/0027-mcp-product-surface.md). Host pipe:
@@ -50,4 +57,4 @@ Split god project `DevTools.Mcp.Tests` into module-scoped projects:
 NUnit MTP-only ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)) is
 [completed](../completed/2026-08-18-nunit-mtp-only.md).
 
-No active execution plans besides the MCP test split.
+Active plans: MCP test split (landed; file still under `active/`).
