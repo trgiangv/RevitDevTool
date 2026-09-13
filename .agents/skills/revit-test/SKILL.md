@@ -41,7 +41,7 @@ pin `TUnit` `1.67.0`.
   <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.6"/>
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.0"/>
   <PackageReference Include="NUnit" Version="4.6.1" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
