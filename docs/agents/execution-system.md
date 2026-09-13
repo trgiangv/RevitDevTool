@@ -27,7 +27,7 @@ Additional interfaces in `source/DevTools.Execution/Interfaces/`:
 
 - `IPythonBridge` — Python.NET runtime
 - `IIronPythonBridge` — IronPython runtime
-- `IDebuggerBridge` (in `DevTools.Presentation.Interfaces`) — attach/detach debugger
+- `IDebuggerBridge` (in `DevTools.Presentation.Interfaces`) — CPython + IronPython listen ports; one `IsConnected`
 
 Host projects register implementations via `AddExecutionServices()`:
 

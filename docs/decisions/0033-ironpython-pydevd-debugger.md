@@ -1,17 +1,24 @@
 # 0033 IronPython Debug via Vendored PyDev.Debugger 2.8.0
 
 Date: 2026-09-11
-Amended: 2026-09-11 — IPy 3.4 `win32`/`cli` shim; port 5680; pyRevit yields
-when the pydevd client is attached.
+Amended: 2026-09-11 — IPy 3.4 `win32`/`cli` shim; port 5680 (later 4567); pyRevit yields
+when a debugger client is attached.
+Amended: 2026-09-12 — VS Code/Cursor client is `debugpy` attach+connect;
+`IpyDebugger.py` handshake + expand-getattr quieting. In-process
+debugger remains PyDev.Debugger 2.8.0 on port 4567 (was 5680).
+Amended: 2026-09-13 — two IronPython stacks, one debugger.
+pyRevit loaded → ScriptExecutor + `IronPythonDebugger.InitializeAsync(engine)`
+on the loader engine (`full_frame: false`, reuse). No pyRevit → embedded 3.4.2
+via `GetOrCreateEngine`. Do not `CreateEngine` on the pyRevit path.
 
 ## Status
 
-Proposed — not shipped. Do not treat as current product behavior.
+Accepted.
 
 Companion to [0025](0025-runner-owned-visual-studio-host-attach.md) (CPython
 `debugpy` listen-on-port is a **separate** DAP path) and
-[0026](0026-ironpython-unittest-script-execution.md) (pyRevit-first for
-**non-debug** IronPython). Living maps stay in
+[0026](0026-ironpython-unittest-script-execution.md) (pyRevit-first when
+loaded). Living maps stay in
 [`code-execution.md`](../architecture/Execution/code-execution.md) after accept.
 
 ## Context
@@ -19,9 +26,10 @@ Companion to [0025](0025-runner-owned-visual-studio-host-attach.md) (CPython
 CPython already listens with `PythonDebugger` / `debugpy` on preferred port
 5678. That stack is pythonnet / CPython. IronPython (`*_ipy_script.py`) cannot
 import `debugpy`, cannot `pip install` a CPython wheel into the DLR engine, and
-today creates the embedded engine with `Python.CreateEngine()` — **no
-`Frames`**. pyRevit Labs (when loaded) uses
-`full_frame: false` in `PyRevitReflectionCache.EngineConfigsJson`.
+today creates the embedded engine with `Python.CreateEngine()` **without**
+`Frames` unless `IronPythonDebugger` owns the session. pyRevit Labs (when
+loaded) uses one `EngineConfigsJson` with `full_frame: false` and
+`clean: false` so the pydevd listener survives across Runs.
 
 `sys._getframe` is a hard requirement of PyDev.Debugger. pydevd 2.8.0 source
 treats IronPython as a first-class target (`IS_IRONPYTHON = sys.platform ==
@@ -44,24 +52,28 @@ not DAP. The 3.x convenience `settrace(..., protocol="dap")` is not in 2.8.0.
 `HTTP_JSON_PROTOCOL` is the Content-Length JSON framing DAP uses;
 `JSON_PROTOCOL` is raw JSON without headers.
 
-VS Code **Python Debugger (debugpy)** and **Python Debugger (PyDev)**
-(`fabioz.vscode-pydev-python-debugger`) are different clients. Handshake of the
-current PyDev 3.x extension against pydevd **2.8.0** DAP is **not** proven
-until a live attach.
+VS Code **Python Debugger (debugpy)** talks DAP directly to the in-process
+2.8 listener. pydevd 2.8 does not emit `InitializedEvent` after attach;
+`IpyDebugger.py` synthesizes it when `adapterID == "debugpy"`. That
+handshake is proven live. Do not import the `debugpy` package into
+IronPython (CPython-only). Do not require the PyDev VS Code extension.
 
 ## Decision
 
-### 1. IronPython debug is PyDev.Debugger 2.8.0, not debugpy
+### 1. IronPython debug is PyDev.Debugger 2.8.0 in-process; VS Code client is debugpy
 
 Adopt **fabioz/PyDev.Debugger tag `pydev_debugger_2_8_0`** as the in-process
-debugger for `ExecutionMode.IronPython`.
+debugger for `ExecutionMode.IronPython`. The VS Code/Cursor attach config is
+`"type": "debugpy"` connect `localhost:4567` — same client as CPython, not
+the same server or socket.
 
 Refuse:
 
-- `debugpy` inside IronPython (CPython-only; already the CPython path).
+- Importing the `debugpy` package into IronPython (CPython-only; already the
+  CPython path).
 - pydevd **3.x** as the first IronPython debugger (IronPython is not the
   supported in-process target; protocol APIs differ).
-- Unifying this listener with `PythonDebugger` or Runner EnvDTE
+- Unifying this listener with `PythonDebugger` or sharing port 5678
   ([0025](0025-runner-owned-visual-studio-host-attach.md) alternative 2 already
   refused merging DAP stacks).
 
@@ -121,16 +133,21 @@ do not need `f_trace`. `set_trace_to_threads` is CPython-only. Do not skip
 `enable_tracing` while already on the debug engine waiting for
 `ConfigurationDone`.
 
-Non-debug IronPython execution may keep today’s engine options until a later
-change; a **debug** session must not reuse an engine created without Frames.
+Non-debug and debug IronPython share one session engine **only on the
+embedded 3.4.2 path** (AutoCAD, Revit without pyRevit). That engine is
+created with <c>Frames</c>/<c>FullFrames</c> and **without** <c>Tracing</c>.
 
-**Debug sessions use the embedded engine we create**, not pyRevit
-`ScriptExecutor` (`full_frame: false`). [0026](0026-ironpython-unittest-script-execution.md)
-unattached Run/test stays pyRevit-first. `RevitIPyExecutionStrategy` yields to
-the session engine only while `pydevd._is_attached()` is true. That is
-engine selection, not a wait-for-client. Do not set pyRevit `full_frame:
-true` in this pass — ScriptExecutor is a different DLR runtime than the
-listener. Do not reopen 0026 for ordinary (unattached) Run.
+When pyRevit is loaded, every `*_ipy_script.py` Run uses pyRevit
+<c>ScriptExecutor</c> / <c>PyRevitLoader</c> — not embedded 3.4.2.
+<c>IronPythonDebugger.InitializeAsync(object)</c> listens on that loader
+engine (no <c>CreateEngine</c>, no <c>Runtime.Shutdown</c>).
+<c>EngineConfigsJson</c>: <c>clean:false</c>, <c>persistent:false</c>,
+<c>full_frame:false</c>, <c>RefreshEngine:false</c>. Do **not** set
+<c>full_frame</c> (pyRevit would set <c>Tracing</c>; IronPython 3.4 then
+fails <c>import pydevd</c>). User-extension modules are dropped from
+<c>sys.modules</c> before each Run so edited files reload. Embedded 3.4.2
+is AutoCAD / Revit-without-pyRevit only. Do not reopen 0026 for routing
+(loaded vs not).
 
 ### 4. Search path is the PyDev root only
 
@@ -147,7 +164,7 @@ Run does not grow a “Debug Script / wait / attach” gesture.
 
 | CPython (`PythonDebugger`) | IronPython (`IronPythonDebugger`) |
 |---------------------------|----------------------------------|
-| `debugpy.listen(...)` at interpreter init | `pydevd._enable_attach(("127.0.0.1", 5680))` at engine init |
+| `debugpy.listen(...)` at interpreter init | `pydevd._enable_attach(("127.0.0.1", 4567))` at engine init |
 | no `debugpy.wait_for_client()` | no `pydevd._wait_for_attach()` |
 | `debugpy.is_client_connected()` | `pydevd._is_attached()` |
 | listener lives with the process | same — see decision 8 |
@@ -179,11 +196,12 @@ request`). Without the flag, 2.8 suspends the host thread and waits for
 `continue` while VS Code never shows a hit. This is host configuration, not
 a pydevd fork.
 
-Preferred port is **5680**. CPython `debugpy` keeps **5678**
+Preferred port is **4567**. CPython `debugpy` keeps **5678**
 ([0025](0025-runner-owned-visual-studio-host-attach.md)). The two listeners must
-not share a socket. If 5680 is taken, pick an ephemeral port and **surface
-it**. VS Code attach for this path is the **PyDev** debugger extension to
-`127.0.0.1:5680` (or the surfaced fallback), not `"type": "debugpy"`.
+not share a socket. If 4567 is taken, pick an ephemeral port and **surface
+it**. VS Code attach is `"type": "debugpy"` connect to `127.0.0.1:4567` (or
+the surfaced fallback). Handshake (`InitializedEvent`, unknown DAP command
+replies) lives in `IpyDebugger.py`, not a pydevd fork.
 
 Breakpoints at the first lines of a script hit only if the client is already
 attached — same as today’s CPython `debugpy` (no wait). Attach after a Run
@@ -212,17 +230,20 @@ Shared `DevTools.Execution` owns an `IronPythonDebugger` parallel to
 public sealed class IronPythonDebugger
 {
     public void ConfigureEngine(ScriptEngine engine); // search path + import
-    public void StartListening(int port = 5680);     // protocol + _enable_attach
+    public void StartListening(int port = 4567);     // protocol + _enable_attach
     public bool IsAttached { get; }                    // _is_attached
 }
 ```
 
 No `WaitForClient`. Do not inject `import pydevd` / `settrace` into each
 `*_ipy_script.py`. Do not put this type in `RevitDevTool` / `AcadDevTool`.
-Hosts keep `IIronPythonBridge` for builtins/references only.
+Hosts keep `IIronPythonBridge` for builtins/references only. pyRevit
+`SearchPaths` are the command-generator list (script / lib / bin /
+pyrevitlib). Do not inject pyRevit paths into the embedded 3.4 engine.
 
-`IDebuggerBridge` remains the CPython/UI port facade until a later product
-decision; this ADR does not merge the two listeners.
+`IDebuggerBridge` surfaces both listen ports (`PythonDebugPort`,
+`IronPythonDebugPort`) and one `IsConnected()` (CPython **or** IronPython
+client). The two listeners stay on separate sockets.
 
 ### 8. Session-lifetime engine: listen at init, execute later, do not shutdown
 
@@ -237,16 +258,15 @@ Therefore the embedded debug engine is **session-lifetime**:
 
 1. Host start (or first embedded IPy init): create Frames engine, add PyDev
    root, `StartListening`, **keep the engine**.
-2. User attaches VS Code to 5680 whenever — host has no extra click.
+2. User attaches VS Code to 4567 whenever — host has no extra click.
 3. `*_ipy_script.py` on the embedded path executes **on that engine**
    (`CreateScriptSourceFromString` with the on-disk path), not on a fresh
    engine that is then shutdown.
 4. Do not `Runtime.Shutdown()` that engine at the end of each script.
 
-pyRevit-first ordinary Run is unchanged ([0026](0026-ironpython-unittest-script-execution.md))
-until a client is attached. Then `RevitIPyExecutionStrategy` runs the same
-file on this engine so breakpoints can bind. AutoCAD (no pyRevit) and
-Revit-without-pyRevit already use embedded IPy.
+pyRevit-first Run is [0026](0026-ironpython-unittest-script-execution.md)
+plus <c>IronPythonDebugger</c> on the same loader engine. AutoCAD and
+Revit-without-pyRevit keep embedded IPy 3.4.2.
 
 `_enable_attach` starts a background listener thread. Do not call it on a
 throwaway engine. Do not `_wait_for_attach` on the Revit UI thread.
@@ -261,15 +281,19 @@ throwaway engine. Do not `_wait_for_attach` on the Revit UI thread.
    target here; AppData zip matches uv/pixi bootstrap.
 4. **Fork or patch pydevd.** Rejected for v1. Upstream 2.8.0 already has the
    IronPython workarounds.
-5. **One `PythonDebugger` / one VS Code `debugpy` attach for both runtimes.**
-   Rejected. Different interpreter, different DAP server, different client
-   extension.
+5. **One `PythonDebugger` / one listen port for both runtimes.** Rejected.
+   Different interpreter, different in-process DAP server (debugpy vs
+   pydevd 2.8). The **client** type can be the same (`debugpy` attach to
+   5678 or 4567). Do not merge sockets.
 6. **User-script boilerplate (`import pydevd` in every file).** Rejected.
    Host configures the engine.
 7. **Execute debug code as `<string>`.** Rejected. Breakpoints will not bind.
-8. **Debug through pyRevit ScriptExecutor with `full_frame: false`.** Rejected.
-   pydevd will fail `_getframe`. A later ADR may add pyRevit `full_frame: true`
-   + search-path injection; it is not v1.
+8. **Adopt pyRevit's DLR into a second debugger type.**
+   Rejected. One <c>IronPythonDebugger</c>; <c>DlrScriptHost</c> already
+   talks to both typed 3.4 and pyRevit's DLR. pyRevit
+   `full_frame`/`Tracing` still must not be set (IronPython 3.4 `import pydevd`
+   throws <c>FieldExpression</c>/<c>BlockExpression</c>). Do not
+   <c>Runtime.Shutdown</c> the loader engine.
 9. **`_wait_for_attach` / `WaitForClient` on each debug Run.** Rejected as
    product UX. It is `debugpy.wait_for_client()`, which this product does not
    use. It freezes the host until VS Code attaches and is a different gesture
@@ -291,23 +315,19 @@ Positive:
 Tradeoffs:
 
 - Two listen-on-port stacks and two VS Code attach configurations
-  (`debugpy` 5678, pydevd **5680**). If 5680 is taken, the fallback port must
-  be visible.
-- Debug Run may use embedded IronPython 3.4.2 even when pyRevit would have
-  run the same file — dialect/engine can differ from ordinary Run (0026).
-- PyDev 3.x client ↔ pydevd 2.8.0 DAP is an unproven handshake until live
-  attach.
+  (`debugpy` 5678 CPython, `debugpy` **4567** IronPython). If 4567 is taken,
+  the fallback port must be visible.
+- pyRevit-loaded Revit runs and debugs on the ScriptExecutor engine
+  (`full_frame: false`, reused). AutoCAD / no-pyRevit use embedded 3.4.2.
 - Zip download needs network once per machine (or a pre-seeded AppData tree).
-- Embedded IPy becomes a long-lived engine (Frames + pydevd) instead of
-  create/shutdown per script. Script isolation / `sys.modules` leakage across
-  runs is a real cost; pyRevit ordinary Run is unaffected.
+- pyRevit `sys.modules` is session-lifetime; user-extension modules are
+  dropped before each Run. Embedded IPy is a long-lived Frames engine.
 - First-line breakpoints miss unless VS Code is already attached — same as
   CPython `debugpy` without `wait_for_client`.
 - Expanding Revit API objects in the Variables view calls `getattr` on
-  throwing properties (`FamilyCreate`, `FamilyManager`, worksets, hosted
-  instance). pydevd 2.8 `pydevd_resolver` catches and stores the traceback as
-  the attribute value; host logs show DBG traceback plus ERR because the
-  TraceListener maps the word `exception`. Do not fork pydevd for this.
+  throwing properties (`FamilyCreate`, `FamilyManager`, worksets). Host
+  `IpyDebugger.py` replaces resolver `print_exc` with a one-line
+  value and swallows stderr during expand. Do not fork AppData pydevd.
 
 ## Follow-Up
 
@@ -317,7 +337,7 @@ Spike is done when a live IronPython debug Run shows all of:
 2. `hasattr(sys, "_getframe")` is true
 3. `pydevd_constants.IS_IRONPYTHON` is true (`sys.platform == 'cli'`)
 4. DAP listener (`HTTP_JSON_PROTOCOL` + `_enable_attach`)
-5. VS Code **PyDev** extension connects
+5. VS Code **debugpy** client connects to 4567
 6. breakpoint hit on the real `co_filename`
 7. locals visible and step-over works
 
@@ -332,17 +352,17 @@ from _pydevd_bundle import pydevd_constants
 
 After that spike passes:
 
-- Product layer: `docs/product/execution.md` — IronPython listen-on-5680.
+- Product layer: `docs/product/execution.md` — IronPython listen-on-4567.
 - Architecture: `code-execution.md` — `pydevd` AppData layout, session engine,
   engine flags.
-- Optional later: pyRevit `full_frame` debug; `IDebuggerBridge` dual port;
-  IPy unittest debug.
+- Optional later: IPy unittest debug through the same loader path.
 
 ## References
 
 - Debugger zip:
   https://github.com/fabioz/PyDev.Debugger/archive/refs/tags/pydev_debugger_2_8_0.zip
-- Client: [Python Debugger (PyDev)](https://marketplace.visualstudio.com/items?itemName=fabioz.vscode-pydev-python-debugger)
+- Client: VS Code/Cursor `"type": "debugpy"` attach+connect to `localhost:4567`
+- Handshake: `source/DevTools.Execution/Resources/scripts/IpyDebugger.py`
 - CPython listen: `source/DevTools.Execution/Providers/Python/PythonDebugger.cs`
 - Embedded IPy: `source/DevTools.Execution/Providers/IronPython/IronPythonRunner.cs`
 - AppData root: `source/DevTools.Utilities/AppUtils.cs`

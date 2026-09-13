@@ -76,8 +76,8 @@ Shared execution depends on interfaces:
 | `ICommandRunner` | Invoke discovered or compiled commands. |
 | `ICompiledScriptBridge` | Parent-bind host APIs, find the compiled command type, rewrite host-year `#r` paths. FSI compile refs are derived from parent `Location`s in Execution, not a fourth contract member. |
 | `IPythonBridge` | Configure CPython builtins/scope for the host. |
-| `IIronPythonBridge` | Configure IronPython runtime and search paths for the host. |
-| `IDebuggerBridge` | Open debugger/runtime hooks from shared UI. |
+| `IIronPythonBridge` | Configure IronPython builtins and host assemblies. |
+| `IDebuggerBridge` | CPython and IronPython listen ports plus per-runtime connect flags for Execution UI; `IsConnected` is either attach. |
 | `IDocumentBridge` | Open, close, and save documents in the host context. |
 
 Revit wiring lives in `RevitHostingExtensions`. AutoCAD wiring lives in `AcadHostingExtensions`. New hosts should add their own adapter project rather than leaking host APIs into `DevTools.Execution`.

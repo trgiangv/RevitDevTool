@@ -20,8 +20,9 @@ here.
 - [0030](0030-host-owned-cpython-and-package-managers.md) is **Python runtime**.
   [0031](0031-daemon-json-source-gen.md) is STJ source-gen **in support of 0032**.
   [0032](0032-daemon-mewui-and-aot.md) is Daemon MewUI + AOT target.
-  [0033](0033-ironpython-pydevd-debugger.md) is **Proposed** IronPython DAP
-  (PyDev.Debugger 2.8.0); CPython stays `debugpy` (0025).
+  [0033](0033-ironpython-pydevd-debugger.md) is **Accepted** IronPython DAP
+  (in-process PyDev.Debugger 2.8.0; VS Code client is `debugpy` on 4567).
+  CPython stays `debugpy` on 5678 (0025).
 
 ## Index
 
@@ -56,4 +57,4 @@ here.
 | [0030](0030-host-owned-cpython-and-package-managers.md) | Host-owned CPython — uv sidecar vs Pixi-owned interpreter | Accepted — Python runtime |
 | [0031](0031-daemon-json-source-gen.md) | Daemon JSON source-gen (supports 0032 AOT) | Accepted — support for 0032 |
 | [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is MewUI; Native AOT is the target | Accepted — UI shipped; AOT not production |
-| [0033](0033-ironpython-pydevd-debugger.md) | IronPython debug via vendored PyDev.Debugger 2.8.0 | Proposed |
+| [0033](0033-ironpython-pydevd-debugger.md) | IronPython debug via vendored PyDev.Debugger 2.8.0 | Accepted |
