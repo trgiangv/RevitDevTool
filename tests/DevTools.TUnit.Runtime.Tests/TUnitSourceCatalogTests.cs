@@ -4,13 +4,11 @@ using TUnit.Core;
 
 namespace DevTools.TUnit.Runtime.Tests;
 
-[CollectionDefinition(nameof(TUnitSourceCatalogTests), DisableParallelization = true)]
-public sealed class TUnitSourceCatalogTestsCollection;
-
-[Collection(nameof(TUnitSourceCatalogTests))]
+[TestClass]
+[DoNotParallelize]
 public sealed class TUnitSourceCatalogTests
 {
-    [Fact]
+    [TestMethod]
     public void Retain_hides_foreign_entries_from_the_live_catalog()
     {
         var current = typeof(TUnitSourceCatalogTests).Assembly;
@@ -23,9 +21,10 @@ public sealed class TUnitSourceCatalogTests
         {
             TUnitSourceCatalog.Retain(current);
 
-            Assert.False(Sources.TestEntries.ContainsKey(foreignType));
-            Assert.True(Sources.TestEntries.ContainsKey(currentType));
-            Assert.All(Sources.TestEntries.Keys, type => Assert.Same(current, type.Assembly));
+            Assert.IsFalse(Sources.TestEntries.ContainsKey(foreignType));
+            Assert.IsTrue(Sources.TestEntries.ContainsKey(currentType));
+            foreach (var type in Sources.TestEntries.Keys)
+                Assert.AreSame(current, type.Assembly);
         }
         finally
         {
@@ -33,7 +32,7 @@ public sealed class TUnitSourceCatalogTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Retain_restores_parked_entries_when_switching_back_to_a_prior_assembly()
     {
         var current = typeof(TUnitSourceCatalogTests).Assembly;
@@ -49,14 +48,14 @@ public sealed class TUnitSourceCatalogTests
             TUnitSourceCatalog.Retain(current);
             TUnitSourceCatalog.Retain(foreignType.Assembly);
 
-            Assert.True(Sources.TestEntries.ContainsKey(foreignType));
-            Assert.False(Sources.TestEntries.ContainsKey(currentType));
+            Assert.IsTrue(Sources.TestEntries.ContainsKey(foreignType));
+            Assert.IsFalse(Sources.TestEntries.ContainsKey(currentType));
 
             TUnitSourceCatalog.Retain(current);
 
-            Assert.True(Sources.TestEntries.ContainsKey(currentType));
-            Assert.Same(currentSource, Sources.TestEntries[currentType]);
-            Assert.False(Sources.TestEntries.ContainsKey(foreignType));
+            Assert.IsTrue(Sources.TestEntries.ContainsKey(currentType));
+            Assert.AreSame(currentSource, Sources.TestEntries[currentType]);
+            Assert.IsFalse(Sources.TestEntries.ContainsKey(foreignType));
         }
         finally
         {
@@ -64,7 +63,7 @@ public sealed class TUnitSourceCatalogTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Retain_restores_from_process_hold_when_a_second_runtime_copy_parked_the_entries()
     {
         var current = typeof(TUnitSourceCatalogTests).Assembly;
@@ -76,7 +75,7 @@ public sealed class TUnitSourceCatalogTests
         Sources.TestEntries[currentType] = currentSource;
 
         var runtimePath = typeof(TUnitSourceCatalog).Assembly.Location;
-        Assert.False(string.IsNullOrWhiteSpace(runtimePath));
+        Assert.IsFalse(string.IsNullOrWhiteSpace(runtimePath));
         var copyDirectory = Directory.CreateTempSubdirectory();
         var copyPath = Path.Combine(copyDirectory.FullName, Path.GetFileName(runtimePath));
         File.Copy(runtimePath, copyPath);
@@ -94,17 +93,17 @@ public sealed class TUnitSourceCatalogTests
         try
         {
             var runtimeCopy = alc.LoadFromAssemblyPath(copyPath);
-            Assert.NotSame(typeof(TUnitSourceCatalog).Assembly, runtimeCopy);
+            Assert.AreNotSame(typeof(TUnitSourceCatalog).Assembly, runtimeCopy);
             InvokeRetain(runtimeCopy, current);
 
-            Assert.False(Sources.TestEntries.ContainsKey(foreignType));
-            Assert.True(Sources.TestEntries.ContainsKey(currentType));
+            Assert.IsFalse(Sources.TestEntries.ContainsKey(foreignType));
+            Assert.IsTrue(Sources.TestEntries.ContainsKey(currentType));
 
             TUnitSourceCatalog.Retain(foreignType.Assembly);
 
-            Assert.True(Sources.TestEntries.ContainsKey(foreignType));
-            Assert.Same(foreignSource, Sources.TestEntries[foreignType]);
-            Assert.False(Sources.TestEntries.ContainsKey(currentType));
+            Assert.IsTrue(Sources.TestEntries.ContainsKey(foreignType));
+            Assert.AreSame(foreignSource, Sources.TestEntries[foreignType]);
+            Assert.IsFalse(Sources.TestEntries.ContainsKey(currentType));
         }
         finally
         {

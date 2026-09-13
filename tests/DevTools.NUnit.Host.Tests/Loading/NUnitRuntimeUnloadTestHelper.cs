@@ -59,7 +59,7 @@ internal static class NUnitRuntimeUnloadTestHelper
         File.Copy(ConflictingNUnitStubPath, isolatedCopyPath, overwrite: true);
 
         var loaded = Assembly.Load(File.ReadAllBytes(isolatedCopyPath));
-        Assert.Equal(new Version(3, 14, 0, 0), loaded.GetName().Version);
+        Assert.AreEqual(new Version(3, 14, 0, 0), loaded.GetName().Version);
 
         return loaded;
     }
@@ -82,8 +82,8 @@ internal static class NUnitRuntimeUnloadTestHelper
         File.Copy(GenerationPrivateDependencyStubPath, isolatedCopyPath, overwrite: true);
 
         var loaded = Assembly.Load(File.ReadAllBytes(isolatedCopyPath));
-        Assert.Equal("GenerationPrivateDependency", loaded.GetName().Name, StringComparer.OrdinalIgnoreCase);
-        Assert.Equal(new Version(1, 0, 0, 0), loaded.GetName().Version);
+        Assert.AreEqual("GenerationPrivateDependency", loaded.GetName().Name, StringComparer.OrdinalIgnoreCase);
+        Assert.AreEqual(new Version(1, 0, 0, 0), loaded.GetName().Version);
 
         return loaded;
     }

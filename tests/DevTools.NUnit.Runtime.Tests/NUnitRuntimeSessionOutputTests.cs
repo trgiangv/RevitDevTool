@@ -4,10 +4,13 @@ using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.NUnit.Runtime.Tests;
 
-[Collection(nameof(BlockingFixtureCollection))]
+[TestClass]
+[DoNotParallelize]
 public sealed class NUnitRuntimeSessionOutputTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void Run_reports_console_trace_and_debug_output()
     {
         var polluter = new RecordingTraceListener();
@@ -18,11 +21,11 @@ public sealed class NUnitRuntimeSessionOutputTests
             var response = session.Run(
                 CreateRequest(DedicatedTestFixturesHarness.OutputCaptureFilter),
                 new RecordingSink(),
-                TestContext.Current.CancellationToken);
+                TestContext.CancellationToken);
 
-            var result = Assert.Single(response.Results);
-            Assert.Equal(DedicatedTestFixturesHarness.OutputCaptureTestFullName, result.FullName);
-            Assert.Equal(TestOutcomes.Passed, result.Outcome);
+            var result = response.Results.Single();
+            Assert.AreEqual(DedicatedTestFixturesHarness.OutputCaptureTestFullName, result.FullName);
+            Assert.AreEqual(TestOutcomes.Passed, result.Outcome);
 
             var output = result.Output ?? string.Empty;
             Assert.Contains("spike-output-marker", output, StringComparison.Ordinal);
@@ -35,7 +38,7 @@ public sealed class NUnitRuntimeSessionOutputTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Run_reports_console_trace_and_debug_output_after_full_semantics_run()
     {
         using (var warmup = FixtureTestHarness.CreateSession())
@@ -43,7 +46,7 @@ public sealed class NUnitRuntimeSessionOutputTests
             _ = warmup.Run(
                 CreateFullSemanticsRequest(null),
                 new RecordingSink(),
-                TestContext.Current.CancellationToken);
+                TestContext.CancellationToken);
         }
 
         var polluter = new RecordingTraceListener();
@@ -54,9 +57,9 @@ public sealed class NUnitRuntimeSessionOutputTests
             var response = session.Run(
                 CreateRequest(DedicatedTestFixturesHarness.OutputCaptureFilter),
                 new RecordingSink(),
-                TestContext.Current.CancellationToken);
+                TestContext.CancellationToken);
 
-            var output = Assert.Single(response.Results).Output ?? string.Empty;
+            var output = response.Results.Single().Output ?? string.Empty;
             Assert.Contains("spike-trace-marker", output, StringComparison.Ordinal);
             Assert.Contains("spike-debug-marker", output, StringComparison.Ordinal);
         }

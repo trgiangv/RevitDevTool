@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="MSTest.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net48</TargetFramework>
         <IsPackable>false</IsPackable>
+        <TestingExtensionsProfile>None</TestingExtensionsProfile>
+        <EnableMicrosoftTestingExtensionsCodeCoverage>false</EnableMicrosoftTestingExtensionsCodeCoverage>
         <DefaultItemExcludes>$(DefaultItemExcludes);Fixtures\**\*</DefaultItemExcludes>
-        <NoWarn>$(NoWarn);xUnit1031;xUnit1051</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -13,7 +14,6 @@
 
     <ItemGroup>
         <PackageReference Include="NUnit"/>
-        <PackageReference Include="xunit.v3"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -27,4 +27,9 @@
         <ProjectReference Include="Fixtures\NetFrameworkGenerationProbe\NetFrameworkGenerationProbe.csproj" ReferenceOutputAssembly="false"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
+    </ItemGroup>
+
 </Project>
+

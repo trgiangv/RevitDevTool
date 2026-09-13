@@ -2,9 +2,10 @@ using DevTools.Testing.Host.NUnit;
 
 namespace DevTools.NUnit.Host.Tests;
 
+[TestClass]
 public sealed class HostAssemblyBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void NUnit_provider_sources_have_no_cad_api_or_logging_references()
     {
         var csproj = File.ReadAllText(Path.Combine(
@@ -33,12 +34,12 @@ public sealed class HostAssemblyBoundaryTests
                 .Where(name => File.ReadAllText(path).Contains(name, StringComparison.OrdinalIgnoreCase))
                 .Select(name => $"{Path.GetRelativePath(FindRepositoryRoot(), path)} contains {name}"))
             .ToList();
-        Assert.True(hostApiNameHits.Count == 0, string.Join(Environment.NewLine, hostApiNameHits));
+        Assert.IsTrue(hostApiNameHits.Count == 0, string.Join(Environment.NewLine, hostApiNameHits));
 
-        Assert.Equal("DevTools.Testing.Host", typeof(NUnitTestFrameworkProvider).Assembly.GetName().Name);
+        Assert.AreEqual("DevTools.Testing.Host", typeof(NUnitTestFrameworkProvider).Assembly.GetName().Name);
     }
 
-    [Fact]
+    [TestMethod]
     public void Host_uses_the_neutral_generation_manifest_without_compatibility_facades()
     {
         var directory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Testing.Host", "NUnit", "Loading");
@@ -58,7 +59,7 @@ public sealed class HostAssemblyBoundaryTests
         ];
 
         var existing = forbiddenFiles.Where(file => File.Exists(Path.Combine(directory, file))).ToList();
-        Assert.Empty(existing);
+        Assert.IsEmpty(existing);
     }
 
     private static string FindRepositoryRoot()

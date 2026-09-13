@@ -3,10 +3,13 @@ using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.TUnit.Runtime.Tests;
 
-[Collection(nameof(TUnitSourceCatalogTests))]
+[TestClass]
+[DoNotParallelize]
 public sealed class TUnitRuntimeSessionTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void Names_map_to_test_ids_and_do_not_throw()
     {
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
@@ -14,14 +17,14 @@ public sealed class TUnitRuntimeSessionTests
         var response = session.Run(
             CreateRequest(TestSelection.FromNames(["DoesNotExist"])),
             NullSink.Instance,
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.Null(response.DiagnosticCode);
-        Assert.Empty(response.Results);
-        Assert.Equal(TestCancellationState.None, response.CancellationState);
+        Assert.IsNull(response.DiagnosticCode);
+        Assert.IsEmpty(response.Results);
+        Assert.AreEqual(TestCancellationState.None, response.CancellationState);
     }
 
-    [Fact]
+    [TestMethod]
     public void Framework_filter_returns_invalid_request_without_throwing()
     {
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
@@ -29,15 +32,15 @@ public sealed class TUnitRuntimeSessionTests
         var response = session.Run(
             CreateRequest(TestSelection.FromFrameworkFilter("filter-xml", "<filter/>")),
             NullSink.Instance,
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.Equal("testing/invalid_request", response.DiagnosticCode);
-        Assert.Contains("--name", response.DiagnosticMessage, StringComparison.Ordinal);
-        Assert.Empty(response.Results);
-        Assert.Equal(TestCancellationState.None, response.CancellationState);
+        Assert.AreEqual("testing/invalid_request", response.DiagnosticCode);
+        Assert.Contains("--name", response.DiagnosticMessage!, StringComparison.Ordinal);
+        Assert.IsEmpty(response.Results);
+        Assert.AreEqual(TestCancellationState.None, response.CancellationState);
     }
 
-    [Fact]
+    [TestMethod]
     public void Cancel_before_active_run_id_is_applied_when_run_starts()
     {
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
@@ -48,13 +51,13 @@ public sealed class TUnitRuntimeSessionTests
         var response = session.Run(
             CreateRequest(TestSelection.FromTestIds([]), runId),
             NullSink.Instance,
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.Equal(TestCancellationState.Completed, response.CancellationState);
-        Assert.Empty(response.Results);
+        Assert.AreEqual(TestCancellationState.Completed, response.CancellationState);
+        Assert.IsEmpty(response.Results);
     }
 
-    [Fact]
+    [TestMethod]
     public void Cancel_for_a_different_run_does_not_pending_cancel_the_next_run()
     {
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
@@ -64,12 +67,12 @@ public sealed class TUnitRuntimeSessionTests
         var response = session.Run(
             CreateRequest(TestSelection.FromTestIds([])),
             NullSink.Instance,
-            TestContext.Current.CancellationToken);
+            TestContext.CancellationToken);
 
-        Assert.Equal(TestCancellationState.None, response.CancellationState);
+        Assert.AreEqual(TestCancellationState.None, response.CancellationState);
     }
 
-    [Fact]
+    [TestMethod]
     public void MapToEngineSelection_converts_names_to_test_ids()
     {
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
@@ -78,8 +81,8 @@ public sealed class TUnitRuntimeSessionTests
             assembly.Location,
             assembly);
 
-        Assert.Equal(TestSelectionKind.TestIds, mapped.Kind);
-        Assert.Empty(mapped.TestIds);
+        Assert.AreEqual(TestSelectionKind.TestIds, mapped.Kind);
+        Assert.IsEmpty(mapped.TestIds);
     }
 
     private static TestRunRequest CreateRequest(TestSelection selection, Guid? runId = null) =>

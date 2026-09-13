@@ -11,50 +11,51 @@ namespace DevTools.NUnit.MTP.Tests;
 /// leaf whose UID is Class.Method (no constructor args). Collapsed filter
 /// XML also selects in-host Class("args").Method and TestName/SetName leaves.
 /// </summary>
+[TestClass]
 public sealed class NUnitCollectPushTests
 {
-    [Fact]
+    [TestMethod]
     public void Collect_emits_collapsed_source_stub_full_name()
     {
         var stub = CollectStub();
 
-        Assert.Equal(stub.FullName, stub.TestId);
-        Assert.Equal("Stub_leaf", stub.MethodName);
+        Assert.AreEqual(stub.FullName, stub.TestId);
+        Assert.AreEqual("Stub_leaf", stub.MethodName);
         Assert.Contains("CollapsedSourceStubFixture", stub.TestId, StringComparison.Ordinal);
         Assert.DoesNotContain("CollapsedSourceStubFixture(", stub.TestId, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_by_collected_uid_returns_the_same_leaf()
     {
         var stub = CollectStub();
         var discoverer = new NUnitTestDiscoverer();
         var selected = discoverer.Discover(FixturePath, TestSelection.FromTestIds([stub.TestId]));
 
-        Assert.Equal(stub.TestId, Assert.Single(selected).TestId);
+        Assert.AreEqual(stub.TestId, selected.Single().TestId);
     }
 
-    [Fact]
+    [TestMethod]
     public void Display_name_is_not_a_uid_so_discover_misses()
     {
         var discoverer = new NUnitTestDiscoverer();
         var selected = discoverer.Discover(FixturePath, TestSelection.FromTestIds(["Stub_leaf"]));
 
-        Assert.Empty(selected);
+        Assert.IsEmpty(selected);
     }
 
-    [Fact]
+    [TestMethod]
     public void Push_xml_is_collapsed_addtest_full_name()
     {
         var stub = CollectStub();
         var xml = NUnitCollapsedSelection.ToFilterXml([stub.TestId]);
 
-        Assert.Contains($"<test>{stub.TestId}</test>", xml, StringComparison.Ordinal);
-        Assert.Contains("re=\"1\"", xml, StringComparison.Ordinal);
-        Assert.Contains("<method>Stub_leaf</method>", xml, StringComparison.Ordinal);
+        Assert.Contains($"<test>{stub.TestId}</test>", xml!, StringComparison.Ordinal);
+        Assert.Contains("re=\"1\"", xml!, StringComparison.Ordinal);
+        Assert.Contains("<method>Stub_leaf</method>", xml!, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Pushed_method_fqn_matches_expanded_fixture_source_leaves()
     {
         var stubId =
@@ -67,37 +68,32 @@ public sealed class NUnitCollectPushTests
             .Where(test => test.MethodName == "FixtureSource_ValueIsPreserved")
             .ToList();
 
-        Assert.Equal(2, expanded.Count);
-        Assert.All(expanded, test => Assert.True(filter.Pass(test)));
-        Assert.All(
-            expanded,
-            test => Assert.Contains("ParameterizedFixture(", test.FullName, StringComparison.Ordinal));
+        Assert.AreEqual(2, expanded.Count);
+        foreach (var test in expanded)
+        {
+            Assert.IsTrue(filter.Pass(test));
+            Assert.Contains("ParameterizedFixture(", test.FullName!, StringComparison.Ordinal);
+        }
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_by_method_fqn_finds_testname_leaves()
     {
         const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
         var discoverer = new NUnitTestDiscoverer();
         var selected = discoverer.Discover(FixturePath, TestSelection.FromTestIds([methodId]));
 
-        Assert.Equal(2, selected.Count);
-        Assert.Equal(
+        Assert.AreEqual(2, selected.Count);
+        Assert.AreSequenceEqual(
             ["Named_one", "Named_two"],
             selected.Select(test => test.DisplayName).OrderBy(name => name, StringComparer.Ordinal).ToArray());
-        Assert.All(selected, test => Assert.Equal("Original_named", test.MethodName));
-        Assert.All(
-            selected,
-            test => Assert.StartsWith(
-                "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named(\"",
-                test.TestId,
-                StringComparison.Ordinal));
-        Assert.All(
-            selected,
-            test => Assert.Contains(
-                "TestNameCaseFixture.Named_",
-                test.FullName,
-                StringComparison.Ordinal));
+        Assert.IsTrue(selected.All(test => test.MethodName == "Original_named"));
+        Assert.IsTrue(selected.All(test => test.TestId.StartsWith(
+            "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named(\"",
+            StringComparison.Ordinal)));
+        Assert.IsTrue(selected.All(test => test.FullName!.Contains(
+            "TestNameCaseFixture.Named_",
+            StringComparison.Ordinal)));
     }
 
     static TestDiscoveredTest CollectStub()
@@ -113,7 +109,7 @@ public sealed class NUnitCollectPushTests
         get
         {
             var path = typeof(FullSemanticsFixture).Assembly.Location;
-            Assert.False(string.IsNullOrWhiteSpace(path));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(path));
             return path;
         }
     }

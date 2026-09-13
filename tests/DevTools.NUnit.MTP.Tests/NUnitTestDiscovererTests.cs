@@ -4,9 +4,10 @@ using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.MTP.Tests;
 
+[TestClass]
 public sealed class NUnitTestDiscovererTests
 {
-    [Fact]
+    [TestMethod]
     public void Discover_emits_parameterized_leaves_with_nunit_full_names()
     {
         var discoverer = new NUnitTestDiscoverer();
@@ -15,20 +16,20 @@ public sealed class NUnitTestDiscovererTests
         var additions = cases
             .Where(test => test.DisplayName.StartsWith("TestCase_Addition", StringComparison.Ordinal))
             .ToList();
-        Assert.Equal(3, additions.Count);
-        Assert.All(additions, test =>
+        Assert.AreEqual(3, additions.Count);
+        foreach (var test in additions)
         {
-            Assert.Equal(test.FullName, test.TestId);
+            Assert.AreEqual(test.FullName, test.TestId);
             Assert.Contains("FullSemanticsFixture.TestCase_Addition", test.TestId, StringComparison.Ordinal);
-        });
+        }
 
         var sources = cases
             .Where(test => test.TestId.Contains("TestCaseSource_StaticProvider", StringComparison.Ordinal))
             .ToList();
-        Assert.Equal(3, sources.Count);
+        Assert.AreEqual(3, sources.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_name_uses_nunit_name_regex_not_method_identity()
     {
         var discoverer = new NUnitTestDiscoverer();
@@ -36,12 +37,11 @@ public sealed class NUnitTestDiscovererTests
             FixturePath,
             TestSelection.FromNames(["TestCase_Addition"]));
 
-        Assert.Equal(3, selected.Count);
-        Assert.All(selected, test =>
-            Assert.StartsWith("TestCase_Addition", test.DisplayName, StringComparison.Ordinal));
+        Assert.AreEqual(3, selected.Count);
+        Assert.IsTrue(selected.All(test => test.DisplayName.StartsWith("TestCase_Addition", StringComparison.Ordinal)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_test_id_matches_nunit_full_name()
     {
         var discoverer = new NUnitTestDiscoverer();
@@ -52,10 +52,10 @@ public sealed class NUnitTestDiscovererTests
             FixturePath,
             TestSelection.FromTestIds([one.TestId]));
 
-        Assert.Equal(one.TestId, Assert.Single(selected).TestId);
+        Assert.AreEqual(one.TestId, selected.Single().TestId);
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_empty_parens_method_uid_selects_parameterized_leaves()
     {
         var discoverer = new NUnitTestDiscoverer();
@@ -67,27 +67,26 @@ public sealed class NUnitTestDiscovererTests
             FixturePath,
             TestSelection.FromTestIds([methodUid]));
 
-        Assert.Equal(3, selected.Count);
-        Assert.All(selected, test =>
-            Assert.StartsWith("TestCase_Addition", test.DisplayName, StringComparison.Ordinal));
+        Assert.AreEqual(3, selected.Count);
+        Assert.IsTrue(selected.All(test => test.DisplayName.StartsWith("TestCase_Addition", StringComparison.Ordinal)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_testname_uid_keeps_csharp_method_in_the_fqn()
     {
         var named = new NUnitTestDiscoverer().Discover(FixturePath, TestSelection.All)
             .Single(test => test.DisplayName == "Named_one");
 
-        Assert.Equal("Original_named", named.MethodName);
-        Assert.Equal(
+        Assert.AreEqual("Original_named", named.MethodName);
+        Assert.AreEqual(
             "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named(\"Named_one\")",
             named.TestId);
-        Assert.Equal(
+        Assert.AreEqual(
             "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one",
             named.FullName);
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_display_name_is_not_a_test_id()
     {
         var discoverer = new NUnitTestDiscoverer();
@@ -95,10 +94,10 @@ public sealed class NUnitTestDiscovererTests
             FixturePath,
             TestSelection.FromTestIds(["PlainTest_Passes"]));
 
-        Assert.Empty(selected);
+        Assert.IsEmpty(selected);
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_display_name_with_args_selects_the_leaf()
     {
         var discoverer = new NUnitTestDiscoverer();
@@ -109,10 +108,10 @@ public sealed class NUnitTestDiscovererTests
             FixturePath,
             TestSelection.FromTestIds([one.DisplayName]));
 
-        Assert.Equal(one.TestId, Assert.Single(selected).TestId);
+        Assert.AreEqual(one.TestId, selected.Single().TestId);
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_groups_fixture_source_instances_under_parameterized_type_names()
     {
         var discoverer = new NUnitTestDiscoverer();
@@ -120,18 +119,18 @@ public sealed class NUnitTestDiscovererTests
             .Where(test => test.MethodName == "FixtureSource_ValueIsPreserved")
             .ToList();
 
-        Assert.Equal(2, cases.Count);
-        Assert.All(cases, test =>
+        Assert.AreEqual(2, cases.Count);
+        foreach (var test in cases)
         {
-            Assert.Equal(test.FullName, test.TestId);
-            Assert.Equal("FixtureSource_ValueIsPreserved", test.MethodName);
-            Assert.Contains("ParameterizedFixture(", test.ClassName, StringComparison.Ordinal);
-            Assert.StartsWith("DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture(", test.ClassName, StringComparison.Ordinal);
-        });
-        Assert.Equal(2, cases.Select(test => test.ClassName).Distinct(StringComparer.Ordinal).Count());
+            Assert.AreEqual(test.FullName, test.TestId);
+            Assert.AreEqual("FixtureSource_ValueIsPreserved", test.MethodName);
+            Assert.Contains("ParameterizedFixture(", test.ClassName!, StringComparison.Ordinal);
+            Assert.IsTrue(test.ClassName!.StartsWith("DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture(", StringComparison.Ordinal));
+        }
+        Assert.AreEqual(2, cases.Select(test => test.ClassName).Distinct(StringComparer.Ordinal).Count());
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_fixture_source_uids_include_constructor_arguments()
     {
         var discoverer = new NUnitTestDiscoverer();
@@ -139,56 +138,55 @@ public sealed class NUnitTestDiscovererTests
             .Where(test => test.MethodName == "FixtureSource_ValueIsPreserved")
             .ToList();
 
-        Assert.Equal(2, cases.Count);
-        Assert.DoesNotContain(
-            cases,
-            test => test.TestId.Equals(
+        Assert.AreEqual(2, cases.Count);
+        Assert.IsFalse(
+            cases.Any(test  => test.TestId.Equals(
                 "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture.FixtureSource_ValueIsPreserved",
-                StringComparison.Ordinal));
+                StringComparison.Ordinal)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_attaches_pdb_source_for_a_plain_test()
     {
         var discoverer = new NUnitTestDiscoverer();
         var plain = discoverer.Discover(FixturePath, TestSelection.All)
             .Single(test => test.DisplayName == "PlainTest_Passes");
 
-        Assert.NotNull(plain.Source);
+        Assert.IsNotNull(plain.Source);
         Assert.Contains("FullSemanticsFixture.cs", plain.Source!.File, StringComparison.OrdinalIgnoreCase);
-        Assert.True(plain.Source.Line > 0);
+        Assert.IsTrue(plain.Source.Line > 0);
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_attaches_pdb_source_for_a_generic_fixture()
     {
         var discoverer = new NUnitTestDiscoverer();
         var generic = discoverer.Discover(FixturePath, TestSelection.All)
             .First(test => test.MethodName == "GenericFixture_UsesRequestedType");
 
-        Assert.NotNull(generic.Source);
+        Assert.IsNotNull(generic.Source);
         Assert.Contains("ParameterizedFixture.cs", generic.Source!.File, StringComparison.OrdinalIgnoreCase);
-        Assert.True(generic.Source.Line > 0);
-        Assert.Contains("GenericFixture<", generic.ClassName, StringComparison.Ordinal);
-        Assert.Equal("DevTools.NUnit.Runtime.Fixtures", generic.Namespace);
-        Assert.Equal("GenericFixture", generic.TypeName);
-        Assert.Equal("GenericFixture_UsesRequestedType", generic.DisplayName);
+        Assert.IsTrue(generic.Source.Line > 0);
+        Assert.Contains("GenericFixture<", generic.ClassName!, StringComparison.Ordinal);
+        Assert.AreEqual("DevTools.NUnit.Runtime.Fixtures", generic.Namespace);
+        Assert.AreEqual("GenericFixture", generic.TypeName);
+        Assert.AreEqual("GenericFixture_UsesRequestedType", generic.DisplayName);
     }
 
-    [Fact]
+    [TestMethod]
     public void Discover_fixture_source_display_name_keeps_constructor_arguments()
     {
         var cases = new NUnitTestDiscoverer().Discover(FixturePath, TestSelection.All)
             .Where(test => test.MethodName == "FixtureSource_ValueIsPreserved")
             .ToList();
 
-        Assert.Equal(2, cases.Count);
-        Assert.All(cases, test =>
+        Assert.AreEqual(2, cases.Count);
+        foreach (var test in cases)
         {
-            Assert.Equal("ParameterizedFixture", test.TypeName);
-            Assert.Equal("DevTools.NUnit.Runtime.Fixtures", test.Namespace);
+            Assert.AreEqual("ParameterizedFixture", test.TypeName);
+            Assert.AreEqual("DevTools.NUnit.Runtime.Fixtures", test.Namespace);
             Assert.Contains("(", test.DisplayName, StringComparison.Ordinal);
-        });
+        }
     }
 
     static string FixturePath
@@ -196,7 +194,7 @@ public sealed class NUnitTestDiscovererTests
         get
         {
             var path = typeof(FullSemanticsFixture).Assembly.Location;
-            Assert.False(string.IsNullOrWhiteSpace(path));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(path));
             return path;
         }
     }

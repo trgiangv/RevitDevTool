@@ -4,9 +4,10 @@ using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.Tests;
 
+[TestClass]
 public sealed class NUnitGenerationPolicyTests
 {
-    [Fact]
+    [TestMethod]
     public void Policy_creates_a_neutral_plan_with_the_NUnit_runtime_and_framework()
     {
         using var workspace = new TempWorkspace();
@@ -15,13 +16,13 @@ public sealed class NUnitGenerationPolicyTests
 
         var plan = policy.CreatePlan(testAssembly);
 
-        Assert.Equal(TestFrameworkId.NUnit, plan.FrameworkId);
-        Assert.Equal(NUnitGenerationPolicy.RuntimeAssemblyFileName, plan.RuntimeAssemblyRelativePath);
-        Assert.Contains(plan.Files, file => string.Equals(
-            file.RelativePath, NUnitGenerationPolicy.FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase));
+        Assert.AreEqual(TestFrameworkId.NUnit, plan.FrameworkId);
+        Assert.AreEqual(NUnitGenerationPolicy.RuntimeAssemblyFileName, plan.RuntimeAssemblyRelativePath);
+        Assert.IsTrue(plan.Files.Any(file  => string.Equals(
+            file.RelativePath, NUnitGenerationPolicy.FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Policy_rejects_missing_or_duplicate_NUnit_framework_assemblies()
     {
         using var workspace = new TempWorkspace();
@@ -29,7 +30,7 @@ public sealed class NUnitGenerationPolicyTests
             File.Delete(Path.Combine(output, NUnitGenerationPolicy.FrameworkAssemblyFileName)));
         var missingHarness = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root);
-        Assert.Throws<TestingGenerationBuildException>(() => missingHarness.Build(missing));
+        Assert.ThrowsExactly<TestingGenerationBuildException>(() => missingHarness.Build(missing));
 
         var duplicate = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(workspace.Root, "duplicate", output =>
         {
@@ -40,23 +41,23 @@ public sealed class NUnitGenerationPolicyTests
         });
         var duplicateHarness = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root);
-        var exception = Assert.Throws<TestingGenerationBuildException>(() => duplicateHarness.Build(duplicate));
+        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => duplicateHarness.Build(duplicate));
         Assert.Contains("found 2", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void Policy_pins_the_supported_NUnit_file_version()
     {
         var frameworkPath = Path.Combine(NUnitGenerationTestEnvironment.FixtureOutputDirectory,
             NUnitGenerationPolicy.FrameworkAssemblyFileName);
         NUnitGenerationPolicy.ValidateNUnitFrameworkVersion(frameworkPath);
 
-        var exception = Assert.Throws<TestingGenerationBuildException>(() =>
+        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             NUnitGenerationPolicy.ValidateNUnitFrameworkVersion(typeof(NUnitGenerationPolicyTests).Assembly.Location));
         Assert.Contains("4.6.1.0", exception.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Policy_keeps_Microsoft_and_System_dependencies_generation_private()
     {
         using var workspace = new TempWorkspace();
@@ -71,13 +72,11 @@ public sealed class NUnitGenerationPolicyTests
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
-        Assert.Contains(manifest.ManagedAssemblies,
-            path => path.EndsWith("Microsoft.Extensions.Logging.Abstractions.dll", StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(manifest.ManagedAssemblies,
-            path => path.EndsWith("System.Custom.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue(manifest.ManagedAssemblies.Any(path  => path.EndsWith("Microsoft.Extensions.Logging.Abstractions.dll", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(manifest.ManagedAssemblies.Any(path  => path.EndsWith("System.Custom.dll", StringComparison.OrdinalIgnoreCase)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Policy_excludes_the_neutral_contract_identity_even_when_renamed()
     {
         using var workspace = new TempWorkspace();
@@ -88,18 +87,17 @@ public sealed class NUnitGenerationPolicyTests
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
-        Assert.DoesNotContain(manifest.ManagedAssemblies,
-            path => path.EndsWith("PrivateTestingContract.dll", StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(manifest.ManagedAssemblies.Any(path  => path.EndsWith("PrivateTestingContract.dll", StringComparison.OrdinalIgnoreCase)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Policy_keeps_satellite_resources_out_of_the_managed_identity_manifest()
     {
         using var workspace = new TempWorkspace();
         const string culture = "fr";
         const string resourceFile = "Microsoft.Testing.Extensions.MSBuild.resources.dll";
         var source = Path.Combine(AppContext.BaseDirectory, culture, resourceFile);
-        Assert.True(File.Exists(source), $"Satellite fixture was not found: {source}");
+        Assert.IsTrue(File.Exists(source), $"Satellite fixture was not found: {source}");
         var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(workspace.Root, "satellite", output =>
         {
             var cultureDirectory = Path.Combine(output, culture);
@@ -110,13 +108,11 @@ public sealed class NUnitGenerationPolicyTests
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
-        Assert.DoesNotContain(manifest.ManagedAssemblies,
-            path => path.EndsWith(resourceFile, StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(manifest.OtherFiles,
-            path => path.EndsWith(Path.Combine(culture, resourceFile), StringComparison.OrdinalIgnoreCase));
+        Assert.IsFalse(manifest.ManagedAssemblies.Any(path  => path.EndsWith(resourceFile, StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(manifest.OtherFiles.Any(path => path.EndsWith(Path.Combine(culture, resourceFile), StringComparison.OrdinalIgnoreCase)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Policy_classifies_native_assets_and_excludes_volatile_outputs()
     {
         using var workspace = new TempWorkspace();
@@ -130,12 +126,9 @@ public sealed class NUnitGenerationPolicyTests
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
-        Assert.Contains(manifest.NativeAssets,
-            path => path.EndsWith("root.native.dll", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(manifest.OtherFiles,
-            path => path.EndsWith("run.diag", StringComparison.OrdinalIgnoreCase));
-        Assert.StartsWith(manifest.ShadowDirectory,
-            NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest), StringComparison.OrdinalIgnoreCase);
+        Assert.IsTrue(manifest.NativeAssets.Any(path  => path.EndsWith("root.native.dll", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(manifest.OtherFiles.Any(path  => path.EndsWith("run.diag", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest).StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed class TempWorkspace : IDisposable

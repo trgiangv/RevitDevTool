@@ -3,9 +3,10 @@ using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.MTP.Tests;
 
+[TestClass]
 public sealed class NUnitHostIdentityTests
 {
-    [Fact]
+    [TestMethod]
     public void ToRunSelection_forwards_opaque_ids_from_already_matched_cases()
     {
         var matched = new[]
@@ -20,15 +21,15 @@ public sealed class NUnitHostIdentityTests
             TestSelection.FromTestIds(["TestCase_Addition"]),
             matched);
 
-        Assert.Equal(TestSelectionKind.FrameworkFilter, host.Kind);
-        Assert.False(string.IsNullOrWhiteSpace(host.FilterData));
+        Assert.AreEqual(TestSelectionKind.FrameworkFilter, host.Kind);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(host.FilterData));
         Assert.Contains(matched[0].TestId, host.FilterData!, StringComparison.Ordinal);
         Assert.DoesNotContain("<method>TestCase_Addition</method>", host.FilterData!, StringComparison.Ordinal);
-        Assert.Empty(host.TestIds);
-        Assert.Empty(host.Names);
+        Assert.IsEmpty(host.TestIds);
+        Assert.IsEmpty(host.Names);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToRunSelection_keeps_cli_name_filters()
     {
         var selection = TestSelection.FromNames(["Span_is_one_on_each_axis"]);
@@ -41,11 +42,11 @@ public sealed class NUnitHostIdentityTests
 
         var host = new NUnitTestRunMapper().ToRunSelection(selection, [stub]);
 
-        Assert.Empty(host.TestIds);
-        Assert.Equal("Span_is_one_on_each_axis", Assert.Single(host.Names!));
+        Assert.IsEmpty(host.TestIds);
+        Assert.AreEqual("Span_is_one_on_each_axis", host.Names!.Single());
     }
 
-    [Fact]
+    [TestMethod]
     public void ToRunSelection_uid_list_is_addtest_full_name()
     {
         var stubId = "DevTools.NUnit.SampleTests.BoundingBoxFixtureSourceTests.Span_is_one_on_each_axis";
@@ -61,27 +62,27 @@ public sealed class NUnitHostIdentityTests
 
         var host = new NUnitTestRunMapper().ToRunSelection(TestSelection.FromTestIds([stubId]), matched);
 
-        Assert.Contains($"<test>{stubId}</test>", host.FilterData, StringComparison.Ordinal);
-        Assert.Contains("re=\"1\"", host.FilterData, StringComparison.Ordinal);
-        Assert.Contains("<method>Span_is_one_on_each_axis</method>", host.FilterData, StringComparison.Ordinal);
-        Assert.Empty(host.TestIds);
-        Assert.Empty(host.Names);
+        Assert.Contains($"<test>{stubId}</test>", host.FilterData!, StringComparison.Ordinal);
+        Assert.Contains("re=\"1\"", host.FilterData!, StringComparison.Ordinal);
+        Assert.Contains("<method>Span_is_one_on_each_axis</method>", host.FilterData!, StringComparison.Ordinal);
+        Assert.IsEmpty(host.TestIds);
+        Assert.IsEmpty(host.Names);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToRunSelection_uid_with_no_select_hits_still_pushes_collapsed_xml()
     {
         var stubId = "DevTools.NUnit.Runtime.Fixtures.CollapsedSourceStubFixture.Stub_leaf";
         var host = new NUnitTestRunMapper().ToRunSelection(TestSelection.FromTestIds([stubId]), []);
 
-        Assert.Contains($"<test>{stubId}</test>", host.FilterData, StringComparison.Ordinal);
-        Assert.Contains("re=\"1\"", host.FilterData, StringComparison.Ordinal);
-        Assert.Contains("<method>Stub_leaf</method>", host.FilterData, StringComparison.Ordinal);
-        Assert.Empty(host.TestIds);
-        Assert.Empty(host.Names);
+        Assert.Contains($"<test>{stubId}</test>", host.FilterData!, StringComparison.Ordinal);
+        Assert.Contains("re=\"1\"", host.FilterData!, StringComparison.Ordinal);
+        Assert.Contains("<method>Stub_leaf</method>", host.FilterData!, StringComparison.Ordinal);
+        Assert.IsEmpty(host.TestIds);
+        Assert.IsEmpty(host.Names);
     }
 
-    [Fact]
+    [TestMethod]
     public void ResultsForUnreported_covers_requested_uid_when_host_returns_nothing()
     {
         var stubId = "DevTools.NUnit.Runtime.Fixtures.CollapsedSourceStubFixture.Stub_leaf";
@@ -91,16 +92,15 @@ public sealed class NUnitHostIdentityTests
             new TestDiscoveredTest(stubId, "Stub_leaf", stubId),
         };
 
-        var missing = Assert.Single(
-            new NUnitTestRunMapper().ResultsForUnreported(request, discovered, []));
+        var missing = new NUnitTestRunMapper().ResultsForUnreported(request, discovered, []).Single();
 
-        Assert.Equal(stubId, missing.TestId);
-        Assert.Equal("Stub_leaf", missing.DisplayName);
-        Assert.Equal("Failed", missing.Outcome);
-        Assert.Equal(NUnitTestRunMapper.UnreportedFullNameMessage, missing.Message);
+        Assert.AreEqual(stubId, missing.TestId);
+        Assert.AreEqual("Stub_leaf", missing.DisplayName);
+        Assert.AreEqual("Failed", missing.Outcome);
+        Assert.AreEqual(NUnitTestRunMapper.UnreportedFullNameMessage, missing.Message);
     }
 
-    [Fact]
+    [TestMethod]
     public void ResultsForUnreported_skips_ids_the_host_already_reported()
     {
         var id = "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes";
@@ -109,25 +109,24 @@ public sealed class NUnitHostIdentityTests
             new TestCaseResult(id, "PlainTest_Passes", "Passed", 1, null, null, null, null, [], []),
         };
 
-        Assert.Empty(new NUnitTestRunMapper().ResultsForUnreported(
+        Assert.IsEmpty(new NUnitTestRunMapper().ResultsForUnreported(
             TestSelection.FromTestIds([id]),
             [new TestDiscoveredTest(id, "PlainTest_Passes", id)],
             host));
     }
 
-    [Fact]
+    [TestMethod]
     public void ResultsForUnreported_uses_uid_when_select_missed()
     {
         var stubId = "DevTools.NUnit.Runtime.Fixtures.CollapsedSourceStubFixture.Stub_leaf";
-        var missing = Assert.Single(
-            new NUnitTestRunMapper().ResultsForUnreported(TestSelection.FromTestIds([stubId]), [], []));
+        var missing = new NUnitTestRunMapper().ResultsForUnreported(TestSelection.FromTestIds([stubId]), [], []).Single();
 
-        Assert.Equal(stubId, missing.TestId);
-        Assert.Equal(stubId, missing.DisplayName);
-        Assert.Equal("Failed", missing.Outcome);
+        Assert.AreEqual(stubId, missing.TestId);
+        Assert.AreEqual(stubId, missing.DisplayName);
+        Assert.AreEqual("Failed", missing.Outcome);
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_maps_expanded_fixture_leaves_onto_the_stub_uid()
     {
         var stubId = "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture.FixtureSource_ValueIsPreserved";
@@ -164,14 +163,14 @@ public sealed class NUnitHostIdentityTests
                 FullName: stubId.Replace("ParameterizedFixture.", "ParameterizedFixture(\"fixture-source\").", StringComparison.Ordinal)),
         };
 
-        var folded = Assert.Single(new NUnitTestRunMapper().FoldResults(request, discovered, host));
+        var folded = new NUnitTestRunMapper().FoldResults(request, discovered, host).Single();
 
-        Assert.Equal(stubId, folded.TestId);
-        Assert.Equal("Passed", folded.Outcome);
-        Assert.Equal(9, folded.DurationMilliseconds);
+        Assert.AreEqual(stubId, folded.TestId);
+        Assert.AreEqual("Passed", folded.Outcome);
+        Assert.AreEqual(9, folded.DurationMilliseconds);
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_maps_setname_leaves_via_parent_suite_id()
     {
         var stubId = "DevTools.NUnit.SampleTests.BoundingBoxCaseSourceTests.Box_source_has_positive_span";
@@ -192,14 +191,13 @@ public sealed class NUnitHostIdentityTests
                 FullName: "DevTools.NUnit.SampleTests.BoundingBoxCaseSourceTests.Wide_box"),
         };
 
-        var folded = Assert.Single(
-            new NUnitTestRunMapper().FoldResults(TestSelection.FromTestIds([stubId]), [], host));
+        var folded = new NUnitTestRunMapper().FoldResults(TestSelection.FromTestIds([stubId]), [], host).Single();
 
-        Assert.Equal(stubId, folded.TestId);
-        Assert.Equal("Passed", folded.Outcome);
+        Assert.AreEqual(stubId, folded.TestId);
+        Assert.AreEqual("Passed", folded.Outcome);
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_publishes_testname_leaves_when_request_is_method_fqn()
     {
         const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
@@ -242,11 +240,11 @@ public sealed class NUnitHostIdentityTests
 
         var folded = new NUnitTestRunMapper().FoldResults(TestSelection.FromTestIds([methodId]), discovered, host);
 
-        Assert.Equal([namedOne, namedTwo], folded.Select(result => result.TestId).ToArray());
-        Assert.All(folded, result => Assert.Equal("Passed", result.Outcome));
+        Assert.AreSequenceEqual([namedOne, namedTwo], folded.Select(result => result.TestId).ToArray());
+        Assert.IsTrue(folded.All(result => result.Outcome == "Passed"));
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_does_not_starve_leaf_when_group_and_leaf_are_requested()
     {
         const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
@@ -273,11 +271,11 @@ public sealed class NUnitHostIdentityTests
             [new TestDiscoveredTest(namedOne, "Named_one", namedOne)],
             host);
 
-        Assert.DoesNotContain(folded, result => result.TestId == methodId);
-        Assert.Contains(folded, result => result.TestId == namedOne);
+        Assert.IsFalse(folded.Any(result  => result.TestId == methodId));
+        Assert.IsTrue(folded.Any(result => result.TestId == namedOne));
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_rider_group_uid_publishes_ide_testname_leaves()
     {
         const string methodId = "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named";
@@ -308,17 +306,16 @@ public sealed class NUnitHostIdentityTests
         };
 
         var mapper = new NUnitTestRunMapper();
-        var folded = Assert.Single(
-            mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host));
+        var folded = mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host).Single();
 
-        Assert.Equal(ideId, folded.TestId);
-        Assert.Empty(mapper.ResultsForUnreported(
+        Assert.AreEqual(ideId, folded.TestId);
+        Assert.IsEmpty(mapper.ResultsForUnreported(
             TestSelection.FromTestIds([methodId]),
             [discovered],
             [folded]));
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_maps_nunit_fullname_onto_ide_testname_uid()
     {
         const string ideId =
@@ -346,15 +343,14 @@ public sealed class NUnitHostIdentityTests
                 FullName: nunitName),
         };
 
-        var folded = Assert.Single(
-            new NUnitTestRunMapper().FoldResults(TestSelection.FromTestIds([ideId]), [discovered], host));
+        var folded = new NUnitTestRunMapper().FoldResults(TestSelection.FromTestIds([ideId]), [discovered], host).Single();
 
-        Assert.Equal(ideId, folded.TestId);
-        Assert.Equal("Named_one", folded.DisplayName);
-        Assert.Equal("Passed", folded.Outcome);
+        Assert.AreEqual(ideId, folded.TestId);
+        Assert.AreEqual("Named_one", folded.DisplayName);
+        Assert.AreEqual("Passed", folded.Outcome);
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_unfiltered_run_remaps_testname_leaf_onto_ide_uid()
     {
         const string ideId =
@@ -382,15 +378,14 @@ public sealed class NUnitHostIdentityTests
                 FullName: nunitName),
         };
 
-        var folded = Assert.Single(
-            new NUnitTestRunMapper().FoldResults(TestSelection.All, [discovered], host));
+        var folded = new NUnitTestRunMapper().FoldResults(TestSelection.All, [discovered], host).Single();
 
-        Assert.Equal(ideId, folded.TestId);
-        Assert.Equal("Named_one", folded.DisplayName);
-        Assert.Equal("Passed", folded.Outcome);
+        Assert.AreEqual(ideId, folded.TestId);
+        Assert.AreEqual("Named_one", folded.DisplayName);
+        Assert.AreEqual("Passed", folded.Outcome);
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_maps_host_double_args_without_suffix_onto_testhost_uid()
     {
         const string testhostId =
@@ -417,21 +412,20 @@ public sealed class NUnitHostIdentityTests
                 FullName: hostId),
         };
 
-        var folded = Assert.Single(
-            new NUnitTestRunMapper().FoldResults(
+        var folded = new NUnitTestRunMapper().FoldResults(
                 TestSelection.FromTestIds([testhostId]),
                 [discovered],
-                host));
+                host).Single();
 
-        Assert.Equal(testhostId, folded.TestId);
-        Assert.Equal("Passed", folded.Outcome);
-        Assert.Empty(new NUnitTestRunMapper().ResultsForUnreported(
+        Assert.AreEqual(testhostId, folded.TestId);
+        Assert.AreEqual("Passed", folded.Outcome);
+        Assert.IsEmpty(new NUnitTestRunMapper().ResultsForUnreported(
             TestSelection.FromTestIds([testhostId]),
             [discovered],
             [folded]));
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_maps_parameterized_cases_onto_method_uid()
     {
         const string methodId =
@@ -454,21 +448,20 @@ public sealed class NUnitHostIdentityTests
                 FullName: hostId),
         };
 
-        var folded = Assert.Single(
-            new NUnitTestRunMapper().FoldResults(
+        var folded = new NUnitTestRunMapper().FoldResults(
                 TestSelection.FromTestIds([methodId]),
                 [],
-                host));
+                host).Single();
 
-        Assert.Equal(methodId, folded.TestId);
-        Assert.Equal("Passed", folded.Outcome);
-        Assert.Empty(new NUnitTestRunMapper().ResultsForUnreported(
+        Assert.AreEqual(methodId, folded.TestId);
+        Assert.AreEqual("Passed", folded.Outcome);
+        Assert.IsEmpty(new NUnitTestRunMapper().ResultsForUnreported(
             TestSelection.FromTestIds([methodId]),
             [],
             [folded]));
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_rider_group_uid_publishes_discovered_leaves_not_ancestor()
     {
         const string methodId =
@@ -498,18 +491,17 @@ public sealed class NUnitHostIdentityTests
         };
 
         var mapper = new NUnitTestRunMapper();
-        var folded = Assert.Single(
-            mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host));
+        var folded = mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host).Single();
 
-        Assert.Equal(testhostId, folded.TestId);
-        Assert.Equal("Passed", folded.Outcome);
-        Assert.Empty(mapper.ResultsForUnreported(
+        Assert.AreEqual(testhostId, folded.TestId);
+        Assert.AreEqual("Passed", folded.Outcome);
+        Assert.IsEmpty(mapper.ResultsForUnreported(
             TestSelection.FromTestIds([methodId]),
             [discovered],
             [folded]));
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_rider_empty_parens_group_uid_publishes_leaves()
     {
         const string methodId =
@@ -539,18 +531,17 @@ public sealed class NUnitHostIdentityTests
         };
 
         var mapper = new NUnitTestRunMapper();
-        var folded = Assert.Single(
-            mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host));
+        var folded = mapper.FoldResults(TestSelection.FromTestIds([methodId]), [discovered], host).Single();
 
-        Assert.Equal(testhostId, folded.TestId);
-        Assert.Equal("Passed", folded.Outcome);
-        Assert.Empty(mapper.ResultsForUnreported(
+        Assert.AreEqual(testhostId, folded.TestId);
+        Assert.AreEqual("Passed", folded.Outcome);
+        Assert.IsEmpty(mapper.ResultsForUnreported(
             TestSelection.FromTestIds([methodId]),
             [discovered],
             [folded]));
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_visual_studio_display_name_uid_publishes_discovered_leaf()
     {
         const string displayName = "Bottom_corners_share_min_z(-12.3,45.6,-7.8,34.5,67.8,12.3)";
@@ -579,18 +570,17 @@ public sealed class NUnitHostIdentityTests
         };
 
         var mapper = new NUnitTestRunMapper();
-        var folded = Assert.Single(
-            mapper.FoldResults(TestSelection.FromTestIds([displayName]), [discovered], host));
+        var folded = mapper.FoldResults(TestSelection.FromTestIds([displayName]), [discovered], host).Single();
 
-        Assert.Equal(testhostId, folded.TestId);
-        Assert.Equal("Passed", folded.Outcome);
-        Assert.Empty(mapper.ResultsForUnreported(
+        Assert.AreEqual(testhostId, folded.TestId);
+        Assert.AreEqual("Passed", folded.Outcome);
+        Assert.IsEmpty(mapper.ResultsForUnreported(
             TestSelection.FromTestIds([displayName]),
             [discovered],
             [folded]));
     }
 
-    [Fact]
+    [TestMethod]
     public void ResultsForUnreported_fails_discovered_leaves_not_group_uid()
     {
         const string methodId =
@@ -602,17 +592,16 @@ public sealed class NUnitHostIdentityTests
             "Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)",
             testhostId);
 
-        var missing = Assert.Single(
-            new NUnitTestRunMapper().ResultsForUnreported(
+        var missing = new NUnitTestRunMapper().ResultsForUnreported(
                 TestSelection.FromTestIds([methodId]),
                 [discovered],
-                []));
+                []).Single();
 
-        Assert.Equal(testhostId, missing.TestId);
-        Assert.Equal("Failed", missing.Outcome);
+        Assert.AreEqual(testhostId, missing.TestId);
+        Assert.AreEqual("Failed", missing.Outcome);
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_unfiltered_run_keeps_unmatched_stub_expansions()
     {
         const string stubId =
@@ -635,16 +624,15 @@ public sealed class NUnitHostIdentityTests
                 FullName: expanded),
         };
 
-        var folded = Assert.Single(
-            new NUnitTestRunMapper().FoldResults(
+        var folded = new NUnitTestRunMapper().FoldResults(
                 TestSelection.All,
                 [new TestDiscoveredTest(stubId, "FixtureSource_ValueIsPreserved", stubId)],
-                host));
+                host).Single();
 
-        Assert.Equal(expanded, folded.TestId);
+        Assert.AreEqual(expanded, folded.TestId);
     }
 
-    [Fact]
+    [TestMethod]
     public void FoldResults_keeps_name_filter_leaves_unmapped()
     {
         var host = new[]
@@ -667,6 +655,6 @@ public sealed class NUnitHostIdentityTests
             [],
             host);
 
-        Assert.Equal(host[0].TestId, Assert.Single(folded).TestId);
+        Assert.AreEqual(host[0].TestId, folded.Single().TestId);
     }
 }

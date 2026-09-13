@@ -1,30 +1,31 @@
 namespace DevTools.TUnit.Runtime.Tests;
 
+[TestClass]
 public sealed class TUnitMetadataNamesTests
 {
-    [Fact]
+    [TestMethod]
     public void Formats_double_and_task_like_tunit_engine()
     {
-        Assert.Equal("System.Double", TUnitMetadataNames.Of(typeof(double)));
-        Assert.Equal("System.Threading.Tasks.Task", TUnitMetadataNames.Of(typeof(Task)));
+        Assert.AreEqual("System.Double", TUnitMetadataNames.Of(typeof(double)));
+        Assert.AreEqual("System.Threading.Tasks.Task", TUnitMetadataNames.Of(typeof(Task)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Formats_constructed_generics_as_rfc_0017()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "System.Collections.Generic.List`1<System.String>",
             TUnitMetadataNames.Of(typeof(List<string>)));
     }
 
-    [Fact]
+    [TestMethod]
     public void Formats_arrays_pointers_byref_and_generic_parameters()
     {
-        Assert.Equal("System.Int32[]", TUnitMetadataNames.Of(typeof(int[])));
-        Assert.Equal("System.Int32*", TUnitMetadataNames.Of(typeof(int).MakePointerType()));
-        Assert.Equal("System.Int32&", TUnitMetadataNames.Of(typeof(int).MakeByRefType()));
-        Assert.Equal("!0", TUnitMetadataNames.Of(typeof(List<>).GetGenericArguments()[0]));
-        Assert.Equal(
+        Assert.AreEqual("System.Int32[]", TUnitMetadataNames.Of(typeof(int[])));
+        Assert.AreEqual("System.Int32*", TUnitMetadataNames.Of(typeof(int).MakePointerType()));
+        Assert.AreEqual("System.Int32&", TUnitMetadataNames.Of(typeof(int).MakeByRefType()));
+        Assert.AreEqual("!0", TUnitMetadataNames.Of(typeof(List<>).GetGenericArguments()[0]));
+        Assert.AreEqual(
             "!!0",
             TUnitMetadataNames.Of(typeof(Array)
                 .GetMethod(nameof(Array.Empty))!

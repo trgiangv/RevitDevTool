@@ -1,24 +1,25 @@
 namespace DevTools.NUnit.Runtime.Tests;
 
+[TestClass]
 public sealed class NUnitRuntimeArchitectureTests
 {
     private static readonly string RepositoryRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
-    [Fact]
+    [TestMethod]
     public void Runtime_session_exposes_a_nunit_free_neutral_runtime_contract()
     {
         var contract = typeof(DevTools.Testing.Abstractions.Runtime.ITestingRuntimeSession);
 
-        Assert.Contains(contract, typeof(NUnitRuntimeSession).GetInterfaces());
-        Assert.All(contract.GetMethods(), method =>
+        Assert.IsTrue(typeof(NUnitRuntimeSession).GetInterfaces().Contains(contract));
+        foreach (var method in contract.GetMethods())
         {
             Assert.DoesNotContain("NUnit", method.ReturnType.FullName ?? string.Empty, StringComparison.Ordinal);
-            Assert.All(method.GetParameters(), parameter =>
-                Assert.DoesNotContain("NUnit", parameter.ParameterType.FullName ?? string.Empty, StringComparison.Ordinal));
-        });
+            foreach (var parameter in method.GetParameters())
+                Assert.DoesNotContain("NUnit", parameter.ParameterType.FullName ?? string.Empty, StringComparison.Ordinal);
+        }
     }
 
-    [Fact]
+    [TestMethod]
     public void OnlyRuntimeProjectReferencesNUnitInProductionSource()
     {
         var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -33,10 +34,10 @@ public sealed class NUnitRuntimeArchitectureTests
             .Select(Path.GetFileName)
             .ToList();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void NoProductionProjectReferencesNUnitEngine()
     {
         var offenders = Directory
@@ -45,12 +46,12 @@ public sealed class NUnitRuntimeArchitectureTests
             .Select(Path.GetFileName)
             .ToList();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Theory]
-    [InlineData("source/DevTools.TestAdapter")]
-    [InlineData("source/DevTools.TestRunner")]
+    [TestMethod]
+    [DataRow("source/DevTools.TestAdapter")]
+    [DataRow("source/DevTools.TestRunner")]
     public void ForbiddenManualNUnitExecutionPatternsStayOutOfBoundary(string relativeProjectPath)
     {
         var projectDirectory = Path.Combine(RepositoryRoot, relativeProjectPath);
@@ -73,14 +74,14 @@ public sealed class NUnitRuntimeArchitectureTests
                 .Select(pattern => $"{Path.GetRelativePath(RepositoryRoot, file.path)} -> {pattern}"))
             .ToList();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void Runtime_DoesNotShipNUnitConsoleSelectionParser()
     {
         var runtimeDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime");
-        Assert.False(File.Exists(Path.Combine(runtimeDirectory, "NUnitTestSelectionParser.cs")));
+        Assert.IsFalse(File.Exists(Path.Combine(runtimeDirectory, "NUnitTestSelectionParser.cs")));
 
         var offenders = Directory
             .EnumerateFiles(runtimeDirectory, "*.cs", SearchOption.AllDirectories)
@@ -88,15 +89,15 @@ public sealed class NUnitRuntimeArchitectureTests
             .Where(content => content.Contains("NUnitTestSelectionParser", StringComparison.Ordinal))
             .ToList();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void HostRuntimeUsesNUnitAssemblyBuilderInsteadOfDefaultGetTypes()
     {
         var sessionPath = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime", "NUnitRuntimeSession.cs");
         var builderPath = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime", "NUnitAssemblyBuilder.cs");
-        Assert.True(File.Exists(builderPath));
+        Assert.IsTrue(File.Exists(builderPath));
         var session = File.ReadAllText(sessionPath);
         Assert.Contains("new NUnitAssemblyBuilder()", session, StringComparison.Ordinal);
         Assert.DoesNotContain("new DefaultTestAssemblyBuilder()", session, StringComparison.Ordinal);
@@ -105,7 +106,7 @@ public sealed class NUnitRuntimeArchitectureTests
         Assert.Contains("ApplyBuilderOptions", File.ReadAllText(builderPath), StringComparison.Ordinal);
 
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.MTP");
-        Assert.False(File.Exists(Path.Combine(mtpDir, "NUnitLocalAssemblyBuilder.cs")));
+        Assert.IsFalse(File.Exists(Path.Combine(mtpDir, "NUnitLocalAssemblyBuilder.cs")));
         Assert.Contains(
             "NUnitAssemblyBuilder.cs",
             File.ReadAllText(Path.Combine(mtpDir, "DevTools.NUnit.MTP.csproj")),
@@ -116,11 +117,11 @@ public sealed class NUnitRuntimeArchitectureTests
             StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Runtime_uses_shared_testing_run_trace_scope()
     {
         var runtimeDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime");
-        Assert.False(File.Exists(Path.Combine(runtimeDirectory, "NUnitRunTraceScope.cs")));
+        Assert.IsFalse(File.Exists(Path.Combine(runtimeDirectory, "NUnitRunTraceScope.cs")));
 
         var listener = File.ReadAllText(Path.Combine(runtimeDirectory, "NUnitEventListener.cs"));
         var session = File.ReadAllText(Path.Combine(runtimeDirectory, "NUnitRuntimeSession.cs"));
@@ -131,7 +132,7 @@ public sealed class NUnitRuntimeArchitectureTests
         Assert.DoesNotContain("NUnitRunTraceScope", session, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Runtime_uses_nunit_full_name_as_test_id()
     {
         var runtimeDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Runtime");
@@ -147,10 +148,10 @@ public sealed class NUnitRuntimeArchitectureTests
             .Select(file => Path.GetFileName(file.path))
             .ToList();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
-    [Fact]
+    [TestMethod]
     public void HostManualNUnitExecution_IsNotPresent()
     {
         var hostDirectory = Path.Combine(RepositoryRoot, "source", "DevTools.Testing.Host", "NUnit");
@@ -172,7 +173,7 @@ public sealed class NUnitRuntimeArchitectureTests
                 .Select(pattern => $"{Path.GetRelativePath(RepositoryRoot, file.path)} -> {pattern}"))
             .ToList();
 
-        Assert.Empty(offenders);
+        Assert.IsEmpty(offenders);
     }
 
     private static bool IsAllowedHostBootstrapPath(string path)

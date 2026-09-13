@@ -17,8 +17,8 @@ internal static class NUnitGenerationShadowLoadTestHelper
 
     internal static void AssertSourceOutputsRemainWritable(string sourceDllPath, string sourcePdbPath)
     {
-        Assert.True(File.Exists(sourceDllPath));
-        Assert.True(File.Exists(sourcePdbPath));
+        Assert.IsTrue(File.Exists(sourceDllPath));
+        Assert.IsTrue(File.Exists(sourcePdbPath));
 
         using (var dllStream = new FileStream(
                    sourceDllPath,
@@ -26,7 +26,7 @@ internal static class NUnitGenerationShadowLoadTestHelper
                    FileAccess.ReadWrite,
                    FileShare.ReadWrite | FileShare.Delete))
         {
-            Assert.True(dllStream.CanWrite);
+            Assert.IsTrue(dllStream.CanWrite);
             var firstByte = (byte)dllStream.ReadByte();
             dllStream.Position = 0;
             dllStream.WriteByte(firstByte);
@@ -38,7 +38,7 @@ internal static class NUnitGenerationShadowLoadTestHelper
                    FileAccess.ReadWrite,
                    FileShare.ReadWrite | FileShare.Delete))
         {
-            Assert.True(pdbStream.CanWrite);
+            Assert.IsTrue(pdbStream.CanWrite);
             var firstByte = (byte)pdbStream.ReadByte();
             pdbStream.Position = 0;
             pdbStream.WriteByte(firstByte);

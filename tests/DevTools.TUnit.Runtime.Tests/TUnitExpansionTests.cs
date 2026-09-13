@@ -1,17 +1,18 @@
 namespace DevTools.TUnit.Runtime.Tests;
 
+[TestClass]
 public sealed class TUnitExpansionTests
 {
-    [Fact]
+    [TestMethod]
     public void Class_arguments_display_name_is_used_when_the_method_has_none()
     {
-        Assert.Equal("neg", TUnitExpansion.CombinationDisplayName(null, "neg"));
-        Assert.Equal("unit", TUnitExpansion.CombinationDisplayName(null, "unit"));
+        Assert.AreEqual("neg", TUnitExpansion.CombinationDisplayName(null, "neg"));
+        Assert.AreEqual("unit", TUnitExpansion.CombinationDisplayName(null, "unit"));
     }
 
-    [Fact]
+    [TestMethod]
     public void Method_arguments_display_name_wins_over_class()
     {
-        Assert.Equal("Unit_X", TUnitExpansion.CombinationDisplayName("Unit_X", "unit"));
+        Assert.AreEqual("Unit_X", TUnitExpansion.CombinationDisplayName("Unit_X", "unit"));
     }
 }

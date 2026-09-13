@@ -2,9 +2,10 @@ using DevTools.NUnit.Runtime;
 
 namespace DevTools.NUnit.Runtime.Tests;
 
+[TestClass]
 public sealed class NUnitTestNameParserTests
 {
-    [Fact]
+    [TestMethod]
     public void Split_keeps_method_when_fixture_has_constructor_arguments()
     {
         NUnitTestNameParser.Split(
@@ -12,11 +13,11 @@ public sealed class NUnitTestNameParserTests
             out var className,
             out var methodName);
 
-        Assert.Equal("DevTools.NUnit.SampleTests.NamedFixtureSourceTests", className);
-        Assert.Equal("Fixture_argument_is_preserved", methodName);
+        Assert.AreEqual("DevTools.NUnit.SampleTests.NamedFixtureSourceTests", className);
+        Assert.AreEqual("Fixture_argument_is_preserved", methodName);
     }
 
-    [Fact]
+    [TestMethod]
     public void SplitIde_keeps_fixture_arguments_on_the_type()
     {
         NUnitTestNameParser.SplitIde(
@@ -26,15 +27,15 @@ public sealed class NUnitTestNameParserTests
             out var typeName,
             out var methodName);
 
-        Assert.Equal(
+        Assert.AreEqual(
             "DevTools.NUnit.SampleTests.NamedFixtureSourceTests(\"alpha.rvt\")",
             className);
-        Assert.Equal("DevTools.NUnit.SampleTests", ns);
-        Assert.Equal("NamedFixtureSourceTests(\"alpha.rvt\")", typeName);
-        Assert.Equal("Fixture_argument_is_preserved", methodName);
+        Assert.AreEqual("DevTools.NUnit.SampleTests", ns);
+        Assert.AreEqual("NamedFixtureSourceTests(\"alpha.rvt\")", typeName);
+        Assert.AreEqual("Fixture_argument_is_preserved", methodName);
     }
 
-    [Fact]
+    [TestMethod]
     public void Split_strips_method_arguments_not_the_declaring_type()
     {
         NUnitTestNameParser.Split(
@@ -42,16 +43,16 @@ public sealed class NUnitTestNameParserTests
             out var className,
             out var methodName);
 
-        Assert.Equal("DevTools.NUnit.SampleTests.ValueSourceTests", className);
-        Assert.Equal("Theory_values_are_combinatorial", methodName);
+        Assert.AreEqual("DevTools.NUnit.SampleTests.ValueSourceTests", className);
+        Assert.AreEqual("Theory_values_are_combinatorial", methodName);
     }
 
-    [Fact]
+    [TestMethod]
     public void ToIdeTestId_keeps_ordinary_parameterized_full_name()
     {
         const string fullName =
             "DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.TestCase_Addition(1,1,2)";
-        Assert.Equal(
+        Assert.AreEqual(
             fullName,
             NUnitTestNameParser.ToIdeTestId(
                 fullName,
@@ -60,10 +61,10 @@ public sealed class NUnitTestNameParserTests
                 "TestCase_Addition(1,1,2)"));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToIdeTestId_maps_testname_leaf_onto_csharp_method()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named(\"Named_one\")",
             NUnitTestNameParser.ToIdeTestId(
                 "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one",
@@ -72,11 +73,11 @@ public sealed class NUnitTestNameParserTests
                 "Named_one"));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToIdeTestId_keeps_generic_method_full_name()
     {
         const string fullName = "DevTools.NUnit.SampleTests.GenericClosedTests.M<Int32>(1)";
-        Assert.Equal(
+        Assert.AreEqual(
             fullName,
             NUnitTestNameParser.ToIdeTestId(
                 fullName,
@@ -85,71 +86,71 @@ public sealed class NUnitTestNameParserTests
                 "M<Int32>(1)"));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToMetadataTypeName_uses_backtick_arity()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "DevTools.NUnit.SampleTests.GenericClosedTests`1",
             NUnitTestNameParser.ToMetadataTypeName(
                 "DevTools.NUnit.SampleTests.GenericClosedTests<Int32>"));
-        Assert.Equal(
+        Assert.AreEqual(
             "Outer`1+Inner",
             NUnitTestNameParser.ToMetadataTypeName("Outer<Int32>+Inner"));
-        Assert.Equal(
+        Assert.AreEqual(
             "Dictionary`2",
             NUnitTestNameParser.ToMetadataTypeName("Dictionary<String,Int32>"));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToMetadataTypeSegment_strips_namespace_and_display_args()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "GenericClosedTests`1",
             NUnitTestNameParser.ToMetadataTypeSegment(
                 "DevTools.NUnit.SampleTests.GenericClosedTests<Int32>"));
-        Assert.Equal(
+        Assert.AreEqual(
             "NamedFixtureSourceTests",
             NUnitTestNameParser.ToMetadataTypeSegment(
                 "NamedFixtureSourceTests(\"alpha.rvt\")"));
     }
 
-    [Fact]
+    [TestMethod]
     public void ToSourceTypeSegment_strips_backtick_arity_for_ide_bind()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "GenericClosedTests",
             NUnitTestNameParser.ToSourceTypeSegment(
                 "DevTools.NUnit.SampleTests.GenericClosedTests<Int32>"));
-        Assert.Equal(
+        Assert.AreEqual(
             "Outer+Inner",
             NUnitTestNameParser.ToSourceTypeSegment("Outer<Int32>+Inner"));
-        Assert.Equal(
+        Assert.AreEqual(
             "NamedFixtureSourceTests",
             NUnitTestNameParser.ToSourceTypeSegment(
                 "NamedFixtureSourceTests(\"alpha.rvt\")"));
     }
 
-    [Fact]
+    [TestMethod]
     public void AppendDisplayArguments_copies_fixture_constructor_args_not_generic_args()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "Fixture_argument_is_preserved(\"alpha.rvt\")",
             NUnitTestNameParser.AppendDisplayArguments(
                 "Fixture_argument_is_preserved",
                 "NamedFixtureSourceTests(\"alpha.rvt\")"));
-        Assert.Equal(
+        Assert.AreEqual(
             "Generic_int_fixture_is_discovered",
             NUnitTestNameParser.AppendDisplayArguments(
                 "Generic_int_fixture_is_discovered",
                 "GenericClosedTests<Int32>"));
-        Assert.Equal(
+        Assert.AreEqual(
             "Method(\"x\")",
             NUnitTestNameParser.AppendDisplayArguments(
                 "Method",
                 "GenericClosedTests<Int32>(\"x\")"));
     }
 
-    [Fact]
+    [TestMethod]
     public void SplitIde_last_dot_ignores_dots_inside_parens_and_closed_generics()
     {
         NUnitTestNameParser.SplitIde(
@@ -159,33 +160,33 @@ public sealed class NUnitTestNameParserTests
             out var typeName,
             out var methodName);
 
-        Assert.Equal("DevTools.NUnit.SampleTests.GenericClosedTests<Int32>", className);
-        Assert.Equal("DevTools.NUnit.SampleTests", ns);
-        Assert.Equal("GenericClosedTests<Int32>", typeName);
-        Assert.Equal("Generic_int_fixture_is_discovered", methodName);
+        Assert.AreEqual("DevTools.NUnit.SampleTests.GenericClosedTests<Int32>", className);
+        Assert.AreEqual("DevTools.NUnit.SampleTests", ns);
+        Assert.AreEqual("GenericClosedTests<Int32>", typeName);
+        Assert.AreEqual("Generic_int_fixture_is_discovered", methodName);
     }
 
-    [Fact]
+    [TestMethod]
     public void GroupKey_strips_argument_lists_and_empty_parens()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "Ns.Box.Bottom_corners_share_min_z",
             NUnitTestNameParser.GroupKey(
                 "Ns.Box.Bottom_corners_share_min_z(-12.3d,45.6d,-7.8d,34.5d,67.8d,12.3d)"));
-        Assert.Equal(
+        Assert.AreEqual(
             "Ns.Box.Bottom_corners_share_min_z",
             NUnitTestNameParser.GroupKey("Ns.Box.Bottom_corners_share_min_z()"));
     }
 
-    [Fact]
+    [TestMethod]
     public void GroupKey_uses_csharp_method_when_testname_renamed_the_leaf()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Original_named",
             NUnitTestNameParser.GroupKey(
                 "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one",
                 "Original_named"));
-        Assert.Equal(
+        Assert.AreEqual(
             "Ns.Box.Bottom_corners_share_min_z",
             NUnitTestNameParser.GroupKey(
                 "Ns.Box.Bottom_corners_share_min_z(-12.3,45.6)",

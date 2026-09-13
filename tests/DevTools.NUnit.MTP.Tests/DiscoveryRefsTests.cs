@@ -2,16 +2,17 @@ using DevTools.Testing.Abstractions;
 
 namespace DevTools.NUnit.MTP.Tests;
 
+[TestClass]
 public sealed class DiscoveryRefsTests
 {
-    [Fact]
+    [TestMethod]
     public void FilePathFor_uses_assembly_name_suffix()
     {
         var path = DiscoveryRefs.FilePathFor(@"C:\tests\Host.Tests.dll");
-        Assert.Equal(@"C:\tests\Host.Tests.discovery-refs.txt", path);
+        Assert.AreEqual(@"C:\tests\Host.Tests.discovery-refs.txt", path);
     }
 
-    [Fact]
+    [TestMethod]
     public void Read_maps_simple_name_to_existing_paths()
     {
         var directory = Directory.CreateTempSubdirectory("nunit-discovery-refs-").FullName;
@@ -28,7 +29,7 @@ public sealed class DiscoveryRefsTests
 
             var map = DiscoveryRefs.Read(assemblyPath);
 
-            Assert.Equal(apiPath, Assert.Single(map, pair => pair.Key == "RevitAPI").Value);
+            Assert.AreEqual(apiPath, map.Single(pair => pair.Key == "RevitAPI").Value);
         }
         finally
         {
@@ -36,7 +37,7 @@ public sealed class DiscoveryRefsTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Read_skips_framework_targeting_packs()
     {
         var directory = Directory.CreateTempSubdirectory("nunit-discovery-refs-").FullName;
@@ -50,7 +51,7 @@ public sealed class DiscoveryRefsTests
             File.WriteAllBytes(packPath, [1]);
             File.WriteAllText(DiscoveryRefs.FilePathFor(assemblyPath), packPath);
 
-            Assert.Empty(DiscoveryRefs.Read(assemblyPath));
+            Assert.IsEmpty(DiscoveryRefs.Read(assemblyPath));
         }
         finally
         {
@@ -58,9 +59,9 @@ public sealed class DiscoveryRefsTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Read_missing_file_is_empty()
     {
-        Assert.Empty(DiscoveryRefs.Read(Path.Combine(Path.GetTempPath(), "no-such-tests.dll")));
+        Assert.IsEmpty(DiscoveryRefs.Read(Path.Combine(Path.GetTempPath(), "no-such-tests.dll")));
     }
 }

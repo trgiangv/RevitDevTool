@@ -3,59 +3,60 @@ using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.Host.Tests;
 
+[TestClass]
 public sealed class NUnitSelectionFilterTests
 {
-    [Fact]
+    [TestMethod]
     public void Empty_selection_runs_the_whole_assembly()
     {
-        Assert.Null(NUnitSelectionFilter.ToNUnitFilter(null));
-        Assert.Null(NUnitSelectionFilter.ToNUnitFilter(TestSelection.All));
+        Assert.IsNull(NUnitSelectionFilter.ToNUnitFilter(null));
+        Assert.IsNull(NUnitSelectionFilter.ToNUnitFilter(TestSelection.All));
     }
 
-    [Fact]
+    [TestMethod]
     public void TestIds_are_emitted_as_nunit_test_nodes_without_using_display_names()
     {
         var filter = NUnitSelectionFilter.ToNUnitFilter(
             TestSelection.FromTestIds(
                 ["DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes"]));
 
-        Assert.Equal(
+        Assert.AreEqual(
             "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>",
             filter);
-        Assert.DoesNotContain("<name>", filter, StringComparison.Ordinal);
+        Assert.DoesNotContain("<name>", filter!, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Multiple_test_ids_are_or_combined()
     {
         var filter = NUnitSelectionFilter.ToNUnitFilter(
             TestSelection.FromTestIds(["alpha", "beta"]));
 
-        Assert.Equal("<filter><or><test>alpha</test><test>beta</test></or></filter>", filter);
+        Assert.AreEqual("<filter><or><test>alpha</test><test>beta</test></or></filter>", filter);
     }
 
-    [Fact]
+    [TestMethod]
     public void Names_are_emitted_as_nunit_name_nodes()
     {
         var filter = NUnitSelectionFilter.ToNUnitFilter(
             TestSelection.FromNames(["Arithmetic_runs_inside_host"]));
 
-        Assert.Equal("<filter><name re=\"1\">Arithmetic_runs_inside_host</name></filter>", filter);
+        Assert.AreEqual("<filter><name re=\"1\">Arithmetic_runs_inside_host</name></filter>", filter);
     }
 
-    [Fact]
+    [TestMethod]
     public void Provider_payload_is_raw_nunit_xml()
     {
         const string xml = "<filter><cat>AcceptanceCategory</cat></filter>";
         var filter = NUnitSelectionFilter.ToNUnitFilter(
             TestSelection.FromFrameworkFilter(NUnitSelectionFilter.XmlFilterFormat, xml));
-        Assert.Equal(xml, filter);
+        Assert.AreEqual(xml, filter);
     }
 
-    [Fact]
+    [TestMethod]
     public void Mixed_ids_and_payload_are_rejected()
     {
-        var ex = Assert.Throws<ArgumentException>(() =>
+        var ex = Assert.ThrowsExactly<ArgumentException>(() =>
             new TestSelection(
                 TestSelectionKind.TestIds,
                 testIds: ["id"],
@@ -64,32 +65,32 @@ public sealed class NUnitSelectionFilterTests
         Assert.Contains("framework filter", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void Wrong_filter_format_is_rejected_even_when_payload_is_xml()
     {
         var selection = TestSelection.FromFrameworkFilter(
             "nunit/filter-xml",
             "<filter><test>x</test></filter>");
-        var ex = Assert.Throws<ArgumentException>(() => NUnitSelectionFilter.ToNUnitFilter(selection));
+        var ex = Assert.ThrowsExactly<ArgumentException>(() => NUnitSelectionFilter.ToNUnitFilter(selection));
         Assert.Contains(NUnitSelectionFilter.XmlFilterFormat, ex.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Non_xml_payload_is_rejected()
     {
         var selection = TestSelection.FromFrameworkFilter(
             NUnitSelectionFilter.XmlFilterFormat,
             "cat == AcceptanceCategory");
-        var ex = Assert.Throws<ArgumentException>(() => NUnitSelectionFilter.ToNUnitFilter(selection));
+        var ex = Assert.ThrowsExactly<ArgumentException>(() => NUnitSelectionFilter.ToNUnitFilter(selection));
         Assert.Contains("filter XML", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void Xml_payload_without_filter_root_is_rejected()
     {
         var selection = TestSelection.FromFrameworkFilter(
             NUnitSelectionFilter.XmlFilterFormat,
             "<cat>AcceptanceCategory</cat>");
-        Assert.Throws<ArgumentException>(() => NUnitSelectionFilter.ToNUnitFilter(selection));
+        Assert.ThrowsExactly<ArgumentException>(() => NUnitSelectionFilter.ToNUnitFilter(selection));
     }
 }

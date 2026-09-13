@@ -10,13 +10,16 @@ using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Host.NUnit.Loading;
 using DevTools.Testing.Host.Runtime;
 using NUnit.Framework;
-using FactAttribute = Xunit.FactAttribute;
+using Assert = NUnit.Framework.Assert;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests;
 
+[TestClass]
 public sealed class NetFrameworkGenerationTests
 {
-    [Fact]
+    public Microsoft.VisualStudio.TestTools.UnitTesting.TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void GenerationBuilder_keeps_versioned_system_and_microsoft_dependencies_private()
     {
         var workspace = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
@@ -50,7 +53,7 @@ public sealed class NetFrameworkGenerationTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void GenerationBuilder_excludes_loose_testing_abstractions_identity_from_netfx_generation()
     {
         var workspace = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
@@ -74,7 +77,7 @@ public sealed class NetFrameworkGenerationTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Process_runs_on_clr_48()
     {
         Assert.That(Environment.Version.Major, Is.EqualTo(4));
@@ -90,7 +93,7 @@ public sealed class NetFrameworkGenerationTests
         TestContext.WriteLine($"Test host base directory: {AppContext.BaseDirectory}");
     }
 
-    [Fact]
+    [TestMethod]
     public void Create_executes_with_conflicting_preloaded_nunit_identity()
     {
         var conflicting = NetFrameworkGenerationTestEnvironment.LoadConflictingNUnitIntoAppDomain();
@@ -105,21 +108,21 @@ public sealed class NetFrameworkGenerationTests
             conflicting.Location.StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase),
             Is.False);
 
-        var probe = RunGenerationProbe("conflicting-binding");
+        var probe = RunGenerationProbe(TestContext, "conflicting-binding");
         Assert.That(probe.ExitCode, Is.EqualTo(0), probe.Output);
         Assert.That(probe.Output, Does.Contain("GenerationFrameworkIdentity="));
     }
 
-    [Fact]
+    [TestMethod]
     public void Create_executes_when_an_earlier_simple_name_resolver_returns_conflicting_nunit()
     {
-        var probe = RunGenerationProbe("costura-binding");
+        var probe = RunGenerationProbe(TestContext, "costura-binding");
         Assert.That(probe.ExitCode, Is.EqualTo(0), probe.Output);
         Assert.That(probe.Output, Does.Contain("GenerationFrameworkIdentity="));
         Assert.That(probe.Output, Does.Contain("Version=4.6.0.0"));
     }
 
-    [Fact]
+    [TestMethod]
     public void Create_executes_two_generations_in_the_default_appdomain()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
@@ -140,7 +143,7 @@ public sealed class NetFrameworkGenerationTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Run_maps_the_source_assembly_request_to_the_loaded_shadow_generation()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
@@ -158,7 +161,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(run.Results.Single().Outcome, Is.EqualTo(TestOutcomes.Passed));
     }
 
-    [Fact]
+    [TestMethod]
     public void Create_resolves_same_identity_dependency_per_requesting_generation()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildDependencyGenerationOne();
@@ -178,7 +181,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(caseTwo.Output, Does.Contain("dependency-behavior=behavior-two"));
     }
 
-    [Fact]
+    [TestMethod]
     public void Create_resolves_root_dependency_per_requesting_generation()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildRootDependencyGenerationOne();
@@ -195,7 +198,7 @@ public sealed class NetFrameworkGenerationTests
         Assert.That(caseTwo.Output, Does.Contain("dependency-behavior=behavior-two"));
     }
 
-    [Fact]
+    [TestMethod]
     public void Create_concurrent_generations_remain_isolated()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
@@ -225,13 +228,13 @@ public sealed class NetFrameworkGenerationTests
             sessionTwo?.Dispose();
         }
 
-        var probe = RunGenerationProbe("concurrent-binding");
+        var probe = RunGenerationProbe(TestContext, "concurrent-binding");
         Assert.That(probe.ExitCode, Is.EqualTo(0), probe.Output);
         Assert.That(probe.Output, Does.Contain("GenerationOneFramework="));
         Assert.That(probe.Output, Does.Contain("GenerationTwoFramework="));
     }
 
-    [Fact]
+    [TestMethod]
     public void Dispose_unregisters_the_scoped_resolver_and_is_idempotent()
     {
         var factory = new NUnitRuntimeSessionFactory();
@@ -251,7 +254,7 @@ public sealed class NetFrameworkGenerationTests
             Throws.TypeOf<ObjectDisposedException>());
     }
 
-    [Fact]
+    [TestMethod]
     public void Create_binds_the_concrete_neutral_contract_identity()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
@@ -268,7 +271,7 @@ public sealed class NetFrameworkGenerationTests
         AssertGenerationMarkerCasePasses(session, manifest);
     }
 
-    [Fact]
+    [TestMethod]
     public void Run_forwards_caller_cancellation_to_an_entered_test()
     {
         const string enteredEventVariable = "DEVTOOLS_NUNIT_CANCELLATION_ENTERED_EVENT";
@@ -341,7 +344,7 @@ public sealed class NetFrameworkGenerationTests
             && location.IndexOf("DevTools.nunit", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
-    private static (int ExitCode, string Output) RunGenerationProbe(string scenario)
+    private static (int ExitCode, string Output) RunGenerationProbe(Microsoft.VisualStudio.TestTools.UnitTesting.TestContext testContext, string scenario)
     {
         var probePath = Path.Combine(
             NetFrameworkGenerationTestEnvironment.RepositoryRoot,
@@ -378,9 +381,9 @@ public sealed class NetFrameworkGenerationTests
         var error = process.StandardError.ReadToEnd();
         process.WaitForExit();
 
-        TestContext.WriteLine(output);
+        testContext.WriteLine(output);
         if (!string.IsNullOrWhiteSpace(error))
-            TestContext.WriteLine(error);
+            testContext.WriteLine(error);
 
         return (process.ExitCode, output + error);
     }

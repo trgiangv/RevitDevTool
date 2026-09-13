@@ -1,16 +1,13 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="MSTest.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
         <IsPackable>false</IsPackable>
+        <UseMicrosoftCodeCoverage>true</UseMicrosoftCodeCoverage>
     </PropertyGroup>
 
     <ItemGroup>
         <Compile Remove="Fixtures\**" />
-    </ItemGroup>
-
-    <ItemGroup>
-        <PackageReference Include="xunit.v3"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -20,7 +17,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Xunit"/>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
     </ItemGroup>
 
 </Project>
+
