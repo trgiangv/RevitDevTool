@@ -12,14 +12,12 @@
     },
     {
       "name": "Attach Host: IronPython",
-      "type": "pydevd",
+      "type": "debugpy",
       "request": "attach",
-      "host": "127.0.0.1",
-      "port": 5680,
-      "mode": "client",
-      "console": "integratedTerminal",
-      "cwd": "${workspaceFolder}",
-      "pythonExecutable": "C:/Program Files/Python314/python.exe"
+      "connect": {
+        "host": "localhost",
+        "port": 4567
+      }
     },
     {
       "name": "Attach Host: NetFramework",

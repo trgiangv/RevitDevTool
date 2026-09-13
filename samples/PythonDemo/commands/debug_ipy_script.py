@@ -1,9 +1,10 @@
-"""IronPython debug sample (Revit). Host listens on 127.0.0.1:5680.
+"""IronPython debug sample (Revit). Host listens on 127.0.0.1:4567.
 
 Must stay named *_ipy_script.py so ScriptExecutionProvider uses IronPython.
 Do not import pydevd here -- RevitDevTool already called _enable_attach.
 
-See launch.json: Attach Host: IronPython (type pydevd, not debugpy).
+Attach with launch.json "Attach Host: IronPython" (debugpy, port 4567).
+CPython debugpy stays on 5678.
 """
 
 
@@ -17,7 +18,7 @@ def main():
     doc = uidoc.Document
     sel = list(uidoc.Selection.GetElementIds())
 
-    # Breakpoint here after VS Code is attached to 5680.
+    # Breakpoint here after VS Code is attached to 4567.
     print("document:", doc.Title)
     print("selection count:", len(sel))
 

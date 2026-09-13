@@ -51,7 +51,7 @@ flowchart TB
 | `dashboard_script.py` | Launches the WebView2 dashboard sample. |
 | `data_analysis_script.py` | Polars/data-analysis demo. |
 | `debugpy_script.py` | CPython `debugpy` demo (port 5678). |
-| `debug_ipy_script.py` | IronPython pydevd demo (port 5680). |
+| `debug_ipy_script.py` | IronPython debug demo (port 4567). |
 | `export_data_script.py` | Excel export demo. |
 | `fcl_script.py` | Geometry/collision dependency demo. |
 | `logging_batch_script.py` | Logging stress sample. |
