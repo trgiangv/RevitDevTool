@@ -47,8 +47,19 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     [ObservableProperty]
     public partial bool IsDebuggerConnected { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsPythonDebuggerConnected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsIronPythonDebuggerConnected { get; set; }
+
+    [ObservableProperty]
+    public partial int PythonDebugPort { get; set; }
+
+    [ObservableProperty]
+    public partial int IronPythonDebugPort { get; set; }
+
     public bool HasDebugger => _debugger != null;
-    public int DebugPort => _debugger?.DebugPort ?? 0;
     public ObservableCollection<ExecutionNodeBase> FilteredItems { get; } = [];
 
     public CommandViewModel(
@@ -71,7 +82,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
         _searchDebounceTimer.Tick += (_, _) => { _searchDebounceTimer.Stop(); PerformSearch(); };
 
-        if (_debugger != null)
+        if (_debugger == null) return;
         {
             _debugStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
             _debugStatusTimer.Tick += (_, _) => UpdateDebuggerStatus();
@@ -82,7 +93,11 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
 
     private void UpdateDebuggerStatus()
     {
-        IsDebuggerConnected = _debugger?.IsConnected() ?? false;
+        IsPythonDebuggerConnected = _debugger?.IsPythonConnected() ?? false;
+        IsIronPythonDebuggerConnected = _debugger?.IsIronPythonConnected() ?? false;
+        IsDebuggerConnected = IsPythonDebuggerConnected || IsIronPythonDebuggerConnected;
+        PythonDebugPort = _debugger?.PythonDebugPort ?? 0;
+        IronPythonDebugPort = _debugger?.IronPythonDebugPort ?? 0;
     }
 
     public async Task LoadSavedPathsAsync()
@@ -391,7 +406,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     {
         try
         {
-            _ = System.Reflection.AssemblyName.GetAssemblyName(filePath);
+            System.Reflection.AssemblyName.GetAssemblyName(filePath);
             return true;
         }
         catch (BadImageFormatException)

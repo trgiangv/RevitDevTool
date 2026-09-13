@@ -25,19 +25,30 @@
             <DataTemplate x:Key="ExecutionPackageTemplate">
                 <views:PackageView DataContext="{Binding PackageViewModel}" />
             </DataTemplate>
+            <Style x:Key="DebuggerPortChip"
+                   TargetType="Border">
+                <Setter Property="Padding" Value="5,2" />
+                <Setter Property="Margin" Value="0,0,4,0" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Background" Value="{DynamicResource DevTools.MahApps.Brushes.Gray10}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource DevTools.MahApps.Brushes.Gray8}" />
+                <Setter Property="BorderThickness" Value="1.5" />
+                <Setter Property="SnapsToDevicePixels" Value="True" />
+            </Style>
         </ResourceDictionary>
     </UserControl.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,0,0,5">
+        <Grid Grid.Row="0"
+              Margin="0,0,0,5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
@@ -46,40 +57,8 @@
                      mah:TextBoxHelper.Watermark="Search..."
                      Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
-            <StackPanel Grid.Column="1"
-                        Margin="8,0,0,0"
-                        VerticalAlignment="Center"
-                        Orientation="Horizontal"
-                        Visibility="{Binding CommandViewModel.HasDebugger, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <Path Width="12"
-                      Height="12"
-                      VerticalAlignment="Center"
-                      Data="{StaticResource Bug}"
-                      Stretch="Uniform">
-                    <Path.Style>
-                        <Style TargetType="Path">
-                            <Setter Property="Fill" Value="#FF6B6B" />
-                            <Setter Property="ToolTip" Value="Python debugger not connected" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding CommandViewModel.IsDebuggerConnected}"
-                                             Value="True">
-                                    <Setter Property="Fill" Value="#4CAF50" />
-                                    <Setter Property="ToolTip" Value="Python debugger connected" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Path.Style>
-                </Path>
-                <TextBlock Margin="3,0,0,0"
-                           VerticalAlignment="Center"
-                           FontSize="11"
-                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                           Text="{Binding CommandViewModel.DebugPort, Mode=OneTime, StringFormat=': {0}'}"
-                           ToolTip="debugpy port" />
-            </StackPanel>
-
-            <ToggleButton Grid.Column="2"
-                          Margin="10,0,0,0"
+            <ToggleButton Grid.Column="1"
+                          Margin="5,0,0,0"
                           Padding="5,0"
                           BorderThickness="0.5"
                           IsChecked="{Binding IsPackageMode, UpdateSourceTrigger=PropertyChanged}"
@@ -92,7 +71,7 @@
                       Stretch="Uniform" />
             </ToggleButton>
 
-            <StackPanel Grid.Column="3"
+            <StackPanel Grid.Column="2"
                         Margin="5,0,0,0"
                         Orientation="Horizontal">
                 <StackPanel.Resources>
@@ -132,7 +111,83 @@
             </StackPanel>
         </Grid>
 
-        <ContentControl Grid.Row="1"
+        <StackPanel Grid.Row="1"
+                    Margin="0,0,0,4"
+                    Orientation="Horizontal"
+                    Visibility="{Binding CommandViewModel.HasDebugger, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Path Width="12"
+                  Height="12"
+                  Margin="0,0,6,0"
+                  VerticalAlignment="Center"
+                  Data="{StaticResource Bug}"
+                  Stretch="Uniform">
+                <Path.Style>
+                    <Style TargetType="Path">
+                        <Setter Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" />
+                        <Setter Property="ToolTip" Value="Debugger not connected" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CommandViewModel.IsDebuggerConnected}"
+                                         Value="True">
+                                <Setter Property="Fill" Value="#FF6B6B" />
+                                <Setter Property="ToolTip" Value="Debugger connected" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Path.Style>
+            </Path>
+            <Border ToolTip="CPython debugpy port">
+                <Border.Style>
+                    <Style BasedOn="{StaticResource DebuggerPortChip}"
+                           TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CommandViewModel.IsPythonDebuggerConnected}"
+                                         Value="True">
+                                <Setter Property="BorderBrush" Value="#FF6B6B" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal">
+                    <Image Width="12"
+                           Height="12"
+                           VerticalAlignment="Center"
+                           Source="{StaticResource PythonIcon}"
+                           ToolTip="CPython" />
+                    <TextBlock Margin="3,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Text="{Binding CommandViewModel.PythonDebugPort}" />
+                </StackPanel>
+            </Border>
+            <Border ToolTip="IronPython debugpy port">
+                <Border.Style>
+                    <Style BasedOn="{StaticResource DebuggerPortChip}"
+                           TargetType="Border">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CommandViewModel.IsIronPythonDebuggerConnected}"
+                                         Value="True">
+                                <Setter Property="BorderBrush" Value="#FF6B6B" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <StackPanel Orientation="Horizontal">
+                    <Image Width="12"
+                           Height="12"
+                           VerticalAlignment="Center"
+                           Source="{StaticResource IronPythonIcon}"
+                           ToolTip="IronPython" />
+                    <TextBlock Margin="3,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="11"
+                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Text="{Binding CommandViewModel.IronPythonDebugPort}" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <ContentControl Grid.Row="2"
                         Content="{Binding}"
                         Focusable="False">
             <ContentControl.Style>

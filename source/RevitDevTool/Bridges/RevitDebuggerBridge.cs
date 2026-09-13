@@ -1,10 +1,16 @@
+using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using DevTools.Presentation.Interfaces;
 
 namespace RevitDevTool.Bridges;
 
-public sealed class RevitDebuggerBridge : IDebuggerBridge
+public sealed class RevitDebuggerBridge(IronPythonDebugger ironPythonDebugger) : IDebuggerBridge
 {
-    public int DebugPort => PythonDebugger.DebugPort;
-    public bool IsConnected() => PythonDebugger.IsConnected();
+    public int PythonDebugPort => PythonDebugger.DebugPort;
+    public int IronPythonDebugPort => ironPythonDebugger.DebugPort;
+
+    public bool IsPythonConnected() => PythonDebugger.IsConnected();
+    public bool IsIronPythonConnected() => ironPythonDebugger.IsAttached;
+
+    public bool IsConnected() => IsPythonConnected() || IsIronPythonConnected();
 }
