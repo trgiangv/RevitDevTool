@@ -209,7 +209,7 @@ public sealed class PackageConsumerTests
                     packageVersion,
                     tfm,
                     engine: "tunit",
-                    framework: """<PackageReference Include="TUnit" Version="1.66.27" />""",
+                    framework: """<PackageReference Include="TUnit" Version="1.67.0" />""",
                     test: """
                         public class DiscoveredTests
                         {

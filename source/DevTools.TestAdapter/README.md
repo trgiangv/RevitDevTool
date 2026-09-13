@@ -6,13 +6,13 @@ Requires [RevitDevTool](https://github.com/trgiangv/RevitDevTool).
 Currently supports **NUnit** and **TUnit** only. Pin the framework in the
 test project — the adapter does not pull either. It depends on
 `Microsoft.Testing.Platform.MSBuild` 2.4.0; do not add or override it.
-TUnit `1.66.27` and Microsoft.Testing.Platform `2.4.0` are a pair — pin
+TUnit `1.67.0` and Microsoft.Testing.Platform `2.4.0` are a pair — pin
 both.
 
 | Package | Version |
 |---------|---------|
 | `NUnit` | 4.6.1 |
-| `TUnit` | 1.66.27 |
+| `TUnit` | 1.67.0 |
 | `Microsoft.Testing.Platform.MSBuild` | 2.4.0 |
 
 NUnit and TUnit both work with every host below. Set `HostName` and
@@ -56,7 +56,7 @@ Do not use `.runsettings`.
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.6" />
-  <PackageReference Include="TUnit" Version="1.66.27" />
+  <PackageReference Include="TUnit" Version="1.67.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>

@@ -10,7 +10,7 @@ public sealed class TUnitGenerationPolicy(Func<HostRuntimeSource> runtimeSourceP
     internal const string PlatformAssemblyFileName = "Microsoft.Testing.Platform.dll";
     public const string RuntimeFolderName = "TUnitRuntime";
     public const string RuntimeAssemblyFileName = "DevTools.TUnit.Runtime.dll";
-    internal static readonly Version ExpectedTUnitAssemblyVersion = new(1, 66, 27, 0);
+    internal static readonly Version ExpectedTUnitAssemblyVersion = new(1, 67, 0, 0);
     internal static readonly Version ExpectedMtpAssemblyVersion = new(2, 4, 0, 0);
 
     public TestingGenerationPlan CreatePlan(string testAssemblyPath)

@@ -14,7 +14,7 @@ public sealed class TUnitGenerationPolicyTests
 
         var tunit = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             TUnitGenerationPolicy.ValidateTUnitFrameworkVersion(typeof(TUnitGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("1.66.27.0", tunit.Message, StringComparison.Ordinal);
+        Assert.Contains("1.67.0.0", tunit.Message, StringComparison.Ordinal);
 
         var mtp = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             TUnitGenerationPolicy.ValidateMtpAssemblyVersion(typeof(TUnitGenerationPolicyTests).Assembly.Location));

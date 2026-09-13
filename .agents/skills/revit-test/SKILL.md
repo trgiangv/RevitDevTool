@@ -30,7 +30,7 @@ otherwise next to the MTP test project.
 
 Default engine is NUnit (`4.6.1`). Do not add `NUnit3TestAdapter` or
 `ricaun.RevitTest.TestAdapter`. TUnit: set `TestingFramework` to `tunit` and
-pin `TUnit` `1.66.27`.
+pin `TUnit` `1.67.0`.
 
 ```xml
 <PropertyGroup>
