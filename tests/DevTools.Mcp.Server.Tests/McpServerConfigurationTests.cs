@@ -11,17 +11,18 @@ using Moq;
 
 namespace DevTools.Mcp.Server.Tests;
 
+[TestClass]
 public sealed class McpServerConfigurationTests
 {
-    [Fact]
+    [TestMethod]
     public void AddMcp_ReturnsServicesForChaining()
     {
         var services = new ServiceCollection();
 
-        Assert.Same(services, services.AddMcp());
+        Assert.AreSame(services, services.AddMcp());
     }
 
-    [Fact]
+    [TestMethod]
     public void McpServerConfigurator_AppliesRegisteredOptionsBeforeLoggingFilters()
     {
         var services = new ServiceCollection();
@@ -33,35 +34,35 @@ public sealed class McpServerConfigurationTests
 
         McpServerConfigurator.Apply(options, provider);
 
-        Assert.Same(MarkerFilterConfigurer.Filter, options.Filters.Request.CallToolFilters[0]);
-        Assert.Equal(2, options.Filters.Request.CallToolFilters.Count);
+        Assert.AreSame(MarkerFilterConfigurer.Filter, options.Filters.Request.CallToolFilters[0]);
+        Assert.AreEqual(2, options.Filters.Request.CallToolFilters.Count);
     }
 
-    [Fact]
+    [TestMethod]
     public void ConfigureDaemonOptions_DisablesExternalListChanged()
     {
         var options = CreateDaemonOptions();
 
-        Assert.False(options.Capabilities?.Tools?.ListChanged);
-        Assert.False(options.Capabilities?.Prompts?.ListChanged);
-        Assert.False(options.Capabilities?.Resources?.ListChanged);
-        Assert.NotNull(options.ResourceCollection);
-        Assert.Empty(options.ResourceCollection);
-        Assert.NotEmpty(options.Filters.Request.CallToolFilters);
+        Assert.IsFalse(options.Capabilities?.Tools?.ListChanged);
+        Assert.IsFalse(options.Capabilities?.Prompts?.ListChanged);
+        Assert.IsFalse(options.Capabilities?.Resources?.ListChanged);
+        Assert.IsNotNull(options.ResourceCollection);
+        Assert.IsEmpty(options.ResourceCollection);
+        Assert.IsNotEmpty(options.Filters.Request.CallToolFilters);
     }
 
-    [Fact]
+    [TestMethod]
     public void ConfigureDaemonOptions_AdvertisesTasksExtension()
     {
         var options = CreateDaemonOptions();
 
-        Assert.NotNull(options.Capabilities?.Extensions);
+        Assert.IsNotNull(options.Capabilities?.Extensions);
         Assert.Contains("io.modelcontextprotocol/tasks", options.Capabilities.Extensions!.Keys);
-        Assert.NotNull(options.RequestHandlers);
-        Assert.Contains(options.RequestHandlers, handler => handler.Method == "tasks/get");
+        Assert.IsNotNull(options.RequestHandlers);
+        Assert.Contains(handler => handler.Method == "tasks/get", options.RequestHandlers);
     }
 
-    [Fact]
+    [TestMethod]
     public void TaskExecutionMeta_MatchesProductPolicy()
     {
         var broker = new Mock<IHostBroker>();
@@ -69,19 +70,19 @@ public sealed class McpServerConfigurationTests
         var search = SearchDynamicTool.Create(broker.Object);
         var optional = TaskModeFixture.CreateOptionalTool("execute_csharp_code");
 
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Synchronous,
             McpTaskExecutionMeta.SelectForRequest(CreateToolRequest(invoke)));
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Synchronous,
             McpTaskExecutionMeta.SelectForRequest(CreateToolRequest(search)));
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Optional,
             McpTaskExecutionMeta.SelectForRequest(CreateToolRequest(optional)));
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Synchronous,
             McpTaskExecutionMeta.SelectForRequest(CreateToolRequest("unknown_tool")));
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Optional,
             McpTaskExecutionMeta.ParseMode(optional.ProtocolTool.Meta));
     }

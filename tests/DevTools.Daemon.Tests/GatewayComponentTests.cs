@@ -15,25 +15,26 @@ using Moq;
 
 namespace DevTools.Daemon.Tests;
 
+[TestClass]
 public sealed class GatewayComponentTests
 {
-    [Theory]
-    [InlineData("wss://gateway.example/tunnel", "https://gateway.example")]
-    [InlineData("https://gateway.example/tunnel", "https://gateway.example")]
+    [TestMethod]
+    [DataRow("wss://gateway.example/tunnel", "https://gateway.example")]
+    [DataRow("https://gateway.example/tunnel", "https://gateway.example")]
     public void GatewayOptions_HttpBaseUrl_StripsTunnelPath(string url, string expectedBase)
     {
         var options = new GatewayOptions { Url = url };
-        Assert.Equal(expectedBase, options.HttpBaseUrl);
+        Assert.AreEqual(expectedBase, options.HttpBaseUrl);
     }
 
-    [Fact]
+    [TestMethod]
     public void TunnelStatusChangedArgs_ExposesStatus()
     {
         var args = new TunnelStatusChangedArgs(TunnelStatus.Connected);
-        Assert.Equal(TunnelStatus.Connected, args.Status);
+        Assert.AreEqual(TunnelStatus.Connected, args.Status);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task GatewayTunnelClient_ReconnectsUntilCancelled()
     {
         using var host = ServerHostBuilder.CreateStdioHostForTests();
@@ -57,11 +58,11 @@ public sealed class GatewayComponentTests
 
         await client.RunAsync(cts.Token);
 
-        Assert.True(lastStatus is TunnelStatus.Connecting or TunnelStatus.Reconnecting or TunnelStatus.Disconnected);
+        Assert.IsTrue(lastStatus is TunnelStatus.Connecting or TunnelStatus.Reconnecting or TunnelStatus.Disconnected);
         await client.DisposeAsync();
     }
 
-    [Fact]
+    [TestMethod]
     public async Task GatewayHostedService_StartsWithoutGatewayUrl()
     {
         using var host = ServerHostBuilder.CreateStdioHostForTests();
@@ -78,10 +79,10 @@ public sealed class GatewayComponentTests
         await service.StartAsync(cts.Token);
         await service.StopAsync(CancellationToken.None);
 
-        Assert.Equal(TunnelStatus.Disconnected, service.Status);
+        Assert.AreEqual(TunnelStatus.Disconnected, service.Status);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task WebSocketNdjsonStreams_ReadsLargePayloadAcrossBuffers()
     {
         var port = GetFreeTcpPort();
@@ -98,14 +99,14 @@ public sealed class GatewayComponentTests
         var readStream = new WebSocketReadStream(ws, 1024 * 1024);
         var first = new byte[128];
         var second = new byte[400];
-        Assert.True(await readStream.ReadAsync(first, cts.Token) > 0);
-        Assert.True(await readStream.ReadAsync(second, cts.Token) > 0);
+        Assert.IsTrue(await readStream.ReadAsync(first, cts.Token) > 0);
+        Assert.IsTrue(await readStream.ReadAsync(second, cts.Token) > 0);
 
         await cts.CancelAsync();
         try { await serverTask; } catch (OperationCanceledException) { }
     }
 
-    [Fact]
+    [TestMethod]
     public async Task WebSocketWriteStream_FlushesMultipleLines()
     {
         var port = GetFreeTcpPort();
@@ -122,7 +123,7 @@ public sealed class GatewayComponentTests
         try { await serverTask; } catch (OperationCanceledException) { }
     }
 
-    [Fact]
+    [TestMethod]
     public async Task GatewayTunnelClient_ConnectsToLocalServer_BeforeCancellation()
     {
         var port = GetFreeTcpPort();

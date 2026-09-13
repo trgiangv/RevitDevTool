@@ -18,9 +18,12 @@ using Moq;
 
 namespace DevTools.Mcp.Server.Tests;
 
+[TestClass]
 public sealed class LocalToolsAndPromptsTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void McpEngine_RegistersDaemonToolsAndPrompts()
     {
         var broker = new Mock<IHostBroker>();
@@ -32,14 +35,14 @@ public sealed class LocalToolsAndPromptsTests
             Mock.Of<IMachineLister>(),
             Mock.Of<IFileReaderCatalog>());
 
-        Assert.Equal(6, engine.LocalTools.Count);
-        Assert.Equal(2, engine.PromptCollection.Count);
-        Assert.Contains(engine.LocalTools, tool => tool.ProtocolTool.Name == "launch_host");
-        Assert.Contains(engine.LocalTools, tool => tool.ProtocolTool.Name == "list_machines");
-        Assert.Contains(engine.LocalTools, tool => tool.ProtocolTool.Name == "read_file_info");
+        Assert.AreEqual(6, engine.LocalTools.Count);
+        Assert.AreEqual(2, engine.PromptCollection.Count);
+        Assert.Contains(tool => tool.ProtocolTool.Name == "launch_host", engine.LocalTools);
+        Assert.Contains(tool => tool.ProtocolTool.Name == "list_machines", engine.LocalTools);
+        Assert.Contains(tool => tool.ProtocolTool.Name == "read_file_info", engine.LocalTools);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ListMachinesTool_ReturnsListerPayload()
     {
         var lister = new Mock<IMachineLister>();
@@ -49,14 +52,14 @@ public sealed class LocalToolsAndPromptsTests
         var tool = ListMachinesTool.Create(lister.Object);
         var result = await McpToolInvoke.Invoke(tool, "list_machines", new { });
 
-        Assert.Equal("machines", McpToolInvoke.Text(result));
+        Assert.AreEqual("machines", McpToolInvoke.Text(result));
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ReadFileInfoTool_ReadsSummaryAndHandlesErrors()
     {
         var path = Path.Combine(Path.GetTempPath(), $"mcp-read-{Guid.NewGuid():N}.rvt");
-        await File.WriteAllTextAsync(path, "demo", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(path, "demo", TestContext.CancellationToken);
 
         var reader = new Mock<IFileReader>();
         reader.Setup(r => r.SupportedExtensions).Returns([".rvt"]);
@@ -70,10 +73,10 @@ public sealed class LocalToolsAndPromptsTests
         var tool = ReadFileInfoTool.Create(catalog.Object);
 
         var summary = await McpToolInvoke.Invoke(tool, "read_file_info", new { filePath = path });
-        Assert.Equal(path, JsonDocument.Parse(McpToolInvoke.Text(summary)).RootElement.GetProperty("filePath").GetString());
+        Assert.AreEqual(path, JsonDocument.Parse(McpToolInvoke.Text(summary)).RootElement.GetProperty("filePath").GetString());
 
         var full = await McpToolInvoke.Invoke(tool, "read_file_info", new { filePath = path, detail = "full" });
-        Assert.Equal(path, JsonDocument.Parse(McpToolInvoke.Text(full)).RootElement.GetProperty("filePath").GetString());
+        Assert.AreEqual(path, JsonDocument.Parse(McpToolInvoke.Text(full)).RootElement.GetProperty("filePath").GetString());
 
         var missing = await McpToolInvoke.Invoke(tool, "read_file_info", new { filePath = path + ".missing" });
         Assert.Contains("File not found", McpToolInvoke.Text(missing), StringComparison.Ordinal);
@@ -93,7 +96,7 @@ public sealed class LocalToolsAndPromptsTests
         try { File.Delete(path); } catch { /* ignored */ }
     }
 
-    [Fact]
+    [TestMethod]
     public async Task LaunchHostTool_ValidatesInputAndLaunchesWhenBridgeConnects()
     {
         var broker = new Mock<IHostBroker>();
@@ -131,17 +134,17 @@ public sealed class LocalToolsAndPromptsTests
 
         var success = await McpToolInvoke.Invoke(tool, "launch_host", new { hostApp = "Revit", languageCode = "fr-FR" });
         var payload = JsonSerializer.Deserialize<LaunchHostResult>(McpToolInvoke.Text(success), McpServerJsonContext.Default.LaunchHostResult);
-        Assert.NotNull(payload);
-        Assert.Equal(HostApp.Revit, payload.HostApp);
-        Assert.True(payload.BridgeConnected);
-        Assert.Equal("fr-FR", payload.LanguageCode);
+        Assert.IsNotNull(payload);
+        Assert.AreEqual(HostApp.Revit, payload.HostApp);
+        Assert.IsTrue(payload.BridgeConnected);
+        Assert.AreEqual("fr-FR", payload.LanguageCode);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task LaunchHostTool_InfersHostFromFilePath_AndReportsExitedProcess()
     {
         using var exited = Process.Start(new ProcessStartInfo("cmd.exe", "/c exit") { CreateNoWindow = true, UseShellExecute = false });
-        Assert.NotNull(exited);
+        Assert.IsNotNull(exited);
         exited.WaitForExit();
 
         var broker = new Mock<IHostBroker>();
@@ -163,7 +166,7 @@ public sealed class LocalToolsAndPromptsTests
         Assert.Contains("exited before the bridge connected", McpToolInvoke.Text(exitedResult), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task LaunchHostTool_CancelledToken_PropagatesCancellation()
     {
         var broker = new Mock<IHostBroker>();
@@ -182,47 +185,47 @@ public sealed class LocalToolsAndPromptsTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        await Assert.ThrowsExactlyAsync<OperationCanceledException>(async () =>
             await tool.InvokeAsync(McpServerConfigurationTests.CreateToolRequest(tool), cts.Token));
     }
 
-    [Fact]
+    [TestMethod]
     public async Task RevitCodePrompt_EmitsManualAndReadonlyTemplates()
     {
         await using var harness = await PromptHarness.StartAsync(RevitCodePrompt.Create());
         var manual = await harness.Client.GetPromptAsync(
             "revit_code",
             new Dictionary<string, object?> { ["task"] = "list walls" },
-            cancellationToken: TestContext.Current.CancellationToken);
-        var manualText = Assert.IsType<TextContentBlock>(manual.Messages[0].Content).Text;
+            cancellationToken: TestContext.CancellationToken);
+        var manualText = Assert.IsInstanceOfType<TextContentBlock>(manual.Messages[0].Content).Text;
         Assert.Contains("TransactionMode.Manual", manualText, StringComparison.Ordinal);
         Assert.Contains("list walls", manualText, StringComparison.Ordinal);
 
         var readOnly = await harness.Client.GetPromptAsync(
             "revit_code",
             new Dictionary<string, object?> { ["task"] = "count doors", ["mode"] = "readonly" },
-            cancellationToken: TestContext.Current.CancellationToken);
-        var readOnlyText = Assert.IsType<TextContentBlock>(readOnly.Messages[0].Content).Text;
+            cancellationToken: TestContext.CancellationToken);
+        var readOnlyText = Assert.IsInstanceOfType<TextContentBlock>(readOnly.Messages[0].Content).Text;
         Assert.Contains("TransactionMode.ReadOnly", readOnlyText, StringComparison.Ordinal);
         Assert.Contains("Do NOT create a Transaction", readOnlyText, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task AcadCodePrompt_EmitsModifyAndReadonlyTemplates()
     {
         await using var harness = await PromptHarness.StartAsync(AcadCodePrompt.Create());
         var modify = await harness.Client.GetPromptAsync(
             "acad_code",
             new Dictionary<string, object?> { ["task"] = "draw line" },
-            cancellationToken: TestContext.Current.CancellationToken);
-        var modifyText = Assert.IsType<TextContentBlock>(modify.Messages[0].Content).Text;
+            cancellationToken: TestContext.CancellationToken);
+        var modifyText = Assert.IsInstanceOfType<TextContentBlock>(modify.Messages[0].Content).Text;
         Assert.Contains("tr.Commit()", modifyText, StringComparison.Ordinal);
 
         var readOnly = await harness.Client.GetPromptAsync(
             "acad_code",
             new Dictionary<string, object?> { ["task"] = "list layers", ["mode"] = "readonly" },
-            cancellationToken: TestContext.Current.CancellationToken);
-        var readOnlyText = Assert.IsType<TextContentBlock>(readOnly.Messages[0].Content).Text;
+            cancellationToken: TestContext.CancellationToken);
+        var readOnlyText = Assert.IsInstanceOfType<TextContentBlock>(readOnly.Messages[0].Content).Text;
         Assert.Contains("OpenMode.ForRead", readOnlyText, StringComparison.Ordinal);
         Assert.Contains("Do NOT call tr.Commit()", readOnlyText, StringComparison.Ordinal);
     }
@@ -276,7 +279,7 @@ public sealed class LocalToolsAndPromptsTests
                     serverToClient.Reader.AsStream(),
                     NullLoggerFactory.Instance),
                 loggerFactory: NullLoggerFactory.Instance,
-                cancellationToken: TestContext.Current.CancellationToken);
+                cancellationToken: CancellationToken.None);
 
             return new PromptHarness(client, server, serverTask, clientToServer, serverToClient, cts);
         }

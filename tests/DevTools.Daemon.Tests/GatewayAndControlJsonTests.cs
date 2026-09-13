@@ -6,9 +6,12 @@ using DevTools.Ipc;
 
 namespace DevTools.Daemon.Tests;
 
+using System.Linq;
+
+[TestClass]
 public sealed class GatewayAndControlJsonTests
 {
-    [Fact]
+    [TestMethod]
     public void GatewayRegisterMessage_RoundTripsWithSnakeCaseKeys()
     {
         var message = new GatewayRegisterMessage(
@@ -20,26 +23,26 @@ public sealed class GatewayAndControlJsonTests
         var json = JsonSerializer.Serialize(message, ControlJsonContext.Default.GatewayRegisterMessage);
         var loaded = JsonSerializer.Deserialize(json, ControlJsonContext.Default.GatewayRegisterMessage);
 
-        Assert.NotNull(loaded);
-        Assert.Equal("machine-1", loaded!.MachineId);
-        Assert.Equal("WORKSTATION", loaded.MachineName);
+        Assert.IsNotNull(loaded);
+        Assert.AreEqual("machine-1", loaded!.MachineId);
+        Assert.AreEqual("WORKSTATION", loaded.MachineName);
         Assert.Contains("Revit", loaded.HostApps);
         Assert.Contains("machine_id", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void GatewayHeartbeatMessage_RoundTripsHostApps()
     {
         var message = new GatewayHeartbeatMessage("heartbeat", ["Revit"]);
         var json = JsonSerializer.Serialize(message, ControlJsonContext.Default.GatewayHeartbeatMessage);
         var loaded = JsonSerializer.Deserialize(json, ControlJsonContext.Default.GatewayHeartbeatMessage);
 
-        Assert.NotNull(loaded);
-        Assert.Equal("heartbeat", loaded!.Type);
-        Assert.Single(loaded.HostApps);
+        Assert.IsNotNull(loaded);
+        Assert.AreEqual("heartbeat", loaded!.Type);
+        Enumerable.Single(loaded.HostApps);
     }
 
-    [Fact]
+    [TestMethod]
     public void ControlResponses_RoundTripExpectedFields()
     {
         var auth = new AuthStateResponse(true, "user-1", "a@example.com", "Agent", "https://avatar");
@@ -60,12 +63,12 @@ public sealed class GatewayAndControlJsonTests
         Assert.Contains("\"pid\":123", hostJson, StringComparison.Ordinal);
     }
 
-    [Theory]
-    [InlineData("wss://gateway.example/tunnel", "https://gateway.example")]
-    [InlineData("https://gateway.example/tunnel", "https://gateway.example")]
+    [TestMethod]
+    [DataRow("wss://gateway.example/tunnel", "https://gateway.example")]
+    [DataRow("https://gateway.example/tunnel", "https://gateway.example")]
     public void GatewayOptions_HttpBaseUrl_StripsTunnelPath(string url, string expectedBase)
     {
         var options = new GatewayOptions { Url = url };
-        Assert.Equal(expectedBase, options.HttpBaseUrl);
+        Assert.AreEqual(expectedBase, options.HttpBaseUrl);
     }
 }

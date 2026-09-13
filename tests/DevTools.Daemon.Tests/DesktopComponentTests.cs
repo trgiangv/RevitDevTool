@@ -14,23 +14,24 @@ using Moq;
 
 namespace DevTools.Daemon.Tests;
 
+[TestClass]
 public sealed class DesktopComponentTests
 {
-    [Theory]
-    [InlineData(AppTheme.Light, true)]
-    [InlineData(AppTheme.Dark, false)]
+    [TestMethod]
+    [DataRow(AppTheme.Light, true)]
+    [DataRow(AppTheme.Dark, false)]
     public void ThemeHelper_IsLight_ReturnsFixedThemes(AppTheme theme, bool expected)
     {
-        Assert.Equal(expected, ThemeHelper.IsLight(theme));
+        Assert.AreEqual(expected, ThemeHelper.IsLight(theme));
     }
 
-    [Fact]
+    [TestMethod]
     public void ThemeHelper_IsLight_Auto_ReadsRegistry()
     {
         _ = ThemeHelper.IsLight(AppTheme.Auto);
     }
 
-    [Fact]
+    [TestMethod]
     public void ThemeHelper_Apply_NoOpsWhenApplicationNotRunning()
     {
         ThemeHelper.Apply(AppTheme.Light);
@@ -38,18 +39,18 @@ public sealed class DesktopComponentTests
         ThemeHelper.Apply(AppTheme.Auto);
     }
 
-    [Fact]
+    [TestMethod]
     public void AppIcons_LoadEmbeddedResources()
     {
-        Assert.NotNull(AppIcons.WindowIcon(true));
-        Assert.NotNull(AppIcons.WindowIcon(false));
+        Assert.IsNotNull(AppIcons.WindowIcon(true));
+        Assert.IsNotNull(AppIcons.WindowIcon(false));
         using var dark = AppIcons.TrayIcon(true);
         using var light = AppIcons.TrayIcon(false);
-        Assert.True(dark.Handle != 0);
-        Assert.True(light.Handle != 0);
+        Assert.IsTrue(dark.Handle != 0);
+        Assert.IsTrue(light.Handle != 0);
     }
 
-    [Fact]
+    [TestMethod]
     public void SingleInstance_FirstInstanceIsUnique()
     {
         using var first = new SingleInstance();
@@ -57,10 +58,10 @@ public sealed class DesktopComponentTests
             return;
 
         using var second = new SingleInstance();
-        Assert.False(second.IsFirstInstance);
+        Assert.IsFalse(second.IsFirstInstance);
     }
 
-    [Fact]
+    [TestMethod]
     public void AutoStart_EnableDisable_RoundTripsRegistryValue()
     {
         var runKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
@@ -71,14 +72,14 @@ public sealed class DesktopComponentTests
         try
         {
             AutoStart.Disable();
-            Assert.False(AutoStart.IsEnabled);
+            Assert.IsFalse(AutoStart.IsEnabled);
 
             AutoStart.Enable();
             if (Environment.ProcessPath is not null)
-                Assert.True(AutoStart.IsEnabled);
+                Assert.IsTrue(AutoStart.IsEnabled);
 
             AutoStart.Disable();
-            Assert.False(AutoStart.IsEnabled);
+            Assert.IsFalse(AutoStart.IsEnabled);
         }
         finally
         {
@@ -90,7 +91,7 @@ public sealed class DesktopComponentTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void UserSettingsStore_Update_WritesAndReloadsSettings()
     {
         var settingsPath = UserSettings.FilePath;
@@ -113,8 +114,8 @@ public sealed class DesktopComponentTests
             var loaded = JsonSerializer.Deserialize(
                 File.ReadAllText(settingsPath),
                 UserSettingsJsonContext.Default.DictionaryStringUserSettings);
-            Assert.Equal(AppTheme.Dark, loaded![UserSettings.SectionName].Theme);
-            Assert.True(loaded[UserSettings.SectionName].AutoStartEnabled);
+            Assert.AreEqual(AppTheme.Dark, loaded![UserSettings.SectionName].Theme);
+            Assert.IsTrue(loaded[UserSettings.SectionName].AutoStartEnabled);
             Assert.Contains("\"Theme\"", File.ReadAllText(settingsPath), StringComparison.Ordinal);
         }
         finally
@@ -126,15 +127,15 @@ public sealed class DesktopComponentTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void AuthOptions_BuildsLoopbackUrls()
     {
         var options = new AuthOptions { LoopbackPort = 17899 };
-        Assert.Equal("http://127.0.0.1:17899/", options.UriPrefix);
-        Assert.Equal("http://127.0.0.1:17899/callback", options.RedirectUri);
+        Assert.AreEqual("http://127.0.0.1:17899/", options.UriPrefix);
+        Assert.AreEqual("http://127.0.0.1:17899/callback", options.RedirectUri);
     }
 
-    [Fact]
+    [TestMethod]
     public void FileLogging_ConfiguresRollingFileProvider()
     {
         var folderName = $"daemon-log-{Guid.NewGuid():N}";
@@ -156,7 +157,7 @@ public sealed class DesktopComponentTests
             provider.GetRequiredService<ILoggerFactory>().CreateLogger("test").LogInformation("coverage");
 
             var logPath = Directory.GetFiles(folder, "log_*.log", SearchOption.AllDirectories);
-            Assert.NotEmpty(logPath);
+            Assert.IsNotEmpty(logPath);
         }
         finally
         {
@@ -164,7 +165,7 @@ public sealed class DesktopComponentTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public async Task DiscoveryHostedService_StartsAndStops()
     {
         var discovery = new Mock<DevTools.Mcp.Client.IHostDiscovery>();

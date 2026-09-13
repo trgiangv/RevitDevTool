@@ -11,18 +11,21 @@ using Moq;
 
 namespace DevTools.Daemon.Tests;
 
+[TestClass]
 public sealed class CompositionIntegrationTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public void CreateDesktop_RegistersDesktopServices()
     {
         using var host = ServerHostBuilder.CreateDesktop();
-        Assert.NotNull(host.Services.GetService<ControlPipeHandler>());
-        Assert.NotNull(host.Services.GetService<GatewayHostedService>());
-        Assert.NotNull(host.Services.GetService<ITunnelStatusProvider>());
+        Assert.IsNotNull(host.Services.GetService<ControlPipeHandler>());
+        Assert.IsNotNull(host.Services.GetService<GatewayHostedService>());
+        Assert.IsNotNull(host.Services.GetService<ITunnelStatusProvider>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task CreateDesktop_StartsControlAndGatewayServices()
     {
         using var host = ServerHostBuilder.CreateDesktop();
@@ -32,7 +35,7 @@ public sealed class CompositionIntegrationTests
         await host.StopAsync(CancellationToken.None);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task GatewayHostedService_ReactsToAuthStateChanges()
     {
         using var host = ServerHostBuilder.CreateStdioHostForTests();
@@ -57,7 +60,7 @@ public sealed class CompositionIntegrationTests
         await gateway.StopAsync(CancellationToken.None);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task StdioHostedService_StopsWhenInputEnds()
     {
         using var host = ServerHostBuilder.CreateStdioHost(["--stdio"]);
@@ -69,7 +72,7 @@ public sealed class CompositionIntegrationTests
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             var runTask = host.RunAsync(cts.Token);
             input.Close();
-            await Task.WhenAny(runTask, Task.Delay(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken));
+            await Task.WhenAny(runTask, Task.Delay(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
             await cts.CancelAsync();
             try { await runTask; } catch (OperationCanceledException) { }
         }

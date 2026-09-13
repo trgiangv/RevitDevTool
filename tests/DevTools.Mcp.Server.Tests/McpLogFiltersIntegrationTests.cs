@@ -9,40 +9,43 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Server.Tests;
 
+[TestClass]
 public sealed class McpLogFiltersIntegrationTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task CallToolFilters_LogSuccessErrorAndExceptions()
     {
         var logger = new ListLogger();
         var options = CreateOptions(logger);
-        await using var harness = await InMemoryHarness.StartAsync(options, TestContext.Current.CancellationToken);
+        await using var harness = await InMemoryHarness.StartAsync(options, TestContext.CancellationToken);
 
-        var ok = await harness.Client.CallToolAsync("ok", cancellationToken: TestContext.Current.CancellationToken);
-        Assert.NotEqual(true, ok.IsError);
+        var ok = await harness.Client.CallToolAsync("ok", cancellationToken: TestContext.CancellationToken);
+        Assert.AreNotEqual(true, ok.IsError);
 
-        var err = await harness.Client.CallToolAsync("fail", cancellationToken: TestContext.Current.CancellationToken);
-        Assert.True(err.IsError == true);
+        var err = await harness.Client.CallToolAsync("fail", cancellationToken: TestContext.CancellationToken);
+        Assert.IsTrue(err.IsError == true);
 
-        var boom = await harness.Client.CallToolAsync("boom", cancellationToken: TestContext.Current.CancellationToken);
-        Assert.True(boom.IsError == true);
+        var boom = await harness.Client.CallToolAsync("boom", cancellationToken: TestContext.CancellationToken);
+        Assert.IsTrue(boom.IsError == true);
 
-        Assert.Contains(logger.Entries, entry => entry.Contains("tools/call ok target=ok", StringComparison.Ordinal));
-        Assert.Contains(logger.Entries, entry => entry.Contains("tools/call error target=fail", StringComparison.Ordinal));
-        Assert.Contains(logger.Entries, entry => entry.Contains("tools/call error target=boom", StringComparison.Ordinal));
+        Assert.Contains(entry => entry.Contains("tools/call ok target=ok", StringComparison.Ordinal), logger.Entries);
+        Assert.Contains(entry => entry.Contains("tools/call error target=fail", StringComparison.Ordinal), logger.Entries);
+        Assert.Contains(entry => entry.Contains("tools/call error target=boom", StringComparison.Ordinal), logger.Entries);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ReadResourceFilters_LogSuccess()
     {
         var logger = new ListLogger();
         var options = CreateOptions(logger);
-        await using var harness = await InMemoryHarness.StartAsync(options, TestContext.Current.CancellationToken);
+        await using var harness = await InMemoryHarness.StartAsync(options, TestContext.CancellationToken);
 
-        var result = await harness.Client.ReadResourceAsync("demo://item", cancellationToken: TestContext.Current.CancellationToken);
-        Assert.Contains(result.Contents.OfType<TextResourceContents>(), c => c.Text == "payload");
+        var result = await harness.Client.ReadResourceAsync("demo://item", cancellationToken: TestContext.CancellationToken);
+        Assert.Contains(c => c.Text == "payload", result.Contents.OfType<TextResourceContents>());
 
-        Assert.Contains(logger.Entries, entry => entry.Contains("resources/read ok target=demo://item", StringComparison.Ordinal));
+        Assert.Contains(entry => entry.Contains("resources/read ok target=demo://item", StringComparison.Ordinal), logger.Entries);
     }
 
     private static McpServerOptions CreateOptions(ListLogger logger)

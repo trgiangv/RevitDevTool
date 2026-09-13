@@ -14,34 +14,36 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Tests;
 
-public class ServerHostBuilderCompositionTests
+[TestClass]
+public sealed class ServerHostBuilderCompositionTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+    [TestMethod]
     public void StdioComposition_ResolvesExternalServerModules()
     {
         using var host = ServerHostBuilder.CreateStdioHostForTests();
         var services = host.Services;
 
-        Assert.NotNull(services.GetRequiredService<IHostBroker>());
-        Assert.NotNull(services.GetRequiredService<IFileReaderCatalog>());
-        Assert.NotNull(services.GetRequiredService<McpEngine>());
+        Assert.IsNotNull(services.GetRequiredService<IHostBroker>());
+        Assert.IsNotNull(services.GetRequiredService<IFileReaderCatalog>());
+        Assert.IsNotNull(services.GetRequiredService<McpEngine>());
     }
 
-    [Fact]
+    [TestMethod]
     public async Task StdioComposition_ListsSixDaemonToolsViaSdkClient()
     {
         using var host = ServerHostBuilder.CreateStdioHostForTests();
-        await host.StartAsync(TestContext.Current.CancellationToken);
+        await host.StartAsync(TestContext.CancellationToken);
         var engine = host.Services.GetRequiredService<McpEngine>();
         var options = McpServerFactory.CreateOptions(
             engine.ToolCollection, engine.PromptCollection, host.Services);
 
-        Assert.Equal(6, engine.LocalTools.Count);
-        Assert.Equal(2, engine.PromptCollection.Count);
+        Assert.AreEqual(6, engine.LocalTools.Count);
+        Assert.AreEqual(2, engine.PromptCollection.Count);
 
         var clientToServer = new Pipe();
         var serverToClient = new Pipe();
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(15));
 
         var transport = new StreamServerTransport(
@@ -63,7 +65,7 @@ public class ServerHostBuilderCompositionTests
         var tools = await client.ListToolsAsync(cancellationToken: cts.Token);
         var prompts = await client.ListPromptsAsync(cancellationToken: cts.Token);
 
-        Assert.Equal(
+        Assert.AreSequenceEqual(
             [
                 "invoke_dynamic",
                 "launch_host",
@@ -73,15 +75,15 @@ public class ServerHostBuilderCompositionTests
                 "search_dynamic",
             ],
             tools.Select(tool => tool.Name).OrderBy(name => name).ToArray());
-        Assert.Equal(["acad_code", "revit_code"], prompts.Select(prompt => prompt.Name).OrderBy(name => name).ToArray());
+        Assert.AreSequenceEqual(["acad_code", "revit_code"], prompts.Select(prompt => prompt.Name).OrderBy(name => name).ToArray());
 
         await client.DisposeAsync();
         await cts.CancelAsync();
         try { await serverTask; } catch { /* ignored */ }
-        await host.StopAsync(TestContext.Current.CancellationToken);
+        await host.StopAsync(TestContext.CancellationToken);
     }
 
-    [Fact]
+    [TestMethod]
     public void StdioComposition_DaemonToolSchemas_AreCursorSafe()
     {
         using var host = ServerHostBuilder.CreateStdioHostForTests();
@@ -90,10 +92,10 @@ public class ServerHostBuilderCompositionTests
         foreach (var tool in engine.LocalTools)
         {
             var protocol = tool.ProtocolTool;
-            Assert.Null(protocol.OutputSchema);
+            Assert.IsNull(protocol.OutputSchema);
 
             var inputSchema = protocol.InputSchema;
-            Assert.Equal(JsonValueKind.Object, inputSchema.ValueKind);
+            Assert.AreEqual(JsonValueKind.Object, inputSchema.ValueKind);
             AssertAllPropertiesHaveType(protocol.Name, inputSchema);
         }
     }
@@ -108,7 +110,7 @@ public class ServerHostBuilderCompositionTests
 
         foreach (var property in properties.EnumerateObject())
         {
-            Assert.True(
+            Assert.IsTrue(
                 property.Value.TryGetProperty("type", out _) ||
                 property.Value.TryGetProperty("$ref", out _),
                 $"{toolName} input property '{property.Name}' is missing a JSON Schema type or $ref.");
@@ -125,7 +127,7 @@ public class ServerHostBuilderCompositionTests
             if (typeName is "array" &&
                 property.Value.TryGetProperty("items", out var items))
             {
-                Assert.True(
+                Assert.IsTrue(
                     items.TryGetProperty("type", out _) || items.TryGetProperty("$ref", out _),
                     $"{toolName} input property '{property.Name}' items are missing type or $ref.");
                 if (items.TryGetProperty("type", out var itemType) &&

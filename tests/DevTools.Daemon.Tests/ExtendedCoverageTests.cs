@@ -20,9 +20,12 @@ using Microsoft.Extensions.Options;
 
 namespace DevTools.Daemon.Tests;
 
+[TestClass]
 public sealed class ExtendedCoverageTests
 {
-    [Fact]
+    public TestContext TestContext { get; set; } = null!;
+
+    [TestMethod]
     public async Task AuthBrowser_CallbackSuccess_ReturnsResponseUrl()
     {
         var port = GetFreePort();
@@ -30,28 +33,28 @@ public sealed class ExtendedCoverageTests
         var browser = new AuthBrowser(new AuthOptions { LoopbackPort = port });
         var invoke = Task.Run(() => browser.InvokeAsync(
             new BrowserOptions("about:blank", callback),
-            TestContext.Current.CancellationToken));
+            TestContext.CancellationToken));
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         for (var attempt = 0; attempt < 80; attempt++)
         {
             try
             {
-                await client.GetAsync($"{callback}?code=abc", TestContext.Current.CancellationToken);
+                await client.GetAsync($"{callback}?code=abc", TestContext.CancellationToken);
                 break;
             }
             catch
             {
-                await Task.Delay(50, TestContext.Current.CancellationToken);
+                await Task.Delay(50, TestContext.CancellationToken);
             }
         }
 
-        var result = await invoke.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
-        Assert.Equal(BrowserResultType.Success, result.ResultType);
+        var result = await invoke.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
+        Assert.AreEqual(BrowserResultType.Success, result.ResultType);
         Assert.Contains("code=abc", result.Response, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task AuthBrowser_CallbackDenied_ReturnsDeniedResponse()
     {
         var port = GetFreePort();
@@ -59,28 +62,28 @@ public sealed class ExtendedCoverageTests
         var browser = new AuthBrowser(new AuthOptions { LoopbackPort = port });
         var invoke = Task.Run(() => browser.InvokeAsync(
             new BrowserOptions("about:blank", callback),
-            TestContext.Current.CancellationToken));
+            TestContext.CancellationToken));
 
         using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         for (var attempt = 0; attempt < 80; attempt++)
         {
             try
             {
-                await client.GetAsync($"{callback}?error=access_denied", TestContext.Current.CancellationToken);
+                await client.GetAsync($"{callback}?error=access_denied", TestContext.CancellationToken);
                 break;
             }
             catch
             {
-                await Task.Delay(50, TestContext.Current.CancellationToken);
+                await Task.Delay(50, TestContext.CancellationToken);
             }
         }
 
-        var result = await invoke.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
-        Assert.Equal(BrowserResultType.Success, result.ResultType);
+        var result = await invoke.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
+        Assert.AreEqual(BrowserResultType.Success, result.ResultType);
         Assert.Contains("error=access_denied", result.Response, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task AuthService_WithStoredToken_RefreshAndSignOut()
     {
         var tokenPath = Path.Combine(AppUtils.GetApplicationDataPath(), "auth.dat");
@@ -104,11 +107,11 @@ public sealed class ExtendedCoverageTests
                 Options.Create(new AuthOptions { Issuer = "https://example.com", ClientId = "client" }),
                 NullLogger<AuthService>.Instance);
 
-            Assert.True(service.IsAuthenticated);
-            Assert.Equal("user@example.com", service.Email);
-            Assert.False(await service.RefreshAsync());
+            Assert.IsTrue(service.IsAuthenticated);
+            Assert.AreEqual("user@example.com", service.Email);
+            Assert.IsFalse(await service.RefreshAsync());
             await service.SignOutAsync();
-            Assert.False(service.IsAuthenticated);
+            Assert.IsFalse(service.IsAuthenticated);
         }
         finally
         {
@@ -119,7 +122,7 @@ public sealed class ExtendedCoverageTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public async Task Program_Main_StdioArg_ReturnsZeroWhenStdinCloses()
     {
         var originalIn = Console.In;
@@ -129,7 +132,7 @@ public sealed class ExtendedCoverageTests
             Console.SetIn(new StreamReader(input));
             var task = Task.Run(() => Program.Main(["--stdio"]));
             input.Close();
-            Assert.Equal(0, await task);
+            Assert.AreEqual(0, await task);
         }
         finally
         {
@@ -137,7 +140,7 @@ public sealed class ExtendedCoverageTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public async Task GatewayTunnelClient_ConnectsAndReconnectsUntilCancelled()
     {
         using var host = ServerHostBuilder.CreateStdioHostForTests();
@@ -160,10 +163,11 @@ public sealed class ExtendedCoverageTests
         await client.DisposeAsync();
     }
 
-    [Collection(nameof(MewUiApplicationCollection))]
-    public sealed class DesktopUiCoverage(MewUiSession session) : MewUiApplicationTestBase(session)
+    [DoNotParallelize]
+    [TestClass]
+    public sealed class DesktopUiCoverage : MewUiApplicationTestBase
     {
-        [Fact]
+        [TestMethod]
         public void MainWindow_TabsAndViews_BuildContent()
         {
             RunOnUi(() =>
@@ -188,7 +192,7 @@ public sealed class ExtendedCoverageTests
         private static void BuildView(UserControl view)
         {
             var onBuild = typeof(UserControl).GetMethod("OnBuild", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.NotNull(onBuild);
+            Assert.IsNotNull(onBuild);
             _ = onBuild!.Invoke(view, null);
         }
 

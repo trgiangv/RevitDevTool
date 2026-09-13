@@ -10,10 +10,11 @@ using Moq;
 
 namespace DevTools.Daemon.Tests;
 
-[Collection(nameof(MewUiApplicationCollection))]
-public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTestBase(session)
+[DoNotParallelize]
+[TestClass]
+public sealed class MewUiDesktopTests : MewUiApplicationTestBase
 {
-    [Fact]
+    [TestMethod]
     public void Views_ConstructAndBuildMarkup()
     {
         RunOnUi(() =>
@@ -22,8 +23,8 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
             using var window = new MainWindow(state);
             window.Show();
 
-            Assert.Equal("DevTools Daemon", window.Title);
-            Assert.NotNull(window.Icon);
+            Assert.AreEqual("DevTools Daemon", window.Title);
+            Assert.IsNotNull(window.Icon);
 
             _ = new OverviewView(state);
             _ = new HostsView(state.Hosts);
@@ -31,7 +32,7 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void ThemeHelper_Apply_UpdatesWhenApplicationRunning()
     {
         RunOnUi(() =>
@@ -43,11 +44,11 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
             var fired = false;
             ThemeHelper.Changed += () => fired = true;
             ThemeHelper.Apply(AppTheme.Light);
-            Assert.True(fired);
+            Assert.IsTrue(fired);
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void Preferences_ThemeChange_PersistsSettings()
     {
         RunOnUi(() =>
@@ -60,7 +61,7 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
                 var preferences = new Preferences(store);
 
                 preferences.Theme.Value = AppTheme.Dark;
-                Assert.Equal(AppTheme.Dark, preferences.Theme.Value);
+                Assert.AreEqual(AppTheme.Dark, preferences.Theme.Value);
             }
             finally
             {
@@ -72,7 +73,7 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void AppState_RefreshAuthAndGatewayStatus()
     {
         RunOnUi(() =>
@@ -81,19 +82,19 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
             var tunnel = DaemonTestDoubles.CreateTunnelStatus(TunnelStatus.Connected);
             var state = CreateAppState(auth.Object, tunnel: tunnel.Object);
 
-            Assert.True(state.IsAuthenticated.Value);
-            Assert.Equal("Connected", state.GatewayStatus.Value);
-            Assert.Equal("Test User", state.DisplayName.Value);
+            Assert.IsTrue(state.IsAuthenticated.Value);
+            Assert.AreEqual("Connected", state.GatewayStatus.Value);
+            Assert.AreEqual("Test User", state.DisplayName.Value);
 
             tunnel.Raise(t => t.StatusChanged += null!, new object(), new TunnelStatusChangedArgs(TunnelStatus.Reconnecting));
-            Assert.Equal("Reconnecting...", state.GatewayStatus.Value);
+            Assert.AreEqual("Reconnecting...", state.GatewayStatus.Value);
 
             state.SelectedTabIndex.Value = 1;
             state.SelectedTabIndex.Value = 2;
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void AppState_SignOut_RefreshesState()
     {
         var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
@@ -105,7 +106,7 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void MainWindow_Close_HidesInsteadOfClosing()
     {
         RunOnUi(() =>
@@ -114,11 +115,11 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
             using var window = new MainWindow(state);
             window.Show();
             window.Close();
-            Assert.True(window.IsVisible);
+            Assert.IsTrue(window.IsVisible);
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void AppState_LoadAvatar_InvalidUrl_ClearsImage()
     {
         RunOnUi(() =>
@@ -126,11 +127,11 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
             var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
             auth.Setup(a => a.AvatarUrl).Returns("http://127.0.0.1:9/avatar.png");
             var state = CreateAppState(auth.Object);
-            Assert.Null(state.AvatarImage.Value);
+            Assert.IsNull(state.AvatarImage.Value);
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void TrayMenu_StartAndDispose_DoesNotThrow()
     {
         RunOnUi(() =>
@@ -144,7 +145,7 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void Preferences_AutoStartToggle_UpdatesRegistry()
     {
         RunOnUi(() =>
@@ -160,9 +161,9 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
                 var preferences = new Preferences(store);
                 preferences.AutoStartEnabled.Value = true;
                 if (Environment.ProcessPath is not null)
-                    Assert.True(AutoStart.IsEnabled);
+                    Assert.IsTrue(AutoStart.IsEnabled);
                 preferences.AutoStartEnabled.Value = false;
-                Assert.False(AutoStart.IsEnabled);
+                Assert.IsFalse(AutoStart.IsEnabled);
             }
             finally
             {
@@ -175,28 +176,28 @@ public sealed class MewUiDesktopTests(MewUiSession session) : MewUiApplicationTe
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void AppState_NotAuthenticated_ShowsSignedOutGatewayStatus()
     {
         RunOnUi(() =>
         {
             var auth = DaemonTestDoubles.CreateAuthService(authenticated: false);
             var state = CreateAppState(auth.Object);
-            Assert.Equal("Not signed in", state.GatewayStatus.Value);
+            Assert.AreEqual("Not signed in", state.GatewayStatus.Value);
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void UiDispatch_PostAndSend_ExecuteOnUiThread()
     {
         RunOnUi(() =>
         {
             var executed = false;
             UiDispatch.Post(() => executed = true);
-            Assert.True(executed);
+            Assert.IsTrue(executed);
 
             UiDispatch.Send(() => executed = false);
-            Assert.False(executed);
+            Assert.IsFalse(executed);
         });
     }
 

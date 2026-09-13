@@ -6,23 +6,24 @@ using Moq;
 
 namespace DevTools.Mcp.Server.Tests;
 
+[TestClass]
 public sealed class McpToolJsonTests
 {
-    [Fact]
+    [TestMethod]
     public void Options_ProvideMetadataForInvokeDynamicParameterTypes()
     {
-        Assert.NotNull(McpToolJson.Options.GetTypeInfo(typeof(Dictionary<string, JsonElement>)));
-        Assert.NotNull(McpToolJson.Options.GetTypeInfo(typeof(ResourceReadRequest[])));
+        Assert.IsNotNull(McpToolJson.Options.GetTypeInfo(typeof(Dictionary<string, JsonElement>)));
+        Assert.IsNotNull(McpToolJson.Options.GetTypeInfo(typeof(ResourceReadRequest[])));
     }
 
-    [Fact]
+    [TestMethod]
     public void InvokeDynamicTool_Create_ResolvesDictionaryParameterMetadata()
     {
         var tool = InvokeDynamicTool.Create(Mock.Of<IHostBroker>());
-        Assert.Equal("invoke_dynamic", tool.ProtocolTool.Name);
+        Assert.AreEqual("invoke_dynamic", tool.ProtocolTool.Name);
     }
 
-    [Fact]
+    [TestMethod]
     public void DynamicCapabilityId_EncodeTryDecode_RoundTrips()
     {
         var id = new DynamicCapabilityId(
@@ -35,17 +36,17 @@ public sealed class McpToolJsonTests
 
         var encoded = id.Encode();
 
-        Assert.True(DynamicCapabilityId.TryDecode(encoded, out var decoded));
-        Assert.NotNull(decoded);
-        Assert.Equal(id, decoded);
+        Assert.IsTrue(DynamicCapabilityId.TryDecode(encoded, out var decoded));
+        Assert.IsNotNull(decoded);
+        Assert.AreEqual(id, decoded);
     }
 
-    [Fact]
+    [TestMethod]
     public void DynamicCapabilityId_TryDecode_LegacyPascalCaseToken_ReturnsFalse()
     {
         const string legacyToken =
             "dci1.eyJNYWNoaW5lSWQiOiJsZWdhY3kiLCJIb3N0SW5zdGFuY2VJZCI6MSwiS2luZCI6MCwiVGFyZ2V0IjoidCIsIkNhdGFsb2dWZXJzaW9uIjoidiIsIkZpbmdlcnByaW50IjoiZiJ9";
 
-        Assert.False(DynamicCapabilityId.TryDecode(legacyToken, out _));
+        Assert.IsFalse(DynamicCapabilityId.TryDecode(legacyToken, out _));
     }
 }

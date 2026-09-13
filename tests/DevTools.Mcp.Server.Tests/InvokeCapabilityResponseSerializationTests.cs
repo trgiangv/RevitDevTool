@@ -10,9 +10,10 @@ namespace DevTools.Mcp.Server.Tests;
 /// Production batch writes use <see cref="McpToolJson.Options"/> (passes).
 /// Closing the union is ADR 0031 AOT follow-up, not this test.
 /// </summary>
+[TestClass]
 public sealed class InvokeCapabilityResponseSerializationTests
 {
-    [Fact]
+    [TestMethod]
     public void BatchReadResult_WithSdkReadResourceResult_ThrowsOnSerialize()
     {
         var resource = new ReadResourceResult
@@ -36,7 +37,7 @@ public sealed class InvokeCapabilityResponseSerializationTests
                 new ResourceReadResult(0, true, resource),
             ]);
 
-        var ex = Assert.Throws<NotSupportedException>(() =>
+        var ex = Assert.ThrowsExactly<NotSupportedException>(() =>
             JsonSerializer.Serialize(response, McpServerJsonContext.Default.InvokeCapabilityResponse));
 
         Assert.Contains("ReadResourceResult", ex.Message, StringComparison.Ordinal);

@@ -6,16 +6,17 @@ using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Server.Tests;
 
-public class McpLogPayloadTests
+[TestClass]
+public sealed class McpLogPayloadTests
 {
-    [Fact]
+    [TestMethod]
     public void SerializeArgs_NullOrEmpty_ReturnsEmptyObject()
     {
-        Assert.Equal("{}", McpLogPayload.SerializeArgs(null));
-        Assert.Equal("{}", McpLogPayload.SerializeArgs([]));
+        Assert.AreEqual("{}", McpLogPayload.SerializeArgs(null));
+        Assert.AreEqual("{}", McpLogPayload.SerializeArgs([]));
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeArgs_SerializesDictionary()
     {
         var args = new Dictionary<string, JsonElement>
@@ -30,7 +31,7 @@ public class McpLogPayloadTests
         Assert.Contains("\"count\":3", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeCallToolResult_StructuredWithoutBinary_ReturnsStructuredRawText()
     {
         var result = new CallToolResult
@@ -44,7 +45,7 @@ public class McpLogPayloadTests
         Assert.Contains("\"healthy\":true", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeCallToolResult_ImageContent_RedactsBinaryLength()
     {
         var result = new CallToolResult
@@ -59,7 +60,7 @@ public class McpLogPayloadTests
         Assert.DoesNotContain("AQID", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeReadResourceResult_RedactsBlobLength()
     {
         var result = new ReadResourceResult
@@ -73,7 +74,7 @@ public class McpLogPayloadTests
         Assert.Contains("\"length\":2", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void SerializeCallToolResult_ScrubsTextWrappedBlobResource()
     {
         var blobBytes = new byte[] { 0xDE, 0xAD, 0xBE, 0xEF };

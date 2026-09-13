@@ -13,10 +13,11 @@ using Moq;
 
 namespace DevTools.Daemon.Tests;
 
-[Collection(nameof(MewUiApplicationCollection))]
-public sealed class ControlPipeHandlerTests(MewUiSession session) : MewUiApplicationTestBase(session)
+[DoNotParallelize]
+[TestClass]
+public sealed class ControlPipeHandlerTests : MewUiApplicationTestBase
 {
-    [Fact]
+    [TestMethod]
     public void HandleRequestAsync_Status_ReturnsRunningVersion()
     {
         RunHandler(async handler =>
@@ -30,7 +31,7 @@ public sealed class ControlPipeHandlerTests(MewUiSession session) : MewUiApplica
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void HandleRequestAsync_AuthState_ReturnsAuthFields()
     {
         var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
@@ -45,7 +46,7 @@ public sealed class ControlPipeHandlerTests(MewUiSession session) : MewUiApplica
         }, auth);
     }
 
-    [Fact]
+    [TestMethod]
     public void HandleRequestAsync_SignInAndSignOut_ReturnOperationResponses()
     {
         var auth = DaemonTestDoubles.CreateAuthService();
@@ -64,7 +65,7 @@ public sealed class ControlPipeHandlerTests(MewUiSession session) : MewUiApplica
         }, auth);
     }
 
-    [Fact]
+    [TestMethod]
     public void HandleRequestAsync_ConnectedHosts_ReturnsCatalogEntries()
     {
         var entry = DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 4242);
@@ -76,13 +77,13 @@ public sealed class ControlPipeHandlerTests(MewUiSession session) : MewUiApplica
                 CancellationToken.None);
 
             var hosts = JsonSerializer.Deserialize(response, ControlJsonContext.Default.HostInfoEntryArray);
-            Assert.NotNull(hosts);
-            Assert.Single(hosts!);
-            Assert.Equal(4242, hosts![0].Pid);
+            Assert.IsNotNull(hosts);
+            Enumerable.Single(hosts!);
+            Assert.AreEqual(4242, hosts![0].Pid);
         }, broker: broker);
     }
 
-    [Fact]
+    [TestMethod]
     public void HandleRequestAsync_OpenDashboard_ShowsMainWindow()
     {
         RunHandler(async handler =>
@@ -94,7 +95,7 @@ public sealed class ControlPipeHandlerTests(MewUiSession session) : MewUiApplica
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void HandleRequestAsync_UnknownMethod_ReturnsError()
     {
         RunHandler(async handler =>
@@ -106,7 +107,7 @@ public sealed class ControlPipeHandlerTests(MewUiSession session) : MewUiApplica
         });
     }
 
-    [Fact]
+    [TestMethod]
     public void HandleRequestAsync_InvalidJson_ReturnsInvalidRequest()
     {
         RunHandler(async handler =>
@@ -116,7 +117,7 @@ public sealed class ControlPipeHandlerTests(MewUiSession session) : MewUiApplica
         });
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ControlPipeHostedService_RespondsToClientRequest()
     {
         var auth = DaemonTestDoubles.CreateAuthService();

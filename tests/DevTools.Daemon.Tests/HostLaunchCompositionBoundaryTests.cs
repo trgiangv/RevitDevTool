@@ -4,9 +4,10 @@ using DevTools.Mcp.Server.Contracts;
 
 namespace DevTools.Daemon.Tests;
 
+[TestClass]
 public sealed class HostLaunchCompositionBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Mcp_Server_forbids_FileMetadata_Revit_and_Hosting_Revit()
     {
         var csproj = File.ReadAllText(Path.Combine(
@@ -16,7 +17,7 @@ public sealed class HostLaunchCompositionBoundaryTests
         Assert.DoesNotContain("Hosting.Acad", csproj, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Daemon_Hosting_folder_has_no_Revit_type_files()
     {
         var hostingDir = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Daemon", "Hosting");
@@ -24,10 +25,10 @@ public sealed class HostLaunchCompositionBoundaryTests
             return;
 
         var revitFiles = Directory.GetFiles(hostingDir, "Revit*", SearchOption.AllDirectories);
-        Assert.Empty(revitFiles);
+        Assert.IsEmpty(revitFiles);
     }
 
-    [Fact]
+    [TestMethod]
     public void Add_ins_do_not_call_launch_extensions()
     {
         var root = FindRepositoryRoot();
@@ -45,7 +46,7 @@ public sealed class HostLaunchCompositionBoundaryTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void LaunchHostTool_uses_HostLaunchWaiter_and_culture_language()
     {
         var source = File.ReadAllText(Path.Combine(
@@ -58,7 +59,7 @@ public sealed class HostLaunchCompositionBoundaryTests
         Assert.DoesNotContain("private async Task<bool> WaitForInstanceConnectionAsync", source, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void LaunchHostResult_echoes_culture_not_ENU()
     {
         var payload = new LaunchHostResult(

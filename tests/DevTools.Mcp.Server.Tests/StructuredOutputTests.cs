@@ -10,22 +10,23 @@ using Moq;
 
 namespace DevTools.Mcp.Server.Tests;
 
+[TestClass]
 public sealed class StructuredOutputTests
 {
-    [Fact]
+    [TestMethod]
     public async Task SearchDynamic_EmitsStructuredContentWithoutOutputSchema()
     {
         var harness = McpSdkTestHarness.Create();
         var result = await McpToolInvoke.Invoke(harness.SearchTool, "search_dynamic", new { query = "find" });
         var protocolTool = harness.SearchTool.ProtocolTool;
 
-        Assert.NotNull(result.StructuredContent);
-        Assert.Null(harness.SearchTool.ProtocolTool.OutputSchema);
+        Assert.IsNotNull(result.StructuredContent);
+        Assert.IsNull(harness.SearchTool.ProtocolTool.OutputSchema);
         Assert.Contains("\"revit_find_elements\"", result.StructuredContent!.Value.GetRawText(), StringComparison.Ordinal);
         Assert.Contains("\"revit_find_elements\"", McpToolInvoke.Text(result), StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task InvokeDynamic_PreservesHostStructuredContentWithShortText()
     {
         const string toolName = "revit_find_elements";
@@ -34,16 +35,16 @@ public sealed class StructuredOutputTests
 
         var result = await harness.InvokeCapability(capabilityId, new { category = "Walls" });
 
-        Assert.NotNull(result.StructuredContent);
-        Assert.Equal(240, result.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
-        Assert.True(result.StructuredContent.Value.GetProperty("hasMore").GetBoolean());
+        Assert.IsNotNull(result.StructuredContent);
+        Assert.AreEqual(240, result.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
+        Assert.IsTrue(result.StructuredContent.Value.GetProperty("hasMore").GetBoolean());
         var text = McpToolInvoke.Text(result);
         Assert.Contains("Found 3 elements", text, StringComparison.Ordinal);
-        Assert.True(text.Length < 120, $"Expected compact summary under 120 chars, got {text.Length}: {text}");
-        Assert.Equal(1, harness.Session.PassthroughCount);
+        Assert.IsTrue(text.Length < 120, $"Expected compact summary under 120 chars, got {text.Length}: {text}");
+        Assert.AreEqual(1, harness.Session.PassthroughCount);
     }
 
-    [Fact]
+    [TestMethod]
     public async Task ListHostInstances_EmitsStructuredContent()
     {
         var broker = new Mock<IHostBroker>();
@@ -54,12 +55,12 @@ public sealed class StructuredOutputTests
         var tool = ListHostInstancesTool.Create(broker.Object, scanner.Object);
         var result = await McpToolInvoke.Invoke(tool, "list_host_instances", new { });
 
-        Assert.NotNull(result.StructuredContent);
-        Assert.Null(tool.ProtocolTool.OutputSchema);
-        Assert.Equal(0, result.StructuredContent!.Value.GetProperty("totalConnected").GetInt32());
+        Assert.IsNotNull(result.StructuredContent);
+        Assert.IsNull(tool.ProtocolTool.OutputSchema);
+        Assert.AreEqual(0, result.StructuredContent!.Value.GetProperty("totalConnected").GetInt32());
     }
 
-    [Fact]
+    [TestMethod]
     public void McpTaskExecutionSelector_UsesPerToolMeta()
     {
         var broker = new Mock<IHostBroker>();
@@ -67,19 +68,19 @@ public sealed class StructuredOutputTests
         var search = SearchDynamicTool.Create(broker.Object);
         var optional = TaskModeFixture.CreateOptionalTool("execute_csharp_code");
 
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Synchronous,
             McpTaskExecutionMeta.SelectForRequest(McpServerConfigurationTests.CreateToolRequest(invoke)));
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Synchronous,
             McpTaskExecutionMeta.SelectForRequest(McpServerConfigurationTests.CreateToolRequest(search)));
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Optional,
             McpTaskExecutionMeta.SelectForRequest(McpServerConfigurationTests.CreateToolRequest(optional)));
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Synchronous,
             McpTaskExecutionMeta.SelectForRequest(CreateRequestContext("unknown_tool")));
-        Assert.Equal(
+        Assert.AreEqual(
             McpTaskExecutionMode.Optional,
             McpTaskExecutionMeta.ParseMode(optional.ProtocolTool.Meta));
     }

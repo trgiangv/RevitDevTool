@@ -13,6 +13,8 @@ using Moq;
 
 namespace DevTools.Mcp.Server.Tests.Harness;
 
+using System.Linq;
+
 /// <summary>SDK-aligned tool behaviors for mock host sessions (SEP-2322 / CallToolResult pass-through).</summary>
 public enum McpToolBehavior
 {
@@ -105,7 +107,7 @@ internal sealed class McpSdkTestHarness
     public async Task<string> SearchFirstCapabilityId(object args)
     {
         var response = await Search(args);
-        return Assert.Single(response.Items).CapabilityId;
+        return Enumerable.Single(response.Items).CapabilityId;
     }
 
     public async Task<CallToolResult> InvokeDynamic(object args) =>
@@ -115,7 +117,7 @@ internal sealed class McpSdkTestHarness
         await InvokeDynamic(new { capabilityId, arguments });
 
     public async Task<InputRequiredException> InvokeExpectingInputRequired(string capabilityId, object? arguments = null) =>
-        await Assert.ThrowsAsync<InputRequiredException>(() => InvokeCapability(capabilityId, arguments));
+        await Assert.ThrowsExactlyAsync<InputRequiredException>(() => InvokeCapability(capabilityId, arguments));
 
     public async Task<CallToolResult> InvokeMrtrRetry(
         string capabilityId,
@@ -162,7 +164,7 @@ internal static class McpToolInvoke
                         ? stateNode.GetString()
                         : null,
                 }),
-            TestContext.Current.CancellationToken);
+            CancellationToken.None);
     }
 
     public static string Text(CallToolResult result) =>
@@ -175,7 +177,7 @@ internal static class McpToolInvoke
     {
         var text = Text(result);
         return JsonSerializer.Deserialize<T>(text, McpJsonUtilities.DefaultOptions)
-            ?? throw new Xunit.Sdk.XunitException(text);
+            ?? throw new InvalidOperationException(text);
     }
 
     private static IDictionary<string, InputResponse>? TryDeserializeInputResponses(Dictionary<string, JsonElement> argumentMap)

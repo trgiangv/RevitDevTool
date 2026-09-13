@@ -95,14 +95,11 @@ public sealed class MewUiSession : IDisposable
     }
 }
 
-[CollectionDefinition(nameof(MewUiApplicationCollection), DisableParallelization = true)]
-public sealed class MewUiApplicationCollection : ICollectionFixture<MewUiSession>;
-
 public abstract class MewUiApplicationTestBase
 {
-    protected MewUiSession Session { get; }
+    private static readonly Lazy<MewUiSession> SharedSession = new(() => new MewUiSession());
 
-    protected MewUiApplicationTestBase(MewUiSession session) => Session = session;
+    protected MewUiSession Session { get; } = SharedSession.Value;
 
     protected void RunOnUi(Action body) => Session.Invoke(body);
 

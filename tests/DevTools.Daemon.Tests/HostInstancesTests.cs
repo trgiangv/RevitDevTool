@@ -5,9 +5,12 @@ using DevTools.Ipc;
 
 namespace DevTools.Daemon.Tests;
 
+using System.Linq;
+
+[TestClass]
 public sealed class HostInstancesTests
 {
-    [Fact]
+    [TestMethod]
     public void Refresh_ListsConnectedAndDiscoveredHosts()
     {
         var connected = DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 1001);
@@ -17,13 +20,13 @@ public sealed class HostInstancesTests
 
         var hosts = new HostInstances(broker.Object, scanner.Object);
 
-        Assert.Equal(1, hosts.Count.Value);
-        Assert.Equal(2, hosts.Rows.Count);
-        Assert.Contains(hosts.Rows, row => row.Pid == 1001 && row.Status == "Connected");
-        Assert.Contains(hosts.Rows, row => row.Pid == 2002 && row.Status == "Discovered");
+        Assert.AreEqual(1, hosts.Count.Value);
+        Assert.AreEqual(2, hosts.Rows.Count);
+        Assert.Contains(row => row.Pid == 1001 && row.Status == "Connected", hosts.Rows);
+        Assert.Contains(row => row.Pid == 2002 && row.Status == "Discovered", hosts.Rows);
     }
 
-    [Fact]
+    [TestMethod]
     public void Refresh_SkipsDuplicateDiscoveredPid()
     {
         var connected = DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 1001);
@@ -33,11 +36,11 @@ public sealed class HostInstancesTests
 
         var hosts = new HostInstances(broker.Object, scanner.Object);
 
-        Assert.Equal(1, hosts.Count.Value);
-        Assert.Single(hosts.Rows);
+        Assert.AreEqual(1, hosts.Count.Value);
+        Enumerable.Single(hosts.Rows);
     }
 
-    [Fact]
+    [TestMethod]
     public void Refresh_PicksUpNewlyConnectedHosts()
     {
         var entries = new List<DevTools.Mcp.Core.Sessions.HostCatalogEntry>();
@@ -47,10 +50,10 @@ public sealed class HostInstancesTests
         broker.Setup(b => b.Catalog).Returns(catalog.Object);
         var scanner = DaemonTestDoubles.CreatePipeScanner();
         var hosts = new HostInstances(broker.Object, scanner.Object);
-        Assert.Empty(hosts.Rows);
+        Assert.IsEmpty(hosts.Rows);
 
         entries.Add(DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 42));
         hosts.Refresh();
-        Assert.Single(hosts.Rows);
+        Enumerable.Single(hosts.Rows);
     }
 }
