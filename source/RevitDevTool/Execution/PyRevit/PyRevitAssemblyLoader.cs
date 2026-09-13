@@ -1,119 +1,130 @@
 using System.IO;
+using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using DevTools.AssemblyIsolation.Loading;
+using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Core;
 using ZLogger;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.PyRevit;
 
 /// <summary>
-/// Loads extension DLLs from pyRevit hierarchy lib/bin folders into the current AppDomain
-/// so IronPython <c>clr.AddReference</c> can resolve them. Load is once per session, no file lock.
+/// Loads one managed DLL per simple name from the extension hierarchy,
+/// chosen by <c>TargetFrameworkAttribute</c> against the host runtime.
+/// Once per <c>*.extension</c>; scripts outside an extension are skipped.
 /// </summary>
 internal static class PyRevitAssemblyLoader
 {
     private static readonly Lock LoadLock = new();
-    private static readonly AssemblyLoader Loader = new();
-    private static bool _initialized;
+    private static readonly HashSet<string> LoadedRoots = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, IReadOnlyList<string>> SelectedByRoot = new(StringComparer.OrdinalIgnoreCase);
 
     internal static void EnsureLoaded(string scriptPath, ILogger? logger = null)
     {
-        if (_initialized) return;
+        var scriptDir = Path.GetDirectoryName(scriptPath);
+        var extensionRoot = PyRevitExtensionPaths.FindExtensionRoot(scriptDir);
+        if (extensionRoot is null)
+            return;
 
         lock (LoadLock)
         {
-            if (_initialized) return;
-
-            var scriptDir = Path.GetDirectoryName(scriptPath);
-            var candidates = PyRevitExtensionPaths.EnumerateDllCandidates(scriptDir).ToList();
-            if (candidates.Count == 0)
-            {
-                _initialized = true;
+            if (!LoadedRoots.Add(extensionRoot))
                 return;
-            }
 
-            var resolved = Resolve(candidates);
-            LoadAll(resolved, logger);
-            _initialized = true;
+            LoadAll(SelectAssemblies(scriptDir), logger);
         }
     }
 
-    private static List<string> Resolve(List<PyRevitExtensionPaths.DllCandidate> candidates)
+    /// <summary>
+    /// Directories of the TFM-selected DLLs, added to IronPython search paths
+    /// so <c>clr.AddReference("Name")</c> can find <c>Name.dll</c>.
+    /// </summary>
+    internal static IReadOnlyList<string> SelectedAssemblyDirectories(string? scriptDirectory)
     {
-        var revitYear = RevitContext.Application.VersionNumber;
-
-        var grouped = candidates
-            .GroupBy(c => c.SimpleName, StringComparer.OrdinalIgnoreCase);
-
-        var result = new List<string>();
-
-        foreach (var group in grouped)
+        var directories = new List<string>();
+        foreach (var dllPath in SelectAssemblies(scriptDirectory))
         {
-            var items = group.ToList();
-
-            if (items.Count == 1)
-            {
-                if (IsValidAssembly(items[0].FilePath))
-                    result.Add(items[0].FilePath);
+            var directory = Path.GetDirectoryName(dllPath);
+            if (string.IsNullOrEmpty(directory))
                 continue;
-            }
+            if (directories.Any(p => string.Equals(p, directory, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            directories.Add(directory);
+        }
 
-            result.Add(ResolveConflict(items, revitYear));
+        return directories;
+    }
+
+    internal static IReadOnlyList<string> SelectAssemblies(string? scriptDirectory)
+    {
+        var extensionRoot = PyRevitExtensionPaths.FindExtensionRoot(scriptDirectory);
+        if (extensionRoot is not null)
+        {
+            lock (LoadLock)
+            {
+                if (SelectedByRoot.TryGetValue(extensionRoot, out var cached))
+                    return cached;
+            }
+        }
+
+        var candidates = PyRevitExtensionPaths.EnumerateDllCandidates(scriptDirectory).ToList();
+        var selected = candidates.Count == 0
+            ? (IReadOnlyList<string>)[]
+            : SelectByTfm(candidates);
+
+        if (extensionRoot is null)
+            return selected;
+
+        lock (LoadLock)
+            SelectedByRoot[extensionRoot] = selected;
+
+        return selected;
+    }
+
+    private static List<string> SelectByTfm(List<string> dllPaths)
+    {
+        var runtimeMajor = Environment.Version.Major;
+        var result = new List<string>();
+        foreach (var group in dllPaths.GroupBy(static p => Path.GetFileNameWithoutExtension(p), StringComparer.OrdinalIgnoreCase))
+        {
+            if (HighestCompatible(group, runtimeMajor) is { } path)
+                result.Add(path);
         }
 
         return result;
     }
 
-    private static string ResolveConflict(
-        List<PyRevitExtensionPaths.DllCandidate> items, string revitYear)
+    private static string? HighestCompatible(IEnumerable<string> dllPaths, int runtimeMajor)
     {
-        var yearMatches = items
-            .Where(c => PathContainsSegment(c.FilePath, revitYear))
-            .ToList();
-
-        if (yearMatches.Count > 0)
-            return PickBest(yearMatches);
-
-        var runtimeMajor = Environment.Version.Major;
-        var compatible = new List<(PyRevitExtensionPaths.DllCandidate Candidate, int Major)>();
-        foreach (var item in items)
+        string? chosen = null;
+        var bestMajor = int.MinValue;
+        foreach (var dllPath in dllPaths)
         {
-            if (!TryReadTfmMajor(item.FilePath, out var major))
+            if (!TryReadTfmMajor(dllPath, out var major))
+                continue;
+            if (major > runtimeMajor)
+                continue;
+            if (major <= bestMajor)
                 continue;
 
-            if (major <= runtimeMajor)
-                compatible.Add((item, major));
+            bestMajor = major;
+            chosen = dllPath;
         }
 
-        if (compatible.Count == 0)
-            return PickBest(items);
-
-        var bestMajor = compatible.Max(r => r.Major);
-        var bestCandidates = compatible
-            .Where(r => r.Major == bestMajor)
-            .Select(r => r.Candidate)
-            .ToList();
-
-        return PickBest(bestCandidates);
+        return chosen;
     }
 
-    private static string PickBest(List<PyRevitExtensionPaths.DllCandidate> items) =>
-        items
-            .OrderBy(c => c.IsLib ? 0 : 1)
-            .ThenBy(c => c.Depth)
-            .First()
-            .FilePath;
-
-    private static void LoadAll(List<string> dllPaths, ILogger? logger = null)
+    private static void LoadAll(IReadOnlyList<string> dllPaths, ILogger? logger)
     {
         foreach (var dllPath in dllPaths)
         {
+            var simpleName = Path.GetFileNameWithoutExtension(dllPath);
+            if (IsLoaded(simpleName))
+                continue;
+
             try
             {
-                Loader.LoadPath(dllPath);
+                Assembly.LoadFrom(dllPath);
                 logger?.ZLogInformation($"[PyRevit] Loaded extension DLL: {Path.GetFileName(dllPath)}");
             }
             catch (Exception ex)
@@ -123,40 +134,14 @@ internal static class PyRevitAssemblyLoader
         }
     }
 
-    private static bool PathContainsSegment(string filePath, string segment)
-    {
-        var dir = Path.GetDirectoryName(filePath);
-        if (string.IsNullOrEmpty(dir)) return false;
-
-        foreach (var part in dir.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
-        {
-            if (string.Equals(part, segment, StringComparison.OrdinalIgnoreCase))
-                return true;
-        }
-        return false;
-    }
-
-    #region PE Metadata
+    private static bool IsLoaded(string simpleName) =>
+        AppDomain.CurrentDomain.GetAssemblies().Any(assembly =>
+            string.Equals(assembly.GetName().Name, simpleName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Returns true if the file has valid .NET PE metadata (is a managed assembly).
-    /// </summary>
-    private static bool IsValidAssembly(string dllPath)
-    {
-        try
-        {
-            using var stream = new FileStream(dllPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-            using var peReader = new PEReader(stream);
-            return peReader.HasMetadata;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Reads TFM major version from PE metadata. Returns false if not a valid .NET assembly.
+    /// Reads TFM major from PE <c>TargetFrameworkAttribute</c>.
+    /// Managed assemblies without the attribute (old-style) are treated as net4.
+    /// Native / invalid files return false.
     /// </summary>
     private static bool TryReadTfmMajor(string dllPath, out int major)
     {
@@ -165,7 +150,8 @@ internal static class PyRevitAssemblyLoader
         {
             using var stream = new FileStream(dllPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var peReader = new PEReader(stream);
-            if (!peReader.HasMetadata) return false;
+            if (!peReader.HasMetadata)
+                return false;
 
             var reader = peReader.GetMetadataReader();
             var assemblyDef = reader.GetAssemblyDefinition();
@@ -179,16 +165,14 @@ internal static class PyRevitAssemblyLoader
                 if (ctor.Parent.Kind != HandleKind.TypeReference) continue;
 
                 var typeRef = reader.GetTypeReference((TypeReferenceHandle)ctor.Parent);
-                if (reader.GetString(typeRef.Name) != "TargetFrameworkAttribute") continue;
+                if (reader.GetString(typeRef.Name) != nameof(TargetFrameworkAttribute)) continue;
 
                 var blob = reader.GetBlobReader(attr.Value);
                 blob.ReadUInt16();
-                var tfmString = blob.ReadSerializedString();
-                major = ParseTfmMajor(tfmString);
+                major = ParseTfmMajor(blob.ReadSerializedString());
                 return true;
             }
 
-            // Valid .NET assembly but no TargetFrameworkAttribute (old-style) — treat as net4
             major = 4;
             return true;
         }
@@ -200,17 +184,15 @@ internal static class PyRevitAssemblyLoader
 
     private static int ParseTfmMajor(string? tfmString)
     {
-        if (string.IsNullOrEmpty(tfmString)) return 4;
+        if (tfmString is not { Length: > 0 }) return 4;
 
-        var vIndex = tfmString!.IndexOf("=v", StringComparison.OrdinalIgnoreCase);
+        var vIndex = tfmString.IndexOf("=v", StringComparison.OrdinalIgnoreCase);
         if (vIndex < 0) return 4;
 
         var versionSpan = tfmString.AsSpan(vIndex + 2);
         var dotIndex = versionSpan.IndexOf('.');
         var majorSpan = dotIndex > 0 ? versionSpan[..dotIndex] : versionSpan;
 
-        return int.TryParse(majorSpan.ToString(), out var major) ? major : 4;
+        return int.TryParse(majorSpan.ToString(), out var parsed) ? parsed : 4;
     }
-
-    #endregion
 }

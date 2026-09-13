@@ -10,8 +10,8 @@ using ZLogger;
 namespace RevitDevTool.Execution;
 
 /// <summary>
-/// Revit IronPython: pyRevit Labs <c>ScriptRuntime</c> when loaded and no
-/// pydevd client is attached; otherwise the embedded IPy 3.4.2 session engine.
+/// pyRevit loaded → ScriptExecutor / PyRevitLoader on that engine's
+/// <see cref="IronPythonDebugger"/>. Otherwise embedded IronPython 3.4.2.
 /// </summary>
 public sealed class RevitIPyExecutionStrategy(
     string scriptPath,
@@ -30,19 +30,9 @@ public sealed class RevitIPyExecutionStrategy(
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        // 0026: unattached Run stays pyRevit-first. pydevd lives on the
-        // session engine (Frames), not ScriptExecutor (full_frame: false).
-        // When VS Code is attached, yield so *_ipy_script.py can hit.
-        if (PyRevitLibraryPaths.IsLoaded && !ironPythonDebugger.IsAttached)
-            return ExecutePyrevitAsync(progress, cancellationToken);
-
-        if (PyRevitLibraryPaths.IsLoaded)
-        {
-            logger.ZLogInformation(
-                $"IronPython debugger attached; running '{Path.GetFileName(scriptPath)}' on the embedded engine (not pyRevit).");
-        }
-
-        return _native.ExecuteAsync(progress, cancellationToken);
+        return !PyRevitLibraryPaths.IsLoaded 
+            ? _native.ExecuteAsync(progress, cancellationToken) 
+            : ExecutePyrevitAsync(progress, cancellationToken);
     }
 
     private async Task<ExecutionResult> ExecutePyrevitAsync(
@@ -57,6 +47,13 @@ public sealed class RevitIPyExecutionStrategy(
             var result = await hostContext
                 .ExecuteAsync(() =>
                 {
+                    ironPythonDebugger.RefreshUserModules(
+                        scriptPath,
+                        PyRevitExtensionPaths.ModuleRefreshRoot(scriptPath),
+                        PyRevitLibraryPaths.RefreshSkipRoots);
+                    PyRevitReflectionCache.Instance.EnsureHostAppImported();
+                    ironPythonDebugger.EnsureCurrentThreadTraced();
+
                     var run = PyRevitScriptExecutor.Execute(scriptPath, rootPath, logger);
                     stopwatch.Stop();
                     return run.Success

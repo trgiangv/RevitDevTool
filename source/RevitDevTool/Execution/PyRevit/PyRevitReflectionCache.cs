@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
@@ -7,8 +8,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 #endif
 using DevTools.Execution.Models;
+using DevTools.Execution.Providers.IronPython;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using RevitDevTool.Core;
 using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -19,14 +22,27 @@ namespace RevitDevTool.Execution.PyRevit;
 /// </summary>
 internal sealed class PyRevitReflectionCache
 {
-    /// <summary>Isolated engine cache key — never use the real extension name.</summary>
-    private const string RevitDevToolExtensionKey = "RevitDevTool";
+    /// <summary>
+    /// Isolated pyRevit engine-cache slot (<c>CommandExtension</c> / TypeId).
+    /// </summary>
+    private const string RevitDevToolExtension = "RevitDevTool-8e4c1b7a-3f92-4d6e-a1c5-7b0e9f2d4a68";
 
+    /// <summary>
+    /// Completes <c>pyrevit/__init__.py</c> (assigns <c>HOST_APP</c>) before pydevd
+    /// traces. <c>pyrevit._perf.mark()</c> otherwise imports <c>coreutils</c> while
+    /// the package is still loading; that <c>ImportError</c> is caught without a
+    /// debugger, but pydevd pauses it on the Revit API thread.
+    /// </summary>
+    private const string ImportHostApp = "from pyrevit import HOST_APP";
+
+    /// <summary>
+    /// pyRevit-loader IronPython. Reuse one engine so pydevd stays attached.
+    /// <c>full_frame</c> is off so pyRevit does not set <c>Tracing</c>.
+    /// </summary>
     private const string EngineConfigsJson =
-        "{\"clean\":true,\"persistent\":false,\"full_frame\":false,\"type\":\"IronPython\",\"type_explicit\":true}";
+        "{\"clean\":false,\"persistent\":false,\"full_frame\":false,\"type\":\"IronPython\",\"type_explicit\":true}";
 
-    private static readonly Lock InitLock = new();
-    private static PyRevitReflectionCache? _instance;
+    private static readonly Lazy<PyRevitReflectionCache> LazyInstance = new(Create);
 
     private readonly RuntimeBinding? _runtime;
     private readonly LoaderBinding? _loader;
@@ -42,57 +58,41 @@ internal sealed class PyRevitReflectionCache
         _logger = logger;
     }
 
-    internal static PyRevitReflectionCache Instance
-    {
-        get
-        {
-            EnsureInitialized();
-            return _instance ?? throw new InvalidOperationException("pyRevit reflection is not initialized.");
-        }
-    }
+    internal static PyRevitReflectionCache Instance => LazyInstance.Value;
 
     internal bool HasRuntime => _runtime is not null;
 
     internal bool HasLoader => _loader is not null;
 
-    private static void EnsureInitialized()
+    private static PyRevitReflectionCache Create()
     {
-        if (_instance is not null)
-            return;
+        PyRevitLibraryPaths.EnsureResolved();
 
-        lock (InitLock)
+        RuntimeBinding? runtime = null;
+        if (PyRevitLibraryPaths.RuntimeAssembly is { } runtimeAssembly)
         {
-            if (_instance is not null)
-                return;
-
-            PyRevitLibraryPaths.EnsureResolved();
-
-            RuntimeBinding? runtime = null;
-            if (PyRevitLibraryPaths.RuntimeAssembly is { } runtimeAssembly)
-            {
-                runtime = RuntimeBinding.Load(runtimeAssembly);
-                runtime.InitializeExecutor.Invoke(null, null);
-            }
-
-            LoaderBinding? loader = null;
-            if (PyRevitLibraryPaths.LoaderAssembly is { } loaderAssembly)
-                loader = LoaderBinding.TryLoad(loaderAssembly);
-
-            _instance = new PyRevitReflectionCache(runtime, loader, NullLogger<PyRevitReflectionCache>.Instance);
+            runtime = RuntimeBinding.Load(runtimeAssembly);
+            ReflectionBound.Call(runtime.InitializeExecutor, null, []);
         }
+
+        LoaderBinding? loader = null;
+        if (PyRevitLibraryPaths.LoaderAssembly is { } loaderAssembly)
+            loader = LoaderBinding.TryLoad(loaderAssembly);
+
+        return new PyRevitReflectionCache(runtime, loader, NullLogger<PyRevitReflectionCache>.Instance);
     }
 
-    internal ExecutionResult ExecuteRuntime(string scriptPath, string rootPath, UIApplication uiApplication)
+    internal ExecutionResult ExecuteRuntime(string scriptPath, string rootPath)
     {
         if (_runtime is null)
             throw new InvalidOperationException("pyRevit Labs runtime is not available.");
 
         var scriptData = _runtime.CreateScriptData(scriptPath);
-        var runtimeConfigs = _runtime.CreateRuntimeConfigs(scriptPath, rootPath, uiApplication);
+        var runtimeConfigs = _runtime.CreateRuntimeConfigs(scriptPath);
         var execConfigs = Activator.CreateInstance(_runtime.ScriptExecutorConfigsType)
             ?? throw new InvalidOperationException("Failed to create ScriptExecutorConfigs.");
 
-        var resultCode = (int)_runtime.ExecuteScript.Invoke(null, [scriptData, runtimeConfigs, execConfigs])!;
+        var resultCode = (int)ReflectionBound.Call(_runtime.ExecuteScript, null, [scriptData, runtimeConfigs, execConfigs])!;
 
         return IsSuccessResultCode(resultCode)
             ? ExecutionResult.Succeeded("Script completed (pyRevit runtime).")
@@ -101,28 +101,92 @@ internal sealed class PyRevitReflectionCache
 
     internal ExecutionResult ExecuteLoader(
         string scriptPath,
-        string rootPath,
-        UIApplication uiApplication)
+        string rootPath)
     {
         if (_loader is null)
             return ExecutionResult.Failed("pyRevit is not loaded in this Revit session.");
 
-        var executor = _loader.CreateExecutor(uiApplication);
-        var sysPaths = PyRevitSearchPaths.Build(scriptPath, rootPath);
-        var revitResult = _loader.ExecuteScript.Invoke(executor, [scriptPath, sysPaths, null, null]);
-
-        var message = _loader.MessageProperty.GetValue(executor) as string;
+        var executor = _loader.CreateExecutor();
+        var revitResult = ReflectionBound.Call(_loader.ExecuteScript, executor, [scriptPath, PyRevitSearchPaths.Build(scriptPath), null, null]);
+        var message = ReflectionBound.Get<string>(executor, PyRevitNames.Message);
         if (!string.IsNullOrEmpty(message))
             Trace.Write(message);
 
         var resultName = revitResult?.ToString() ?? string.Empty;
-        if (resultName.Contains("Succeeded", StringComparison.Ordinal))
+        if (resultName.Contains(PyRevitNames.Succeeded, StringComparison.Ordinal))
             return ExecutionResult.Succeeded("Script completed (pyRevit loader).");
 
         if (!string.IsNullOrEmpty(message))
             return ExecutionResult.Failed(message!);
 
         return ExecutionResult.Failed($"pyRevit loader finished with {resultName}.");
+    }
+
+    /// <summary>
+    /// DLR engine for this add-in's <c>CommandExtension</c> slot — the same
+    /// cache ScriptExecutor uses on Run.
+    /// </summary>
+    internal object EnsureIronPythonEngine(ILogger? logger = null)
+    {
+        var existing = TryGetIronPythonEngine();
+        if (existing is not null)
+            return existing;
+
+        var dir = Path.GetTempPath();
+        var scriptPath = Path.Combine(dir, "warmup_ipy_script.py");
+        File.WriteAllText(scriptPath, ImportHostApp);
+
+        var result = PyRevitScriptExecutor.Execute(scriptPath, dir, logger);
+        if (!result.Success)
+            throw new InvalidOperationException($"pyRevit IronPython engine warmup failed: {result.Message}");
+
+        return TryGetIronPythonEngine()
+            ?? throw new InvalidOperationException(
+                "pyRevit IronPythonEngine.Engine was not found after ScriptExecutor warmup.");
+    }
+
+    /// <summary>
+    /// Load pyRevit on this engine with tracing off. Safe to call every Run
+    /// (cached <c>sys.modules</c> hit after warmup).
+    /// </summary>
+    internal void EnsureHostAppImported()
+    {
+        var engine = TryGetIronPythonEngine();
+        if (engine is null)
+            return;
+
+        DlrScriptHost.Execute(engine, ImportHostApp);
+    }
+
+    private static object? TryGetIronPythonEngine()
+    {
+        if (AppDomain.CurrentDomain.GetData(PyRevitLibraryPaths.EnginesDictKey) is not IDictionary dict)
+            return null;
+
+        foreach (var wrapper in dict.Values)
+        {
+            if (EngineIfOurs(wrapper) is { } engine)
+                return engine;
+        }
+
+        return null;
+    }
+
+    private static object? EngineIfOurs(object? wrapper)
+    {
+        if (wrapper is null)
+            return null;
+
+        var type = wrapper.GetType();
+        if (!string.Equals(type.Name, PyRevitNames.IronPythonEngine, StringComparison.Ordinal))
+            return null;
+
+        if (ReflectionBound.Get<string>(wrapper, PyRevitNames.TypeId) is not { } typeId)
+            return null;
+        if (typeId.IndexOf(RevitDevToolExtension, StringComparison.OrdinalIgnoreCase) < 0)
+            return null;
+
+        return ReflectionBound.Get<object>(wrapper, PyRevitNames.Engine);
     }
 
     /// <summary>pyRevit <c>ScriptExecutorResultCodes</c>: Succeeded=0, SysExited=1.</summary>
@@ -163,16 +227,16 @@ internal sealed class PyRevitReflectionCache
 
         internal static RuntimeBinding Load(Assembly runtimeAssembly)
         {
-            var scriptExecutorType = ResolveType(runtimeAssembly, "PyRevitLabs.PyRevit.Runtime.ScriptExecutor");
-            var scriptDataType = ResolveType(runtimeAssembly, "PyRevitLabs.PyRevit.Runtime.ScriptData");
-            var configsType = ResolveType(runtimeAssembly, "PyRevitLabs.PyRevit.Runtime.ScriptRuntimeConfigs");
-            var execConfigsType = ResolveType(runtimeAssembly, "PyRevitLabs.PyRevit.Runtime.ScriptExecutorConfigs");
+            var scriptExecutorType = ResolveType(runtimeAssembly, PyRevitNames.ScriptExecutor);
+            var scriptDataType = ResolveType(runtimeAssembly, PyRevitNames.ScriptData);
+            var configsType = ResolveType(runtimeAssembly, PyRevitNames.ScriptRuntimeConfigs);
+            var execConfigsType = ResolveType(runtimeAssembly, PyRevitNames.ScriptExecutorConfigs);
 
-            var initialize = scriptExecutorType.GetMethod("Initialize", BindingFlags.Public | BindingFlags.Static)
+            var initialize = scriptExecutorType.GetMethod(PyRevitNames.Initialize, BindingFlags.Public | BindingFlags.Static)
                 ?? throw new InvalidOperationException("ScriptExecutor.Initialize was not found.");
 
             var execute = scriptExecutorType.GetMethod(
-                "ExecuteScript",
+                PyRevitNames.ExecuteScript,
                 BindingFlags.Public | BindingFlags.Static,
                 binder: null,
                 [scriptDataType, configsType, execConfigsType],
@@ -193,39 +257,39 @@ internal sealed class PyRevitReflectionCache
             var scriptData = Activator.CreateInstance(ScriptDataType)
                 ?? throw new InvalidOperationException("Failed to create ScriptData.");
 
-            Apply(_scriptDataSetters, scriptData, "ScriptPath", scriptPath);
-            Apply(_scriptDataSetters, scriptData, "ConfigScriptPath", scriptPath);
-            Apply(_scriptDataSetters, scriptData, "CommandUniqueId", Guid.NewGuid().ToString());
-            Apply(_scriptDataSetters, scriptData, "CommandControlId", commandName);
-            Apply(_scriptDataSetters, scriptData, "CommandName", commandName);
-            Apply(_scriptDataSetters, scriptData, "CommandBundle", commandBundle);
-            Apply(_scriptDataSetters, scriptData, "CommandExtension", RevitDevToolExtensionKey);
-            Apply(_scriptDataSetters, scriptData, "CommandContext", string.Empty);
-            Apply(_scriptDataSetters, scriptData, "HelpSource", string.Empty);
-            Apply(_scriptDataSetters, scriptData, "Tooltip", string.Empty);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.ScriptPath, scriptPath);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.ConfigScriptPath, scriptPath);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.CommandUniqueId, Guid.NewGuid().ToString());
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.CommandControlId, commandName);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.CommandName, commandName);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.CommandBundle, commandBundle);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.CommandExtension, RevitDevToolExtension);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.CommandContext, string.Empty);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.HelpSource, string.Empty);
+            Apply(_scriptDataSetters, scriptData, PyRevitNames.Tooltip, string.Empty);
             return scriptData;
         }
 
-        internal object CreateRuntimeConfigs(string scriptPath, string rootPath, UIApplication uiApplication)
+        internal object CreateRuntimeConfigs(string scriptPath)
         {
-            var searchPaths = PyRevitSearchPaths.Build(scriptPath, rootPath).ToList();
-            var commandData = CreateCommandData(uiApplication);
+            var searchPaths = PyRevitSearchPaths.Build(scriptPath);
+            var commandData = CreateCommandData(RevitContext.UiApplication);
 
             var configs = Activator.CreateInstance(ScriptRuntimeConfigsType)
                 ?? throw new InvalidOperationException("Failed to create ScriptRuntimeConfigs.");
 
-            Apply(_runtimeConfigSetters, configs, "UIApp", uiApplication);
-            Apply(_runtimeConfigSetters, configs, "CommandData", commandData);
-            Apply(_runtimeConfigSetters, configs, "SelectedElements", null);
-            Apply(_runtimeConfigSetters, configs, "SearchPaths", searchPaths);
-            Apply(_runtimeConfigSetters, configs, "Arguments", new List<string>());
-            Apply(_runtimeConfigSetters, configs, "Variables", null);
-            Apply(_runtimeConfigSetters, configs, "EngineConfigs", EngineConfigsJson);
-            Apply(_runtimeConfigSetters, configs, "RefreshEngine", true);
-            Apply(_runtimeConfigSetters, configs, "DebugMode", false);
-            Apply(_runtimeConfigSetters, configs, "ConfigMode", false);
-            Apply(_runtimeConfigSetters, configs, "ExecutedFromUI", false);
-            Apply(_runtimeConfigSetters, configs, "SuppressOutput", false);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.UiApp, RevitContext.UiApplication);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.CommandData, commandData);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.SelectedElements, null);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.SearchPaths, searchPaths);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.Arguments, new List<string>());
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.Variables, null);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.EngineConfigs, EngineConfigsJson);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.RefreshEngine, false);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.DebugMode, false);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.ConfigMode, false);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.ExecutedFromUi, false);
+            Apply(_runtimeConfigSetters, configs, PyRevitNames.SuppressOutput, false);
             return configs;
         }
 
@@ -244,41 +308,38 @@ internal sealed class PyRevitReflectionCache
     private sealed class LoaderBinding
     {
         internal MethodInfo ExecuteScript { get; }
-        internal PropertyInfo MessageProperty { get; }
 
         private readonly ConstructorInfo _executorConstructor;
 
-        private LoaderBinding(ConstructorInfo executorConstructor, MethodInfo executeScript, PropertyInfo messageProperty)
+        private LoaderBinding(ConstructorInfo executorConstructor, MethodInfo executeScript)
         {
             _executorConstructor = executorConstructor;
             ExecuteScript = executeScript;
-            MessageProperty = messageProperty;
         }
 
         internal static LoaderBinding? TryLoad(Assembly loaderAssembly)
         {
-            var executorType = loaderAssembly.GetType("PyRevitLoader.ScriptExecutor", throwOnError: false);
+            var executorType = loaderAssembly.GetType(PyRevitNames.LoaderScriptExecutor, throwOnError: false);
             if (executorType is null)
                 return null;
 
             var constructor = executorType.GetConstructor([typeof(UIApplication), typeof(bool)]);
             var execute = executorType.GetMethod(
-                "ExecuteScript",
+                PyRevitNames.ExecuteScript,
                 BindingFlags.Instance | BindingFlags.Public,
                 binder: null,
                 [typeof(string), typeof(IEnumerable<string>), typeof(string), typeof(IDictionary<string, object>)],
                 modifiers: null);
-            var message = executorType.GetProperty("Message", BindingFlags.Instance | BindingFlags.Public);
 
-            if (constructor is null || execute is null || message is null)
+            if (constructor is null || execute is null)
                 return null;
 
-            return new LoaderBinding(constructor, execute, message);
+            return new LoaderBinding(constructor, execute);
         }
 
-        internal object CreateExecutor(UIApplication uiApplication) =>
-            _executorConstructor.Invoke([uiApplication, false])
-            ?? throw new InvalidOperationException("Could not create PyRevitLoader.ScriptExecutor.");
+        internal object CreateExecutor() =>
+            ReflectionBound.Call(_executorConstructor, null, [RevitContext.UiApplication, false])
+            ?? throw new InvalidOperationException($"Could not create {PyRevitNames.LoaderScriptExecutor}.");
     }
 
     private static Type ResolveType(Assembly assembly, string fullName) =>
@@ -305,7 +366,7 @@ internal sealed class PyRevitReflectionCache
     {
         if (!setters.TryGetValue(memberName, out var setter))
         {
-            _instance!._logger.ZLogDebug($"Warning: Member '{memberName}' was not found on type '{instance.GetType().FullName}'.");
+            Instance._logger.ZLogDebug($"Warning: Member '{memberName}' was not found on type '{instance.GetType().FullName}'.");
             return;
         }
 

@@ -3,23 +3,19 @@ using System.Reflection;
 namespace RevitDevTool.Execution.PyRevit;
 
 /// <summary>
-/// Resolves pyRevit assemblies and install paths once per Revit session.
+/// Resolves pyRevit assemblies and the install root (directory of <c>pyRevitfile</c>) once per Revit session.
 /// </summary>
 internal static class PyRevitLibraryPaths
 {
-    private const string LoaderAssemblyName = "PyRevitLoader";
     private const string PyRevitLibDir = "pyrevitlib";
-    private const string SitePackagesDir = "site-packages";
     private const string RootMarkerFile = "pyRevitfile";
-    private const string RuntimeAssemblyPrefix = "PyRevitLabs.PyRevit.Runtime";
 
     private static readonly Lock ResolveLock = new();
     private static bool _resolved;
     private static Assembly? _loaderAssembly;
     private static Assembly? _runtimeAssembly;
-    private static Paths? _installPaths;
-
-    internal readonly record struct Paths(string PyRevitLib, string? SitePackages);
+    private static string? _installRoot;
+    private static string _enginesDictKey = PyRevitNames.DefaultEnginesDictKey;
 
     internal static bool IsLoaded
     {
@@ -48,6 +44,27 @@ internal static class PyRevitLibraryPaths
         }
     }
 
+    internal static string EnginesDictKey
+    {
+        get
+        {
+            EnsureResolved();
+            return _enginesDictKey;
+        }
+    }
+
+    internal static string? InstallRoot
+    {
+        get
+        {
+            EnsureResolved();
+            return _installRoot;
+        }
+    }
+
+    internal static IReadOnlyList<string> RefreshSkipRoots =>
+        InstallRoot is { } root ? [root] : [];
+
     internal static void EnsureResolved()
     {
         if (_resolved)
@@ -59,29 +76,27 @@ internal static class PyRevitLibraryPaths
                 return;
 
             _loaderAssembly = ScanAssemblies(static name =>
-                string.Equals(name, LoaderAssemblyName, StringComparison.OrdinalIgnoreCase));
+                string.Equals(name, PyRevitNames.LoaderAssembly, StringComparison.OrdinalIgnoreCase));
 
             _runtimeAssembly = ScanAssemblies(static name =>
-                name.StartsWith(RuntimeAssemblyPrefix, StringComparison.OrdinalIgnoreCase));
+                name.StartsWith(PyRevitNames.RuntimePrefix, StringComparison.OrdinalIgnoreCase));
+
+            _enginesDictKey = ReadEnginesDictKey(_runtimeAssembly) ?? PyRevitNames.DefaultEnginesDictKey;
 
             if (_loaderAssembly is not null)
-                _installPaths = ResolveInstallPaths(_loaderAssembly);
+                _installRoot = ResolveInstallRoot(_loaderAssembly);
 
-            _resolved = true;
+            // pyRevit may load after this add-in; do not cache a miss.
+            if (_loaderAssembly is not null || _runtimeAssembly is not null)
+                _resolved = true;
         }
     }
 
-    internal static bool TryResolve(out Paths paths)
+    private static string? ReadEnginesDictKey(Assembly? runtime)
     {
-        EnsureResolved();
-        if (_installPaths is null)
-        {
-            paths = default;
-            return false;
-        }
-
-        paths = _installPaths.Value;
-        return true;
+        var keysType = runtime?.GetType(PyRevitNames.DomainStorageKeys);
+        return keysType?.GetField(PyRevitNames.EnginesDictKey, BindingFlags.Public | BindingFlags.Static)
+            ?.GetValue(null) as string;
     }
 
     private static Assembly? ScanAssemblies(Func<string, bool> matches)
@@ -96,7 +111,7 @@ internal static class PyRevitLibraryPaths
         return null;
     }
 
-    private static Paths? ResolveInstallPaths(Assembly loader)
+    private static string? ResolveInstallRoot(Assembly loader)
     {
         var hint = Path.GetDirectoryName(loader.Location);
         if (string.IsNullOrEmpty(hint))
@@ -104,16 +119,9 @@ internal static class PyRevitLibraryPaths
 
         for (var dir = hint; !string.IsNullOrEmpty(dir); dir = Path.GetDirectoryName(dir))
         {
-            if (!File.Exists(Path.Combine(dir, RootMarkerFile))
-                && !Directory.Exists(Path.Combine(dir, PyRevitLibDir)))
-                continue;
-
-            var pyRevitLib = Path.Combine(dir, PyRevitLibDir);
-            if (!Directory.Exists(pyRevitLib))
-                return null;
-
-            var sitePackages = Path.Combine(dir, SitePackagesDir);
-            return new Paths(pyRevitLib, Directory.Exists(sitePackages) ? sitePackages : null);
+            if (File.Exists(Path.Combine(dir, RootMarkerFile))
+                || Directory.Exists(Path.Combine(dir, PyRevitLibDir)))
+                return dir;
         }
 
         return null;

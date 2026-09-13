@@ -2,13 +2,16 @@ using System.IO;
 using Autodesk.Windows;
 using DevTools.Hosting;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
 using DevTools.UI;
+using RevitDevTool.Execution.PyRevit;
 using RevitDevTool.Settings;
 using DevTools.UI.Theme;
+using ZLogger;
 
 namespace RevitDevTool.Controllers;
 
@@ -18,7 +21,8 @@ public sealed class HostBackgroundController(
     IRevitSettingsService settingsService,
     PythonInitializer pythonInitializer,
     IronPythonDebugger ironPythonDebugger,
-    IIronPythonBridge ironPythonBridge) : IHostedService
+    IIronPythonBridge ironPythonBridge,
+    ILogger<HostBackgroundController> logger) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -33,7 +37,7 @@ public sealed class HostBackgroundController(
         HostUiHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
         await Task.WhenAll(
             pythonInitializer.InitializeAsync(),
-            ironPythonDebugger.InitializeAsync(ironPythonBridge)).ConfigureAwait(false);
+            InitializeIronPythonAsync()).ConfigureAwait(false);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -42,6 +46,20 @@ public sealed class HostBackgroundController(
         CleanLogFolder();
         await pythonInitializer.ShutdownAsync().ConfigureAwait(false);
         ironPythonDebugger.Shutdown();
+    }
+
+    private async Task InitializeIronPythonAsync()
+    {
+        if (PyRevitLibraryPaths.IsLoaded)
+        {
+            logger.ZLogInformation($"IronPython debug uses pyRevit ScriptExecutor engine.");
+            var engine = PyRevitReflectionCache.Instance.EnsureIronPythonEngine(logger);
+            await ironPythonDebugger.InitializeAsync(engine).ConfigureAwait(false);
+            return;
+        }
+
+        logger.ZLogInformation($"IronPython debug uses embedded 3.4.2.");
+        await ironPythonDebugger.InitializeAsync(ironPythonBridge).ConfigureAwait(false);
     }
 
     private void CleanLogFolder()

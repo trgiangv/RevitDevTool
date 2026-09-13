@@ -4,7 +4,8 @@ using RevitDevTool.Core;
 namespace RevitDevTool.Adapters;
 
 /// <summary>
-/// Injects Revit into IronPython builtins and loads Revit API assemblies into the script engine.
+/// Injects Revit into IronPython builtins and loads Revit API assemblies into the
+/// embedded engine (Revit without pyRevit). pyRevit Scripts use ScriptExecutor.
 /// </summary>
 public sealed class RevitIronPythonBridge : IIronPythonBridge
 {
