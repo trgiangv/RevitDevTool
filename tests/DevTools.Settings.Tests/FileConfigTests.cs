@@ -5,9 +5,10 @@ using Microsoft.Extensions.Options;
 
 namespace DevTools.Settings.Tests;
 
+[TestClass]
 public sealed class FileConfigTests
 {
-    [Fact]
+    [TestMethod]
     public void Save_and_Load_round_trip_general_config()
     {
         var root = Directory.CreateTempSubdirectory("file-config-").FullName;
@@ -29,10 +30,10 @@ public sealed class FileConfigTests
 
             config.Save(expected);
             var loaded = config.Load<GeneralConfig>();
-            Assert.NotNull(loaded);
-            Assert.Equal(expected.Theme, loaded.Theme);
-            Assert.Equal(expected.UseHardwareRendering, loaded.UseHardwareRendering);
-            Assert.Equal(expected.EnableTelemetry, loaded.EnableTelemetry);
+            Assert.IsNotNull(loaded);
+            Assert.AreEqual(expected.Theme, loaded.Theme);
+            Assert.AreEqual(expected.UseHardwareRendering, loaded.UseHardwareRendering);
+            Assert.AreEqual(expected.EnableTelemetry, loaded.EnableTelemetry);
         }
         finally
         {
@@ -40,7 +41,7 @@ public sealed class FileConfigTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Load_returns_null_when_file_missing_or_invalid()
     {
         var root = Directory.CreateTempSubdirectory("file-config-missing-").FullName;
@@ -52,12 +53,12 @@ public sealed class FileConfigTests
                 LogsDirectory = Path.Combine(root, "Logs"),
             });
             var config = new FileConfig(options);
-            Assert.Null(config.Load<ExecutionConfig>());
+            Assert.IsNull(config.Load<ExecutionConfig>());
 
             Directory.CreateDirectory(options.Value.SettingsDirectory);
             var badPath = options.Value.GetSettingsPath<ExecutionConfig>();
             File.WriteAllText(badPath, "{ not json");
-            Assert.Null(config.Load<ExecutionConfig>());
+            Assert.IsNull(config.Load<ExecutionConfig>());
         }
         finally
         {
@@ -65,7 +66,7 @@ public sealed class FileConfigTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void LogConfig_deserializes_nested_logging_options()
     {
         const string json = """
@@ -78,11 +79,11 @@ public sealed class FileConfigTests
             """;
 
         var config = JsonSerializer.Deserialize<LogConfig>(json);
-        Assert.NotNull(config);
-        Assert.True(config.FileLogging.Enabled);
-        Assert.Equal(@"C:\\logs", config.FileLogging.LogFolder);
-        Assert.Equal(5, config.TraceListener.StackTraceDepth);
-        Assert.True(config.Monitor.EnablePrettyJson);
-        Assert.False(config.HttpLogging.Enabled);
+        Assert.IsNotNull(config);
+        Assert.IsTrue(config.FileLogging.Enabled);
+        Assert.AreEqual(@"C:\\logs", config.FileLogging.LogFolder);
+        Assert.AreEqual(5, config.TraceListener.StackTraceDepth);
+        Assert.IsTrue(config.Monitor.EnablePrettyJson);
+        Assert.IsFalse(config.HttpLogging.Enabled);
     }
 }

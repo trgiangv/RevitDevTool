@@ -4,9 +4,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class NotifyListenerTests
 {
-    [Fact]
+    [TestMethod]
     public void NotifyListener_and_provider_raise_trace_received()
     {
         var count = 0;
@@ -30,11 +31,11 @@ public sealed class NotifyListenerTests
 
             var provider = new NotifyLoggerProvider();
             var logger = provider.CreateLogger("cat");
-            Assert.True(logger.IsEnabled(LogLevel.Debug));
+            Assert.IsTrue(logger.IsEnabled(LogLevel.Debug));
             logger.Log(LogLevel.Information, default, "state", null, static (s, _) => s?.ToString() ?? "");
             logger.Log(LogLevel.None, default, "ignored", null, static (s, _) => s?.ToString() ?? "");
 
-            Assert.Equal(9, count);
+            Assert.AreEqual(9, count);
         }
         finally
         {
@@ -42,7 +43,7 @@ public sealed class NotifyListenerTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void NotifyLoggerProvider_dispose_is_noop()
     {
         using var provider = new NotifyLoggerProvider();

@@ -7,9 +7,10 @@ using ZLogger;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class LoggerTraceListenerTests
 {
-    [Fact]
+    [TestMethod]
     public void LoggerTraceListener_routes_trace_output_to_zlogger()
     {
         var delivered = new List<LogLevel>();
@@ -52,14 +53,14 @@ public sealed class LoggerTraceListenerTests
         listener.TraceData(cache, "src", TraceEventType.Verbose, 5, "a", "b");
         listener.TraceTransfer(cache, "src", 6, "xfer", Guid.NewGuid());
 
-        Assert.NotEmpty(delivered);
+        Assert.IsNotEmpty(delivered);
         Assert.Contains(LogLevel.Critical, delivered);
         Assert.Contains(LogLevel.Error, delivered);
         Assert.Contains(LogLevel.Warning, delivered);
         Assert.Contains(LogLevel.Information, delivered);
     }
 
-    [Fact]
+    [TestMethod]
     public void LoggerTraceListener_callback_exceptions_are_swallowed()
     {
         using var factory = LoggerFactory.Create(static builder => builder.AddZLoggerConsole());
@@ -67,16 +68,15 @@ public sealed class LoggerTraceListenerTests
             factory.CreateLogger("trace"),
             new TraceListenerOptions(),
             _ => throw new InvalidOperationException("boom"));
-        var ex = Record.Exception(() => listener.Write("hello"));
-        Assert.Null(ex);
+        listener.Write("hello");
     }
 
-    [Fact]
+    [TestMethod]
     public void LoggerTraceListener_ctor_rejects_null_dependencies()
     {
         using var factory = LoggerFactory.Create(static _ => { });
         var logger = factory.CreateLogger("x");
-        Assert.Throws<ArgumentNullException>(() => new LoggerTraceListener(null!, new TraceListenerOptions()));
-        Assert.Throws<ArgumentNullException>(() => new LoggerTraceListener(logger, null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new LoggerTraceListener(null!, new TraceListenerOptions()));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new LoggerTraceListener(logger, null!));
     }
 }

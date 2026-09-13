@@ -3,9 +3,10 @@ using DevTools.Logging;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class TraceListenerHelperTests
 {
-    [Fact]
+    [TestMethod]
     public void RegisterTraceListeners_adds_once_and_skips_null()
     {
         var listener = new TestTraceListener();
@@ -20,7 +21,7 @@ public sealed class TraceListenerHelperTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void UnregisterTraceListeners_removes_listener()
     {
         var listener = new TestTraceListener();

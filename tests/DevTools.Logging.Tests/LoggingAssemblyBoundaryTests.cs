@@ -1,8 +1,9 @@
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class LoggingAssemblyBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Logging_assembly_forbids_ui_scintilla_and_wpf()
     {
         var references = typeof(LoggingExtensions).Assembly
@@ -17,7 +18,7 @@ public sealed class LoggingAssemblyBoundaryTests
         Assert.DoesNotContain("ScintillaNET", references);
     }
 
-    [Fact]
+    [TestMethod]
     public void Logging_csproj_has_no_wpf_or_scintilla()
     {
         var csproj = File.ReadAllText(Path.Combine(
@@ -31,12 +32,12 @@ public sealed class LoggingAssemblyBoundaryTests
         Assert.DoesNotContain("Scintilla5", csproj, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void Logging_source_has_no_wpf_ui_or_scintilla()
     {
         var loggingDir = Path.Combine(RepositoryRoot.Find(), "source", "DevTools.Logging");
         var sources = Directory.GetFiles(loggingDir, "*.cs", SearchOption.AllDirectories);
-        Assert.NotEmpty(sources);
+        Assert.IsNotEmpty(sources);
 
         string[] forbidden =
         [
@@ -57,7 +58,7 @@ public sealed class LoggingAssemblyBoundaryTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Presentation_csproj_references_ZLogger_Scintilla()
     {
         var csproj = File.ReadAllText(Path.Combine(
@@ -70,7 +71,7 @@ public sealed class LoggingAssemblyBoundaryTests
         Assert.Contains("Scintilla5.NET", csproj, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void NUnit_Host_does_not_reference_Logging_or_scintilla()
     {
         var csproj = File.ReadAllText(Path.Combine(
@@ -84,7 +85,7 @@ public sealed class LoggingAssemblyBoundaryTests
         Assert.DoesNotContain("Scintilla5", csproj, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void Host_source_calls_AddLoggingProvider_then_AddMonitorLogging()
     {
         var root = RepositoryRoot.Find();
@@ -99,9 +100,9 @@ public sealed class LoggingAssemblyBoundaryTests
             var text = File.ReadAllText(path);
             var providerIndex = text.IndexOf("AddLoggingProvider()", StringComparison.Ordinal);
             var monitorIndex = text.IndexOf("AddMonitorLogging(", StringComparison.Ordinal);
-            Assert.True(providerIndex >= 0, $"{path} must call AddLoggingProvider().");
-            Assert.True(monitorIndex >= 0, $"{path} must call AddMonitorLogging.");
-            Assert.True(providerIndex < monitorIndex, $"{path} must call AddLoggingProvider before AddMonitorLogging.");
+            Assert.IsTrue(providerIndex >= 0, $"{path} must call AddLoggingProvider().");
+            Assert.IsTrue(monitorIndex >= 0, $"{path} must call AddMonitorLogging.");
+            Assert.IsTrue(providerIndex < monitorIndex, $"{path} must call AddLoggingProvider before AddMonitorLogging.");
         }
     }
 }

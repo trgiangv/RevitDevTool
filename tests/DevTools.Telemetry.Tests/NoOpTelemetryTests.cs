@@ -2,9 +2,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Telemetry.Tests;
 
+[TestClass]
 public sealed class NoOpTelemetryTests
 {
-    [Fact]
+    [TestMethod]
     public void NoOp_methods_do_not_throw()
     {
         var t = new NoOpTelemetry();

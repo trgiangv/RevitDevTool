@@ -6,9 +6,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class LogFileNamingPolicyTests
 {
-    [Fact]
+    [TestMethod]
     public void StartupTrace_uses_crash_prefix_not_log_prefix()
     {
         var dir = Directory.CreateTempSubdirectory("log-policy-").FullName;
@@ -18,7 +19,7 @@ public sealed class LogFileNamingPolicyTests
             trace.Fail(new InvalidOperationException("boom"));
 
             var crashFile = Path.Combine(dir, "crash_Revit_2025_99.log");
-            Assert.True(File.Exists(crashFile));
+            Assert.IsTrue(File.Exists(crashFile));
             Assert.DoesNotContain("log_", Path.GetFileName(crashFile), StringComparison.Ordinal);
         }
         finally
@@ -27,7 +28,7 @@ public sealed class LogFileNamingPolicyTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void FileLogProcessor_uses_log_prefix_not_crash_prefix()
     {
         var dir = Directory.CreateTempSubdirectory("file-log-").FullName;
@@ -45,7 +46,7 @@ public sealed class LogFileNamingPolicyTests
             factory.CreateLogger("policy").LogInformation("hello");
 
             var logFile = Directory.GetFiles(dir, "log_*").SingleOrDefault();
-            Assert.NotNull(logFile);
+            Assert.IsNotNull(logFile);
             Assert.StartsWith("log_", Path.GetFileName(logFile), StringComparison.Ordinal);
             Assert.DoesNotContain("crash_", Path.GetFileName(logFile), StringComparison.Ordinal);
 

@@ -4,43 +4,46 @@ using DevTools.Settings.Configs;
 
 namespace DevTools.Settings.Tests;
 
+[TestClass]
 public sealed class GeneralConfigThemeJsonTests
 {
     private static string GoldenTheme0Path =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "general-config-theme-0.json");
 
-    [Fact]
+    [TestMethod]
     public void Ordinals_MatchUiThemeContract()
     {
-        Assert.Equal(0, (int)AppTheme.Light);
-        Assert.Equal(1, (int)AppTheme.Dark);
-        Assert.Equal(2, (int)AppTheme.Auto);
+#pragma warning disable MSTEST0032 // enum ordinals document the UI theme wire contract.
+        Assert.AreEqual(0, (int)AppTheme.Light);
+        Assert.AreEqual(1, (int)AppTheme.Dark);
+        Assert.AreEqual(2, (int)AppTheme.Auto);
+#pragma warning restore MSTEST0032
     }
 
-    [Fact]
+    [TestMethod]
     public void GoldenNumericTheme0_DeserializesToLight()
     {
         var json = File.ReadAllText(GoldenTheme0Path);
         Assert.Contains("\"theme\": 0", json, StringComparison.Ordinal);
 
         var config = JsonSerializer.Deserialize<GeneralConfig>(json);
-        Assert.NotNull(config);
-        Assert.Equal(AppTheme.Light, config.Theme);
+        Assert.IsNotNull(config);
+        Assert.AreEqual(AppTheme.Light, config.Theme);
     }
 
-    [Theory]
-    [InlineData(0, AppTheme.Light)]
-    [InlineData(1, AppTheme.Dark)]
-    [InlineData(2, AppTheme.Auto)]
+    [TestMethod]
+    [DataRow(0, AppTheme.Light)]
+    [DataRow(1, AppTheme.Dark)]
+    [DataRow(2, AppTheme.Auto)]
     public void NumericTheme_DeserializesToMatchingOrdinal(int stored, AppTheme expected)
     {
         var json = $"{{\"theme\":{stored}}}";
         var config = JsonSerializer.Deserialize<GeneralConfig>(json);
-        Assert.NotNull(config);
-        Assert.Equal(expected, config.Theme);
+        Assert.IsNotNull(config);
+        Assert.AreEqual(expected, config.Theme);
     }
 
-    [Fact]
+    [TestMethod]
     public void SettingsAssembly_DoesNotReferenceUiOrMahApps()
     {
         var names = typeof(GeneralConfig).Assembly.GetReferencedAssemblies()

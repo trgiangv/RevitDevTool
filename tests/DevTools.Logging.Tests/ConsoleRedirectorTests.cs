@@ -3,9 +3,10 @@ using DevTools.Logging.Listeners;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class ConsoleRedirectorTests
 {
-    [Fact]
+    [TestMethod]
     public void ConsoleRedirector_routes_console_to_trace_and_restores_on_dispose()
     {
         var originalOut = Console.Out;
@@ -27,8 +28,8 @@ public sealed class ConsoleRedirectorTests
                 Console.Out.Flush();
             }
 
-            Assert.Same(originalOut, Console.Out);
-            Assert.Same(originalError, Console.Error);
+            Assert.AreSame(originalOut, Console.Out);
+            Assert.AreSame(originalError, Console.Error);
             Assert.Contains("x", string.Concat(seen), StringComparison.Ordinal);
             Assert.Contains("hello", string.Concat(seen), StringComparison.Ordinal);
             Assert.Contains("line", string.Concat(seen), StringComparison.Ordinal);

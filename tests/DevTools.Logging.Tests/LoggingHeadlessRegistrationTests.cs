@@ -5,9 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class LoggingHeadlessRegistrationTests
 {
-    [Fact]
+    [TestMethod]
     public void AddLoggingProvider_resolves_ILogger_without_Presentation()
     {
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
@@ -19,7 +20,7 @@ public sealed class LoggingHeadlessRegistrationTests
 
         using var host = builder.Build();
         var logger = host.Services.GetRequiredService<ILogger<LoggingHeadlessRegistrationTests>>();
-        Assert.NotNull(logger);
+        Assert.IsNotNull(logger);
 
         var references = typeof(LoggingExtensions).Assembly
             .GetReferencedAssemblies()

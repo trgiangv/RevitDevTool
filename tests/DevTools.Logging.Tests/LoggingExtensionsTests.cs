@@ -5,9 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class LoggingExtensionsTests
 {
-    [Fact]
+    [TestMethod]
     public void SuppressHostingFrameworkLogs_filters_hosting_categories()
     {
         var services = new ServiceCollection();
@@ -19,17 +20,17 @@ public sealed class LoggingExtensionsTests
         using var provider = services.BuildServiceProvider();
         var factory = provider.GetRequiredService<ILoggerFactory>();
 
-        Assert.False(factory.CreateLogger("Microsoft.Extensions.Hosting.Internal.Host").IsEnabled(LogLevel.Information));
-        Assert.False(factory.CreateLogger("Microsoft.Hosting.Lifetime").IsEnabled(LogLevel.Information));
+        Assert.IsFalse(factory.CreateLogger("Microsoft.Extensions.Hosting.Internal.Host").IsEnabled(LogLevel.Information));
+        Assert.IsFalse(factory.CreateLogger("Microsoft.Hosting.Lifetime").IsEnabled(LogLevel.Information));
     }
 
-    [Fact]
+    [TestMethod]
     public void AddLoggingProvider_registers_logging_configuration()
     {
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
         builder.AddLoggingProvider();
 
         using var host = builder.Build();
-        Assert.NotNull(host.Services.GetService<LoggingConfiguration>());
+        Assert.IsNotNull(host.Services.GetService<LoggingConfiguration>());
     }
 }

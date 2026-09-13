@@ -2,9 +2,10 @@ using DevTools.FileMetadata.Core;
 
 namespace DevTools.FileMetadata.Core.Tests;
 
+[TestClass]
 public sealed class FileMetadataCoreAssemblyBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void FileMetadataCore_forbids_ui_logging_and_presentation_and_may_reference_hosting()
     {
         var references = typeof(FileInfoResult).Assembly

@@ -1,8 +1,9 @@
 namespace DevTools.Telemetry.Tests;
 
+[TestClass]
 public sealed class TelemetryPathScrubberTests
 {
-    [Fact]
+    [TestMethod]
     public void Scrub_replaces_windows_absolute_path()
     {
         var input = "Failed at C:\\Users\\me\\project\\file.py line 1";
@@ -11,10 +12,10 @@ public sealed class TelemetryPathScrubberTests
         Assert.Contains("[path]", scrubbed, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Scrub_empty_returns_empty()
     {
-        Assert.Equal(string.Empty, TelemetryPathScrubber.Scrub(null));
-        Assert.Equal(string.Empty, TelemetryPathScrubber.Scrub(""));
+        Assert.AreEqual(string.Empty, TelemetryPathScrubber.Scrub(null));
+        Assert.AreEqual(string.Empty, TelemetryPathScrubber.Scrub(""));
     }
 }

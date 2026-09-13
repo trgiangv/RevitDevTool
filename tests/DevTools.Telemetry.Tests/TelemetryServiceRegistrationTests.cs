@@ -2,27 +2,28 @@ using DevTools.Hosting;
 
 namespace DevTools.Telemetry.Tests;
 
+[TestClass]
 public sealed class TelemetryServiceRegistrationTests
 {
     private const string DummyDsn = "https://publickey@127.0.0.1/1";
 
-    [Fact]
+    [TestMethod]
     public void Resolve_returns_NoOp_when_disabled()
     {
         var services = new FakeServices();
         var telemetry = TelemetryServiceRegistration.Resolve(services, _ => false, _ => DummyDsn);
-        Assert.IsType<NoOpTelemetry>(telemetry);
+        Assert.IsInstanceOfType<NoOpTelemetry>(telemetry);
     }
 
-    [Fact]
+    [TestMethod]
     public void Resolve_returns_NoOp_when_dsn_missing()
     {
         var services = new FakeServices().Add<IHostAppInfo>(new FakeHostAppInfo());
         var telemetry = TelemetryServiceRegistration.Resolve(services, _ => true, _ => null);
-        Assert.IsType<NoOpTelemetry>(telemetry);
+        Assert.IsInstanceOfType<NoOpTelemetry>(telemetry);
     }
 
-    [Fact]
+    [TestMethod]
     public void Resolve_returns_NoOp_when_enable_callback_throws()
     {
         var services = new FakeServices();
@@ -30,10 +31,10 @@ public sealed class TelemetryServiceRegistrationTests
             services,
             _ => throw new InvalidOperationException("settings not ready"),
             _ => DummyDsn);
-        Assert.IsType<NoOpTelemetry>(telemetry);
+        Assert.IsInstanceOfType<NoOpTelemetry>(telemetry);
     }
 
-    [Fact]
+    [TestMethod]
     public void Resolve_returns_Sentry_when_enabled()
     {
         var prev = Environment.GetEnvironmentVariable("SENTRY_DSN");
@@ -42,7 +43,7 @@ public sealed class TelemetryServiceRegistrationTests
             Environment.SetEnvironmentVariable("SENTRY_DSN", null);
             var services = new FakeServices().Add<IHostAppInfo>(new FakeHostAppInfo());
             using var telemetry = TelemetryServiceRegistration.Resolve(services, _ => true, _ => DummyDsn);
-            Assert.IsType<SentryTelemetryService>(telemetry);
+            Assert.IsInstanceOfType<SentryTelemetryService>(telemetry);
         }
         finally
         {

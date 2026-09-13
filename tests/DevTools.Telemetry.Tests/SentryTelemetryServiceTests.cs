@@ -7,18 +7,19 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Telemetry.Tests;
 
+[TestClass]
 public sealed class SentryTelemetryServiceTests
 {
     private const string DummyDsn = "https://publickey@127.0.0.1/1";
 
-    [Fact]
+    [TestMethod]
     public void Constructor_validates_arguments()
     {
-        Assert.Throws<ArgumentNullException>(() => new SentryTelemetryService(DummyDsn, null!));
-        Assert.Throws<ArgumentException>(() => new SentryTelemetryService("  ", new FakeHostAppInfo()));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SentryTelemetryService(DummyDsn, null!));
+        Assert.ThrowsExactly<ArgumentException>(() => new SentryTelemetryService("  ", new FakeHostAppInfo()));
     }
 
-    [Fact]
+    [TestMethod]
     public void Record_methods_and_flush_do_not_throw()
     {
         var prev = Environment.GetEnvironmentVariable("SENTRY_DSN");
@@ -50,14 +51,14 @@ public sealed class SentryTelemetryServiceTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Flush_with_no_usage_is_noop()
     {
         using var telemetry = new SentryTelemetryService(DummyDsn, new FakeHostAppInfo());
         telemetry.Flush();
     }
 
-    [Fact]
+    [TestMethod]
     public void BuiltInSentryDsn_is_https_endpoint()
     {
         Assert.StartsWith("https://", BuiltInSentryDsn.Value, StringComparison.Ordinal);
@@ -72,9 +73,10 @@ public sealed class SentryTelemetryServiceTests
     }
 }
 
+[TestClass]
 public sealed class TelemetryExtensionsTests
 {
-    [Fact]
+    [TestMethod]
     public void AddDevToolsTelemetry_registers_ITelemetry()
     {
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
@@ -82,23 +84,24 @@ public sealed class TelemetryExtensionsTests
         builder.AddDevToolsTelemetry(_ => false, _ => null);
 
         using var host = builder.Build();
-        Assert.IsType<NoOpTelemetry>(host.Services.GetRequiredService<ITelemetry>());
+        Assert.IsInstanceOfType<NoOpTelemetry>(host.Services.GetRequiredService<ITelemetry>());
     }
 }
 
+[TestClass]
 public sealed class TelemetryReportingCoverageTests
 {
-    [Fact]
+    [TestMethod]
     public void ShouldReport_returns_false_for_task_canceled_and_inner_timeout()
     {
-        Assert.False(TelemetryReporting.ShouldReportCriticalException(new TaskCanceledException()));
-        Assert.False(TelemetryReporting.ShouldReportCriticalException(
+        Assert.IsFalse(TelemetryReporting.ShouldReportCriticalException(new TaskCanceledException()));
+        Assert.IsFalse(TelemetryReporting.ShouldReportCriticalException(
             new InvalidOperationException("wrap", new TimeoutException())));
     }
 
-    [Fact]
+    [TestMethod]
     public void ShouldReport_returns_true_for_other_exceptions()
     {
-        Assert.True(TelemetryReporting.ShouldReportCriticalException(new Exception("x")));
+        Assert.IsTrue(TelemetryReporting.ShouldReportCriticalException(new Exception("x")));
     }
 }

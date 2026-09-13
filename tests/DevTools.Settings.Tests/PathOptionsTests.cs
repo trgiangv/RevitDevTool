@@ -5,16 +5,17 @@ using Microsoft.Extensions.Options;
 
 namespace DevTools.Settings.Tests;
 
+[TestClass]
 public sealed class PathOptionsTests
 {
-    [Fact]
+    [TestMethod]
     public void GetSettingsPath_uses_type_name_and_settings_directory()
     {
         var options = new PathOptions { SettingsDirectory = @"C:\root\Settings" };
-        Assert.Equal(@"C:\root\Settings\GeneralConfig.json", options.GetSettingsPath<GeneralConfig>());
+        Assert.AreEqual(@"C:\root\Settings\GeneralConfig.json", options.GetSettingsPath<GeneralConfig>());
     }
 
-    [Fact]
+    [TestMethod]
     public void EnsureDirectoriesExist_creates_settings_and_logs_folders()
     {
         var root = Directory.CreateTempSubdirectory("path-options-").FullName;
@@ -26,8 +27,8 @@ public sealed class PathOptionsTests
                 LogsDirectory = Path.Combine(root, "Logs"),
             };
             options.EnsureDirectoriesExist();
-            Assert.True(Directory.Exists(options.SettingsDirectory));
-            Assert.True(Directory.Exists(options.LogsDirectory));
+            Assert.IsTrue(Directory.Exists(options.SettingsDirectory));
+            Assert.IsTrue(Directory.Exists(options.LogsDirectory));
         }
         finally
         {
@@ -35,7 +36,7 @@ public sealed class PathOptionsTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void AddSettingServices_registers_path_options_and_file_config()
     {
         var root = Directory.CreateTempSubdirectory("setting-services-").FullName;
@@ -46,11 +47,11 @@ public sealed class PathOptionsTests
             using var provider = services.BuildServiceProvider();
 
             var options = provider.GetRequiredService<IOptions<PathOptions>>().Value;
-            Assert.Equal(Path.Combine(root, "Settings"), options.SettingsDirectory);
-            Assert.Equal(Path.Combine(root, "Logs"), options.LogsDirectory);
-            Assert.True(Directory.Exists(options.SettingsDirectory));
-            Assert.True(Directory.Exists(options.LogsDirectory));
-            Assert.NotNull(provider.GetService<IFileConfig<PathOptions>>());
+            Assert.AreEqual(Path.Combine(root, "Settings"), options.SettingsDirectory);
+            Assert.AreEqual(Path.Combine(root, "Logs"), options.LogsDirectory);
+            Assert.IsTrue(Directory.Exists(options.SettingsDirectory));
+            Assert.IsTrue(Directory.Exists(options.LogsDirectory));
+            Assert.IsNotNull(provider.GetService<IFileConfig<PathOptions>>());
         }
         finally
         {

@@ -7,22 +7,23 @@ using ZLogger;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class StackTraceBuilderTests
 {
-    [Fact]
+    [TestMethod]
     public void BuildStackTrace_returns_empty_when_depth_is_zero()
     {
-        Assert.Equal(string.Empty, StackTraceBuilder.BuildStackTrace(null, 0));
-        Assert.Equal(string.Empty, StackTraceBuilder.BuildStackTrace(null, -1));
+        Assert.AreEqual(string.Empty, StackTraceBuilder.BuildStackTrace(null, 0));
+        Assert.AreEqual(string.Empty, StackTraceBuilder.BuildStackTrace(null, -1));
     }
 
-    [Fact]
+    [TestMethod]
     public void BuildStackTrace_returns_empty_for_null_cache()
     {
-        Assert.Equal(string.Empty, StackTraceBuilder.BuildStackTrace(null, 3));
+        Assert.AreEqual(string.Empty, StackTraceBuilder.BuildStackTrace(null, 3));
     }
 
-    [Fact]
+    [TestMethod]
     public void BuildStackTrace_formats_callstack_lines()
     {
         TraceEventCache? cache = null;
@@ -33,7 +34,7 @@ public sealed class StackTraceBuilderTests
         });
         EmitTrace(source);
 
-        Assert.NotNull(cache);
+        Assert.IsNotNull(cache);
         var stack = StackTraceBuilder.BuildStackTrace(
             cache,
             maxDepth: 4,

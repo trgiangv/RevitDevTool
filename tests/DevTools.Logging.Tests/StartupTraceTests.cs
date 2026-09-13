@@ -2,7 +2,8 @@ using DevTools.Logging.Diagnostics;
 
 namespace DevTools.Logging.Tests;
 
-[Collection(nameof(StartupTrace))]
+[DoNotParallelize]
+[TestClass]
 public sealed class StartupTraceTests : IDisposable
 {
     private readonly string _dir = Directory.CreateTempSubdirectory("startup-trace-").FullName;
@@ -20,7 +21,7 @@ public sealed class StartupTraceTests : IDisposable
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Dispose_without_Fail_creates_no_file()
     {
         using (var trace = StartupTrace.Begin("Revit", "26.0", 4242, _dir))
@@ -28,11 +29,11 @@ public sealed class StartupTraceTests : IDisposable
             trace.Mark("Host.Start");
         }
 
-        Assert.Empty(Directory.GetFiles(_dir));
-        Assert.Null(StartupTrace.Current);
+        Assert.IsEmpty(Directory.GetFiles(_dir));
+        Assert.IsNull(StartupTrace.Current);
     }
 
-    [Fact]
+    [TestMethod]
     public void Fail_writes_crash_file_with_elapsed_and_exception()
     {
         var trace = StartupTrace.Begin("Revit", "26.0", 4242, _dir);
@@ -43,7 +44,7 @@ public sealed class StartupTraceTests : IDisposable
         trace.Fail(new Exception("second"));
 
         var path = Path.Combine(_dir, "crash_Revit_26.0_4242.log");
-        Assert.True(File.Exists(path));
+        Assert.IsTrue(File.Exists(path));
         var text = File.ReadAllText(path);
         Assert.Contains("app=Revit ver=26.0 pid=4242", text, StringComparison.Ordinal);
         Assert.Contains("+", text, StringComparison.Ordinal);
@@ -52,16 +53,15 @@ public sealed class StartupTraceTests : IDisposable
         Assert.Contains("FAIL InvalidOperationException", text, StringComparison.Ordinal);
         Assert.Contains("startup exploded", text, StringComparison.Ordinal);
         Assert.DoesNotContain("second", text, StringComparison.Ordinal);
-        Assert.Single(Directory.GetFiles(_dir));
+        Assert.HasCount(1, Directory.GetFiles(_dir));
     }
 
-    [Fact]
+    [TestMethod]
     public void Fail_does_not_throw_when_folder_is_invalid()
     {
         var blocked = Path.Combine(_dir, "not-a-directory");
         File.WriteAllText(blocked, "x");
         using var trace = StartupTrace.Begin("Revit", "26.0", 1, blocked);
-        var ex = Record.Exception(() => trace.Fail(new InvalidOperationException("x")));
-        Assert.Null(ex);
+        trace.Fail(new InvalidOperationException("x"));
     }
 }

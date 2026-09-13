@@ -2,9 +2,10 @@ using DevTools.Telemetry;
 
 namespace DevTools.Telemetry.Tests;
 
+[TestClass]
 public sealed class TelemetryAssemblyBoundaryTests
 {
-    [Fact]
+    [TestMethod]
     public void Telemetry_assembly_forbids_settings_ui_logging_and_utilities()
     {
         var references = typeof(ITelemetry).Assembly
@@ -21,7 +22,7 @@ public sealed class TelemetryAssemblyBoundaryTests
         Assert.Contains("Sentry", references);
     }
 
-    [Fact]
+    [TestMethod]
     public void Telemetry_csproj_references_hosting_and_sentry_only()
     {
         var csproj = File.ReadAllText(Path.Combine(
@@ -38,12 +39,12 @@ public sealed class TelemetryAssemblyBoundaryTests
         Assert.DoesNotContain("DevTools.UI", csproj, StringComparison.OrdinalIgnoreCase);
     }
 
-    [Fact]
+    [TestMethod]
     public void Telemetry_source_has_no_settings_ui_logging_or_utilities()
     {
         var telemetryDir = Path.Combine(RepositoryRoot.Find(), "source", "DevTools.Telemetry");
         var sources = Directory.GetFiles(telemetryDir, "*.cs", SearchOption.AllDirectories);
-        Assert.NotEmpty(sources);
+        Assert.IsNotEmpty(sources);
 
         string[] forbidden =
         [
@@ -64,7 +65,7 @@ public sealed class TelemetryAssemblyBoundaryTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Host_source_supplies_enable_and_dsn()
     {
         var root = RepositoryRoot.Find();

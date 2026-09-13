@@ -4,11 +4,12 @@ using DevTools.Hosting;
 
 namespace DevTools.FileMetadata.Core.Tests;
 
+[TestClass]
 public sealed class FileInfoResultHostAppJsonTests
 {
-    [Theory]
-    [InlineData(HostApp.Revit, "\"hostApp\":\"Revit\"")]
-    [InlineData(HostApp.AutoCad, "\"hostApp\":\"AutoCad\"")]
+    [TestMethod]
+    [DataRow(HostApp.Revit, "\"hostApp\":\"Revit\"")]
+    [DataRow(HostApp.AutoCad, "\"hostApp\":\"AutoCad\"")]
     public void FileInfoResult_serializes_family_host_app_as_wire_string(HostApp hostApp, string expected)
     {
         FileInfoResult result = new TestFileInfoResult
@@ -26,12 +27,12 @@ public sealed class FileInfoResultHostAppJsonTests
         Assert.DoesNotContain("\"hostApp\":\"AcadMep\"", json, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void IFileReader_keeps_supported_extensions()
     {
         IFileReader reader = new StubFileReader();
 
-        Assert.Equal([".rvt"], reader.SupportedExtensions);
+        Assert.AreSequenceEqual([".rvt"], reader.SupportedExtensions);
     }
 
     private sealed class TestFileInfoResult : FileInfoResult;

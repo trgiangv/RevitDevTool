@@ -5,9 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class LogTargetProcessorTests
 {
-    [Fact]
+    [TestMethod]
     public void FileLogProcessor_json_format_disable_and_wrong_type()
     {
         var dir = Directory.CreateTempSubdirectory("file-json-").FullName;
@@ -15,7 +16,7 @@ public sealed class LogTargetProcessorTests
         {
             using var factory = LoggerFactory.Create(static _ => { });
             var processor = new FileLogProcessor(factory, new StubHostAppInfo());
-            Assert.Throws<ArgumentException>(() => processor.Enable("not-options"));
+            Assert.ThrowsExactly<ArgumentException>(() => processor.Enable("not-options"));
 
             processor.Enable(new FileLoggingOptions
             {
@@ -23,7 +24,7 @@ public sealed class LogTargetProcessorTests
                 Format = SaveFormat.Json,
             });
             factory.CreateLogger("json").LogInformation("payload");
-            Assert.Contains(Directory.GetFiles(dir, "log_*.json"), static f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
+            Assert.IsTrue(Directory.GetFiles(dir, "log_*.json").Any(static f => f.EndsWith(".json", StringComparison.OrdinalIgnoreCase)));
 
             processor.Disable();
             processor.Enable(new FileLoggingOptions { LogFolder = dir, Format = SaveFormat.Text });
@@ -36,12 +37,12 @@ public sealed class LogTargetProcessorTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void HttpLogProcessor_empty_endpoint_disables_and_wrong_type()
     {
         using var factory = LoggerFactory.Create(static _ => { });
         var processor = new HttpLogProcessor(factory);
-        Assert.Throws<ArgumentException>(() => processor.Enable("bad"));
+        Assert.ThrowsExactly<ArgumentException>(() => processor.Enable("bad"));
 
         processor.Enable(new HttpLoggingOptions { Endpoint = "   " });
         processor.Enable(new HttpLoggingOptions

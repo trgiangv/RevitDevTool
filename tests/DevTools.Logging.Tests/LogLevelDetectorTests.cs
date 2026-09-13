@@ -3,66 +3,67 @@ using Microsoft.Extensions.Logging;
 
 namespace DevTools.Logging.Tests;
 
+[TestClass]
 public sealed class LogLevelDetectorTests
 {
-    [Theory]
-    [InlineData("[ERROR] boom", LogLevel.Error)]
-    [InlineData("  [WARN] slow", LogLevel.Warning)]
-    [InlineData("[INF] ok", LogLevel.Information)]
-    [InlineData("[DBG] detail", LogLevel.Debug)]
-    [InlineData("[TRACE] fine", LogLevel.Trace)]
-    [InlineData("[FATAL] dead", LogLevel.Critical)]
+    [TestMethod]
+    [DataRow("[ERROR] boom", LogLevel.Error)]
+    [DataRow("  [WARN] slow", LogLevel.Warning)]
+    [DataRow("[INF] ok", LogLevel.Information)]
+    [DataRow("[DBG] detail", LogLevel.Debug)]
+    [DataRow("[TRACE] fine", LogLevel.Trace)]
+    [DataRow("[FATAL] dead", LogLevel.Critical)]
     public void Detect_uses_bracket_prefixes(string message, LogLevel expected)
     {
-        Assert.Equal(expected, LogLevelDetector.Detect(message, [], [], [], []));
+        Assert.AreEqual(expected, LogLevelDetector.Detect(message, [], [], [], []));
     }
 
-    [Fact]
+    [TestMethod]
     public void Detect_uses_custom_keywords_when_no_prefix()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             LogLevel.Critical,
             LogLevelDetector.Detect("disk full", ["full"], [], [], []));
-        Assert.Equal(
+        Assert.AreEqual(
             LogLevel.Error,
             LogLevelDetector.Detect("request failed", [], ["failed"], [], []));
-        Assert.Equal(
+        Assert.AreEqual(
             LogLevel.Warning,
             LogLevelDetector.Detect("slow query", [], [], ["slow"], []));
-        Assert.Equal(
+        Assert.AreEqual(
             LogLevel.Information,
             LogLevelDetector.Detect("started", [], [], [], ["started"]));
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow("   ")]
     public void ParseKeywords_returns_empty_for_blank_input(string? input)
     {
-        Assert.Empty(LogLevelDetector.ParseKeywords(input));
+        Assert.IsEmpty(LogLevelDetector.ParseKeywords(input));
     }
 
-    [Fact]
+    [TestMethod]
     public void ParseKeywords_trims_splits_and_lowercases_up_to_five()
     {
         var keywords = LogLevelDetector.ParseKeywords(" One, TWO , ,three,Four,FIVE,SIX ");
-        Assert.Equal(["one", "two", "three", "four", "five"], keywords);
+        Assert.AreSequenceEqual(["one", "two", "three", "four", "five"], keywords);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("a,b,c")]
+    [TestMethod]
+    [DataRow(null)]
+    [DataRow("")]
+    [DataRow("a,b,c")]
     public void ValidateKeywords_allows_up_to_five_keywords(string? input)
     {
-        Assert.Null(LogLevelDetector.ValidateKeywords(input));
+        Assert.IsNull(LogLevelDetector.ValidateKeywords(input));
     }
 
-    [Fact]
+    [TestMethod]
     public void ValidateKeywords_rejects_more_than_five_keywords()
     {
-        Assert.Equal(
+        Assert.AreEqual(
             "Maximum 5 keywords allowed",
             LogLevelDetector.ValidateKeywords("a,b,c,d,e,f"));
     }
