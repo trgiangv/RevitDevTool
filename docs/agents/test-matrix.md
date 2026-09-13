@@ -84,7 +84,7 @@ Last Coverlet snapshot below is historical (2026-09-04). New runs use `--coverag
 | MCP Core/Catalog/Server/Client + Daemon | **≥80% line** (last snapshot) | Daemon is **MewUI**, not WPF. Adapter/live pipe is host-process (out of gate). |
 | Execution | Tests exist in scoped MSTest.Sdk projects; measure with `--coverage` | Independent of Revit.exe — mock `IHostContextExecutor`. See Current gaps. |
 | Ipc | **Low in merge (~21%)** | No dedicated test project; framing covered via Execution / Testing.Transport. |
-| NUnit / Testing | **Medium–high** | In-host product; xUnit harness is out of process. |
+| NUnit / Testing | **Medium–high** | In-host product; in-repo testhosts are MSTest.Sdk (out of process). |
 | Settings / Logging / Telemetry / Utilities / FileMetadata.Core / Hosting | **≥80% line** | Hosting.Revit/Acad remain out of the out-of-host gate. |
 
 ---
@@ -265,5 +265,5 @@ Measure Execution (and other net10 testhosts) with `--coverage`.
 State the **feature gap** (e.g. "pytest bridge: no in-host `PytestRunner.py` run"), missing
 build artifact, or environment (pixi, host PID). Do not claim full platform verification
 when only compile or a single project passed. Optional fixtures must **Skip**, not Fail.
-Do not treat a low Coverlet % as a product bug without checking **Current gaps** first.
+Do not treat a low coverage % as a product bug without checking **Current gaps** first.
 Do not add tests or features that assume Daemon is WPF, Execution needs Revit.exe, or pixi is opt-in `RUN_PIXI_SMOKE`.

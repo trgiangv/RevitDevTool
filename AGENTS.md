@@ -23,7 +23,7 @@ Read the **minimum** layer for the task. Do not duplicate docs into chat.
 |---------|----------|
 | Don't know where code belongs | `docs/agents/host-boundaries.md` — shared `DevTools.*` vs `RevitDevTool` / `AcadDevTool` |
 | Build fails / unsure what to run | `.agents/skills/build/SKILL.md` |
-| Test path looks wrong / Skip / Coverlet % | `docs/agents/test-matrix.md` — **Current gaps** + untestable limits **before** adding tests or “raising coverage” |
+| Test path looks wrong / Skip / coverage % | `docs/agents/test-matrix.md` — **Current gaps** + untestable limits **before** adding tests or “raising coverage” |
 | MCP live behavior | `docs/agents/mcp-integration-test.md` |
 | Need logs to diagnose host/Daemon | `docs/agents/verification.md` → Diagnostic logs (`crash_*` if add-in failed to load) |
 | Host pytest/control pipe (in-repo) | `docs/agents/mcp-pytest-bridge.md` |

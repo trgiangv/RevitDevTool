@@ -113,7 +113,7 @@ not a product regression. When a live host is unavailable, name the skipped step
 |---------|--------------|---------|
 | CS errors after editing `DevTools.*` | Shared multi-TFM break | Compile the project you touched |
 | CS errors only on `net48` | Polyfill / API surface | Same csproj with `-c Debug.Autodesk.2022` |
-| MSB3027 / file locked | Target host year is running, or a second MTP testhost holds `tests/*/bin` | Host: `scripts/kill-host.ps1 -HostApp Revit -Year 2025`. Testhost: do not spawn a second Coverlet (`test-matrix.md`) |
+| MSB3027 / file locked | Target host year is running, or a second MTP testhost holds `tests/*/bin` | Host: `scripts/kill-host.ps1 -HostApp Revit -Year 2025`. Testhost: do not spawn a second coverage run (`test-matrix.md`) |
 | Deploy did not update the DLL | Built with the compile-only props | Stop only the target year, then `scripts/build-host.ps1 -Year 2025` |
 | MCP tools = 0 in Cursor | Bad daemon `outputSchema` or stale bundle | Republish the daemon, reload MCP (`mcp-integration-test.md`) |
 | Host starts but add-in missing / no pipe | Startup threw before FileLogProcessor | `%APPDATA%\RevitDevTool\{Year}\Logs\crash_*`, then `docs/agents/verification.md` |
