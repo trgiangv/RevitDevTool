@@ -4,9 +4,10 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class ReparsePointContainmentTests
 {
-    [Fact]
+    [TestMethod]
     public void Managed_candidate_through_a_child_link_is_rejected_even_though_its_lexical_path_is_under_the_root()
     {
         using var workload = ReparsePointWorkload.Create();
@@ -18,15 +19,15 @@ public sealed class ReparsePointContainmentTests
                 .AddManagedSource(new FixedManagedSource(candidate))
                 .WithDiagnosticSink(diagnostics));
 
-        Assert.True(IsLexicallyUnderRoot(candidate.Path, candidate.Root));
+        Assert.IsTrue(IsLexicallyUnderRoot(candidate.Path, candidate.Root));
 
         var resolved = session.ResolveManagedForTesting(typeof(ReparsePointContainmentTests).Assembly.GetName());
 
-        Assert.Null(resolved);
+        Assert.IsNull(resolved);
         AssertRejected(diagnostics, "managed-candidate-rejected", candidate);
     }
 
-    [Fact]
+    [TestMethod]
     public void Native_candidate_through_a_child_link_is_rejected_even_though_its_lexical_path_is_under_the_root()
     {
         using var workload = ReparsePointWorkload.Create();
@@ -38,15 +39,15 @@ public sealed class ReparsePointContainmentTests
                 .AddNativeSource(new FixedNativeSource(candidate))
                 .WithDiagnosticSink(diagnostics));
 
-        Assert.True(IsLexicallyUnderRoot(candidate.Path, candidate.Root));
+        Assert.IsTrue(IsLexicallyUnderRoot(candidate.Path, candidate.Root));
 
-        Assert.Equal(nint.Zero, session.ResolveNativeForTesting("linked-native"));
+        Assert.AreEqual(nint.Zero, session.ResolveNativeForTesting("linked-native"));
         AssertRejected(diagnostics, "native-candidate-rejected", candidate);
     }
 
     static void AssertRejected(RecordingDiagnosticSink diagnostics, string code, AssemblyCandidate candidate)
     {
-        var diagnostic = Assert.Single(diagnostics.Diagnostics, diagnostic => diagnostic.Code == code);
+        var diagnostic = diagnostics.Diagnostics.Single(diagnostic => diagnostic.Code == code);
         Assert.Contains(candidate.Path, diagnostic.Message, StringComparison.Ordinal);
         Assert.Contains("outside its root", diagnostic.Message, StringComparison.Ordinal);
     }

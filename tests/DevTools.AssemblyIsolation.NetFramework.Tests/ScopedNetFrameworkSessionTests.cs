@@ -6,12 +6,13 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 
+[TestClass]
 public sealed class ScopedNetFrameworkSessionTests
 {
-    [Fact]
+    [TestMethod]
     public void Scoped_session_resolves_only_while_its_assembly_resolve_handler_is_registered()
     {
-        Assert.Equal(4, Environment.Version.Major);
+        Assert.AreEqual(4, Environment.Version.Major);
         Assert.Contains(".NET Framework", RuntimeInformation.FrameworkDescription, StringComparison.Ordinal);
 
         using var workload = FixtureWorkload.Create();
@@ -26,16 +27,16 @@ public sealed class ScopedNetFrameworkSessionTests
 
         var activeResult = (string)loadDependency.Invoke(null, null)!;
 
-        Assert.Equal("System.Private.IsolationFixture", new AssemblyName(activeResult).Name);
+        Assert.AreEqual("System.Private.IsolationFixture", new AssemblyName(activeResult).Name);
 
         session.Dispose();
         session.Dispose();
 
-        var failure = Assert.Throws<TargetInvocationException>(() => loadAfterDisposeDependency.Invoke(null, null));
-        Assert.IsType<FileNotFoundException>(failure.InnerException);
+        var failure = Assert.ThrowsExactly<TargetInvocationException>(() => loadAfterDisposeDependency.Invoke(null, null));
+        Assert.IsInstanceOfType<FileNotFoundException>(failure.InnerException);
     }
 
-    [Fact]
+    [TestMethod]
     public void InsertFirst_runs_before_an_already_registered_resolver()
     {
         var order = new List<string>();
@@ -64,9 +65,9 @@ public sealed class ScopedNetFrameworkSessionTests
                 {
                 }
 
-                Assert.True(order.Count >= 2, string.Join(",", order));
-                Assert.Equal("pin", order[0]);
-                Assert.Equal("costura", order[1]);
+                Assert.IsTrue(order.Count >= 2, string.Join(",", order));
+                Assert.AreEqual("pin", order[0]);
+                Assert.AreEqual("costura", order[1]);
             }
             finally
             {
@@ -79,7 +80,7 @@ public sealed class ScopedNetFrameworkSessionTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Scoped_session_pin_wins_against_an_earlier_simple_name_resolver()
     {
         using var workload = FixtureWorkload.Create();
@@ -116,11 +117,11 @@ public sealed class ScopedNetFrameworkSessionTests
 
             var shadowPath = Path.GetFullPath(Path.Combine(workload.Directory, "System.Private.IsolationFixture.dll"));
             Assert.Contains(
-                AppDomain.CurrentDomain.GetAssemblies(),
                 assembly => !assembly.IsDynamic
                     && !string.IsNullOrEmpty(assembly.Location)
                     && string.Equals(assembly.GetName().Name, "System.Private.IsolationFixture", StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(Path.GetFullPath(assembly.Location), shadowPath, StringComparison.OrdinalIgnoreCase));
+                    && string.Equals(Path.GetFullPath(assembly.Location), shadowPath, StringComparison.OrdinalIgnoreCase),
+                AppDomain.CurrentDomain.GetAssemblies());
         }
         finally
         {
@@ -128,7 +129,7 @@ public sealed class ScopedNetFrameworkSessionTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Isolated_session_does_not_claim_to_unload_default_app_domain_assemblies()
     {
         var entry = typeof(ScopedNetFrameworkSessionTests).Assembly;
@@ -137,16 +138,16 @@ public sealed class ScopedNetFrameworkSessionTests
                 .WithKind(AssemblyIsolationKind.Isolated)
                 .Pin(entry));
 
-        Assert.Same(entry, session.LoadEntryAssembly());
+        Assert.AreSame(entry, session.LoadEntryAssembly());
 
         var result = session.VerifyUnload();
 
-        Assert.False(result.IsCollectible);
-        Assert.False(result.IsUnloaded);
-        Assert.NotNull(result.Detail);
+        Assert.IsFalse(result.IsCollectible);
+        Assert.IsFalse(result.IsUnloaded);
+        Assert.IsNotNull(result.Detail);
     }
 
-    [Fact]
+    [TestMethod]
     public void Distinct_file_load_reuses_the_same_path()
     {
         using var workload = FixtureWorkload.Create();
@@ -158,10 +159,10 @@ public sealed class ScopedNetFrameworkSessionTests
         var first = session.LoadFromPath(workload.EntryPath);
         var second = session.LoadFromPath(workload.EntryPath);
 
-        Assert.Same(first, second);
+        Assert.AreSame(first, second);
     }
 
-    [Fact]
+    [TestMethod]
     public void Scoped_session_rejects_a_managed_candidate_that_escapes_through_a_child_link()
     {
         using var fixture = FixtureWorkload.Create();
@@ -177,14 +178,13 @@ public sealed class ScopedNetFrameworkSessionTests
         var loadDependency = entry.GetType("IsolationEntry.Entry", throwOnError: true)!
             .GetMethod("GetAfterDisposeDependencyName", BindingFlags.Public | BindingFlags.Static)!;
 
-        Assert.True(ReparsePointWorkload.IsLexicallyUnderRoot(candidate.Path, candidate.Root));
-        Assert.True(File.Exists(candidate.Path), candidate.Path);
+        Assert.IsTrue(ReparsePointWorkload.IsLexicallyUnderRoot(candidate.Path, candidate.Root));
+        Assert.IsTrue(File.Exists(candidate.Path), candidate.Path);
 
-        var failure = Assert.Throws<TargetInvocationException>(() => loadDependency.Invoke(null, null));
+        var failure = Assert.ThrowsExactly<TargetInvocationException>(() => loadDependency.Invoke(null, null));
 
-        Assert.IsType<FileNotFoundException>(failure.InnerException);
-        var diagnostic = Assert.Single(
-            diagnostics.Diagnostics,
+        Assert.IsInstanceOfType<FileNotFoundException>(failure.InnerException);
+        var diagnostic = diagnostics.Diagnostics.Single(
             item => item.Code == "managed-candidate-rejected"
                     && string.Equals(item.RequestedAssembly?.Name, "System.Private.AfterDisposeFixture", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(candidate.Path, diagnostic.Message, StringComparison.Ordinal);

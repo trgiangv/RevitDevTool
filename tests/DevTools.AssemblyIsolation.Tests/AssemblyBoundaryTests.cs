@@ -4,6 +4,7 @@ using DevTools.AssemblyIsolation.Identity;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class AssemblyBoundaryTests
 {
     static readonly string[] ForbiddenReferences =
@@ -18,14 +19,14 @@ public sealed class AssemblyBoundaryTests
         "ZLogger",
     ];
 
-    [Fact]
+    [TestMethod]
     public void Assembly_isolation_project_is_a_host_neutral_leaf()
     {
         var projectDirectory = Path.Combine(FindRepositoryRoot(), "source", "DevTools.AssemblyIsolation");
         var sourceFiles = Directory.GetFiles(projectDirectory, "*.cs", SearchOption.AllDirectories)
             .Where(path => !IsBuildArtifact(path, projectDirectory))
             .ToArray();
-        Assert.NotEmpty(sourceFiles);
+        Assert.IsNotEmpty(sourceFiles);
 
         var sourceAndProjectFiles = sourceFiles.Append(Path.Combine(projectDirectory, "DevTools.AssemblyIsolation.csproj"));
         var sourceViolations = sourceAndProjectFiles
@@ -45,14 +46,14 @@ public sealed class AssemblyBoundaryTests
             .Select(reference => $"references {reference}")
             .ToArray();
 
-        Assert.True(sourceViolations.Length == 0, string.Join(Environment.NewLine, sourceViolations));
-        Assert.True(referenceViolations.Length == 0, string.Join(Environment.NewLine, referenceViolations));
+        Assert.IsTrue(sourceViolations.Length == 0, string.Join(Environment.NewLine, sourceViolations));
+        Assert.IsTrue(referenceViolations.Length == 0, string.Join(Environment.NewLine, referenceViolations));
     }
 
-    [Theory]
-    [InlineData("net48")]
-    [InlineData("net8.0-windows")]
-    [InlineData("net10.0-windows")]
+    [TestMethod]
+    [DataRow("net48")]
+    [DataRow("net8.0-windows")]
+    [DataRow("net10.0-windows")]
     public void Assembly_isolation_project_has_only_the_allowed_resolved_package_reference(string targetFramework)
     {
         var project = Path.Combine(
@@ -77,7 +78,7 @@ public sealed class AssemblyBoundaryTests
         var error = process.StandardError.ReadToEnd();
         process.WaitForExit();
 
-        Assert.True(process.ExitCode == 0, error);
+        Assert.IsTrue(process.ExitCode == 0, error);
         using var result = JsonDocument.Parse(output);
         var packages = result.RootElement
             .GetProperty("Items")
@@ -87,7 +88,7 @@ public sealed class AssemblyBoundaryTests
                 ?? throw new InvalidOperationException("Package reference identity is missing."))
             .ToArray();
 
-        Assert.Equal(["System.Reflection.MetadataLoadContext", "Polyfill"], packages);
+        Assert.AreSequenceEqual(["System.Reflection.MetadataLoadContext", "Polyfill"], packages);
     }
 
     static bool IsBuildArtifact(string path, string projectDirectory)

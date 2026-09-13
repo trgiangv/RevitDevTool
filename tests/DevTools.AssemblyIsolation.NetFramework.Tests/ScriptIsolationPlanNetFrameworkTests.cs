@@ -4,9 +4,10 @@ using DevTools.Execution.Providers.CSharp;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 
+[TestClass]
 public sealed class ScriptIsolationPlanNetFrameworkTests
 {
-    [Fact]
+    [TestMethod]
     public void Scoped_script_plan_resolves_selected_nuget_assemblies_on_net_framework()
     {
         using var workload = ScriptFixtureWorkload.Create();
@@ -22,10 +23,10 @@ public sealed class ScriptIsolationPlanNetFrameworkTests
 
         var dependencyName = (string)method.Invoke(null, null)!;
 
-        Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
-        Assert.Single(plan.ManagedSources);
-        Assert.Empty(plan.NativeSources);
-        Assert.Equal("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
+        Assert.AreEqual(AssemblyIsolationKind.Isolated, plan.Kind);
+        Assert.AreEqual(1, plan.ManagedSources.Count);
+        Assert.IsEmpty(plan.NativeSources);
+        Assert.AreEqual("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
     }
 }
 

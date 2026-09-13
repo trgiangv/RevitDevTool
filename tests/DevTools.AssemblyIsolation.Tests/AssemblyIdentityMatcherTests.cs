@@ -3,78 +3,79 @@ using DevTools.AssemblyIsolation.Identity;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class AssemblyIdentityMatcherTests
 {
-    [Fact]
+    [TestMethod]
     public void Assembly_identity_mismatch_exception_rejects_a_null_requested_identity()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        Assert.ThrowsExactly<ArgumentNullException>(() =>
             new AssemblyMismatchException(null!, new AssemblyName("Contoso.Component")));
     }
 
-    [Fact]
+    [TestMethod]
     public void Assembly_identity_mismatch_exception_rejects_a_null_candidate_identity()
     {
-        Assert.Throws<ArgumentNullException>(() =>
+        Assert.ThrowsExactly<ArgumentNullException>(() =>
             new AssemblyMismatchException(new AssemblyName("Contoso.Component"), null!));
     }
 
-    [Fact]
+    [TestMethod]
     public void Is_compatible_matches_simple_names_case_insensitively()
     {
         var requested = new AssemblyName("Contoso.Component");
         var candidate = new AssemblyName("contoso.component");
 
-        Assert.True(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
+        Assert.IsTrue(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
     }
 
-    [Fact]
+    [TestMethod]
     public void Is_compatible_rejects_a_different_requested_version()
     {
         var requested = new AssemblyName("Contoso.Component, Version=2.0.0.0");
         var candidate = new AssemblyName("Contoso.Component, Version=1.0.0.0");
 
-        Assert.False(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
+        Assert.IsFalse(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
     }
 
-    [Fact]
+    [TestMethod]
     public void Is_compatible_with_version_drift_ignores_requested_version()
     {
         var requested = new AssemblyName("RevitAPIUI, Version=2025.0.0.0, Culture=neutral, PublicKeyToken=null");
         var parent = new AssemblyName("RevitAPIUI, Version=2025.0.2.0, Culture=neutral, PublicKeyToken=null");
 
-        Assert.False(AssemblyIdentityMatcher.IsCompatible(requested, parent));
-        Assert.True(AssemblyIdentityMatcher.IsCompatible(requested, parent, allowVersionDrift: true));
+        Assert.IsFalse(AssemblyIdentityMatcher.IsCompatible(requested, parent));
+        Assert.IsTrue(AssemblyIdentityMatcher.IsCompatible(requested, parent, allowVersionDrift: true));
     }
 
-    [Fact]
+    [TestMethod]
     public void Is_compatible_ignores_candidate_version_when_request_does_not_specify_one()
     {
         var requested = new AssemblyName("Contoso.Component");
         var candidate = new AssemblyName("Contoso.Component, Version=2.0.0.0");
 
-        Assert.True(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
+        Assert.IsTrue(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
     }
 
-    [Fact]
+    [TestMethod]
     public void Is_compatible_normalizes_neutral_culture()
     {
         var requested = new AssemblyName("Contoso.Component, Culture=neutral");
         var candidate = new AssemblyName("Contoso.Component");
 
-        Assert.True(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
+        Assert.IsTrue(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
     }
 
-    [Fact]
+    [TestMethod]
     public void Is_compatible_rejects_a_different_requested_culture()
     {
         var requested = new AssemblyName("Contoso.Component, Culture=fr-FR");
         var candidate = new AssemblyName("Contoso.Component, Culture=en-US");
 
-        Assert.False(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
+        Assert.IsFalse(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
     }
 
-    [Fact]
+    [TestMethod]
     public void Is_compatible_requires_an_exact_requested_public_key_token()
     {
         var requested = new AssemblyName("Contoso.Component");
@@ -82,10 +83,10 @@ public sealed class AssemblyIdentityMatcherTests
         var candidate = new AssemblyName("Contoso.Component");
         candidate.SetPublicKeyToken([0x04, 0x03, 0x02, 0x01]);
 
-        Assert.False(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
+        Assert.IsFalse(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
     }
 
-    [Fact]
+    [TestMethod]
     public void Is_compatible_accepts_an_exact_requested_public_key_token()
     {
         var requested = new AssemblyName("Contoso.Component");
@@ -93,6 +94,6 @@ public sealed class AssemblyIdentityMatcherTests
         var candidate = new AssemblyName("Contoso.Component");
         candidate.SetPublicKeyToken([0x01, 0x02, 0x03, 0x04]);
 
-        Assert.True(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
+        Assert.IsTrue(AssemblyIdentityMatcher.IsCompatible(requested, candidate));
     }
 }

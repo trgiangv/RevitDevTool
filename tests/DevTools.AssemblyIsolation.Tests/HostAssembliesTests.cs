@@ -2,17 +2,18 @@ using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class HostAssembliesTests
 {
-    [Fact]
+    [TestMethod]
     public void All_captures_type_anchors_once_and_skips_missing_names()
     {
         var host = new StubHostAssemblies();
         var first = host.All();
         var second = host.All();
 
-        Assert.Same(first, second);
-        Assert.Same(typeof(HostAssembliesTests).Assembly, Assert.Single(first));
+        Assert.AreSame(first, second);
+        Assert.AreSame(typeof(HostAssembliesTests).Assembly, first.Single());
     }
 
     sealed class StubHostAssemblies : HostAssemblies

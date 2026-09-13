@@ -6,9 +6,10 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class AssemblyIsolationPlanTests
 {
-    [Fact]
+    [TestMethod]
     public void Plan_composition_returns_new_instances_without_mutating_the_prior_plan()
     {
         var initial = AssemblyIsolationPlan.Create("entry.dll");
@@ -24,24 +25,24 @@ public sealed class AssemblyIsolationPlanTests
             .AddNativeSource(nativeSource)
             .WithDiagnosticSink(sink);
 
-        Assert.NotSame(initial, composed);
-        Assert.False(initial.LoadsFromDistinctFile);
-        Assert.True(composed.LoadsFromDistinctFile);
-        Assert.Equal(AssemblyIsolationKind.Permanent, initial.Kind);
-        Assert.Empty(initial.ManagedSources);
-        Assert.Empty(initial.NativeSources);
-        Assert.Null(initial.DiagnosticSink);
-        Assert.False(initial.TryShare(typeof(AssemblyIsolationPlanTests).Assembly.GetName(), out _));
+        Assert.AreNotSame(initial, composed);
+        Assert.IsFalse(initial.LoadsFromDistinctFile);
+        Assert.IsTrue(composed.LoadsFromDistinctFile);
+        Assert.AreEqual(AssemblyIsolationKind.Permanent, initial.Kind);
+        Assert.IsEmpty(initial.ManagedSources);
+        Assert.IsEmpty(initial.NativeSources);
+        Assert.IsNull(initial.DiagnosticSink);
+        Assert.IsFalse(initial.TryShare(typeof(AssemblyIsolationPlanTests).Assembly.GetName(), out _));
 
-        Assert.Equal(AssemblyIsolationKind.Isolated, composed.Kind);
-        Assert.Single(composed.ManagedSources);
-        Assert.Single(composed.NativeSources);
-        Assert.Same(sink, composed.DiagnosticSink);
-        Assert.True(composed.TryShare(typeof(AssemblyIsolationPlanTests).Assembly.GetName(), out var parent));
-        Assert.Same(typeof(AssemblyIsolationPlanTests).Assembly, parent);
+        Assert.AreEqual(AssemblyIsolationKind.Isolated, composed.Kind);
+        Assert.AreEqual(1, composed.ManagedSources.Count);
+        Assert.AreEqual(1, composed.NativeSources.Count);
+        Assert.AreSame(sink, composed.DiagnosticSink);
+        Assert.IsTrue(composed.TryShare(typeof(AssemblyIsolationPlanTests).Assembly.GetName(), out var parent));
+        Assert.AreSame(typeof(AssemblyIsolationPlanTests).Assembly, parent);
     }
 
-    [Fact]
+    [TestMethod]
     public void Plan_construction_rejects_incompatible_duplicate_shares()
     {
         var first = AssemblyBuilder.DefineDynamicAssembly(
@@ -53,22 +54,22 @@ public sealed class AssemblyIsolationPlanTests
 
         var plan = AssemblyIsolationPlan.Create("entry.dll").Share(first);
 
-        Assert.Throws<AssemblyMismatchException>(() => plan.Share(second));
+        Assert.ThrowsExactly<AssemblyMismatchException>(() => plan.Share(second));
     }
 
-    [Fact]
+    [TestMethod]
     public void Pin_rejects_requested_version_drift()
     {
         var loaded = typeof(AssemblyIsolationPlanTests).Assembly;
         var requested = new AssemblyName(loaded.FullName!) { Version = new Version(99, 0, 0, 0) };
         var plan = AssemblyIsolationPlan.Create("entry.dll").Pin(loaded);
 
-        var error = Assert.Throws<AssemblyMismatchException>(
+        var error = Assert.ThrowsExactly<AssemblyMismatchException>(
             () => plan.TryShare(requested, out _));
         Assert.Contains(loaded.GetName().Name!, error.Message, StringComparison.Ordinal);
     }
 
-    [Fact]
+    [TestMethod]
     public void Share_accepts_requested_version_drift_without_publishing()
     {
         var loaded = typeof(AssemblyIsolationPlanTests).Assembly;
@@ -78,19 +79,19 @@ public sealed class AssemblyIsolationPlanTests
             .Share(loaded)
             .WithDiagnosticSink(sink);
 
-        Assert.True(plan.TryShare(requested, out var actual));
-        Assert.Same(loaded, actual);
-        Assert.Empty(sink.Diagnostics);
+        Assert.IsTrue(plan.TryShare(requested, out var actual));
+        Assert.AreSame(loaded, actual);
+        Assert.IsEmpty(sink.Diagnostics);
     }
 
-    [Fact]
+    [TestMethod]
     public void Share_collapses_the_same_instance()
     {
         var loaded = typeof(AssemblyIsolationPlanTests).Assembly;
         var plan = AssemblyIsolationPlan.Create("entry.dll").Share(loaded).Share(loaded);
 
-        Assert.True(plan.TryShare(loaded.GetName(), out var actual));
-        Assert.Same(loaded, actual);
+        Assert.IsTrue(plan.TryShare(loaded.GetName(), out var actual));
+        Assert.AreSame(loaded, actual);
     }
 
     sealed class StubManagedSource : IManagedAssemblySource

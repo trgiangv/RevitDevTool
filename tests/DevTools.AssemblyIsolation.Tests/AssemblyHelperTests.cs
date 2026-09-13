@@ -2,26 +2,27 @@ using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class AssemblyHelperTests
 {
-    [Fact]
+    [TestMethod]
     public void Find_returns_an_assembly_already_in_the_default_context()
     {
         var loaded = typeof(AssemblyHelperTests).Assembly;
         var simpleName = loaded.GetName().Name!;
 
-        Assert.Same(loaded, AssemblyHelper.Find(simpleName));
-        Assert.Same(loaded, AssemblyHelper.Find(simpleName.ToUpperInvariant()));
+        Assert.AreSame(loaded, AssemblyHelper.Find(simpleName));
+        Assert.AreSame(loaded, AssemblyHelper.Find(simpleName.ToUpperInvariant()));
     }
 
-    [Fact]
+    [TestMethod]
     public void Find_does_not_load_a_missing_simple_name()
     {
-        Assert.Null(AssemblyHelper.Find("DevTools.Missing.HostApi"));
-        Assert.Null(AssemblyHelper.Find(" "));
+        Assert.IsNull(AssemblyHelper.Find("DevTools.Missing.HostApi"));
+        Assert.IsNull(AssemblyHelper.Find(" "));
     }
 
-    [Fact]
+    [TestMethod]
     public void Find_many_skips_missing_names_and_collapses_duplicates()
     {
         var loaded = typeof(AssemblyHelperTests).Assembly;
@@ -34,12 +35,12 @@ public sealed class AssemblyHelperTests
             simpleName.ToLowerInvariant(),
         ]).ToArray();
 
-        Assert.Same(loaded, Assert.Single(found));
+        Assert.AreSame(loaded, found.Single());
     }
 
-    [Fact]
+    [TestMethod]
     public void Find_many_rejects_a_null_name_list()
     {
-        Assert.Throws<ArgumentNullException>(() => AssemblyHelper.FindMany(null!).ToArray());
+        Assert.ThrowsExactly<ArgumentNullException>(() => AssemblyHelper.FindMany(null!).ToArray());
     }
 }

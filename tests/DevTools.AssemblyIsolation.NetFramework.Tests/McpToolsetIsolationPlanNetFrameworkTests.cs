@@ -4,9 +4,10 @@ using DevTools.Mcp.Catalog.Isolation;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 
+[TestClass]
 public sealed class McpToolsetIsolationPlanNetFrameworkTests
 {
-    [Fact]
+    [TestMethod]
     public void Scoped_mcp_context_loads_a_private_sibling_dependency_on_net_framework()
     {
         using var workload = McpFixtureWorkload.Create();
@@ -19,10 +20,10 @@ public sealed class McpToolsetIsolationPlanNetFrameworkTests
 
         var dependencyName = (string)method.Invoke(null, null)!;
 
-        Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
-        Assert.Single(plan.ManagedSources);
-        Assert.Empty(plan.NativeSources);
-        Assert.Equal("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
+        Assert.AreEqual(AssemblyIsolationKind.Isolated, plan.Kind);
+        Assert.AreEqual(1, plan.ManagedSources.Count);
+        Assert.IsEmpty(plan.NativeSources);
+        Assert.AreEqual("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
     }
 }
 

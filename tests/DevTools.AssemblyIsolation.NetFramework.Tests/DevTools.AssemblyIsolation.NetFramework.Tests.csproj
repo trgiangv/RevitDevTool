@@ -1,13 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="MSTest.Sdk">
+
     <PropertyGroup>
         <TargetFramework>net48</TargetFramework>
         <IsPackable>false</IsPackable>
         <DefaultItemExcludes>$(DefaultItemExcludes);Fixtures\**\*</DefaultItemExcludes>
+        <TestingExtensionsProfile>None</TestingExtensionsProfile>
+        <EnableMicrosoftTestingExtensionsCodeCoverage>false</EnableMicrosoftTestingExtensionsCodeCoverage>
     </PropertyGroup>
 
     <ItemGroup>
         <Compile Remove="Fixtures\**\*.cs" />
-        <PackageReference Include="xunit.v3" />
     </ItemGroup>
 
     <ItemGroup>
@@ -20,6 +22,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Xunit" />
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
     </ItemGroup>
 </Project>

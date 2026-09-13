@@ -3,9 +3,10 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class ManagedAssemblySourceTests
 {
-    [Fact]
+    [TestMethod]
     public void Manifest_lookup_selects_by_full_identity()
     {
         using var directory = new TemporaryDirectory();
@@ -18,11 +19,11 @@ public sealed class ManagedAssemblySourceTests
 
         var differentVersion = new AssemblyName(identity.FullName!) { Version = new Version(99, 0, 0, 0) };
 
-        Assert.Null(source.Resolve(differentVersion));
-        Assert.Equal(Path.GetFullPath(path), source.Resolve(identity)!.Path);
+        Assert.IsNull(source.Resolve(differentVersion));
+        Assert.AreEqual(Path.GetFullPath(path), source.Resolve(identity)!.Path);
     }
 
-    [Fact]
+    [TestMethod]
     public void Manifest_resolves_distinct_versions_of_the_same_simple_name()
     {
         using var directory = new TemporaryDirectory();
@@ -39,11 +40,11 @@ public sealed class ManagedAssemblySourceTests
             (newerIdentity, new AssemblyCandidate(newerPath, directory.Path)),
         ]);
 
-        Assert.Equal(Path.GetFullPath(olderPath), source.Resolve(olderIdentity)!.Path);
-        Assert.Equal(Path.GetFullPath(newerPath), source.Resolve(newerIdentity)!.Path);
+        Assert.AreEqual(Path.GetFullPath(olderPath), source.Resolve(olderIdentity)!.Path);
+        Assert.AreEqual(Path.GetFullPath(newerPath), source.Resolve(newerIdentity)!.Path);
     }
 
-    [Fact]
+    [TestMethod]
     public void Duplicate_compatible_manifest_candidates_use_the_first_declared_candidate()
     {
         using var directory = new TemporaryDirectory();
@@ -58,11 +59,11 @@ public sealed class ManagedAssemblySourceTests
 
         var candidate = source.Resolve(identity);
 
-        Assert.NotNull(candidate);
-        Assert.Equal(Path.GetFullPath(firstPath), candidate.Path);
+        Assert.IsNotNull(candidate);
+        Assert.AreEqual(Path.GetFullPath(firstPath), candidate.Path);
     }
 
-    [Fact]
+    [TestMethod]
     public void System_text_json_candidate_is_not_implicitly_shared()
     {
         using var directory = new TemporaryDirectory();
@@ -70,10 +71,10 @@ public sealed class ManagedAssemblySourceTests
         var candidate = new AssemblyCandidate(Path.Combine(directory.Path, "System.Text.Json.dll"), directory.Path);
         var source = new ManifestAssemblySource([(identity, candidate)]);
 
-        Assert.Same(candidate, source.Resolve(identity));
+        Assert.AreSame(candidate, source.Resolve(identity));
     }
 
-    [Fact]
+    [TestMethod]
     public void Microsoft_extensions_candidate_is_not_implicitly_shared()
     {
         using var directory = new TemporaryDirectory();
@@ -81,10 +82,10 @@ public sealed class ManagedAssemblySourceTests
         var candidate = new AssemblyCandidate(Path.Combine(directory.Path, "Microsoft.Extensions.Configuration.dll"), directory.Path);
         var source = new ManifestAssemblySource([(identity, candidate)]);
 
-        Assert.Same(candidate, source.Resolve(identity));
+        Assert.AreSame(candidate, source.Resolve(identity));
     }
 
-    [Fact]
+    [TestMethod]
     public void Directory_source_is_lazy_and_does_not_preload_siblings()
     {
         using var directory = new TemporaryDirectory();
@@ -94,11 +95,11 @@ public sealed class ManagedAssemblySourceTests
 
         _ = new DirectoryAssemblySource(directory.Path);
 
-        Assert.Equal(before, AppDomain.CurrentDomain.GetAssemblies().Length);
-        Assert.True(File.Exists(assemblyPath));
+        Assert.AreEqual(before, AppDomain.CurrentDomain.GetAssemblies().Length);
+        Assert.IsTrue(File.Exists(assemblyPath));
     }
 
-    [Fact]
+    [TestMethod]
     public void Directory_source_rejects_traversal_outside_its_allowed_root()
     {
         using var root = new TemporaryDirectory();
@@ -109,21 +110,21 @@ public sealed class ManagedAssemblySourceTests
 
         var traversal = new AssemblyName(identity.FullName!) { Name = Path.Combine("..", Path.GetFileName(outside.Path), identity.Name!) };
 
-        Assert.Null(source.Resolve(traversal));
+        Assert.IsNull(source.Resolve(traversal));
     }
 
-    [Fact]
+    [TestMethod]
     public void Candidate_outside_allowed_root_is_rejected()
     {
         using var root = new TemporaryDirectory();
         using var outside = new TemporaryDirectory();
 
-        Assert.Throws<ArgumentException>(() => new AssemblyCandidate(
+        Assert.ThrowsExactly<ArgumentException>(() => new AssemblyCandidate(
             Path.Combine(outside.Path, "Outside.Root.Component.dll"),
             root.Path));
     }
 
-    [Fact]
+    [TestMethod]
     public void Candidate_deconstructs_to_its_normalized_public_contract_values()
     {
         using var directory = new TemporaryDirectory();
@@ -133,11 +134,11 @@ public sealed class ManagedAssemblySourceTests
 
         var (path, root) = candidate;
 
-        Assert.Equal(Path.Combine(directory.Path, "Component.dll"), path);
-        Assert.Equal(directory.Path, root);
+        Assert.AreEqual(Path.Combine(directory.Path, "Component.dll"), path);
+        Assert.AreEqual(directory.Path, root);
     }
 
-    [Fact]
+    [TestMethod]
     public void Directory_source_returns_null_for_a_malformed_matching_dll()
     {
         using var directory = new TemporaryDirectory();
@@ -145,10 +146,10 @@ public sealed class ManagedAssemblySourceTests
         File.WriteAllText(Path.Combine(directory.Path, "Malformed.Component.dll"), "not a managed assembly");
         var source = new DirectoryAssemblySource(directory.Path);
 
-        Assert.Null(source.Resolve(identity));
+        Assert.IsNull(source.Resolve(identity));
     }
 
-    [Fact]
+    [TestMethod]
     public void Manifest_source_construction_does_not_load_an_assembly()
     {
         using var directory = new TemporaryDirectory();
@@ -160,7 +161,7 @@ public sealed class ManagedAssemblySourceTests
             (typeof(ManagedAssemblySourceTests).Assembly.GetName(), new AssemblyCandidate(path, directory.Path)),
         ]);
 
-        Assert.Equal(before, AppDomain.CurrentDomain.GetAssemblies().Length);
+        Assert.AreEqual(before, AppDomain.CurrentDomain.GetAssemblies().Length);
     }
 
     static string CopyAssembly(string directory, Assembly assembly, string? name = null)

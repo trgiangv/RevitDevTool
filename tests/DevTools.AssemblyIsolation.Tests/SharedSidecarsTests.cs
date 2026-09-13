@@ -2,23 +2,24 @@ using DevTools.AssemblyIsolation;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class SharedSidecarsTests
 {
-    [Theory]
-    [InlineData("MahApps.Metro", true)]
-    [InlineData("controlzex", true)]
-    [InlineData("Microsoft.Xaml.Behaviors", true)]
-    [InlineData("DevTools.UI", false)]
-    [InlineData(null, false)]
+    [TestMethod]
+    [DataRow("MahApps.Metro", true)]
+    [DataRow("controlzex", true)]
+    [DataRow("Microsoft.Xaml.Behaviors", true)]
+    [DataRow("DevTools.UI", false)]
+    [DataRow(null, false)]
     public void Contains_recognizes_known_sidecar_simple_names(string? name, bool expected)
     {
-        Assert.Equal(expected, SharedSidecars.Contains(name));
+        Assert.AreEqual(expected, SharedSidecars.Contains(name));
     }
 
-    [Fact]
+    [TestMethod]
     public void ShareFromDirectory_requires_directory()
     {
         var plan = AssemblyIsolationPlan.Create("entry.dll");
-        Assert.Throws<ArgumentException>(() => SharedSidecars.ShareFromDirectory(plan, " "));
+        Assert.ThrowsExactly<ArgumentException>(() => SharedSidecars.ShareFromDirectory(plan, " "));
     }
 }

@@ -4,9 +4,10 @@ using DevTools.Execution.Providers.Dotnet;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 
+[TestClass]
 public sealed class CommandIsolationPlanNetFrameworkTests
 {
-    [Fact]
+    [TestMethod]
     public void Scoped_command_plan_loads_a_private_sibling_dependency_on_net_framework()
     {
         using var workload = CommandFixtureWorkload.Create();
@@ -19,14 +20,14 @@ public sealed class CommandIsolationPlanNetFrameworkTests
 
         var dependencyName = (string)method.Invoke(null, null)!;
 
-        Assert.Equal(AssemblyIsolationKind.Isolated, plan.Kind);
-        Assert.False(plan.LoadsFromDistinctFile);
-        Assert.Single(plan.ManagedSources);
-        Assert.Empty(plan.NativeSources);
-        Assert.Equal("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
+        Assert.AreEqual(AssemblyIsolationKind.Isolated, plan.Kind);
+        Assert.IsFalse(plan.LoadsFromDistinctFile);
+        Assert.AreEqual(1, plan.ManagedSources.Count);
+        Assert.IsEmpty(plan.NativeSources);
+        Assert.AreEqual("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
     }
 
-    [Fact]
+    [TestMethod]
     public void Scoped_command_plan_byte_load_does_not_lock_the_project_output()
     {
         using var workload = CommandFixtureWorkload.Create();
@@ -35,8 +36,8 @@ public sealed class CommandIsolationPlanNetFrameworkTests
         using var session = AssemblyIsolationSession.Create(plan);
         _ = session.LoadEntryAssembly();
 
-        Assert.False(plan.LoadsFromDistinctFile);
-        Assert.Equal(Path.GetFullPath(workload.EntryPath), plan.EntryAssemblyPath);
+        Assert.IsFalse(plan.LoadsFromDistinctFile);
+        Assert.AreEqual(Path.GetFullPath(workload.EntryPath), plan.EntryAssemblyPath);
         using (new FileStream(workload.EntryPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
         {
         }

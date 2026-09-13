@@ -2,9 +2,10 @@ using DevTools.AssemblyIsolation.Loading;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 
+[TestClass]
 public sealed class AssemblyLoaderNetFrameworkTests
 {
-    [Fact]
+    [TestMethod]
     public void Load_path_preserves_the_physical_location()
     {
         using var workload = LoaderFixtureWorkload.Create();
@@ -12,7 +13,7 @@ public sealed class AssemblyLoaderNetFrameworkTests
 
         var assembly = loader.LoadPath(workload.EntryPath);
 
-        Assert.Equal(Path.GetFullPath(workload.EntryPath), assembly.Location, ignoreCase: true);
+        Assert.AreEqual(Path.GetFullPath(workload.EntryPath), assembly.Location, ignoreCase: true);
     }
 }
 

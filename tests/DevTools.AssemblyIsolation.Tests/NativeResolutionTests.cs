@@ -5,9 +5,10 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class NativeResolutionTests
 {
-    [Fact]
+    [TestMethod]
     public void Collectible_session_rejects_an_out_of_root_native_candidate_without_loading_it()
     {
         using var allowedRoot = new TemporaryDirectory();
@@ -21,9 +22,9 @@ public sealed class NativeResolutionTests
 
         var handle = session.ResolveNativeForTesting("out-of-root-native");
 
-        Assert.Equal(nint.Zero, handle);
-        var diagnostic = Assert.Single(diagnostics.Diagnostics);
-        Assert.Equal("native-candidate-rejected", diagnostic.Code);
+        Assert.AreEqual(nint.Zero, handle);
+        var diagnostic = diagnostics.Diagnostics.Single();
+        Assert.AreEqual("native-candidate-rejected", diagnostic.Code);
         Assert.Contains("out-of-root-native", diagnostic.Message, StringComparison.Ordinal);
         Assert.Contains(candidate.Path, diagnostic.Message, StringComparison.Ordinal);
         Assert.Contains("outside its root", diagnostic.Message, StringComparison.Ordinal);

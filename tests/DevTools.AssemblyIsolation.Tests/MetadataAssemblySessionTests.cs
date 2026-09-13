@@ -2,9 +2,10 @@ using DevTools.AssemblyIsolation.Metadata;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class MetadataAssemblySessionTests
 {
-    [Fact]
+    [TestMethod]
     public void Metadata_session_loads_an_assembly_without_running_its_module_initializer()
     {
         using var directory = new TemporaryDirectory();
@@ -17,8 +18,8 @@ public sealed class MetadataAssemblySessionTests
             using var session = MetadataAssemblySession.Create(assemblyPath, RuntimeAssemblyPaths());
             var assembly = session.LoadEntryAssembly();
 
-            Assert.Equal("IsolationSibling", assembly.GetName().Name);
-            Assert.False(File.Exists(markerPath));
+            Assert.AreEqual("IsolationSibling", assembly.GetName().Name);
+            Assert.IsFalse(File.Exists(markerPath));
         }
         finally
         {
@@ -26,7 +27,7 @@ public sealed class MetadataAssemblySessionTests
         }
     }
 
-    [Fact]
+    [TestMethod]
     public void Metadata_session_keeps_the_first_path_when_the_same_identity_appears_twice()
     {
         using var directory = new TemporaryDirectory();
@@ -36,7 +37,7 @@ public sealed class MetadataAssemblySessionTests
         using var session = MetadataAssemblySession.Create(first, [second, ..RuntimeAssemblyPaths()]);
         var assembly = session.LoadEntryAssembly();
 
-        Assert.Equal("IsolationSibling", assembly.GetName().Name);
+        Assert.AreEqual("IsolationSibling", assembly.GetName().Name);
     }
 
     static IEnumerable<string> RuntimeAssemblyPaths() =>

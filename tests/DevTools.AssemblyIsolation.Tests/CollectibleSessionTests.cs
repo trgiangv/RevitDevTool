@@ -7,9 +7,10 @@ using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class CollectibleSessionTests
 {
-    [Fact]
+    [TestMethod]
     public void Collectible_session_returns_the_explicitly_parent_bound_entry_assembly()
     {
         var entry = typeof(CollectibleSessionTests).Assembly;
@@ -18,10 +19,10 @@ public sealed class CollectibleSessionTests
                 .WithKind(AssemblyIsolationKind.Collectible)
                 .Pin(entry));
 
-        Assert.Same(entry, session.LoadEntryAssembly());
+        Assert.AreSame(entry, session.LoadEntryAssembly());
     }
 
-    [Fact]
+    [TestMethod]
     public void Collectible_session_rejects_an_incompatible_parent_before_private_fallback()
     {
         var entry = typeof(CollectibleSessionTests).Assembly;
@@ -35,10 +36,10 @@ public sealed class CollectibleSessionTests
 
         using var session = AssemblyIsolationSession.Create(plan);
 
-        Assert.Throws<AssemblyMismatchException>(session.LoadEntryAssembly);
+        Assert.ThrowsExactly<AssemblyMismatchException>(session.LoadEntryAssembly);
     }
 
-    [Fact]
+    [TestMethod]
     public void Collectible_session_keeps_a_workload_local_system_named_dependency_private_and_leaves_its_files_writable()
     {
         using var workload = FixtureWorkload.Create();
@@ -54,14 +55,14 @@ public sealed class CollectibleSessionTests
         var dependency = AssemblyLoadContext.GetLoadContext(entry)!.Assemblies
             .Single(assembly => string.Equals(assembly.GetName().Name, "System.Private.IsolationFixture", StringComparison.Ordinal));
 
-        Assert.Equal("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
-        Assert.NotSame(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(entry));
-        Assert.Same(AssemblyLoadContext.GetLoadContext(entry), AssemblyLoadContext.GetLoadContext(dependency));
+        Assert.AreEqual("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
+        Assert.AreNotSame(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(entry));
+        Assert.AreSame(AssemblyLoadContext.GetLoadContext(entry), AssemblyLoadContext.GetLoadContext(dependency));
 
         using var writable = new FileStream(workload.DependencyPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
     }
 
-    [Fact]
+    [TestMethod]
     public void Collectible_session_does_not_load_unrequested_siblings()
     {
         using var workload = FixtureWorkload.Create(includeSibling: true);
@@ -72,10 +73,10 @@ public sealed class CollectibleSessionTests
 
         _ = session.LoadEntryAssembly();
 
-        Assert.False(File.Exists(workload.SiblingInitializerMarkerPath));
+        Assert.IsFalse(File.Exists(workload.SiblingInitializerMarkerPath));
     }
 
-    [Fact]
+    [TestMethod]
     public void Collectible_session_releases_the_context_after_dispose()
     {
         using var workload = FixtureWorkload.Create();
@@ -83,8 +84,8 @@ public sealed class CollectibleSessionTests
 
         var result = session.VerifyUnload();
 
-        Assert.True(result.IsCollectible);
-        Assert.True(result.IsUnloaded, result.Detail);
+        Assert.IsTrue(result.IsCollectible);
+        Assert.IsTrue(result.IsUnloaded, result.Detail);
     }
 
     static AssemblyIsolationSession CreateAndLoad(string entryPath, string directory)

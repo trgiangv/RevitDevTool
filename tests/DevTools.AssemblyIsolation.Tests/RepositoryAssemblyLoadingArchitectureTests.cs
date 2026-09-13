@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class RepositoryAssemblyLoadingArchitectureTests
 {
     private static readonly string[] InputRoots = ["source", "libs", "build", "props"];
@@ -18,7 +19,7 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
         ".cs", ".csproj", ".props", ".targets", ".slnx", ".nuspec", ".json",
     };
 
-    [Fact]
+    [TestMethod]
     public void Direct_assembly_loading_stays_in_the_kernel_or_an_explicit_discovery_or_plan_adapter()
     {
         var violations = new List<string>();
@@ -40,13 +41,13 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
             }
         }
 
-        Assert.True(
+        Assert.IsTrue(
             violations.Count == 0,
             "Direct assembly loading must use DevTools.AssemblyIsolation unless the explicit discovery-load exception applies:"
             + Environment.NewLine + string.Join(Environment.NewLine, violations));
     }
 
-    [Fact]
+    [TestMethod]
     public void Testhost_discovery_load_is_limited_to_compile_only_host_api_refs()
     {
         const string relativePath = "source/DevTools.Testing.Abstractions/Loading/DiscoveryAssemblyLoad.cs";
@@ -61,11 +62,11 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
         Assert.DoesNotContain("Revit", content, StringComparison.Ordinal);
         Assert.DoesNotContain("Acad", content, StringComparison.Ordinal);
         Assert.DoesNotContain("Execution", content, StringComparison.Ordinal);
-        Assert.False(File.Exists(Path.Combine(
+        Assert.IsFalse(File.Exists(Path.Combine(
             RepositoryRoot, "source", "DevTools.TestAdapter", "RuntimeAssemblyResolver.cs")));
     }
 
-    [Fact]
+    [TestMethod]
     public void Shipped_stub_generator_uses_the_kernel_without_framework_runtime_probing()
     {
         const string relativePath = "libs/pythonnet-stub-generator/csharp/PythonNetStubGenerator/StubBuilder.cs";

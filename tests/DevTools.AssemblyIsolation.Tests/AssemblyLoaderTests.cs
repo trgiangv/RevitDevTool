@@ -4,9 +4,10 @@ using DevTools.AssemblyIsolation.Loading;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
+[TestClass]
 public sealed class AssemblyLoaderTests
 {
-    [Fact]
+    [TestMethod]
     public void Load_path_preserves_the_physical_location()
     {
         using var directory = new LoadTestDirectory();
@@ -15,10 +16,10 @@ public sealed class AssemblyLoaderTests
 
         var assembly = loader.LoadPath(path);
 
-        Assert.Equal(Path.GetFullPath(path), assembly.Location, ignoreCase: true);
+        Assert.AreEqual(Path.GetFullPath(path), assembly.Location, ignoreCase: true);
     }
 
-    [Fact]
+    [TestMethod]
     public void Load_path_returns_the_initial_instance_for_the_same_full_identity_from_another_path()
     {
         using var directory = new LoadTestDirectory();
@@ -29,10 +30,10 @@ public sealed class AssemblyLoaderTests
         var first = loader.LoadPath(firstPath);
         var second = loader.LoadPath(secondPath);
 
-        Assert.Same(first, second);
+        Assert.AreSame(first, second);
     }
 
-    [Fact]
+    [TestMethod]
     public void Load_path_does_not_report_a_stable_same_identity_alias_as_changed()
     {
         using var directory = new LoadTestDirectory();
@@ -47,10 +48,10 @@ public sealed class AssemblyLoaderTests
 
         _ = loader.LoadPath(secondPath);
 
-        Assert.DoesNotContain(diagnostics.Diagnostics, diagnostic => diagnostic.Code == "path-changed");
+        Assert.DoesNotContain(diagnostic => diagnostic.Code == "path-changed", diagnostics.Diagnostics);
     }
 
-    [Fact]
+    [TestMethod]
     public void Registered_loader_probes_its_directory_for_managed_dependencies()
     {
         using var directory = new LoadTestDirectory();
@@ -65,10 +66,10 @@ public sealed class AssemblyLoaderTests
             .GetMethod("GetPrivateDependencyName")!
             .Invoke(null, null)!;
 
-        Assert.Equal("System.Private.IsolationFixture", new AssemblyName(result).Name);
+        Assert.AreEqual("System.Private.IsolationFixture", new AssemblyName(result).Name);
     }
 
-    [Fact]
+    [TestMethod]
     public void Disposed_loader_no_longer_probes_its_directory_and_disposal_is_idempotent()
     {
         using var directory = new LoadTestDirectory();
@@ -80,14 +81,14 @@ public sealed class AssemblyLoaderTests
         loader.Dispose();
         loader.Dispose();
 
-        var exception = Assert.Throws<TargetInvocationException>(() => entry.GetType("IsolationEntry.Entry")!
+        var exception = Assert.ThrowsExactly<TargetInvocationException>(() => entry.GetType("IsolationEntry.Entry")!
             .GetMethod("GetAfterDisposeDependencyName")!
             .Invoke(null, null));
 
-        Assert.IsType<FileNotFoundException>(exception.InnerException);
+        Assert.IsInstanceOfType<FileNotFoundException>(exception.InnerException);
     }
 
-    [Fact]
+    [TestMethod]
     public void Registered_loader_probes_its_directory_for_unmanaged_dependencies()
     {
         using var directory = new LoadTestDirectory();
@@ -99,7 +100,7 @@ public sealed class AssemblyLoaderTests
 
         var resolvedPath = loader.FindUnmanagedPathForTesting("resolver-native-fixture");
 
-        Assert.Equal(destination, resolvedPath, ignoreCase: true);
+        Assert.AreEqual(destination, resolvedPath, ignoreCase: true);
     }
 
     sealed class RecordingDiagnosticSink : IAssemblyIsolationDiagnosticSink
