@@ -247,6 +247,7 @@ public sealed class ExecutionCoverageFinalTests
         Assert.Equal("SetupRevit.py", PythonEmbedded.SetupScriptFileName);
         Assert.False(string.IsNullOrWhiteSpace(PythonEmbedded.ToolParserScript));
         Assert.False(string.IsNullOrWhiteSpace(PythonEmbedded.PytestRunnerScript));
+        Assert.False(string.IsNullOrWhiteSpace(PythonEmbedded.IpyDebuggerScript));
     }
 
     [Fact]

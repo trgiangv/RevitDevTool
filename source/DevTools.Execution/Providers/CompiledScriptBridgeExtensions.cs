@@ -25,7 +25,7 @@ internal static class CompiledScriptBridgeExtensions
                 continue;
             }
 
-            if (!string.IsNullOrWhiteSpace(location) && File.Exists(location))
+            if (File.Exists(location))
                 yield return location;
         }
     }

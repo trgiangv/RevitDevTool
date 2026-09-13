@@ -8,11 +8,12 @@ namespace DevTools.Execution.Providers.Python;
 
 public static class PythonDebugger
 {
+    public const int PreferredPort = 5678;
     public static int DebugPort { get; private set; }
 
     public static void StartListening(ILogger? logger = null)
     {
-        DebugPort = FindAvailablePort();
+        DebugPort = FindAvailablePort(PreferredPort);
 
         const string debugpySetup = """
                                     import os
@@ -62,7 +63,7 @@ public static class PythonDebugger
         }
     }
 
-    private static int FindAvailablePort(int preferredPort = 5678)
+    internal static int FindAvailablePort(int preferredPort)
     {
         try
         {

@@ -76,7 +76,46 @@ public sealed class IronPythonDebuggerTests : IronPythonSessionTestBase
         var thrown = Record.Exception(debugger.EnsureCurrentThreadTraced);
 
         Assert.Null(thrown);
-        // RevitIPyExecutionStrategy yields to this engine only while attached.
         Assert.False(debugger.IsAttached);
+    }
+
+    [Fact]
+    public void DlrScriptHost_Execute_OnLocalEngine_SetsVariables()
+    {
+        var debugger = new IronPythonDebugger();
+        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var scope = DlrScriptHost.CreateScope(engine);
+        DlrScriptHost.Execute(engine, "value = 41 + 1", scope);
+
+        Assert.Equal(42, Convert.ToInt32(DlrScriptHost.GetVariable<object>(scope, "value")));
+    }
+
+    [Fact]
+    public void FindInstanceMethod_ResolvesExecuteWithoutAmbiguousMatch()
+    {
+        var debugger = new IronPythonDebugger();
+        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var scope = engine.CreateScope();
+        var source = engine.CreateScriptSourceFromString("pass");
+
+        var execute = DlrScriptHost.FindInstanceMethod(source.GetType(), DlrScriptHost.ExecuteName, [scope.GetType()]);
+        Assert.False(execute.IsGenericMethod);
+        Assert.Single(execute.GetParameters());
+
+        var createScope = DlrScriptHost.FindInstanceMethod(engine.GetType(), DlrScriptHost.CreateScopeName, Type.EmptyTypes);
+        Assert.Empty(createScope.GetParameters());
+
+        var fromString = DlrScriptHost.FindInstanceMethod(
+            engine.GetType(),
+            DlrScriptHost.CreateScriptSourceFromStringName,
+            [typeof(string)]);
+        Assert.Single(fromString.GetParameters());
+
+        var getVariable = DlrScriptHost.FindGenericInstanceMethod(
+            scope.GetType(),
+            DlrScriptHost.GetVariableName,
+            genericArity: 1,
+            [typeof(string)]);
+        Assert.NotNull(getVariable);
     }
 }

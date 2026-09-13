@@ -1,6 +1,6 @@
-using System.Net;
-using System.Net.Sockets;
+using System.IO;
 using DevTools.Execution.Interfaces;
+using DevTools.Execution.Providers.Python;
 using Microsoft.Extensions.Logging;
 using Microsoft.Scripting.Hosting;
 using ZLogger;
@@ -9,41 +9,19 @@ using Ipy = IronPython.Hosting.Python;
 namespace DevTools.Execution.Providers.IronPython;
 
 /// <summary>
-/// Session-lifetime embedded IronPython engine with PyDev.Debugger 2.8.0 listen-on-port (no wait).
+/// Session-lifetime pydevd 2.8.0. Engine comes from either embedded 3.4.2
+/// (<see cref="GetOrCreateEngine"/>) or an existing pyRevit ScriptExecutor
+/// engine (<see cref="InitializeAsync(object)"/>). One listener.
 /// </summary>
 public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = null)
 {
-    public const int PreferredPort = 5680;
-
-    private static readonly object SessionLock = new();
-    private static ScriptEngine? SessionEngine;
-    private static bool Listening;
-    private static int DebugPortValue;
-
-    // IronPython 3.4 reports sys.platform as win32. pydevd 2.8.0 sets
-    // IS_IRONPYTHON from platform == 'cli' (IronPython 2) and IS_WINDOWS from
-    // platform == 'win32'. Those two cannot be true at once, so: import
-    // constants under cli, force IS_WINDOWS, restore platform, then import
-    // pydevd. Leaving IS_WINDOWS false makes breakpoint path matching
-    // case-sensitive (Samples vs samples, C: vs c:) and never hits.
-    private const string ListenScript = """
-        import sys
-        __pydevd_orig_platform = sys.platform
-        sys.platform = 'cli'
-        from _pydevd_bundle import pydevd_constants
-        pydevd_constants.IS_WINDOWS = True
-        sys.platform = __pydevd_orig_platform
-        from _pydevd_bundle.pydevd_constants import HTTP_JSON_PROTOCOL
-        from _pydevd_bundle.pydevd_defaults import PydevdCustomization
-        PydevdCustomization.DEFAULT_PROTOCOL = HTTP_JSON_PROTOCOL
-        import pydevd
-        pydevd._enable_attach(("127.0.0.1", __port__))
-        # 2.8 HTTP_JSON make_thread_suspend_message is NULL_NET_COMMAND.
-        # DAP StoppedEvent is only sent when this flag is True. 3.4.1
-        # (VS Code adapter) still emits StoppedEvent when the flag is False;
-        # 2.8 does not. Adapter never sends multiThreadsSingleNotification.
-        pydevd.get_global_debugger().multi_threads_single_notification = True
-        """;
+    public const int PreferredPort = 4567;
+    private static readonly Lock SessionLock = new();
+    private static object? sessionEngine;
+    private static bool ownsEngine;
+    private static bool listening;
+    private static int debugPortValue;
+    private static string? lastAttachCheckError;
 
     private const string AttachedScript = """
         import sys
@@ -69,14 +47,21 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
                 py_db.enable_tracing()
         """;
 
-    public int DebugPort => DebugPortValue;
+    public int DebugPort
+    {
+        get
+        {
+            lock (SessionLock)
+                return debugPortValue;
+        }
+    }
 
     public ScriptEngine? Engine
     {
         get
         {
             lock (SessionLock)
-                return SessionEngine;
+                return sessionEngine as ScriptEngine;
         }
     }
 
@@ -84,22 +69,27 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
     {
         get
         {
-            ScriptEngine? engine;
+            object? engine;
             lock (SessionLock)
-                engine = SessionEngine;
+                engine = sessionEngine;
 
             if (engine is null)
                 return false;
 
             try
             {
-                var scope = engine.CreateScope();
-                engine.CreateScriptSourceFromString(AttachedScript).Execute(scope);
-                return scope.GetVariable<bool>("__is_attached__");
+                var scope = DlrScriptHost.CreateScope(engine);
+                DlrScriptHost.Execute(engine, AttachedScript, scope);
+                lastAttachCheckError = null;
+                return DlrScriptHost.GetVariable<bool>(scope, "__is_attached__");
             }
             catch (Exception ex)
             {
-                logger?.ZLogWarning($"Failed to check IronPython pydevd attach: {ex.Message}");
+                var message = ex.Message;
+                if (string.Equals(lastAttachCheckError, message, StringComparison.Ordinal)) 
+                    return false;
+                lastAttachCheckError = message;
+                logger?.ZLogWarning($"Failed to check IronPython pydevd attach: {message}");
                 return false;
             }
         }
@@ -120,28 +110,59 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         }
     }
 
+    /// <summary>
+    /// Listen on an existing DLR engine (pyRevit ScriptExecutor). Does not
+    /// <c>CreateEngine</c> and does not own shutdown of that engine.
+    /// </summary>
+    public async Task InitializeAsync(object engine)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            await PydevdInstaller.EnsureInstalledAsync(logger).ConfigureAwait(false);
+            lock (SessionLock)
+            {
+                sessionEngine = engine;
+                ownsEngine = false;
+            }
+
+            StartListening();
+        }
+        catch (Exception ex)
+        {
+            logger?.ZLogWarning($"IronPython pydevd init failed: {ex.Message}");
+        }
+    }
+
     public ScriptEngine GetOrCreateEngine(IIronPythonBridge bridge)
     {
         ArgumentNullException.ThrowIfNull(bridge);
         lock (SessionLock)
         {
-            if (SessionEngine is null)
+            if (sessionEngine is ScriptEngine typed)
+                return typed;
+
+            if (sessionEngine is not null)
             {
-                var engine = Ipy.CreateEngine(new Dictionary<string, object>
-                {
-                    ["Frames"] = true,
-                    ["FullFrames"] = true,
-                });
-                bridge.ConfigureEngine(engine);
-                IronPythonInitializer.AddStdLib(engine);
-                IronPythonInitializer.Setup(engine);
-                ConfigureEngine(engine);
-                SessionEngine = engine;
+                throw new InvalidOperationException(
+                    "IronPython debugger already holds a non-embedded engine.");
             }
+
+            var engine = Ipy.CreateEngine(new Dictionary<string, object>
+            {
+                ["Frames"] = true,
+                ["FullFrames"] = true,
+            });
+            bridge.ConfigureEngine(engine);
+            IronPythonInitializer.AddStdLib(engine);
+            IronPythonInitializer.Setup(engine);
+            ConfigureEngine(engine);
+            sessionEngine = engine;
+            ownsEngine = true;
 
             // Listen is InitializeAsync-only. GetOrCreateEngine is also used by
             // headless Execute; starting pydevd here races pythonnet in testhost.
-            return SessionEngine;
+            return engine;
         }
     }
 
@@ -152,17 +173,16 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
     /// </summary>
     public void EnsureCurrentThreadTraced()
     {
-        ScriptEngine? engine;
+        object? engine;
         lock (SessionLock)
-            engine = SessionEngine;
+            engine = sessionEngine;
 
         if (engine is null || !PydevdInstaller.IsInstalled())
             return;
 
         try
         {
-            var scope = engine.CreateScope();
-            engine.CreateScriptSourceFromString(TraceCurrentThreadScript).Execute(scope);
+            DlrScriptHost.Execute(engine, TraceCurrentThreadScript);
         }
         catch (Exception ex)
         {
@@ -170,33 +190,90 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         }
     }
 
-    public void ConfigureEngine(ScriptEngine engine)
+    /// <summary>
+    /// Drop modules whose <c>__file__</c> is under the refresh root so the
+    /// next Run re-reads edited files.
+    /// </summary>
+    public void RefreshUserModules(
+        string scriptPath,
+        string? root = null,
+        IReadOnlyList<string>? skipRoots = null)
+    {
+        object? engine;
+        lock (SessionLock)
+            engine = sessionEngine;
+
+        if (engine is null)
+            return;
+
+        root ??= Path.GetDirectoryName(scriptPath);
+        if (string.IsNullOrEmpty(root))
+            return;
+
+        try
+        {
+            var scope = DlrScriptHost.CreateScope(engine);
+            DlrScriptHost.SetVariable(scope, "__refresh_root__", root);
+            DlrScriptHost.SetVariable(scope, "__refresh_skip__", skipRoots?.ToList() ?? []);
+            DlrScriptHost.Execute(engine, """
+                import os
+                import sys
+                sep = os.sep
+                root = os.path.normcase(os.path.abspath(__refresh_root__))
+                skips = [os.path.normcase(os.path.abspath(p)) for p in __refresh_skip__]
+                def under(base, full):
+                    return full == base or full.startswith(base + sep)
+                dead = []
+                for name, mod in list(sys.modules.items()):
+                    path = getattr(mod, '__file__', None)
+                    if not path:
+                        continue
+                    try:
+                        full = os.path.normcase(os.path.abspath(path))
+                    except Exception:
+                        continue
+                    if not under(root, full):
+                        continue
+                    if any(under(s, full) for s in skips):
+                        continue
+                    dead.append(name)
+                for name in dead:
+                    sys.modules.pop(name, None)
+                """, scope);
+        }
+        catch (Exception ex)
+        {
+            logger?.ZLogWarning($"IronPython user-module refresh failed: {ex.Message}");
+        }
+    }
+
+    public void ConfigureEngine(object engine)
     {
         ArgumentNullException.ThrowIfNull(engine);
         if (!PydevdInstaller.IsInstalled())
             return;
 
         var root = PydevdInstaller.ExtractRoot;
-        var paths = engine.GetSearchPaths().ToList();
+        var paths = DlrScriptHost.GetSearchPaths(engine);
         if (!paths.Any(p => string.Equals(p, root, StringComparison.OrdinalIgnoreCase)))
             paths.Insert(0, root);
 
-        engine.SetSearchPaths(paths);
+        DlrScriptHost.SetSearchPaths(engine, paths);
     }
 
     public void StartListening(int port = PreferredPort)
     {
-        ScriptEngine engine;
+        object engine;
         int debugPort;
         lock (SessionLock)
         {
-            if (Listening || SessionEngine is null || !PydevdInstaller.IsInstalled())
+            if (listening || sessionEngine is null || !PydevdInstaller.IsInstalled())
                 return;
 
-            engine = SessionEngine;
+            engine = sessionEngine;
             ConfigureEngine(engine);
-            debugPort = FindAvailablePort(port);
-            DebugPortValue = debugPort;
+            debugPort = PythonDebugger.FindAvailablePort(port);
+            debugPortValue = debugPort;
         }
 
         // _enable_attach calls settrace on *this* thread. Host.Start uses
@@ -206,14 +283,14 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         // keeps settrace after return. CPython debugpy.listen is the same
         // idea (listener threads, not the API thread).
         Exception? listenError = null;
-        using var ready = new ManualResetEventSlim(false);
+        var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>
         {
             try
             {
-                var scope = engine.CreateScope();
-                scope.SetVariable("__port__", debugPort);
-                engine.CreateScriptSourceFromString(ListenScript).Execute(scope);
+                var scope = DlrScriptHost.CreateScope(engine);
+                DlrScriptHost.SetVariable(scope, "__port__", debugPort);
+                DlrScriptHost.Execute(engine, PythonEmbedded.IpyDebuggerScript, scope);
             }
             catch (Exception ex)
             {
@@ -221,7 +298,7 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
             }
             finally
             {
-                ready.Set();
+                ready.TrySetResult(true);
             }
         })
         {
@@ -230,7 +307,7 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         };
         thread.Start();
 
-        if (!ready.Wait(TimeSpan.FromSeconds(30)))
+        if (!ready.Task.Wait(TimeSpan.FromSeconds(30)))
         {
             logger?.ZLogError($"IronPython pydevd listen timed out on 127.0.0.1:{debugPort}");
             return;
@@ -244,7 +321,7 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         }
 
         lock (SessionLock)
-            Listening = true;
+            listening = true;
 
         logger?.ZLogInformation($"IronPython pydevd listening on 127.0.0.1:{debugPort}");
     }
@@ -253,37 +330,23 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
     {
         lock (SessionLock)
         {
-            try
+            if (ownsEngine && sessionEngine is not null)
             {
-                SessionEngine?.Runtime.Shutdown();
-            }
-            catch
-            {
-                // ignored
+                try
+                {
+                    DlrScriptHost.Shutdown(sessionEngine);
+                }
+                catch
+                {
+                    // ignored
+                }
             }
 
-            SessionEngine = null;
-            Listening = false;
-            DebugPortValue = 0;
-        }
-    }
-
-    private static int FindAvailablePort(int preferredPort)
-    {
-        try
-        {
-            var tester = new TcpListener(IPAddress.Loopback, preferredPort);
-            tester.Start();
-            tester.Stop();
-            return preferredPort;
-        }
-        catch (SocketException)
-        {
-            var fallback = new TcpListener(IPAddress.Loopback, 0);
-            fallback.Start();
-            var port = ((IPEndPoint)fallback.LocalEndpoint).Port;
-            fallback.Stop();
-            return port;
+            sessionEngine = null;
+            ownsEngine = false;
+            listening = false;
+            debugPortValue = 0;
+            lastAttachCheckError = null;
         }
     }
 }

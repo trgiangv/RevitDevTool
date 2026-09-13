@@ -47,7 +47,8 @@ public static class ExecutionExtensions
         services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
         services.AddSingleton<PythonInitializer>();
         services.AddSingleton<PythonExecutor>();
-        services.AddSingleton(sp => new IronPythonDebugger(sp.GetService<ILogger<IronPythonDebugger>>()));
+        services.AddSingleton(sp => new IronPythonDebugger(
+            sp.GetService<ILogger<IronPythonDebugger>>()));
 
         services.AddSingleton<NugetManager>();
         services.AddSingleton<NugetPackageStore>();

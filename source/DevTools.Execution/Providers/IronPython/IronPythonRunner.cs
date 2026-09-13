@@ -56,13 +56,20 @@ internal static class IronPythonRunner
     {
         var paths = engine.GetSearchPaths().ToList();
         foreach (var dir in IronPythonSearchPaths.ForNativeHost(scriptPath, rootPath))
-        {
-            if (paths.Any(p => string.Equals(p, dir, StringComparison.OrdinalIgnoreCase)))
-                continue;
-            paths.Add(dir);
-        }
+            AppendUnique(paths, dir);
 
         engine.SetSearchPaths(paths);
+    }
+
+    private static void AppendUnique(ICollection<string> paths, string directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+            return;
+
+        if (paths.Any(p => string.Equals(p, directory, StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        paths.Add(directory);
     }
 
     private static void SetPytestRunning(ScriptEngine engine, bool value)
@@ -103,10 +110,9 @@ internal static class IronPythonRunner
 
         var errors = new CompileErrorListener();
         var command = script.Compile(compilerOptions, errors);
-        if (command is null)
-            return ExecutionResult.Failed(FormatCompileErrors(errors));
-
-        return ExecuteCompiledCommand(engine, command, scope);
+        return command is null
+            ? ExecutionResult.Failed(FormatCompileErrors(errors))
+            : ExecuteCompiledCommand(engine, command, scope);
     }
 
     private static ExecutionResult ExecuteCompiledCommand(
