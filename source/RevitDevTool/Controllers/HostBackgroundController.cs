@@ -52,7 +52,8 @@ public sealed class HostBackgroundController(
     {
         if (PyRevitLibraryPaths.IsLoaded)
         {
-            logger.ZLogInformation($"IronPython debug uses pyRevit ScriptExecutor engine.");
+            logger.ZLogInformation(
+                $"IronPython debug uses pyRevit ScriptExecutor engine. Root={PyRevitLibraryPaths.InstallRoot}");
             var engine = PyRevitReflectionCache.Instance.EnsureIronPythonEngine(logger);
             await ironPythonDebugger.InitializeAsync(engine).ConfigureAwait(false);
             return;

@@ -10,6 +10,11 @@ Amended: 2026-09-13 — two IronPython stacks, one debugger.
 pyRevit loaded → ScriptExecutor + `IronPythonDebugger.InitializeAsync(engine)`
 on the loader engine (`full_frame: false`, reuse). No pyRevit → embedded 3.4.2
 via `GetOrCreateEngine`. Do not `CreateEngine` on the pyRevit path.
+Amended: 2026-09-14 — live Revit 2024 (.NET 4.8): `import pydevd` succeeds;
+`_enable_attach` → `import site` → `os.path.abspath` on CLR `__file__`
+(assembly display name). net48 `Path.GetFullPath` rejects it. Wrap
+`abspath` in `IpyDebugger.py` before `_enable_attach`. Do not edit AppData
+pydevd.
 
 ## Status
 
@@ -45,6 +50,13 @@ Listen imports `_pydevd_bundle.pydevd_constants` under `cli` so
 `sys.platform`, then `import pydevd`. Leaving `IS_WINDOWS` false makes
 breakpoint matching case-sensitive (`Samples` vs `samples`, `C:` vs `c:`)
 and the hit never fires. Do not fork pydevd.
+
+Live Revit 2024 (.NET 4.8): `import pydevd` is fine. Failure is
+`pydevd._enable_attach` → `FilesFiltering` → `import site` →
+`os.path.abspath` on CLR `__file__` values that are assembly display names.
+net48 `Path.GetFullPath` rejects them (`Specified path is invalid.`); net8+
+does not. `IpyDebugger.py` wraps `abspath` before `_enable_attach`. CPython
+never throws from `abspath`.
 
 pydevd 2.8.0 DAP attach exists as `_enable_attach` / `_wait_for_attach` /
 `_is_attached`, but the **default wire protocol is `QUOTED_LINE_PROTOCOL`**,
@@ -171,7 +183,7 @@ Run does not grow a “Debug Script / wait / attach” gesture.
 
 Order when starting the listener (once per host session):
 
-1. `import pydevd`
+1. `import pydevd` (after the `cli` / `IS_WINDOWS` shim)
 2. `PydevdCustomization.DEFAULT_PROTOCOL = HTTP_JSON_PROTOCOL`
 3. `pydevd._enable_attach(("127.0.0.1", port))`
 
@@ -328,6 +340,8 @@ Tradeoffs:
   throwing properties (`FamilyCreate`, `FamilyManager`, worksets). Host
   `IpyDebugger.py` replaces resolver `print_exc` with a one-line
   value and swallows stderr during expand. Do not fork AppData pydevd.
+- net48 `Path.GetFullPath` rejects CLR assembly-name `__file__` blobs.
+  `IpyDebugger.py` wraps `abspath` before `_enable_attach`.
 
 ## Follow-Up
 

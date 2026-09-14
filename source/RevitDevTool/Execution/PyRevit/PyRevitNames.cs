@@ -13,6 +13,10 @@ internal static class PyRevitNames
     internal const string IronPythonEngine = "IronPythonEngine";
     internal const string DefaultEnginesDictKey = "PYREVITCachedEngines";
 
+    internal const string FileMarker = "pyRevitfile";
+    internal const string LibDir = "pyrevitlib";
+    internal const string SitePackagesDir = "site-packages";
+
     internal const string Initialize = "Initialize";
     internal const string ExecuteScript = "ExecuteScript";
     internal const string EnginesDictKey = "EnginesDictKey";

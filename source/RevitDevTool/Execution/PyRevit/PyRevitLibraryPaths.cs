@@ -1,15 +1,14 @@
 using System.IO;
 using System.Reflection;
+
 namespace RevitDevTool.Execution.PyRevit;
 
 /// <summary>
-/// Resolves pyRevit assemblies and the install root (directory of <c>pyRevitfile</c>) once per Revit session.
+/// Resolves loaded pyRevit assemblies and the install root from
+/// <c>PyRevitLoader</c> (walk to <c>pyRevitfile</c>).
 /// </summary>
 internal static class PyRevitLibraryPaths
 {
-    private const string PyRevitLibDir = "pyrevitlib";
-    private const string RootMarkerFile = "pyRevitfile";
-
     private static readonly Lock ResolveLock = new();
     private static bool _resolved;
     private static Assembly? _loaderAssembly;
@@ -110,17 +109,15 @@ internal static class PyRevitLibraryPaths
 
         return null;
     }
-
     private static string? ResolveInstallRoot(Assembly loader)
     {
-        var hint = Path.GetDirectoryName(loader.Location);
-        if (string.IsNullOrEmpty(hint))
+        var start = Path.GetDirectoryName(loader.Location);
+        if (string.IsNullOrEmpty(start))
             return null;
 
-        for (var dir = hint; !string.IsNullOrEmpty(dir); dir = Path.GetDirectoryName(dir))
+        for (var dir = start; !string.IsNullOrEmpty(dir); dir = Path.GetDirectoryName(dir))
         {
-            if (File.Exists(Path.Combine(dir, RootMarkerFile))
-                || Directory.Exists(Path.Combine(dir, PyRevitLibDir)))
+            if (File.Exists(Path.Combine(dir, PyRevitNames.FileMarker)))
                 return dir;
         }
 

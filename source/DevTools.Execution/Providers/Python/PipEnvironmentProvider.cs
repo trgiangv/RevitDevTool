@@ -124,7 +124,7 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
 
         var paths = new List<string>();
 
-        foreach (var line in stdout.ToString().Split(Environment.NewLine))
+        foreach (var line in stdout.ToString().Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries))
         {
             const string marker = "Path: \"";
             var start = line.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
@@ -142,7 +142,8 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
         }
 
         if (paths.Count == 0)
-            throw new DirectoryNotFoundException("No attached pyRevit clone paths were reported by 'pyrevit attached'.");
+            throw new DirectoryNotFoundException(
+                "No attached pyRevit paths were reported by 'pyrevit attached'.");
 
         return paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
     }

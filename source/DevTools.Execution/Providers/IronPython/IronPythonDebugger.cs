@@ -315,8 +315,7 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
 
         if (listenError is not null)
         {
-            logger?.ZLogError(
-                $"Failed to initialize IronPython pydevd: {listenError.Message}{Environment.NewLine}{listenError.StackTrace}");
+            logger?.ZLogError($"Failed to initialize IronPython pydevd:{Environment.NewLine}{listenError}");
             return;
         }
 

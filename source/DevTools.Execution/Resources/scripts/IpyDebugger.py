@@ -10,6 +10,11 @@ constants under cli, force ``IS_WINDOWS``, restore platform, then import
 pydevd. Leaving ``IS_WINDOWS`` false makes breakpoint path matching
 case-sensitive (Samples vs samples, C: vs c:) and never hits.
 
+Before ``_enable_attach``, wrap ``os.path.abspath`` so it does not throw.
+``import site`` (from pydevd FilesFiltering) calls ``abspath`` on CLR
+``__file__`` assembly names; net48 ``Path.GetFullPath`` rejects them.
+Do not edit AppData pydevd.
+
 VS Code/Cursor ``type: debugpy`` attach+connect talks DAP directly to this
 socket. pydevd 2.8 never emits InitializedEvent after attach. Without the
 event, the client waits forever and never setBreakpoints. Emit it when
@@ -24,6 +29,7 @@ ERR. Store a one-line value instead. Do not edit AppData pydevd.
 """
 
 import json
+import os
 import sys
 
 
@@ -43,6 +49,16 @@ class IpyDebugger:
 
         import pydevd
 
+        orig_abspath = os.path.abspath
+
+        def _abspath(path):
+            try:
+                return orig_abspath(path)
+            except Exception:
+                return path or os.curdir
+
+        os.path.abspath = _abspath
+        os.path.realpath = _abspath
         pydevd._enable_attach(("127.0.0.1", int(port)))
         # 2.8 HTTP_JSON make_thread_suspend_message is NULL_NET_COMMAND.
         # DAP StoppedEvent is only sent when this flag is True. 3.4.1

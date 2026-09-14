@@ -6,12 +6,11 @@ namespace RevitDevTool.Execution.PyRevit;
 /// <summary>
 /// pyRevit command-generator paths (script dir, hierarchy lib/bin, pyrevitlib)
 /// plus TFM-selected extension DLL directories, pydevd extract root first.
+/// <c>pyrevitlib</c>/<c>site-packages</c> come from walking <c>PyRevitLoader</c>
+/// up to <c>pyRevitfile</c>.
 /// </summary>
 internal static class PyRevitSearchPaths
 {
-    private const string PyRevitLibDir = "pyrevitlib";
-    private const string SitePackagesDir = "site-packages";
-
     internal static List<string> Build(string scriptPath)
     {
         var paths = new List<string>();
@@ -30,8 +29,8 @@ internal static class PyRevitSearchPaths
         var root = PyRevitLibraryPaths.InstallRoot;
         if (root is not null)
         {
-            AppendIfExists(paths, Path.Combine(root, PyRevitLibDir));
-            AppendIfExists(paths, Path.Combine(root, SitePackagesDir));
+            AppendIfExists(paths, Path.Combine(root, PyRevitNames.LibDir));
+            AppendIfExists(paths, Path.Combine(root, PyRevitNames.SitePackagesDir));
         }
 
         if (PydevdInstaller.IsInstalled())
