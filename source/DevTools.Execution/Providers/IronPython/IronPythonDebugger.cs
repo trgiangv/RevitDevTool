@@ -31,20 +31,23 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
             __is_attached__ = bool(pydevd._is_attached())
         """;
 
-    // pydevd.settrace() walks get_frame().f_back. IronPython 3.4 hosted
-    // DLR stacks throw ArgumentOutOfRangeException (Parameter 'index') on
-    // that walk. User code is compiled after this call, so existing frames
-    // do not need f_trace. enable_tracing() is sys.settrace on this thread.
+    // sys.settrace inside ScriptSource.Execute races IronPython RunWorker:
+    // PushFrame, pydevd FrameExit pops FunctionStack, then PopFrame
+    // RemoveAt throws ArgumentOutOfRangeException. Prepare the callback in
+    // Python; install it via PythonContext.SetTrace after Execute returns.
     private const string TraceCurrentThreadScript = """
         import sys
         import threading
+        __has_trace__ = False
+        __trace_func__ = None
         if 'pydevd' in sys.modules:
             import pydevd
-            from _pydevd_bundle.pydevd_additional_thread_info import set_additional_thread_info
             py_db = pydevd.get_global_debugger()
             if py_db is not None:
+                from _pydevd_bundle.pydevd_additional_thread_info import set_additional_thread_info
                 set_additional_thread_info(threading.currentThread())
-                py_db.enable_tracing()
+                __trace_func__ = py_db.get_thread_local_trace_func()
+                __has_trace__ = __trace_func__ is not None
         """;
 
     public int DebugPort
@@ -86,7 +89,7 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
             catch (Exception ex)
             {
                 var message = ex.Message;
-                if (string.Equals(lastAttachCheckError, message, StringComparison.Ordinal)) 
+                if (string.Equals(lastAttachCheckError, message, StringComparison.Ordinal))
                     return false;
                 lastAttachCheckError = message;
                 logger?.ZLogWarning($"Failed to check IronPython pydevd attach: {message}");
@@ -168,8 +171,9 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
 
     /// <summary>
     /// Script Run is the Revit API thread; listen ran on a background thread.
-    /// Install pydevd tracing with <c>enable_tracing</c>, not full
-    /// <c>settrace</c> (that walks <c>f_back</c> and throws on IronPython 3.4).
+    /// Bind pydevd's trace callback on this thread via
+    /// <c>PythonContext.SetTrace</c>. Do not call <c>sys.settrace</c> from
+    /// <c>ScriptSource.Execute</c> (IronPython <c>PopFrame</c> then throws).
     /// </summary>
     public void EnsureCurrentThreadTraced()
     {
@@ -182,11 +186,18 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
 
         try
         {
-            DlrScriptHost.Execute(engine, TraceCurrentThreadScript);
+            var scope = DlrScriptHost.CreateScope(engine);
+            DlrScriptHost.Execute(engine, TraceCurrentThreadScript, scope);
+            if (!DlrScriptHost.GetVariable<bool>(scope, "__has_trace__"))
+                return;
+
+            var traceFunc = DlrScriptHost.GetVariable<object>(scope, "__trace_func__");
+            if (traceFunc is not null)
+                DlrScriptHost.SetTrace(engine, traceFunc);
         }
         catch (Exception ex)
         {
-            logger?.ZLogWarning($"IronPython pydevd current-thread trace failed: {ex.Message}");
+            logger?.ZLogWarning($"IronPython pydevd current-thread trace failed:{Environment.NewLine}{ex}");
         }
     }
 

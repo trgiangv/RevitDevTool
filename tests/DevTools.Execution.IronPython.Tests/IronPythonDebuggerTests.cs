@@ -61,16 +61,27 @@ public sealed class IronPythonDebuggerTests : IronPythonSessionTestBase
     }
 
     [TestMethod]
+    public void SetTrace_Null_DoesNotThrowOnLocalEngine()
+    {
+        var debugger = new IronPythonDebugger();
+        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        DlrScriptHost.SetTrace(engine, null);
+    }
+
+    [TestMethod]
     public void EnsureCurrentThreadTraced_AfterListen_DoesNotThrow()
     {
         if (!PydevdInstaller.IsInstalled())
             Assert.Inconclusive("pydevd 2.8.0 extract is not on disk.");
 
         var debugger = new IronPythonDebugger();
-        debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
         debugger.StartListening();
         debugger.EnsureCurrentThreadTraced();
 
+        var scope = DlrScriptHost.CreateScope(engine);
+        DlrScriptHost.Execute(engine, "import sys\n__traced__ = sys.gettrace() is not None", scope);
+        Assert.IsTrue(DlrScriptHost.GetVariable<bool>(scope, "__traced__"));
         Assert.IsFalse(debugger.IsAttached);
     }
 

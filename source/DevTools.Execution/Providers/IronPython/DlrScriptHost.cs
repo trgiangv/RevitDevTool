@@ -100,9 +100,40 @@ internal static class DlrScriptHost
         local.Runtime.Shutdown();
     }
 
+    public static void SetTrace(object engine, object? traceFunc)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        var context = LanguageContextOf(engine);
+        var setTrace = FindSetTrace(context.GetType());
+        ReflectionBound.Call(setTrace, context, [traceFunc]);
+    }
+
     internal static MethodInfo FindInstanceMethod(Type type, string name, Type[] argTypes) =>
         ReflectionBound.FindInstanceMethod(type, name, argTypes);
 
     internal static MethodInfo? FindGenericInstanceMethod(Type type, string name, int genericArity, Type[] argTypes) =>
         ReflectionBound.FindGenericInstanceMethod(type, name, genericArity, argTypes);
+
+    private static object LanguageContextOf(object engine)
+    {
+        var property = engine.GetType().GetProperty(
+            "LanguageContext",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        return property?.GetValue(engine)
+            ?? throw new InvalidOperationException("DLR LanguageContext was not found on the engine.");
+    }
+
+    private static MethodInfo FindSetTrace(Type contextType)
+    {
+        foreach (var method in contextType.GetMethods(
+                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+        {
+            if (method.Name != "SetTrace")
+                continue;
+            if (method.GetParameters().Length == 1)
+                return method;
+        }
+
+        throw new MissingMethodException(contextType.FullName, "SetTrace");
+    }
 }

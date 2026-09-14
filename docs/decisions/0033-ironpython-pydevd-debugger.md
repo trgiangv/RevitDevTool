@@ -13,8 +13,11 @@ via `GetOrCreateEngine`. Do not `CreateEngine` on the pyRevit path.
 Amended: 2026-09-14 — live Revit 2024 (.NET 4.8): `import pydevd` succeeds;
 `_enable_attach` → `import site` → `os.path.abspath` on CLR `__file__`
 (assembly display name). net48 `Path.GetFullPath` rejects it. Wrap
-`abspath` in `IpyDebugger.py` before `_enable_attach`. Do not edit AppData
-pydevd.
+`abspath` in `IpyDebugger.py` before `_enable_attach`. API-thread
+`sys.settrace` inside `ScriptSource.Execute` double-pops IronPython
+`FunctionStack` (`PopFrame` `RemoveAt`, `Parameter 'index'`). Prepare
+the callback in Python, then `PythonContext.SetTrace` from C#. Do not
+edit AppData pydevd.
 
 ## Status
 
@@ -137,13 +140,15 @@ suspends Revit and VS Code never shows a hit.
 
 Script **execution** still uses `IHostContextExecutor` because Revit API
 requires it, not because pydevd does. Before compiling a user file on that
-API thread, call `set_additional_thread_info` + `py_db.enable_tracing()`.
-Do not call `pydevd.settrace()` there: 2.8 walks `get_frame().f_back`, and
-IronPython 3.4 hosted DLR stacks throw `ArgumentOutOfRangeException`
-(`Parameter 'index'`). User code is compiled after this, so existing frames
-do not need `f_trace`. `set_trace_to_threads` is CPython-only. Do not skip
-`enable_tracing` while already on the debug engine waiting for
-`ConfigurationDone`.
+API thread, bind the pydevd callback with `set_additional_thread_info` in
+Python then `PythonContext.SetTrace` from C#. Do **not** call
+`sys.settrace` / `py_db.enable_tracing()` / `pydevd.settrace()` inside
+`ScriptSource.Execute`: IronPython `RunWorker` pushes `FunctionStack`,
+tracing `FrameExit` pops it, then `PopFrame` `RemoveAt` throws
+`ArgumentOutOfRangeException` (`Parameter 'index'`). User code is compiled
+after this, so existing frames do not need `f_trace`.
+`set_trace_to_threads` is CPython-only. Do not skip installing the thread
+trace while already on the debug engine waiting for `ConfigurationDone`.
 
 Non-debug and debug IronPython share one session engine **only on the
 embedded 3.4.2 path** (AutoCAD, Revit without pyRevit). That engine is
