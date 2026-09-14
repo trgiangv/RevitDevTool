@@ -1,4 +1,5 @@
 using System.Reflection;
+using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Identity;
 
 namespace DevTools.AssemblyIsolation.Sources;
@@ -27,25 +28,10 @@ public sealed class DirectoryAssemblySource : IManagedAssemblySource
         if (candidate is null || !File.Exists(candidate.Path))
             return null;
 
-        AssemblyName identity;
-        try
-        {
-            identity = AssemblyName.GetAssemblyName(candidate.Path);
-        }
-        catch (BadImageFormatException)
-        {
-            return null;
-        }
-        catch (IOException)
-        {
-            return null;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return null;
-        }
-
-        return AssemblyIdentityMatcher.IsCompatible(requested, identity) ? candidate : null;
+        return ManagedAssembly.TryGetName(candidate.Path, out var identity)
+               && AssemblyIdentityMatcher.IsCompatible(requested, identity)
+            ? candidate
+            : null;
     }
 
     private static bool IsSimpleFileName(string name) =>

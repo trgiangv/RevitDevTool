@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using ZLogger;
+using DevTools.AssemblyIsolation;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Settings;
@@ -396,26 +397,9 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
 
     private async Task ProcessDroppedDllFileAsync(string filePath)
     {
-        if (IsManagedAssembly(filePath))
+        if (ManagedAssembly.IsManaged(filePath))
             await LoadFromPathAsync(filePath);
         else
             _logger.ZLogWarning($"File {filePath} is not a valid managed assembly.");
-    }
-
-    private static bool IsManagedAssembly(string filePath)
-    {
-        try
-        {
-            System.Reflection.AssemblyName.GetAssemblyName(filePath);
-            return true;
-        }
-        catch (BadImageFormatException)
-        {
-            return false;
-        }
-        catch (FileLoadException)
-        {
-            return false;
-        }
     }
 }

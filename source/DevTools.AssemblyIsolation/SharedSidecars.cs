@@ -70,22 +70,12 @@ public static class SharedSidecars
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
             return false;
 
-        AssemblyName identity;
-        try
-        {
-            identity = AssemblyName.GetAssemblyName(path);
-        }
-        catch (BadImageFormatException)
+        if (!ManagedAssembly.TryGetName(path, out var identity)
+            || identity.Name is null
+            || !Contains(identity.Name))
         {
             return false;
         }
-        catch (IOException)
-        {
-            return false;
-        }
-
-        if (identity.Name is null || !Contains(identity.Name))
-            return false;
 
         name = identity.Name;
         return true;

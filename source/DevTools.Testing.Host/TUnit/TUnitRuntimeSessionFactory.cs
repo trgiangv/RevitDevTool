@@ -21,9 +21,7 @@ public sealed class TUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
             .AddManagedSource(new ManifestAssemblySource(
                 generation.ManagedAssemblies.Select(path =>
                     new AssemblyCandidate(path, root))))
-            .AddNativeSource(new ManifestNativeAssemblySource(
-                generation.NativeAssets.Select(path =>
-                    new AssemblyCandidate(path, root))));
+            .WithGenerationNatives(generation.ShadowAssemblyPath);
 
         return IsolatedRuntimeActivator.Activate(
             generation,

@@ -1,4 +1,4 @@
-using System.Reflection;
+using DevTools.AssemblyIsolation;
 using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.Testing.Host.Loading;
@@ -28,19 +28,11 @@ public static class TestingGenerationFiles
             return false;
         }
 
-        try
-        {
-            simpleName = AssemblyName.GetAssemblyName(path).Name;
-            return !string.IsNullOrWhiteSpace(simpleName);
-        }
-        catch (BadImageFormatException)
-        {
+        if (!ManagedAssembly.TryGetName(path, out var identity))
             return false;
-        }
-        catch (FileLoadException)
-        {
-            return false;
-        }
+
+        simpleName = identity.Name;
+        return !string.IsNullOrWhiteSpace(simpleName);
     }
 
     public static bool IsManagedAssembly(string path) =>
@@ -150,10 +142,9 @@ public static class TestingGenerationFiles
 
     private static bool IsSatelliteResourceAssembly(string path)
     {
-        if (!IsManagedAssembly(path))
+        if (!ManagedAssembly.TryGetName(path, out var identity))
             return false;
 
-        var identity = AssemblyName.GetAssemblyName(path);
         return identity.Name?.EndsWith(".resources", StringComparison.OrdinalIgnoreCase) == true
                && !string.IsNullOrWhiteSpace(identity.CultureName);
     }

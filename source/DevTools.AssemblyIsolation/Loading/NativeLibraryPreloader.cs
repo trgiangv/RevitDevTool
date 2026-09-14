@@ -1,5 +1,4 @@
 #if NETFRAMEWORK
-using System.Reflection;
 using System.Runtime.InteropServices;
 using DevTools.AssemblyIsolation.Sources;
 
@@ -25,27 +24,10 @@ public static class NativeLibraryPreloader
         {
             if (!AssemblyCandidate.IsExistingPathUnderRoot(path, root))
                 continue;
-            if (IsManaged(path))
+            if (ManagedAssembly.IsManaged(path))
                 continue;
 
             LoadLibrary(path);
-        }
-    }
-
-    private static bool IsManaged(string path)
-    {
-        try
-        {
-            AssemblyName.GetAssemblyName(path);
-            return true;
-        }
-        catch (BadImageFormatException)
-        {
-            return false;
-        }
-        catch (FileLoadException)
-        {
-            return false;
         }
     }
 

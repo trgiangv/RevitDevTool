@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DevTools.AssemblyIsolation;
+using DevTools.AssemblyIsolation.Sources;
 using DevTools.NUnit.Host.Tests.Loading;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
@@ -64,9 +65,8 @@ public sealed class NUnitAssemblyIsolationTests
     }
 
     [TestMethod]
-    public void Plan_rejects_ambiguous_managed_identities_and_native_assets()
+    public void Plan_rejects_ambiguous_managed_identities()
     {
-        using var workspace = new TempWorkspace();
         var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
         var conflictingFrameworkPath = Path.Combine(manifest.ShadowDirectory, "alternate", NUnitGenerationPolicy.FrameworkAssemblyFileName);
         Directory.CreateDirectory(Path.GetDirectoryName(conflictingFrameworkPath)!);
@@ -80,9 +80,19 @@ public sealed class NUnitAssemblyIsolationTests
         };
 
         Assert.ThrowsExactly<InvalidOperationException>(() => NUnitRuntimeSessionFactory.CreateIsolationPlan(ambiguousManaged, framework));
+    }
 
-        var duplicateNative = NUnitRuntimeTestEnvironment.BuildGenerationWithDuplicateNativeAssets(workspace.Root);
-        Assert.ThrowsExactly<InvalidOperationException>(() => NUnitRuntimeSessionFactory.CreateIsolationPlan(duplicateNative, framework));
+    [TestMethod]
+    public void Plan_does_not_catalog_native_files_as_a_separate_identity_index()
+    {
+        using var workspace = new TempWorkspace();
+        var manifest = NUnitRuntimeTestEnvironment.BuildGenerationWithDuplicateNativeAssets(workspace.Root);
+        var framework = NUnitFrameworkHostShare.GetOrLoadFromShadow(
+            NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest));
+
+        var plan = NUnitRuntimeSessionFactory.CreateIsolationPlan(manifest, framework);
+
+        Assert.IsInstanceOfType<ResolverNativeAssemblySource>(plan.NativeSources.Single());
     }
 
     [TestMethod]

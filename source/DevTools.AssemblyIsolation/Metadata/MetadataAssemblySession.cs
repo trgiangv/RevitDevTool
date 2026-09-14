@@ -1,4 +1,5 @@
 using System.Reflection;
+using DevTools.AssemblyIsolation;
 
 namespace DevTools.AssemblyIsolation.Metadata;
 
@@ -45,16 +46,13 @@ public sealed class MetadataAssemblySession : IDisposable
                 throw new ArgumentException("Metadata resolution paths cannot be empty.", nameof(resolutionPaths));
 
             var normalizedPath = Path.GetFullPath(path);
-            AssemblyName assemblyName;
-            try
+            if (!string.Equals(normalizedPath, entryPath, StringComparison.OrdinalIgnoreCase)
+                && !ManagedAssembly.IsManaged(normalizedPath))
             {
-                assemblyName = AssemblyName.GetAssemblyName(normalizedPath);
-            }
-            catch (BadImageFormatException) when (!string.Equals(normalizedPath, entryPath, StringComparison.OrdinalIgnoreCase))
-            {
-                // Resolution folders may also contain native DLLs. They cannot participate in metadata resolution.
                 continue;
             }
+
+            var assemblyName = AssemblyName.GetAssemblyName(normalizedPath);
 
             var identity = assemblyName.FullName
                 ?? throw new InvalidOperationException($"Metadata assembly '{normalizedPath}' has no full identity.");

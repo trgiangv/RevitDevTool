@@ -50,6 +50,13 @@ without allowing one feature's dependency policy to leak into another.
   still run before earlier simple-name resolvers (Costura). Returning null
   leaves later handlers free to serve their own assemblies. `Collectible`
   remains explicit when a test must name the ALC (and throws on net48).
+- Native libraries are not a separate identity catalog. Generation snapshots
+  still copy them; isolation resolves them through the managed entry that
+  P/Invokes them (`AssemblyDependencyResolver` / `deps.json` on modern TFMs,
+  same as commands and MCP toolsets). net48 has no ADR: unmanaged search is
+  the loading assembly directory, plus `NativeLibraryPreloader` for command
+  folders. `ManagedAssembly.IsManaged` is the shared probe that distinguishes
+  a CLR image from a native PE without loading it.
 
 ## Kinds
 
@@ -82,9 +89,9 @@ bootstrap.
 
 Architecture tests prevent new direct loaders outside the kernel and the
 testhost discovery-load exception. Focused suites cover identity drift, private
-`System.*`/`Microsoft.*` dependencies, managed/native containment, metadata-only
-inspection, net48 hook cleanup, collectible unload, host package ownership, and
-clean MTP consumers.
+`System.*`/`Microsoft.*` dependencies, managed/native containment, native
+probing via the managed entry, metadata-only inspection, net48 hook cleanup,
+collectible unload, host package ownership, and clean MTP consumers.
 
 See [decision 0023](../decisions/0023-shared-assembly-isolation-kernel.md) for
 the rationale and the [completed plan](../plans/completed/2026-08-18-assembly-isolation-kernel.md)

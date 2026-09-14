@@ -276,17 +276,15 @@ public sealed class CSharpCompiler(
 
     private bool TryReadSimpleName(string refPath, out string? simpleName)
     {
-        try
+        if (ManagedAssembly.TryGetName(refPath, out var identity))
         {
-            simpleName = AssemblyName.GetAssemblyName(refPath).Name;
+            simpleName = identity.Name;
             return true;
         }
-        catch (Exception ex)
-        {
-            LogDebug($"Skipping unreadable reference '{refPath}': {ex.Message}");
-            simpleName = null;
-            return false;
-        }
+
+        LogDebug($"Skipping unreadable reference '{refPath}'.");
+        simpleName = null;
+        return false;
     }
 
     [Conditional("DEBUG")]

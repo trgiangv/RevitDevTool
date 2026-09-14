@@ -44,8 +44,6 @@ public sealed class NUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
 
         var managedCandidates = manifest.ManagedAssemblies
             .Select(path => new AssemblyCandidate(path, shadowDirectory));
-        var nativeCandidates = manifest.NativeAssets
-            .Select(path => new AssemblyCandidate(path, shadowDirectory));
 
         return AssemblyIsolationPlan.Create(manifest.RuntimeAssemblyPath)
             .WithKind(AssemblyIsolationKind.Isolated)
@@ -55,6 +53,6 @@ public sealed class NUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
             .Pin(frameworkAssembly)
             .Pin(typeof(ITestingRuntimeSession).Assembly)
             .AddManagedSource(new ManifestAssemblySource(managedCandidates))
-            .AddNativeSource(new ManifestNativeAssemblySource(nativeCandidates));
+            .WithGenerationNatives(manifest.ShadowAssemblyPath);
     }
 }

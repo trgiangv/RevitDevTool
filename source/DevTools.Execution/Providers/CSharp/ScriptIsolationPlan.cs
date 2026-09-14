@@ -49,26 +49,16 @@ public static class ScriptIsolationPlan
         if (directory is null)
             return;
 
-        try
-        {
-            var identity = AssemblyName.GetAssemblyName(normalizedPath);
-            if (SharedSidecars.Contains(identity.Name))
-                return;
-
-            manifest.Add(new AssemblyCandidate(normalizedPath, directory));
-        }
-        catch (BadImageFormatException)
+        if (!ManagedAssembly.TryGetName(normalizedPath, out var identity))
         {
             Skip(diagnosticSink, normalizedPath, "is not a managed assembly.");
+            return;
         }
-        catch (IOException)
-        {
-            Skip(diagnosticSink, normalizedPath, "could not be read.");
-        }
-        catch (UnauthorizedAccessException)
-        {
-            Skip(diagnosticSink, normalizedPath, "could not be accessed.");
-        }
+
+        if (SharedSidecars.Contains(identity.Name))
+            return;
+
+        manifest.Add(new AssemblyCandidate(normalizedPath, directory));
     }
 
     private static void Skip(IAssemblyIsolationDiagnosticSink? diagnosticSink, string path, string reason) =>
