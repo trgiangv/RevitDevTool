@@ -55,7 +55,9 @@ public static class HostUiHelper
     /// Clears <see cref="SynchronizationContext"/> <em>before</em> invoking
     /// <paramref name="start"/> so awaits resume on the thread pool instead of
     /// posting back to the blocked caller. The synchronous prefix of
-    /// <paramref name="start"/> still runs on the caller
+    /// <paramref name="start"/> still runs on the caller. Hosted
+    /// <c>StartAsync</c> must not await CPython/IronPython env setup, or this
+    /// freeze lasts through pixi/uv and nests inside other add-in dispatcher frames.
     /// </summary>
     public static void RunBlocking(Func<Task> start)
     {

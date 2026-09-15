@@ -2,10 +2,10 @@ using System.IO;
 using AcadDevTool.Settings;
 using Autodesk.Windows;
 using DevTools.Hosting;
-using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
+using DevTools.Mcp.Catalog;
 using DevTools.UI;
 using DevTools.UI.Theme;
 using Microsoft.Extensions.Hosting;
@@ -16,10 +16,12 @@ public sealed class HostBackgroundController(
     IHostAppInfo hostAppInfo,
     IAcadSettingsService settingsService,
     PythonInitializer pythonInitializer,
-    IronPythonDebugger ironPythonDebugger,
-    IIronPythonBridge ironPythonBridge) : IHostedService
+    IronPythonInitializer ironPythonInitializer,
+    McpCatalogStore catalogStore) : IHostedService
 {
-    public async Task StartAsync(CancellationToken cancellationToken)
+    private Task _runtimeInit = Task.CompletedTask;
+
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         HostUiHelper.Initialize(ComponentManager.ApplicationWindow, ComponentManager.Ribbon.Dispatcher);
 
@@ -30,17 +32,44 @@ public sealed class HostBackgroundController(
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme((AppTheme)settingsService.GeneralConfig.Theme);
         HostUiHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
-        await Task.WhenAll(
-            pythonInitializer.InitializeAsync(),
-            ironPythonDebugger.InitializeAsync(ironPythonBridge)).ConfigureAwait(false);
+        pythonInitializer.ReserveDebugPort();
+        ironPythonInitializer.ReserveDebugPort();
+        _runtimeInit = InitializeRuntimesAsync();
+        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         settingsService.SaveSettings();
         CleanLogFolder();
+        try
+        {
+            await _runtimeInit.ConfigureAwait(false);
+        }
+        catch
+        {
+            // InitializeAsync / pydevd already log failures.
+        }
+
         await pythonInitializer.ShutdownAsync().ConfigureAwait(false);
-        ironPythonDebugger.Shutdown();
+        await ironPythonInitializer.ShutdownAsync().ConfigureAwait(false);
+    }
+
+    private async Task InitializeRuntimesAsync()
+    {
+        await Task.WhenAll(
+            pythonInitializer.InitializeAsync(),
+            ironPythonInitializer.InitializeAsync())
+            .ConfigureAwait(false);
+
+        try
+        {
+            await catalogStore.ReloadAsync().ConfigureAwait(false);
+        }
+        catch
+        {
+            // Built-in MCP tools remain; Python toolsets retry on the next ReloadAsync.
+        }
     }
 
     private void CleanLogFolder()
