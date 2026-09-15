@@ -82,7 +82,7 @@ Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`Di
 
 - Default: new features go into shared `DevTools.*` libraries unless they require host-specific APIs.
 - Shared services should depend on interfaces, not Revit/AutoCAD/Tekla/Bentley APIs.
-- Host projects should implement adapters for command discovery, host context execution, script bridges, debugger bridges, document bridge (`IDocumentBridge`), and visualization.
+- Host projects should implement adapters for command discovery, host context execution, script bridges (`IPythonBridge`, `IIronPythonBridge`), document bridge (`IDocumentBridge`), and visualization.
 - UI/view models in shared presentation code should expose host-neutral behavior.
 - Host-specific rendering, transactions, threading, and document context must stay in host projects.
 - When adding a feature to one host, evaluate whether the design can be shared or extracted into a shared abstraction for future hosts.

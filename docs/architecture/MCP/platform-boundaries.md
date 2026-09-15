@@ -107,7 +107,7 @@ Host in-process catalog is `McpCatalogStore` (Catalog). Adapter and UI inject th
 |---------|------------------|------|-----------|
 | **Built-in C#** | Direct `IBuiltInMcpTool` invoke | Host wire forwards `input_required` | Same assembly as host |
 | **.NET toolset** | Cached SDK `McpServerTool` + SDK-contract JSON result bridge | Low-level `InputRequiredException` + retry params | Isolated ALC; private identity still needs ALC-local primitive |
-| **Python toolset** | `PythonExecutor` + `ToolInvoke.py` | `InputRequiredResult` → exception on wire | Interpreted |
+| **Python toolset** | `PythonExecutor.Execute(initializer, …)` + `ToolInvoke.py` | `InputRequiredResult` → exception on wire | Interpreted |
 | **Ad-hoc C#** | Rare catalog path | Same as built-in if registered | — |
 
 Resources (.NET toolset): dispatcher resource path with template URI from catalog metadata.

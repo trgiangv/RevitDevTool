@@ -71,7 +71,7 @@ Host prompts are not registered; guidance lives in daemon fixed prompts.
 
 | Primitive | .NET path | Python path |
 |-----------|-----------|-------------|
-| Tool call (built-in) | `IBuiltInMcpTool` via dispatcher | `PythonExecutor` binding |
+| Tool call (built-in) | `IBuiltInMcpTool` via dispatcher | `PythonExecutor.Execute(initializer, …)` |
 | Tool call (.NET toolset, ALC) | `ToolsetInvoker` + `ToolsetResultSerializer` JSON bridge | — |
 | Resource read | Dispatcher resource path | Python resource binding |
 

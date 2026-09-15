@@ -27,14 +27,14 @@ Additional interfaces in `source/DevTools.Execution/Interfaces/`:
 
 - `IPythonBridge` — Python.NET runtime
 - `IIronPythonBridge` — IronPython runtime
-- `IDebuggerBridge` (in `DevTools.Presentation.Interfaces`) — CPython + IronPython listen ports; one `IsConnected`
+- `DebugEndpoints` (singleton in `DevTools.Execution`) — CPython/IronPython `Port` + `Attached` for Execution UI chips
 
 Host projects register implementations via `AddExecutionServices()`:
 
 - Revit: `source/RevitDevTool/Composition/RevitServiceRegistration.cs`
 - AutoCAD: `source/AcadDevTool/Composition/AcadServiceRegistration.cs`
 
-The `AddExecutionServices()` call is the central DI hub — it registers orchestrator, MCP in-host pipe server (`DevToolsPipeServer`), pytest handler, and all strategy factories.
+The `AddExecutionServices()` call is the central DI hub — it registers orchestrator, MCP in-host pipe server (`DevToolsPipeServer`), pytest handler, and all strategy factories. Runtime init: `PythonInitializer` + `IronPythonInitializer` only; `PythonExecutor` / `PythonDebugger` / `IronPythonDebugger` are static.
 
 ## Execution Guard (Dialog & Failure Suppression)
 

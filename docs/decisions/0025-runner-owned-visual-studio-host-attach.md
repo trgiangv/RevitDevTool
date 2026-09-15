@@ -128,7 +128,7 @@ the testhost session ends.
 
 ### 5. What this does not decide
 
-- Python `debugpy.listen` / `IDebuggerBridge` internals (port, not PID).
+- Python `debugpy.listen` / `DebugEndpoints` internals (port, not PID).
 - Host-side `IDebugController`.
 - MCP execute / interactive C# script attach (no testhost, no Runner).
 - Changing VS warn-and-continue.

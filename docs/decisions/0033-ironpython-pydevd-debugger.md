@@ -7,9 +7,11 @@ Amended: 2026-09-12 — VS Code/Cursor client is `debugpy` attach+connect;
 `IpyDebugger.py` handshake + expand-getattr quieting. In-process
 debugger remains PyDev.Debugger 2.8.0 on port 4567 (was 5680).
 Amended: 2026-09-13 — two IronPython stacks, one debugger.
-pyRevit loaded → ScriptExecutor + `IronPythonDebugger.InitializeAsync(engine)`
-on the loader engine (`full_frame: false`, reuse). No pyRevit → embedded 3.4.2
-via `GetOrCreateEngine`. Do not `CreateEngine` on the pyRevit path.
+pyRevit loaded → ScriptExecutor + static `IronPythonDebugger` on the loader
+engine (`full_frame: false`, reuse). No pyRevit → embedded 3.4.2 via
+`IronPythonInitializer` session engine. Do not `CreateEngine` on the pyRevit path.
+Amended: 2026-09-15 — static `IronPythonDebugger` / `PythonDebugger`; singleton
+`DebugEndpoints` (`Port`, `Attached`, `IsListening`); no `IDebuggerBridge`.
 Amended: 2026-09-14 — live Revit 2024 (.NET 4.8): `import pydevd` succeeds;
 `_enable_attach` → `import site` → `os.path.abspath` on CLR `__file__`
 (assembly display name). net48 `Path.GetFullPath` rejects it. Wrap
@@ -156,7 +158,8 @@ created with <c>Frames</c>/<c>FullFrames</c> and **without** <c>Tracing</c>.
 
 When pyRevit is loaded, every `*_ipy_script.py` Run uses pyRevit
 <c>ScriptExecutor</c> / <c>PyRevitLoader</c> — not embedded 3.4.2.
-<c>IronPythonDebugger.InitializeAsync(object)</c> listens on that loader
+<c>IronPythonInitializer</c> attaches via <c>IIronPythonBridge.TryGetHostEngine</c>;
+static <c>IronPythonDebugger.StartListeningAsync</c> listens on that loader
 engine (no <c>CreateEngine</c>, no <c>Runtime.Shutdown</c>).
 <c>EngineConfigsJson</c>: <c>clean:false</c>, <c>persistent:false</c>,
 <c>full_frame:false</c>, <c>RefreshEngine:false</c>. Do **not** set
@@ -240,36 +243,38 @@ filename + line.
 
 ### 7. Debugger logic lives in the host, not in user scripts
 
-Shared `DevTools.Execution` owns an `IronPythonDebugger` parallel to
-`PythonDebugger` (conceptual API):
+Shared `DevTools.Execution` owns static `IronPythonDebugger` parallel to static
+`PythonDebugger`:
 
 ```csharp
-public sealed class IronPythonDebugger
+public static class IronPythonDebugger
 {
-    public void ConfigureEngine(ScriptEngine engine); // search path + import
-    public void StartListening(int port = 4567);     // protocol + _enable_attach
-    public bool IsAttached { get; }                    // _is_attached
+    public static void AddPydevdSearchPath(ScriptEngine engine);
+    public static Task StartListeningAsync(object engine, DebugEndpoint endpoint, …);
+    public static void EnsureCurrentThreadTraced(object engine);
 }
 ```
 
-No `WaitForClient`. Do not inject `import pydevd` / `settrace` into each
-`*_ipy_script.py`. Do not put this type in `RevitDevTool` / `AcadDevTool`.
-Hosts keep `IIronPythonBridge` for builtins/references only. pyRevit
-`SearchPaths` are the command-generator list (script / lib / bin /
-pyrevitlib). Do not inject pyRevit paths into the embedded 3.4 engine.
+Attach state is probed into `DebugEndpoint.Attached` via `PythonInstances`
+constants. No `WaitForClient`. Do not inject `import pydevd` / `settrace` into
+each `*_ipy_script.py`. Do not put these types in `RevitDevTool` / `AcadDevTool`.
+Hosts keep `IIronPythonBridge` for builtins/references and
+`TryGetHostEngine` only. pyRevit `SearchPaths` are the command-generator list
+(script / lib / bin / pyrevitlib). Do not inject pyRevit paths into the embedded
+3.4 engine.
 
-`IDebuggerBridge` surfaces both listen ports (`PythonDebugPort`,
-`IronPythonDebugPort`) and one `IsConnected()` (CPython **or** IronPython
-client). The two listeners stay on separate sockets.
+Singleton `DebugEndpoints` holds CPython and IronPython `DebugEndpoint` slots
+(`Port`, `Attached`, `IsListening`). Execution UI reads them directly. The two
+listeners stay on separate sockets.
 
 ### 8. Session-lifetime engine: listen at init, execute later, do not shutdown
 
 `debugpy` works without wait because pythonnet is **one process-lifetime
 interpreter**; `PythonDebugger.StartListening` runs in `SetupRuntime`, then
-any later script is the same `sys.settrace`. Today `IronPythonRunner` does
-the opposite: `CreateEngine` → execute → `Runtime.Shutdown()`. A
-per-script `_enable_attach` without wait is not attachable: the socket dies
-when the engine is shut down, before VS Code can connect.
+any later script is the same `sys.settrace`. A per-script engine that calls
+`Runtime.Shutdown()` after each Run is not attachable: the socket dies before
+VS Code can connect. `IronPythonExecutor` reuses the `IronPythonInitializer`
+session engine instead.
 
 Therefore the embedded debug engine is **session-lifetime**:
 
@@ -383,6 +388,6 @@ After that spike passes:
 - Client: VS Code/Cursor `"type": "debugpy"` attach+connect to `localhost:4567`
 - Handshake: `source/DevTools.Execution/Resources/scripts/IpyDebugger.py`
 - CPython listen: `source/DevTools.Execution/Providers/Python/PythonDebugger.cs`
-- Embedded IPy: `source/DevTools.Execution/Providers/IronPython/IronPythonRunner.cs`
+- Embedded IPy: `source/DevTools.Execution/Providers/IronPython/IronPythonExecutor.cs`
 - AppData root: `source/DevTools.Utilities/AppUtils.cs`
 - pyRevit engine JSON: `source/RevitDevTool/Execution/PyRevit/PyRevitReflectionCache.cs`

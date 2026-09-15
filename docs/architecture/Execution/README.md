@@ -4,7 +4,7 @@ The execution system is the shared runtime in `source/DevTools.Execution/`. It d
 
 The platform is not Revit-only. Revit and AutoCAD currently provide host adapters; future .NET-capable hosts should plug in through the same abstractions.
 
-Last updated: 2026-09-05
+Last updated: 2026-09-15
 
 ---
 
@@ -76,11 +76,13 @@ Shared execution depends on interfaces:
 | `ICommandRunner` | Invoke discovered or compiled commands. |
 | `ICompiledScriptBridge` | Parent-bind host APIs, find the compiled command type, rewrite host-year `#r` paths. FSI compile refs are derived from parent `Location`s in Execution, not a fourth contract member. |
 | `IPythonBridge` | Configure CPython builtins/scope for the host. |
-| `IIronPythonBridge` | Configure IronPython builtins and host assemblies. |
-| `IDebuggerBridge` | CPython and IronPython listen ports plus per-runtime connect flags for Execution UI; `IsConnected` is either attach. |
+| `IIronPythonBridge` | Configure IronPython builtins and host assemblies; `TryGetHostEngine` is pyRevit ScriptExecutor or null (embedded 3.4.2). |
+| `DebugEndpoints` | Cached CPython/IronPython listen ports and attach flags for Execution UI. |
 | `IDocumentBridge` | Open, close, and save documents in the host context. |
 
 Revit wiring lives in `RevitHostingExtensions`. AutoCAD wiring lives in `AcadHostingExtensions`. New hosts should add their own adapter project rather than leaking host APIs into `DevTools.Execution`.
+
+`ExecutionExtensions.AddExecutionServices` registers `DebugEndpoints`, `PythonInitializer`, and `IronPythonInitializer`. `PythonExecutor`, `PythonDebugger`, and `IronPythonDebugger` are public static helpers (not DI singletons). CAD start, port lease, and catalog reload: [python-runtime.md](python-runtime.md).
 
 ---
 

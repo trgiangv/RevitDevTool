@@ -54,7 +54,7 @@ sequenceDiagram
 |---------|------------------|
 | Built-in C# (`IBuiltInMcpTool`) | Direct invoke on host assembly |
 | .NET toolset (ALC) | `ToolsetInvoker` + JSON bridge (`ToolsetResultSerializer`) |
-| Python toolset | `PythonExecutor` + `ToolInvoke.py` |
+| Python toolset | `PythonExecutor.Execute(initializer, …)` + `ToolInvoke.py` |
 | Ad-hoc C# (`ExecutionMode.CSharp`) | Rare catalog path |
 
 See [Platform boundaries](../MCP/platform-boundaries.md) for MRTR and ALC detail.
