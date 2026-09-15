@@ -1,0 +1,26 @@
+<Window x:Class="DevTools.MetroFork.Tests.Support.LogSettingsComboWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+        Title="LogSettingsCombo"
+        Width="400"
+        Height="200"
+        ShowInTaskbar="False"
+        WindowStartupLocation="Manual">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DevTools.MahApps.Metro;component/Styles/Fonts.xaml" />
+                <ResourceDictionary Source="/DevTools.MahApps.Metro;component/Styles/Controls.xaml" />
+                <ResourceDictionary Source="/DevTools.MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+    <mah:MultiSelectionComboBox x:Name="ComboBox"
+                                Width="200"
+                                VerticalAlignment="Center"
+                                mah:MultiSelectorHelper.SelectedItems="{Binding SelectedLogTargets}"
+                                ItemContainerStyle="{StaticResource DevTools.MahApps.Styles.MultiSelectionComboBoxItem.CheckBox}"
+                                ItemsSource="{Binding AvailableLogTargets, Mode=OneTime}"
+                                SelectionMode="Multiple" />
+</Window>
