@@ -5,10 +5,10 @@ using System.Windows.Threading;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 using DevTools.AssemblyIsolation;
+using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Settings;
-using DevTools.Presentation.Interfaces;
 using DevTools.UI.Theme;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 // ReSharper disable UnusedParameterInPartialMethod
@@ -20,7 +20,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     private readonly IExecutionOrchestrator _orchestrator;
     private readonly ISettingsService _settingsService;
     private readonly MemoryViewModel _memoryViewModel;
-    private readonly IDebuggerBridge? _debugger;
+    private readonly DebugEndpoints? _endpoints;
     private readonly ILogger<CommandViewModel> _logger;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer? _debugStatusTimer;
@@ -60,7 +60,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     [ObservableProperty]
     public partial int IronPythonDebugPort { get; set; }
 
-    public bool HasDebugger => _debugger != null;
+    public bool HasDebugger => _endpoints is not null;
     public ObservableCollection<ExecutionNodeBase> FilteredItems { get; } = [];
 
     public CommandViewModel(
@@ -68,13 +68,13 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         ISettingsService settingsService,
         MemoryViewModel memoryViewModel,
         ILogger<CommandViewModel> logger,
-        IDebuggerBridge? debugger = null)
+        DebugEndpoints? endpoints = null)
     {
         _orchestrator = orchestrator;
         _settingsService = settingsService;
         _memoryViewModel = memoryViewModel;
         _logger = logger;
-        _debugger = debugger;
+        _endpoints = endpoints;
         _orchestrator.TreeChanged += OnTreeChanged;
         _orchestrator.RootRemoved += OnRootRemoved;
         _orchestrator.ExecutionProgressChanged += OnExecutionProgressChanged;
@@ -83,22 +83,23 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         _searchDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
         _searchDebounceTimer.Tick += (_, _) => { _searchDebounceTimer.Stop(); PerformSearch(); };
 
-        if (_debugger == null) return;
-        {
-            _debugStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
-            _debugStatusTimer.Tick += (_, _) => UpdateDebuggerStatus();
-            _debugStatusTimer.Start();
-            UpdateDebuggerStatus();
-        }
+        if (_endpoints is null) return;
+
+        _debugStatusTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _debugStatusTimer.Tick += (_, _) => UpdateDebuggerStatus();
+        _debugStatusTimer.Start();
+        UpdateDebuggerStatus();
     }
 
     private void UpdateDebuggerStatus()
     {
-        IsPythonDebuggerConnected = _debugger?.IsPythonConnected() ?? false;
-        IsIronPythonDebuggerConnected = _debugger?.IsIronPythonConnected() ?? false;
+        if (_endpoints is null) return;
+
+        IsPythonDebuggerConnected = _endpoints.CPython.Attached;
+        IsIronPythonDebuggerConnected = _endpoints.IronPython.Attached;
         IsDebuggerConnected = IsPythonDebuggerConnected || IsIronPythonDebuggerConnected;
-        PythonDebugPort = _debugger?.PythonDebugPort ?? 0;
-        IronPythonDebugPort = _debugger?.IronPythonDebugPort ?? 0;
+        PythonDebugPort = _endpoints.CPython.Port;
+        IronPythonDebugPort = _endpoints.IronPython.Port;
     }
 
     public async Task LoadSavedPathsAsync()

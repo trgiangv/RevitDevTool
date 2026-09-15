@@ -84,7 +84,6 @@ internal static class AcadServiceRegistration
     {
         var services = builder.Services;
 
-        services.AddSingleton<IDebuggerBridge, AcadDebuggerBridge>();
         services.AddSingleton<IHostContextExecutor, AcadHostContextExecutor>();
         services.AddSingleton<IDocumentBridge, AcadDocumentBridge>();
         services.AddSingleton<HostAssemblies, AcadHostAssemblies>();
