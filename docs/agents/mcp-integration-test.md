@@ -150,7 +150,8 @@ Each vertical product has its own subfolder under the AutoCAD install:
 dotnet build samples/RevitMcpToolSet/RevitMcpToolSet.csproj -c Release.Autodesk.2025
 
 # Python Toolset (no build needed — interpreted)
-# Located at: samples/PythonDemo/mcp_toolset/
+# Revit: samples/PythonDemo/mcp_toolset/
+# AutoCAD: samples/PythonDemo/mcp_acad_toolset/
 ```
 
 ### Register in McpRegistryConfig.json
@@ -168,12 +169,13 @@ Edit `%AppData%\RevitDevTool\{Version}\Settings\McpRegistryConfig.json`:
 }
 ```
 
-For AutoCAD/Civil3D (same structure, different version folder):
+For AutoCAD/Civil3D, edit `%AppData%\RevitDevTool\{Version}\Settings\AcadMcpRegistryConfig.json`
+(same app-data root; distinct file so it does not collide with Revit's `McpRegistryConfig.json`):
 ```json
 {
   "dotnetToolsetPaths": [],
   "pythonToolsetPaths": [
-    "C:\\Users\\{user}\\source\\repos\\RevitDevTool\\samples\\PythonDemo\\mcp_toolset"
+    "C:\\Users\\{user}\\source\\repos\\RevitDevTool\\samples\\PythonDemo\\mcp_acad_toolset"
   ]
 }
 ```

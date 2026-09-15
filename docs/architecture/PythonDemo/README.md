@@ -2,7 +2,7 @@
 
 `samples/PythonDemo/` demonstrates the Python runtime, PEP 723 dependency resolution, logging, visualization, WebView2 dashboard patterns, and Python MCP toolsets.
 
-Last updated: 2026-05-29
+Last updated: 2026-09-15
 
 ---
 
@@ -13,7 +13,8 @@ Last updated: 2026-05-29
 | Entry scripts | `samples/PythonDemo/commands/` |
 | Dashboard backend | `samples/PythonDemo/revit_dashboard/` |
 | Dashboard frontend | `samples/PythonDemo/revit_dashboard_ui/` |
-| Python MCP toolset | `samples/PythonDemo/mcp_toolset/` |
+| Python MCP toolset (Revit) | `samples/PythonDemo/mcp_toolset/` |
+| Python MCP toolset (AutoCAD) | `samples/PythonDemo/mcp_acad_toolset/` |
 | Import/dependency test module | `samples/PythonDemo/test_module/` |
 
 ---
@@ -26,7 +27,7 @@ flowchart TB
     Runtime["DevTools.Execution Python runtime\nhost-attach uv / owned pixi / pip"]
     Dashboard["revit_dashboard/\ncollector, analytics, export, WebView bridge"]
     UI["revit_dashboard_ui/\nReact + TypeScript + Vite"]
-    MCP["mcp_toolset/\nPython MCP tools"]
+    MCP["mcp_toolset / mcp_acad_toolset\nPython MCP tools"]
     TestModule["test_module/\nimport/dependency samples"]
     Logging["Logging monitor"]
     Viz["Revit visualization"]
@@ -51,7 +52,8 @@ flowchart TB
 | `dashboard_script.py` | Launches the WebView2 dashboard sample. |
 | `data_analysis_script.py` | Polars/data-analysis demo. |
 | `debugpy_script.py` | CPython `debugpy` demo (port 5678). |
-| `debug_ipy_script.py` | IronPython debug demo (port 4567). |
+| `debug_ipy_script.py` | IronPython debug demo (Revit, port 4567). |
+| `debug_acad_ipy_script.py` | IronPython debug demo (AutoCAD, port 4567). |
 | `export_data_script.py` | Excel export demo. |
 | `fcl_script.py` | Geometry/collision dependency demo. |
 | `logging_batch_script.py` | Logging stress sample. |
@@ -111,15 +113,24 @@ npm run build
 
 ## Python MCP Toolset
 
-`mcp_toolset/` contains parser samples and a larger Revit-oriented Python MCP toolset.
+Two Python MCP samples share the same layout (`tools/` → `services/` → `dto/` + `shared/`, plus `resources/` and `prompts/`). Entry files must match `*mcp.py` so `McpPathValidator` and PEP 723 pre-resolve can find them.
 
-Key folders:
+| Folder | Host | Entry |
+|--------|------|-------|
+| `mcp_toolset/` | Revit | `revitdevtool_mcp.py` |
+| `mcp_acad_toolset/` | AutoCAD family | `acaddevtool_mcp.py` |
 
-- `tools/` - MCP tool functions grouped by domain.
-- `services/` - Revit/API service logic behind tools.
+`mcp_toolset/` is the larger Revit-oriented catalog (query/CRUD/MEP/docs/export) plus parser samples (`tests/parser_annotation_sample.py`, `tests/parser_lowlevel_sample.py`).
+
+`mcp_acad_toolset/` is a small AutoCAD catalog: status, layers, find/selection, draw line/circle, highlight, erase. Resources use `acad://…` URIs. Register it in AutoCAD's `AcadMcpRegistryConfig.json` (`pythonToolsetPaths`), not Revit's `McpRegistryConfig.json` — AutoCAD API imports fail in Revit.
+
+Key folders (both toolsets):
+
+- `tools/` - MCP tool functions grouped by domain (`acad_*` / `revit_*` names).
+- `services/` - host API logic behind tools.
 - `dto/` - DTO contracts.
-- `shared/` - common responses, constants, transactions, element helpers.
-- `parser_annotation_sample.py` and `parser_lowlevel_sample.py` - parser coverage samples.
+- `shared/` - responses, annotations, transactions / document lock helpers.
+- `resources/` / `prompts/` - static + live resources and workflow prompts.
 
 ---
 
