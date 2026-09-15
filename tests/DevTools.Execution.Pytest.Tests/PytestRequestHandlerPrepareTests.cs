@@ -21,7 +21,7 @@ public sealed class PytestRequestHandlerPrepareTests
         var handler = new PytestRequestHandler(
             ExecutionTestHelpers.InlineHostContext(),
             new PytestDependencyService(initializer),
-            new PytestExecutionService(new PythonExecutor(initializer)));
+            new PytestExecutionService(initializer));
 
         var workspace = ExecutionTestHelpers.CreateTempDirectory("pytest-prepare-fail");
         var testsDir = Path.Combine(workspace, "tests");

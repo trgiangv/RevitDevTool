@@ -17,7 +17,7 @@ public sealed class PythonCodeToolTests
     [DataRow("   ")]
     public async Task Execute_EmptyOrWhitespaceCode_ReturnsErrorBeforeInitialization(string code)
     {
-        var tool = new PythonCodeTool(null!, null!, null!);
+        var tool = new PythonCodeTool(null!, null!);
         var result = await InvokeToolAsync(tool, new { code });
 
         Assert.IsTrue(result.IsError);

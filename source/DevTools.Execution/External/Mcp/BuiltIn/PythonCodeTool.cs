@@ -10,17 +10,14 @@ namespace DevTools.Execution.External.Mcp.BuiltIn;
 public sealed class PythonCodeTool : IBuiltInMcpTool
 {
     private readonly PythonInitializer _initializer;
-    private readonly PythonExecutor _executor;
     private readonly IHostContextExecutor _hostContext;
     private string? _lastDepError;
 
     public PythonCodeTool(
         PythonInitializer initializer,
-        PythonExecutor executor,
         IHostContextExecutor hostContext)
     {
         _initializer = initializer;
-        _executor = executor;
         _hostContext = hostContext;
         ServerTool = McpServerTool.Create(
             ExecuteAsync,
@@ -112,7 +109,7 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
 
     private PythonExecutionOutcome RunCode(string code)
     {
-        return _executor.Execute("execute_python_code", rootFolder: null, scope =>
+        return PythonExecutor.Execute(_initializer, "execute_python_code", rootFolder: null, scope =>
         {
             scope.Set(PythonInstances.Source, new PyString(code));
             scope.Exec(StdoutCaptureBegin);

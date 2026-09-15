@@ -14,7 +14,7 @@ namespace DevTools.Execution.External.Mcp.Backends;
 /// Owns the complete Python MCP boundary: runtime invocation plus request/result JSON.
 /// Protocol encoding is deliberately private to this backend.
 /// </summary>
-public sealed class PythonMcpToolBackend(PythonExecutor executor) : IMcpPrimitiveBackend
+public sealed class PythonMcpToolBackend(PythonInitializer initializer) : IMcpPrimitiveBackend
 {
     public ExecutionMode SourceKind => ExecutionMode.Python;
 
@@ -32,7 +32,8 @@ public sealed class PythonMcpToolBackend(PythonExecutor executor) : IMcpPrimitiv
     private McpResult<McpInvocationResponse> Invoke(McpRegisteredTool tool, CallToolRequestParams request)
     {
         var sourcePath = RequireSourcePath(tool.Binding.SourcePath);
-        var resultJson = executor.Execute(
+        var resultJson = PythonExecutor.Execute(
+            initializer,
             sourcePath,
             Path.GetDirectoryName(sourcePath) ?? string.Empty,
             scope =>
@@ -53,7 +54,8 @@ public sealed class PythonMcpToolBackend(PythonExecutor executor) : IMcpPrimitiv
         CancellationToken cancellationToken)
     {
         var sourcePath = RequireSourcePath(resource.Binding.SourcePath);
-        var resultJson = executor.Execute(
+        var resultJson = PythonExecutor.Execute(
+            initializer,
             sourcePath,
             Path.GetDirectoryName(sourcePath) ?? string.Empty,
             scope =>

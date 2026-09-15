@@ -67,7 +67,7 @@ public sealed class PythonMcpToolBackendInvokeTests
         [TestMethod]
         public async Task InvokeToolAsync_MissingSourcePath_ThrowsThroughHostContext()
         {
-            var backend = new PythonMcpToolBackend(new PythonExecutor(ExecutionTestHelpers.CreatePythonInitializer()));
+            var backend = new PythonMcpToolBackend(ExecutionTestHelpers.CreatePythonInitializer());
             var tool = new McpRegisteredTool
             {
                 Id = "tool-1",
@@ -99,8 +99,7 @@ public sealed class PythonMcpToolBackendInvokeTests
                     return message
                 """);
 
-            var executor = new PythonExecutor(initializer);
-            var backend = new PythonMcpToolBackend(executor);
+            var backend = new PythonMcpToolBackend(initializer);
             var tool = new McpRegisteredTool
             {
                 Id = "tool-echo",
@@ -148,8 +147,7 @@ public sealed class PythonMcpToolBackendInvokeTests
                     return "resource-body"
                 """);
 
-            var executor = new PythonExecutor(initializer);
-            var backend = new PythonMcpToolBackend(executor);
+            var backend = new PythonMcpToolBackend(initializer);
             var resource = new McpRegisteredResource
             {
                 Id = "res-1",

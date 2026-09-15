@@ -1,3 +1,4 @@
+using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Providers.Python;
 
 namespace DevTools.Execution.Tests;
@@ -28,7 +29,8 @@ public sealed class PythonDepsManagerHeadlessTests
             new UvEnvironmentProvider(Microsoft.Extensions.Logging.Abstractions.NullLogger<UvEnvironmentProvider>.Instance),
             new PipEnvironmentProvider(Microsoft.Extensions.Logging.Abstractions.NullLogger<PipEnvironmentProvider>.Instance),
             ExecutionTestHelpers.CreatePythonBridge(),
-            Microsoft.Extensions.Logging.Abstractions.NullLogger<PythonInitializer>.Instance);
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<PythonInitializer>.Instance,
+            new DebugEndpoints());
 
         PythonDepsManager.RefreshImportCache(initializer);
     }

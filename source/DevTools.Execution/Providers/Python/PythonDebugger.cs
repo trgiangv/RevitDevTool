@@ -1,5 +1,4 @@
-using System.Net;
-using System.Net.Sockets;
+using DevTools.Execution.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Python.Runtime;
 using ZLogger;
@@ -9,29 +8,59 @@ namespace DevTools.Execution.Providers.Python;
 public static class PythonDebugger
 {
     public const int PreferredPort = 5678;
-    public static int DebugPort { get; private set; }
 
-    public static void StartListening(ILogger? logger = null)
+    private const string ImportDebugpy = """
+        import os
+        import debugpy
+        os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
+        """;
+
+    private const string ConnectedScript = $"""
+                                            import sys
+                                            {PythonInstances.IsConnected} = False
+                                            if 'debugpy' in sys.modules:
+                                                import debugpy
+                                                {PythonInstances.IsConnected} = debugpy.is_client_connected()
+                                            """;
+
+    private const string ListenScript = $"""
+                                         if not debugpy.is_client_connected():
+                                             debugpy.listen(("127.0.0.1", {PythonInstances.Port}), in_process_debug_adapter=True)
+                                         """;
+
+    public static void StartListening(DebugEndpoint endpoint, ILogger? logger = null)
     {
-        DebugPort = FindAvailablePort(PreferredPort);
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (endpoint.IsListening)
+            return;
 
-        const string debugpySetup = """
-                                    import os
-                                    import debugpy
-                                    os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
-
-                                    if not debugpy.is_client_connected():
-                                        debugpy.listen(("localhost", __port__), in_process_debug_adapter=True)
-                                    """;
+        endpoint.Reserve(PreferredPort);
 
         using var scope = Py.CreateScope();
         try
         {
-            scope.Set("__port__", new PyInt(DebugPort));
-            scope.Exec(debugpySetup);
+            scope.Exec(ImportDebugpy);
+            var port = endpoint.ReleaseLease();
+            try
+            {
+                Listen(scope, port);
+            }
+            catch (Exception first)
+            {
+                logger?.ZLogWarning($"debugpy.listen {port} failed: {first.Message}");
+                using (var fallback = DebugPortLease.Acquire(0))
+                    port = fallback.Port;
+
+                Listen(scope, port);
+            }
+
+            endpoint.MarkListening(port);
+            endpoint.AttachProbe = () => IsConnected(logger);
+            logger?.ZLogInformation($"debugpy listening on {DebugPortLease.Host}:{port}");
         }
         catch (Exception e)
         {
+            endpoint.MarkFailed();
             logger?.ZLogError($"Failed to initialize debugpy: {e.Message}{Environment.NewLine}{e.StackTrace}");
         }
     }
@@ -45,14 +74,8 @@ public static class PythonDebugger
             using var scope = Py.CreateScope();
             try
             {
-                scope.Exec("""
-                           import sys
-                           __is_connected__ = False
-                           if 'debugpy' in sys.modules:
-                               import debugpy
-                               __is_connected__ = debugpy.is_client_connected()
-                           """);
-                dynamic isConnected = scope.Get("__is_connected__");
+                scope.Exec(ConnectedScript);
+                dynamic isConnected = scope.Get(PythonInstances.IsConnected);
                 return (bool)isConnected;
             }
             catch (Exception ex)
@@ -63,22 +86,9 @@ public static class PythonDebugger
         }
     }
 
-    internal static int FindAvailablePort(int preferredPort)
+    private static void Listen(PyModule scope, int port)
     {
-        try
-        {
-            var tester = new TcpListener(IPAddress.Loopback, preferredPort);
-            tester.Start();
-            tester.Stop();
-            return preferredPort;
-        }
-        catch (SocketException)
-        {
-            var fallback = new TcpListener(IPAddress.Loopback, 0);
-            fallback.Start();
-            var port = ((IPEndPoint)fallback.LocalEndpoint).Port;
-            fallback.Stop();
-            return port;
-        }
+        scope.Set(PythonInstances.Port, new PyInt(port));
+        scope.Exec(ListenScript);
     }
 }

@@ -1,6 +1,7 @@
 using System.Reflection;
 using DevTools.Execution;
 using DevTools.Execution.Abstractions;
+using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Python;
@@ -78,7 +79,8 @@ public static class ExecutionTestHelpers
             uv ?? new UvEnvironmentProvider(NullLogger<UvEnvironmentProvider>.Instance),
             pip ?? new PipEnvironmentProvider(NullLogger<PipEnvironmentProvider>.Instance),
             bridge ?? CreatePythonBridge(),
-            NullLogger<PythonInitializer>.Instance);
+            NullLogger<PythonInitializer>.Instance,
+            new DebugEndpoints());
     }
 
     public static async Task<PythonInitializer> EnsurePixiPythonInitializedAsync()

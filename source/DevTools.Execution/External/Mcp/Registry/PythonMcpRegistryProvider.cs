@@ -9,7 +9,6 @@ namespace DevTools.Execution.External.Mcp.Registry;
 
 public sealed class PythonMcpRegistryProvider(
     PythonInitializer pythonInitializer,
-    PythonExecutor executor,
     PythonToolsetParser toolsetParser,
     ILogger<PythonMcpRegistryProvider> logger) : IMcpRegistryProvider
 {
@@ -94,7 +93,8 @@ public sealed class PythonMcpRegistryProvider(
             return null;
 
         var anchorFile = Path.Combine(toolsetDirectory, "__mcp_registry__.py");
-        return executor.Execute(
+        return PythonExecutor.Execute(
+            pythonInitializer,
             anchorFile,
             toolsetDirectory,
             scope =>

@@ -195,7 +195,6 @@ public sealed class PythonCoverageTests
     public async Task PythonExecutionStrategy_RunsSimpleScript()
     {
         var initializer = await ExecutionTestHelpers.EnsurePixiPythonInitializedAsync();
-        var executor = new PythonExecutor(initializer);
         var directory = ExecutionTestHelpers.CreateTempDirectory("python-strategy-run");
         var scriptPath = Path.Combine(directory, "hello_script.py");
         await File.WriteAllTextAsync(scriptPath, "value = 40 + 2", TestContext.CancellationToken);
@@ -206,7 +205,6 @@ public sealed class PythonCoverageTests
                 scriptPath,
                 directory,
                 initializer,
-                executor,
                 ExecutionTestHelpers.InlineHostContext(),
                 NullLogger<PythonExecutionStrategy>.Instance);
 
@@ -224,7 +222,7 @@ public sealed class PythonCoverageTests
     public async Task PythonCodeTool_ExecutesInlineCode_WhenPythonReady()
     {
         var initializer = await ExecutionTestHelpers.EnsurePixiPythonInitializedAsync();
-        var tool = new PythonCodeTool(initializer, new PythonExecutor(initializer), ExecutionTestHelpers.InlineHostContext());
+        var tool = new PythonCodeTool(initializer, ExecutionTestHelpers.InlineHostContext());
 
         var result = await InvokeToolAsync(tool, new { code = "print('coverage-boost')" }, TestContext.CancellationToken);
 

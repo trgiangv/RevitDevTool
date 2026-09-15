@@ -21,7 +21,6 @@ public sealed class PythonMcpRegistryProviderTests
     {
         var provider = new PythonMcpRegistryProvider(
             ExecutionTestHelpers.CreatePythonInitializer(),
-            new PythonExecutor(ExecutionTestHelpers.CreatePythonInitializer()),
             new PythonToolsetParser(NullLogger<PythonToolsetParser>.Instance),
             NullLogger<PythonMcpRegistryProvider>.Instance);
 
@@ -108,7 +107,6 @@ public sealed class PythonMcpRegistryProviderTests
     private static PythonMcpRegistryProvider CreateProvider(PythonInitializer initializer) =>
         new(
             initializer,
-            new PythonExecutor(initializer),
             new PythonToolsetParser(NullLogger<PythonToolsetParser>.Instance),
             NullLogger<PythonMcpRegistryProvider>.Instance);
 

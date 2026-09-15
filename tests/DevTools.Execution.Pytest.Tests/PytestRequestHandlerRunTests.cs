@@ -21,7 +21,7 @@ public sealed class PytestRequestHandlerRunTests
         var handler = new PytestRequestHandler(
             ExecutionTestHelpers.InlineHostContext(),
             new PytestDependencyService(initializer),
-            new PytestExecutionService(new PythonExecutor(initializer)));
+            new PytestExecutionService(initializer));
 
         var workspace = ExecutionTestHelpers.CreateTempDirectory("pytest-handler-run");
         var testsDir = Path.Combine(workspace, "tests");
@@ -63,7 +63,7 @@ public sealed class PytestRequestHandlerRunTests
         var handler = new PytestRequestHandler(
             ExecutionTestHelpers.InlineHostContext(),
             new PytestDependencyService(initializer),
-            new PytestExecutionService(new PythonExecutor(initializer)))
+            new PytestExecutionService(initializer))
         {
             NotificationSender = (_, _) => { },
         };

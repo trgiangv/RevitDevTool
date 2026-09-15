@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,9 +15,12 @@ public sealed class PythonInitializer(
     [FromKeyedServices(PythonBackend.Uv)] PyEnvironmentProvider uvProvider,
     [FromKeyedServices(PythonBackend.Pip)] PyEnvironmentProvider pipProvider,
     IPythonBridge bridge,
-    ILogger<PythonInitializer> logger)
+    ILogger<PythonInitializer> logger,
+    DebugEndpoints endpoints)
 {
     private readonly SemaphoreSlim _initLock = new(1, 1);
+
+    public void ReserveDebugPort() => endpoints.CPython.Reserve(PythonDebugger.PreferredPort);
 
     public PyModule? GlobalScope { get; private set; }
     public PyEnvironmentProvider? Provider { get; private set; }
@@ -62,6 +66,7 @@ public sealed class PythonInitializer(
 
     public async Task ShutdownAsync()
     {
+        endpoints.CPython.Reset();
         if (!PythonEngine.IsInitialized) return;
 
         await _initLock.WaitAsync().ConfigureAwait(false);
@@ -147,7 +152,7 @@ public sealed class PythonInitializer(
             if (probe.Length > 0)
                 logger.ZLogInformation($"Python sidecar overlay probe={probe}");
             SetupGlobalScope();
-            PythonDebugger.StartListening(logger);
+            PythonDebugger.StartListening(endpoints.CPython, logger);
         }
     }
 

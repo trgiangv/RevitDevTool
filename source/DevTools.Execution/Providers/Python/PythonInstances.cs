@@ -25,4 +25,14 @@ public static class PythonInstances
     // Test execution
     public const string PytestRequestJson = "__pytest_request_json__";
     public const string ProgressCallback = "__progress_callback__";
+
+    // Debugger (CPython debugpy / IronPython pydevd)
+    public const string Port = "__port__";
+    public const string IsConnected = "__is_connected__";
+    public const string IsAttached = "__is_attached__";
+    public const string HasTrace = "__has_trace__";
+    public const string TraceFunc = "__trace_func__";
+    public const string Debugger = "__dbg__";
+    public const string RefreshRoot = "__refresh_root__";
+    public const string RefreshSkip = "__refresh_skip__";
 }

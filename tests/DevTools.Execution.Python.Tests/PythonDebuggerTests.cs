@@ -1,3 +1,4 @@
+using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Providers.Python;
 using Microsoft.Extensions.Logging.Abstractions;
 using Python.Runtime;
@@ -26,7 +27,7 @@ public sealed class PythonDebuggerListeningTests
         await ExecutionTestHelpers.EnsurePixiPythonInitializedAsync();
         using (Py.GIL())
         {
-            PythonDebugger.StartListening(NullLogger.Instance);
+            PythonDebugger.StartListening(new DebugEndpoint(), NullLogger.Instance);
         }
 
         Assert.IsFalse(PythonDebugger.IsConnected(NullLogger.Instance));

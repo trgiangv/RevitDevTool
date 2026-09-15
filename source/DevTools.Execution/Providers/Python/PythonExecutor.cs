@@ -1,18 +1,22 @@
 using Python.Runtime;
+
 namespace DevTools.Execution.Providers.Python;
 
-public class PythonExecutor(PythonInitializer initializer)
+public static class PythonExecutor
 {
     /// <summary>
     /// Execute a callback within a fresh Python scope.
     /// When <paramref name="rootFolder"/> is provided, resets module cache and configures sys.path
     /// (for file-based scripts). When null, creates a minimal scope (for inline MCP code).
     /// </summary>
-    public T Execute<T>(
+    public static T Execute<T>(
+        PythonInitializer initializer,
         string anchorFileOrLabel,
         string? rootFolder,
         Func<PyModule, T> action)
     {
+        ArgumentNullException.ThrowIfNull(initializer);
+
         using (Py.GIL())
         {
             if (!initializer.IsInitialized)

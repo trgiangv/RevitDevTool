@@ -6,7 +6,7 @@ using Python.Runtime;
 
 namespace DevTools.Execution.External.Testing;
 
-public sealed class PytestExecutionService(PythonExecutor executor)
+public sealed class PytestExecutionService(PythonInitializer initializer)
 {
     private static readonly JsonSerializerOptions RequestOptions = new()
     {
@@ -75,7 +75,8 @@ public sealed class PytestExecutionService(PythonExecutor executor)
         var rootFolder = ResolveRootFolder(request);
         var anchorFile = ResolveAnchorFile(anchorPath, rootFolder);
 
-        return executor.Execute(
+        return PythonExecutor.Execute(
+            initializer,
             anchorFile,
             rootFolder,
             scope =>

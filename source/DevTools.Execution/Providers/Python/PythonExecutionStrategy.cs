@@ -12,7 +12,6 @@ public sealed class PythonExecutionStrategy(
     string scriptPath,
     string rootPath,
     PythonInitializer pythonInitializer,
-    PythonExecutor executor,
     IHostContextExecutor hostContext,
     ILogger<PythonExecutionStrategy> logger)
     : IExecutionStrategy
@@ -39,7 +38,8 @@ public sealed class PythonExecutionStrategy(
             var result = await hostContext
                 .ExecuteAsync(() =>
                 {
-                    executor.Execute(
+                    PythonExecutor.Execute(
+                        pythonInitializer,
                         scriptPath,
                         rootPath,
                         scope =>

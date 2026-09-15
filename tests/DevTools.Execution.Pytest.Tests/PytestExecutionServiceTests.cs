@@ -78,8 +78,7 @@ public sealed class PytestExecutionServiceTests
         public async Task Run_ExecutesRunnerAndReturnsCollectionError_ForMissingNode()
         {
             var initializer = await ExecutionTestHelpers.EnsurePixiPythonInitializedAsync();
-            var executor = new PythonExecutor(initializer);
-            var service = new PytestExecutionService(executor);
+            var service = new PytestExecutionService(initializer);
 
             var workspace = ExecutionTestHelpers.CreateTempDirectory("pytest-run-missing");
             var testsDir = Path.Combine(workspace, "tests");
@@ -108,8 +107,7 @@ public sealed class PytestExecutionServiceTests
         public async Task Run_InvokesProgressCallback_WhenProvided()
         {
             var initializer = await ExecutionTestHelpers.EnsurePixiPythonInitializedAsync();
-            var executor = new PythonExecutor(initializer);
-            var service = new PytestExecutionService(executor);
+            var service = new PytestExecutionService(initializer);
 
             var workspace = ExecutionTestHelpers.CreateTempDirectory("pytest-run-progress");
             var testsDir = Path.Combine(workspace, "tests");
@@ -145,7 +143,8 @@ public sealed class PytestExecutionServiceTests
                 [],
                 "pytest"));
 
-            var result = new PythonExecutor(initializer).Execute(
+            var result = PythonExecutor.Execute(
+                initializer,
                 Path.Combine(ExecutionTestHelpers.CreateTempDirectory("pytest-stub"), "anchor.py"),
                 null,
                 scope =>
