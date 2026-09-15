@@ -1,171 +1,104 @@
 using System.IO;
-using DevTools.Execution.Interfaces;
+using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Providers.Python;
 using Microsoft.Extensions.Logging;
-using Microsoft.Scripting.Hosting;
 using ZLogger;
-using Ipy = IronPython.Hosting.Python;
 
 namespace DevTools.Execution.Providers.IronPython;
 
 /// <summary>
-/// Session-lifetime pydevd 2.8.0. Engine comes from either embedded 3.4.2
-/// (<see cref="GetOrCreateEngine"/>) or an existing pyRevit ScriptExecutor
-/// engine (<see cref="InitializeAsync(object)"/>). One listener.
+/// pydevd 2.8.0 helpers, parallel to <see cref="PythonDebugger"/>.
+/// Engine comes from <see cref="IronPythonInitializer"/>.
 /// </summary>
-public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = null)
+public static class IronPythonDebugger
 {
     public const int PreferredPort = 4567;
-    private static readonly Lock SessionLock = new();
-    private static object? sessionEngine;
-    private static bool ownsEngine;
-    private static bool listening;
-    private static int debugPortValue;
-    private static string? lastAttachCheckError;
 
-    private const string AttachedScript = """
-        import sys
-        __is_attached__ = False
-        if 'pydevd' in sys.modules:
-            import pydevd
-            __is_attached__ = bool(pydevd._is_attached())
-        """;
+    private const string AttachedScript = $"""
+                                           import sys
+                                           {PythonInstances.IsAttached} = False
+                                           if 'pydevd' in sys.modules:
+                                               import pydevd
+                                               {PythonInstances.IsAttached} = bool(pydevd._is_attached())
+                                           """;
 
     // sys.settrace inside ScriptSource.Execute races IronPython RunWorker:
     // PushFrame, pydevd FrameExit pops FunctionStack, then PopFrame
     // RemoveAt throws ArgumentOutOfRangeException. Prepare the callback in
     // Python; install it via PythonContext.SetTrace after Execute returns.
-    private const string TraceCurrentThreadScript = """
-        import sys
-        import threading
-        __has_trace__ = False
-        __trace_func__ = None
-        if 'pydevd' in sys.modules:
-            import pydevd
-            py_db = pydevd.get_global_debugger()
-            if py_db is not None:
-                from _pydevd_bundle.pydevd_additional_thread_info import set_additional_thread_info
-                set_additional_thread_info(threading.currentThread())
-                __trace_func__ = py_db.get_thread_local_trace_func()
-                __has_trace__ = __trace_func__ is not None
-        """;
+    private const string TraceCurrentThreadScript = $"""
+                                                     import sys
+                                                     import threading
+                                                     {PythonInstances.HasTrace} = False
+                                                     {PythonInstances.TraceFunc} = None
+                                                     if 'pydevd' in sys.modules:
+                                                         import pydevd
+                                                         py_db = pydevd.get_global_debugger()
+                                                         if py_db is not None:
+                                                             from _pydevd_bundle.pydevd_additional_thread_info import set_additional_thread_info
+                                                             set_additional_thread_info(threading.currentThread())
+                                                             {PythonInstances.TraceFunc} = py_db.get_thread_local_trace_func()
+                                                             {PythonInstances.HasTrace} = {PythonInstances.TraceFunc} is not None
+                                                     """;
 
-    public int DebugPort
+    private const string RefreshUserModulesScript = $"""
+                                                     import os
+                                                     import sys
+                                                     sep = os.sep
+                                                     root = os.path.normcase(os.path.abspath({PythonInstances.RefreshRoot}))
+                                                     skips = [os.path.normcase(os.path.abspath(p)) for p in {PythonInstances.RefreshSkip}]
+                                                     def under(base, full):
+                                                         return full == base or full.startswith(base + sep)
+                                                     dead = []
+                                                     for name, mod in list(sys.modules.items()):
+                                                         path = getattr(mod, '{PythonInstances.File}', None)
+                                                         if not path:
+                                                             continue
+                                                         try:
+                                                             full = os.path.normcase(os.path.abspath(path))
+                                                         except Exception:
+                                                             continue
+                                                         if not under(root, full):
+                                                             continue
+                                                         if any(under(s, full) for s in skips):
+                                                             continue
+                                                         dead.append(name)
+                                                     for name in dead:
+                                                         sys.modules.pop(name, None)
+                                                     """;
+
+    private const string PrepareDebuggerScript = $"{PythonInstances.Debugger} = IpyDebugger()\n{PythonInstances.Debugger}.prepare()";
+
+    private const string ListenScript = $"{PythonInstances.Debugger}.listen({PythonInstances.Port})";
+
+    public static bool IsAttached(object? engine, ILogger? logger = null)
     {
-        get
-        {
-            lock (SessionLock)
-                return debugPortValue;
-        }
-    }
+        if (engine is null)
+            return false;
 
-    public ScriptEngine? Engine
-    {
-        get
-        {
-            lock (SessionLock)
-                return sessionEngine as ScriptEngine;
-        }
-    }
-
-    public bool IsAttached
-    {
-        get
-        {
-            object? engine;
-            lock (SessionLock)
-                engine = sessionEngine;
-
-            if (engine is null)
-                return false;
-
-            try
-            {
-                var scope = DlrScriptHost.CreateScope(engine);
-                DlrScriptHost.Execute(engine, AttachedScript, scope);
-                lastAttachCheckError = null;
-                return DlrScriptHost.GetVariable<bool>(scope, "__is_attached__");
-            }
-            catch (Exception ex)
-            {
-                var message = ex.Message;
-                if (string.Equals(lastAttachCheckError, message, StringComparison.Ordinal))
-                    return false;
-                lastAttachCheckError = message;
-                logger?.ZLogWarning($"Failed to check IronPython pydevd attach: {message}");
-                return false;
-            }
-        }
-    }
-
-    public async Task InitializeAsync(IIronPythonBridge bridge)
-    {
         try
         {
-            ArgumentNullException.ThrowIfNull(bridge);
-            await PydevdInstaller.EnsureInstalledAsync(logger).ConfigureAwait(false);
-            GetOrCreateEngine(bridge);
-            StartListening();
+            var scope = DlrScriptHost.CreateScope(engine);
+            DlrScriptHost.Execute(engine, AttachedScript, scope);
+            return DlrScriptHost.GetVariable<bool>(scope, PythonInstances.IsAttached);
         }
         catch (Exception ex)
         {
-            logger?.ZLogWarning($"IronPython pydevd init failed: {ex.Message}");
+            logger?.ZLogWarning($"Failed to check IronPython pydevd attach: {ex.Message}");
+            return false;
         }
     }
 
-    /// <summary>
-    /// Listen on an existing DLR engine (pyRevit ScriptExecutor). Does not
-    /// <c>CreateEngine</c> and does not own shutdown of that engine.
-    /// </summary>
-    public async Task InitializeAsync(object engine)
+    public static async Task StartListeningAsync(object engine, DebugEndpoint endpoint, ILogger? logger = null)
     {
         try
         {
-            ArgumentNullException.ThrowIfNull(engine);
             await PydevdInstaller.EnsureInstalledAsync(logger).ConfigureAwait(false);
-            lock (SessionLock)
-            {
-                sessionEngine = engine;
-                ownsEngine = false;
-            }
-
-            StartListening();
+            StartListening(engine, endpoint, logger);
         }
         catch (Exception ex)
         {
-            logger?.ZLogWarning($"IronPython pydevd init failed: {ex.Message}");
-        }
-    }
-
-    public ScriptEngine GetOrCreateEngine(IIronPythonBridge bridge)
-    {
-        ArgumentNullException.ThrowIfNull(bridge);
-        lock (SessionLock)
-        {
-            if (sessionEngine is ScriptEngine typed)
-                return typed;
-
-            if (sessionEngine is not null)
-            {
-                throw new InvalidOperationException(
-                    "IronPython debugger already holds a non-embedded engine.");
-            }
-
-            var engine = Ipy.CreateEngine(new Dictionary<string, object>
-            {
-                ["Frames"] = true,
-                ["FullFrames"] = true,
-            });
-            bridge.ConfigureEngine(engine);
-            IronPythonInitializer.AddStdLib(engine);
-            IronPythonInitializer.Setup(engine);
-            ConfigureEngine(engine);
-            sessionEngine = engine;
-            ownsEngine = true;
-
-            // Listen is InitializeAsync-only. GetOrCreateEngine is also used by
-            // headless Execute; starting pydevd here races pythonnet in testhost.
-            return engine;
+            logger?.ZLogWarning($"IronPython pydevd init failed:{Environment.NewLine}{ex}");
         }
     }
 
@@ -175,12 +108,8 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
     /// <c>PythonContext.SetTrace</c>. Do not call <c>sys.settrace</c> from
     /// <c>ScriptSource.Execute</c> (IronPython <c>PopFrame</c> then throws).
     /// </summary>
-    public void EnsureCurrentThreadTraced()
+    public static void EnsureCurrentThreadTraced(object? engine, ILogger? logger = null)
     {
-        object? engine;
-        lock (SessionLock)
-            engine = sessionEngine;
-
         if (engine is null || !PydevdInstaller.IsInstalled())
             return;
 
@@ -188,10 +117,11 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         {
             var scope = DlrScriptHost.CreateScope(engine);
             DlrScriptHost.Execute(engine, TraceCurrentThreadScript, scope);
-            if (!DlrScriptHost.GetVariable<bool>(scope, "__has_trace__"))
+            if (!DlrScriptHost.GetVariable<bool>(scope, PythonInstances.HasTrace))
                 return;
 
-            var traceFunc = DlrScriptHost.GetVariable<object>(scope, "__trace_func__");
+            var traceFunc = DlrScriptHost.GetVariable<object>(scope, PythonInstances.TraceFunc);
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
             if (traceFunc is not null)
                 DlrScriptHost.SetTrace(engine, traceFunc);
         }
@@ -205,15 +135,13 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
     /// Drop modules whose <c>__file__</c> is under the refresh root so the
     /// next Run re-reads edited files.
     /// </summary>
-    public void RefreshUserModules(
+    public static void RefreshUserModules(
+        object? engine,
         string scriptPath,
         string? root = null,
-        IReadOnlyList<string>? skipRoots = null)
+        IReadOnlyList<string>? skipRoots = null,
+        ILogger? logger = null)
     {
-        object? engine;
-        lock (SessionLock)
-            engine = sessionEngine;
-
         if (engine is null)
             return;
 
@@ -224,33 +152,9 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         try
         {
             var scope = DlrScriptHost.CreateScope(engine);
-            DlrScriptHost.SetVariable(scope, "__refresh_root__", root);
-            DlrScriptHost.SetVariable(scope, "__refresh_skip__", skipRoots?.ToList() ?? []);
-            DlrScriptHost.Execute(engine, """
-                import os
-                import sys
-                sep = os.sep
-                root = os.path.normcase(os.path.abspath(__refresh_root__))
-                skips = [os.path.normcase(os.path.abspath(p)) for p in __refresh_skip__]
-                def under(base, full):
-                    return full == base or full.startswith(base + sep)
-                dead = []
-                for name, mod in list(sys.modules.items()):
-                    path = getattr(mod, '__file__', None)
-                    if not path:
-                        continue
-                    try:
-                        full = os.path.normcase(os.path.abspath(path))
-                    except Exception:
-                        continue
-                    if not under(root, full):
-                        continue
-                    if any(under(s, full) for s in skips):
-                        continue
-                    dead.append(name)
-                for name in dead:
-                    sys.modules.pop(name, None)
-                """, scope);
+            DlrScriptHost.SetVariable(scope, PythonInstances.RefreshRoot, root);
+            DlrScriptHost.SetVariable(scope, PythonInstances.RefreshSkip, skipRoots?.ToList() ?? []);
+            DlrScriptHost.Execute(engine, RefreshUserModulesScript, scope);
         }
         catch (Exception ex)
         {
@@ -258,7 +162,7 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         }
     }
 
-    public void ConfigureEngine(object engine)
+    internal static void AddPydevdSearchPath(object engine)
     {
         ArgumentNullException.ThrowIfNull(engine);
         if (!PydevdInstaller.IsInstalled())
@@ -272,20 +176,14 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         DlrScriptHost.SetSearchPaths(engine, paths);
     }
 
-    public void StartListening(int port = PreferredPort)
+    public static void StartListening(object? engine, DebugEndpoint endpoint, ILogger? logger = null)
     {
-        object engine;
-        int debugPort;
-        lock (SessionLock)
-        {
-            if (listening || sessionEngine is null || !PydevdInstaller.IsInstalled())
-                return;
+        ArgumentNullException.ThrowIfNull(endpoint);
+        if (engine is null || endpoint.IsListening || !PydevdInstaller.IsInstalled())
+            return;
 
-            engine = sessionEngine;
-            ConfigureEngine(engine);
-            debugPort = PythonDebugger.FindAvailablePort(port);
-            debugPortValue = debugPort;
-        }
+        AddPydevdSearchPath(engine);
+        endpoint.Reserve(PreferredPort);
 
         // _enable_attach calls settrace on *this* thread. Host.Start uses
         // RunBlocking, so listen on the caller would leave the Revit UI
@@ -299,13 +197,12 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
         {
             try
             {
-                var scope = DlrScriptHost.CreateScope(engine);
-                DlrScriptHost.SetVariable(scope, "__port__", debugPort);
-                DlrScriptHost.Execute(engine, PythonEmbedded.IpyDebuggerScript, scope);
+                ListenOnDedicatedThread(engine, endpoint, logger);
             }
             catch (Exception ex)
             {
                 listenError = ex;
+                endpoint.MarkFailed();
             }
             finally
             {
@@ -320,7 +217,8 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
 
         if (!ready.Task.Wait(TimeSpan.FromSeconds(30)))
         {
-            logger?.ZLogError($"IronPython pydevd listen timed out on 127.0.0.1:{debugPort}");
+            endpoint.MarkFailed();
+            logger?.ZLogError($"IronPython pydevd listen timed out on {DebugPortLease.Host}:{endpoint.Port}");
             return;
         }
 
@@ -330,33 +228,36 @@ public sealed class IronPythonDebugger(ILogger<IronPythonDebugger>? logger = nul
             return;
         }
 
-        lock (SessionLock)
-            listening = true;
-
-        logger?.ZLogInformation($"IronPython pydevd listening on 127.0.0.1:{debugPort}");
+        logger?.ZLogInformation($"IronPython pydevd listening on {DebugPortLease.Host}:{endpoint.Port}");
     }
 
-    public void Shutdown()
+    private static void ListenOnDedicatedThread(object engine, DebugEndpoint endpoint, ILogger? logger)
     {
-        lock (SessionLock)
-        {
-            if (ownsEngine && sessionEngine is not null)
-            {
-                try
-                {
-                    DlrScriptHost.Shutdown(sessionEngine);
-                }
-                catch
-                {
-                    // ignored
-                }
-            }
+        var scope = DlrScriptHost.CreateScope(engine);
+        DlrScriptHost.Execute(engine, PythonEmbedded.IpyDebuggerScript, scope);
+        DlrScriptHost.Execute(engine, PrepareDebuggerScript, scope);
 
-            sessionEngine = null;
-            ownsEngine = false;
-            listening = false;
-            debugPortValue = 0;
-            lastAttachCheckError = null;
+        var port = endpoint.ReleaseLease();
+        try
+        {
+            EnableAttach(scope, engine, port);
         }
+        catch (Exception first)
+        {
+            logger?.ZLogWarning($"pydevd listen {port} failed: {first.Message}");
+            using (var fallback = DebugPortLease.Acquire(0))
+                port = fallback.Port;
+
+            EnableAttach(scope, engine, port);
+        }
+
+        endpoint.MarkListening(port);
+        endpoint.AttachProbe = () => IsAttached(engine, logger);
+    }
+
+    private static void EnableAttach(object scope, object engine, int port)
+    {
+        DlrScriptHost.SetVariable(scope, PythonInstances.Port, port);
+        DlrScriptHost.Execute(engine, ListenScript, scope);
     }
 }

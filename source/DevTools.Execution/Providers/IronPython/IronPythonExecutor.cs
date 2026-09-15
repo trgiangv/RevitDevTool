@@ -14,18 +14,18 @@ namespace DevTools.Execution.Providers.IronPython;
 /// <summary>
 /// Embedded IronPython 3.4 host
 /// </summary>
-internal static class IronPythonRunner
+internal static class IronPythonExecutor
 {
     internal static ExecutionResult Execute(
         string scriptPath,
         string rootPath,
         IIronPythonBridge bridge,
-        IronPythonDebugger? debugger = null)
+        IronPythonInitializer initializer)
     {
         try
         {
-            debugger ??= new IronPythonDebugger();
-            var engine = debugger.GetOrCreateEngine(bridge);
+            ArgumentNullException.ThrowIfNull(initializer);
+            var engine = initializer.GetOrCreateEngine(bridge);
             RefreshScriptSearchPaths(engine, scriptPath, rootPath);
 
             var isDriver = IsIpyTestDriverScript(scriptPath);
@@ -34,7 +34,7 @@ internal static class IronPythonRunner
 
             try
             {
-                debugger.EnsureCurrentThreadTraced();
+                IronPythonDebugger.EnsureCurrentThreadTraced(engine);
                 return CompileAndExecute(engine, scriptPath);
             }
             finally

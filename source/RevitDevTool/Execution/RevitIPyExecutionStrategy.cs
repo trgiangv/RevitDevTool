@@ -20,11 +20,11 @@ public sealed class RevitIPyExecutionStrategy(
     IHostContextExecutor hostContext,
     ILogger<IronPythonExecutionStrategy> ironPythonLogger,
     ILogger<RevitIPyExecutionStrategy> logger,
-    IronPythonDebugger ironPythonDebugger)
+    IronPythonInitializer ironPythonInitializer)
     : IExecutionStrategy
 {
     private readonly IronPythonExecutionStrategy _native =
-        new(scriptPath, rootPath, bridge, hostContext, ironPythonLogger, ironPythonDebugger);
+        new(scriptPath, rootPath, ironPythonInitializer, bridge, hostContext, ironPythonLogger);
 
     public Task<ExecutionResult> ExecuteAsync(
         IProgress<string>? progress = null,
@@ -47,12 +47,14 @@ public sealed class RevitIPyExecutionStrategy(
             var result = await hostContext
                 .ExecuteAsync(() =>
                 {
-                    ironPythonDebugger.RefreshUserModules(
+                    IronPythonDebugger.RefreshUserModules(
+                        ironPythonInitializer.Engine,
                         scriptPath,
                         PyRevitExtensionPaths.ModuleRefreshRoot(scriptPath),
-                        PyRevitLibraryPaths.RefreshSkipRoots);
+                        PyRevitLibraryPaths.RefreshSkipRoots,
+                        logger);
                     PyRevitReflectionCache.Instance.EnsureHostAppImported();
-                    ironPythonDebugger.EnsureCurrentThreadTraced();
+                    IronPythonDebugger.EnsureCurrentThreadTraced(ironPythonInitializer.Engine, logger);
 
                     var run = PyRevitScriptExecutor.Execute(scriptPath, rootPath, logger);
                     stopwatch.Stop();

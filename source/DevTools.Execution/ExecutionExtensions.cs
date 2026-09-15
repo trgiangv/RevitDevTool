@@ -1,3 +1,4 @@
+using DevTools.Execution.Diagnostics;
 using DevTools.Execution.External;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Mcp.BuiltIn;
@@ -21,7 +22,6 @@ using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace DevTools.Execution;
 
@@ -45,10 +45,9 @@ public static class ExecutionExtensions
         services.AddKeyedSingleton<PyEnvironmentProvider, PixiEnvironmentProvider>(PythonBackend.Pixi);
         services.AddKeyedSingleton<PyEnvironmentProvider, UvEnvironmentProvider>(PythonBackend.Uv);
         services.AddKeyedSingleton<PyEnvironmentProvider, PipEnvironmentProvider>(PythonBackend.Pip);
+        services.AddSingleton<DebugEndpoints>();
         services.AddSingleton<PythonInitializer>();
-        services.AddSingleton<PythonExecutor>();
-        services.AddSingleton(sp => new IronPythonDebugger(
-            sp.GetService<ILogger<IronPythonDebugger>>()));
+        services.AddSingleton<IronPythonInitializer>();
 
         services.AddSingleton<NugetManager>();
         services.AddSingleton<NugetPackageStore>();

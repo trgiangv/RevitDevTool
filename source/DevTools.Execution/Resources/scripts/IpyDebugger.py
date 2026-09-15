@@ -1,7 +1,9 @@
 # coding: utf-8  # noqa: UP009
 """IpyDebugger: IronPython 2.7 / 3.4 pydevd listen + debugpy DAP handshake.
 
-Host injects ``__port__`` then execs this file. Do not import from user scripts.
+Host execs this file to define ``IpyDebugger``, then ``prepare()`` (import
+pydevd while the port lease is held) then ``listen(port)`` after the
+placeholder socket is released. Do not import from user scripts.
 
 IronPython 3.4 reports ``sys.platform`` as win32. pydevd 2.8.0 sets
 ``IS_IRONPYTHON`` from platform == 'cli' and ``IS_WINDOWS`` from
@@ -34,7 +36,7 @@ import sys
 
 
 class IpyDebugger:
-    def start_listening(self, port):
+    def prepare(self):
         orig_platform = sys.platform
         sys.platform = "cli"
         from _pydevd_bundle import pydevd_constants
@@ -47,7 +49,7 @@ class IpyDebugger:
 
         PydevdCustomization.DEFAULT_PROTOCOL = HTTP_JSON_PROTOCOL
 
-        import pydevd
+        import pydevd  # noqa: F401
 
         orig_abspath = os.path.abspath
 
@@ -59,6 +61,10 @@ class IpyDebugger:
 
         os.path.abspath = _abspath
         os.path.realpath = _abspath
+
+    def listen(self, port):
+        import pydevd
+
         pydevd._enable_attach(("127.0.0.1", int(port)))
         # 2.8 HTTP_JSON make_thread_suspend_message is NULL_NET_COMMAND.
         # DAP StoppedEvent is only sent when this flag is True. 3.4.1
@@ -178,6 +184,3 @@ class _NullWriter:
     def flush(self):
         # this is a null flush that does nothing, used to suppress stderr output
         pass
-
-
-IpyDebugger().start_listening(__port__)  # noqa: F821  # pyright: ignore[reportUndefinedVariable]

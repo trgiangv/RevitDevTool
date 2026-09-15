@@ -19,7 +19,7 @@ public sealed class IronPythonRunnerExtendedTests : IronPythonSessionTestBase
 
         try
         {
-            var result = IronPythonRunner.Execute(driverPath, root, bridge.Object);
+            var result = IronPythonExecutor.Execute(driverPath, root, bridge.Object, Initializer);
             Assert.IsTrue(result.Success || !result.Success);
         }
         finally
@@ -40,7 +40,7 @@ public sealed class IronPythonRunnerExtendedTests : IronPythonSessionTestBase
 
         try
         {
-            var result = IronPythonRunner.Execute(scriptPath, root, bridge.Object);
+            var result = IronPythonExecutor.Execute(scriptPath, root, bridge.Object, Initializer);
 
             Assert.IsFalse(result.Success);
             Assert.Contains("compile", result.Message, StringComparison.OrdinalIgnoreCase);
@@ -63,7 +63,7 @@ public sealed class IronPythonRunnerExtendedTests : IronPythonSessionTestBase
 
         try
         {
-            var result = IronPythonRunner.Execute(scriptPath, root, bridge.Object);
+            var result = IronPythonExecutor.Execute(scriptPath, root, bridge.Object, Initializer);
 
             Assert.IsFalse(result.Success);
             Assert.Contains("boom", result.Message, StringComparison.OrdinalIgnoreCase);
@@ -92,10 +92,10 @@ public sealed class IronPythonRunnerExtendedTests : IronPythonSessionTestBase
 
         try
         {
-            var driver = IronPythonRunner.Execute(driverPath, root, bridge.Object);
+            var driver = IronPythonExecutor.Execute(driverPath, root, bridge.Object, Initializer);
             Assert.IsTrue(driver.Success, driver.Message);
 
-            var probe = IronPythonRunner.Execute(probePath, root, bridge.Object);
+            var probe = IronPythonExecutor.Execute(probePath, root, bridge.Object, Initializer);
             Assert.IsTrue(probe.Success, probe.Message);
         }
         finally

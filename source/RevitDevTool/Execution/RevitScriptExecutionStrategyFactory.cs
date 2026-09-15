@@ -10,7 +10,7 @@ public sealed class RevitScriptExecutionStrategyFactory(
     IHostContextExecutor hostContext,
     ILogger<IronPythonExecutionStrategy> ironPythonLogger,
     ILogger<RevitIPyExecutionStrategy> revitIPyLogger,
-    IronPythonDebugger ironPythonDebugger) : IScriptExecutionStrategyFactory
+    IronPythonInitializer ironPythonInitializer) : IScriptExecutionStrategyFactory
 {
     public IExecutionStrategy Create(ExecutionMode mode, string scriptPath, string rootPath) =>
         mode == ExecutionMode.IronPython
@@ -21,6 +21,6 @@ public sealed class RevitScriptExecutionStrategyFactory(
                 hostContext,
                 ironPythonLogger,
                 revitIPyLogger,
-                ironPythonDebugger)
+                ironPythonInitializer)
             : defaultFactory.Create(mode, scriptPath, rootPath);
 }

@@ -11,8 +11,8 @@ public sealed class IronPythonPytestRunningTests
     [TestMethod]
     public void IsIpyTestDriverScript_MatchesDriverFilenameOnly()
     {
-        Assert.IsTrue(IronPythonRunner.IsIpyTestDriverScript(@"C:\pixi-env\IpyTestDriver.py"));
-        Assert.IsFalse(IronPythonRunner.IsIpyTestDriverScript(@"C:\tests\test_foo_ipy_script.py"));
+        Assert.IsTrue(IronPythonExecutor.IsIpyTestDriverScript(@"C:\pixi-env\IpyTestDriver.py"));
+        Assert.IsFalse(IronPythonExecutor.IsIpyTestDriverScript(@"C:\tests\test_foo_ipy_script.py"));
     }
 
     [TestMethod]

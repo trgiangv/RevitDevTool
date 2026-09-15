@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace DevTools.Execution.Providers;
 
 public sealed class ScriptExecutionStrategyFactory(
+    IronPythonInitializer ironPythonInitializer,
     PythonInitializer pythonInitializer,
-    PythonExecutor pythonExecutor,
     IIronPythonBridge ironPythonBridge,
     IHostContextExecutor hostContext,
     ICommandRunner commandRunner,
@@ -18,8 +18,7 @@ public sealed class ScriptExecutionStrategyFactory(
     ILogger<CSharpExecutionStrategy> csharpLogger,
     ILogger<FSharpExecutionStrategy> fsharpLogger,
     ILogger<PythonExecutionStrategy> pythonExecutionLogger,
-    ILogger<IronPythonExecutionStrategy> ironPythonLogger,
-    IronPythonDebugger ironPythonDebugger) : IScriptExecutionStrategyFactory
+    ILogger<IronPythonExecutionStrategy> ironPythonLogger) : IScriptExecutionStrategyFactory
 {
     public IExecutionStrategy Create(ExecutionMode mode, string scriptPath, string rootPath) =>
         mode switch
@@ -28,17 +27,16 @@ public sealed class ScriptExecutionStrategyFactory(
                 scriptPath,
                 rootPath,
                 pythonInitializer,
-                pythonExecutor,
                 hostContext,
                 pythonExecutionLogger),
 
             ExecutionMode.IronPython => new IronPythonExecutionStrategy(
                 scriptPath,
                 rootPath,
+                ironPythonInitializer,
                 ironPythonBridge,
                 hostContext,
-                ironPythonLogger,
-                ironPythonDebugger),
+                ironPythonLogger),
 
             ExecutionMode.CSharp => new CSharpExecutionStrategy(
                 scriptPath,

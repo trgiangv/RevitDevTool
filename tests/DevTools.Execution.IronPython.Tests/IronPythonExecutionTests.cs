@@ -1,5 +1,5 @@
+using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
-using DevTools.Execution.Models;
 using DevTools.Execution.Providers.IronPython;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Scripting.Hosting;
@@ -8,12 +8,23 @@ using Moq;
 namespace DevTools.Execution.Tests;
 
 /// <summary>
-/// Session-engine IronPython tests shut down the static engine after each method.
+/// Session-engine IronPython tests shut down the debugger after each method.
 /// </summary>
 public abstract class IronPythonSessionTestBase
 {
+    protected DebugEndpoints Endpoints { get; } = new();
+    protected IronPythonInitializer Initializer { get; }
+
+    protected IronPythonSessionTestBase()
+    {
+        Initializer = new IronPythonInitializer(
+            Mock.Of<IIronPythonBridge>(),
+            Endpoints,
+            NullLogger<IronPythonInitializer>.Instance);
+    }
+
     [TestCleanup]
-    public void SessionCleanup() => new IronPythonDebugger().Shutdown();
+    public void SessionCleanup() => Initializer.ShutdownAsync().GetAwaiter().GetResult();
 }
 
 [TestClass]
@@ -48,8 +59,8 @@ public sealed class IronPythonExecutionTests : IronPythonSessionTestBase
     [TestMethod]
     public void IronPythonRunner_IsIpyTestDriverScript_DetectsDriverName()
     {
-        Assert.IsTrue(IronPythonRunner.IsIpyTestDriverScript(@"C:\scripts\IpyTestDriver.py"));
-        Assert.IsFalse(IronPythonRunner.IsIpyTestDriverScript(@"C:\scripts\other_ipy_script.py"));
+        Assert.IsTrue(IronPythonExecutor.IsIpyTestDriverScript(@"C:\scripts\IpyTestDriver.py"));
+        Assert.IsFalse(IronPythonExecutor.IsIpyTestDriverScript(@"C:\scripts\other_ipy_script.py"));
     }
 
     [TestMethod]
@@ -64,7 +75,7 @@ public sealed class IronPythonExecutionTests : IronPythonSessionTestBase
 
         try
         {
-            var result = IronPythonRunner.Execute(scriptPath, root, bridge.Object);
+            var result = IronPythonExecutor.Execute(scriptPath, root, bridge.Object, Initializer);
 
             Assert.IsTrue(result.Success);
             bridge.Verify(b => b.ConfigureEngine(It.IsAny<ScriptEngine>()), Times.AtMostOnce);
@@ -90,7 +101,7 @@ public sealed class IronPythonExecutionTests : IronPythonSessionTestBase
 
         try
         {
-            var result = IronPythonRunner.Execute(scriptPath, root, bridge.Object);
+            var result = IronPythonExecutor.Execute(scriptPath, root, bridge.Object, Initializer);
             Assert.IsTrue(result.Success, result.Message);
             Assert.IsTrue(File.Exists(markerPath), result.Message);
             Assert.AreEqual(Path.GetFullPath(scriptPath), File.ReadAllText(markerPath));
@@ -113,9 +124,11 @@ public sealed class IronPythonExecutionTests : IronPythonSessionTestBase
         var strategy = new IronPythonExecutionStrategy(
             scriptPath,
             root,
+            Initializer,
             bridge.Object,
             ExecutionTestHelpers.InlineHostContext(),
-            NullLogger<IronPythonExecutionStrategy>.Instance);
+            NullLogger<IronPythonExecutionStrategy>.Instance
+            );
 
         try
         {

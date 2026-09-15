@@ -10,17 +10,15 @@ public sealed class IronPythonDebuggerTests : IronPythonSessionTestBase
     [TestMethod]
     public void StartListening_WithoutZip_DoesNotThrow_IsAttachedFalse()
     {
-        var debugger = new IronPythonDebugger();
-        debugger.StartListening();
+        IronPythonDebugger.StartListening(Initializer.Engine, Endpoints.IronPython);
 
-        Assert.IsFalse(debugger.IsAttached);
+        Assert.IsFalse(IronPythonDebugger.IsAttached(Initializer.Engine));
     }
 
     [TestMethod]
     public void SessionEngine_HasGetframe()
     {
-        var debugger = new IronPythonDebugger();
-        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var engine = Initializer.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
         var scope = engine.CreateScope();
         engine.CreateScriptSourceFromString(
             "import sys\n__has_getframe__ = hasattr(sys, '_getframe')\n__platform__ = sys.platform").Execute(scope);
@@ -35,8 +33,7 @@ public sealed class IronPythonDebuggerTests : IronPythonSessionTestBase
         if (!PydevdInstaller.IsInstalled())
             Assert.Inconclusive("pydevd 2.8.0 extract is not on disk.");
 
-        var debugger = new IronPythonDebugger();
-        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var engine = Initializer.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
         var scope = engine.CreateScope();
         engine.CreateScriptSourceFromString("""
             import sys
@@ -57,14 +54,13 @@ public sealed class IronPythonDebuggerTests : IronPythonSessionTestBase
         Assert.IsTrue(scope.GetVariable<bool>("__is_windows__"));
         Assert.AreEqual("WINDOWS", scope.GetVariable<string>("__ide_os__"));
         Assert.IsFalse(scope.GetVariable<bool>("__cython__"));
-        Assert.IsFalse(debugger.IsAttached);
+        Assert.IsFalse(IronPythonDebugger.IsAttached(engine));
     }
 
     [TestMethod]
     public void SetTrace_Null_DoesNotThrowOnLocalEngine()
     {
-        var debugger = new IronPythonDebugger();
-        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var engine = Initializer.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
         DlrScriptHost.SetTrace(engine, null);
     }
 
@@ -74,22 +70,20 @@ public sealed class IronPythonDebuggerTests : IronPythonSessionTestBase
         if (!PydevdInstaller.IsInstalled())
             Assert.Inconclusive("pydevd 2.8.0 extract is not on disk.");
 
-        var debugger = new IronPythonDebugger();
-        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
-        debugger.StartListening();
-        debugger.EnsureCurrentThreadTraced();
+        var engine = Initializer.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        IronPythonDebugger.StartListening(engine, Endpoints.IronPython);
+        IronPythonDebugger.EnsureCurrentThreadTraced(engine);
 
         var scope = DlrScriptHost.CreateScope(engine);
         DlrScriptHost.Execute(engine, "import sys\n__traced__ = sys.gettrace() is not None", scope);
         Assert.IsTrue(DlrScriptHost.GetVariable<bool>(scope, "__traced__"));
-        Assert.IsFalse(debugger.IsAttached);
+        Assert.IsFalse(IronPythonDebugger.IsAttached(engine));
     }
 
     [TestMethod]
     public void DlrScriptHost_Execute_OnLocalEngine_SetsVariables()
     {
-        var debugger = new IronPythonDebugger();
-        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var engine = Initializer.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
         var scope = DlrScriptHost.CreateScope(engine);
         DlrScriptHost.Execute(engine, "value = 41 + 1", scope);
 
@@ -99,8 +93,7 @@ public sealed class IronPythonDebuggerTests : IronPythonSessionTestBase
     [TestMethod]
     public void FindInstanceMethod_ResolvesExecuteWithoutAmbiguousMatch()
     {
-        var debugger = new IronPythonDebugger();
-        var engine = debugger.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var engine = Initializer.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
         var scope = engine.CreateScope();
         var source = engine.CreateScriptSourceFromString("pass");
 
