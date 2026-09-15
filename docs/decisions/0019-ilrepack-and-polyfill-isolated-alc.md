@@ -96,7 +96,13 @@ filename.
    are ILRepack filename excludes.
    `RepackBinariesExcludes` is only for assemblies that must remain loadable
    beside the output (MahApps `pack://`, NUnit payload, Nice3point Polyfill
-   sidecar).
+   sidecar, IronPython + DLR). IronPython `CurrentVersion` reads
+   `AssemblyInformationalVersion` from `typeof(CurrentVersion).Assembly` and
+   splits on spaces (`IronPython 3.4.2 final 0`). Merging those DLLs into the
+   host makes that assembly the add-in (`1.0.0+sha` / `3.1.0-alpha.*`) and
+   `CreateEngine` throws `IndexOutOfRangeException`. Both `RevitDevTool` and
+   `AcadDevTool` exclude `IronPython*.dll`, `Microsoft.Dynamic.dll`, and
+   `Microsoft.Scripting*.dll`.
 7. **MCP uses that rule, not a special ILRepack mode.** Copy-local MCP on the
    host merges into the host DLL (no siblings). That ILRepack step removes
    standalone `ModelContextProtocol*` assembly identities from the output

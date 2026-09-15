@@ -19,6 +19,9 @@
             DevTools.UI.dll;
             DevTools.NUnit.Runtime.dll;
             DevTools.Testing.Abstractions.dll;
+            IronPython*.dll;
+            Microsoft.Dynamic.dll;
+            Microsoft.Scripting*.dll;
         </RepackBinariesExcludes>
     </PropertyGroup>
 
