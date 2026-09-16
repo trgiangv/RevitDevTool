@@ -48,7 +48,8 @@
                       VerticalAlignment="Center"
                       Content="Hide unchecked"
                       Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                      IsChecked="{Binding HideUnchecked}" />
+                      IsChecked="{Binding HideUnchecked}"
+                      Style="{StaticResource DevTools.MahApps.Styles.CheckBox.Win10}" />
 
             <Button Margin="0,0,8,0"
                     Command="{Binding SelectAllCommand}"
@@ -75,10 +76,8 @@
                  VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Recycling">
             <ListBox.ItemContainerStyle>
-                <Style BasedOn="{StaticResource {x:Type ListBoxItem}}"
+                <Style BasedOn="{StaticResource DevTools.MahApps.Styles.ListBoxItem.CheckList}"
                        TargetType="ListBoxItem">
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                    <Setter Property="Padding" Value="4,2" />
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="OnAssemblyItemDoubleClick" />
                 </Style>
@@ -88,7 +87,9 @@
                     <StackPanel Orientation="Horizontal">
                         <CheckBox Margin="0,0,6,0"
                                   VerticalAlignment="Center"
-                                  IsChecked="{Binding IsSelected}" />
+                                  Focusable="True"
+                                  IsChecked="{Binding IsSelected}"
+                                  Style="{StaticResource DevTools.MahApps.Styles.CheckBox.MultiSelectionComboBoxItem}" />
                         <TextBlock VerticalAlignment="Center"
                                    FontWeight="SemiBold"
                                    Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"

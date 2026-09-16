@@ -66,7 +66,7 @@ public partial class MainViewModel : ObservableRecipient,
         catch (Exception ex) { _logger.ZLogError($"Failed to open log folder: {ex.Message}"); }
     }
 
-    private bool CanOpenLogFolder() => _settingsService.LogConfig.FileLogging.Enabled;
+    private bool CanOpenLogFolder() => _logSettingsViewModel.IsFileTargetSelected;
 
     public MainViewModel(
         LogViewModel logViewModel,
