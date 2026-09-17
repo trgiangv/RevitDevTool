@@ -2,7 +2,7 @@
 
 `samples/PythonDemo/` demonstrates the Python runtime, PEP 723 dependency resolution, logging, visualization, WebView2 dashboard patterns, and Python MCP toolsets.
 
-Last updated: 2026-09-15
+Last updated: 2026-09-17
 
 ---
 
@@ -58,6 +58,7 @@ flowchart TB
 | `fcl_script.py` | Geometry/collision dependency demo. |
 | `logging_batch_script.py` | Logging stress sample. |
 | `logging_format_script.py` | Logging format/severity sample. |
+| `link_element_trace_script.py` | Pick linked elements; print `{instanceId}@{inner}` tokens for monitor click-to-select. |
 | `modeless_script.py` | Modeless UI sample. |
 | `module_test_script.py` | Multi-file import/dependency sample. |
 | `pipe_bridge_script.py` | Named-pipe bridge sample. |

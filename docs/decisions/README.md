@@ -27,6 +27,9 @@ here.
   unit tests: scoped MSTest.Sdk 4.4.0 projects + first-party `--coverage`.
   [0035](0035-mstest-sdk-repo-tests.md) is **Accepted** remaining in-repo
   `tests/*.Tests` on the same SDK and collector (no xUnit, no Coverlet).
+  [0036](0036-revit-monitor-link-element-tokens.md) is **Accepted** Revit
+  monitor click-to-select in links: same three token kinds, optional
+  `linkInstanceId@` scope, host-space eight-corner zoom.
 
 ## Index
 
@@ -64,3 +67,4 @@ here.
 | [0033](0033-ironpython-pydevd-debugger.md) | IronPython debug via vendored PyDev.Debugger 2.8.0 | Accepted |
 | [0034](0034-execution-mstest-sdk-scoped-tests.md) | Execution tests: scoped MSTest.Sdk + first-party coverage | Accepted |
 | [0035](0035-mstest-sdk-repo-tests.md) | In-repo tests: MSTest.Sdk 4.4.0 + first-party coverage | Accepted |
+| [0036](0036-revit-monitor-link-element-tokens.md) | Revit monitor link scope (`linkInstanceId@` + three kinds) and host-space zoom | Accepted |

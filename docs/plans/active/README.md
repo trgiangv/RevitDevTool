@@ -25,6 +25,13 @@ Remaining live-host / year-matrix / pixi-opt-in stay in `test-matrix.md`.
 Split god project `DevTools.Mcp.Tests` into module-scoped projects:
 [2026-09-04-mcp-test-project-split](2026-09-04-mcp-test-project-split.md).
 
+## Revit monitor link-element tokens (closed)
+
+Click-to-select for elements in RVT links (pair token, `SetReferences`,
+host-space zoom):
+[completed](../completed/2026-09-17-revit-link-element-monitor-tokens.md)
+([0036](../../decisions/0036-revit-monitor-link-element-tokens.md)).
+
 ## Execution / MSTest.Sdk tests (closed)
 
 - Execution god project split: [completed](../completed/2026-09-13-execution-test-project-split.md)
