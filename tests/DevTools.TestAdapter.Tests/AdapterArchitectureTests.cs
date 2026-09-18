@@ -489,6 +489,11 @@ public sealed class AdapterArchitectureTests
         }
 
         Assert.Contains("AppendRuntimeIdentifierToOutputPath", packed[0], StringComparison.Ordinal);
+        Assert.Contains("TestingPlatformCommandLineArguments", packed[0], StringComparison.Ordinal);
+        Assert.Contains("--output Detailed", packed[0], StringComparison.Ordinal);
+        Assert.Contains("--show-stdout All", packed[0], StringComparison.Ordinal);
+        Assert.Contains("--show-test-results all", packed[0], StringComparison.Ordinal);
+        Assert.Contains("MSB3277", packed[0], StringComparison.Ordinal);
 
         Assert.DoesNotContain("DevToolsTestAdapterLocal", packedTargets, StringComparison.Ordinal);
         Assert.DoesNotContain("RevitDevTool.TestAdapter.Local.targets", packedTargets, StringComparison.Ordinal);

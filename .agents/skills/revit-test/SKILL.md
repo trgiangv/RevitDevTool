@@ -76,10 +76,14 @@ Run `dotnet test` from a directory covered by the intended `global.json`
 that project.
 
 ```powershell
-dotnet test --project path/to/Host.Tests/Host.Tests.csproj -c <Config> --filter MethodName
-dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName
+dotnet test --project path/to/Host.Tests/Host.Tests.csproj -c <Config> --filter MethodName --output Detailed
+dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName --output Detailed
 dotnet test --project Host.Tests.csproj -c <Config> --list-tests
 ```
+
+`--output Detailed` is required to print passed-test `Standard output`
+(Console/Trace) under MTP-mode `dotnet test` (default `Normal` only shows
+failures). Direct `.exe` runs also accept `--show-stdout All`.
 
 `--filter` is an adapter method-name option (NUnit `<name re="1">` regex, so
 `FamilyPolicy` matches those cases). Same command runs `[Explicit]`. Do

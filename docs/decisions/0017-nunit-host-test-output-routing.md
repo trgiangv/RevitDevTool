@@ -1,7 +1,7 @@
 # 0017 In-Host Test Output Routing
 
 Date: 2026-08-14
-Updated: 2026-08-22
+Updated: 2026-09-18
 
 ## Status
 
@@ -33,6 +33,9 @@ only.
    `Debug`. On case finish the provider merges that buffer with
    framework-captured Console. MTP maps the field to `StandardOutputProperty`;
    VSTest maps it to `StandardOut`. NUnit and TUnit both consume this helper.
+   For **Passed** cases, MTP has no pass-explanation slot, so the adapter also
+   merges success `Message` (e.g. `Assert.Pass`) into `StandardOutputProperty`.
+   Failed/Skipped keep `Message` on the state property only.
 
 3. **Console to the pane is a one-shot write-through.** After the IDE buffer is
    taken, Runtime forwards trimmed framework Console with `Trace.Write` while

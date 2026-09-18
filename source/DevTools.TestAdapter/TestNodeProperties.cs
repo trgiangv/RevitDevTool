@@ -1,4 +1,5 @@
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Extensions.Messages;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
@@ -32,8 +33,14 @@ internal static class TestNodeProperties
         properties.Add(new TimingProperty(new TimingInfo(end - duration, end, duration)));
     }
 
-    private static void AddOutput(List<IProperty> properties, string? output)
+    private static void AddOutput(List<IProperty> properties, TestCaseResult result)
     {
+        // PassedTestNodeStateProperty has no explanation slot; surface Assert.Pass /
+        // success Message on stdout so IDE and MTP terminal show it with Console.
+        var output = string.Equals(result.Outcome, TestOutcomes.Passed, StringComparison.Ordinal)
+            ? TestRunTraceScope.Merge(result.Output, result.Message)
+            : result.Output;
+
         if (string.IsNullOrWhiteSpace(output))
             return;
 
@@ -72,7 +79,7 @@ internal static class TestNodeProperties
         AddSource(properties, result.Source);
         AddTraits(properties, result.Traits);
         AddTiming(properties, result.DurationMilliseconds);
-        AddOutput(properties, result.Output);
+        AddOutput(properties, result);
         AddAttachments(properties, result.Attachments);
     }
 

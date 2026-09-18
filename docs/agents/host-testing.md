@@ -38,7 +38,9 @@ scripts/pack-test-adapter.ps1
 scripts/test-adapter-matrix.ps1
 
 # 4. live (host running; root global.json is MTP)
-dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host
+# Normal output hides passed blocks — use Detailed to see Console/Trace on the terminal.
+dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2026 --filter Arithmetic_runs_inside_host --output Detailed
+dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2024 --filter Writes_output --output Detailed -v q
 ```
 
 Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner:

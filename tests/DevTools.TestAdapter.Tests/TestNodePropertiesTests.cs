@@ -76,6 +76,64 @@ public sealed class TestNodePropertiesTests
     }
 
     [TestMethod]
+    public void Passed_message_is_merged_into_standard_output()
+    {
+        var properties = new List<IProperty>();
+        TestNodeProperties.AddCommonResultProperties(
+            properties,
+            new TestCaseResult(
+                "case-1",
+                "Display",
+                TestOutcomes.Passed,
+                1,
+                Message: "pass reason",
+                StackTrace: null,
+                Output: "console line",
+                Source: null,
+                Traits: [],
+                Attachments: []));
+
+        var stdout = Assert.ContainsSingle(properties.OfType<StandardOutputProperty>());
+        Assert.Contains("console line", stdout.StandardOutput, StringComparison.Ordinal);
+        Assert.Contains("pass reason", stdout.StandardOutput, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void Passed_message_alone_becomes_standard_output()
+    {
+        var properties = new List<IProperty>();
+        TestNodeProperties.AddCommonResultProperties(
+            properties,
+            CreateResult(TestOutcomes.Passed, "Assert.Pass text", null));
+
+        var stdout = Assert.ContainsSingle(properties.OfType<StandardOutputProperty>());
+        Assert.AreEqual("Assert.Pass text", stdout.StandardOutput);
+    }
+
+    [TestMethod]
+    public void Failed_message_is_not_duplicated_into_standard_output()
+    {
+        var properties = new List<IProperty>();
+        TestNodeProperties.AddCommonResultProperties(
+            properties,
+            new TestCaseResult(
+                "case-1",
+                "Display",
+                TestOutcomes.Failed,
+                1,
+                Message: "boom",
+                StackTrace: "at line 1",
+                Output: "console only",
+                Source: null,
+                Traits: [],
+                Attachments: []));
+
+        var stdout = Assert.ContainsSingle(properties.OfType<StandardOutputProperty>());
+        Assert.AreEqual("console only", stdout.StandardOutput);
+        Assert.IsTrue(properties.Any(property => property is FailedTestNodeStateProperty));
+    }
+
+    [TestMethod]
     public void CreateErrorNode_requires_uid_and_exception()
     {
         Assert.ThrowsExactly<ArgumentException>(() =>

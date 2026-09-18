@@ -38,6 +38,6 @@ public sealed class HostSmokeTests
         Console.WriteLine("devtools-nunit-sample-output");
         Trace.WriteLine("ERR devtools-nunit-sample-trace");
         Debug.WriteLine("ERR devtools-nunit-sample-debug");
-        Assert.Pass();
+        Assert.Pass("devtools-nunit-sample-pass");
     }
 }
