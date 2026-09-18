@@ -119,7 +119,7 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger, HostA
         var session = AssemblyIsolationSession.Create(plan);
         try
         {
-            NativeLibraryPreloader.LoadUnmanagedFromDirectory(Path.GetDirectoryName(item.AssemblyPath)!);
+            NativeLibraryPreloader.LoadUnmanagedFromDirectory(Path.GetDirectoryName(plan.EntryAssemblyPath)!);
             return LoadAndExecute(session, item);
         }
         finally

@@ -16,8 +16,8 @@ public sealed class CommandAssemblyIsolationTests
     public void Command_plan_loads_private_system_named_dependencies_lazily_without_locking_their_files()
     {
         using var workload = CommandFixtureWorkload.Create(includeSibling: true);
-        using var session = AssemblyIsolationSession.Create(
-            CommandIsolationPlan.Create(workload.EntryPath, Array.Empty<Assembly>()));
+        var plan = CommandIsolationPlan.Create(workload.EntryPath, Array.Empty<Assembly>());
+        using var session = AssemblyIsolationSession.Create(plan);
 
         var entry = session.LoadEntryAssembly();
         var dependencyName = (string)entry.GetType("IsolationEntry.Entry")!
@@ -29,6 +29,7 @@ public sealed class CommandAssemblyIsolationTests
         Assert.AreEqual("System.Private.IsolationFixture", new AssemblyName(dependencyName).Name);
         Assert.AreSame(AssemblyLoadContext.GetLoadContext(entry), AssemblyLoadContext.GetLoadContext(dependency));
         Assert.IsFalse(File.Exists(workload.SiblingInitializerMarkerPath));
+        Assert.IsFalse(plan.LoadsFromDistinctFile);
 
         using var writable = new FileStream(workload.DependencyPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
     }

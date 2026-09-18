@@ -63,9 +63,9 @@ without allowing one feature's dependency policy to leak into another.
 | Kind | Product behavior |
 |----------|------------------|
 | Permanent | Add-in-shipped assemblies are path-loaded once for the process lifetime so WPF resources and dependency locations remain stable. They are not hot-reloaded. Implemented by `AssemblyLoader`, not `AssemblyIsolationSession`. |
-| Isolated | Feature default. Kernel maps to collectible (modern TFM) or scoped net48. Scripts, MCP toolsets, commands, and NUnit/TUnit generations use this. Command sessions stay alive after `Execute` so modeless host UI is not torn down. |
+| Isolated | Feature default. Kernel maps to collectible (modern TFM) or scoped net48. Scripts, MCP toolsets, commands, and NUnit/TUnit generations use this. Command sessions stay alive after `Execute` so modeless host UI is not torn down. **Commands, NUnit, and TUnit** are Isolated *user workloads*: on net48 they `LoadFile` (`WithDistinctFileIdentity`) so each load of the same identity stays distinct without locking the project output (commands: one-shot `%TEMP%\{guid}` copy; NUnit: content-addressed generation). Do not use `Assembly.Load(byte[])` for these — it pins the identity in the default Load context. On modern TFMs a collectible ALC already provides that. Host CAD APIs already loaded by Revit/AutoCAD are reused in place. Those DLLs cannot be unloaded from the process. |
 | Collectible | Explicit collectible ALC. Same unload rules as Isolated on modern TFMs. Throws on net48. |
-| NUnit net48 | Same default AppDomain as the host. Generation **shadow** copies are `LoadFile`'d so the same identity can exist per generation (hot reload) without locking the project output. Host CAD APIs already loaded by Revit/AutoCAD are reused in place. Those DLLs cannot be unloaded from the process. |
+| NUnit net48 | Same Isolated user-workload load policy as commands (`LoadFile`); generation snapshot ownership stays in Testing. |
 
 Feature code continues to own compilation, discovery semantics, registries,
 generation snapshots, invocation, result mapping, and logging. It composes an
