@@ -83,7 +83,7 @@
                     <mah:HamburgerMenuIconItem.Icon>
                         <Path Width="20"
                               Height="20"
-                              Data="{StaticResource Line}"
+                              Data="{StaticResource Curve}"
                               Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                               Stretch="Uniform" />
                     </mah:HamburgerMenuIconItem.Icon>
@@ -114,7 +114,7 @@
         <mah:HamburgerMenu.ContentTemplate>
             <DataTemplate>
                 <ContentControl x:Name="ContentArea"
-                                Margin="0 5 5 5"
+                                Margin="0,5,5,5"
                                 Content="{Binding}" />
             </DataTemplate>
         </mah:HamburgerMenu.ContentTemplate>

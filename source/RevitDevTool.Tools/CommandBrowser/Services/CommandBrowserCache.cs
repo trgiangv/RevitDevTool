@@ -1,7 +1,6 @@
 using DevTools.Settings;
-using RevitDevTool.CommandBrowser.Models;
-
-namespace RevitDevTool.CommandBrowser.Services;
+using RevitDevTool.Tools.CommandBrowser.Models;
+namespace RevitDevTool.Tools.CommandBrowser.Services;
 
 /// <summary>
 /// Manages favorites (persisted) and recent commands (session-only in-memory).

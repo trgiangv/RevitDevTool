@@ -1,21 +1,53 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using RevitDevTool.CommandBrowser.Models;
-using RevitDevTool.CommandBrowser.ViewModels;
+using RevitDevTool.Tools.CommandBrowser.Models;
+using RevitDevTool.Tools.CommandBrowser.ViewModels;
+using RevitDevTool.Tools.ElementFinder;
 
-namespace RevitDevTool.CommandBrowser.Views;
+namespace RevitDevTool.Tools.CommandBrowser.Views;
 
 public partial class CommandBrowserView
 {
     private bool _toggleClicked;
+    private ElementFinderViewModel? _elementFinder;
 
     public CommandBrowserView()
     {
         InitializeComponent();
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
         SearchComboBox.DropDownOpened += OnSearchDropDownOpened;
         SearchComboBox.DropDownClosed += OnSearchDropDownClosed;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not CommandBrowserViewModel vm)
+            return;
+
+        _elementFinder = vm.ElementFinder;
+        _elementFinder.PropertyChanged += OnElementFinderPropertyChanged;
+        SyncToggles();
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        if (_elementFinder is not null)
+            _elementFinder.PropertyChanged -= OnElementFinderPropertyChanged;
+    }
+
+    private void OnElementFinderPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ElementFinderViewModel.IsOpen))
+            ElementFinderToggle.IsChecked = _elementFinder?.IsOpen == true;
+    }
+
+    private void SyncToggles()
+    {
+        ElementFinderToggle.IsChecked = _elementFinder?.IsOpen == true;
     }
 
     private void OnSearchDropDownOpened(object? sender, EventArgs e)
@@ -58,5 +90,12 @@ public partial class CommandBrowserView
         Dispatcher.BeginInvoke(
             new Action(() => SearchComboBox.IsDropDownOpen = true),
             DispatcherPriority.Background);
+    }
+
+    private void OnElementFinderToggle(object sender, RoutedEventArgs e)
+    {
+        _elementFinder?.Toggle();
+        if (sender is System.Windows.Controls.Primitives.ToggleButton toggle)
+            toggle.IsChecked = _elementFinder?.IsOpen == true;
     }
 }

@@ -1,6 +1,5 @@
 using System.Text.Json.Serialization;
-
-namespace RevitDevTool.CommandBrowser.Models;
+namespace RevitDevTool.Tools.CommandBrowser.Models;
 
 /// <summary>
 /// Persisted settings for the Command Browser feature.

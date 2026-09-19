@@ -45,6 +45,10 @@
             <Build Project="false" />
         </Project>
     </Folder>
+    <Folder Name="/Libs/Revit/">
+        <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj" />
+        <Project Path="source/RevitDevTool.Tools/RevitDevTool.Tools.csproj" />
+    </Folder>
     <Folder Name="/Shared/">
         <Project Path="source/DevTools.Ipc/DevTools.Ipc.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
@@ -186,8 +190,7 @@
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
         </Project>
-        <Project
-            Path="source/DevTools.Execution.Abstractions/DevTools.Execution.Abstractions.csproj">
+        <Project Path="source/DevTools.Execution.Abstractions/DevTools.Execution.Abstractions.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -518,7 +521,7 @@
         <Project Path="tests/RevitDevTool.ExternalEvent.App/RevitDevTool.ExternalEvent.App.csproj">
             <Build Project="false" />
         </Project>
-        <Project Path="tests/DevTools.AssemblyIsolation.Tests/DevTools.AssemblyIsolation.Tests.csproj" >
+        <Project Path="tests/DevTools.AssemblyIsolation.Tests/DevTools.AssemblyIsolation.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -819,8 +822,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project
-            Path="tests/DevTools.Testing.Abstractions.Tests/DevTools.Testing.Abstractions.Tests.csproj">
+        <Project Path="tests/DevTools.Testing.Abstractions.Tests/DevTools.Testing.Abstractions.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -835,8 +837,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project
-            Path="tests/DevTools.Testing.Transport.Tests/DevTools.Testing.Transport.Tests.csproj">
+        <Project Path="tests/DevTools.Testing.Transport.Tests/DevTools.Testing.Transport.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -896,8 +897,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project
-            Path="tests/DevTools.FileMetadata.Core.Tests/DevTools.FileMetadata.Core.Tests.csproj">
+        <Project Path="tests/DevTools.FileMetadata.Core.Tests/DevTools.FileMetadata.Core.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -912,8 +912,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project
-            Path="tests/DevTools.NUnit.Host.Spike.Fixtures/DevTools.NUnit.Host.Spike.Fixtures.csproj">
+        <Project Path="tests/DevTools.NUnit.Host.Spike.Fixtures/DevTools.NUnit.Host.Spike.Fixtures.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -988,8 +987,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project
-            Path="tests/DevTools.NUnit.Runtime.Tests/Fixtures/DevTools.NUnit.Runtime.Tests.Fixtures.csproj">
+        <Project Path="tests/DevTools.NUnit.Runtime.Tests/Fixtures/DevTools.NUnit.Runtime.Tests.Fixtures.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -1004,8 +1002,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project
-            Path="tests/DevTools.NUnit.Host.NetFramework.Tests/DevTools.NUnit.Host.NetFramework.Tests.csproj">
+        <Project Path="tests/DevTools.NUnit.Host.NetFramework.Tests/DevTools.NUnit.Host.NetFramework.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -1020,8 +1017,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project
-            Path="tests/DevTools.MahApps.Metro.Tests/DevTools.MahApps.Metro.Tests.csproj">
+        <Project Path="tests/DevTools.MahApps.Metro.Tests/DevTools.MahApps.Metro.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -1126,8 +1122,7 @@
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
         </Project>
-        <Project
-            Path="libs/XamlBehaviorsWpf/src/Microsoft.Xaml.Behaviors/Microsoft.Xaml.Behaviors.csproj">
+        <Project Path="libs/XamlBehaviorsWpf/src/Microsoft.Xaml.Behaviors/Microsoft.Xaml.Behaviors.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -1141,8 +1136,7 @@
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
         </Project>
-        <Project
-            Path="libs/pythonnet-stub-generator/csharp/PythonNetStubGenerator/PythonNetStubGenerator.csproj">
+        <Project Path="libs/pythonnet-stub-generator/csharp/PythonNetStubGenerator/PythonNetStubGenerator.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
@@ -1156,7 +1150,6 @@
             <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
         </Project>
-        <Project Path="source/RevitDevTool.Core/RevitDevTool.Core.csproj" />
     </Folder>
     <Project Path="source/RevitDevTool/RevitDevTool.csproj" />
     <Project Path="source/AcadDevTool/AcadDevTool.csproj" />

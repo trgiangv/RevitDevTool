@@ -1,6 +1,5 @@
 using RevitDevTool.Core;
-
-namespace RevitDevTool.CommandBrowser.Models;
+namespace RevitDevTool.Tools.CommandBrowser.Models;
 
 /// <summary>
 /// Represents a single runnable Revit command discovered from the ribbon.

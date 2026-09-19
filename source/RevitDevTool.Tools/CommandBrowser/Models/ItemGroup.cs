@@ -1,4 +1,4 @@
-namespace RevitDevTool.CommandBrowser.Models;
+namespace RevitDevTool.Tools.CommandBrowser.Models;
 
 public sealed class ItemGroup(string name, int order)
 {

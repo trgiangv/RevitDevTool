@@ -55,6 +55,7 @@
         <ProjectReference
             Include="..\..\libs\pythonnet-stub-generator\csharp\PythonNetStubGenerator\PythonNetStubGenerator.csproj" />
         <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
+        <ProjectReference Include="..\RevitDevTool.Tools\RevitDevTool.Tools.csproj" />
         <ProjectReference Include="..\DevTools.Mcp.Revit\DevTools.Mcp.Revit.csproj" />
         <ProjectReference Include="..\DevTools.Testing.Host\DevTools.Testing.Host.csproj" />
     </ItemGroup>

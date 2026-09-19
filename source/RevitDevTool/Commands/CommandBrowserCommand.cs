@@ -1,5 +1,5 @@
 using Autodesk.Revit.Attributes;
-using RevitDevTool.CommandBrowser;
+using RevitDevTool.Tools.CommandBrowser;
 
 namespace RevitDevTool.Commands;
 
@@ -11,5 +11,15 @@ public class CommandBrowserCommand : IExternalCommand
     {
         Host.GetService<CommandBrowserController>().ToggleVisibility();
         return Result.Succeeded;
+    }
+
+    public static void Register(UIControlledApplication uiControlledApplication)
+    {
+        Host.GetService<CommandBrowserController>().Initialize(uiControlledApplication);
+    }
+
+    public static void Unregister()
+    {
+        Host.GetService<CommandBrowserController>().Shutdown();
     }
 }

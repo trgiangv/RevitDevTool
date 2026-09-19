@@ -5,12 +5,13 @@ using System.Windows.Threading;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Windows;
 using DevTools.UI;
-using RevitDevTool.CommandBrowser.Services;
-using RevitDevTool.CommandBrowser.ViewModels;
-using RevitDevTool.CommandBrowser.Views;
+using RevitDevTool.Tools.CommandBrowser.Services;
+using RevitDevTool.Tools.CommandBrowser.ViewModels;
+using RevitDevTool.Tools.CommandBrowser.Views;
+using RevitDevTool.Tools.Helpers;
 using Grid = System.Windows.Controls.Grid;
 
-namespace RevitDevTool.CommandBrowser;
+namespace RevitDevTool.Tools.CommandBrowser;
 
 /// <summary>
 /// Manages the Command Browser bar by injecting a compact search control
@@ -21,7 +22,8 @@ namespace RevitDevTool.CommandBrowser;
 public sealed class CommandBrowserController(
     RibbonSnoopService snoopService,
     CommandBrowserCache cache,
-    CommandBrowserViewModel viewModel)
+    CommandBrowserViewModel viewModel,
+    ToolWindowService toolWindows)
 {
     private const string ControlName = "DevToolsCommandBrowser";
     private bool _initialized;
@@ -54,6 +56,7 @@ public sealed class CommandBrowserController(
         }
 
         Remove();
+        toolWindows.CloseAll();
         snoopService.Dispose();
         viewModel.Dispose();
         _initialized = false;
@@ -69,6 +72,7 @@ public sealed class CommandBrowserController(
         if (_desiredVisible || IsAdded())
         {
             _desiredVisible = false;
+            toolWindows.CloseAll();
             Hide();
         }
         else
@@ -182,7 +186,7 @@ public sealed class CommandBrowserController(
 
         // Remove our injected controls
         var toRemove = grid.Children.OfType<FrameworkElement>()
-            .Where(e => e.Name == ControlName)
+            .Where(e => e.Name is ControlName)
             .ToList();
         foreach (var element in toRemove)
             grid.Children.Remove(element);

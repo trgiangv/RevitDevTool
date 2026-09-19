@@ -33,4 +33,14 @@ public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
     {
         return true;
     }
+    
+    public static void Register(UIControlledApplication uiControlledApplication)
+    {
+        Host.GetService<PanelController>().Initialize(uiControlledApplication);
+    }
+    
+    public static void Unregister()
+    {
+        Host.GetService<PanelController>().Shutdown();
+    }
 }

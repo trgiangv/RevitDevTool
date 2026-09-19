@@ -1,4 +1,4 @@
-namespace RevitDevTool.Logging.Linkify;
+namespace RevitDevTool.Tools.Selection;
 
 public abstract class SearchMatch
 {

@@ -1,11 +1,11 @@
 using System.Collections.Specialized;
 using Autodesk.Internal.Windows;
 using Autodesk.Windows;
-using RevitDevTool.CommandBrowser.Models;
+using RevitDevTool.Tools.CommandBrowser.Models;
 using RibbonItem = Autodesk.Windows.RibbonItem;
 using RibbonPanel = Autodesk.Windows.RibbonPanel;
 
-namespace RevitDevTool.CommandBrowser.Services;
+namespace RevitDevTool.Tools.CommandBrowser.Services;
 
 /// <summary>
 /// Discovers all postable commands by walking the Autodesk ribbon visual tree.

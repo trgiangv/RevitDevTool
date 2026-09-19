@@ -1,7 +1,7 @@
 using System.Text;
 using DevTools.UI;
+using RevitDevTool.Tools.Selection;
 using RevitDevTool.Core;
-using RevitDevTool.Logging.Enums;
 using ZLogger.Scintilla.Models;
 using ZLogger.Scintilla.Public;
 // ReSharper disable ForCanBeConvertedToForeach
@@ -10,8 +10,6 @@ namespace RevitDevTool.Logging.Linkify;
 
 internal sealed class RevitLinkifier : ILinkifier
 {
-    private const string ElementIdFullName = "Autodesk.Revit.DB.ElementId";
-
     public bool TryMatch(ReadOnlySpan<byte> utf8Token, RenderContext context, out Action? onClick)
     {
         onClick = null;
@@ -20,49 +18,34 @@ internal sealed class RevitLinkifier : ILinkifier
             return false;
 
         var tokenText = Encoding.UTF8.GetString(utf8Token.ToArray());
+        if (TokenParser.TryParse(tokenText) is not { } parsed)
+            return false;
+        
+        if (parsed is { LinkInstanceId: null, Kind: TokenKind.ElementId }
+            && !ParameterSpan.HasParameter(context, typeof(ElementId).FullName!, tokenText))
+            return false;
 
-        if (LinkToken.TrySplit(tokenText, out var linkInstanceId, out var inner)
-            && LinkToken.TryClassifyInner(inner.AsSpan(), out var scopedKind))
-        {
-            onClick = CreateSearchAction(scopedKind, inner, linkInstanceId);
-            return true;
-        }
-
-        if (ParameterSpan.HasParameter(context, ElementIdFullName, tokenText))
-        {
-            onClick = CreateSearchAction(RevitTokenKind.ElementId, tokenText, linkInstanceId: null);
-            return true;
-        }
-
-        var tokenChars = tokenText.AsSpan();
-        if (LinkToken.IsUniqueId(tokenChars))
-        {
-            onClick = CreateSearchAction(RevitTokenKind.UniqueId, tokenText, linkInstanceId: null);
-            return true;
-        }
-
-        if (LinkToken.IsIfcGuid(tokenChars))
-        {
-            onClick = CreateSearchAction(RevitTokenKind.IfcGuid, tokenText, linkInstanceId: null);
-            return true;
-        }
-
-        return false;
+        onClick = CreateSearchAction(parsed);
+        return true;
     }
 
-    private static Action CreateSearchAction(RevitTokenKind tokenKind, string value, string? linkInstanceId)
+    private static Action CreateSearchAction(TokenParser.ParsedToken parsed)
     {
         return () => HostUiHelper.RunOnMainThread(() =>
         {
             try
             {
-                var uiDocument = RevitContext.UiApplication.ActiveUIDocument;
-                if (uiDocument?.Document is null)
+                var uiDocument = RevitContext.ActiveUiDocument;
+                if (uiDocument is null)
                     return;
 
-                var match = ElementSearcher.TrySearch(uiDocument.Document, tokenKind, value, linkInstanceId);
+                var match = ElementSearcher.TrySearch(
+                    uiDocument.Document,
+                    parsed.Kind,
+                    parsed.Value,
+                    parsed.LinkInstanceId);
                 if (match is not null)
-                    ElementSelector.Select(uiDocument, match);
+                    ElementSelector.Select([match], zoom: true, sectionBox: false);
             }
             catch
             {

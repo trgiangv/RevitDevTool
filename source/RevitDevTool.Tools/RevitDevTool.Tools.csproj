@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <UseRevit>true</UseRevit>
+    <UseWpf>true</UseWpf>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
+    <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
+    <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
+    <Using Include="CommunityToolkit.Mvvm.Input" />
+  </ItemGroup>
+</Project>

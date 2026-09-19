@@ -3,11 +3,12 @@ using System.ComponentModel;
 using System.Windows.Data;
 using System.Windows.Media;
 using DevTools.UI.Theme;
-using RevitDevTool.CommandBrowser.Models;
-using RevitDevTool.CommandBrowser.Services;
+using RevitDevTool.Tools.CommandBrowser.Models;
+using RevitDevTool.Tools.CommandBrowser.Services;
+using RevitDevTool.Tools.ElementFinder;
 // ReSharper disable UnusedParameterInPartialMethod
 
-namespace RevitDevTool.CommandBrowser.ViewModels;
+namespace RevitDevTool.Tools.CommandBrowser.ViewModels;
 
 /// <summary>
 /// ViewModel for the Command Browser bar.
@@ -25,9 +26,9 @@ public sealed partial class CommandBrowserViewModel : ObservableObject, IDisposa
 
     static CommandBrowserViewModel()
     {
-        DarkIconsBg = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3B4552"));
+        DarkIconsBg = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#3B4552"));
         DarkIconsBg.Freeze();
-        LightIconsBg = new SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#F4F4F4"));
+        LightIconsBg = new SolidColorBrush((System.Windows.Media.Color)ColorConverter.ConvertFromString("#F4F4F4"));
         LightIconsBg.Freeze();
     }
 
@@ -45,10 +46,16 @@ public sealed partial class CommandBrowserViewModel : ObservableObject, IDisposa
     [ObservableProperty]
     public partial ICollectionView? AllItemsView { get; private set; }
 
-    public CommandBrowserViewModel(RibbonSnoopService snoopService, CommandBrowserCache cache)
+    public ElementFinderViewModel ElementFinder { get; }
+
+    public CommandBrowserViewModel(
+        RibbonSnoopService snoopService,
+        CommandBrowserCache cache,
+        ElementFinderViewModel elementFinder)
     {
         _snoopService = snoopService;
         _cache = cache;
+        ElementFinder = elementFinder;
 
         snoopService.CommandExecuted += OnRibbonCommandExecuted;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;

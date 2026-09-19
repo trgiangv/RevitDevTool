@@ -1,15 +1,49 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using RevitDevTool.Logging.Enums;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace RevitDevTool.Logging.Linkify;
+namespace RevitDevTool.Tools.Selection;
 
 /// <summary>
-/// Optional <c>{linkInstanceId}@{inner}</c> prefix. Inner is still
-/// <see cref="RevitTokenKind.ElementId"/>, UniqueId, or IfcGuid.
+/// Parse and format element identity tokens (ElementId / UniqueId / IfcGuid),
+/// with optional <c>{linkInstanceId}@{inner}</c> scope prefix.
 /// </summary>
-internal static class LinkToken
+public static class TokenParser
 {
+    public readonly record struct ParsedToken(TokenKind Kind, string Value, string? LinkInstanceId);
+
+    /// <summary>
+    /// Split optional <c>instanceId@</c> prefix, classify inner, apply
+    /// <paramref name="defaultLinkInstanceId"/> only when the token is bare.
+    /// </summary>
+    public static ParsedToken? TryParse(string? token, string? defaultLinkInstanceId = null)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return null;
+
+        var value = token!;
+        var linkInstanceId = defaultLinkInstanceId;
+        if (TrySplit(token, out var splitLink, out var splitInner))
+        {
+            linkInstanceId = splitLink;
+            value = splitInner!;
+        }
+
+        if (!TryClassifyInner(value.AsSpan(), out var kind))
+            return null;
+
+        return new ParsedToken(kind, value, linkInstanceId);
+    }
+
+    public static string FormatElementId(ElementId id)
+    {
+#if REVIT2024_OR_GREATER
+        return id.Value.ToString(CultureInfo.InvariantCulture);
+#else
+        return id.IntegerValue.ToString(CultureInfo.InvariantCulture);
+#endif
+    }
+
     internal static bool TrySplit(
         string? token,
         [NotNullWhen(true)] out string? linkInstanceId,
@@ -47,21 +81,21 @@ internal static class LinkToken
         return true;
     }
 
-    internal static bool TryClassifyInner(ReadOnlySpan<char> inner, out RevitTokenKind kind)
+    internal static bool TryClassifyInner(ReadOnlySpan<char> inner, out TokenKind kind)
     {
         switch (inner.Length)
         {
             case 45 when IsUniqueId(inner):
-                kind = RevitTokenKind.UniqueId;
+                kind = TokenKind.UniqueId;
                 return true;
             case 22 when IsIfcGuid(inner):
-                kind = RevitTokenKind.IfcGuid;
+                kind = TokenKind.IfcGuid;
                 return true;
         }
 
         if (IsPositiveId(inner))
         {
-            kind = RevitTokenKind.ElementId;
+            kind = TokenKind.ElementId;
             return true;
         }
 

@@ -1,6 +1,5 @@
-using RevitDevTool.CommandBrowser.Models;
-
-namespace RevitDevTool.CommandBrowser.Controls;
+using DevTools.UI.Controls;
+namespace RevitDevTool.Tools.CommandBrowser.Models;
 
 /// <summary>
 /// Custom filter that searches across Name, TabName, and Description.

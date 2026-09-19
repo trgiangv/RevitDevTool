@@ -7,8 +7,8 @@ using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
 using Nice3point.Revit.Extensions.UI;
 using Autodesk.Revit.DB.Events;
-using RevitDevTool.CommandBrowser;
 using RevitDevTool.Commands;
+using RevitDevTool.Tools.CommandBrowser;
 using RevitDevTool.Controllers;
 using ZLogger;
 
@@ -60,8 +60,8 @@ public class Application : IExternalApplication
         _startup = null;
         try
         {
-            Host.GetService<CommandBrowserController>().Shutdown();
             Host.GetService<PanelController>().Shutdown();
+            Host.GetService<CommandBrowserController>().Shutdown();
             Host.Stop();
         }
         catch

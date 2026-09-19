@@ -4,7 +4,7 @@ using Autodesk.Windows;
 using RevitDevTool.Core;
 using RibbonPanel = Autodesk.Windows.RibbonPanel;
 
-namespace RevitDevTool.CommandBrowser.Models;
+namespace RevitDevTool.Tools.CommandBrowser.Models;
 
 /// <summary>
 /// DTO wrapping an Autodesk ribbon command item and its parent panel.

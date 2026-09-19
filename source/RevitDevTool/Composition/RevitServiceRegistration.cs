@@ -18,15 +18,17 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Adapters;
 using RevitDevTool.Bridges;
-using RevitDevTool.CommandBrowser;
-using RevitDevTool.CommandBrowser.Services;
-using RevitDevTool.CommandBrowser.ViewModels;
+using RevitDevTool.Tools.CommandBrowser;
+using RevitDevTool.Tools.CommandBrowser.Services;
+using RevitDevTool.Tools.CommandBrowser.ViewModels;
+using RevitDevTool.Tools.ElementFinder;
 using RevitDevTool.Controllers;
 using RevitDevTool.Core.Execution;
 using RevitDevTool.Execution;
 using RevitDevTool.Logging;
 using RevitDevTool.Logging.Enrichers;
 using RevitDevTool.Settings;
+using RevitDevTool.Tools.Helpers;
 using RevitDevTool.View;
 using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel.Settings.Visualization;
@@ -113,11 +115,13 @@ internal static class RevitServiceRegistration
         services.AddTransient<SolidVisualizationSettingsView>();
         services.AddTransient<XyzVisualizationSettingsView>();
 
-        // Command Browser
+        // Command Browser + floating tools
         services.AddSingleton<RibbonSnoopService>();
         services.AddSingleton<CommandBrowserCache>();
         services.AddSingleton<CommandBrowserViewModel>();
         services.AddSingleton<CommandBrowserController>();
+        services.AddSingleton<ToolWindowService>();
+        services.AddSingleton<ElementFinderViewModel>();
 
         return builder;
     }
