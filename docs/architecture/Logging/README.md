@@ -132,13 +132,11 @@ Revit registration is in `RevitHostingExtensions.AddLoggingServices()`. AutoCAD 
 Revit adds behavior that must not leak into shared logging:
 
 - `GeometryListener` intercepts Revit geometry objects written to `Trace`.
-- `RevitLinkifier` detects monitor tokens: optional `{linkInstanceId}@` scope plus ElementId / UniqueId / IfcGuid. Match and parse only; click calls `ElementSearcher.TrySearch` then `ElementSelector.Select` on the Revit UI thread.
-- `ElementSearcher` resolves a `SearchMatch` (host ids vs linked instance + ids). Unscoped tokens search the host document only. A scoped token resolves that `RevitLinkInstance`; `GetLinkDocument()` null (unloaded) is a silent miss.
-- `ElementSelector` keeps host `SetElementIds` / `ShowElements`; linked matches use `SetReferences` (2023+) and `LinkBoundingBox` host-space zoom.
+- `RevitLinkifier` (Linkify) detects monitor tokens: optional `{linkInstanceId}@` scope plus ElementId / UniqueId / IfcGuid. Match and click only; search / select / box types live in `RevitDevTool.Tools.Selection`.
 - `RevitContextProvider` enriches log records with selected Revit context fields.
 - Visualization routing sends geometry to DirectContext3D servers under `source/RevitDevTool/Visualization/`.
 
-Linked-element token and zoom policy: [0036](../../decisions/0036-revit-monitor-link-element-tokens.md).
+Linked-element token, Element Finder, and Tools ownership: [0036](../../decisions/0036-revit-monitor-link-element-tokens.md).
 
 AutoCAD has its own context provider/enricher path and does not share Revit geometry routing.
 

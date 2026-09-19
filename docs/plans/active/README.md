@@ -25,10 +25,16 @@ Remaining live-host / year-matrix / pixi-opt-in stay in `test-matrix.md`.
 Split god project `DevTools.Mcp.Tests` into module-scoped projects:
 [2026-09-04-mcp-test-project-split](2026-09-04-mcp-test-project-split.md).
 
+## RevitDevTool.Tools (closed under 0036)
+
+Select/search + Element Finder + Command Browser extract landed under
+[0036](../../decisions/0036-revit-monitor-link-element-tokens.md). GeoViz /
+Inspect pick-to-overlay abandoned (no plan).
+
 ## Revit monitor link-element tokens (closed)
 
 Click-to-select for elements in RVT links (pair token, `SetReferences`,
-host-space zoom):
+host-space zoom) + later Tools / Element Finder ownership:
 [completed](../completed/2026-09-17-revit-link-element-monitor-tokens.md)
 ([0036](../../decisions/0036-revit-monitor-link-element-tokens.md)).
 

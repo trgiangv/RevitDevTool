@@ -1,8 +1,8 @@
 # Visualization System Architecture
 
-Visualization is currently a Revit-host feature. It renders transient geometry through Revit DirectContext3D when Revit geometry objects are written through the logging path.
+Visualization is currently a Revit-host feature. It renders transient geometry through Revit DirectContext3D when Revit geometry objects are written through the logging path (`Trace.Write`). Visualization does not own picks.
 
-Last updated: 2026-05-29
+Last updated: 2026-09-18
 
 ---
 

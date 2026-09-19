@@ -16,6 +16,9 @@ Shared-platform boundaries were unclear for Revit helpers and DirectContext3D.
   only the Revit host references it.
 - Visualization lives entirely in `source/RevitDevTool/Visualization/`, not in
   shared libraries.
+- Select / search APIs, Element Finder, and Command Browser live in
+  `RevitDevTool.Tools` ([0036](0036-revit-monitor-link-element-tokens.md)),
+  not Core.
 
 ## Consequences
 

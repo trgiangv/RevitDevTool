@@ -25,7 +25,8 @@ Keep these host-neutral — this is the default for all new functionality:
 Host API references belong in host projects:
 
 - Revit host: `source/RevitDevTool/`
-- Revit-only core: `source/RevitDevTool.Core/` (RevitContext, RevitTransactionService, dockable pane loader, image exporter — not shared with other hosts)
+- Revit-only core: `source/RevitDevTool.Core/` (RevitContext, RevitTransactionService, dockable pane loader, image exporter — not shared with other hosts — not select/search)
+- Revit select / search API, Element Finder, and CommandBrowser WPF: `source/RevitDevTool.Tools/` (Revit-only, host-referenced; `UseWpf` — Revit already hosts WPF)
 - AutoCAD host: `source/AcadDevTool/`
 - Launch specs (path / argv / dialog catalog): `source/DevTools.Hosting.Revit/`, `source/DevTools.Hosting.Acad/`. `net10.0-windows` only. Daemon and TestRunner call `AddRevitLaunch` / `AddAutocadFamilyLaunch`. Add-ins do **not**.
 - Offline file parse: `source/DevTools.FileMetadata.Revit/` (OpenMcdf) and `FileMetadata.Acad` (ACadSharp). `net10.0-windows` only. Parsers stay **HostApp-free**. Daemon wires `RevitFileMetadataReader.TryReadRevitVersion` into `AddRevitLaunch`; Runner passes `null`. Do not ProjectReference FileMetadata from `Hosting.Revit`.
