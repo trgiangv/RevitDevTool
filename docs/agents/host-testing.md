@@ -103,8 +103,9 @@ so the next sample restore cannot keep a previous extraction of the packed versi
 - net48 has no load context: if the host already loaded an assembly with the same identity,
   in-host tests bind that copy, not the generation snapshot. Restart the host after
   deploying, or use net8+.
-- Stream-loaded assemblies have an empty `Assembly.Location`. Tests that locate assets use
-  NUnit `TestContext.WorkDirectory` (the generation shadow).
+- Stream-loaded assemblies have an empty `Assembly.Location`. Do not use NUnit
+  `TestContext.WorkDirectory` (generation shadow) or TUnit work dirs for assets —
+  prefer `[CallerFilePath]` (see `revit-test` skill).
 - Live `testing/run` is marshaled through `IHostContextExecutor` (NUnit `RunOnMainThread`).
   WPF `Dispatcher.Invoke` is not a Revit API context.
 - Do not add a Host `TraceListener` or `ILogger` dump of `CaseResult.Output`; Trace/Debug

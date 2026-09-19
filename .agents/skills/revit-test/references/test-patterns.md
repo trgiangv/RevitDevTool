@@ -1,130 +1,57 @@
-# Test patterns
+# Test patterns (shared)
 
-Bodies run on the Autodesk API context (`RunOnMainThread`). WPF
-`Dispatcher.Invoke` is not an API context. Read `Application` from the
-host's context type, not from the MTP package.
+Applies to **NUnit** and **TUnit**. Framework-specific syntax:
+[nunit.md](nunit.md) · [tunit.md](tunit.md). Filters: [mtp-filter.md](mtp-filter.md).
 
-`Assembly.Location` is empty (stream-load). Locate Content/assets with
-`TestContext.WorkDirectory` (generation shadow of the test output).
+## API context
 
-## 1. Smoke — prove the host process
+Test bodies run inside the Autodesk host process on the API context thread.
+Read `Application` / `Document` from the project's host helper or fixtures — not
+from the MTP package.
 
-```csharp
-[Test]
-public void Runs_inside_revit()
-{
-    var revitApi = AppDomain.CurrentDomain.GetAssemblies()
-        .FirstOrDefault(a =>
-            string.Equals(a.GetName().Name, "RevitAPI", StringComparison.OrdinalIgnoreCase));
+WPF `Dispatcher.Invoke` is **not** a Revit / AutoCAD API context.
 
-    Assert.That(revitApi, Is.Not.Null, "Host tests must execute inside Revit, not the MTP exe.");
-    Console.WriteLine($"host-pid={Process.GetCurrentProcess().Id}");
-}
-```
+## Paths — default to source
 
-## 2. Host application context
+In-host test assemblies are often stream-loaded into the host. Path APIs behave
+differently from a normal `dotnet test` project on disk.
 
-Use the project's host helper (Inspexel `RevitContext`, Nice3point
-`RevitApiContext`, …):
+| API | Framework | Prefer? |
+|-----|-----------|---------|
+| `[CallerFilePath]` → folder beside the `.cs` file | Both | **Yes** — fixtures, models, agent-visible outputs |
+| `TestContext.CurrentContext.WorkDirectory` | NUnit only | **No** — generation shadow under temp/output |
+| `TestContext.CurrentContext.TestDirectory` | NUnit only | **No** — testhost layout, not source tree |
+| Framework / engine work directories | TUnit | **No** — same generation-shadow issue |
+| `Assembly.GetExecutingAssembly().Location` | Both | **No** — often **empty** when stream-loaded |
 
-```csharp
-[Test]
-public void Reads_application_version()
-{
-    var version = RevitApiContext.Application.VersionBuild;
-    Assert.That(version, Is.Not.Null.And.Not.Empty);
-    Console.WriteLine(version);
-}
-```
-
-## 3. Content files via WorkDirectory
+Do not write test reports under work directories or `Assembly.Location` — agents
+and CI cannot reliably find those paths. Use source-adjacent paths or Console /
+`Assert.Pass` for MTP stdout (`--output Detailed`).
 
 ```csharp
-[Test]
-public void Loads_content_from_shadow()
-{
-    var path = Path.Combine(TestContext.WorkDirectory, "Testdata", "model.rvt");
-    Assert.That(File.Exists(path), Is.True, path);
-}
+using System.Runtime.CompilerServices;
+
+static string BesideSource(string relative, [CallerFilePath] string cs = "") =>
+    Path.GetFullPath(Path.Combine(Path.GetDirectoryName(cs)!, relative));
 ```
 
-Mark files `<Content CopyToOutputDirectory="PreserveNewest" />` so they copy
-into the generation shadow.
+Leave fixtures as `<None>` with no copy-to-output, or equivalent in your SDK.
 
-## 3b. Sample files next to source (no shadow copy)
+Framework examples: [nunit.md](nunit.md#paths) · [tunit.md](tunit.md#paths).
 
-Leave large models in the test project. Do not `CopyToOutputDirectory`.
-Resolve from the compile-time `.cs` path — not `WorkDirectory` / `TestDirectory`
-(those are the generation shadow). `[CallerFilePath]` is the build machine path.
+## Smoke
 
-```csharp
-[Test]
-public void Loads_sample_next_to_source()
-{
-    var path = Sample("model.rvt");
-    Assert.That(File.Exists(path), Is.True, path);
-}
+Prove the body runs inside the Autodesk process, not the MTP exe. Stdout should
+include `host-pid=<Autodesk PID>`.
 
-static string Sample(string name, [CallerFilePath] string cs = "") =>
-    Path.GetFullPath(Path.Combine(Path.GetDirectoryName(cs)!, "Testdata", name));
-```
+Replace `RevitAPI` with the host API assembly name for your `HostName` when needed
+(e.g. `AcDbMgd` for AutoCAD).
 
-See `samples/DevTools.NUnit.SampleTests/SourceAssetPathTests.cs`.
+See [nunit.md](nunit.md#smoke) / [tunit.md](tunit.md#smoke) for assert style per engine.
 
-## 4. One-shot / Explicit
+## Output
 
-```csharp
-[Explicit("Writes the live model; run with --filter Refresh_WritesTheCurrentModel")]
-[Test]
-public void Refresh_WritesTheCurrentModel()
-{
-    // selected only when --filter names this method
-}
-```
-
-Without `--filter`, NUnit skips Explicit. Do not expect `Name=` expressions
-to unlock it — see [mtp-filter.md](mtp-filter.md).
-
-## 5. Setup lifecycle
-
-`[SetUp]`, `[TearDown]`, `[OneTimeSetUp]`, `[SetUpFixture]` are NUnit's.
-They run again on each `nunit/run`. User **static fields** on net48 do
-**not** reset between `dotnet test` invocations on the same host PID.
-Restart the host if static or event state is dirty.
-
-```csharp
-[SetUpFixture]
-public sealed class AssemblySetUp
-{
-    [OneTimeSetUp]
-    public void Init() { /* per run, not per process */ }
-}
-
-[TestFixture]
-public sealed class Fixture
-{
-    [OneTimeSetUp]
-    public void FixtureInit() { }
-
-    [SetUp]
-    public void PerTest() { }
-}
-```
-
-net8+ hosts isolate a **rebuilt** generation by content hash. Live unload
-is not guaranteed. Same-generation re-runs still share statics.
-
-## 6. Output
-
-| API | IDE / `dotnet test` stdout | Host log pane (tracing on) |
-|-----|----------------------------|----------------------------|
-| `Console.WriteLine` / `TestContext.WriteLine` | Yes (`CaseResult.Output`) | Forwarded at case finish |
-| `Trace.WriteLine` / `Debug.WriteLine` | Merged into stdout | Process `Trace.Listeners` |
-
-Do not add extra listeners to "help" the pane.
-
-## 7. Timeout
-
-`PerTestTimeout` is the per-test budget. The `testing/run` pipe wait is this
-times the number of tests in that run (same as pytest `per_test_timeout`).
-Raise it for slow cases. NUnit `RunOnMainThread` cannot cancel an in-flight test.
+MTP-mode `dotnet test` needs `--output Detailed` to print passed-test
+`Standard output` (Console / Trace / Pass message). Default `Normal` expands
+failures only. Do not add extra Trace listeners for the host pane — the adapter
+already routes Console / Trace / Debug.

@@ -1,7 +1,8 @@
 # Project setup
 
-Consumer csproj + `global.json` for `RevitDevTool.TestAdapter`. CLI commands stay
-in SKILL.md.
+Consumer `csproj` + `global.json` for
+[RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter).
+Run commands stay in [SKILL.md](../SKILL.md).
 
 ## Required csproj
 
@@ -14,71 +15,68 @@ in SKILL.md.
   <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.0" />
   <PackageReference Include="NUnit" Version="4.6.1" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
 ```
 
-Pin **NUnit 4.6.1** (`nunit.framework` file version `4.6.1.0`). The host
-generation snapshot rejects a missing or mismatched framework DLL.
+Pin framework versions — the adapter does not pull NUnit or TUnit:
 
-The adapter package depends on `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do not add
-`Microsoft.Testing.Platform` as a compile package. Do not override MTP.MSBuild.
+| Package | Version |
+|---------|---------|
+| `NUnit` | 4.6.1 |
+| `TUnit` | 1.67.0 |
+| `Microsoft.Testing.Platform.MSBuild` | 2.4.0 (transitive from adapter — do not override) |
+
+The adapter depends on `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do not add
+`Microsoft.Testing.Platform` as a compile package or override MTP.MSBuild.
+
+### Host properties
 
 | Property | Role |
 |----------|------|
 | `HostName` | `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`, `AcadElec`, `AcadMep`, `AcadMap3D` |
 | `HostVersion` | Year, e.g. `2025` |
-| `ForceLaunch` | `false` = reuse a matching host, start if none. `true` = always start a new host |
-| `PerTestTimeout` | Per-test budget (seconds). The `testing/run` pipe wait is this × tests in the run. 60 is smoke-only |
+| `ForceLaunch` | `false` = reuse matching host, start if none. `true` = always start new |
+| `PerTestTimeout` | Per-test budget (seconds). Pipe wait ≈ this × tests in the run |
 | `LaunchTimeout` | Seconds to wait for a launched host pipe |
-| `TestingFramework` | Default `nunit`. Override in the test csproj to change the in-host engine without changing the package |
-| `NetFxModuleInitializer` | net48 TUnit only. Default on: inject `[ModuleInitializer]`. Leave unset when the project already has `Polyfill` or `ModuleInitializerAttribute.cs`. Set `false` when the attribute lives in a differently named file, PolySharp, or a polyfill package not named `Polyfill` (`CS0436` otherwise) |
+| `TestingFramework` | Default `nunit`. Set `tunit` for TUnit |
+| `NetFxModuleInitializer` | net48 TUnit only. Default on. Set `false` if another polyfill already defines `[ModuleInitializer]` |
+| `TestingRunnerPath` | Override when `DevTools.TestRunner.exe` is not in the default bundle path |
 
-`HostName` / `HostVersion` are the runner contract. Include a compile-only
-host API package (`Revit_All_Main_Versions_API_x64` for Revit) matching that
-year so testhost discovery can resolve Autodesk types. Do not copy host API
-DLLs into the test output.
+### Host API package (compile-only)
 
-Build generates `testconfig.json` from the csproj properties. A normal
-incremental `dotnet build` (not only Rebuild) refreshes
-`[AssemblyName].testconfig.json`. Microsoft.Testing.Platform.MSBuild also
-copies that file. The adapter reads the `devtools` section through
-`IConfiguration`. Author `testconfig.json` beside the `.csproj`
-to add `platformOptions` (the `devtools` section is merged from csproj unless
-you already wrote one). Do not use `.runsettings`. Do not edit the copied
-output file by hand.
+Include a compile-only host API package matching `HostVersion` so discovery can
+resolve Autodesk types. Do **not** copy host API DLLs into the test output.
+
+Common choices (pick one that matches your repo):
+
+| Host | Example package |
+|------|-----------------|
+| Revit | `Revit_All_Main_Versions_API_x64`, `Nice3point.Revit.Toolkit` |
+| AutoCAD / Civil3D | Product-specific NuGet or internal refs with `IncludeAssets="build; compile"` |
+
+Repo-specific MSBuild flags like `UseRevit` are **not** package settings — they
+only affect how your solution selects API packages.
+
+### testconfig.json
+
+Build generates `[AssemblyName].testconfig.json` from csproj properties.
+Author a sibling `testconfig.json` only for `platformOptions`; the `devtools`
+section is merged from the csproj. Do not use `.runsettings`.
+
+### Target frameworks
+
+Do not set `<RuntimeIdentifier>` on net8 / net10 test projects (nested
+`win-x64` output confuses Test Explorer). The package flattens RID output when
+a RID is still present. On net48 only, a project may set `win-x64` when the SDK
+requires it for x64 (`NETSDK1047`).
 
 ## global.json
 
-`dotnet test` defaults to VSTest. Add the MTP runner to `global.json`.
-Nearest `global.json` replaces the whole file (not a merge) and is chosen
-from the **current directory**, not from `--project`.
-
-**All-MTP repo** — every `dotnet test` project uses MTP. Put the runner on the
-**root** `global.json`. `dotnet test` from the repo root is correct.
-
-```text
-repo/
-  global.json                 ← sdk + test.runner MTP
-  csharp/Host.Tests/
-    Host.Tests.csproj
-```
-
-**One VSTest leftover** — same as all-MTP at root, plus a nested override.
-Include `sdk` in the nested file. `cd` into that folder before `dotnet test`.
-
-```text
-repo/
-  global.json                 ← sdk + test.runner MTP
-  samples/ricaun.NUnit.SampleTests/
-    global.json               ← sdk + "runner": "VSTest"
-```
-
-**Many VSTest projects** — do **not** put MTP on the root; scope it next to
-each MTP test project.
+`dotnet test` defaults to VSTest. MTP needs:
 
 ```json
 {
@@ -92,9 +90,17 @@ each MTP test project.
 }
 ```
 
-Use a .NET 10 SDK. Match `-c` to the consumer configurations (`Debug.R24`,
-`Release`, …). Run `dotnet test` from a directory covered by the intended
-runner.
+Nearest `global.json` **replaces** the whole file (not a merge). Choice is by
+**current directory**, not `--project`.
+
+| Repo layout | Where to put MTP |
+|-------------|------------------|
+| All `dotnet test` projects are MTP | Root `global.json` |
+| One leftover VSTest project | Root MTP + nested `global.json` with `"runner": "VSTest"` (include `sdk`); `cd` there before testing it |
+| Many VSTest projects remain | MTP `global.json` next to each MTP test project only |
+
+Use a .NET 10 SDK. Match `-c` to configurations that set `HostVersion` and
+`TargetFramework` for your host year.
 
 ## Conflicting packages
 
@@ -104,20 +110,17 @@ Do not add a second test adapter to the same project:
 - `ricaun.RevitTest.TestAdapter`
 - `Microsoft.Testing.Extensions.VSTestBridge`
 
-Keep one owner: `RevitDevTool.TestAdapter`.
-
-If `Directory.Packages.props` (or `Directory.Build.props`) has
-`<GlobalPackageReference Include="Polyfill" />`, remove it on the host-test
-project. The testhost is a single-runtime Exe; NUnit does not need Polyfill,
-and net48 TUnit gets `[ModuleInitializer]` from the package.
-
-```xml
-<GlobalPackageReference Remove="Polyfill" />
-```
+If the repo has `<GlobalPackageReference Include="Polyfill" />`, remove it on
+the host-test project (`<GlobalPackageReference Remove="Polyfill" />`). NUnit
+does not need it; net48 TUnit gets `[ModuleInitializer]` from the adapter package.
 
 ## Runner install
 
+Default path:
+
 `%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.TestRunner.exe`
 
-Override with MSBuild `TestingRunnerPath` only when the bundle is not
-in the default location. Missing file → `"RevitDevTool is not installed"`.
+Override with MSBuild `TestingRunnerPath` when the bundle is elsewhere.
+Missing file → `"RevitDevTool is not installed"`.
+
+Install from [RevitDevTool releases](https://github.com/trgiangv/RevitDevTool).

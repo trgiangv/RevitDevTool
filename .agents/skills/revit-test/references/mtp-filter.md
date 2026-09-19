@@ -1,81 +1,47 @@
 # MTP filter
 
-Measured on the generated test exe (`--info` / `--help`), not inferred
-from MTP version notes.
+| Flag | Owner | What it becomes |
+|------|--------|-----------------|
+| `--filter` | adapter | NUnit `<name re="1">` regex on `ITest.Name` |
+| `--filter-uid` | MTP | Exact TestNode uid → host `<test>` |
+| `--treenode-filter` | MTP | Discovered leaves under `/ns/type/method` (never whole assembly) |
+| `--list-tests` | MTP | text = DisplayName; `json` = includes `uid` |
 
-| Flag | Owner | Arity | What it becomes |
-|------|--------|-------|-----------------|
-| `--filter` | adapter `TestCommandLineProvider` | 1 | `TestingSelection.Names` → NUnit `<name re="1">` (regex on `ITest.Name`) |
-| `--filter-uid` | Microsoft.Testing.Platform | 1..N | `TestNodeUidListFilter` → `TestingSelection.TestIds` → NUnit `<test>` |
-| `--treenode-filter` | Microsoft.Testing.Platform | 1 | `TreeNodeFilter` → discovered leaves whose `/ns/type/method` (or uid) path matches. Never whole-assembly. |
-| `--list-tests` text | platform | — | prints `TestNode.DisplayName` (`ITest.Name`), not the UID |
-| `--list-tests json` | platform | — | `uid` is `TestNode.Uid` from testhost `ExploreTests` |
-
-`dotnet test --filter MethodName` from the test-project folder reaches the
-adapter option. Do not pass `Name=` / `FullyQualifiedName~` / `Category=` —
-those strings are sent as a NUnit name regex and will not match.
-
-`--filter-uid` must be the json uid. Ordinary cases are `ITest.FullName`.
-`TestName`/`SetName` leaves are `Class.Method("DisplayName")`. PowerShell
-keeps the inner quotes with single quotes:
-
-```powershell
-dotnet test --project Host.Tests.csproj -c <Config> -- --filter-uid 'Ns.Class.Method("Unit_X")'
-```
+Do not pass VSTest expressions (`Name=`, `FullyQualifiedName~`, `Category=`).
+They are treated as a literal NUnit name regex and usually match nothing
+(**exit 8**).
 
 ## Commands
 
-Run `dotnet test` from a directory covered by the intended `global.json`
-(repo root for MTP in this repo; `cd` into a `"runner": "VSTest"` folder
-before testing that project).
-
 ```powershell
-dotnet test --project path/to/Host.Tests/Host.Tests.csproj -c <Config> --filter MethodName
-dotnet test --project path/to/Host.Tests/Host.Tests.csproj -c <Config> --filter FamilyPolicy
-```
-
-If the SDK binds `--filter` itself:
-
-```powershell
-dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName
-```
-
-```powershell
+dotnet test --project path/to/Host.Tests.csproj -c <Config> --filter MethodName --output Detailed
+dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName --output Detailed
 dotnet test --project Host.Tests.csproj -c <Config> --list-tests
 dotnet test --project Host.Tests.csproj -c <Config> --list-tests json
-dotnet test --project Host.Tests.csproj -c <Config> -- --filter-uid <uid>
+dotnet test --project Host.Tests.csproj -c <Config> -- --filter-uid 'Ns.Class.Method("Unit_X")'
 ```
 
-List tests without starting a host. Discovery is local NUnit
-`ExploreTests` (plus `discovery-refs.txt` for Autodesk API compile refs).
-There is no PE-metadata fallback. `--filter MethodName` still goes to the
-host as NUnit `<name re="1">`.
+Use `--` when the SDK binds `--filter` itself. `--filter-uid` needs the uid
+from `--list-tests json` (ordinary leaves: `ITest.FullName`;
+`TestName`/`SetName`: `Class.Method("DisplayName")`).
 
-`ForceLaunch=false` still starts a matching-version host on **run** if none
-is open.
+`--list-tests` does not start a host. A filtered **run** still executes in the
+host. `ForceLaunch=false` starts a matching-version host on run if none is open.
 
 ## What matches
 
 | Command | Result |
 |---------|--------|
-| `--filter Refresh_WritesTheCurrentModel` | NUnit name regex; that method; unlocks `[Explicit]` |
-| `--filter FamilyPolicy` | Every leaf whose `ITest.Name` matches the regex, including parameterized cases |
-| `--filter-uid <uid from json>` | That one TestNode (host `<test>` uses `ITest.FullName`) |
-| `--filter "Name=Refresh_WritesTheCurrentModel"` | No match → **exit 8, Zero tests ran** |
-| `--filter "FullyQualifiedName~Refresh_…"` | Same: literal token, no match |
-| no `--filter` | Whole assembly; `[Explicit]` is **Skipped**, not run |
+| `--filter Refresh_WritesTheCurrentModel` | That method; unlocks `[Explicit]` |
+| `--filter FamilyPolicy` | Every leaf whose `ITest.Name` matches |
+| `--filter-uid <uid from json>` | That one TestNode |
+| `--filter "FullyQualifiedName~…"` | No match → exit 8 |
+| no `--filter` | Whole assembly; `[Explicit]` is **Skipped** |
 
-Exit **8** after a few seconds with zero cases: local NUnit select found
-nothing (fast) **or** the host ran a filter that matched zero loaded tests.
-Confirm with `--list-tests json` before assuming a dead host.
-
-Test Explorer click / `--filter-uid` send discovered UIDs. A testhost stub
-or identifier `Class.Method` also runs in-host expansions of that method,
-including `TestName` / `SetName` leaves.
-
-`[Explicit]` runs only when the filter selects that test.
+Exit **8** with zero cases: local select found nothing, or the host filter
+matched nothing. Confirm with `--list-tests json` before assuming a dead host.
 
 ## Host proof
 
-Test output may include `host-pid=…`. Use that PID to confirm execution
-inside the Autodesk process, not the MTP exe.
+Test output may include `host-pid=…`. That PID is the Autodesk process, not
+the MTP testhost exe.

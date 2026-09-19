@@ -1,36 +1,44 @@
 ---
 name: revit-test
 description: >
-  Configure and run in-host tests with the RevitDevTool.TestAdapter NuGet
-  package (Microsoft Testing Platform). Use in any repo that references that
-  package when writing or running NUnit or TUnit tests inside Revit, AutoCAD,
-  or Civil 3D; setting HostName/HostVersion/ForceLaunch; using `dotnet test --filter`;
-  selecting [Explicit] tests; or diagnosing MTP exit code 8 / zero tests.
+  Configure and run in-host CAD/BIM tests with RevitDevTool.TestAdapter (Microsoft
+  Testing Platform). Use when a repo references that NuGet package; writing or running
+  NUnit or TUnit inside Revit, AutoCAD, Civil3D, or family; setting HostName,
+  HostVersion, or ForceLaunch; using dotnet test --filter; selecting [Explicit]
+  tests; or diagnosing MTP exit code 8 / zero tests discovered.
 ---
 
 # Host tests (RevitDevTool.TestAdapter)
 
-Standalone consumer skill. Copy this folder into any repo (or
-`~/.agents/skills/revit-test/`).
+Consumer skill for any repo that references
+[RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter).
+Copy this folder to `~/.cursor/skills/revit-test/`, `~/.agents/skills/revit-test/`,
+or `.agents/skills/revit-test/` in the repo.
 
+**Prerequisites:** [RevitDevTool](https://github.com/trgiangv/RevitDevTool) installed
+on the machine (provides `DevTools.TestRunner` and the host add-in).
+
+```text
+dotnet test → MTP testhost (discover locally, no host)
+           → DevTools.TestRunner → host pipe → NUnit | TUnit in host
 ```
-dotnet test (MTP exe) → installed DevTools.TestRunner → host pipe → NUnit or TUnit
-```
 
-The MTP exe never runs test bodies locally. Requires
-[RevitDevTool](https://github.com/trgiangv/RevitDevTool) installed and NuGet
-`RevitDevTool.TestAdapter`.
+Test bodies never run in the MTP process.
 
-Detect: `PackageReference` `RevitDevTool.TestAdapter` + a `global.json` with
-`"test": { "runner": "Microsoft.Testing.Platform" }` — **repo root** when the
-tree is MTP (or has one VSTest folder that overrides to `"runner": "VSTest"`),
-otherwise next to the MTP test project.
+## Detect
 
-## Configure
+The consumer project should have:
 
-Default engine is NUnit (`4.6.1`). Do not add `NUnit3TestAdapter` or
-`ricaun.RevitTest.TestAdapter`. TUnit: set `TestingFramework` to `tunit` and
-pin `TUnit` `1.67.0`.
+- `PackageReference` `RevitDevTool.TestAdapter`
+- Nearest `global.json` (from the cwd where you run `dotnet test`) with
+  `"test": { "runner": "Microsoft.Testing.Platform" }`
+
+Do **not** add `NUnit3TestAdapter`, `ricaun.RevitTest.TestAdapter`, or
+`Microsoft.Testing.Extensions.VSTestBridge` to the same project.
+
+## Quick start
+
+Default engine: **NUnit 4.6.1**. TUnit: `TestingFramework=tunit` + pin **TUnit 1.67.0**.
 
 ```xml
 <PropertyGroup>
@@ -41,17 +49,13 @@ pin `TUnit` `1.67.0`.
   <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.0"/>
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.0" />
   <PackageReference Include="NUnit" Version="4.6.1" />
+  <!-- compile-only host API — pick a package that matches HostVersion -->
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
 ```
-
-`dotnet test` needs `"test": { "runner": "Microsoft.Testing.Platform" }` in
-`global.json`. All-MTP repo, or one VSTest leftover with a nested `"runner":
-"VSTest"`: put MTP on the **root**. Many VSTest/`dotnet test` projects still in
-the tree: scope MTP next to the MTP test project.
 
 ```json
 {
@@ -60,62 +64,58 @@ the tree: scope MTP next to the MTP test project.
 }
 ```
 
-If the repo has a central `GlobalPackageReference` to `Polyfill`, remove it on
-the test project (`<GlobalPackageReference Remove="Polyfill" />`). NUnit does
-not need it; net48 TUnit gets `[ModuleInitializer]` from the package.
-`NetFxModuleInitializer=false` opts out when that skip misses your type
-(see [project-setup.md](references/project-setup.md)).
-
-Property meanings and conflicting packages:
+Full properties, `global.json` placement, conflicts, runner path:
 [project-setup.md](references/project-setup.md).
 
 ## Run
 
-Run `dotnet test` from a directory covered by the intended `global.json`
-(repo root for MTP). `cd` into a `"runner": "VSTest"` folder before testing
-that project.
+Run `dotnet test` from a directory covered by the intended `global.json`.
 
 ```powershell
-dotnet test --project path/to/Host.Tests/Host.Tests.csproj -c <Config> --filter MethodName --output Detailed
+dotnet test --project path/to/Host.Tests.csproj -c <Config> --filter MethodName --output Detailed
 dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName --output Detailed
 dotnet test --project Host.Tests.csproj -c <Config> --list-tests
 ```
 
-`--output Detailed` is required to print passed-test `Standard output`
-(Console/Trace) under MTP-mode `dotnet test` (default `Normal` only shows
-failures). Direct `.exe` runs also accept `--show-stdout All`.
+| Behavior | Detail |
+|----------|--------|
+| Discovery | `--list-tests`, Test Explorer refresh — **no host** |
+| Run | Starts or reuses a host (`ForceLaunch=false` still launches if none match) |
+| Passed stdout | `--output Detailed` shows Console / Trace / `Assert.Pass` on passes; default `Normal` expands failures only |
+| `--filter` | Method-name regex (NUnit `<name re="1">`), **not** VSTest `FullyQualifiedName~` |
+| `[Explicit]` | Selected only when `--filter` matches the method name |
+| Host launch | Do not start `Revit.exe` / `acad.exe` yourself |
 
-`--filter` is an adapter method-name option (NUnit `<name re="1">` regex, so
-`FamilyPolicy` matches those cases). Same command runs `[Explicit]`. Do
-not start `Revit.exe` / `acad.exe` yourself. `--filter-uid` needs the UID
-from `--list-tests json` (ordinary leaves: `ITest.FullName`; `TestName` /
-`SetName`: `Class.Method("DisplayName")`). PowerShell: quote uids that
-contain `"` (`--filter-uid 'Ns.Class.Method("Unit_X")'`).
-
-Filter / exit 8: [mtp-filter.md](references/mtp-filter.md).
+Filters, `--filter-uid`, exit 8: [mtp-filter.md](references/mtp-filter.md).
 
 ## Write tests
 
-Bodies run on the Autodesk API context. Use the host context type for
-`Application`, `TestContext.WorkDirectory` for assets. Patterns:
-[test-patterns.md](references/test-patterns.md).
+Bodies run on the Autodesk API context (not the MTP process). WPF
+`Dispatcher.Invoke` is not an API context.
 
-## Common mistakes
+**Paths:** prefer `[CallerFilePath]` for fixtures and agent-visible outputs.
+`TestContext.WorkDirectory` is **NUnit-only** and points at a generation shadow —
+do not use it for assets or reports. Details: [test-patterns.md](references/test-patterns.md).
 
-| Mistake | Fix |
+| Topic | Reference |
+|-------|-----------|
+| Shared (paths, smoke, stdout) | [test-patterns.md](references/test-patterns.md) |
+| NUnit (default) | [nunit.md](references/nunit.md) |
+| TUnit (`TestingFramework=tunit`) | [tunit.md](references/tunit.md) |
+
+## Troubleshooting
+
+| Symptom | Fix |
 |---------|-----|
-| `--filter "Name=…"` / `FullyQualifiedName~` | `--filter MethodName` or a substring |
-| `[Explicit]` never runs | Select it with `--filter MethodName` |
-| Ran `dotnet test` on a VSTest project from an MTP `global.json` cwd | `cd` into the folder whose `global.json` has `"runner": "VSTest"` |
-| Timeout | Raise `PerTestTimeout` (per-test budget; 60s is smoke-only) |
+| `--filter FullyQualifiedName~…` / `Name=` matches nothing | Use `--filter MethodName` |
+| No passed stdout under `dotnet test` | Add `--output Detailed` |
+| `[Explicit]` never runs | Select with `--filter MethodName` |
+| Exit 8, zero tests | Wrong filter syntax, or cwd `global.json` still has VSTest |
+| `"RevitDevTool is not installed"` | Install RevitDevTool or set `TestingRunnerPath` |
+| Timeout | Raise `PerTestTimeout` (60s is smoke-only) |
+| Stale host state (net48) | Restart the host process |
 
-## Package
+## Links
 
 - NuGet: [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter)
-- Installer / Runner: [RevitDevTool](https://github.com/trgiangv/RevitDevTool)
-
-## References
-
-- [project-setup.md](references/project-setup.md)
-- [mtp-filter.md](references/mtp-filter.md)
-- [test-patterns.md](references/test-patterns.md)
+- Installer / runner: [RevitDevTool](https://github.com/trgiangv/RevitDevTool)
