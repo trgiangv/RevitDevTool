@@ -49,7 +49,7 @@ Default engine: **NUnit 4.6.1**. TUnit: `TestingFramework=tunit` + pin **TUnit 1
   <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.0" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.1" />
   <PackageReference Include="NUnit" Version="4.6.1" />
   <!-- compile-only host API — pick a package that matches HostVersion -->
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
