@@ -12,15 +12,13 @@ on:
       - '.github/workflows/Docs.yml'
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 concurrency:
-  group: docs-${{ github.ref }}
+  group: docs-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
+    name: Build Docusaurus
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,6 +26,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          lfs: true
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -42,3 +43,25 @@ jobs:
 
       - name: Build site
         run: bun run build
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/build
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -29,6 +29,15 @@ generated directory. The public Markdown is intentionally separate from the
 engineering source-of-truth below; link to product and architecture documents
 when deeper detail is needed.
 
+### GitHub Pages
+
+CI workflow [`.github/workflows/Docs.yml`](../.github/workflows/Docs.yml) builds
+on PRs and deploys to GitHub Pages on push to `develop` / `main` (and
+`workflow_dispatch`).
+
+One-time repo setting: **Settings → Pages → Source = GitHub Actions**.
+Site URL: https://trgiangv.github.io/RevitDevTool/
+
 Start here when locating repository truth. Retrieve only what the task needs.
 
 ## Harness Core

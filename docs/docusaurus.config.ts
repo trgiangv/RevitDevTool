@@ -11,6 +11,7 @@ const config: Config = {
   organizationName: 'trgiangv',
   projectName: 'RevitDevTool',
   deploymentBranch: 'gh-pages',
+  trailingSlash: true,
   onBrokenLinks: 'throw',
   onBrokenAnchors: 'throw',
   i18n: { defaultLocale: 'en', locales: ['en'] },
