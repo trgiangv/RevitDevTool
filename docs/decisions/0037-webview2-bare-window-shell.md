@@ -6,14 +6,24 @@ Date: 2026-09-23
 
 Proposed
 
+Updated 2026-09-24: every host year (including Revit 2025) hosts the SPA in
+WebView2. The earlier CefSharp exception for 2025 is withdrawn. Revit 2025's
+in-process CEF and a current WebView2 Runtime both register the Win32 class
+`Chrome_WidgetWin_0`; after WebView2 starts, Manage Links (and similar)
+crash in `libcef.dll`. The fix is Microsoft's
+`--edge-webview-unique-window-class` browser argument on every
+`CoreWebView2Environment` ([0040](0040-webview2-host-and-virtual-host.md)),
+the same approach as
+[pyRevit#3592](https://github.com/pyrevitlabs/pyRevit/pull/3592) and
+[AnalyseTool#139](https://github.com/Nikola1Davydov/AnalyzeTool/pull/139).
+Do not ship CefSharp in this product.
+
 Updated 2026-09-23: the WPF bridge stays in `DevTools.UI`. There is no
 `DevTools.WebView` project. `DevTools.Web` is the frontend only.
-Product chrome for the host add-in is the web UI. Revit 2025 hosts that UI
-in CefSharp because that Revit release is incompatible with the WebView2
-runtime. Revit 2022, 2023, 2024, and 2026 onward use WebView2, as does the
-AutoCAD family. The standalone Daemon is not this shell
-([0043](0043-daemon-wpf-fluent.md)). The three WPF git submodules leave with
-the custom controls. Scintilla and the WinForms host around it leave as well.
+Product chrome for the host add-in is the web UI. The standalone Daemon is
+not this shell ([0043](0043-daemon-wpf-fluent.md)). The three WPF git
+submodules leave with the custom controls. Scintilla and the WinForms host
+around it leave as well.
 
 Depends on nothing. Later WebView decisions
 ([0038](0038-webview-react-parkui-codemirror.md),
@@ -36,8 +46,8 @@ and referenced by both host projects, with no product code calling it.
 A CAD add-in can already host a browser this way:
 
 - The window's only XAML child is `WebView2`. The page talks to C# by `postMessage`. Core stays headless.
-- One browser surface serves many hosts. The SPA never sees a host type. Revit 2025 in this product is CefSharp; every other year and the AutoCAD family are WebView2.
-- Release assets load from a virtual host. Tests split Vitest, Playwright on Chromium, standalone CDP, and an optional live host CDP session. |
+- One browser surface serves every host year and the AutoCAD family. The SPA never sees a host type.
+- Release assets load from a virtual host. Tests split Vitest, Playwright on Chromium, standalone CDP, and an optional live host CDP session.
 
 The standalone Daemon is a tray app with a small status window. It does not
 host this SPA. Its shell, theme, and the dropped Native AOT target are
@@ -50,21 +60,18 @@ host this SPA. Its shell, theme, and the dropped Native AOT target are
   ([0038](0038-webview-react-parkui-codemirror.md)) inside one bare WPF
   `Window`. The window's only child is the browser surface.
 - `DevTools.UI` owns the bare window, the JSON envelope, `ThemeManager`, and
-  `IBrowserSurface`. It does not reference WebView2 or CefSharp. Loading
-  `DevTools.UI` inside Revit 2025 must not load the WebView2 runtime. It
-  does not reference Revit API, AutoCAD API, `DevTools.Execution`, or
+  `IBrowserSurface`. It does not reference `Microsoft.Web.WebView2`. Loading
+  `DevTools.UI` alone must not start the WebView2 runtime. It does not
+  reference Revit API, AutoCAD API, `DevTools.Execution`, or
   `DevTools.Presentation`.
-- Revit 2025 cannot load the WebView2 runtime in-process. That build hosts
-  CefSharp and does not reference `DevTools.UI.WebView2`. The CefSharp
-  package and surface live on the Revit 2025 build of `RevitDevTool`.
-- The WebView2 surface is `source/DevTools.UI.WebView2/`, referenced by
-  every host add-in except the Revit 2025 build: Revit 2022, 2023, 2024,
-  and 2026 onward, and the AutoCAD family. `DevTools.Daemon` does not
-  reference it. This project is the control and
-  its transport. `DevTools.Web` stays the frontend. Only the Revit 2025
-  build loads CEF. The SPA, the envelope
-  ([0039](0039-webview-json-bridge.md)), and the window chrome are the same
-  on both browsers.
+- Every host add-in year uses WebView2, including Revit 2025. There is no
+  CefSharp package, surface, or configuration branch. The WebView2 surface
+  is `source/DevTools.UI.WebView2/`, referenced by every Revit year and the
+  AutoCAD family. `DevTools.Daemon` does not reference it. Environment
+  creation always passes `--edge-webview-unique-window-class`
+  ([0040](0040-webview2-host-and-virtual-host.md)).
+- The SPA, the envelope ([0039](0039-webview-json-bridge.md)), and the
+  window chrome are the same on every host. Features do not branch on year.
 - `ThemeManager` keeps its mechanism: `Setup(resolveHostTheme, subscribe)`,
   `AppTheme` (`Light`, `Dark`, `Auto`), `ApplySettingsTheme`, and
   `ActualApplicationTheme` plus the host-change callback already used by
@@ -136,12 +143,14 @@ host this SPA. Its shell, theme, and the dropped Native AOT target are
 2. **A remote HTTPS SPA** as the production UI. The add-in would depend on a
    network deploy and a frozen bridge ABI. DevTools is a local tool and must
    run offline from files next to the add-in.
-3. **CefSharp on every host.** CefSharp stays on the Revit 2025 build only.
-   Revit 2022, 2023, 2024, and 2026 onward, plus the AutoCAD family, stay on
-   WebView2. Daemon is not a browser host
-   ([0043](0043-daemon-wpf-fluent.md)).
+3. **CefSharp on Revit 2025 (withdrawn).** Previously proposed to avoid the
+   CEF / WebView2 `Chrome_WidgetWin_0` clash. That clash is resolved by
+   `--edge-webview-unique-window-class` on every environment. A second
+   browser stack, dual bridge pipes, and a Cef-only CDP port are not worth
+   keeping.
 4. **Drop Revit 2025** until WebView2 works there. 2025 is a supported host
-   year. The UI for that year is CefSharp, not a missing shell.
+   year. WebView2 with the unique-window-class flag is the shell for that
+   year.
 5. **Put this SPA in the Daemon window** so the tray app matches Park UI.
    That starts WebView2 for overview, hosts, and settings. Daemon stays
    plain WPF ([0043](0043-daemon-wpf-fluent.md)).
@@ -163,6 +172,8 @@ Positive:
 - Product UI for the host add-in is DOM. Palette and dark/light live in
   Park UI; `ThemeManager` only resolves `AppTheme` and forwards the result.
   Log text, including linkify, is CodeMirror in that page.
+- One browser stack on every host year. No CefSharp binaries, no dual
+  `runtime.ts` pipe, no year-gated package reference.
 - `DevTools.UI` stays the shared UI assembly for Revit and every
   AutoCAD-family add-in. Host-specific docking is not required to ship the
   shell. Daemon does not reference it
@@ -172,16 +183,14 @@ Positive:
 
 Tradeoffs:
 
-- WebView2 is an HWND. CefSharp on Revit 2025 is also an HWND. Native
-  dialogs cannot draw over either. File pickers go through bridge commands
-  that hide or complete before the dialog. Product content does not use MahApps
-  dialogs. The MahApps reference stays on `DevTools.UI` only until
-  Presentation stops merging `Theme.xaml`
+- WebView2 is an HWND. Native dialogs cannot draw over it. File pickers go
+  through bridge commands that hide or complete before the dialog. Product
+  content does not use MahApps dialogs. The MahApps reference stays on
+  `DevTools.UI` only until Presentation stops merging `Theme.xaml`
   ([0042](0042-wpf-ui-migration-slices.md)).
-- Revit 2025 ships CefSharp binaries with that add-in only. Revit 2022,
-  2023, 2024, 2026 onward, and AutoCAD layouts must not copy those binaries
-  in. The Cef package version is chosen when that project reference is
-  added; it has to load inside the Revit 2025 process.
+- Every `CoreWebView2Environment` that shares a user-data folder must use
+  identical options, including the unique-window-class flag
+  ([0040](0040-webview2-host-and-virtual-host.md)).
 - Two host processes must not share one WebView2 user-data folder. Profile
   layout is [0040](0040-webview2-host-and-virtual-host.md).
 - `RevitDevTool.Tools` (Element Finder, Command Browser) is still WPF after

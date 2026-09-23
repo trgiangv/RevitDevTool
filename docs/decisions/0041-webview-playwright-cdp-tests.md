@@ -6,10 +6,13 @@ Date: 2026-09-23
 
 Proposed
 
+Updated 2026-09-24: lane 4 on every host year (including Revit 2025)
+attaches to WebView2 CDP. The CefSharp port 19227 branch is withdrawn with
+[0037](0037-webview2-bare-window-shell.md).
+
 Updated 2026-09-23: lane 3 launches `tests/DevTools.UI.Standalone`.
 That exe is the WebView test host, not `DevTools.Daemon`. Daemon UI is
-[0043](0043-daemon-wpf-fluent.md). Lane 3 stays on WebView2. Revit 2025
-lane 4 attaches to CefSharp CDP port 19227.
+[0043](0043-daemon-wpf-fluent.md). Lane 3 stays on WebView2.
 
 Lanes 1 and 2 need only [0038](0038-webview-react-parkui-codemirror.md) and
 the fixtures from [0039](0039-webview-json-bridge.md). Lane 3 needs the
@@ -41,7 +44,7 @@ lower one.
 | 1. Vitest 5.0.1 | `source/DevTools.Web` | Bridge client, fixtures, editor setup | No |
 | 2. Playwright Chromium | Vite on port **5174**, `page.addInitScript` fake `chrome.webview` | Visible UI flows against the envelope | No |
 | 3. Standalone CDP | `tests/DevTools.UI.Standalone` + MSTest.Sdk | Real WebView2, real `WebViewTransport`, ephemeral CDP port | No |
-| 4. Live host CDP | Opt-in, dedicated run | The add-in window and host executor together. Revit 2025 uses Cef CDP | Yes |
+| 4. Live host CDP | Opt-in, dedicated run | The add-in window and host executor together (WebView2 CDP on every year) | Yes |
 
 - Lane 2 uses `@playwright/test` `1.63.0`. Selectors hit visible controls.
   Calling `invoke()` from the test is allowed only in a bridge-contract spec,
@@ -52,10 +55,9 @@ lower one.
   One standalone process per test class. The suite does not share a WebView2
   user-data folder across processes ([0040](0040-webview2-host-and-virtual-host.md)).
 - Lane 4 sets `DEVTOOLS_CDP_ENDPOINT`. WebView2 debug default is port
-  `19226`. Revit 2025 CefSharp default is port `19227`
-  ([0040](0040-webview2-host-and-virtual-host.md)). The lane is skipped when
-  the variable is absent. It is not part of `dotnet test` for the repo and
-  not part of an MTP host run.
+  `19226` ([0040](0040-webview2-host-and-virtual-host.md)). The lane is
+  skipped when the variable is absent. It is not part of `dotnet test` for
+  the repo and not part of an MTP host run.
 - In-host MTP and lane 4 never share a CAD process. Lane 3 never starts
   Revit or AutoCAD.
 - FlaUI, WPF-MCP, and MewUI automation are not how the host SPA is tested.

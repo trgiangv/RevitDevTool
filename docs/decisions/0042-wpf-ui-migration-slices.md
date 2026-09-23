@@ -6,6 +6,10 @@ Date: 2026-09-23
 
 Proposed
 
+Updated 2026-09-24: slice D opens WebView2 on every host year. The Revit
+2025 CefSharp branch is withdrawn with
+[0037](0037-webview2-bare-window-shell.md).
+
 Updated 2026-09-23: `DevTools.UI` stays as the bare-WPF bridge. Slice F
 removes the MahApps, ControlzEx, and XamlBehaviors submodules together with
 the custom WPF controls. It does not delete `DevTools.UI`.
@@ -29,7 +33,7 @@ Today's add-in UI is spread across:
 | `DevTools.Execution` | `UseWpf` for `XmlnsDefinition` so XAML can bind models; `ProjectReference` to `DevTools.UI`; `ZLogger.Scintilla` (`ICustomSerializer` on `PythonJsonSerializer`). The package goes away with Scintilla; the serializer stays. |
 | `RevitDevTool.Tools` | Element Finder and Command Browser. They stay WPF: Command Browser is injected into Revit's visual tree. Theme is the .NET 10 Fluent theme ([0044](0044-revit-wpf-fluent-theme.md)), not a SPA route. |
 | `RevitDevTool.Core` | `UseWpf` on the csproj. No `System.Windows` usages in its C# sources. |
-| `DevTools.Daemon` | Out of this migration. Plain WPF on the .NET 10 Fluent theme ([0043](0043-daemon-wpf-fluent.md)). Shipped UI stays MewUI until that ADR is Accepted. |
+| `DevTools.Daemon` | Out of this migration. Plain WPF on the .NET 10 Fluent theme ([0043](0043-daemon-wpf-fluent.md), Accepted). |
 
 One shared shell. Civil 3D and Plant 3D are composition modules on the
 AutoCAD host, not a second UI. The core stays headless. UI I/O stays in the
@@ -71,7 +75,7 @@ Slices, each shippable alone:
 | A. Execution | `ExecutionView` XAML, `HighlightRange` | Other Presentation views, add-in still opens `MainPage` |
 | B. Settings (general, log, MCP) | Settings XAML in Presentation and host settings views | Execution route from A if it has merged |
 | C. Log | `ScintillaLogViewerWpf`, `MonitorLogTarget` WPF viewer, `ZLogger.Scintilla`, `Scintilla5.NET`. Log route is CodeMirror linkify + render ([0038](0038-webview-react-parkui-codemirror.md)). `RevitLinkifier` click behavior moves to a bridge command | MCP registry, packages, memory, commands, stub builder can share this slice or follow it |
-| D. Entry switch | `MainPage` / host shell XAML, Acad `ElementHost` / `PaletteSet` UI host, `UseWindowsForms` on both host csprojs. The add-in command opens `WebViewWindow`. Revit 2025 puts CefSharp in that window. Revit 2022, 2023, 2024, 2026 onward, and AutoCAD put WebView2 | Tools windows ([0044](0044-revit-wpf-fluent-theme.md)). Daemon is [0043](0043-daemon-wpf-fluent.md) |
+| D. Entry switch | `MainPage` / host shell XAML, Acad `ElementHost` / `PaletteSet` UI host, `UseWindowsForms` on both host csprojs. The add-in command opens `WebViewWindow` (WebView2 on every year, including Revit 2025 — [0037](0037-webview2-bare-window-shell.md), [0040](0040-webview2-host-and-virtual-host.md)) | Tools windows ([0044](0044-revit-wpf-fluent-theme.md)). Daemon is [0043](0043-daemon-wpf-fluent.md) |
 | F. Strip WPF libraries | Submodules `libs/MahApps.Metro`, `libs/ControlzEx`, `libs/XamlBehaviorsWpf`. `tests/DevTools.MahApps.Metro.Tests`. `SharedSidecars` entries and host DLL copy lists for the three assemblies. Theme dictionaries, custom controls, behaviors, converters, `ThemeManager` dependency properties. Empty `DevTools.Presentation` project. | `DevTools.UI` (`WebViewWindow`, transport, plain `ThemeManager`, `HostUiHelper`, `Win32Utils`). `libs/pythonnet-stub-generator`. `RevitDevTool.Tools` on the Fluent theme ([0044](0044-revit-wpf-fluent-theme.md)) |
 
 Slice D merges only after A–C have routes, because one window replaces

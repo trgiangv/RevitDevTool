@@ -29,9 +29,10 @@ rolled back.
 
 The host add-in is moving to a browser SPA. Putting that SPA in the Daemon
 window would start the WebView2 runtime for a tray app whose screens are a
-status list and a settings form. Daemon does not host Revit 2025, so CefSharp
-is not in question here either. The process should open a window, not a
-browser environment.
+status list and a settings form. The process should open a window, not a
+browser environment. Host add-ins unify on WebView2
+([0037](0037-webview2-bare-window-shell.md)); Daemon still stays out of that
+stack.
 
 Daemon already targets `net10.0-windows`. WPF on that runtime has an inbox
 Fluent theme:
@@ -56,10 +57,10 @@ toolkit whose reason was AOT. Neither belongs on this window.
 
 - Daemon desktop UI is plain WPF on `net10.0-windows`. The window and its
   tray menu use inbox controls. No MahApps, no MewUI, no WebView2, no
-  CefSharp, no `DevTools.UI` window, no `DevTools.Web` page.
-- `DevTools.Daemon` does not reference `Microsoft.Web.WebView2`,
-  `DevTools.UI.WebView2`, or CefSharp. Startup of the tray process does not
-  create a browser environment. `--stdio` still has no UI.
+  `DevTools.UI` window, no `DevTools.Web` page.
+- `DevTools.Daemon` does not reference `Microsoft.Web.WebView2` or
+  `DevTools.UI.WebView2`. Startup of the tray process does not create a
+  browser environment. `--stdio` still has no UI.
 - Theme is `Application.ThemeMode`. Existing Light / Dark / Auto settings map
   to `ThemeMode.Light`, `ThemeMode.Dark`, and `ThemeMode.System`. The Daemon
   project suppresses `WPF0001` so that assignment compiles. Do not also merge

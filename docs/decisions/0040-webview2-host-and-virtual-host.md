@@ -6,9 +6,21 @@ Date: 2026-09-23
 
 Proposed
 
+Updated 2026-09-24: every host year (including Revit 2025) uses WebView2.
+CefSharp scheme handlers, user-data folders, and CDP port 19227 are
+withdrawn. Every `CoreWebView2Environment` is created with
+`AdditionalBrowserArguments` including
+`--edge-webview-unique-window-class` so WebView2 does not register the same
+Win32 class names as Revit 2025's in-process CEF
+(`Chrome_WidgetWin_0`). Proven approach:
+[pyRevit#3592](https://github.com/pyrevitlabs/pyRevit/pull/3592),
+[AnalyseTool#139](https://github.com/Nikola1Davydov/AnalyzeTool/pull/139).
+Autodesk documents the crash when Manage Links opens after another add-in
+has started WebView2 without that flag.
+
 Updated 2026-09-23: `WebViewWindow`, session, and transport are types in
-`DevTools.UI`. The standalone exe references that project. Revit 2025
-swaps in a CefSharp surface; the release URL stays `https://app.local`.
+`DevTools.UI`. The standalone exe references that project. The release URL
+stays `https://app.local`.
 
 Requires [0037](0037-webview2-bare-window-shell.md) and the app in
 [0038](0038-webview-react-parkui-codemirror.md). Uses the envelope from
@@ -29,7 +41,8 @@ control exists before `EnsureCoreWebView2Async`. Delaying creation also
 avoids startup clashes with other add-ins. Set an explicit user-data
 folder. A shared folder such as `C:\temp`, or one folder for every window
 under local app data, fails the second environment when two processes
-open the control.
+open the control. WebView2 also refuses a second environment on the same
+folder when `AdditionalBrowserArguments` (or other options) differ.
 
 The NuGet API is already centralized: `Microsoft.Web.WebView2` `1.0.4191.47`
 in `Directory.Packages.props`. Host csprojs reference it and do not call it.
@@ -38,52 +51,53 @@ in `Directory.Packages.props`. Host csprojs reference it and do not call it.
 
 - `DevTools.UI` contains the bare `WebViewWindow` and the command dictionary.
   `DevTools.UI.WebView2` contains the WebView2 child, `WebViewSession` for
-  that runtime, and `WebViewTransport`. Revit 2025 does not reference that
-  project. Its CefSharp surface implements the same `IBrowserSurface`.
-  No MahApps type on this window, no ribbon, no overlay controls. A solid
-  window background is set in code so the HWND does not flash white.
+  that runtime, and `WebViewTransport`. Every Revit year and the AutoCAD
+  family reference that project. No CefSharp surface. No MahApps type on
+  this window, no ribbon, no overlay controls. A solid window background is
+  set in code so the HWND does not flash white.
+- Environment creation is one helper (for example
+  `WebView2Runtime.CreateEnvironmentAsync`) used by every window that starts
+  WebView2. It always sets
+  `CoreWebView2EnvironmentOptions.AdditionalBrowserArguments` to include
+  `--edge-webview-unique-window-class` (and Debug CDP args below). The flag
+  is applied on every host year, including years with no CEF conflict, so
+  options stay identical wherever the same user-data folder layout is used.
 - The control is created when the window is visible, on the dispatcher, then
   `EnsureCoreWebView2Async` runs. Bindings register before navigation.
   Navigation runs after `host.ready` can be posted (navigation-completed, or
-  immediately after navigate if the queue is ready).
-- Start URL, both browsers:
+  immediately after navigate if the page is ready).
+- Start URL:
   - Debug: `http://127.0.0.1:5173/` plus the hash route.
   - Release: `https://app.local/index.html` plus the hash route. `<dist>` is
     `{add-in dir}/ui/web`, copied from `source/DevTools.Web/dist`.
   - WebView2 maps that host with
     `SetVirtualHostNameToFolderMapping("app.local", <dist>, Allow)`.
-  - CefSharp on Revit 2025 registers a scheme handler for `app.local` over
-    the same folder. The SPA does not branch on which browser loaded the URL.
-- User-data folder, one per process. WebView2:
+- User-data folder, one per process:
 
   `%LocalAppData%\RevitDevTool\WebView2\{hostApp}\{hostVersion}\{pid}`
 
-  CefSharp on Revit 2025:
-
-  `%LocalAppData%\RevitDevTool\CefSharp\revit\2025\{pid}`
-
-  The two runtimes do not share a cache folder. Standalone uses
-  `hostApp = standalone` and omits a CAD version. Product settings that must
-  survive a new PID stay in `DevTools.Settings`. The SPA does not treat
-  `localStorage` as the settings database.
+  Standalone uses `hostApp = standalone` and omits a CAD version. Product
+  settings that must survive a new PID stay in `DevTools.Settings`. The SPA
+  does not treat `localStorage` as the settings database.
 - CDP:
-  - Debug WebView2 (add-in and the test exe): `--remote-debugging-port=19226`.
-  - Debug Revit 2025 (CefSharp): Cef `RemoteDebuggingPort` **19227**, so a
-    WebView2 host and a Revit 2025 session can both be open.
+  - Debug WebView2 (add-in and the test exe): `--remote-debugging-port=19226`
+    (combined with the unique-window-class flag in the same
+    `AdditionalBrowserArguments` string).
   - Standalone tests: an ephemeral WebView2 port passed with
-    `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS`, not 19226 or 19227.
-  - Release: remote debugging off on both browsers.
-- Missing WebView2 Evergreen runtime: the WebView2 window shows a short text
-  block and does not throw out of the host command. The check runs before
-  `EnsureCoreWebView2Async`. The Revit 2025 CefSharp build does not perform
-  that check.
+    `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` (or the environment helper),
+    not 19226. That path must still include
+    `--edge-webview-unique-window-class` when the same options contract is
+    shared.
+  - Release: remote debugging off.
+- Missing WebView2 Evergreen runtime: the window shows a short text block
+  and does not throw out of the host command. The check runs before
+  `EnsureCoreWebView2Async`.
 - Debug enables browser DevTools (F12 and a startup open). Release disables
   the default context menu and zoom-by-gesture.
 - `Microsoft.Web.WebView2` stays on the existing CPM pin. The package
   reference moves from `RevitDevTool.csproj` and `ACadDevTool.csproj` onto
-  `DevTools.UI.WebView2.csproj`. The Revit 2025 configuration does not
-  reference that project. CefSharp is a package reference on that
-  configuration only. Its version is fixed when the reference is added.
+  `DevTools.UI.WebView2.csproj`. Every host year references that project.
+  There is no CefSharp package reference.
 - An exe `tests/DevTools.UI.Standalone` boots `WebViewWindow` with the
   `host.echo` command from [0039](0039-webview-json-bridge.md) and no CAD
   API. That exe is the proof of this ADR.
@@ -104,6 +118,13 @@ in `Directory.Packages.props`. Host csprojs reference it and do not call it.
 5. **MahApps `MetroWindow` as the shell.** The bare window has nothing for
    Metro chrome to host, and a Metro dialog over the HWND is the airspace
    bug this shell avoids.
+6. **CefSharp on Revit 2025 (withdrawn).** Avoided the class-name clash by
+   never loading WebView2 in that process. The unique-window-class flag
+   removes the clash without a second browser stack
+   ([0037](0037-webview2-bare-window-shell.md)).
+7. **Apply unique-window-class only on Revit 2025.** Different options on
+   the same user-data folder fail the second environment. One helper, one
+   options string, every year.
 
 ## Consequences
 
@@ -112,6 +133,8 @@ Positive:
 - Debug HMR is a running Vite process. Release is files beside the add-in.
 - The standalone exe is the same `WebViewWindow` the hosts will show later.
 - CDP is on in Debug without a code change when someone attaches Playwright.
+- Revit 2025 Manage Links (and similar CEF dialogs) stay usable after the
+  product UI has started WebView2.
 
 Tradeoffs:
 
@@ -125,6 +148,9 @@ Tradeoffs:
   virtual host; the build must fail if `dist/index.html` is missing when
   the add-in is packed. Until a host command shows `WebViewWindow`, only the
   standalone csproj enforces that copy.
+- All windows that share a profile folder must go through the same
+  environment helper. A second code path that omits the unique-window-class
+  flag is a defect.
 
 ## Follow-Up
 
