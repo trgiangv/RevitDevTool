@@ -11,24 +11,37 @@ using Moq;
 
 namespace DevTools.Daemon.Tests;
 
+[DoNotParallelize]
 [TestClass]
-public sealed class CompositionIntegrationTests
+public sealed class CompositionIntegrationTests : WpfApplicationTestBase
 {
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
     public void CreateDesktop_RegistersDesktopServices()
     {
-        using var host = ServerHostBuilder.CreateDesktop();
-        Assert.IsNotNull(host.Services.GetService<ControlPipeHandler>());
-        Assert.IsNotNull(host.Services.GetService<GatewayHostedService>());
-        Assert.IsNotNull(host.Services.GetService<ITunnelStatusProvider>());
+        RunOnUi(() =>
+        {
+            using var host = ServerHostBuilder.CreateDesktop();
+            Assert.IsNotNull(host.Services.GetService<ControlPipeHandler>());
+            Assert.IsNotNull(host.Services.GetService<GatewayHostedService>());
+            Assert.IsNotNull(host.Services.GetService<ITunnelStatusProvider>());
+        });
     }
 
     [TestMethod]
     public async Task CreateDesktop_StartsControlAndGatewayServices()
     {
-        using var host = ServerHostBuilder.CreateDesktop();
+        IHost? created = null;
+        RunOnUi(() =>
+        {
+            created = ServerHostBuilder.CreateDesktop();
+            // Resolve WPF singletons on the STA thread before Host StartAsync.
+            _ = created.Services.GetRequiredService<ControlPipeHandler>();
+        });
+
+        Assert.IsNotNull(created);
+        using var host = created;
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         await host.StartAsync(cts.Token);
         await cts.CancelAsync();
@@ -51,11 +64,15 @@ public sealed class CompositionIntegrationTests
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         await gateway.StartAsync(cts.Token);
+        await Task.Delay(50, TestContext.CancellationToken);
 
         auth.Raise(a => a.StateChanged += null!, new object(), new AuthStateArgs(false));
+        await Task.Delay(100, TestContext.CancellationToken);
+
         auth.Setup(a => a.IsAuthenticated).Returns(true);
         auth.Setup(a => a.AccessToken).Returns("token");
         auth.Raise(a => a.StateChanged += null!, new object(), new AuthStateArgs(true));
+        await Task.Delay(100, TestContext.CancellationToken);
 
         await gateway.StopAsync(CancellationToken.None);
     }

@@ -1,0 +1,36 @@
+<UserControl x:Class="DevTools.Daemon.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:desktop="clr-namespace:DevTools.Daemon.Desktop"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DataContext="{d:DesignInstance desktop:AppState}"
+             d:DesignHeight="400"
+             d:DesignWidth="400"
+             mc:Ignorable="d">
+    <StackPanel Margin="16">
+        <TextBlock Margin="0,0,0,8"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Text="Appearance" />
+        <ComboBox Width="140"
+                  Margin="0,0,0,24"
+                  HorizontalAlignment="Left"
+                  ItemsSource="{Binding Preferences.Themes, Mode=OneTime}"
+                  SelectedItem="{Binding Preferences.Theme, Mode=TwoWay}" />
+
+        <TextBlock Margin="0,0,0,8"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Text="Startup" />
+        <CheckBox Margin="0,0,0,24"
+                  Content="Start DevTools Daemon at login"
+                  IsChecked="{Binding Preferences.AutoStartEnabled, Mode=TwoWay}" />
+
+        <TextBlock Margin="0,0,0,8"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Text="About" />
+        <TextBlock Text="{Binding Version, StringFormat=Version {0}}" />
+    </StackPanel>
+</UserControl>

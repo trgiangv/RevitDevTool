@@ -1,10 +1,7 @@
 using System.Net;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Aprillz.MewUI;
-using Aprillz.MewUI.Controls;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Composition;
 using DevTools.Daemon.Control;
@@ -165,7 +162,7 @@ public sealed class ExtendedCoverageTests
 
     [DoNotParallelize]
     [TestClass]
-    public sealed class DesktopUiCoverage : MewUiApplicationTestBase
+    public sealed class DesktopUiCoverage : WpfApplicationTestBase
     {
         [TestMethod]
         public void MainWindow_TabsAndViews_BuildContent()
@@ -175,25 +172,19 @@ public sealed class ExtendedCoverageTests
                 var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
                 auth.Setup(a => a.AvatarUrl).Returns("https://example.com/avatar.png");
                 var state = CreateAppState(auth.Object);
-                using var window = new MainWindow(state);
+                var window = new MainWindow(state);
                 window.Show();
 
-                state.SelectedTabIndex.Value = 0;
-                state.SelectedTabIndex.Value = 1;
-                state.SelectedTabIndex.Value = 2;
+                state.SelectedTabIndex = 0;
+                state.SelectedTabIndex = 1;
+                state.SelectedTabIndex = 2;
                 state.Preferences.ReloadAutoStart();
 
-                BuildView(new OverviewView(state));
-                BuildView(new HostsView(state.Hosts));
-                BuildView(new SettingsView(state.Preferences, state.Version));
+                _ = new OverviewView { DataContext = state };
+                _ = new HostsView { DataContext = state };
+                _ = new SettingsView { DataContext = state };
+                window.Hide();
             });
-        }
-
-        private static void BuildView(UserControl view)
-        {
-            var onBuild = typeof(UserControl).GetMethod("OnBuild", BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.IsNotNull(onBuild);
-            _ = onBuild!.Invoke(view, null);
         }
 
         private static AppState CreateAppState(IAuthService auth)

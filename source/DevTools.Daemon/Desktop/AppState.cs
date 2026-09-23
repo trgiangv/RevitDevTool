@@ -1,6 +1,8 @@
 using System.Reflection;
-using Aprillz.MewUI;
-using Aprillz.MewUI.Controls;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using CommunityToolkit.Mvvm.ComponentModel;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Gateway;
 using DevTools.Mcp.Client;
@@ -8,7 +10,7 @@ using DevTools.Mcp.Core.Sessions;
 
 namespace DevTools.Daemon.Desktop;
 
-public sealed class AppState
+public partial class AppState : ObservableObject
 {
     private const string StatusUnknown = "Unknown";
     private const string StatusNotSignedIn = "Not signed in";
@@ -17,17 +19,27 @@ public sealed class AppState
     private const string DefaultVersion = "1.0.0";
     private const string SignInFailedTitle = "Sign In Failed";
     private const string SignInFailedMessage = "Sign in failed.";
-    private static readonly HttpClient AvatarHttp = new();
 
     private readonly IAuthService _authService;
     private readonly ITunnelStatusProvider _tunnelStatus;
 
-    public ObservableValue<int> SelectedTabIndex { get; } = new();
-    public ObservableValue<bool> IsAuthenticated { get; } = new();
-    public ObservableValue<string> DisplayName { get; } = new(string.Empty);
-    public ObservableValue<string> Email { get; } = new(string.Empty);
-    public ObservableValue<IImageSource?> AvatarImage { get; } = new();
-    public ObservableValue<string> GatewayStatus { get; } = new(StatusDisconnected);
+    [ObservableProperty]
+    public partial int SelectedTabIndex { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAuthenticated { get; set; }
+
+    [ObservableProperty]
+    public partial string DisplayName { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial string Email { get; set; } = string.Empty;
+
+    [ObservableProperty]
+    public partial ImageSource? AvatarImage { get; set; }
+
+    [ObservableProperty]
+    public partial string GatewayStatus { get; set; } = StatusDisconnected;
 
     public HostInstances Hosts { get; }
     public Preferences Preferences { get; }
@@ -46,7 +58,6 @@ public sealed class AppState
         Preferences = new Preferences(settings);
         Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? DefaultVersion;
 
-        SelectedTabIndex.Changed += OnTabChanged;
         RefreshAuthState();
 
         _authService.StateChanged += (_, _) => UiDispatch.Post(RefreshAuthState);
@@ -59,13 +70,11 @@ public sealed class AppState
         var result = await _authService.SignInAsync().ConfigureAwait(true);
         if (!result.Success)
         {
-            await MessageBox.PromptAsync(new MessageBoxOptions
-            {
-                Message = result.Error ?? SignInFailedMessage,
-                Title = SignInFailedTitle,
-                Icon = PromptIconKind.Error,
-                Owner = Application.Current.MainWindow,
-            }).ConfigureAwait(true);
+            MessageBox.Show(
+                result.Error ?? SignInFailedMessage,
+                SignInFailedTitle,
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
 
         RefreshAuthState();
@@ -85,49 +94,51 @@ public sealed class AppState
         RefreshAuthState();
     }
 
-    private void OnTabChanged()
+    partial void OnSelectedTabIndexChanged(int value)
     {
-        if (SelectedTabIndex.Value == 1)
+        if (value == 1)
             Hosts.Refresh();
-        else if (SelectedTabIndex.Value == 2)
+        else if (value == 2)
             Preferences.ReloadAutoStart();
     }
 
     private void RefreshAuthState()
     {
-        IsAuthenticated.Value = _authService.IsAuthenticated;
-        DisplayName.Value = _authService.DisplayName ?? string.Empty;
-        Email.Value = _authService.Email ?? string.Empty;
-        LoadAvatar(_authService.AvatarUrl);
+        IsAuthenticated = _authService.IsAuthenticated;
+        DisplayName = _authService.DisplayName ?? string.Empty;
+        Email = _authService.Email ?? string.Empty;
+        AvatarImage = CreateAvatar(_authService.AvatarUrl);
 
         if (!_authService.IsAuthenticated)
-            GatewayStatus.Value = StatusNotSignedIn;
+            GatewayStatus = StatusNotSignedIn;
         else
             RefreshGatewayStatus(_tunnelStatus.Status);
     }
 
-    private async void LoadAvatar(string? url)
+    private static ImageSource? CreateAvatar(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
-        {
-            AvatarImage.Value = null;
-            return;
-        }
+            return null;
 
         try
         {
-            var bytes = await AvatarHttp.GetByteArrayAsync(url).ConfigureAwait(true);
-            AvatarImage.Value = ImageSource.FromBytes(bytes);
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.UriSource = new Uri(url, UriKind.Absolute);
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.EndInit();
+            image.Freeze();
+            return image;
         }
         catch
         {
-            AvatarImage.Value = null;
+            return null;
         }
     }
 
     private void RefreshGatewayStatus(TunnelStatus status)
     {
-        GatewayStatus.Value = status switch
+        GatewayStatus = status switch
         {
             TunnelStatus.Connected => StatusConnected,
             TunnelStatus.Connecting => "Connecting...",

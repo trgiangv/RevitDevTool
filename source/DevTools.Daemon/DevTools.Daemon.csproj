@@ -6,13 +6,14 @@
 
           Usage:
               DevTools.Daemon.exe            desktop app (single-instance, gateway, control pipe, UI)
-              DevTools.Daemon.exe - -stdio    MCP server on stdin/stdout (independent process)
+              DevTools.Daemon.exe - -stdio   MCP server on stdin/stdout (independent process)
     -->
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0-windows</TargetFramework>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <UseWPF>true</UseWPF>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>DevTools.Daemon</RootNamespace>
@@ -21,7 +22,6 @@
         <ApplicationIcon>..\DevTools.UI\Resources\icons\DevTools-32-Dark.ico</ApplicationIcon>
         <SelfContained>false</SelfContained>
         <PublishSingleFile>true</PublishSingleFile>
-        <MewUIBackend>Direct2D</MewUIBackend>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -40,9 +40,8 @@
         <Copy SourceFiles="appsettings.development.json" DestinationFolder="$(BundleContentsFolder)" Condition="Exists('appsettings.development.json')" OverwriteReadOnlyFiles="true"/>
     </Target>
     <ItemGroup>
-        <PackageReference Include="H.NotifyIcon"/>
-        <PackageReference Include="Aprillz.MewUI.Windows"/>
-        <PackageReference Include="System.Security.Cryptography.ProtectedData"/>
+        <PackageReference Include="H.NotifyIcon.Wpf"/>
+        <PackageReference Include="CommunityToolkit.Mvvm"/>
         <PackageReference Include="ModelContextProtocol"/>
         <PackageReference Include="ModelContextProtocol.Extensions.Tasks"/>
         <PackageReference Include="Duende.IdentityModel.OidcClient"/>

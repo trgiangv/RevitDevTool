@@ -1,18 +1,16 @@
-using Aprillz.MewUI;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Desktop;
 using DevTools.Daemon.Gateway;
 using DevTools.Daemon.Tests.Support;
 using DevTools.Daemon.Views;
 using DevTools.Settings.Configs;
-using Microsoft.Win32;
 using Moq;
 
 namespace DevTools.Daemon.Tests;
 
 [DoNotParallelize]
 [TestClass]
-public sealed class MewUiDesktopTests : MewUiApplicationTestBase
+public sealed class WpfDesktopTests : WpfApplicationTestBase
 {
     [TestMethod]
     public void Views_ConstructAndBuildMarkup()
@@ -20,15 +18,16 @@ public sealed class MewUiDesktopTests : MewUiApplicationTestBase
         RunOnUi(() =>
         {
             var state = CreateAppState();
-            using var window = new MainWindow(state);
+            var window = new MainWindow(state);
             window.Show();
 
             Assert.AreEqual("DevTools Daemon", window.Title);
             Assert.IsNotNull(window.Icon);
 
-            _ = new OverviewView(state);
-            _ = new HostsView(state.Hosts);
-            _ = new SettingsView(state.Preferences, state.Version);
+            _ = new OverviewView { DataContext = state };
+            _ = new HostsView { DataContext = state };
+            _ = new SettingsView { DataContext = state };
+            window.Hide();
         });
     }
 
@@ -60,8 +59,8 @@ public sealed class MewUiDesktopTests : MewUiApplicationTestBase
                 var store = DaemonTestDoubles.CreateUserSettingsStore(new UserSettings { Theme = AppTheme.Light });
                 var preferences = new Preferences(store);
 
-                preferences.Theme.Value = AppTheme.Dark;
-                Assert.AreEqual(AppTheme.Dark, preferences.Theme.Value);
+                preferences.Theme = AppTheme.Dark;
+                Assert.AreEqual(AppTheme.Dark, preferences.Theme);
             }
             finally
             {
@@ -82,15 +81,15 @@ public sealed class MewUiDesktopTests : MewUiApplicationTestBase
             var tunnel = DaemonTestDoubles.CreateTunnelStatus(TunnelStatus.Connected);
             var state = CreateAppState(auth.Object, tunnel: tunnel.Object);
 
-            Assert.IsTrue(state.IsAuthenticated.Value);
-            Assert.AreEqual("Connected", state.GatewayStatus.Value);
-            Assert.AreEqual("Test User", state.DisplayName.Value);
+            Assert.IsTrue(state.IsAuthenticated);
+            Assert.AreEqual("Connected", state.GatewayStatus);
+            Assert.AreEqual("Test User", state.DisplayName);
 
             tunnel.Raise(t => t.StatusChanged += null!, new object(), new TunnelStatusChangedArgs(TunnelStatus.Reconnecting));
-            Assert.AreEqual("Reconnecting...", state.GatewayStatus.Value);
+            Assert.AreEqual("Reconnecting...", state.GatewayStatus);
 
-            state.SelectedTabIndex.Value = 1;
-            state.SelectedTabIndex.Value = 2;
+            state.SelectedTabIndex = 1;
+            state.SelectedTabIndex = 2;
         });
     }
 
@@ -112,10 +111,13 @@ public sealed class MewUiDesktopTests : MewUiApplicationTestBase
         RunOnUi(() =>
         {
             var state = CreateAppState();
-            using var window = new MainWindow(state);
+            var window = new MainWindow(state);
             window.Show();
             window.Close();
+            Assert.AreEqual(System.Windows.Visibility.Hidden, window.Visibility);
+            window.Show();
             Assert.IsTrue(window.IsVisible);
+            window.Hide();
         });
     }
 
@@ -127,21 +129,21 @@ public sealed class MewUiDesktopTests : MewUiApplicationTestBase
             var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
             auth.Setup(a => a.AvatarUrl).Returns("http://127.0.0.1:9/avatar.png");
             var state = CreateAppState(auth.Object);
-            Assert.IsNull(state.AvatarImage.Value);
+            Assert.IsNull(state.AvatarImage);
         });
     }
 
     [TestMethod]
-    public void TrayMenu_StartAndDispose_DoesNotThrow()
+    public void TrayMenu_ConstructAndShowMainWindow_DoesNotThrow()
     {
         RunOnUi(() =>
         {
             var state = CreateAppState();
-            using var window = new MainWindow(state);
-            using var tray = new TrayMenu(state, window);
-            tray.Start();
+            var window = new MainWindow(state);
+            var tray = new TrayMenu(state, window);
             tray.ShowMainWindow();
-            tray.Dispose();
+            Assert.IsTrue(window.IsVisible);
+            window.Hide();
         });
     }
 
@@ -159,10 +161,10 @@ public sealed class MewUiDesktopTests : MewUiApplicationTestBase
             {
                 var store = DaemonTestDoubles.CreateUserSettingsStore();
                 var preferences = new Preferences(store);
-                preferences.AutoStartEnabled.Value = true;
+                preferences.AutoStartEnabled = true;
                 if (Environment.ProcessPath is not null)
                     Assert.IsTrue(AutoStart.IsEnabled);
-                preferences.AutoStartEnabled.Value = false;
+                preferences.AutoStartEnabled = false;
                 Assert.IsFalse(AutoStart.IsEnabled);
             }
             finally
@@ -183,7 +185,7 @@ public sealed class MewUiDesktopTests : MewUiApplicationTestBase
         {
             var auth = DaemonTestDoubles.CreateAuthService(authenticated: false);
             var state = CreateAppState(auth.Object);
-            Assert.AreEqual("Not signed in", state.GatewayStatus.Value);
+            Assert.AreEqual("Not signed in", state.GatewayStatus);
         });
     }
 

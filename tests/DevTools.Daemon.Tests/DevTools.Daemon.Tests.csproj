@@ -2,6 +2,7 @@
 
     <PropertyGroup>
         <TargetFramework>net10.0-windows</TargetFramework>
+        <UseWPF>true</UseWPF>
         <IsPackable>false</IsPackable>
         <UseMicrosoftCodeCoverage>true</UseMicrosoftCodeCoverage>
         <NoWarn>$(NoWarn);MCPEXP002</NoWarn>

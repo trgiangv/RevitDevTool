@@ -1,6 +1,7 @@
-using Aprillz.MewUI;
+using System.Windows;
 using DevTools.Settings.Configs;
 using Microsoft.Win32;
+
 namespace DevTools.Daemon.Desktop;
 
 internal static class ThemeHelper
@@ -25,15 +26,17 @@ internal static class ThemeHelper
 
     public static void Apply(AppTheme theme)
     {
-        if (!Application.IsRunning)
+        if (Application.Current is null)
             return;
 
-        Application.Current.SetThemeMode(theme switch
+#pragma warning disable WPF0001 // ThemeMode is experimental
+        Application.Current.ThemeMode = theme switch
         {
-            AppTheme.Light => ThemeVariant.Light,
-            AppTheme.Dark => ThemeVariant.Dark,
-            _ => ThemeVariant.System
-        });
+            AppTheme.Light => ThemeMode.Light,
+            AppTheme.Dark => ThemeMode.Dark,
+            _ => ThemeMode.System
+        };
+#pragma warning restore WPF0001
 
         Changed?.Invoke();
     }

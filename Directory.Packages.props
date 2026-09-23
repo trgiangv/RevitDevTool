@@ -53,7 +53,7 @@
         <!--UI-->
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageVersion Include="Aprillz.MewUI.Windows" Version="0.20.2" />
-        <PackageVersion Include="H.NotifyIcon" Version="2.4.1" />
+        <PackageVersion Include="H.NotifyIcon.Wpf" Version="2.4.1" />
         <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
         <!--BuildTools-->
         <PackageVersion Include="ILRepack" Version="2.0.48" />
