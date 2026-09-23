@@ -25,7 +25,7 @@ without allowing one feature's dependency policy to leak into another.
   Nested `AssemblyResolve` while `LoadFile` is still running is served by this
   session (`activeLoads`) so a payload Bcl 10 does not bind Carbon Insights'
   Tasks.Extensions. The session never selects a DefaultDomain assembly it did
-  not load (Speckle, Carbon Insights, pyRevit). Directory sources (commands,
+  not load (Carbon Insights, pyRevit, or any other add-in this session did not load). Directory sources (commands,
   MCP toolsets) and CoreCLR stay exact. Workload assemblies still `LoadFile`
   under `WithDistinctFileIdentity` so two generation shadows of the same Engine
   identity stay distinct. Compile-ref vs nupkg assembly version (for example

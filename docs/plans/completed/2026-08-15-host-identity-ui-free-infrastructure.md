@@ -161,7 +161,7 @@ NUnit.Host.
   own a wait loop.
 - 2026-08-16: C+D launch contracts are three (`IHostPathResolver`,
   `IHostArgumentBuilder`, `IHostStartupDialogSpec`). Wiring is
-  Speckle-shaped `AddHostLaunchCore()` / `AddRevitLaunch()` /
+  explicit `AddHostLaunchCore()` / `AddRevitLaunch()` /
   `AddAutocadFamilyLaunch()` — not `IHostPlugin`, not keyed DI, not
   `new HostLaunchService()`. `Supports(HostApp)` selects in multi-host
   containers. Argument builder is required (no `?? []`). `HostLaunchRequest`
@@ -380,7 +380,7 @@ Must not include: launch policy, reader `SupportedExtensions` deletion.
 
 One PR. **Launch only.** **Do not** put Revit year policy in Daemon. **Do
 not** split `HostSharedAssemblies` or add `IHostSharedAssemblyPolicy` here.
-Speckle shape: contracts in `DevTools.Hosting`, implementations in
+Contracts live in `DevTools.Hosting`. Implementations live in
 `Hosting.Revit` / `Hosting.Acad`, composition roots call `Add*Launch`.
 
 Create / move into `DevTools.Hosting` (already exists from A):

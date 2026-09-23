@@ -201,8 +201,7 @@ otherwise **add** `DevTools.Hosting.Revit` / `DevTools.Hosting.Acad`.
 Still reject empty pyramids: no `Hosting.Abstractions`, no `Logging.Abstractions`,
 no `IHostPlugin`, no assembly-scan registration. Contracts live **in**
 `DevTools.Hosting`. Each host assembly exposes explicit
-`IServiceCollection.AddRevitLaunch()` / `AddAutocadFamilyLaunch()` (Speckle
-`AddRevit()` / `AddAutocadBase()` shape). In-process policy is a separate
+`IServiceCollection.AddRevitLaunch()` / `AddAutocadFamilyLaunch()`. In-process policy is a separate
 `AddRevitInProcess()` / `AddAutocadInProcess()` (D2). Composition roots
 **call** those methods; they do not discover plugins.
 
@@ -356,12 +355,12 @@ Ready signal stays a caller probe, not a Hosting type.
 Interim: `HostLaunchWaiter` / `HostReadyStatus` / `HostLaunchTiming` live in
 `DevTools.Utilities/Hosting` and move with the rest of launch in **C+D**.
 
-### 4.2 Host capability contracts — DI only, Speckle connector shape
+### 4.2 Host capability contracts — DI only
 
-Pattern taken from speckle-sharp-connectors: common interfaces in a shared
-SDK; each host assembly implements them and exposes **explicit**
-`IServiceCollection` extensions (`AddRevitLaunch()` / later
-`AddRevitInProcess()`; Speckle’s `AddRevit()` / `AddAutocadBase()` shape).
+Common interfaces live in the shared host assembly. Each host assembly
+implements them and exposes **explicit** `IServiceCollection` extensions
+(`AddRevitLaunch()` / `AddAutocadFamilyLaunch()`, and the in-process pair
+`AddRevitInProcess()` / `AddAutocadInProcess()`).
 Civil3D still calls the Acad-family launch method then adds extras if needed.
 The composition root wires by **calling** those methods. Civil 3D does not
 edit generic SDK code. Two methods per host (launch vs in-process) so add-ins
@@ -440,8 +439,7 @@ Test the **shared helper both roots call** (`AddHostLaunchCore` + the host
 `Add*` methods), not an invented fourth container.
 
 `Supports()` is justified because Daemon/Runner are **multi-host** processes
-(Speckle’s `AddRevit()` never coexists with `AddAutocadBase()` in one
-container; ours do). Linear scan of a handful of implementations is enough.
+(one container registers more than one host). Linear scan of a handful of implementations is enough.
 Keyed DI is not worth it.
 
 Dialog **engine** in generic Hosting: `EnumWindows` / `SendMessageTimeout`
@@ -854,7 +852,7 @@ names — spec comes from `IHostStartupDialogSpec`),
 16. **Keyed DI `AddKeyedSingleton<IHostPathResolver>(HostApp.Revit, …)`** —
     eight keys for one Acad-family resolver. `Supports(HostApp)` +
     `IEnumerable<T>` is enough. Rejected.
-17. **`AddMatchingInterfacesAsTransient` (Speckle convention scan)** —
+17. **Assembly-wide convention scan** (`AddMatchingInterfacesAsTransient`) —
     registers every interface in the assembly. Too implicit for three
     launch contracts. Explicit `AddRevitLaunch()` only. Rejected.
 18. **`IHostPlugin` / MEF so Daemon never lists hosts** — hides the enum
