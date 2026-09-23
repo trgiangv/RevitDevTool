@@ -60,6 +60,9 @@ hop — not a client-visible flow.
    - Host tools on daemon `tools/list`
    - `UseStructuredContent` on envelope tools until Cursor accepts an explicit
      `OutputSchema` (inferred schema from `JsonElement` drops `tools/list`)
+   - MCP Apps (`ModelContextProtocol.Extensions.Apps`, `ui://` views in the
+     chat client). Experimental only:
+     [0045](0045-mcp-apps-optional-client-ui.md). Do not add the package.
 
    Keep `CallToolPassthroughAsync` + `InputRequiredResult` so a tool throw
    does not corrupt the hop. That is plumbing, not a product workflow.
