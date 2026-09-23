@@ -17,6 +17,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Settings/`
 - `source/DevTools.Telemetry/`
 - `source/DevTools.UI/`
+- `source/PresentationFramework.Fluent/` — vendored .NET 10 Fluent dictionaries for `net48` and `net8.0-windows`. `net10` uses inbox Fluent; this project is not referenced there. `DevTools.UI` merges them via `FluentTheme` / `FluentThemeResources`. Not ILRepacked into host add-ins.
 - `source/DevTools.Utilities/` — helpers only. Leaf: no Hosting, no Execution.Abstractions, and no assembly-loading ownership.
 - `source/DevTools.Testing.*` / `DevTools.NUnit.*` / `DevTools.TUnit.*` / `DevTools.TestAdapter` / `DevTools.TestRunner*` — host-API-free testing stack. Testhost (adapter + MTP) vs in-host (`Testing.Host` includes first-party NUnit/TUnit providers + Runtime payloads) vs Runner exe are **separate release artifacts**; see [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md). `Testing.Abstractions` must not reference `NUnit.*` / `TUnit.*`.
 

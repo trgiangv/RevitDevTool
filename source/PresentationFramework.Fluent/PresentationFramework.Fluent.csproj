@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows</TargetFrameworks>
+        <UseWpf>true</UseWpf>
+        <RootNamespace>PresentationFramework.Fluent</RootNamespace>
+        <AssemblyName>PresentationFramework.Fluent</AssemblyName>
+        <Description>Vendored .NET 10 Fluent dictionaries for net48 and net8. net10 does not compile them.</Description>
+    </PropertyGroup>
+
+    <!-- Default globs would compile the tree on every TFM. Re-include the Fluent backport below. -->
+    <ItemGroup>
+        <Compile Remove="**\*" />
+        <Page Remove="**\*" />
+        <None Remove="**\*" />
+        <EmbeddedResource Remove="**\*" />
+        <Content Remove="**\*" />
+        <Resource Remove="**\*" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="Controls\**\*.cs" />
+        <Page Include="Themes\*.xaml">
+            <Generator>MSBuild:Compile</Generator>
+            <SubType>Designer</SubType>
+        </Page>
+        <None Include="Styles\**\*" />
+        <None Include="Resources\**\*" />
+        <None Include="LICENSE.TXT" />
+        <None Include="NOTICE.md" />
+    </ItemGroup>
+
+</Project>

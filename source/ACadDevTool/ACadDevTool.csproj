@@ -17,6 +17,7 @@
             DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
             DevTools.UI.dll;
+            PresentationFramework.Fluent.dll;
             DevTools.NUnit.Runtime.dll;
             DevTools.Testing.Abstractions.dll;
             IronPython*.dll;
