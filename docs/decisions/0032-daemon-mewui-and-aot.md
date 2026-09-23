@@ -7,6 +7,14 @@ Date: 2026-09-04
 Accepted — **MewUI desktop shell** (shipped). **Native AOT** is a documented
 long-term target, not current production publish.
 
+[0043](0043-daemon-wpf-fluent.md) proposes to replace this MewUI shell with
+plain WPF on the .NET 10 Fluent theme, and to drop Native AOT as a Daemon
+target. Until 0043 is Accepted, the shipped UI is still MewUI and section 3
+is still the written AOT target. Do not add new MewUI views. Do not set
+`PublishAot`. Do not put WebView2 in this process. JIT publish in section 2
+is unchanged. Host add-in chrome is
+[0037](0037-webview2-bare-window-shell.md), not this shell.
+
 Companion to [0018](0018-host-identity-and-out-of-process-infrastructure.md)
 (Runner AOT rejected — Daemon AOT is separate),
 [0027](0027-mcp-product-surface.md) (MCP product surface on this process),

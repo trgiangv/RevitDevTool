@@ -1,6 +1,6 @@
 # DevTools.Daemon
 
-Standalone MewUI tray application that composes the external MCP server, hosts authentication, and manages multi-machine gateway connectivity. The tray icon uses `H.NotifyIcon` (core, not the WPF package). The right-click menu is a MewUI `ContextMenu` native popup (auto-size); an invisible 1×1 host owned by the tray `MessageWindow` is only the placement target.
+Standalone MewUI tray application that composes the external MCP server, hosts authentication, and manages multi-machine gateway connectivity. [0043](../../decisions/0043-daemon-wpf-fluent.md) proposes to replace this shell with plain WPF on the .NET 10 Fluent theme and to drop Native AOT. Until that ADR is Accepted, this page describes the shipped MewUI app. The tray icon uses `H.NotifyIcon`. The right-click menu is a MewUI `ContextMenu` native popup (auto-size); an invisible 1×1 host owned by the tray `MessageWindow` is only the placement target.
 
 ## Capabilities
 

@@ -82,7 +82,7 @@ Composition: `DevTools.Mcp.Server` (daemon fixed surface), `DevTools.Mcp.Client`
 
 ## JSON serialization
 
-Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JSON in support of Daemon AOT ([0032](../../decisions/0032-daemon-mewui-and-aot.md)).
+Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JSON on Daemon wires. [0043](../../decisions/0043-daemon-wpf-fluent.md) proposes to drop the Native AOT target this style was written to reach. The contexts stay.
 
 | Layer | Serializer |
 |-------|------------|
@@ -96,9 +96,9 @@ Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JS
 | Document | Contents |
 |----------|----------|
 | [SDK gap matrix](sdk-gap-matrix.md) | Living ✅/⚠️/⏸ map vs `ModelContextProtocol` 2.2.0 |
-| [JSON (0031)](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON; supports [0032](../../decisions/0032-daemon-mewui-and-aot.md) AOT |
+| [JSON (0031)](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON. AOT target proposed dropped by [0043](../../decisions/0043-daemon-wpf-fluent.md) |
 | [Platform boundaries](platform-boundaries.md) | Host wire, ALC, error hop; MRTR is plumbing ([0027](../../decisions/0027-mcp-product-surface.md)) |
-| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API — UI/AOT: [0032](../../decisions/0032-daemon-mewui-and-aot.md) |
+| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API — shipped UI is MewUI ([0032](../../decisions/0032-daemon-mewui-and-aot.md)); proposed shell is [0043](../../decisions/0043-daemon-wpf-fluent.md) |
 | [Transport](transport.md) | Stdio mode, Gateway WebSocket, dual pipe protocols |
 | [Tools](tools.md) | Fixed daemon surface, ConnectedHostCatalog, in-host primitives |
 | [In-Host Runtime](in-host-runtime.md) | Host spec handler, registry flow, dispatch |

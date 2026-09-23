@@ -5,10 +5,13 @@ Amended: 2026-09-04
 
 ## Status
 
-Accepted. **Support ADR for [0032](0032-daemon-mewui-and-aot.md)** — Native
-AOT on standalone `DevTools.Daemon` needs source-generated `System.Text.Json`,
-not reflection. Envelope `tools/call` shape still follows
+Accepted. Source-generated `System.Text.Json` on Daemon-owned wires.
+Envelope `tools/call` shape still follows
 [0027](0027-mcp-product-surface.md).
+
+[0043](0043-daemon-wpf-fluent.md) proposes to drop the Native AOT target in
+[0032](0032-daemon-mewui-and-aot.md). Source-gen on these wires stays either
+way. It is no longer an AOT prerequisite.
 
 Do not rename `ToolHelpers` to `McpJson`.
 
