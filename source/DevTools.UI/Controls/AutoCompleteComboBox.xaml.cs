@@ -25,11 +25,11 @@ public partial class AutoCompleteComboBox
     private Predicate<object>? _cachedFilter;
 
     [UsedImplicitly]
-    public System.Windows.Controls.TextBox? EditableTextBox
+    public TextBox? EditableTextBox
     {
         get
         {
-            field ??= FindDescendant(this, "PART_EditableTextBox") as System.Windows.Controls.TextBox;
+            field ??= FindDescendant(this, "PART_EditableTextBox") as TextBox;
             return field;
         }
     }
@@ -67,7 +67,7 @@ public partial class AutoCompleteComboBox
 
     #region TextChanged / Filtering
 
-    private readonly struct TextBoxStateSaver(System.Windows.Controls.TextBox? textBox) : IDisposable
+    private readonly struct TextBoxStateSaver(TextBox? textBox) : IDisposable
     {
         private readonly int _selectionStart = textBox?.SelectionStart ?? 0;
         private readonly int _selectionLength = textBox?.SelectionLength ?? 0;
@@ -167,8 +167,7 @@ public partial class AutoCompleteComboBox
         UpdateSuggestionList(controlOpen: false);
 
         var textBox = EditableTextBox;
-        if (textBox is not null)
-            textBox.Select(textBox.SelectionStart + textBox.SelectionLength, 0);
+        textBox?.Select(textBox.SelectionStart + textBox.SelectionLength, 0);
     }
 
     private void ComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -277,11 +276,9 @@ public class AutoCompleteComboBoxSetting
     /// </summary>
     public virtual TimeSpan Delay => TimeSpan.FromMilliseconds(300);
 
-    private static AutoCompleteComboBoxSetting _default = new();
-
     public static AutoCompleteComboBoxSetting Default
     {
-        get => _default;
-        set => _default = value ?? throw new ArgumentNullException(nameof(value));
-    }
+        get;
+        set => field = value ?? throw new ArgumentNullException(nameof(value));
+    } = new();
 }

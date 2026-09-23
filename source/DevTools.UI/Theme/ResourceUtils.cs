@@ -13,6 +13,8 @@ public static class ResourceUtils
     private static ResourceDictionary? _mahAppsControls;
     private static ResourceDictionary? _mahAppsLightTheme;
     private static ResourceDictionary? _mahAppsDarkTheme;
+    private static ResourceDictionary? _fluentLightTheme;
+    private static ResourceDictionary? _fluentDarkTheme;
 
     private static ResourceDictionary GetResource(string assemblyName, string resourcePath)
     {
@@ -33,6 +35,16 @@ public static class ResourceUtils
     public static ResourceDictionary GetMahAppsDarkTheme()
     {
         return _mahAppsDarkTheme ??= GetResource("DevTools.MahApps.Metro", "Styles/Themes/Dark.Blue.xaml");
+    }
+
+    public static ResourceDictionary GetFluentLightTheme()
+    {
+        return _fluentLightTheme ??= GetResource("PresentationFramework.Fluent", "Themes/Fluent.Light.xaml");
+    }
+
+    public static ResourceDictionary GetFluentDarkTheme()
+    {
+        return _fluentDarkTheme ??= GetResource("PresentationFramework.Fluent", "Themes/Fluent.Dark.xaml");
     }
 
     public static void RemoveIfNotNull(this Collection<ResourceDictionary> mergedDictionaries, ResourceDictionary? item)

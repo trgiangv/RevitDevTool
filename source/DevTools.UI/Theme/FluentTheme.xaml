@@ -1,0 +1,10 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:theme="clr-namespace:DevTools.UI.Theme">
+
+    <ResourceDictionary.MergedDictionaries>
+        <theme:FluentThemeResources />
+        <ResourceDictionary Source="/DevTools.UI;component/Theme/Styles/Icons.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+</ResourceDictionary>

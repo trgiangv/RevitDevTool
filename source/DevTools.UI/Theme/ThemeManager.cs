@@ -1,5 +1,4 @@
 using System.Windows;
-using DevTools.UI;
 
 namespace DevTools.UI.Theme;
 
@@ -36,8 +35,6 @@ public sealed class ThemeManager : DependencyObject
         ApplyThemeToResources();
     }
 
-    #region ApplicationTheme
-
     public static readonly DependencyProperty ApplicationThemeProperty =
         DependencyProperty.Register(
             nameof(ApplicationTheme),
@@ -55,10 +52,6 @@ public sealed class ThemeManager : DependencyObject
     {
         ((ThemeManager)d).UpdateActualApplicationTheme();
     }
-
-    #endregion
-
-    #region ActualApplicationTheme
 
     private static readonly DependencyPropertyKey ActualApplicationThemePropertyKey =
         DependencyProperty.RegisterReadOnly(
@@ -79,6 +72,7 @@ public sealed class ThemeManager : DependencyObject
     private static void OnActualApplicationThemeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
         var tm = (ThemeManager)d;
+        // tm.ApplyThemeToResources();
         tm.ActualApplicationThemeChanged?.Invoke(tm, EventArgs.Empty);
     }
 
@@ -99,11 +93,9 @@ public sealed class ThemeManager : DependencyObject
 
     private void ApplyThemeToResources()
     {
-        if (ThemeResources.Current == null) return;
-        ThemeResources.Current.ApplyApplicationTheme(ActualApplicationTheme);
+        ThemeResources.Current?.ApplyApplicationTheme(ActualApplicationTheme);
+        FluentThemeResources.Current?.ApplyApplicationTheme(ActualApplicationTheme);
     }
-
-    #endregion
 
     public static ThemeManager Current { get; } = new();
     public event EventHandler<EventArgs>? ActualApplicationThemeChanged;

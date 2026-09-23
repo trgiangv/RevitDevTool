@@ -1,0 +1,6 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/PresentationFramework.Fluent;component/Themes/Fluent.Light.xaml" />
+        <ResourceDictionary Source="/DevTools.UI;component/Theme/Styles/Icons.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>
