@@ -8,8 +8,11 @@ parallel duplicate plans for the same workstream, and move a plan to
 ## Daemon
 
 Production publish is framework-dependent single-file. AOT spike:
-[completed](../completed/2026-09-03-daemon-aot-spike.md) (rolled back). UI/AOT:
-[0032](../../decisions/0032-daemon-mewui-and-aot.md). JSON facades:
+[completed](../completed/2026-09-03-daemon-aot-spike.md) (rolled back).
+Shipped UI is still MewUI
+([0032](../../decisions/0032-daemon-mewui-and-aot.md)).
+[0043](../../decisions/0043-daemon-wpf-fluent.md) proposes plain WPF on the
+.NET 10 Fluent theme and drops Native AOT. JSON facades:
 [0031](../../decisions/0031-daemon-json-source-gen.md) —
 [plan completed](../completed/2026-09-03-stj-facade-0028.md). Remaining
 `object?` on invoke/batch DTOs is 0031 follow-up, not an active plan.
@@ -70,4 +73,13 @@ host-space zoom) + later Tools / Element Finder ownership:
 NUnit MTP-only ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)) is
 [completed](../completed/2026-08-18-nunit-mtp-only.md).
 
-Active plans: MCP test split (landed; file still under `active/`).
+## WebView2 product shell (active)
+
+Replace host add-in chrome with one bare window plus a browser. Daemon is
+not this shell. Decisions
+[0037](../../decisions/0037-webview2-bare-window-shell.md)–[0042](../../decisions/0042-wpf-ui-migration-slices.md)
+(Proposed). Plan: [2026-09-23-webview2-shell](2026-09-23-webview2-shell.md).
+Daemon: [0043](../../decisions/0043-daemon-wpf-fluent.md).
+
+Active plans: MCP test split (landed; file still under `active/`); WebView2
+shell.

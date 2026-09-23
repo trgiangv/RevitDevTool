@@ -18,8 +18,14 @@ here.
   (partially superseded by 0027 — SDK types and ILRepack allowed; no `McpServer`
   session on the host pipe).
 - [0030](0030-host-owned-cpython-and-package-managers.md) is **Python runtime**.
-  [0031](0031-daemon-json-source-gen.md) is STJ source-gen **in support of 0032**.
-  [0032](0032-daemon-mewui-and-aot.md) is Daemon MewUI + AOT target.
+  [0031](0031-daemon-json-source-gen.md) is STJ source-gen on Daemon wires.
+  [0043](0043-daemon-wpf-fluent.md) proposes to drop the Native AOT reason;
+  source-gen stays.
+  [0032](0032-daemon-mewui-and-aot.md) is the shipped Daemon MewUI shell and
+  the written AOT target. [0043](0043-daemon-wpf-fluent.md) **proposes** plain
+  WPF on the .NET 10 Fluent theme, no WebView2, and no Native AOT. Until
+  0043 is Accepted, the shipped Daemon UI is still MewUI. Do not add new
+  MewUI views and do not set `PublishAot`.
   [0033](0033-ironpython-pydevd-debugger.md) is **Accepted** IronPython DAP
   (in-process PyDev.Debugger 2.8.0; VS Code client is `debugpy` on 4567).
   CPython stays `debugpy` on 5678 (0025).
@@ -31,6 +37,17 @@ here.
   link tokens (`linkInstanceId@` + three kinds), host-space zoom, Element
   Finder, and `RevitDevTool.Tools` ownership of select/search + Command
   Browser. GeoViz / Inspect pick-to-overlay is out of scope.
+  [0037](0037-webview2-bare-window-shell.md) through
+  [0042](0042-wpf-ui-migration-slices.md) are **Proposed** WebView product
+  UI for the host add-in. They are not current behavior. They do not choose
+  the Daemon window. bun is the package manager for `DevTools.Web`, and
+  CodeMirror is the log renderer. Revit command windows that stay inside
+  Revit's WPF use the .NET 10 Fluent theme
+  ([0044](0044-revit-wpf-fluent-theme.md)). Work order:
+  [plan](../plans/active/2026-09-23-webview2-shell.md).
+  [0045](0045-mcp-apps-optional-client-ui.md) is an **experimental** proposal
+  for MCP Apps (`ui://` HTML in the chat client). It does not amend 0027
+  and it is not part of the WebView shell. Do not add the package.
 
 ## Index
 
@@ -63,9 +80,18 @@ here.
 | [0026](0026-ironpython-unittest-script-execution.md) | One IronPython unittest flow, dialect 2.7 and 3.4 | Accepted |
 | [0027](0027-mcp-product-surface.md) | MCP product surface — Daemon envelope, not full protocol | Accepted |
 | [0030](0030-host-owned-cpython-and-package-managers.md) | Host-owned CPython — uv sidecar vs Pixi-owned interpreter | Accepted — Python runtime |
-| [0031](0031-daemon-json-source-gen.md) | Daemon JSON source-gen (supports 0032 AOT) | Accepted — support for 0032 |
-| [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is MewUI; Native AOT is the target | Accepted — UI shipped; AOT not production |
+| [0031](0031-daemon-json-source-gen.md) | Daemon JSON source-gen | Accepted — wires stay source-gen; AOT reason dropped by 0043 when Accepted |
+| [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is MewUI; Native AOT is the target | Accepted — UI shipped; AOT not production. 0043 proposes to replace both |
 | [0033](0033-ironpython-pydevd-debugger.md) | IronPython debug via vendored PyDev.Debugger 2.8.0 | Accepted |
 | [0034](0034-execution-mstest-sdk-scoped-tests.md) | Execution tests: scoped MSTest.Sdk + first-party coverage | Accepted |
 | [0035](0035-mstest-sdk-repo-tests.md) | In-repo tests: MSTest.Sdk 4.4.0 + first-party coverage | Accepted |
 | [0036](0036-revit-monitor-link-element-tokens.md) | Revit link tokens, Element Finder, `RevitDevTool.Tools` | Accepted |
+| [0037](0037-webview2-bare-window-shell.md) | Product UI is a bare WPF window hosting WebView2 | Proposed |
+| [0038](0038-webview-react-parkui-codemirror.md) | Web UI is React, Vite, Park UI, and CodeMirror 6 | Proposed |
+| [0039](0039-webview-json-bridge.md) | WebView bridge is a JSON envelope over postMessage | Proposed |
+| [0040](0040-webview2-host-and-virtual-host.md) | WebView2 host, virtual host, and CDP port | Proposed |
+| [0041](0041-webview-playwright-cdp-tests.md) | Web UI tests are Vitest, Playwright, and CDP | Proposed |
+| [0042](0042-wpf-ui-migration-slices.md) | WPF product UI leaves in independent slices | Proposed |
+| [0043](0043-daemon-wpf-fluent.md) | Daemon desktop is plain WPF on the .NET 10 Fluent theme | Proposed |
+| [0044](0044-revit-wpf-fluent-theme.md) | Revit command WPF uses the .NET 10 Fluent theme | Proposed |
+| [0045](0045-mcp-apps-optional-client-ui.md) | MCP Apps is an optional visual face on the client | Proposed — experimental |
