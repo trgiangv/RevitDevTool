@@ -19,13 +19,12 @@ here.
   session on the host pipe).
 - [0030](0030-host-owned-cpython-and-package-managers.md) is **Python runtime**.
   [0031](0031-daemon-json-source-gen.md) is STJ source-gen on Daemon wires.
-  [0043](0043-daemon-wpf-fluent.md) proposes to drop the Native AOT reason;
-  source-gen stays.
-  [0032](0032-daemon-mewui-and-aot.md) is the shipped Daemon MewUI shell and
-  the written AOT target. [0043](0043-daemon-wpf-fluent.md) **proposes** plain
-  WPF on the .NET 10 Fluent theme, no WebView2, and no Native AOT. Until
-  0043 is Accepted, the shipped Daemon UI is still MewUI. Do not add new
-  MewUI views and do not set `PublishAot`.
+  Source-gen stays; Native AOT is not a Daemon reason
+  ([0043](0043-daemon-wpf-fluent.md)).
+  [0032](0032-daemon-mewui-and-aot.md) recorded the MewUI shell; its UI and
+  AOT target are superseded by [0043](0043-daemon-wpf-fluent.md) (**Accepted**
+  plain WPF + Fluent `ThemeMode`, no WebView2, no `PublishAot`). JIT publish
+  in 0032 section 2 stays.
   [0033](0033-ironpython-pydevd-debugger.md) is **Accepted** IronPython DAP
   (in-process PyDev.Debugger 2.8.0; VS Code client is `debugpy` on 4567).
   CPython stays `debugpy` on 5678 (0025).
@@ -43,8 +42,8 @@ here.
   the Daemon window. bun is the package manager for `DevTools.Web`, and
   CodeMirror is the log renderer. Revit command windows that stay inside
   Revit's WPF use the .NET 10 Fluent theme
-  ([0044](0044-revit-wpf-fluent-theme.md)). Work order:
-  [plan](../plans/active/2026-09-23-webview2-shell.md).
+  ([0044](0044-revit-wpf-fluent-theme.md), **Accepted**). Work order for the
+  WebView shell: [plan](../plans/active/2026-09-23-webview2-shell.md).
   [0045](0045-mcp-apps-optional-client-ui.md) is an **experimental** proposal
   for MCP Apps (`ui://` HTML in the chat client). It does not amend 0027
   and it is not part of the WebView shell. Do not add the package.
@@ -80,8 +79,8 @@ here.
 | [0026](0026-ironpython-unittest-script-execution.md) | One IronPython unittest flow, dialect 2.7 and 3.4 | Accepted |
 | [0027](0027-mcp-product-surface.md) | MCP product surface — Daemon envelope, not full protocol | Accepted |
 | [0030](0030-host-owned-cpython-and-package-managers.md) | Host-owned CPython — uv sidecar vs Pixi-owned interpreter | Accepted — Python runtime |
-| [0031](0031-daemon-json-source-gen.md) | Daemon JSON source-gen | Accepted — wires stay source-gen; AOT reason dropped by 0043 when Accepted |
-| [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is MewUI; Native AOT is the target | Accepted — UI shipped; AOT not production. 0043 proposes to replace both |
+| [0031](0031-daemon-json-source-gen.md) | Daemon JSON source-gen | Accepted — wires stay source-gen; AOT reason dropped by 0043 |
+| [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop was MewUI; Native AOT was the target | Accepted — UI and AOT superseded by 0043; JIT publish stays |
 | [0033](0033-ironpython-pydevd-debugger.md) | IronPython debug via vendored PyDev.Debugger 2.8.0 | Accepted |
 | [0034](0034-execution-mstest-sdk-scoped-tests.md) | Execution tests: scoped MSTest.Sdk + first-party coverage | Accepted |
 | [0035](0035-mstest-sdk-repo-tests.md) | In-repo tests: MSTest.Sdk 4.4.0 + first-party coverage | Accepted |
@@ -92,6 +91,6 @@ here.
 | [0040](0040-webview2-host-and-virtual-host.md) | WebView2 host, virtual host, and CDP port | Proposed |
 | [0041](0041-webview-playwright-cdp-tests.md) | Web UI tests are Vitest, Playwright, and CDP | Proposed |
 | [0042](0042-wpf-ui-migration-slices.md) | WPF product UI leaves in independent slices | Proposed |
-| [0043](0043-daemon-wpf-fluent.md) | Daemon desktop is plain WPF on the .NET 10 Fluent theme | Proposed |
-| [0044](0044-revit-wpf-fluent-theme.md) | Revit command WPF uses the .NET 10 Fluent theme | Proposed |
+| [0043](0043-daemon-wpf-fluent.md) | Daemon desktop is plain WPF on the .NET 10 Fluent theme | Accepted |
+| [0044](0044-revit-wpf-fluent-theme.md) | Revit command WPF uses the .NET 10 Fluent theme | Accepted |
 | [0045](0045-mcp-apps-optional-client-ui.md) | MCP Apps is an optional visual face on the client | Proposed — experimental |

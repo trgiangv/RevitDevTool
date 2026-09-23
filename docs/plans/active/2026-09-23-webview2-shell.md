@@ -81,7 +81,7 @@ they are not a slice of this plan.
 - [ ] 0042 B — settings routes
 - [ ] 0042 C — CodeMirror log + linkify; delete Scintilla packages
 - [ ] 0042 D — add-in command opens `WebViewWindow`; drop `ElementHost` and `UseWindowsForms`
-- [ ] 0044 — Fluent on `RevitDevTool.Tools`: inbox `Window.ThemeMode` on net10, vendored `release/10.0` theme on net48 and net8
+- [x] 0044 — Fluent on `RevitDevTool.Tools`: declarative `FluentTheme` (inbox on net10, vendored `release/10.0` on net48/net8); spike [completed](../completed/2026-09-23-fluent-theme-spike.md)
 - [ ] 0042 F — remove MahApps, ControlzEx, and XamlBehaviors submodules; strip custom WPF; delete empty Presentation
 - [ ] Mark 0037 Accepted; update `docs/agents/host-boundaries.md`
 
@@ -99,13 +99,13 @@ they are not a slice of this plan.
   runtime. WebView2 lives in `DevTools.UI.WebView2` for Revit 2022, 2023,
   2024, 2026 onward, and the AutoCAD family. Daemon does not reference it.
 - 2026-09-23: Frontend package manager is bun `1.4.2`, matching `docs/`.
-- 2026-09-23: Daemon is [0043](../../decisions/0043-daemon-wpf-fluent.md):
-  plain WPF, .NET 10 Fluent `ThemeMode`, no WebView2, no Native AOT. It is
-  not a slice of this plan.
+- 2026-09-23: Daemon is [0043](../../decisions/0043-daemon-wpf-fluent.md)
+  (**Accepted**): plain WPF, .NET 10 Fluent `ThemeMode`, no WebView2, no
+  Native AOT. It is not a slice of this plan.
 - 2026-09-23: Command Browser and Element Finder stay in `RevitDevTool.Tools`.
-  [0044](../../decisions/0044-revit-wpf-fluent-theme.md): inbox Fluent on
-  Revit 2027, a `release/10.0` copy of `PresentationFramework.Fluent` on
-  earlier years. Not a SPA route.
+  [0044](../../decisions/0044-revit-wpf-fluent-theme.md) (**Accepted**):
+  inbox Fluent on Revit 2027, vendored `PresentationFramework.Fluent` on
+  earlier years via `FluentTheme`. Not a SPA route.
 
 ## Validation
 

@@ -1,16 +1,15 @@
 # 0043 Daemon Desktop Is Plain WPF on the .NET 10 Fluent Theme
 
-Date: 2026-09-23
+Date: 2026-09-23  
+Accepted: 2026-09-24
 
 ## Status
 
-Proposed
+Accepted
 
 Replaces the Daemon shell and the Native AOT target in
-[0032](0032-daemon-mewui-and-aot.md) when Accepted. Until then the shipped
-tray UI is still MewUI, and 0032 section 3 is still the written AOT target.
-Do not add MewUI views. Do not set `PublishAot`. Do not put WebView2 in
-`DevTools.Daemon`.
+[0032](0032-daemon-mewui-and-aot.md). Do not add MewUI views. Do not set
+`PublishAot`. Do not put WebView2 in `DevTools.Daemon`.
 
 Host add-in chrome is a separate proposal
 ([0037](0037-webview2-bare-window-shell.md) through

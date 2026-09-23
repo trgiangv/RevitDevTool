@@ -1,15 +1,15 @@
 # 0044 Revit Command WPF Uses the .NET 10 Fluent Theme
 
-Date: 2026-09-23
+Date: 2026-09-23  
+Accepted: 2026-09-24
 
 ## Status
 
-Proposed
+Accepted
 
 Does not move these screens into the WebView shell
-([0037](0037-webview2-bare-window-shell.md)). Does not theme Daemon;
-that process is [0043](0043-daemon-wpf-fluent.md) and already runs on
-`net10.0-windows`.
+([0037](0037-webview2-bare-window-shell.md)). Daemon theming is
+[0043](0043-daemon-wpf-fluent.md).
 
 ## Context
 
@@ -31,10 +31,10 @@ Host TFMs, from `docs/docs/hosts/Hosts-Revit.md`:
 | 2025–2026 | `net8.0-windows` | No. Fluent and `ThemeMode` start in .NET 9 |
 | 2027 | `net10.0-windows` | Yes. .NET 10 extends the .NET 9 Fluent styles |
 
-MahApps is the theme on these windows today, and
-[0037](0037-webview2-bare-window-shell.md) removes that stack. A third-party
-Fluent kit would replace one library with another. The .NET 10 theme is
-already the product look on Daemon ([0043](0043-daemon-wpf-fluent.md)).
+MahApps is still the theme on other Presentation windows, and
+[0037](0037-webview2-bare-window-shell.md) removes that stack later. A
+third-party Fluent kit would replace one library with another. The .NET 10
+theme is already the product look on Daemon ([0043](0043-daemon-wpf-fluent.md)).
 Older Revit years should show that same theme.
 
 The theme sources are
@@ -49,36 +49,40 @@ chrome. These windows are guests in that process.
 
 ## Decision
 
-- Command Browser, Element Finder, and the other `RevitDevTool.Tools`
-  windows stay WPF. They do not become routes in `DevTools.Web`.
+- Command Browser, Element Finder, and Stub Builder stay WPF. They do not
+  become routes in `DevTools.Web`.
   [0036](0036-revit-monitor-link-element-tokens.md) still owns what those
-  tools do.
-- Revit 2027 (`net10.0-windows`) uses the inbox Fluent theme.
-  Set `Window.ThemeMode` on our tool windows (`Light`, `Dark`, or `System`
-  from the existing app theme). Suppress `WPF0001` on that TFM only.
-  Do not set `Application.ThemeMode` on Revit's `Application`. Do not merge
-  a copied `Fluent.xaml` on this TFM; a manual dictionary overrides the one
-  `ThemeMode` loads.
-- Revit 2022–2026 (`net48` and `net8.0-windows`) compile a full copy of the
-  .NET 10 `PresentationFramework.Fluent` tree into `RevitDevTool.Tools`.
-  The pin is `release/10.0` of that directory, recorded at the copy (commit
-  id in the folder). Not a git submodule of `dotnet/wpf`, not a NuGet, not
-  MahApps, not WPF-UI or ModernWpf. Keep the upstream MIT license with the
-  files. The `ref` project that defines the theme assembly's public API is
-  not part of the copy. `ThemeMode` does not exist on these TFMs.
-- The copy is merged on our window or on the control injected into Revit's
-  tree. It is not merged into `Application.Current.Resources`.
-- Keys the older TFM does not ship (`SystemColors` accent brushes, added in
-  .NET 9) are defined inside the copy so the dictionaries resolve. That is
-  a local stand-in for a missing platform key, not a second theme and not a
-  package. Visual values stay the .NET 10 dictionaries.
-- `net10.0-windows` does not compile the copy. One Revit year does not load
-  both the inbox theme and the vendored dictionaries.
-- Daemon does not reference the copy. It keeps inbox `ThemeMode`
-  ([0043](0043-daemon-wpf-fluent.md)). The WebView shell does not reference
-  the copy. AutoCAD has no Revit visual-tree UI and does not take this theme.
-- A refresh of the copy is one change for every pre-`net10` TFM, still pinned
-  to a `release/10.0` commit. It does not float `main`.
+  tools do. Other `DevTools.Presentation` views keep MahApps `Theme.xaml`
+  until a later migration.
+- Fluent surfaces merge
+  `/DevTools.UI;component/Theme/FluentTheme.xaml` on the window or injected
+  control (`FluentThemeResources`, same singleton pattern as MahApps
+  `ThemeResources`). Theme changes reapply through
+  `ThemeManager` → `FluentThemeResources.Current`. Never merge into
+  `Application.Current.Resources`. Never set `Application.ThemeMode` on
+  Revit's `Application`.
+- One pack URI names the dictionaries on every TFM:
+  `pack://application:,,,/PresentationFramework.Fluent;component/Themes/Fluent.{Light|Dark}.xaml`.
+  On `net48` / `net8.0-windows` that assembly is the vendored
+  `source/PresentationFramework.Fluent/` project (targets those TFMs only).
+  On `net10.0-windows` the same URI resolves to the inbox WPF assembly;
+  `DevTools.UI` does not ProjectReference the vendored project on net10.
+- The vendored pin is `dotnet/wpf` `release/10.0` commit
+  `87e4d30e28c1aaadf1866fa0bfdab110bbef1d6f`. Not a submodule, not a NuGet,
+  not MahApps / WPF-UI / ModernWpf. Keep upstream MIT (`LICENSE.TXT`,
+  `NOTICE.md`). Only `Themes/*.xaml` and `Controls/**/*.cs` compile;
+  `Styles/` and `Resources/` stay on disk as source. The assembly is
+  excluded from ILRepack of `RevitDevTool` and `AcadDevTool`.
+- Tool windows set `Background` / `Foreground` to Fluent brushes explicitly.
+  An implicit `Window` style inside `Window.Resources` does not style that
+  window, and Fluent's default window background is `Transparent`.
+- Keys older TFMs do not ship (`SystemColors` accent brushes from .NET 9)
+  are stand-ins inside the copy so dictionaries resolve. Visual values stay
+  the .NET 10 dictionaries.
+- Design-time preview uses `FluentDesignTimeResources.xaml` via
+  `IntellisenseResources`, parallel to MahApps `DesignTimeResources.xaml`.
+- Daemon does not reference the copy ([0043](0043-daemon-wpf-fluent.md)).
+  The WebView shell does not reference the copy.
 
 ## Alternatives Considered
 
@@ -95,31 +99,36 @@ chrome. These windows are guests in that process.
 5. **Set `Application.ThemeMode` or merge Fluent at application scope.**
    That restyles Revit. The theme attaches only to our windows and to the
    injected Command Browser root.
+6. **`Window.ThemeMode` on net10 tool windows instead of dictionary merge.**
+   Daemon uses `Application.ThemeMode`. Tool windows use the shared
+   `FluentTheme.xaml` dictionary path on every TFM so one attach story
+   covers Revit 2022–2027.
 
 ## Consequences
 
 Positive:
 
-- Revit 2022 through 2027 show one Fluent generation on the command UI,
-  without a theme library.
+- Revit 2022 through 2027 show one Fluent generation on Element Finder,
+  Command Browser, and Stub Builder, without a theme NuGet.
 - Revit's own WPF keeps its theme. Only our windows and the injected bar
   take Fluent.
-- Slice F can drop MahApps without deleting `RevitDevTool.Tools`.
+- Slice F can drop MahApps from remaining Presentation views without
+  deleting `RevitDevTool.Tools`.
 
 Tradeoffs:
 
 - The vendored XAML is large and frozen at a `release/10.0` commit. Inbox
   fixes that land only on later .NET 10 patches are not in the copy until
   someone updates the pin.
-- `Window.ThemeMode` is experimental (`WPF0001`). On Revit 2027 a removed
-  API falls back to merging the same `release/10.0` dictionaries on that
-  window, still not at application scope.
 - Accent brushes on `net48` and `net8` are values we define, not live
   Windows accent. .NET 9 is the first inbox `SystemColors` accent, and
   those hosts are not on .NET 9.
+- Remaining Presentation windows still merge MahApps until they move.
 
 ## Follow-Up
 
-- Copy the theme when implementing this ADR. This file is the policy.
+- Spike that landed this ADR:
+  [completed/2026-09-23-fluent-theme-spike](../plans/completed/2026-09-23-fluent-theme-spike.md).
 - [0042](0042-wpf-ui-migration-slices.md) no longer turns these tools into
-  SPA routes. MahApps leaves them only after this theme is what they merge.
+  SPA routes. MahApps leaves the other Presentation windows only after they
+  merge `FluentTheme.xaml` the same way.
