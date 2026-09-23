@@ -3,6 +3,7 @@
     <UseRevit>true</UseRevit>
     <UseWpf>true</UseWpf>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />

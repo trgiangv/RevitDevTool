@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI.Events;
 using RevitDevTool.Core;
-using RevitDevTool.Tools.CommandBrowser;
 using RevitDevTool.Tools.Helpers;
 using RevitDevTool.Tools.Selection;
 
@@ -26,40 +25,24 @@ public sealed partial class ElementFinderViewModel(ToolWindowService toolWindows
     [ObservableProperty]
     public partial bool IsOpen { get; set; }
 
-    public void Show()
+    partial void OnIsOpenChanged(bool value)
     {
-        if (IsOpen)
-            return;
-
-        toolWindows.Show(WindowKey, () =>
+        if (value)
         {
-            RefreshDocuments();
-            Subscribe();
-
-            var window = new ElementFinderView { DataContext = this };
-            window.Closed += (_, _) =>
+            toolWindows.Show(WindowKey, () =>
             {
-                Unsubscribe();
-                IsOpen = false;
-            };
-            IsOpen = true;
-            return window;
-        });
-    }
+                RefreshDocuments();
+                Subscribe();
 
-    public void Close()
-    {
-        if (!IsOpen)
-            return;
-        toolWindows.Close(WindowKey);
-    }
-
-    public void Toggle()
-    {
-        if (IsOpen)
-            Close();
+                var window = new ElementFinderView { DataContext = this };
+                window.Closed += (_, _) => Unsubscribe();
+                return window;
+            });
+        }
         else
-            Show();
+        {
+            toolWindows.Close(WindowKey);
+        }
     }
 
     public void RefreshDocuments()

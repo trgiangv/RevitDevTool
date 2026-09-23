@@ -3,7 +3,6 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-        xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:models="clr-namespace:DevTools.Presentation.Models"
         xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
@@ -15,7 +14,7 @@
         d:DataContext="{d:DesignInstance Type=viewModels:StubBuilderViewModel}"
         d:DesignHeight="650"
         d:DesignWidth="700"
-        Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+        Background="{DynamicResource ApplicationBackgroundBrush}"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         mc:Ignorable="d">
@@ -23,8 +22,8 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
-                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/FluentTheme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/FluentDesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
@@ -40,21 +39,16 @@
         </Grid.RowDefinitions>
 
         <!--  Toolbar: Hide unchecked + Select All / Clear  -->
-        <StackPanel Margin="0,0,0,8"
+        <StackPanel Margin="0,0,0,5"
                     HorizontalAlignment="Left"
                     Orientation="Horizontal">
-
             <CheckBox Margin="0,0,12,0"
                       VerticalAlignment="Center"
                       Content="Hide unchecked"
-                      Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                      IsChecked="{Binding HideUnchecked}"
-                      Style="{StaticResource DevTools.MahApps.Styles.CheckBox.Win10}" />
-
+                      IsChecked="{Binding HideUnchecked}" />
             <Button Margin="0,0,8,0"
                     Command="{Binding SelectAllCommand}"
                     Content="Check All" />
-
             <Button Command="{Binding ClearSelectionCommand}"
                     Content="Check None" />
         </StackPanel>
@@ -63,8 +57,6 @@
         <TextBox Grid.Row="1"
                  Margin="0,0,0,8"
                  VerticalContentAlignment="Center"
-                 mah:TextBoxHelper.ClearTextButton="True"
-                 mah:TextBoxHelper.Watermark="Search assemblies..."
                  Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
         <!--  Assembly CheckListBox  -->
@@ -73,31 +65,32 @@
                  ItemsSource="{Binding FilteredAssemblies}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  TextSearch.TextPath="Name"
-                 VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Recycling">
+
             <ListBox.ItemContainerStyle>
-                <Style BasedOn="{StaticResource DevTools.MahApps.Styles.ListBoxItem.CheckList}"
+                <Style BasedOn="{StaticResource DefaultListBoxItemStyle}"
                        TargetType="ListBoxItem">
+                    <Setter Property="Padding" Value="8,2" />
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="OnAssemblyItemDoubleClick" />
                 </Style>
             </ListBox.ItemContainerStyle>
+
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="models:AssemblyItem">
-                    <StackPanel Orientation="Horizontal">
+                    <StackPanel Orientation="Horizontal"
+                                ToolTip="{Binding Location}">
                         <CheckBox Margin="0,0,6,0"
                                   VerticalAlignment="Center"
                                   Focusable="True"
-                                  IsChecked="{Binding IsSelected}"
-                                  Style="{StaticResource DevTools.MahApps.Styles.CheckBox.MultiSelectionComboBoxItem}" />
+                                  IsChecked="{Binding IsSelected}" />
                         <TextBlock VerticalAlignment="Center"
-                                   FontWeight="SemiBold"
-                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                                    Text="{Binding Name}" />
                         <TextBlock MaxWidth="350"
                                    Margin="8,0,0,0"
                                    VerticalAlignment="Center"
-                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                   FontSize="10"
+                                   Foreground="{DynamicResource TextFillColorDisabledBrush}"
                                    Text="{Binding Location}"
                                    TextTrimming="CharacterEllipsis" />
                     </StackPanel>
@@ -113,19 +106,15 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-
             <TextBlock Grid.Column="0"
                        Margin="0,0,8,0"
                        VerticalAlignment="Center"
-                       FontWeight="SemiBold"
-                       Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                       Foreground="{StaticResource TextFillColorPrimaryBrush}"
                        Text="Output Path:" />
-
             <TextBox Grid.Column="1"
                      Margin="0,0,5,0"
                      VerticalContentAlignment="Center"
                      Text="{Binding OutputPath, UpdateSourceTrigger=PropertyChanged}" />
-
             <Button Grid.Column="2"
                     Width="30"
                     Command="{Binding BrowseOutputPathCommand}"
@@ -135,8 +124,6 @@
         <!--  Status Message  -->
         <TextBlock Grid.Row="4"
                    Margin="0,0,0,8"
-                   FontSize="11"
-                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Accent}"
                    Text="{Binding StatusMessage}"
                    TextWrapping="Wrap" />
 
@@ -147,21 +134,18 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-
-            <mah:MetroProgressBar Grid.Column="0"
-                                  Height="6"
-                                  Margin="0,0,15,0"
-                                  VerticalAlignment="Center"
-                                  IsIndeterminate="{Binding IsGenerating}"
-                                  Visibility="{Binding IsGenerating, Converter={StaticResource BooleanToVisibilityConverter}}" />
-
+            <ProgressBar Grid.Column="0"
+                         Height="6"
+                         Margin="0,0,15,0"
+                         VerticalAlignment="Center"
+                         IsIndeterminate="{Binding IsGenerating}"
+                         Visibility="{Binding IsGenerating, Converter={StaticResource BooleanToVisibilityConverter}}" />
             <Button Grid.Column="1"
                     Width="100"
                     Margin="0,0,8,0"
                     Padding="16,6"
                     Command="{Binding GenerateStubsCommand}"
                     Content="Generate" />
-
             <Button Grid.Column="2"
                     Width="100"
                     Padding="16,6"

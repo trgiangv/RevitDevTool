@@ -86,6 +86,18 @@ public sealed partial class CommandBrowserViewModel : ObservableObject, IDisposa
         AllItemsView?.Refresh();
     }
 
+    [RelayCommand]
+    private void OpenElementFinder()
+    {
+        ElementFinder.IsOpen = !ElementFinder.IsOpen;
+    }
+
+    [RelayCommand]
+    private void ToggleFavoritesOnly()
+    {
+        ShowOnlyFavorites = !ShowOnlyFavorites;
+    }
+
     /// <summary>
     /// Refreshes <see cref="RibbonCommandInfo.IsEnabled"/> for all commands
     /// so the dropdown reflects current availability.

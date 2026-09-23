@@ -4,7 +4,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:dui="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="clr-namespace:RevitDevTool.Tools.CommandBrowser.Models"
              xmlns:vm="clr-namespace:RevitDevTool.Tools.CommandBrowser.ViewModels"
@@ -12,71 +11,20 @@
              d:DataContext="{d:DesignInstance vm:CommandBrowserViewModel}"
              d:DesignHeight="32"
              d:DesignWidth="600"
-             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             Background="{DynamicResource ApplicationBackgroundBrush}"
              mc:Ignorable="d">
 
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
-                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/FluentTheme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/FluentDesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!--  Toolbar Favourite Toggle  -->
-            <Style x:Key="DevTools.Styles.ToggleButton.Favorite"
-                   BasedOn="{StaticResource DevTools.MahApps.Styles.ToggleButton}"
-                   TargetType="{x:Type ToggleButton}">
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="BorderBrush" Value="Transparent" />
-                <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="Padding" Value="0" />
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                <Setter Property="mah:ControlsHelper.FocusBorderBrush" Value="Transparent" />
-                <Setter Property="mah:ControlsHelper.MouseOverBorderBrush" Value="Transparent" />
-                <Setter Property="mah:ControlsHelper.FocusBorderThickness" Value="0" />
-                <Setter Property="ContentTemplate">
-                    <Setter.Value>
-                        <DataTemplate>
-                            <Path Width="16"
-                                  Height="16"
-                                  Data="{StaticResource Bookmark}"
-                                  Stretch="Uniform">
-                                <Path.Style>
-                                    <Style TargetType="{x:Type Path}">
-                                        <Setter Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.Accent3}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}}}"
-                                                         Value="True">
-                                                <Setter Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.AccentBase}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Path.Style>
-                            </Path>
-                        </DataTemplate>
-                    </Setter.Value>
-                </Setter>
-                <Style.Triggers>
-                    <!--  Checked, not hovered: no background / no border  -->
-                    <Trigger Property="IsChecked" Value="True">
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="BorderBrush" Value="Transparent" />
-                    </Trigger>
-                    <!--  Checked + hover: same background as unchecked + hover  -->
-                    <MultiTrigger>
-                        <MultiTrigger.Conditions>
-                            <Condition Property="IsMouseOver" Value="True" />
-                            <Condition Property="IsChecked" Value="True" />
-                        </MultiTrigger.Conditions>
-                        <Setter Property="Background" Value="{DynamicResource DevTools.MahApps.Brushes.Gray8}" />
-                        <Setter Property="BorderBrush" Value="Transparent" />
-                    </MultiTrigger>
-                </Style.Triggers>
-            </Style>
-
-            <!--  Item Favourite Gutter Toggle  -->
-            <Style x:Key="DevTools.Styles.ToggleButton.FavoriteGutter"
-                   TargetType="{x:Type ToggleButton}">
+            <!--  Item favourite gutter  -->
+            <Style x:Key="DevTools.Styles.Button.FavoriteGutter"
+                   d:DataContext="{d:DesignInstance models:GroupedCommandEntry}"
+                   TargetType="{x:Type Button}">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
@@ -87,7 +35,7 @@
                 <Setter Property="VerticalAlignment" Value="Stretch" />
                 <Setter Property="Template">
                     <Setter.Value>
-                        <ControlTemplate TargetType="{x:Type ToggleButton}">
+                        <ControlTemplate TargetType="{x:Type Button}">
                             <Border Padding="6,0"
                                     Background="Transparent">
                                 <Path x:Name="Icon"
@@ -95,8 +43,8 @@
                                       Height="12"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
-                                      Data="{StaticResource Bookmark}"
-                                      Fill="{DynamicResource DevTools.MahApps.Brushes.Accent2}"
+                                      Data="{StaticResource BookmarkOn}"
+                                      Fill="{DynamicResource TextFillColorSecondaryBrush}"
                                       Opacity="0"
                                       Stretch="Uniform" />
                             </Border>
@@ -107,12 +55,13 @@
                                 </DataTrigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="1" />
-                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.Accent2}" />
+                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource TextFillColorSecondaryBrush}" />
                                 </Trigger>
-                                <Trigger Property="IsChecked" Value="True">
+                                <DataTrigger Binding="{Binding Command.IsFavorite}"
+                                             Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="1" />
-                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.AccentBase}" />
-                                </Trigger>
+                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+                                </DataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
@@ -142,12 +91,10 @@
                         </Style>
                     </Grid.Style>
 
-                    <!--  Icon  -->
                     <Border Grid.Column="0"
-                            Padding="2"
                             VerticalAlignment="Center"
                             Background="{Binding DataContext.IconsBackground, ElementName=CommandBrowserBar}"
-                            BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray6}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                             BorderThickness="1"
                             CornerRadius="3">
                         <Image Width="16"
@@ -157,34 +104,31 @@
                                Source="{Binding Command.RibbonInfo.Image}" />
                     </Border>
 
-                    <!--  Name and Tab  -->
                     <TextBlock Grid.Column="1"
                                Margin="4,0,0,0"
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis">
-                        <Run Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                             Text="{Binding Command.RibbonInfo.Name, Mode=OneWay}" /><Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray2}"
-                             Text=" (" /><Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray2}"
-                             Text="{Binding Command.RibbonInfo.TabName, Mode=OneWay}" /><Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray2}"
+                        <Run Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                             Text="{Binding Command.RibbonInfo.Name, Mode=OneWay}" /><Run Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                             Text=" (" /><Run Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                             Text="{Binding Command.RibbonInfo.TabName, Mode=OneWay}" /><Run Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                              Text=")" />
                     </TextBlock>
 
-                    <!--  Favorite gutter toggle  -->
-                    <ToggleButton Grid.Column="2"
-                                  IsChecked="{Binding Command.IsFavorite, Mode=OneWay}"
-                                  PreviewMouseLeftButtonDown="HeartButton_PreviewMouseLeftButtonDown"
-                                  Style="{StaticResource DevTools.Styles.ToggleButton.FavoriteGutter}"
-                                  ToolTip="Toggle favorite" />
+                    <Button Grid.Column="2"
+                            Command="{Binding DataContext.ToggleFavoriteCommand, ElementName=CommandBrowserBar}"
+                            CommandParameter="{Binding Command}"
+                            Style="{StaticResource DevTools.Styles.Button.FavoriteGutter}"
+                            ToolTip="Toggle favorite" />
                 </Grid>
             </DataTemplate>
 
-            <!--  Header  -->
             <DataTemplate x:Key="GroupHeaderTemplate"
                           DataType="{x:Type CollectionViewGroup}">
-                <TextBlock Margin="4,4,4,2"
+                <TextBlock Margin="5"
                            FontSize="11"
                            FontWeight="SemiBold"
-                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray4}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                            Text="{Binding Name}" />
             </DataTemplate>
         </ResourceDictionary>
@@ -197,33 +141,39 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <ToggleButton Grid.Column="0"
-                      Width="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
-                      Height="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
-                      Margin="2"
-                      IsChecked="{Binding ShowOnlyFavorites}"
-                      PreviewMouseLeftButtonDown="FavToggleButton_PreviewMouseLeftButtonDown"
-                      Style="{StaticResource DevTools.Styles.ToggleButton.Favorite}"
-                      ToolTip="Show only favorites" />
+        <Button Grid.Column="0"
+                Width="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
+                Height="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
+                Margin="2"
+                Padding="0"
+                Command="{Binding ToggleFavoritesOnlyCommand}"
+                ToolTip="Show only favorites">
+            <Path Width="14"
+                  Height="14"
+                  Fill="{DynamicResource AccentFillColorDefaultBrush}"
+                  Stretch="Uniform">
+                <Path.Style>
+                    <Style TargetType="Path">
+                        <Setter Property="Data" Value="{StaticResource BookmarkOff}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowOnlyFavorites}"
+                                         Value="True">
+                                <Setter Property="Data" Value="{DynamicResource BookmarkOn}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Path.Style>
+            </Path>
+        </Button>
 
         <dui:AutoCompleteComboBox x:Name="SearchComboBox"
                                   Grid.Column="1"
-                                  Margin="2,2,0,2"
                                   VerticalAlignment="Center"
                                   ItemTemplate="{StaticResource CommandItemTemplate}"
                                   ItemsSource="{Binding AllItemsView}"
                                   MaxDropDownHeight="400"
                                   SelectionChanged="OnSelectionChanged"
-                                  Style="{DynamicResource DevTools.MahApps.Styles.ComboBox.Virtualized}"
                                   TextSearch.TextPath="Command.RibbonInfo.Name">
-
-            <ComboBox.ItemContainerStyle>
-                <Style BasedOn="{StaticResource DevTools.MahApps.Styles.ComboBoxItem}"
-                       TargetType="{x:Type ComboBoxItem}">
-                    <Setter Property="HorizontalAlignment" Value="Stretch" />
-                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                </Style>
-            </ComboBox.ItemContainerStyle>
 
             <dui:AutoCompleteComboBox.Setting>
                 <models:CommandBrowserFilterSetting />
@@ -234,20 +184,18 @@
             </dui:AutoCompleteComboBox.GroupStyle>
         </dui:AutoCompleteComboBox>
 
-        <ToggleButton x:Name="ElementFinderToggle"
-                      Grid.Column="2"
-                      Width="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
-                      Height="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
-                      Margin="2,2,0,2"
-                      Padding="0"
-                      Click="OnElementFinderToggle"
-                      Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}"
-                      ToolTip="Element Finder">
+        <Button Grid.Column="2"
+                Width="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
+                Height="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
+                Margin="2,2,0,2"
+                Padding="0"
+                Command="{Binding OpenElementFinderCommand}"
+                ToolTip="Element Finder">
             <Path Width="14"
                   Height="14"
                   Data="{StaticResource Search}"
-                  Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                  Fill="{DynamicResource AccentFillColorDefaultBrush}"
                   Stretch="Uniform" />
-        </ToggleButton>
+        </Button>
     </Grid>
 </UserControl>
