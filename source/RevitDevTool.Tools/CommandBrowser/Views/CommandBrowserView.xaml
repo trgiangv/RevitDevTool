@@ -22,76 +22,27 @@
                 <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!--  Toolbar Favourite Toggle  -->
-            <Style x:Key="DevTools.Styles.ToggleButton.Favorite"
-                   TargetType="{x:Type ToggleButton}">
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="BorderBrush" Value="Transparent" />
-                <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="Padding" Value="0" />
-                <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                <Setter Property="ContentTemplate">
-                    <Setter.Value>
-                        <DataTemplate>
-                            <Path Width="16"
-                                  Height="16"
-                                  Data="{StaticResource Bookmark}"
-                                  Stretch="Uniform">
-                                <Path.Style>
-                                    <Style TargetType="{x:Type Path}">
-                                        <Setter Property="Fill" Value="{DynamicResource LightPrimaryBrush}" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}}}"
-                                                         Value="True">
-                                                <Setter Property="Fill" Value="{DynamicResource DarkPrimaryBrush}" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Path.Style>
-                            </Path>
-                        </DataTemplate>
-                    </Setter.Value>
-                </Setter>
-                <Style.Triggers>
-                    <!--  Checked, not hovered: no background / no border  -->
-                    <Trigger Property="IsChecked" Value="True">
-                        <Setter Property="Background" Value="Transparent" />
-                        <Setter Property="BorderBrush" Value="Transparent" />
-                    </Trigger>
-                    <!--  Checked + hover: same background as unchecked + hover  -->
-                    <MultiTrigger>
-                        <MultiTrigger.Conditions>
-                            <Condition Property="IsMouseOver" Value="True" />
-                            <Condition Property="IsChecked" Value="True" />
-                        </MultiTrigger.Conditions>
-                        <Setter Property="Background" Value="{DynamicResource SecondaryRegionBrush}" />
-                        <Setter Property="BorderBrush" Value="Transparent" />
-                    </MultiTrigger>
-                </Style.Triggers>
-            </Style>
-
-            <!--  Item Favourite Gutter Toggle  -->
-            <Style x:Key="DevTools.Styles.ToggleButton.FavoriteGutter"
-                   TargetType="{x:Type ToggleButton}">
+            <!--  Hover-reveal bookmark. Click must not select the combo row.  -->
+            <Style x:Key="CommandItemFavoriteButton"
+                   d:DataContext="{d:DesignInstance models:GroupedCommandEntry}"
+                   TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                 <Setter Property="Cursor" Value="Hand" />
-                <Setter Property="MinWidth" Value="28" />
-                <Setter Property="HorizontalAlignment" Value="Stretch" />
-                <Setter Property="VerticalAlignment" Value="Stretch" />
+                <Setter Property="Padding" Value="6,0" />
                 <Setter Property="Template">
                     <Setter.Value>
-                        <ControlTemplate TargetType="{x:Type ToggleButton}">
-                            <Border Padding="6,0"
+                        <ControlTemplate TargetType="Button">
+                            <Border Padding="{TemplateBinding Padding}"
                                     Background="Transparent">
                                 <Path x:Name="Icon"
                                       Width="12"
                                       Height="12"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
-                                      Data="{StaticResource Bookmark}"
+                                      Data="{StaticResource BookmarkOn}"
                                       Fill="{DynamicResource PrimaryBrush}"
                                       Opacity="0"
                                       Stretch="Uniform" />
@@ -103,19 +54,18 @@
                                 </DataTrigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="1" />
-                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource PrimaryBrush}" />
                                 </Trigger>
-                                <Trigger Property="IsChecked" Value="True">
+                                <DataTrigger Binding="{Binding Command.IsFavorite}"
+                                             Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="1" />
                                     <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource DarkPrimaryBrush}" />
-                                </Trigger>
+                                </DataTrigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
             </Style>
 
-            <!--  Command Item Template  -->
             <DataTemplate x:Key="CommandItemTemplate"
                           DataType="{x:Type models:GroupedCommandEntry}">
                 <Grid ToolTip="{Binding Command.RibbonInfo.ToolTip}"
@@ -138,22 +88,20 @@
                         </Style>
                     </Grid.Style>
 
-                    <!--  Icon  -->
                     <Border Grid.Column="0"
                             Padding="2"
                             VerticalAlignment="Center"
                             Background="{Binding DataContext.IconsBackground, ElementName=CommandBrowserBar}"
                             BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1"
-                            CornerRadius="3">
-                        <Image Width="16"
-                               Height="16"
+                            CornerRadius="{StaticResource DefaultCornerRadius}">
+                        <Image Width="{StaticResource Length16}"
+                               Height="{StaticResource Length16}"
                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                SnapsToDevicePixels="True"
                                Source="{Binding Command.RibbonInfo.Image}" />
                     </Border>
 
-                    <!--  Name and Tab  -->
                     <TextBlock Grid.Column="1"
                                Margin="4,0,0,0"
                                VerticalAlignment="Center"
@@ -165,20 +113,16 @@
                              Text=")" />
                     </TextBlock>
 
-                    <!--  Favorite gutter toggle  -->
-                    <ToggleButton Grid.Column="2"
-                                  IsChecked="{Binding Command.IsFavorite, Mode=OneWay}"
-                                  PreviewMouseLeftButtonDown="HeartButton_PreviewMouseLeftButtonDown"
-                                  Style="{StaticResource DevTools.Styles.ToggleButton.FavoriteGutter}"
-                                  ToolTip="Toggle favorite" />
+                    <Button Grid.Column="2"
+                            PreviewMouseLeftButtonDown="OnFavoriteClick"
+                            Style="{StaticResource CommandItemFavoriteButton}"
+                            ToolTip="Toggle favorite" />
                 </Grid>
             </DataTemplate>
 
-            <!--  Header  -->
             <DataTemplate x:Key="GroupHeaderTemplate"
                           DataType="{x:Type CollectionViewGroup}">
-                <TextBlock Margin="4,4,4,2"
-                           FontSize="11"
+                <TextBlock Margin="4,6,4,2"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource ThirdlyTextBrush}"
                            Text="{Binding Name}" />
@@ -194,13 +138,32 @@
         </Grid.ColumnDefinitions>
 
         <ToggleButton Grid.Column="0"
-                      Width="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
-                      Height="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
+                      Width="{Binding ActualHeight, ElementName=SearchComboBox}"
+                      Height="{Binding ActualHeight, ElementName=SearchComboBox}"
                       Margin="2"
+                      Padding="0"
+                      VerticalAlignment="Center"
                       IsChecked="{Binding ShowOnlyFavorites}"
-                      PreviewMouseLeftButtonDown="FavToggleButton_PreviewMouseLeftButtonDown"
-                      Style="{StaticResource DevTools.Styles.ToggleButton.Favorite}"
-                      ToolTip="Show only favorites" />
+                      PreviewMouseLeftButtonDown="OnFavoritesFilterClick"
+                      Style="{StaticResource ToggleButtonDefault}"
+                      ToolTip="Show only favorites">
+            <Path Width="14"
+                  Height="14"
+                  Fill="{DynamicResource PrimaryBrush}"
+                  Stretch="Uniform">
+                <Path.Style>
+                    <Style TargetType="Path">
+                        <Setter Property="Data" Value="{StaticResource BookmarkOff}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ShowOnlyFavorites}"
+                                         Value="True">
+                                <Setter Property="Data" Value="{StaticResource BookmarkOn}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Path.Style>
+            </Path>
+        </ToggleButton>
 
         <dui:AutoCompleteComboBox x:Name="SearchComboBox"
                                   Grid.Column="1"
@@ -212,33 +175,44 @@
                                   SelectionChanged="OnSelectionChanged"
                                   Style="{DynamicResource ComboBoxExtend}"
                                   TextSearch.TextPath="Command.RibbonInfo.Name">
-
             <ComboBox.ItemContainerStyle>
                 <Style BasedOn="{StaticResource ComboBoxItemBaseStyle}"
-                       TargetType="{x:Type ComboBoxItem}">
-                    <Setter Property="HorizontalAlignment" Value="Stretch" />
+                       TargetType="ComboBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 </Style>
             </ComboBox.ItemContainerStyle>
-
             <dui:AutoCompleteComboBox.Setting>
                 <models:CommandBrowserFilterSetting />
             </dui:AutoCompleteComboBox.Setting>
-
             <dui:AutoCompleteComboBox.GroupStyle>
                 <GroupStyle HeaderTemplate="{StaticResource GroupHeaderTemplate}" />
             </dui:AutoCompleteComboBox.GroupStyle>
         </dui:AutoCompleteComboBox>
 
-        <ToggleButton x:Name="ElementFinderToggle"
-                      Grid.Column="2"
-                      Width="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
-                      Height="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
-                      Margin="2,2,0,2"
-                      Click="OnElementFinderToggle"
-                      Style="{StaticResource ToggleButtonIcon}"
-                      ToolTip="Element Finder"
-                      hc:IconSwitchElement.Geometry="{StaticResource Search}"
-                      hc:IconSwitchElement.GeometrySelected="{StaticResource Search}" />
+        <ToggleButton Grid.Column="2"
+                      Margin="2"
+                      VerticalAlignment="Center"
+                      IsChecked="{Binding ElementFinder.IsOpen}"
+                      Style="{StaticResource ToggleButtonFlip}"
+                      ToolTip="Element Finder">
+            <hc:StatusSwitchElement.CheckedElement>
+                <Border Background="{StaticResource PrimaryBrush}">
+                    <Path Width="{StaticResource Length16}"
+                          Height="{StaticResource Length16}"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          Data="{StaticResource Search}"
+                          Fill="{DynamicResource TextIconBrush}"
+                          Stretch="Uniform" />
+                </Border>
+            </hc:StatusSwitchElement.CheckedElement>
+            <Path Width="{StaticResource Length16}"
+                  Height="{StaticResource Length16}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Data="{StaticResource Search}"
+                  Fill="{DynamicResource PrimaryTextBrush}"
+                  Stretch="Uniform" />
+        </ToggleButton>
     </Grid>
 </UserControl>

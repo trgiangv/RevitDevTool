@@ -22,12 +22,10 @@
                 <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
                 <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <BooleanToVisibilityConverter x:Key="BoolToVis" />
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="{DynamicResource RegionBrush}"
-            CornerRadius="5">
+    <Border CornerRadius="{StaticResource DefaultCornerRadius}">
         <Grid Margin="5">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -42,7 +40,7 @@
                     Height="3"
                     Margin="0,0,0,6"
                     HorizontalAlignment="Center"
-                    Background="{DynamicResource SecondaryTextBrush}"
+                    Background="{DynamicResource ThirdlyTextBrush}"
                     CornerRadius="1.5"
                     Cursor="SizeAll" />
 
@@ -63,7 +61,7 @@
                                   Fill="{DynamicResource PrimaryTextBrush}"
                                   Stretch="Uniform"
                                   ToolTip="Linked document"
-                                  Visibility="{Binding IsLinked, Converter={StaticResource BoolToVis}}" />
+                                  Visibility="{Binding IsLinked, Converter={StaticResource Boolean2VisibilityConverter}}" />
                             <TextBlock VerticalAlignment="Center"
                                        Text="{Binding Title}"
                                        TextTrimming="CharacterEllipsis" />
@@ -75,12 +73,12 @@
             <hc:TextBox Grid.Row="2"
                         Margin="0,0,0,4"
                         VerticalContentAlignment="Top"
-                        hc:InfoElement.Placeholder="ElementId, UniqueId or IFC Guid&#x0a;Ex:&#x0a;- 30,9946,1658795 (comma separated)&#x0a;- 30&#x0a;  9946&#x0a;  1658795 (line separated)"
+                        hc:InfoElement.Placeholder="ElementId, UniqueId or IFC Guid"
                         hc:InfoElement.ShowClearButton="True"
                         AcceptsReturn="True"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                         TextWrapping="Wrap"
-                        ToolTip="ElementId / UniqueId / IFC Guid"
+                        ToolTip="ElementId, UniqueId or IFC Guid&#x0a;Ex:&#x0a;- 30,9946,1658795 (comma separated)&#x0a;- 30&#x0a;  9946&#x0a;  1658795 (line separated)"
                         VerticalScrollBarVisibility="Auto" />
 
             <UniformGrid Grid.Row="3"
@@ -88,39 +86,39 @@
                          Columns="4"
                          Rows="1">
                 <Button Margin="0,0,4,0"
-                        Padding="6,4"
                         HorizontalAlignment="Stretch"
                         hc:IconElement.Geometry="{StaticResource Cursor}"
-                        hc:IconElement.Height="14"
-                        hc:IconElement.Width="14"
+                        hc:IconElement.Height="{StaticResource Length14}"
+                        hc:IconElement.Width="{StaticResource Length14}"
+                        BorderThickness="0.5"
                         Command="{Binding SelectOnlyCommand}"
                         ToolTip="Select" />
                 <Button Margin="0,0,4,0"
-                        Padding="6,4"
                         HorizontalAlignment="Stretch"
                         hc:IconElement.Geometry="{StaticResource Zoom}"
-                        hc:IconElement.Height="14"
-                        hc:IconElement.Width="14"
+                        hc:IconElement.Height="{StaticResource Length14}"
+                        hc:IconElement.Width="{StaticResource Length14}"
+                        BorderThickness="0.5"
                         Command="{Binding SelectAndZoomCommand}"
                         ToolTip="Select + Zoom" />
                 <Button Margin="0,0,4,0"
-                        Padding="6,4"
                         HorizontalAlignment="Stretch"
                         hc:IconElement.Geometry="{StaticResource SectionBox}"
-                        hc:IconElement.Height="14"
-                        hc:IconElement.Width="14"
+                        hc:IconElement.Height="{StaticResource Length14}"
+                        hc:IconElement.Width="{StaticResource Length14}"
+                        BorderThickness="0.5"
                         Command="{Binding SelectZoomSectionBoxCommand}"
                         ToolTip="Select + Zoom + Section Box (3D)" />
-                <Button Padding="6,4"
-                        HorizontalAlignment="Stretch"
+                <Button HorizontalAlignment="Stretch"
                         hc:IconElement.Geometry="{StaticResource QrCode}"
-                        hc:IconElement.Height="14"
-                        hc:IconElement.Width="14"
-                        Click="CopyIdentifiersButton_Click"
+                        hc:IconElement.Height="{StaticResource Length14}"
+                        hc:IconElement.Width="{StaticResource Length14}"
+                        BorderThickness="0.5"
+                        Click="OnCopyMenuClick"
                         ToolTip="Copy selected (ElementId / UniqueId / IfcGuid)">
                     <Button.ContextMenu>
-                        <ContextMenu Width="{StaticResource Length200}"
-                                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                        <ContextMenu d:DataContext="{d:DesignInstance local:ElementFinderViewModel}"
+                                     DataContext="{Binding PlacementTarget.(FrameworkElement.DataContext), RelativeSource={RelativeSource Self}}">
                             <MenuItem Command="{Binding CopyElementIdsCommand}"
                                       Header="ElementId" />
                             <MenuItem Command="{Binding CopyUniqueIdsCommand}"
@@ -133,7 +131,6 @@
             </UniformGrid>
 
             <TextBlock Grid.Row="4"
-                       FontSize="10"
                        Foreground="{DynamicResource SecondaryTextBrush}"
                        Text="{Binding StatusText}"
                        TextWrapping="Wrap" />
