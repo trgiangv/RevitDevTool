@@ -34,10 +34,11 @@ without allowing one feature's dependency policy to leak into another.
   Directory traversal and reparse-point escapes are rejected, including add-in
   directory resolution.
 - `System.*`, `Microsoft.*`, Autodesk APIs, and UI libraries are not shared by
-  prefix. DevTools forks (`DevTools.MahApps.Metro`, `DevTools.ControlzEx`,
-  `DevTools.Microsoft.Xaml.Behaviors`) are separate identities and stay private
-  to the host add-in. WPF resource/theme assemblies must not load twice in one
-  process — a second copy breaks styling.
+  prefix. The product does not ship MahApps, ControlzEx, or Xaml Behaviors.
+  Official WPF kit simple names (HandyControl, MaterialDesignThemes.Wpf,
+  MaterialDesignColors, Wpf.Ui, MahApps.Metro, ControlzEx,
+  Microsoft.Xaml.Behaviors) are shared via `SharedSidecars` so another add-in
+  does not load a second copy — a second copy breaks styling.
 - Unresolved framework dependencies fall back to the CLR after private sources
   have declined the request.
 - Metadata discovery never executes the inspected assembly. When the host

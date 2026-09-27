@@ -9,6 +9,10 @@ public sealed class SharedSidecarsTests
     [DataRow("MahApps.Metro", true)]
     [DataRow("controlzex", true)]
     [DataRow("Microsoft.Xaml.Behaviors", true)]
+    [DataRow("handycontrol", true)]
+    [DataRow("MaterialDesignThemes.Wpf", true)]
+    [DataRow("materialdesigncolors", true)]
+    [DataRow("WPF.UI", true)]
     [DataRow("DevTools.UI", false)]
     [DataRow(null, false)]
     public void Contains_recognizes_known_sidecar_simple_names(string? name, bool expected)

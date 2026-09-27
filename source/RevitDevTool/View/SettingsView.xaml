@@ -9,7 +9,7 @@
              d:DataContext="{d:DesignInstance settings:SettingsViewModel}"
              d:DesignHeight="630"
              d:DesignWidth="600"
-             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             Background="{DynamicResource RegionBrush}"
              mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -36,7 +36,8 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TabControl Grid.Row="0">
+        <TabControl Grid.Row="0"
+                    BorderThickness="0">
             <TabItem Header="General">
                 <ContentControl Content="{Binding GeneralSettings}" />
             </TabItem>

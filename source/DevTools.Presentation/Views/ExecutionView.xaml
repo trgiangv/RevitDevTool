@@ -3,14 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
              xmlns:views="clr-namespace:DevTools.Presentation.Views"
              d:DataContext="{d:DesignInstance viewModels:ExecutionViewModel}"
              d:DesignHeight="500"
              d:DesignWidth="400"
-             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             Background="{DynamicResource RegionBrush}"
              mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -28,11 +28,10 @@
             <Style x:Key="DebuggerPortChip"
                    TargetType="Border">
                 <Setter Property="Padding" Value="5,2" />
-                <Setter Property="Margin" Value="0,0,4,0" />
                 <Setter Property="CornerRadius" Value="4" />
-                <Setter Property="Background" Value="{DynamicResource DevTools.MahApps.Brushes.Gray10}" />
-                <Setter Property="BorderBrush" Value="{DynamicResource DevTools.MahApps.Brushes.Gray8}" />
-                <Setter Property="BorderThickness" Value="1.5" />
+                <Setter Property="Background" Value="{DynamicResource SecondaryRegionBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="SnapsToDevicePixels" Value="True" />
             </Style>
         </ResourceDictionary>
@@ -52,83 +51,70 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBox Grid.Column="0"
-                     mah:TextBoxHelper.ClearTextButton="True"
-                     mah:TextBoxHelper.Watermark="Search..."
-                     Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
+            <hc:TextBox Grid.Column="0"
+                        hc:InfoElement.Placeholder="Search..."
+                        hc:InfoElement.ShowClearButton="True"
+                        Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             <ToggleButton Grid.Column="1"
                           Margin="5,0,0,0"
-                          Padding="5,0"
-                          BorderThickness="0.5"
-                          IsChecked="{Binding IsPackageMode, UpdateSourceTrigger=PropertyChanged}"
-                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}"
-                          ToolTip="Installed packages">
-                <Path Width="16"
-                      Height="16"
-                      Data="{StaticResource Package}"
-                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                      Stretch="Uniform" />
+                          IsChecked="{Binding IsPackageMode}"
+                          Style="{StaticResource ToggleButtonFlip}"
+                          ToolTip="MCP">
+                <hc:StatusSwitchElement.CheckedElement>
+                    <Border Background="{StaticResource PrimaryBrush}">
+                        <Path Width="{StaticResource Length16}"
+                              Height="{StaticResource Length16}"
+                              Data="{StaticResource Package}"
+                              Fill="{DynamicResource TextIconBrush}"
+                              Stretch="Uniform" />
+                    </Border>
+                </hc:StatusSwitchElement.CheckedElement>
+                <Border>
+                    <Path Width="{StaticResource Length16}"
+                          Height="{StaticResource Length16}"
+                          Data="{StaticResource Package}"
+                          Fill="{DynamicResource PrimaryTextBrush}"
+                          Stretch="Uniform" />
+                </Border>
             </ToggleButton>
 
-            <StackPanel Grid.Column="2"
-                        Margin="5,0,0,0"
-                        Orientation="Horizontal">
-                <StackPanel.Resources>
-                    <Style BasedOn="{StaticResource DevTools.MahApps.Styles.Button.Circle}"
-                           TargetType="{x:Type Button}">
-                        <Setter Property="Height" Value="25" />
-                        <Setter Property="Width" Value="25" />
-                    </Style>
-                </StackPanel.Resources>
-                <Button Margin="0,0,5,0"
+            <!--  Tree Expand/Collapse  -->
+            <hc:UniformSpacingPanel Grid.Column="2"
+                                    Margin="5,0,0,0"
+                                    Orientation="Horizontal"
+                                    Spacing="5">
+                <Button hc:IconElement.Geometry="{StaticResource Expand}"
                         Command="{Binding ExpandAllCommand}"
-                        ToolTip="Expand all">
-                    <Path Width="7"
-                          Height="7"
-                          Data="{StaticResource Expand}"
-                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform" />
-                </Button>
-                <Button Margin="0,0,5,0"
+                        Style="{StaticResource ButtonIconCircular}"
+                        ToolTip="Expand all" />
+                <Button hc:IconElement.Geometry="{StaticResource Collapse}"
                         Command="{Binding CollapseAllCommand}"
-                        ToolTip="Collapse all">
-                    <Path Width="7"
-                          Height="7"
-                          Data="{StaticResource Collapse}"
-                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform" />
-                </Button>
-                <Button Margin="0,0,5,0"
+                        Style="{StaticResource ButtonIconCircular}"
+                        ToolTip="Collapse all" />
+                <Button hc:IconElement.Geometry="{StaticResource Toggle}"
                         Command="{Binding ToggleAllCommand}"
-                        ToolTip="Toggle expand/collapse">
-                    <Path Width="11"
-                          Height="11"
-                          Data="{StaticResource Toggle}"
-                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform" />
-                </Button>
-            </StackPanel>
+                        Style="{StaticResource ButtonIconCircular}"
+                        ToolTip="Toggle expand/collapse" />
+            </hc:UniformSpacingPanel>
         </Grid>
 
-        <StackPanel Grid.Row="1"
-                    Margin="0,0,0,4"
-                    Orientation="Horizontal"
-                    Visibility="{Binding CommandViewModel.HasDebugger, Converter={StaticResource BooleanToVisibilityConverter}}">
+        <hc:UniformSpacingPanel Grid.Row="1"
+                                Margin="0,0,0,4"
+                                Spacing="4"
+                                Visibility="{Binding CommandViewModel.HasDebugger, Converter={StaticResource Boolean2VisibilityConverter}}">
             <Path Width="12"
                   Height="12"
-                  Margin="0,0,6,0"
                   VerticalAlignment="Center"
                   Data="{StaticResource Bug}"
                   Stretch="Uniform">
                 <Path.Style>
                     <Style TargetType="Path">
-                        <Setter Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" />
+                        <Setter Property="Fill" Value="{DynamicResource PrimaryTextBrush}" />
                         <Setter Property="ToolTip" Value="Debugger not connected" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding CommandViewModel.IsDebuggerConnected}"
                                          Value="True">
-                                <Setter Property="Fill" Value="#FF6B6B" />
+                                <Setter Property="Fill" Value="{DynamicResource DangerBrush}" />
                                 <Setter Property="ToolTip" Value="Debugger connected" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -142,7 +128,7 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding CommandViewModel.IsPythonDebuggerConnected}"
                                          Value="True">
-                                <Setter Property="BorderBrush" Value="#FF6B6B" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -156,7 +142,7 @@
                     <TextBlock Margin="3,0,0,0"
                                VerticalAlignment="Center"
                                FontSize="11"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
                                Text="{Binding CommandViewModel.PythonDebugPort}" />
                 </StackPanel>
             </Border>
@@ -167,7 +153,7 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding CommandViewModel.IsIronPythonDebuggerConnected}"
                                          Value="True">
-                                <Setter Property="BorderBrush" Value="#FF6B6B" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -181,11 +167,11 @@
                     <TextBlock Margin="3,0,0,0"
                                VerticalAlignment="Center"
                                FontSize="11"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
                                Text="{Binding CommandViewModel.IronPythonDebugPort}" />
                 </StackPanel>
             </Border>
-        </StackPanel>
+        </hc:UniformSpacingPanel>
 
         <ContentControl Grid.Row="2"
                         Content="{Binding}"

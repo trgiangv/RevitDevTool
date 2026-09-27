@@ -3,8 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
         xmlns:local="clr-namespace:RevitDevTool.Tools.ElementFinder"
-        xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         Width="240"
         Height="260"
@@ -26,7 +26,7 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+    <Border Background="{DynamicResource RegionBrush}"
             CornerRadius="5">
         <Grid Margin="5">
             <Grid.RowDefinitions>
@@ -42,7 +42,7 @@
                     Height="3"
                     Margin="0,0,0,6"
                     HorizontalAlignment="Center"
-                    Background="{DynamicResource DevTools.MahApps.Brushes.Gray3}"
+                    Background="{DynamicResource SecondaryTextBrush}"
                     CornerRadius="1.5"
                     Cursor="SizeAll" />
 
@@ -50,7 +50,7 @@
                       Margin="0,0,0,4"
                       ItemsSource="{Binding Documents}"
                       SelectedItem="{Binding SelectedDocument}"
-                      Style="{DynamicResource DevTools.MahApps.Styles.ComboBox}"
+                      Style="{DynamicResource ComboBoxExtend}"
                       ToolTip="Document">
                 <ComboBox.ItemTemplate>
                     <DataTemplate>
@@ -60,7 +60,7 @@
                                   Margin="0,0,6,0"
                                   Data="{StaticResource Link}"
                                   DockPanel.Dock="Left"
-                                  Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                                  Fill="{DynamicResource PrimaryTextBrush}"
                                   Stretch="Uniform"
                                   ToolTip="Linked document"
                                   Visibility="{Binding IsLinked, Converter={StaticResource BoolToVis}}" />
@@ -72,15 +72,16 @@
                 </ComboBox.ItemTemplate>
             </ComboBox>
 
-            <TextBox Grid.Row="2"
-                     Margin="0,0,0,4"
-                     mah:TextBoxHelper.Watermark="ElementId, UniqueId or IFC Guid&#x0a;Ex:&#x0a;- 30,9946,1658795 (comma separated)&#x0a;- 30&#x0a;  9946&#x0a;  1658795 (line separated)"
-                     AcceptsReturn="True"
-                     Style="{DynamicResource DevTools.MahApps.Styles.TextBox}"
-                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                     TextWrapping="Wrap"
-                     ToolTip="ElementId / UniqueId / IFC Guid"
-                     VerticalScrollBarVisibility="Auto" />
+            <hc:TextBox Grid.Row="2"
+                        Margin="0,0,0,4"
+                        VerticalContentAlignment="Top"
+                        hc:InfoElement.Placeholder="ElementId, UniqueId or IFC Guid&#x0a;Ex:&#x0a;- 30,9946,1658795 (comma separated)&#x0a;- 30&#x0a;  9946&#x0a;  1658795 (line separated)"
+                        hc:InfoElement.ShowClearButton="True"
+                        AcceptsReturn="True"
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                        TextWrapping="Wrap"
+                        ToolTip="ElementId / UniqueId / IFC Guid"
+                        VerticalScrollBarVisibility="Auto" />
 
             <UniformGrid Grid.Row="3"
                          Margin="0,0,0,4"
@@ -88,59 +89,52 @@
                          Rows="1">
                 <Button Margin="0,0,4,0"
                         Padding="6,4"
+                        HorizontalAlignment="Stretch"
+                        hc:IconElement.Geometry="{StaticResource Cursor}"
+                        hc:IconElement.Height="14"
+                        hc:IconElement.Width="14"
                         Command="{Binding SelectOnlyCommand}"
-                        ToolTip="Select">
-                    <Path Width="14"
-                          Height="14"
-                          Data="{StaticResource Cursor}"
-                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform" />
-                </Button>
+                        ToolTip="Select" />
                 <Button Margin="0,0,4,0"
                         Padding="6,4"
+                        HorizontalAlignment="Stretch"
+                        hc:IconElement.Geometry="{StaticResource Zoom}"
+                        hc:IconElement.Height="14"
+                        hc:IconElement.Width="14"
                         Command="{Binding SelectAndZoomCommand}"
-                        ToolTip="Select + Zoom">
-                    <Path Width="14"
-                          Height="14"
-                          Data="{StaticResource Zoom}"
-                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform" />
-                </Button>
+                        ToolTip="Select + Zoom" />
                 <Button Margin="0,0,4,0"
                         Padding="6,4"
+                        HorizontalAlignment="Stretch"
+                        hc:IconElement.Geometry="{StaticResource SectionBox}"
+                        hc:IconElement.Height="14"
+                        hc:IconElement.Width="14"
                         Command="{Binding SelectZoomSectionBoxCommand}"
-                        ToolTip="Select + Zoom + Section Box (3D)">
-                    <Path Width="14"
-                          Height="14"
-                          Data="{StaticResource SectionBox}"
-                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                          Stretch="Uniform" />
+                        ToolTip="Select + Zoom + Section Box (3D)" />
+                <Button Padding="6,4"
+                        HorizontalAlignment="Stretch"
+                        hc:IconElement.Geometry="{StaticResource QrCode}"
+                        hc:IconElement.Height="14"
+                        hc:IconElement.Width="14"
+                        Click="CopyIdentifiersButton_Click"
+                        ToolTip="Copy selected (ElementId / UniqueId / IfcGuid)">
+                    <Button.ContextMenu>
+                        <ContextMenu Width="{StaticResource Length200}"
+                                     DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                            <MenuItem Command="{Binding CopyElementIdsCommand}"
+                                      Header="ElementId" />
+                            <MenuItem Command="{Binding CopyUniqueIdsCommand}"
+                                      Header="UniqueId" />
+                            <MenuItem Command="{Binding CopyIfcGuidsCommand}"
+                                      Header="IfcGuid" />
+                        </ContextMenu>
+                    </Button.ContextMenu>
                 </Button>
-                <mah:DropDownButton mah:ControlsHelper.CornerRadius="3"
-                                    ArrowVisibility="Collapsed"
-                                    BorderBrush="{StaticResource DevTools.MahApps.Brushes.Button.Border}"
-                                    ToolTip="Copy selected (ElementId / UniqueId / IfcGuid)">
-                    <mah:DropDownButton.Icon>
-                        <Path Width="14"
-                              Height="14"
-                              Data="{StaticResource QrCode}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                              Stretch="Uniform" />
-                    </mah:DropDownButton.Icon>
-                    <mah:DropDownButton.Items>
-                        <MenuItem Command="{Binding CopyElementIdsCommand}"
-                                  Header="ElementId" />
-                        <MenuItem Command="{Binding CopyUniqueIdsCommand}"
-                                  Header="UniqueId" />
-                        <MenuItem Command="{Binding CopyIfcGuidsCommand}"
-                                  Header="IfcGuid" />
-                    </mah:DropDownButton.Items>
-                </mah:DropDownButton>
             </UniformGrid>
 
             <TextBlock Grid.Row="4"
                        FontSize="10"
-                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray3}"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
                        Text="{Binding StatusText}"
                        TextWrapping="Wrap" />
         </Grid>

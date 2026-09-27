@@ -28,7 +28,6 @@ public partial class StubBuilderViewModel : ObservableObject
     public partial string SearchText { get; set; } = string.Empty;
     private ObservableCollection<AssemblyItem> AppDomainAssemblies { get; } = [];
     public ICollectionView FilteredAssemblies { get; }
-    public Action? CloseAction { get; set; }
     private CancellationTokenSource? _searchDebounceToken;
 
     public StubBuilderViewModel(string versionNumber)
@@ -186,8 +185,5 @@ public partial class StubBuilderViewModel : ObservableObject
     }
 
     private bool CanGenerate() => !IsGenerating;
-
-    [RelayCommand]
-    private void Cancel() => CloseAction?.Invoke();
 }
 

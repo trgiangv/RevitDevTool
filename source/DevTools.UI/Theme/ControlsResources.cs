@@ -2,11 +2,11 @@ using System.Windows;
 namespace DevTools.UI.Theme;
 
 /// <summary>
-/// Static ResourceDictionary for MahApps.Metro controls.
+/// Static ResourceDictionary for HandyControl themes and control styles.
 /// </summary>
 public class ControlsResources : ResourceDictionary
 {
-    private static ResourceDictionary? _controls;
+    private static ResourceDictionary? controls;
 
     public ControlsResources()
     {
@@ -14,7 +14,7 @@ public class ControlsResources : ResourceDictionary
     }
 
     /// <summary>
-    /// Gets the static MahApps.Metro controls resource dictionary.
+    /// Gets the static HandyControl resource dictionary (Themes/Theme.xaml).
     /// </summary>
-    private static ResourceDictionary Controls => _controls ??= ResourceUtils.GetMahAppsControls();
+    private static ResourceDictionary Controls => controls ??= ResourceUtils.GetHandyControls();
 }

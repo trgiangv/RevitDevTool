@@ -1,0 +1,12 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+    <system:Double x:Key="Length200">200</system:Double>
+    <system:Double x:Key="Length100">100</system:Double>
+    <system:Double x:Key="Length120">120</system:Double>
+    <system:Double x:Key="Length150">150</system:Double>
+    <system:Double x:Key="Length50">50</system:Double>
+    <system:Double x:Key="Length16">16</system:Double>
+    <system:Double x:Key="Length14">14</system:Double>
+    <Thickness x:Key="Thickness8">8</Thickness>
+</ResourceDictionary>

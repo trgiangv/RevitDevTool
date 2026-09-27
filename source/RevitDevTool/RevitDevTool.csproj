@@ -12,9 +12,6 @@
     <PropertyGroup>
         <ILRepackable>true</ILRepackable>
         <RepackBinariesExcludes>
-            DevTools.MahApps.Metro.dll;
-            DevTools.ControlzEx.dll;
-            DevTools.Microsoft.Xaml.Behaviors.dll;
             FSharp.Core.dll;
             DevTools.UI.dll;
             DevTools.NUnit.Runtime.dll;

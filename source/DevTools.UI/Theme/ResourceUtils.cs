@@ -1,38 +1,41 @@
 using System.Collections.ObjectModel;
+using System.Reflection;
 using System.Windows;
 // ReSharper disable ConvertToExtensionBlock
 
 namespace DevTools.UI.Theme;
 
 /// <summary>
-/// Resource helper class for loading ResourceDictionaries.
-/// Handles URI resolution for both standalone and ILRepack merged assemblies.
+/// Resource helper class for loading ResourceDictionaries compiled into this assembly.
 /// </summary>
 public static class ResourceUtils
 {
-    private static ResourceDictionary? _mahAppsControls;
-    private static ResourceDictionary? _mahAppsLightTheme;
-    private static ResourceDictionary? _mahAppsDarkTheme;
+    private static ResourceDictionary? handyControls;
+    private static ResourceDictionary? handyLightTheme;
+    private static ResourceDictionary? handyDarkTheme;
 
-    private static ResourceDictionary GetResource(string assemblyName, string resourcePath)
+    private static ResourceDictionary GetResource(string resourcePath)
     {
-        var uri = new Uri($"pack://application:,,,/{assemblyName};component/{resourcePath}", UriKind.Absolute);
-        return new ResourceDictionary { Source = uri };
+        var assemblyName = Assembly.GetExecutingAssembly().GetName().Name;
+        return new ResourceDictionary
+        {
+            Source = new Uri($"/{assemblyName};component/{resourcePath}", UriKind.RelativeOrAbsolute)
+        };
     }
 
-    public static ResourceDictionary GetMahAppsControls()
+    public static ResourceDictionary GetHandyControls()
     {
-        return _mahAppsControls ??= GetResource("DevTools.MahApps.Metro", "Styles/Controls.xaml");
+        return handyControls ??= GetResource("Themes/Theme.xaml");
     }
 
-    public static ResourceDictionary GetMahAppsLightTheme()
+    public static ResourceDictionary GetHandyLightTheme()
     {
-        return _mahAppsLightTheme ??= GetResource("DevTools.MahApps.Metro", "Styles/Themes/Light.Blue.xaml");
+        return handyLightTheme ??= GetResource("Themes/SkinDefault.xaml");
     }
 
-    public static ResourceDictionary GetMahAppsDarkTheme()
+    public static ResourceDictionary GetHandyDarkTheme()
     {
-        return _mahAppsDarkTheme ??= GetResource("DevTools.MahApps.Metro", "Styles/Themes/Dark.Blue.xaml");
+        return handyDarkTheme ??= GetResource("Themes/SkinDark.xaml");
     }
 
     public static void RemoveIfNotNull(this Collection<ResourceDictionary> mergedDictionaries, ResourceDictionary? item)

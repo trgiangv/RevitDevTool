@@ -7,13 +7,13 @@ namespace DevTools.UI.Theme.Design;
 /// </summary>
 internal static class DesignMode
 {
-    private static bool? _isDesignModeEnabled;
+    private static bool? isDesignModeEnabled;
 
     /// <summary>
     /// Gets a value that indicates whether the process is running in design mode.
     /// </summary>
     /// <returns><c>true</c> if the process is running in design mode; otherwise <c>false</c>.</returns>
-    public static bool IsDesignModeEnabled => _isDesignModeEnabled ??= DetectDesignMode();
+    public static bool IsDesignModeEnabled => isDesignModeEnabled ??= DetectDesignMode();
 
     private static bool DetectDesignMode()
     {

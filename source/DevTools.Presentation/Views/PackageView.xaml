@@ -5,7 +5,7 @@
              xmlns:control="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="http://devtools.execution/models"
              xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
@@ -50,40 +50,50 @@
                                FontWeight="SemiBold"
                                Text="{Binding Name}" />
                     <TextBlock Margin="6,0,0,0"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
                                Text="{Binding Children.Count, StringFormat='({0})'}" />
                 </StackPanel>
             </HierarchicalDataTemplate>
 
             <DataTemplate DataType="{x:Type models:PackageItemNode}">
-                <StackPanel Orientation="Horizontal">
-                    <Path Width="11"
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="PackageNameTb"
+                               Grid.Column="1"
+                               behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
+                               Text="{Binding Name}" />
+                    <Path Grid.Column="0"
+                          Width="11"
                           Height="11"
                           Margin="0,0,6,0"
+                          VerticalAlignment="Center"
                           Data="{StaticResource Box}"
-                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                          Fill="{Binding Path=Foreground, ElementName=PackageNameTb}"
                           Stretch="Uniform" />
-                    <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
-                               Text="{Binding Name}" />
-                    <Border Margin="6,0,0,0"
+                    <Border Grid.Column="2"
+                            Margin="6,0,0,0"
                             Padding="4,1"
-                            Background="{DynamicResource DevTools.MahApps.Brushes.Accent}"
+                            Background="{DynamicResource PrimaryBrush}"
                             CornerRadius="3"
-                            Visibility="{Binding IsLatest, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding IsLatest, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <TextBlock FontSize="10"
                                    FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextIconBrush}"
                                    Text="Latest" />
                     </Border>
-                </StackPanel>
+                </Grid>
             </DataTemplate>
 
             <Style x:Key="ExtendedTreeViewItemStyle"
                    d:DataContext="{d:DesignInstance models:TreeNodeBase}"
-                   BasedOn="{StaticResource DevTools.MahApps.Styles.TreeViewItem}"
+                   BasedOn="{StaticResource TreeViewItemBaseStyle}"
                    TargetType="{x:Type TreeViewItem}">
                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                 <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource Boolean2VisibilityConverter}}" />
             </Style>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -98,7 +108,7 @@
                                   ItemsSource="{Binding FilteredItems}"
                                   SelectedTreeItem="{Binding SelectedNode, Mode=TwoWay}">
             <control:ExtendedTreeView.ContextMenu>
-                <ContextMenu>
+                <ContextMenu Width="{StaticResource Length200}">
                     <MenuItem Command="{Binding RemoveCommand}"
                               Header="Remove" />
                     <MenuItem Command="{Binding RemoveAllCommand}"
@@ -115,16 +125,15 @@
         <Border Grid.Row="1"
                 Margin="0,6,0,0"
                 Padding="8,6"
-                Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+                Background="{DynamicResource RegionBrush}"
                 BorderThickness="1"
-                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                Visibility="{Binding IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}">
             <StackPanel>
                 <TextBlock FontSize="11"
-                           Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
                            Text="{Binding BusyMessage}" />
-                <mah:MetroProgressBar Height="6"
-                                      Margin="0,6,0,0"
-                                      IsIndeterminate="True" />
+                <hc:LoadingLine Margin="0,6,0,0"
+                                IsRunning="{Binding IsBusy}" />
             </StackPanel>
         </Border>
     </Grid>

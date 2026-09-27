@@ -3,14 +3,164 @@
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
         <UseWpf>true</UseWpf>
+        <Nullable>annotations</Nullable>
+        <NoWarn>$(NoWarn);0067;0649;1591;CA2022;SYSLIB0003;SYSLIB0004;SYSLIB0032</NoWarn>
+        <HandySharedDir>$(MSBuildThisFileDirectory)..\..\libs\HandyControl\src\Shared\HandyControl_Shared\</HandySharedDir>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\libs\MahApps.Metro\src\MahApps.Metro\MahApps.Metro.csproj" />
+        <Compile Include="$(HandySharedDir)Properties\AssemblyInfo.cs"/>
+        <Compile Include="$(HandySharedDir)Properties\Langs\Lang.Designer.cs"/>
+        <Compile Include="$(HandySharedDir)Properties\Langs\LangProvider.cs"/>
     </ItemGroup>
 
     <ItemGroup>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.tr.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.tr.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.ca-ES.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.ca-ES.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.cs.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.cs.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.en.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.en.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.es.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.es.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.fa.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.fa.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.fr.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.fr.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.ja.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.ja.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.ko-KR.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.ko-KR.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.pl.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.pl.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.pt-BR.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.pt-BR.resources</LogicalName>
+        </EmbeddedResource>
+        <EmbeddedResource Include="$(HandySharedDir)Properties\Langs\Lang.ru.resx">
+            <LogicalName>HandyControl.Properties.Langs.Lang.ru.resources</LogicalName>
+        </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Resource Include="$(HandySharedDir)Resources\dropper.cur">
+            <Link>Resources\dropper.cur</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Effects\BrightnessEffect.ps">
+            <Link>Resources\Effects\BrightnessEffect.ps</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Effects\ColorComplementEffect.ps">
+            <Link>Resources\Effects\ColorComplementEffect.ps</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Effects\ColorMatrixEffect.ps">
+            <Link>Resources\Effects\ColorMatrixEffect.ps</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Effects\ContrastEffect.ps">
+            <Link>Resources\Effects\ContrastEffect.ps</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Effects\GrayScaleEffect.ps">
+            <Link>Resources\Effects\GrayScaleEffect.ps</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\bottom.png">
+            <Link>Resources\Images\GlowWindow\bottom.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\bottomleft.png">
+            <Link>Resources\Images\GlowWindow\bottomleft.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\bottomright.png">
+            <Link>Resources\Images\GlowWindow\bottomright.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\cornerbottomleft.png">
+            <Link>Resources\Images\GlowWindow\cornerbottomleft.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\cornerbottomright.png">
+            <Link>Resources\Images\GlowWindow\cornerbottomright.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\cornertopleft.png">
+            <Link>Resources\Images\GlowWindow\cornertopleft.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\cornertopright.png">
+            <Link>Resources\Images\GlowWindow\cornertopright.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\left.png">
+            <Link>Resources\Images\GlowWindow\left.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\leftbottom.png">
+            <Link>Resources\Images\GlowWindow\leftbottom.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\lefttop.png">
+            <Link>Resources\Images\GlowWindow\lefttop.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\right.png">
+            <Link>Resources\Images\GlowWindow\right.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\rightbottom.png">
+            <Link>Resources\Images\GlowWindow\rightbottom.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\righttop.png">
+            <Link>Resources\Images\GlowWindow\righttop.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\top.png">
+            <Link>Resources\Images\GlowWindow\top.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\topleft.png">
+            <Link>Resources\Images\GlowWindow\topleft.png</Link>
+        </Resource>
+        <Resource Include="$(HandySharedDir)Resources\Images\GlowWindow\topright.png">
+            <Link>Resources\Images\GlowWindow\topright.png</Link>
+        </Resource>
         <Resource Include="Resources\icons\*.*"/>
+    </ItemGroup>
+
+    <Import Project="..\..\libs\HandyControl\src\Shared\HandyControl_Shared\HandyControl_Shared.projitems" Label="Shared"/>
+    <Import Project="..\..\libs\HandyControl\src\Shared\Microsoft.Expression.Drawing\Microsoft.Expression.Drawing.projitems" Label="Shared"/>
+    <Import Project="..\..\libs\HandyControl\src\Shared\System.Windows.Interactivity\System.Windows.Interactivity.projitems" Label="Shared"/>
+    <Import Project="..\..\libs\HandyControl\src\Shared\Microsoft.Expression.Interactions\Microsoft.Expression.Interactions.projitems" Label="Shared"/>
+
+    <!--Combine XAML-->
+    <Target Name="CombineHandyTheme" BeforeTargets="MarkupCompilePass1">
+        <PropertyGroup>
+            <_XamlCombineDir>$(HandySharedDir)Themes</_XamlCombineDir>
+        </PropertyGroup>
+        <Exec Command="&quot;$(_XamlCombineDir)\XamlCombine.exe&quot; Theme_GE45.txt Theme.xaml"
+              WorkingDirectory="$(_XamlCombineDir)"/>
+    </Target>
+
+    <!--Names embedded BAML themes/*.baml-->
+    <Target Name="LinkHandySharedItems" BeforeTargets="MarkupCompilePass1">
+        <PropertyGroup>
+            <_HandyRoot>$([System.IO.Path]::GetFullPath('$(HandySharedDir)'))</_HandyRoot>
+        </PropertyGroup>
+        <ItemGroup>
+            <Page>
+                <Link Condition="$([System.String]::Copy('%(FullPath)').StartsWith('$(_HandyRoot)', System.StringComparison.OrdinalIgnoreCase))">$([System.IO.Path]::GetRelativePath('$(_HandyRoot)', '%(FullPath)'))</Link>
+            </Page>
+            <EmbeddedResource>
+                <Link Condition="'%(Link)' == '' and $([System.String]::Copy('%(FullPath)').StartsWith('$(_HandyRoot)', System.StringComparison.OrdinalIgnoreCase))">$([System.IO.Path]::GetRelativePath('$(_HandyRoot)', '%(FullPath)'))</Link>
+            </EmbeddedResource>
+        </ItemGroup>
+    </Target>
+
+    <!--IntelliSense-->
+    <ItemGroup Condition="'$(DesignTimeBuild)' == 'true' AND '$(BuildingProject)' != 'true'">
+        <Reference Include="HandyControl">
+            <HintPath>..\..\libs\HandyControl\src\Net_GE45\HandyControl_Net_GE45\bin\$(Configuration)\$(TargetFramework)\HandyControl.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
     </ItemGroup>
 
 </Project>

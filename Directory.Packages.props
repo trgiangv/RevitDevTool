@@ -6,6 +6,7 @@
     </PropertyGroup>
     <ItemGroup>
         <!--Mirosoft-->
+        <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="$(MsVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions"
             Version="$(MsVersion)" />

@@ -1,6 +1,8 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="/DevTools.MahApps.Metro;component/Styles/Themes/Light.Blue.xaml" />
-        <ResourceDictionary Source="/DevTools.MahApps.Metro;component/Styles/Controls.xaml" />
+        <!--  ReSharper disable Xaml.PathError  -->
+        <ResourceDictionary Source="/HandyControl;component/../../Shared/HandyControl_Shared/Themes/Theme.xaml" />
+        <ResourceDictionary Source="/HandyControl;component/../../Shared/HandyControl_Shared/Themes/SkinDefault.xaml" />
+        <!--  ReSharper restore Xaml.PathError  -->
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:dui="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:models="clr-namespace:RevitDevTool.Tools.CommandBrowser.Models"
              xmlns:vm="clr-namespace:RevitDevTool.Tools.CommandBrowser.ViewModels"
@@ -12,7 +12,7 @@
              d:DataContext="{d:DesignInstance vm:CommandBrowserViewModel}"
              d:DesignHeight="32"
              d:DesignWidth="600"
-             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             Background="{DynamicResource RegionBrush}"
              mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -24,16 +24,12 @@
 
             <!--  Toolbar Favourite Toggle  -->
             <Style x:Key="DevTools.Styles.ToggleButton.Favorite"
-                   BasedOn="{StaticResource DevTools.MahApps.Styles.ToggleButton}"
                    TargetType="{x:Type ToggleButton}">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderBrush" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Padding" Value="0" />
                 <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                <Setter Property="mah:ControlsHelper.FocusBorderBrush" Value="Transparent" />
-                <Setter Property="mah:ControlsHelper.MouseOverBorderBrush" Value="Transparent" />
-                <Setter Property="mah:ControlsHelper.FocusBorderThickness" Value="0" />
                 <Setter Property="ContentTemplate">
                     <Setter.Value>
                         <DataTemplate>
@@ -43,11 +39,11 @@
                                   Stretch="Uniform">
                                 <Path.Style>
                                     <Style TargetType="{x:Type Path}">
-                                        <Setter Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.Accent3}" />
+                                        <Setter Property="Fill" Value="{DynamicResource LightPrimaryBrush}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType={x:Type ToggleButton}}}"
                                                          Value="True">
-                                                <Setter Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.AccentBase}" />
+                                                <Setter Property="Fill" Value="{DynamicResource DarkPrimaryBrush}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -68,7 +64,7 @@
                             <Condition Property="IsMouseOver" Value="True" />
                             <Condition Property="IsChecked" Value="True" />
                         </MultiTrigger.Conditions>
-                        <Setter Property="Background" Value="{DynamicResource DevTools.MahApps.Brushes.Gray8}" />
+                        <Setter Property="Background" Value="{DynamicResource SecondaryRegionBrush}" />
                         <Setter Property="BorderBrush" Value="Transparent" />
                     </MultiTrigger>
                 </Style.Triggers>
@@ -96,7 +92,7 @@
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center"
                                       Data="{StaticResource Bookmark}"
-                                      Fill="{DynamicResource DevTools.MahApps.Brushes.Accent2}"
+                                      Fill="{DynamicResource PrimaryBrush}"
                                       Opacity="0"
                                       Stretch="Uniform" />
                             </Border>
@@ -107,11 +103,11 @@
                                 </DataTrigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="1" />
-                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.Accent2}" />
+                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource PrimaryBrush}" />
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="1" />
-                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource DevTools.MahApps.Brushes.AccentBase}" />
+                                    <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource DarkPrimaryBrush}" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -147,7 +143,7 @@
                             Padding="2"
                             VerticalAlignment="Center"
                             Background="{Binding DataContext.IconsBackground, ElementName=CommandBrowserBar}"
-                            BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray6}"
+                            BorderBrush="{DynamicResource BorderBrush}"
                             BorderThickness="1"
                             CornerRadius="3">
                         <Image Width="16"
@@ -162,10 +158,10 @@
                                Margin="4,0,0,0"
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis">
-                        <Run Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                             Text="{Binding Command.RibbonInfo.Name, Mode=OneWay}" /><Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray2}"
-                             Text=" (" /><Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray2}"
-                             Text="{Binding Command.RibbonInfo.TabName, Mode=OneWay}" /><Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray2}"
+                        <Run Foreground="{DynamicResource PrimaryTextBrush}"
+                             Text="{Binding Command.RibbonInfo.Name, Mode=OneWay}" /><Run Foreground="{DynamicResource ThirdlyTextBrush}"
+                             Text=" (" /><Run Foreground="{DynamicResource ThirdlyTextBrush}"
+                             Text="{Binding Command.RibbonInfo.TabName, Mode=OneWay}" /><Run Foreground="{DynamicResource ThirdlyTextBrush}"
                              Text=")" />
                     </TextBlock>
 
@@ -184,7 +180,7 @@
                 <TextBlock Margin="4,4,4,2"
                            FontSize="11"
                            FontWeight="SemiBold"
-                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray4}"
+                           Foreground="{DynamicResource ThirdlyTextBrush}"
                            Text="{Binding Name}" />
             </DataTemplate>
         </ResourceDictionary>
@@ -214,11 +210,11 @@
                                   ItemsSource="{Binding AllItemsView}"
                                   MaxDropDownHeight="400"
                                   SelectionChanged="OnSelectionChanged"
-                                  Style="{DynamicResource DevTools.MahApps.Styles.ComboBox.Virtualized}"
+                                  Style="{DynamicResource ComboBoxExtend}"
                                   TextSearch.TextPath="Command.RibbonInfo.Name">
 
             <ComboBox.ItemContainerStyle>
-                <Style BasedOn="{StaticResource DevTools.MahApps.Styles.ComboBoxItem}"
+                <Style BasedOn="{StaticResource ComboBoxItemBaseStyle}"
                        TargetType="{x:Type ComboBoxItem}">
                     <Setter Property="HorizontalAlignment" Value="Stretch" />
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -239,15 +235,10 @@
                       Width="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
                       Height="{Binding ElementName=SearchComboBox, Path=ActualHeight}"
                       Margin="2,2,0,2"
-                      Padding="0"
                       Click="OnElementFinderToggle"
-                      Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}"
-                      ToolTip="Element Finder">
-            <Path Width="14"
-                  Height="14"
-                  Data="{StaticResource Search}"
-                  Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                  Stretch="Uniform" />
-        </ToggleButton>
+                      Style="{StaticResource ToggleButtonIcon}"
+                      ToolTip="Element Finder"
+                      hc:IconSwitchElement.Geometry="{StaticResource Search}"
+                      hc:IconSwitchElement.GeometrySelected="{StaticResource Search}" />
     </Grid>
 </UserControl>

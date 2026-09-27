@@ -1,5 +1,4 @@
 using System.Windows;
-using DevTools.UI;
 
 namespace DevTools.UI.Theme;
 
@@ -99,8 +98,7 @@ public sealed class ThemeManager : DependencyObject
 
     private void ApplyThemeToResources()
     {
-        if (ThemeResources.Current == null) return;
-        ThemeResources.Current.ApplyApplicationTheme(ActualApplicationTheme);
+        ThemeResources.Current?.ApplyApplicationTheme(ActualApplicationTheme);
     }
 
     #endregion

@@ -20,6 +20,12 @@ Headless-automatable gaps closed:
 [2026-09-04-known-test-gaps](../completed/2026-09-04-known-test-gaps.md).
 Remaining live-host / year-matrix / pixi-opt-in stay in `test-matrix.md`.
 
+## UI theme (closed)
+
+HandyControl compiles into loose `DevTools.UI`. Hosts do not ILRepack WPF:
+[completed](../completed/2026-09-26-handycontrol-replaces-mahapps.md)
+([0037](../../decisions/0037-handycontrol-replaces-mahapps.md)).
+
 ## MCP tests (active)
 
 Split god project `DevTools.Mcp.Tests` into module-scoped projects:

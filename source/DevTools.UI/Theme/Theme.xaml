@@ -1,12 +1,26 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:controls="clr-namespace:DevTools.UI.Controls"
                     xmlns:theme="clr-namespace:DevTools.UI.Theme">
 
     <ResourceDictionary.MergedDictionaries>
         <theme:ThemeResources />
         <theme:ControlsResources />
         <ResourceDictionary Source="/DevTools.UI;component/Theme/Styles/Icons.xaml" />
-        <ResourceDictionary Source="/DevTools.UI;component/Theme/Styles/Constants.xaml" />
+        <ResourceDictionary Source="/DevTools.UI;component/Theme/Styles/Sizes.xaml" />
+        <ResourceDictionary Source="/DevTools.UI;component/Controls/ColorPicker/ColorPicker.xaml" />
     </ResourceDictionary.MergedDictionaries>
+
+    <!--  Handy keys these on the parent control. An implicit style still applies when that assignment is absent  -->
+    <!--  ReSharper disable Xaml.StaticResourceNotResolved  -->
+    <Style BasedOn="{StaticResource ListBoxItemBaseStyle}"
+           TargetType="ListBoxItem" />
+    <Style BasedOn="{StaticResource ListViewItemBaseStyle}"
+           TargetType="ListViewItem" />
+    <Style BasedOn="{StaticResource ComboBoxItemBaseStyle}"
+           TargetType="ComboBoxItem" />
+    <Style BasedOn="{StaticResource TreeViewBaseStyle}"
+           TargetType="{x:Type controls:ExtendedTreeView}" />
+    <!--  ReSharper restore Xaml.StaticResourceNotResolved  -->
 
 </ResourceDictionary>

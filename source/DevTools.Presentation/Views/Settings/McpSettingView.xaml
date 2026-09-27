@@ -3,10 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:DevTools.Presentation.ViewModels.Settings"
-             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             d:Background="{DynamicResource RegionBrush}"
              d:DataContext="{d:DesignInstance settings:McpSettingViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="600"
@@ -27,13 +27,15 @@
 
             <!--  DevTools Daemon (Remote AI Clients)  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="DevTools Daemon">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Streamable Http"
+                      Style="{StaticResource GroupBoxTab.Small}">
                 <Grid>
                     <StackPanel Margin="5">
                         <TextBlock Margin="0,0,0,4"
                                    FontSize="11"
-                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                   Text="Remote AI clients connect through the DevTools Daemon — ChatGPT, Claude, Perplexity, Gemini, and other Streamable HTTP MCP clients."
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   Text="Remote AI clients connect through the DevTools Daemon — ChatGPT, Claude, Perplexity, and other Streamable HTTP MCP clients."
                                    TextWrapping="Wrap" />
 
                         <TextBlock Margin="0,10,0,0"
@@ -53,14 +55,15 @@
                     </StackPanel>
 
                     <!--  Sign-in overlay  -->
-                    <Border Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+                    <Border Background="{DynamicResource RegionBrush}"
                             Opacity="0.85"
-                            Visibility="{Binding IsSigningIn, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding IsSigningIn, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Stretch"
                                     VerticalAlignment="Center">
-                            <mah:ProgressRing Width="40"
+                            <hc:LoadingCircle Width="40"
                                               Height="40"
-                                              IsActive="{Binding IsSigningIn}" />
+                                              HorizontalAlignment="Center"
+                                              IsRunning="{Binding IsSigningIn}" />
                             <TextBlock Margin="0,8,0,0"
                                        HorizontalAlignment="Center"
                                        FontSize="12"
@@ -76,17 +79,20 @@
 
             <!--  Stdio (Local Desktop Apps)  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Stdio">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Stdio"
+                      Style="{StaticResource GroupBoxTab.Small}">
                 <StackPanel Margin="5">
                     <TextBlock Margin="0,0,0,4"
                                FontSize="11"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                               Text="For local desktop AI clients that support stdio transport — Cursor, VS Code, OpenCode, Claude Desktop, Codex, Windsurf, and any MCP-compatible client. Point your AI client to DevTools.Daemon.exe (the daemon tray app must be running)."
+                               Foreground="{DynamicResource SecondaryTextBrush}"
+                               Text="For local desktop AI clients that support stdio transport — Cursor, VS Code, OpenCode, Claude Desktop, Codex, Windsurf, and any MCP-compatible client. Point your AI client to DevTools.Daemon.exe."
                                TextWrapping="Wrap" />
                     <TextBox Margin="0,8,0,0"
+                             Padding="5"
                              FontFamily="Consolas"
                              FontSize="11"
-                             Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                             Foreground="{DynamicResource PrimaryTextBrush}"
                              IsReadOnly="True"
                              Text="{Binding StdioConfigSnippet, Mode=OneTime}"
                              TextWrapping="NoWrap" />
@@ -95,9 +101,10 @@
 
             <!--  Custom Loaded Sources  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Custom Loaded Sources">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Custom Loaded Sources"
+                      Style="{StaticResource GroupBoxTab.Small}">
                 <ListBox MinHeight="200"
-                         Margin="5"
                          ItemsSource="{Binding ToolsetSources}"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          VirtualizingPanel.IsVirtualizing="True"
@@ -107,7 +114,7 @@
                                TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             <Setter Property="Padding" Value="4,2" />
-                            <Setter Property="mah:ControlsHelper.CornerRadius" Value="4" />
+                            <Setter Property="hc:BorderElement.CornerRadius" Value="4" />
                         </Style>
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
@@ -122,26 +129,18 @@
                                 <TextBlock Grid.Column="0"
                                            VerticalAlignment="Center"
                                            FontSize="11"
-                                           Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                                           Foreground="{DynamicResource PrimaryTextBrush}"
                                            Text="{Binding}"
                                            TextTrimming="CharacterEllipsis"
                                            ToolTip="{Binding}" />
 
                                 <Button Grid.Column="1"
-                                        Width="20"
-                                        Height="20"
                                         Margin="6,0,0,0"
-                                        BorderBrush="Transparent"
-                                        BorderThickness="0"
+                                        hc:IconElement.Geometry="{StaticResource Clear}"
                                         Command="{Binding DataContext.RemoveSourceCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                         CommandParameter="{Binding}"
-                                        ToolTip="Remove">
-                                    <Path Width="8"
-                                          Height="8"
-                                          Data="{StaticResource Clear}"
-                                          Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                                          Stretch="Uniform" />
-                                </Button>
+                                        Style="{StaticResource ButtonIcon.Small}"
+                                        ToolTip="Remove" />
                             </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

@@ -6,7 +6,6 @@
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
-             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              d:DataContext="{d:DesignInstance viewModels:MemoryViewModel}"
              d:DesignHeight="100"
              d:DesignWidth="450"
@@ -24,7 +23,7 @@
     </UserControl.Resources>
 
     <Border Padding="10,8"
-            BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+            BorderBrush="{DynamicResource SecondaryRegionBrush}"
             BorderThickness="1"
             CornerRadius="6">
         <Grid>
@@ -43,51 +42,51 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock FontSize="11"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
                                Text="Working Set:" />
                     <TextBlock Margin="5,0,0,0"
                                FontSize="11"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
                                Text="{Binding WorkingSetMb, Mode=OneWay, StringFormat='{}{0:F1} MB'}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1"
                             HorizontalAlignment="Center"
                             Orientation="Horizontal">
                     <TextBlock FontSize="11"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
                                Text="Private:" />
                     <TextBlock Margin="5,0,0,0"
                                FontSize="11"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
                                Text="{Binding PrivateMb, Mode=OneWay, StringFormat='{}{0:F1} MB'}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2"
                             HorizontalAlignment="Center"
                             Orientation="Horizontal">
                     <TextBlock FontSize="11"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                               Foreground="{DynamicResource SecondaryTextBrush}"
                                Text="Managed:" />
                     <TextBlock Margin="5,0,0,0"
                                FontSize="11"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
                                Text="{Binding ManagedMb, Mode=OneWay, StringFormat='{}{0:F1} MB'}" />
                 </StackPanel>
                 <TextBlock Grid.Column="3"
                            Margin="8,0,0,0"
                            HorizontalAlignment="Right"
                            FontSize="11">
-                    <Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
                          Text="H/T: " />
                     <Run FontWeight="SemiBold"
-                         Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                         Foreground="{DynamicResource PrimaryTextBrush}"
                          Text="{Binding HandleCount, Mode=OneWay}" />
-                    <Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
                          Text=" / " />
                     <Run FontWeight="SemiBold"
-                         Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                         Foreground="{DynamicResource PrimaryTextBrush}"
                          Text="{Binding ThreadCount, Mode=OneWay}" />
                 </TextBlock>
             </Grid>
@@ -109,7 +108,7 @@
                            Visibility="{Binding LastExecutionMode, Converter={StaticResource ModeToVisibilityConverter}, Mode=OneWay}" />
                     <TextBlock FontSize="11"
                                FontWeight="SemiBold"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
                                Text="{Binding LastOperationName, Mode=OneWay}"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
@@ -133,29 +132,29 @@
                            VerticalAlignment="Center"
                            DockPanel.Dock="Right"
                            FontSize="10"
-                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                           Foreground="{DynamicResource SecondaryTextBrush}"
                            Text="{Binding LastOperationDurationMs, Mode=OneWay, StringFormat='{}{0} ms'}" />
                 <TextBlock VerticalAlignment="Center"
                            FontSize="10">
-                    <Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
                          Text="ΔPrivate: " />
                     <Run FontWeight="SemiBold"
                          Foreground="{Binding LastDeltaPrivateBrush, Mode=OneWay}"
                          Text="{Binding LastDeltaPrivateMb, Mode=OneWay, StringFormat='{}{0:+0.0;-0.0;0.0} MB'}" />
-                    <Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
                          Text="   ΔManaged: " />
                     <Run FontWeight="SemiBold"
                          Foreground="{Binding LastDeltaManagedBrush, Mode=OneWay}"
                          Text="{Binding LastDeltaManagedMb, Mode=OneWay, StringFormat='{}{0:+0.0;-0.0;0.0} MB'}" />
-                    <Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
                          Text="   ΔHandles: " />
                     <Run FontWeight="SemiBold"
                          Foreground="{Binding LastDeltaHandlesBrush, Mode=OneWay}"
                          Text="{Binding LastDeltaHandles, Mode=OneWay, StringFormat='{}{0:+#;-#;0}'}" />
-                    <Run Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
                          Text="   Peak: " />
                     <Run FontWeight="SemiBold"
-                         Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray2}"
+                         Foreground="{DynamicResource ThirdlyTextBrush}"
                          Text="{Binding LastPeakPrivateDeltaMb, Mode=OneWay, StringFormat='{}{0:+0.0;-0.0;0.0} MB'}" />
                 </TextBlock>
             </DockPanel>

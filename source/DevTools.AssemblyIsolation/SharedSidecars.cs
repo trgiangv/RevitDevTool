@@ -20,6 +20,10 @@ public static class SharedSidecars
         "ControlzEx",
         "Microsoft.Xaml.Behaviors",
         "FSharp.Core",
+        "HandyControl",
+        "MaterialDesignThemes.Wpf",
+        "MaterialDesignColors",
+        "Wpf.Ui",
     ];
 
     public static bool Contains(string? simpleName) =>

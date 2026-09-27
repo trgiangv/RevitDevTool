@@ -3,10 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:DevTools.Presentation.ViewModels.Settings"
-             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             d:Background="{DynamicResource RegionBrush}"
              d:DataContext="{d:DesignInstance settings:GeneralSettingsViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="600"
@@ -26,7 +25,9 @@
         <StackPanel Margin="5">
             <!--  Theme  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Theme">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Theme"
+                      Style="{StaticResource GroupBoxTab.Small}">
                 <Grid Margin="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -36,11 +37,11 @@
                         <TextBlock FontWeight="SemiBold"
                                    Text="Application Theme" />
                         <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
                                    Text="Customise the application theme" />
                     </StackPanel>
                     <ComboBox Grid.Column="1"
-                              Width="120"
+                              Width="{StaticResource Length120}"
                               VerticalAlignment="Center"
                               ItemsSource="{Binding Themes, Mode=OneTime}"
                               SelectedItem="{Binding Theme}" />
@@ -49,7 +50,9 @@
 
             <!--  Performance  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Performance">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Performance"
+                      Style="{StaticResource GroupBoxTab.Small}">
                 <StackPanel>
                     <Grid Margin="8">
                         <Grid.ColumnDefinitions>
@@ -60,12 +63,12 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Hardware graphics acceleration" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Offloads graphic rendering from the CPU to the GPU" />
                         </StackPanel>
-                        <mah:ToggleSwitch Grid.Column="1"
-                                          MinWidth="60"
-                                          IsOn="{Binding UseHardwareRendering}" />
+                        <ToggleButton Grid.Column="1"
+                                      IsChecked="{Binding UseHardwareRendering}"
+                                      Style="{StaticResource ToggleButtonSwitch}" />
                     </Grid>
                     <Grid Margin="8,0,8,8">
                         <Grid.ColumnDefinitions>
@@ -76,19 +79,21 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Memory monitor" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Shows realtime process memory and operation tracking" />
                         </StackPanel>
-                        <mah:ToggleSwitch Grid.Column="1"
-                                          MinWidth="60"
-                                          IsOn="{Binding IsMemoryEnabled}" />
+                        <ToggleButton Grid.Column="1"
+                                      IsChecked="{Binding IsMemoryEnabled}"
+                                      Style="{StaticResource ToggleButtonSwitch}" />
                     </Grid>
                 </StackPanel>
             </GroupBox>
 
             <!--  Privacy  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Privacy">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Privacy"
+                      Style="{StaticResource GroupBoxTab.Small}">
                 <Grid Margin="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -98,13 +103,13 @@
                         <TextBlock FontWeight="SemiBold"
                                    Text="Anonymous diagnostics" />
                         <TextBlock FontSize="11"
-                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
-                                   TextWrapping="Wrap"
-                                   Text="Optional. Helps maintainers spot crashes and usage patterns. No model content or script source." />
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   Text="Optional. Helps maintainers spot crashes and usage patterns. No model content or script source."
+                                   TextWrapping="Wrap" />
                     </StackPanel>
-                    <mah:ToggleSwitch Grid.Column="1"
-                                      MinWidth="60"
-                                      IsOn="{Binding EnableTelemetry}" />
+                    <ToggleButton Grid.Column="1"
+                                  IsChecked="{Binding EnableTelemetry}"
+                                  Style="{StaticResource ToggleButtonSwitch}" />
                 </Grid>
             </GroupBox>
         </StackPanel>

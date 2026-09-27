@@ -3,11 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:settings="clr-namespace:DevTools.Presentation.ViewModels.Settings"
-             xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             d:Background="{DynamicResource RegionBrush}"
              d:DataContext="{d:DesignInstance settings:LogSettingsViewModel}"
              d:DesignHeight="850"
              d:DesignWidth="600"
@@ -19,18 +18,17 @@
                 <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
                 <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-            <sys:Double x:Key="ContentMinWidth">100</sys:Double>
-            <sys:Double x:Key="ToggleSwitchMinWidth">60</sys:Double>
         </ResourceDictionary>
     </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled"
                   VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="5">
+        <hc:SimpleStackPanel Margin="5">
             <!--  Log Filter  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Log Filter">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Log Filter"
+                      Style="{StaticResource GroupBoxTab.Small}">
                 <StackPanel Margin="8,5,8,8">
                     <!--  Minimum Level  -->
                     <Grid>
@@ -43,7 +41,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource LogLevel}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -51,11 +49,11 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Minimum Level" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Minimum level for displaying logs" />
                         </StackPanel>
                         <ComboBox Grid.Column="2"
-                                  Width="{StaticResource ContentMinWidth}"
+                                  Width="{StaticResource Length100}"
                                   VerticalAlignment="Center"
                                   ItemsSource="{Binding LogLevels, Mode=OneTime}"
                                   SelectedItem="{Binding LogLevel}" />
@@ -65,34 +63,84 @@
                               Header="Level Detection Keywords"
                               IsExpanded="False">
                         <StackPanel>
-                            <TextBlock Margin="0,4"
-                                       FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                            <TextBlock Margin="0,0,0,5"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="comma-separated, max 5 keywords for each level" />
-                            <!--  Information Keywords  -->
-                            <TextBox Margin="0,4"
-                                     mah:TextBoxHelper.UseFloatingWatermark="True"
-                                     mah:TextBoxHelper.Watermark="Information"
-                                     mah:ValidationHelper.ShowValidationErrorOnMouseOver="True"
-                                     Text="{Binding InformationKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
-                            <!--  Warning Keywords  -->
-                            <TextBox Margin="0,4"
-                                     mah:TextBoxHelper.UseFloatingWatermark="True"
-                                     mah:TextBoxHelper.Watermark="Warning"
-                                     mah:ValidationHelper.ShowValidationErrorOnMouseOver="True"
-                                     Text="{Binding WarningKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
-                            <!--  Error Keywords  -->
-                            <TextBox Margin="0,4"
-                                     mah:TextBoxHelper.UseFloatingWatermark="True"
-                                     mah:TextBoxHelper.Watermark="Error"
-                                     mah:ValidationHelper.ShowValidationErrorOnMouseOver="True"
-                                     Text="{Binding ErrorKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
-                            <!--  Critical Keywords  -->
-                            <TextBox Margin="0,4"
-                                     mah:TextBoxHelper.UseFloatingWatermark="True"
-                                     mah:TextBoxHelper.Watermark="Critical"
-                                     mah:ValidationHelper.ShowValidationErrorOnMouseOver="True"
-                                     Text="{Binding CriticalKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+
+                            <!--  Information  -->
+                            <DockPanel Margin="0,0,0,5"
+                                       LastChildFill="True"
+                                       ToolTip="Information">
+
+                                <Path Width="{StaticResource Length14}"
+                                      Height="{StaticResource Length14}"
+                                      Margin="5,0"
+                                      VerticalAlignment="Center"
+                                      Data="{StaticResource InfoGeometry}"
+                                      DockPanel.Dock="Left"
+                                      Fill="{StaticResource InfoBrush}"
+                                      Stretch="Uniform" />
+
+                                <hc:TextBox hc:InfoElement.Placeholder="Information"
+                                            Style="{StaticResource TextBoxExtend}"
+                                            Text="{Binding InformationKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+                            </DockPanel>
+
+                            <!--  Warning  -->
+                            <DockPanel Margin="0,0,0,5"
+                                       LastChildFill="True"
+                                       ToolTip="Warning">
+
+                                <Path Width="{StaticResource Length14}"
+                                      Height="{StaticResource Length14}"
+                                      Margin="5,0"
+                                      VerticalAlignment="Center"
+                                      Data="{StaticResource WarningGeometry}"
+                                      DockPanel.Dock="Left"
+                                      Fill="{StaticResource WarningBrush}"
+                                      Stretch="Uniform" />
+
+                                <hc:TextBox hc:InfoElement.Placeholder="Warning"
+                                            Style="{StaticResource TextBoxExtend}"
+                                            Text="{Binding WarningKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+                            </DockPanel>
+
+                            <!--  Error  -->
+                            <DockPanel Margin="0,0,0,5"
+                                       LastChildFill="True"
+                                       ToolTip="Error">
+
+                                <Path Width="{StaticResource Length14}"
+                                      Height="{StaticResource Length14}"
+                                      Margin="5,0"
+                                      VerticalAlignment="Center"
+                                      Data="{StaticResource ErrorGeometry}"
+                                      DockPanel.Dock="Left"
+                                      Fill="{StaticResource DangerBrush}"
+                                      Stretch="Uniform" />
+
+                                <hc:TextBox hc:InfoElement.Placeholder="Error"
+                                            Style="{StaticResource TextBoxExtend}"
+                                            Text="{Binding ErrorKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+                            </DockPanel>
+
+                            <!--  Critical  -->
+                            <DockPanel LastChildFill="True"
+                                       ToolTip="Critical">
+
+                                <Path Width="{StaticResource Length14}"
+                                      Height="{StaticResource Length14}"
+                                      Margin="5,0"
+                                      VerticalAlignment="Center"
+                                      Data="{StaticResource FatalGeometry}"
+                                      DockPanel.Dock="Left"
+                                      Fill="{StaticResource AccentBrush}"
+                                      Stretch="Uniform" />
+
+                                <hc:TextBox hc:InfoElement.Placeholder="Critical"
+                                            Style="{StaticResource TextBoxExtend}"
+                                            Text="{Binding CriticalKeywords, ValidatesOnDataErrors=True, UpdateSourceTrigger=PropertyChanged, NotifyOnValidationError=True}" />
+                            </DockPanel>
                         </StackPanel>
                     </Expander>
                 </StackPanel>
@@ -100,8 +148,12 @@
 
             <!--  Stack Trace  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Stack Trace">
-                <StackPanel Margin="8">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Stack Trace"
+                      Style="{StaticResource GroupBoxTab.Small}">
+                <hc:UniformSpacingPanel Margin="8"
+                                        Orientation="Vertical"
+                                        Spacing="8">
                     <!--  Stack Trace  -->
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -113,7 +165,7 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Stack}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
@@ -121,27 +173,28 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Include Stack Trace" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Include stack trace frame information" />
                         </StackPanel>
                         <StackPanel Grid.Column="2"
                                     Orientation="Vertical">
-                            <mah:ToggleSwitch MinWidth="{StaticResource ToggleSwitchMinWidth}"
-                                              HorizontalAlignment="Right"
-                                              VerticalAlignment="Bottom"
-                                              IsOn="{Binding IncludeStackTrace}" />
-                            <mah:NumericUpDown Width="{StaticResource ContentMinWidth}"
-                                               Margin="0,8,0,0"
-                                               HorizontalAlignment="Right"
-                                               VerticalAlignment="Center"
-                                               Minimum="1"
-                                               Visibility="{Binding IncludeStackTrace, Converter={StaticResource BoolToVisibility}}"
-                                               Value="{Binding StackTraceDepth, UpdateSourceTrigger=PropertyChanged}" />
+                            <ToggleButton HorizontalAlignment="Right"
+                                          VerticalAlignment="Bottom"
+                                          IsChecked="{Binding IncludeStackTrace}"
+                                          Style="{StaticResource ToggleButtonSwitch}" />
+                            <hc:NumericUpDown Width="{StaticResource Length100}"
+                                              Margin="0,8,0,0"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Center"
+                                              Increment="1"
+                                              Minimum="1"
+                                              Visibility="{Binding IncludeStackTrace, Converter={StaticResource Boolean2VisibilityConverter}}"
+                                              Value="{Binding StackTraceDepth, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
                     </Grid>
 
                     <!--  WPF Trace  -->
-                    <Grid Margin="0,8,0,0">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -157,29 +210,34 @@
                             <TextBlock FontWeight="SemiBold"
                                        Text="Include WPF Trace" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Include presentation trace information" />
                         </StackPanel>
                         <StackPanel Grid.Column="2"
                                     Orientation="Vertical">
-                            <mah:ToggleSwitch MinWidth="{StaticResource ToggleSwitchMinWidth}"
-                                              HorizontalAlignment="Right"
-                                              IsOn="{Binding IncludeWpfTrace}" />
-                            <ComboBox Width="{StaticResource ContentMinWidth}"
+                            <ToggleButton HorizontalAlignment="Right"
+                                          VerticalAlignment="Bottom"
+                                          IsChecked="{Binding IncludeWpfTrace}"
+                                          Style="{StaticResource ToggleButtonSwitch}" />
+                            <ComboBox Width="{StaticResource Length100}"
                                       Margin="0,8,0,0"
                                       HorizontalAlignment="Right"
                                       ItemsSource="{Binding SourceLevels, Mode=OneTime}"
                                       SelectedItem="{Binding WpfTraceLevel}"
-                                      Visibility="{Binding IncludeWpfTrace, Converter={StaticResource BoolToVisibility}}" />
+                                      Visibility="{Binding IncludeWpfTrace, Converter={StaticResource Boolean2VisibilityConverter}}" />
                         </StackPanel>
                     </Grid>
-                </StackPanel>
+                </hc:UniformSpacingPanel>
             </GroupBox>
 
             <!--  Log Sinks  -->
             <GroupBox Margin="0,0,0,8"
-                      Header="Log Sinks">
-                <StackPanel Margin="8,5,8,8">
+                      Background="{StaticResource RegionBrush}"
+                      Header="Log Sinks"
+                      Style="{StaticResource GroupBoxTab.Small}">
+                <hc:UniformSpacingPanel Margin="8,5,8,8"
+                                        Orientation="Vertical"
+                                        Spacing="12">
                     <!--  Target Selector  -->
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -191,28 +249,26 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource MonitorLog}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
+                        <hc:SimpleStackPanel Grid.Column="1"
+                                             Margin="12,0"
+                                             VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
                                        Text="Active Sinks" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Select logging output destinations" />
-                        </StackPanel>
-                        <mah:MultiSelectionComboBox Grid.Column="2"
-                                                    Width="200"
-                                                    VerticalAlignment="Center"
-                                                    mah:MultiSelectorHelper.SelectedItems="{Binding SelectedLogTargets}"
-                                                    ItemContainerStyle="{StaticResource DevTools.MahApps.Styles.MultiSelectionComboBoxItem.CheckBox}"
-                                                    ItemsSource="{Binding AvailableLogTargets, Mode=OneTime}"
-                                                    SelectionMode="Multiple" />
+                        </hc:SimpleStackPanel>
+                        <hc:CheckComboBox Grid.Column="2"
+                                          Width="{StaticResource Length200}"
+                                          VerticalAlignment="Center"
+                                          hc:ListBoxAttach.SelectedItems="{Binding SelectedLogTargets, Mode=OneWay}"
+                                          ItemsSource="{Binding AvailableLogTargets, Mode=OneTime}" />
                     </Grid>
 
                     <!--  JSON Output  -->
-                    <Grid Margin="0,12,0,0">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -222,26 +278,25 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource PrettyJson}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
+                        <hc:SimpleStackPanel Grid.Column="1"
+                                             Margin="12,0"
+                                             VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
                                        Text="JSON" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Use JSON format for all logging outputs" />
-                        </StackPanel>
-                        <mah:ToggleSwitch Grid.Column="2"
-                                          MinWidth="{StaticResource ToggleSwitchMinWidth}"
-                                          HorizontalAlignment="Right"
-                                          IsOn="{Binding EnableJson}" />
+                        </hc:SimpleStackPanel>
+                        <ToggleButton Grid.Column="2"
+                                      HorizontalAlignment="Right"
+                                      IsChecked="{Binding EnableJson}"
+                                      Style="{StaticResource ToggleButtonSwitch}" />
                     </Grid>
 
                     <!--  Optional enrichers (host-provided)  -->
-                    <Grid Margin="0,12,0,0"
-                          Visibility="{Binding HasEnrichers, Converter={StaticResource BoolToVisibility}}">
+                    <Grid Visibility="{Binding HasEnrichers, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -251,35 +306,37 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource RevitEnricher}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
+                        <hc:SimpleStackPanel Grid.Column="1"
+                                             Margin="12,0"
+                                             VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
                                        Text="Log enrichers" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Add optional context fields to JSON logs" />
-                        </StackPanel>
-                        <mah:MultiSelectionComboBox Grid.Column="2"
-                                                    Width="300"
-                                                    VerticalAlignment="Center"
-                                                    mah:MultiSelectorHelper.SelectedItems="{Binding SelectedEnrichers}"
-                                                    ItemContainerStyle="{StaticResource DevTools.MahApps.Styles.MultiSelectionComboBoxItem.CheckBox}"
-                                                    ItemsSource="{Binding AvailableEnrichers, Mode=OneTime}"
-                                                    SelectionMode="Multiple" />
+                        </hc:SimpleStackPanel>
+                        <hc:CheckComboBox Grid.Column="2"
+                                          Width="{StaticResource Length200}"
+                                          VerticalAlignment="Center"
+                                          hc:ListBoxAttach.SelectedItems="{Binding SelectedEnrichers, Mode=OneWay}"
+                                          ItemsSource="{Binding AvailableEnrichers, Mode=OneTime}" />
                     </Grid>
-                </StackPanel>
+                </hc:UniformSpacingPanel>
             </GroupBox>
 
             <!--  File Logging  -->
             <GroupBox Margin="0,0,0,8"
+                      Background="{StaticResource RegionBrush}"
                       Header="File Logging"
-                      Visibility="{Binding IsFileTargetSelected, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel Margin="8,5,8,8">
+                      Style="{StaticResource GroupBoxTab.Small}"
+                      Visibility="{Binding IsFileTargetSelected, Converter={StaticResource Boolean2VisibilityConverter}}">
+                <hc:UniformSpacingPanel Margin="8,5,8,8"
+                                        Orientation="Vertical"
+                                        Spacing="12">
                     <!--  Rolling Interval  -->
-                    <Grid Margin="0,12,0,0">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -289,26 +346,26 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Clock}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
+                        <hc:SimpleStackPanel Grid.Column="1"
+                                             Margin="12,0"
+                                             VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
                                        Text="Rolling Interval" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Create new file every" />
-                        </StackPanel>
+                        </hc:SimpleStackPanel>
                         <ComboBox Grid.Column="2"
-                                  Width="{StaticResource ContentMinWidth}"
+                                  Width="{StaticResource Length100}"
                                   VerticalAlignment="Center"
                                   ItemsSource="{Binding LogTimeIntervals, Mode=OneTime}"
                                   SelectedItem="{Binding TimeInterval}" />
                     </Grid>
 
                     <!--  Auto Clean  -->
-                    <Grid Margin="0,12,0,0">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -318,25 +375,25 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Clear}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
+                        <hc:SimpleStackPanel Grid.Column="1"
+                                             Margin="12,0"
+                                             VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
                                        Text="Auto Clean" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Delete old log files when Revit startup or shutdown" />
-                        </StackPanel>
-                        <mah:ToggleSwitch Grid.Column="2"
-                                          MinWidth="{StaticResource ToggleSwitchMinWidth}"
-                                          VerticalAlignment="Bottom"
-                                          IsOn="{Binding AutoClean}" />
+                        </hc:SimpleStackPanel>
+                        <ToggleButton Grid.Column="2"
+                                      VerticalAlignment="Bottom"
+                                      IsChecked="{Binding AutoClean}"
+                                      Style="{StaticResource ToggleButtonSwitch}" />
                     </Grid>
 
                     <!--  Log Folder  -->
-                    <Grid Margin="0,12,0,0">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -346,31 +403,35 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Folder}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0">
+                        <hc:SimpleStackPanel Grid.Column="1"
+                                             Margin="12,0">
                             <TextBlock FontWeight="SemiBold"
                                        Text="Log Folder" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="{Binding LogFolder}"
                                        TextTrimming="CharacterEllipsis"
                                        ToolTip="{Binding LogFolder}" />
-                        </StackPanel>
+                        </hc:SimpleStackPanel>
                         <Button Grid.Column="2"
                                 Padding="8,4"
                                 Command="{Binding BrowseFolderCommand}"
                                 Content="Browse..." />
                     </Grid>
-                </StackPanel>
+                </hc:UniformSpacingPanel>
             </GroupBox>
 
             <!--  HTTP Logging  -->
             <GroupBox Margin="0,0,0,8"
+                      Background="{StaticResource RegionBrush}"
                       Header="HTTP Logging"
-                      Visibility="{Binding IsHttpTargetSelected, Converter={StaticResource BoolToVisibility}}">
-                <StackPanel Margin="8,5,8,8">
+                      Style="{StaticResource GroupBoxTab.Small}"
+                      Visibility="{Binding IsHttpTargetSelected, Converter={StaticResource Boolean2VisibilityConverter}}">
+                <hc:UniformSpacingPanel Margin="8,5,8,8"
+                                        Orientation="Vertical"
+                                        Spacing="12">
                     <!--  Endpoint  -->
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -382,27 +443,26 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource Link}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
+                        <hc:SimpleStackPanel Grid.Column="1"
+                                             Margin="12,0"
+                                             VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
                                        Text="Endpoint" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="HTTP endpoint URL to send logs" />
-                        </StackPanel>
+                        </hc:SimpleStackPanel>
                         <TextBox Grid.Column="2"
-                                 Width="250"
+                                 Width="{StaticResource Length200}"
                                  VerticalAlignment="Center"
-                                 mah:TextBoxHelper.UseFloatingWatermark="True"
-                                 mah:TextBoxHelper.Watermark="https://..."
+                                 hc:InfoElement.Placeholder="https://..."
                                  Text="{Binding HttpEndpoint, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
 
                     <!--  Batch Size  -->
-                    <Grid Margin="0,12,0,0">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -412,26 +472,26 @@
                               Height="20"
                               VerticalAlignment="Center"
                               Data="{StaticResource BulletList}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                              Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <StackPanel Grid.Column="1"
-                                    Margin="12,0"
-                                    VerticalAlignment="Center">
+                        <hc:SimpleStackPanel Grid.Column="1"
+                                             Margin="12,0"
+                                             VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
                                        Text="Batch Size" />
                             <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Number of log entries per HTTP request" />
-                        </StackPanel>
-                        <mah:NumericUpDown Grid.Column="2"
-                                           Width="{StaticResource ContentMinWidth}"
-                                           VerticalAlignment="Center"
-                                           Minimum="1"
-                                           Value="{Binding HttpBatchSize, UpdateSourceTrigger=PropertyChanged}" />
+                        </hc:SimpleStackPanel>
+                        <hc:NumericUpDown Grid.Column="2"
+                                          Width="{StaticResource Length100}"
+                                          VerticalAlignment="Center"
+                                          Increment="1"
+                                          Minimum="1"
+                                          Value="{Binding HttpBatchSize, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
-
-                </StackPanel>
+                </hc:UniformSpacingPanel>
             </GroupBox>
-        </StackPanel>
+        </hc:SimpleStackPanel>
     </ScrollViewer>
 </UserControl>

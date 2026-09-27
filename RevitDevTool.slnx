@@ -807,6 +807,21 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
+        <Project Path="tests/DevTools.HandyControl.Tests/DevTools.HandyControl.Tests.csproj">
+            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
+            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
+            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
+            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
+            <Build Project="false" />
+        </Project>
         <Project Path="tests/DevTools.Utilities.Tests/DevTools.Utilities.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
@@ -1017,21 +1032,6 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project Path="tests/DevTools.MahApps.Metro.Tests/DevTools.MahApps.Metro.Tests.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
-            <Build Project="false" />
-        </Project>
         <Project Path="tests/DevTools.NUnit.Host.Tests/DevTools.NUnit.Host.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
@@ -1094,35 +1094,7 @@
         </Project>
     </Folder>
     <Folder Name="/Libs/">
-        <Project Path="libs/MahApps.Metro/src/MahApps.Metro/MahApps.Metro.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
-        </Project>
-        <Project Path="libs/ControlzEx/src/ControlzEx/ControlzEx.csproj">
-            <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2025|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2026|*" Project="Debug" />
-            <BuildType Solution="Debug.Autodesk.2027|*" Project="Debug" />
-            <BuildType Solution="Release.Autodesk.2022|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2023|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2024|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2025|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2026|*" Project="Release" />
-            <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
-        </Project>
-        <Project Path="libs/XamlBehaviorsWpf/src/Microsoft.Xaml.Behaviors/Microsoft.Xaml.Behaviors.csproj">
+        <Project Path="libs/HandyControl/src/Net_GE45/HandyControl_Net_GE45/HandyControl_Net_GE45.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />

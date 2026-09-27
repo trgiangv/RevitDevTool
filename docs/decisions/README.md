@@ -31,6 +31,9 @@ here.
   link tokens (`linkInstanceId@` + three kinds), host-space zoom, Element
   Finder, and `RevitDevTool.Tools` ownership of select/search + Command
   Browser. GeoViz / Inspect pick-to-overlay is out of scope.
+  [0037](0037-handycontrol-replaces-mahapps.md) is **Accepted** and landed.
+  HandyControl source compiles into loose `DevTools.UI`. Hosts do not
+  ILRepack WPF. MahApps, ControlzEx, and Xaml Behaviors are gone.
 
 ## Index
 
@@ -69,3 +72,4 @@ here.
 | [0034](0034-execution-mstest-sdk-scoped-tests.md) | Execution tests: scoped MSTest.Sdk + first-party coverage | Accepted |
 | [0035](0035-mstest-sdk-repo-tests.md) | In-repo tests: MSTest.Sdk 4.4.0 + first-party coverage | Accepted |
 | [0036](0036-revit-monitor-link-element-tokens.md) | Revit link tokens, Element Finder, `RevitDevTool.Tools` | Accepted |
+| [0037](0037-handycontrol-replaces-mahapps.md) | HandyControl compiles into loose `DevTools.UI`; WPF stays out of ILRepack | Accepted |

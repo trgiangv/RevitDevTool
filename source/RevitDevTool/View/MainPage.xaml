@@ -4,15 +4,14 @@
              xmlns:converters="clr-namespace:DevTools.UI.Converters;assembly=DevTools.UI"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:system="clr-namespace:System;assembly=System.Runtime"
              xmlns:view="clr-namespace:RevitDevTool.View"
              xmlns:viewModels="http://devtools.presentation"
              d:DataContext="{d:DesignInstance viewModels:MainViewModel}"
              d:DesignHeight="600"
-             d:DesignWidth="450"
-             Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+             d:DesignWidth="600"
+             Background="{DynamicResource RegionBrush}"
              mc:Ignorable="d">
 
     <UserControl.Resources>
@@ -34,53 +33,68 @@
         </Grid.RowDefinitions>
 
         <DockPanel Grid.Row="0"
-                   Margin="5"
+                   Margin="5,0"
                    LastChildFill="False">
-            <!--  Toggle Buttons  -->
-            <ToggleButton Padding="7,4"
-                          BorderThickness="0.5"
-                          IsChecked="{Binding IsSettingsVisible, UpdateSourceTrigger=PropertyChanged}"
-                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}">
-                <Path Width="16"
-                      Height="16"
-                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                      Stretch="Uniform">
-                    <Path.Style>
-                        <Style TargetType="Path">
-                            <Setter Property="Data" Value="{StaticResource Settings}" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Path=IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
-                                             Value="True">
-                                    <Setter Property="Data" Value="{StaticResource ArrowLeft}" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Path.Style>
-                </Path>
-            </ToggleButton>
-            <ToggleButton Margin="5,0,0,0"
-                          Padding="7,4"
-                          BorderThickness="0.5"
-                          IsChecked="{Binding IsExecutionVisible}"
-                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}"
-                          ToolTip="Execution">
-                <Path Width="16"
-                      Height="16"
-                      Data="{StaticResource Code}"
-                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                      Stretch="Uniform" />
+            <ToggleButton IsChecked="{Binding IsSettingsVisible, UpdateSourceTrigger=PropertyChanged}"
+                          Style="{StaticResource ToggleButtonFlip}">
+                <hc:StatusSwitchElement.CheckedElement>
+                    <Border Background="{StaticResource PrimaryBrush}">
+                        <Path Width="{StaticResource Length16}"
+                              Height="{StaticResource Length16}"
+                              Data="{StaticResource ArrowLeft}"
+                              Fill="{DynamicResource TextIconBrush}"
+                              Stretch="Uniform" />
+                    </Border>
+                </hc:StatusSwitchElement.CheckedElement>
+                <Border>
+                    <Path Width="{StaticResource Length16}"
+                          Height="{StaticResource Length16}"
+                          Data="{StaticResource Settings}"
+                          Fill="{DynamicResource PrimaryTextBrush}"
+                          Stretch="Uniform" />
+                </Border>
             </ToggleButton>
             <ToggleButton Margin="5,0"
-                          Padding="7,4"
-                          BorderThickness="0.5"
+                          IsChecked="{Binding IsExecutionVisible}"
+                          Style="{StaticResource ToggleButtonFlip}"
+                          ToolTip="Execution">
+                <hc:StatusSwitchElement.CheckedElement>
+                    <Border Background="{StaticResource PrimaryBrush}">
+                        <Path Width="{StaticResource Length16}"
+                              Height="{StaticResource Length16}"
+                              Data="{StaticResource Code}"
+                              Fill="{DynamicResource TextIconBrush}"
+                              Stretch="Uniform" />
+                    </Border>
+                </hc:StatusSwitchElement.CheckedElement>
+                <Border>
+                    <Path Width="{StaticResource Length16}"
+                          Height="{StaticResource Length16}"
+                          Data="{StaticResource Code}"
+                          Fill="{DynamicResource PrimaryTextBrush}"
+                          Stretch="Uniform" />
+                </Border>
+            </ToggleButton>
+            <ToggleButton Margin="0,0,5,0"
                           IsChecked="{Binding IsMcpVisible}"
-                          Style="{DynamicResource DevTools.MahApps.Styles.ToggleButton.Circle}"
+                          Style="{StaticResource ToggleButtonFlip}"
                           ToolTip="MCP">
-                <Path Width="16"
-                      Height="16"
-                      Data="{StaticResource Mcp}"
-                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                      Stretch="Uniform" />
+                <hc:StatusSwitchElement.CheckedElement>
+                    <Border Background="{StaticResource PrimaryBrush}">
+                        <Path Width="{StaticResource Length16}"
+                              Height="{StaticResource Length16}"
+                              Data="{StaticResource Mcp}"
+                              Fill="{DynamicResource TextIconBrush}"
+                              Stretch="Uniform" />
+                    </Border>
+                </hc:StatusSwitchElement.CheckedElement>
+                <Border>
+                    <Path Width="{StaticResource Length16}"
+                          Height="{StaticResource Length16}"
+                          Data="{StaticResource Mcp}"
+                          Fill="{DynamicResource PrimaryTextBrush}"
+                          Stretch="Uniform" />
+                </Border>
             </ToggleButton>
 
             <!--  Action Buttons  -->
@@ -90,45 +104,30 @@
                 <TextBlock Margin="5,0"
                            VerticalAlignment="Center"
                            FontSize="11"
-                           Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                           Foreground="{StaticResource SecondaryTextBrush}"
                            Text="{Binding ProcessId, Mode=OneTime, StringFormat='PID: {0}'}" />
-                <Button Padding="0"
+                <Button hc:IconElement.Geometry="{StaticResource ClearLog}"
+                        hc:IconElement.Height="{StaticResource Length14}"
+                        hc:IconElement.Width="{StaticResource Length14}"
                         BorderThickness="0.5"
                         Command="{Binding LogViewModel.ClearCommand}"
-                        ToolTip="Clear Log">
-                    <StackPanel Margin="0"
-                                Orientation="Horizontal">
-                        <Path Width="14"
-                              Height="14"
-                              Margin="5,0,0,0"
-                              Data="{StaticResource ClearLog}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                              Stretch="Uniform" />
-                        <TextBlock Margin="5"
-                                   Text="Clear Log" />
-                    </StackPanel>
-                </Button>
+                        Content="Clear Log"
+                        ToolTip="Clear Log" />
                 <Button Margin="5,0"
-                        Padding="0"
+                        hc:IconElement.Geometry="{StaticResource ClearGeometry}"
+                        hc:IconElement.Height="{StaticResource Length14}"
+                        hc:IconElement.Width="{StaticResource Length14}"
                         BorderThickness="0.5"
                         Command="{Binding LogViewModel.ClearGeometryCommand}"
                         ToolTip="Clear Geometry">
                     <StackPanel Margin="0"
                                 Orientation="Horizontal">
-                        <Path Width="14"
-                              Height="14"
-                              Margin="5,0,0,0"
-                              Data="{StaticResource ClearGeometry}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                              Stretch="Uniform" />
-                        <TextBlock Margin="5"
-                                   Text="Clear Geometry" />
-                        <Grid Height="20"
-                              Margin="0,0,5,0"
+                        <TextBlock Text="Clear Geometry" />
+                        <Grid Margin="5,0,0,0"
                               HorizontalAlignment="Stretch"
                               VerticalAlignment="Center"
                               Visibility="{Binding LogViewModel.GeometryCount, Converter={StaticResource IntToVisibility}}">
-                            <Rectangle Fill="{DynamicResource DevTools.MahApps.Brushes.Accent}"
+                            <Rectangle Fill="{StaticResource PrimaryBrush}"
                                        RadiusX="3"
                                        RadiusY="3" />
                             <TextBlock Margin="3"
@@ -137,49 +136,29 @@
                                        VerticalAlignment="Center"
                                        FontSize="10"
                                        FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextIconBrush}"
                                        IsHitTestVisible="False"
                                        Text="{Binding LogViewModel.GeometryCount}" />
                         </Grid>
                     </StackPanel>
                 </Button>
                 <Button Margin="0,0,5,0"
-                        Padding="0"
+                        hc:IconElement.Geometry="{StaticResource Folder}"
+                        hc:IconElement.Height="{StaticResource Length14}"
+                        hc:IconElement.Width="{StaticResource Length14}"
                         BorderThickness="0.5"
                         Command="{Binding OpenLogFolderCommand}"
-                        ToolTip="Open log folder">
-                    <StackPanel Margin="0"
-                                Orientation="Horizontal">
-                        <Path Width="14"
-                              Height="14"
-                              Margin="5,0,0,0"
-                              Data="{StaticResource Folder}"
-                              Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                              Stretch="Uniform" />
-                        <TextBlock Margin="5,0"
-                                   Text="Log Folder" />
-                    </StackPanel>
-                </Button>
-                <mah:ToggleSwitch MinWidth="0"
-                                  ContentPadding="0"
-                                  DataContext="{Binding LogViewModel}"
-                                  IsOn="{Binding IsStarted}"
-                                  OffContent=""
-                                  OnContent="">
-                    <mah:ToggleSwitch.Resources>
-                        <!--  ReSharper disable Xaml.RedundantResource  -->
-                        <GridLength x:Key="ToggleSwitchContentSpaceMargin">0</GridLength>
-                        <system:Double x:Key="ToggleSwitchThemeMinWidth">0</system:Double>
-                        <GridLength x:Key="ToggleSwitchPreContentMargin">0</GridLength>
-                        <GridLength x:Key="ToggleSwitchPostContentMargin">0</GridLength>
-                        <!--  ReSharper restore Xaml.RedundantResource  -->
-                    </mah:ToggleSwitch.Resources>
-                </mah:ToggleSwitch>
+                        Content="Log Folder"
+                        ToolTip="Open log folder" />
+                <ToggleButton DataContext="{Binding LogViewModel}"
+                              IsChecked="{Binding IsStarted}"
+                              Style="{StaticResource ToggleButtonSwitch}" />
             </StackPanel>
         </DockPanel>
 
         <!--  Content  -->
         <Grid Grid.Row="1"
-              Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}">
+              Background="{DynamicResource RegionBrush}">
 
             <!--  Control Grid Splitter Height  -->
             <Grid Margin="5,0,5,5"
@@ -226,7 +205,7 @@
                 <!--  LogMonitor  -->
                 <Border Grid.Row="1"
                         Padding="2"
-                        BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                        BorderBrush="{DynamicResource SecondaryRegionBrush}"
                         BorderThickness="1"
                         CornerRadius="6"
                         SnapsToDevicePixels="True">
@@ -236,7 +215,10 @@
                 <GridSplitter Grid.Row="2"
                               Height="2"
                               Margin="0,5"
-                              Background="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                              HorizontalAlignment="Stretch"
+                              Background="{DynamicResource SecondaryRegionBrush}"
+                              ResizeBehavior="PreviousAndNext"
+                              ResizeDirection="Rows"
                               ShowsPreview="False"
                               Visibility="{Binding ShowLogMonitorOnly, Converter={StaticResource InverseBoolToVisibility}}" />
 
@@ -254,7 +236,6 @@
             <!--  Setting  -->
             <Border Margin="5,0,5,5"
                     Padding="2"
-                    BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Visibility="{Binding IsSettingsVisible, Converter={StaticResource BoolToVisibility}}">

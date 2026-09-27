@@ -1,4 +1,5 @@
-using MahApps.Metro.Controls;
+using HandyControl.Controls;
+using HandyControl.Data;
 using RevitDevTool.View.Settings.Visualization;
 using System.Windows;
 
@@ -16,18 +17,31 @@ public partial class VisualizationSettingsView
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (HamburgerMenuControl.SelectedItem is HamburgerMenuIconItem item)
+        if (FindSelectedSideMenuItem() is { } item)
         {
             NavigateTo(item.Tag?.ToString());
         }
     }
 
-    private void OnMenuItemInvoked(object sender, HamburgerMenuItemInvokedEventArgs e)
+    private void OnSideMenuSelectionChanged(object sender, FunctionEventArgs<object> e)
     {
-        if (e.InvokedItem is HamburgerMenuIconItem item)
+        if (e.Info is SideMenuItem item)
         {
             NavigateTo(item.Tag?.ToString());
         }
+    }
+
+    private SideMenuItem? FindSelectedSideMenuItem()
+    {
+        foreach (var child in SideMenuControl.Items)
+        {
+            if (child is SideMenuItem { IsSelected: true } selected)
+            {
+                return selected;
+            }
+        }
+
+        return SideMenuControl.Items.OfType<SideMenuItem>().FirstOrDefault();
     }
 
     private void NavigateTo(string? tag)
@@ -53,6 +67,6 @@ public partial class VisualizationSettingsView
             if (view is not null) _viewCache[viewType] = view;
         }
 
-        HamburgerMenuControl.Content = view;
+        ContentArea.Content = view;
     }
 }

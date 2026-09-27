@@ -7,7 +7,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:executionModels="http://devtools.execution/models"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
              d:DataContext="{d:DesignInstance viewModels:CommandViewModel}"
@@ -58,19 +58,19 @@
                     <Ellipse Width="8"
                              Height="8"
                              Margin="5,0,0,0"
-                             Fill="Green"
+                             Fill="{StaticResource SuccessBrush}"
                              ToolTip="Last executed"
-                             Visibility="{Binding IsLastExecuted, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                             Visibility="{Binding IsLastExecuted, Converter={StaticResource Boolean2VisibilityConverter}}" />
                 </StackPanel>
             </DataTemplate>
 
             <Style x:Key="ExtendedTreeViewItemStyle"
                    d:DataContext="{d:DesignInstance executionModels:ExecutionNodeBase}"
-                   BasedOn="{StaticResource DevTools.MahApps.Styles.TreeViewItem}"
+                   BasedOn="{StaticResource TreeViewItemBaseStyle}"
                    TargetType="{x:Type TreeViewItem}">
                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                 <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource Boolean2VisibilityConverter}}" />
                 <Setter Property="control:MouseDoubleClick.CommandParameter" Value="{Binding}" />
                 <Setter Property="control:MouseDoubleClick.Command" Value="{Binding Path=DataContext.(viewModels:CommandViewModel.ExecuteCommand), RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type control:ExtendedTreeView}}}" />
             </Style>
@@ -98,7 +98,7 @@
                                 Command="{Binding RemoveCommand}" />
                 </control:ExtendedTreeView.InputBindings>
                 <control:ExtendedTreeView.ContextMenu>
-                    <ContextMenu>
+                    <ContextMenu Width="{StaticResource Length200}">
                         <MenuItem Command="{Binding ExecuteCommand}"
                                   Header="Execute" />
                         <MenuItem Command="{Binding OpenLocationCommand}"
@@ -115,7 +115,7 @@
             <Border Panel.ZIndex="10"
                     Background="#AA1E1E1E"
                     IsHitTestVisible="False"
-                    Visibility="{Binding IsDropMaskVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    Visibility="{Binding IsDropMaskVisible, Converter={StaticResource Boolean2VisibilityConverter}}">
                 <StackPanel HorizontalAlignment="Center"
                             VerticalAlignment="Center">
                     <TextBlock x:Name="DropMaskTitle"
@@ -137,9 +137,9 @@
         <Border Grid.Row="1"
                 Margin="0,5,0,0"
                 Padding="10,6"
-                Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+                Background="{DynamicResource RegionBrush}"
                 BorderThickness="1"
-                Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}">
+                Visibility="{Binding IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}">
             <StackPanel>
                 <StackPanel Margin="0,0,0,6"
                             HorizontalAlignment="Center"
@@ -150,13 +150,12 @@
                            Source="{Binding BusyExecutionMode, Converter={StaticResource ExecutionModeIconConverter}}"
                            Visibility="{Binding BusyExecutionMode, Converter={StaticResource ExecutionModeVisibilityConverter}}" />
                     <TextBlock FontSize="9"
-                               Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                               Foreground="{DynamicResource PrimaryTextBrush}"
                                Text="{Binding BusyMessage}"
                                TextAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
                 </StackPanel>
-                <mah:MetroProgressBar Height="6"
-                                      IsIndeterminate="True" />
+                <hc:LoadingLine IsRunning="{Binding IsBusy}" />
             </StackPanel>
         </Border>
 

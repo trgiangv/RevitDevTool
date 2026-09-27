@@ -5,10 +5,9 @@
              xmlns:converters="clr-namespace:DevTools.Presentation.Converters"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
-             d:Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
              d:DataContext="{d:DesignInstance viewModels:McpRegistryViewModel}"
              d:DesignHeight="500"
              d:DesignWidth="500"
@@ -20,11 +19,6 @@
                 <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
                 <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
-
-            <Style x:Key="InfoBlock"
-                   TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}" />
-            </Style>
 
             <converters:ExecutionModeImageConverter x:Key="ExecutionModeToIcon" />
 
@@ -48,7 +42,7 @@
                                  Rows="1">
                         <Border Margin="0,0,5,0"
                                 Padding="6"
-                                BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                                BorderBrush="{DynamicResource SecondaryRegionBrush}"
                                 BorderThickness="1"
                                 CornerRadius="4">
                             <StackPanel>
@@ -60,80 +54,78 @@
                                              ToolTip="{Binding McpPipeTooltip}">
                                         <Ellipse.Style>
                                             <Style TargetType="Ellipse">
-                                                <Setter Property="Fill" Value="#FF9E9E9E" />
+                                                <Setter Property="Fill" Value="{StaticResource BorderBrush}" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding McpIsConnected}"
                                                                  Value="True">
-                                                        <Setter Property="Fill" Value="#4CAF50" />
+                                                        <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
                                                     </DataTrigger>
                                                     <MultiDataTrigger>
                                                         <MultiDataTrigger.Conditions>
-                                                            <Condition Binding="{Binding McpIsListening}"
-                                                                       Value="True" />
-                                                            <Condition Binding="{Binding McpIsConnected}"
-                                                                       Value="False" />
+                                                            <Condition Binding="{Binding McpIsListening}" Value="True" />
+                                                            <Condition Binding="{Binding McpIsConnected}" Value="False" />
                                                         </MultiDataTrigger.Conditions>
-                                                        <Setter Property="Fill" Value="#FFB300" />
+                                                        <Setter Property="Fill" Value="{StaticResource WarningBrush}" />
                                                     </MultiDataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Ellipse.Style>
                                     </Ellipse>
                                     <TextBlock FontSize="10"
-                                               Style="{StaticResource InfoBlock}"
+                                               Foreground="{StaticResource PrimaryTextBrush}"
                                                Text="Total Tool" />
                                 </StackPanel>
                                 <TextBlock FontSize="12"
                                            FontWeight="SemiBold"
-                                           Style="{StaticResource InfoBlock}"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            Text="{Binding TotalToolCount}" />
                             </StackPanel>
                         </Border>
 
                         <Border Margin="2,0"
                                 Padding="6"
-                                BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                                BorderBrush="{DynamicResource SecondaryRegionBrush}"
                                 BorderThickness="1"
                                 CornerRadius="4">
                             <StackPanel>
                                 <TextBlock FontSize="10"
-                                           Style="{StaticResource InfoBlock}"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            Text=".NET Tools" />
                                 <TextBlock FontSize="12"
                                            FontWeight="SemiBold"
-                                           Style="{StaticResource InfoBlock}"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            Text="{Binding DotNetToolCount}" />
                             </StackPanel>
                         </Border>
 
                         <Border Margin="2,0"
                                 Padding="6"
-                                BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                                BorderBrush="{DynamicResource SecondaryRegionBrush}"
                                 BorderThickness="1"
                                 CornerRadius="4">
                             <StackPanel>
                                 <TextBlock FontSize="10"
-                                           Style="{StaticResource InfoBlock}"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            Text="Python Tools" />
                                 <TextBlock FontSize="12"
                                            FontWeight="SemiBold"
-                                           Style="{StaticResource InfoBlock}"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            Text="{Binding PythonToolCount}" />
                             </StackPanel>
                         </Border>
 
                         <Border Margin="4,0,0,0"
                                 Padding="6"
-                                BorderBrush="{DynamicResource DevTools.MahApps.Brushes.Gray8}"
+                                BorderBrush="{DynamicResource SecondaryRegionBrush}"
                                 BorderThickness="1"
                                 CornerRadius="4">
                             <StackPanel>
                                 <TextBlock FontSize="10"
-                                           Style="{StaticResource InfoBlock}"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            Text="Total Called" />
                                 <TextBlock FontSize="12"
                                            FontWeight="SemiBold"
-                                           Style="{StaticResource InfoBlock}"
+                                           Foreground="{StaticResource PrimaryTextBrush}"
                                            Text="{Binding TotalCalled}" />
                             </StackPanel>
                         </Border>
@@ -145,7 +137,7 @@
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling">
                         <ListBox.ItemContainerStyle>
-                            <Style BasedOn="{StaticResource {x:Type ListBoxItem}}"
+                            <Style BasedOn="{StaticResource ListBoxItemBaseStyle}"
                                    TargetType="ListBoxItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                 <Setter Property="Padding" Value="4,3" />
@@ -172,16 +164,16 @@
                                                 Orientation="Horizontal">
                                         <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding NameHighlight}"
                                                    FontWeight="SemiBold"
-                                                   Style="{StaticResource InfoBlock}"
                                                    Text="{Binding Name}"
                                                    TextTrimming="CharacterEllipsis" />
                                         <Border Margin="6,0,0,0"
                                                 Padding="5,1"
                                                 VerticalAlignment="Center"
-                                                Background="{DynamicResource DevTools.MahApps.Brushes.Accent}"
+                                                Background="{DynamicResource PrimaryBrush}"
                                                 CornerRadius="3">
                                             <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding GroupNameHighlight}"
                                                        FontSize="10"
+                                                       Foreground="{StaticResource TextIconBrush}"
                                                        Text="{Binding GroupName}"
                                                        TextTrimming="CharacterEllipsis" />
                                         </Border>
@@ -191,10 +183,11 @@
                                             Margin="6,0,0,0"
                                             Padding="6,2"
                                             VerticalAlignment="Center"
-                                            Background="{DynamicResource DevTools.MahApps.Brushes.Accent}"
+                                            Background="{DynamicResource PrimaryBrush}"
                                             CornerRadius="6">
                                         <TextBlock FontSize="10"
                                                    FontWeight="SemiBold"
+                                                   Foreground="{StaticResource TextIconBrush}"
                                                    Text="{Binding CallCount, StringFormat='Call: {0}'}" />
                                     </Border>
                                 </Grid>
@@ -205,18 +198,17 @@
                     <Border Grid.Row="2"
                             Margin="0,6,0,0"
                             Padding="10,6"
-                            Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+                            Background="{DynamicResource RegionBrush}"
                             BorderThickness="1"
-                            Visibility="{Binding ShowStatusPanel, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding ShowStatusPanel, Converter={StaticResource Boolean2VisibilityConverter}}">
                         <StackPanel>
                             <TextBlock FontSize="9"
-                                       Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                                       Foreground="{DynamicResource PrimaryTextBrush}"
                                        Text="{Binding StatusPanelText}"
                                        TextAlignment="Center"
                                        TextTrimming="CharacterEllipsis" />
-                            <mah:MetroProgressBar Height="6"
-                                                  Margin="0,6,0,0"
-                                                  IsIndeterminate="True" />
+                            <hc:LoadingLine Margin="0,6,0,0"
+                                            IsRunning="{Binding ShowStatusPanel}" />
                         </StackPanel>
                     </Border>
 
@@ -276,23 +268,16 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBox Grid.Column="0"
-                     mah:TextBoxHelper.ClearTextButton="True"
-                     mah:TextBoxHelper.Watermark="Search tools..."
-                     Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <hc:TextBox Grid.Column="0"
+                        hc:InfoElement.Placeholder="Search tools..."
+                        hc:InfoElement.ShowClearButton="True"
+                        Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
             <Button Grid.Column="1"
-                    Width="28"
-                    Height="28"
                     Margin="2,0,0,0"
+                    hc:IconElement.Geometry="{StaticResource Refresh}"
                     Command="{Binding ReloadCommand}"
-                    ToolTip="Reload tool registry">
-                <Path Width="12"
-                      Height="12"
-                      Data="{StaticResource Refresh}"
-                      Fill="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                      Stretch="Uniform" />
-            </Button>
+                    ToolTip="Reload tool registry" />
         </Grid>
 
         <ContentControl Grid.Row="1"

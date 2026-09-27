@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-        xmlns:mah="http://metro.devtools.ui/winfx/xaml/controls"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:models="clr-namespace:DevTools.Presentation.Models"
         xmlns:viewModels="clr-namespace:DevTools.Presentation.ViewModels"
@@ -15,7 +15,7 @@
         d:DataContext="{d:DesignInstance Type=viewModels:StubBuilderViewModel}"
         d:DesignHeight="650"
         d:DesignWidth="700"
-        Background="{DynamicResource DevTools.MahApps.Brushes.ThemeBackground}"
+        Background="{DynamicResource SecondaryRegionBrush}"
         ShowInTaskbar="False"
         WindowStartupLocation="CenterOwner"
         mc:Ignorable="d">
@@ -45,11 +45,8 @@
                     Orientation="Horizontal">
 
             <CheckBox Margin="0,0,12,0"
-                      VerticalAlignment="Center"
                       Content="Hide unchecked"
-                      Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
-                      IsChecked="{Binding HideUnchecked}"
-                      Style="{StaticResource DevTools.MahApps.Styles.CheckBox.Win10}" />
+                      IsChecked="{Binding HideUnchecked}" />
 
             <Button Margin="0,0,8,0"
                     Command="{Binding SelectAllCommand}"
@@ -59,13 +56,13 @@
                     Content="Check None" />
         </StackPanel>
 
-        <!--  Search TextBox  -->
-        <TextBox Grid.Row="1"
-                 Margin="0,0,0,8"
-                 VerticalContentAlignment="Center"
-                 mah:TextBoxHelper.ClearTextButton="True"
-                 mah:TextBoxHelper.Watermark="Search assemblies..."
-                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+        <!--  Search  -->
+        <hc:TextBox Grid.Row="1"
+                    Margin="0,0,0,8"
+                    VerticalContentAlignment="Center"
+                    hc:InfoElement.Placeholder="Search assemblies..."
+                    hc:InfoElement.ShowClearButton="True"
+                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
         <!--  Assembly CheckListBox  -->
         <ListBox Grid.Row="2"
@@ -76,7 +73,7 @@
                  VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Recycling">
             <ListBox.ItemContainerStyle>
-                <Style BasedOn="{StaticResource DevTools.MahApps.Styles.ListBoxItem.CheckList}"
+                <Style BasedOn="{StaticResource ListBoxItemBaseStyle}"
                        TargetType="ListBoxItem">
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="OnAssemblyItemDoubleClick" />
@@ -86,18 +83,15 @@
                 <DataTemplate DataType="models:AssemblyItem">
                     <StackPanel Orientation="Horizontal">
                         <CheckBox Margin="0,0,6,0"
-                                  VerticalAlignment="Center"
                                   Focusable="True"
-                                  IsChecked="{Binding IsSelected}"
-                                  Style="{StaticResource DevTools.MahApps.Styles.CheckBox.MultiSelectionComboBoxItem}" />
+                                  IsChecked="{Binding IsSelected}" />
                         <TextBlock VerticalAlignment="Center"
                                    FontWeight="SemiBold"
-                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
                                    Text="{Binding Name}" />
                         <TextBlock MaxWidth="350"
                                    Margin="8,0,0,0"
                                    VerticalAlignment="Center"
-                                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Gray}"
+                                   Foreground="{DynamicResource ThirdlyTextBrush}"
                                    Text="{Binding Location}"
                                    TextTrimming="CharacterEllipsis" />
                     </StackPanel>
@@ -118,7 +112,7 @@
                        Margin="0,0,8,0"
                        VerticalAlignment="Center"
                        FontWeight="SemiBold"
-                       Foreground="{DynamicResource DevTools.MahApps.Brushes.ThemeForeground}"
+                       Foreground="{DynamicResource PrimaryTextBrush}"
                        Text="Output Path:" />
 
             <TextBox Grid.Column="1"
@@ -136,7 +130,7 @@
         <TextBlock Grid.Row="4"
                    Margin="0,0,0,8"
                    FontSize="11"
-                   Foreground="{DynamicResource DevTools.MahApps.Brushes.Accent}"
+                   Foreground="{DynamicResource PrimaryBrush}"
                    Text="{Binding StatusMessage}"
                    TextWrapping="Wrap" />
 
@@ -145,28 +139,20 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <mah:MetroProgressBar Grid.Column="0"
-                                  Height="6"
-                                  Margin="0,0,15,0"
-                                  VerticalAlignment="Center"
-                                  IsIndeterminate="{Binding IsGenerating}"
-                                  Visibility="{Binding IsGenerating, Converter={StaticResource BooleanToVisibilityConverter}}" />
+            <ProgressBar Grid.Column="0"
+                         Margin="0,0,15,0"
+                         VerticalAlignment="Center"
+                         IsIndeterminate="{Binding IsGenerating}"
+                         Visibility="{Binding IsGenerating, Converter={StaticResource Boolean2VisibilityConverter}}" />
 
             <Button Grid.Column="1"
                     Width="100"
-                    Margin="0,0,8,0"
                     Padding="16,6"
                     Command="{Binding GenerateStubsCommand}"
-                    Content="Generate" />
-
-            <Button Grid.Column="2"
-                    Width="100"
-                    Padding="16,6"
-                    Command="{Binding CancelCommand}"
-                    Content="Cancel" />
+                    Content="Generate"
+                    Style="{StaticResource ButtonPrimary}" />
         </Grid>
     </Grid>
 </Window>
