@@ -2,6 +2,7 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Composition;
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Views;
 using DevTools.Daemon.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,20 +20,29 @@ public sealed class CompositionIntegrationTests
     [TestMethod]
     public void CreateDesktop_RegistersDesktopServices()
     {
-        using var host = ServerHostBuilder.CreateDesktop();
-        Assert.IsNotNull(host.Services.GetService<ControlPipeHandler>());
-        Assert.IsNotNull(host.Services.GetService<GatewayHostedService>());
-        Assert.IsNotNull(host.Services.GetService<ITunnelStatusProvider>());
+        WpfApplicationTestBase.RunShared(() =>
+        {
+            using var host = ServerHostBuilder.CreateDesktop();
+            Assert.IsNotNull(host.Services.GetService<ControlPipeHandler>());
+            Assert.IsNotNull(host.Services.GetService<GatewayHostedService>());
+            Assert.IsNotNull(host.Services.GetService<ITunnelStatusProvider>());
+        });
     }
 
     [TestMethod]
     public async Task CreateDesktop_StartsControlAndGatewayServices()
     {
-        using var host = ServerHostBuilder.CreateDesktop();
+        var host = default(IHost);
+        WpfApplicationTestBase.RunShared(() =>
+        {
+            host = ServerHostBuilder.CreateDesktop();
+            _ = host.Services.GetRequiredService<TrayMenu>();
+        });
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-        await host.StartAsync(cts.Token);
+        await host!.StartAsync(cts.Token);
         await cts.CancelAsync();
         await host.StopAsync(CancellationToken.None);
+        host.Dispose();
     }
 
     [TestMethod]

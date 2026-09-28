@@ -1,3 +1,5 @@
+using System.IO;
+using System.Net.Http;
 using DevTools.Utilities;
 using Duende.IdentityModel.OidcClient;
 using Microsoft.Extensions.Logging;

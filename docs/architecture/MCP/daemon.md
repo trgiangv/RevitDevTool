@@ -1,6 +1,6 @@
 # DevTools.Daemon
 
-Standalone MewUI tray application that composes the external MCP server, hosts authentication, and manages multi-machine gateway connectivity. The tray icon uses `H.NotifyIcon` (core, not the WPF package). The right-click menu is a MewUI `ContextMenu` native popup (auto-size); an invisible 1×1 host owned by the tray `MessageWindow` is only the placement target.
+Standalone HandyControl WPF tray application that composes the external MCP server, hosts authentication, and manages multi-machine gateway connectivity. The tray icon is HandyControl `NotifyIcon`. The right-click menu is a WPF `ContextMenu`. Close hides the main window; Quit exits.
 
 ## Capabilities
 
@@ -10,7 +10,7 @@ Standalone MewUI tray application that composes the external MCP server, hosts a
 4. **Hosts the MCP engine** — Stdio mode (separate process) for local AI clients, Gateway mode (tray process) for remote
 5. **Multi-machine aware** — registers with Gateway including device metadata and host_apps
 6. **Exposes a control pipe** (`DevToolsDaemon_Control`) for host add-in communication (tray only)
-7. **Main window** — MewUI window (C# markup, Direct2D) showing auth state, hosts, gateway status, settings. Close hides; Quit from the tray exits.
+7. **Main window** — standard WPF `Window` with Win32 title-bar theme and system buttons, showing auth state, hosts, gateway status, settings. Close hides; Quit from the tray exits.
 
 ## Startup Modes
 
@@ -32,7 +32,7 @@ Stdio and desktop processes are fully independent — no IPC between them. Both 
 | Desktop (mutex, Run key, settings, `AppState`) | `source/DevTools.Daemon/Desktop/` |
 | MCP tool adapters (`list_machines`) | `source/DevTools.Daemon/Tools/` |
 | Main window + views + tray | `source/DevTools.Daemon/Views/` |
-| Icon / theme / UI dispatch | `source/DevTools.Daemon/Helpers/` |
+| Icon / theme / UI dispatch | `source/DevTools.Daemon/Desktop/` |
 | App entry point | `source/DevTools.Daemon/Program.cs` |
 | External MCP surface | `source/DevTools.Mcp.Server/` |
 
@@ -80,4 +80,4 @@ DevTools.Daemon.exe
 DevTools.Daemon.exe --stdio
 ```
 
-Policy: [0032](../../decisions/0032-daemon-mewui-and-aot.md) — MewUI desktop (shipped); production publish is framework-dependent JIT; Native AOT is the target, not current.
+Policy: [0032](../../decisions/0032-daemon-mewui-and-aot.md) — HandyControl WPF; production publish is framework-dependent JIT; Native AOT is dropped.

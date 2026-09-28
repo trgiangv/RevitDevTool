@@ -82,7 +82,7 @@ Composition: `DevTools.Mcp.Server` (daemon fixed surface), `DevTools.Mcp.Client`
 
 ## JSON serialization
 
-Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JSON in support of Daemon AOT ([0032](../../decisions/0032-daemon-mewui-and-aot.md)).
+Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JSON on Daemon wires. UI: [0032](../../decisions/0032-daemon-mewui-and-aot.md).
 
 | Layer | Serializer |
 |-------|------------|
@@ -96,9 +96,9 @@ Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JS
 | Document | Contents |
 |----------|----------|
 | [SDK gap matrix](sdk-gap-matrix.md) | Living ✅/⚠️/⏸ map vs `ModelContextProtocol` 2.2.0 |
-| [JSON (0031)](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON; supports [0032](../../decisions/0032-daemon-mewui-and-aot.md) AOT |
+| [JSON (0031)](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON on Daemon wires |
 | [Platform boundaries](platform-boundaries.md) | Host wire, ALC, error hop; MRTR is plumbing ([0027](../../decisions/0027-mcp-product-surface.md)) |
-| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API — UI/AOT: [0032](../../decisions/0032-daemon-mewui-and-aot.md) |
+| [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API — UI: [0032](../../decisions/0032-daemon-mewui-and-aot.md) |
 | [Transport](transport.md) | Stdio mode, Gateway WebSocket, dual pipe protocols |
 | [Tools](tools.md) | Fixed daemon surface, ConnectedHostCatalog, in-host primitives |
 | [In-Host Runtime](in-host-runtime.md) | Host spec handler, registry flow, dispatch |

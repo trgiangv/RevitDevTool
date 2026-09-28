@@ -18,8 +18,9 @@ here.
   (partially superseded by 0027 — SDK types and ILRepack allowed; no `McpServer`
   session on the host pipe).
 - [0030](0030-host-owned-cpython-and-package-managers.md) is **Python runtime**.
-  [0031](0031-daemon-json-source-gen.md) is STJ source-gen **in support of 0032**.
-  [0032](0032-daemon-mewui-and-aot.md) is Daemon MewUI + AOT target.
+  [0031](0031-daemon-json-source-gen.md) is STJ source-gen on Daemon wires.
+  [0032](0032-daemon-mewui-and-aot.md) is Daemon HandyControl WPF; Native AOT
+  is dropped.
   [0033](0033-ironpython-pydevd-debugger.md) is **Accepted** IronPython DAP
   (in-process PyDev.Debugger 2.8.0; VS Code client is `debugpy` on 4567).
   CPython stays `debugpy` on 5678 (0025).
@@ -66,8 +67,8 @@ here.
 | [0026](0026-ironpython-unittest-script-execution.md) | One IronPython unittest flow, dialect 2.7 and 3.4 | Accepted |
 | [0027](0027-mcp-product-surface.md) | MCP product surface — Daemon envelope, not full protocol | Accepted |
 | [0030](0030-host-owned-cpython-and-package-managers.md) | Host-owned CPython — uv sidecar vs Pixi-owned interpreter | Accepted — Python runtime |
-| [0031](0031-daemon-json-source-gen.md) | Daemon JSON source-gen (supports 0032 AOT) | Accepted — support for 0032 |
-| [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is MewUI; Native AOT is the target | Accepted — UI shipped; AOT not production |
+| [0031](0031-daemon-json-source-gen.md) | Daemon JSON is source-generated | Accepted |
+| [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is HandyControl WPF; Native AOT is dropped | Accepted — amended 2026-09-27 |
 | [0033](0033-ironpython-pydevd-debugger.md) | IronPython debug via vendored PyDev.Debugger 2.8.0 | Accepted |
 | [0034](0034-execution-mstest-sdk-scoped-tests.md) | Execution tests: scoped MSTest.Sdk + first-party coverage | Accepted |
 | [0035](0035-mstest-sdk-repo-tests.md) | In-repo tests: MSTest.Sdk 4.4.0 + first-party coverage | Accepted |

@@ -1,28 +1,29 @@
 using System.Runtime.ExceptionServices;
-using Aprillz.MewUI;
+using System.Windows;
 
 namespace DevTools.Daemon.Tests.Support;
 
-public sealed class MewUiSession : IDisposable
+public sealed class WpfSession : IDisposable
 {
     private readonly Thread _uiThread;
     private readonly ManualResetEventSlim _ready = new(false);
     private Exception? _startupError;
+    private bool _disposed;
 
-    public MewUiSession()
+    public WpfSession()
     {
         _uiThread = new Thread(RunMessageLoop)
         {
             IsBackground = true,
-            Name = "MewUiSession",
+            Name = "WpfSession",
         };
         _uiThread.SetApartmentState(ApartmentState.STA);
         _uiThread.Start();
         _ready.Wait(TimeSpan.FromSeconds(30));
         if (_startupError is not null)
             ExceptionDispatchInfo.Capture(_startupError).Throw();
-        if (!Application.IsRunning)
-            throw new InvalidOperationException("MewUI application failed to start.");
+        if (Application.Current is null)
+            throw new InvalidOperationException("WPF application failed to start.");
     }
 
     public void Invoke(Action action)
@@ -52,13 +53,11 @@ public sealed class MewUiSession : IDisposable
     {
         try
         {
-            Application.Create()
-                .UseWin32()
-                .UseDirect2D()
-                .UseTheme(ThemeVariant.System)
-                .WithShutdownMode(ShutdownMode.OnExplicitShutdown)
-                .OnStartup(() => _ready.Set())
-                .Run();
+            var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+            app.Resources.MergedDictionaries.Add(SkinDictionary("SkinDefault.xaml"));
+            app.Resources.MergedDictionaries.Add(SkinDictionary("Theme.xaml"));
+            app.Startup += (_, _) => _ready.Set();
+            app.Run();
         }
         catch (Exception ex)
         {
@@ -67,17 +66,26 @@ public sealed class MewUiSession : IDisposable
         }
     }
 
+    private static ResourceDictionary SkinDictionary(string name) => new()
+    {
+        MergedDictionaries =
+        {
+            new ResourceDictionary
+            {
+                Source = new Uri($"/DevTools.UI;component/Themes/{name}", UriKind.Relative),
+            },
+        },
+    };
+
     private static void Send(Action action)
     {
-        var dispatcher = Application.Current.Dispatcher
-            ?? throw new InvalidOperationException("MewUI dispatcher is unavailable.");
-        if (dispatcher.IsOnUIThread)
+        var dispatcher = Application.Current?.Dispatcher
+            ?? throw new InvalidOperationException("WPF dispatcher is unavailable.");
+        if (dispatcher.CheckAccess())
             action();
         else
             dispatcher.Invoke(action);
     }
-
-    private bool _disposed;
 
     public void Dispose()
     {
@@ -85,9 +93,9 @@ public sealed class MewUiSession : IDisposable
             return;
         _disposed = true;
 
-        if (Application.IsRunning)
+        if (Application.Current is not null)
         {
-            Send(Application.Shutdown);
+            Send(() => Application.Current.Shutdown());
             _uiThread.Join(TimeSpan.FromSeconds(10));
         }
 
@@ -95,11 +103,13 @@ public sealed class MewUiSession : IDisposable
     }
 }
 
-public abstract class MewUiApplicationTestBase
+public abstract class WpfApplicationTestBase
 {
-    private static readonly Lazy<MewUiSession> SharedSession = new(() => new MewUiSession());
+    private static readonly Lazy<WpfSession> SharedSession = new(() => new WpfSession());
 
-    protected MewUiSession Session { get; } = SharedSession.Value;
+    public static void RunShared(Action body) => SharedSession.Value.Invoke(body);
+
+    protected WpfSession Session { get; } = SharedSession.Value;
 
     protected void RunOnUi(Action body) => Session.Invoke(body);
 

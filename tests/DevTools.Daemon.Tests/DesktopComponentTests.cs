@@ -42,12 +42,8 @@ public sealed class DesktopComponentTests
     [TestMethod]
     public void AppIcons_LoadEmbeddedResources()
     {
-        Assert.IsNotNull(AppIcons.WindowIcon(true));
-        Assert.IsNotNull(AppIcons.WindowIcon(false));
-        using var dark = AppIcons.TrayIcon(true);
-        using var light = AppIcons.TrayIcon(false);
-        Assert.IsTrue(dark.Handle != 0);
-        Assert.IsTrue(light.Handle != 0);
+        Assert.IsNotNull(AppIcons.ForTheme(true));
+        Assert.IsNotNull(AppIcons.ForTheme(false));
     }
 
     [TestMethod]

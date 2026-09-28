@@ -166,6 +166,6 @@ These are **product choices**, not incomplete adoption:
 | [`product/mcp.md`](../../product/mcp.md) | External behavior contract |
 | [0027 MCP product surface](../../decisions/0027-mcp-product-surface.md) | Daemon envelope; not full protocol |
 | [0012 Host MCP spec engine](../../decisions/0012-host-mcp-spec-engine.md) | Host pipe; partially superseded by 0027 |
-| [0031 Daemon JSON source-gen](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON for 0032 AOT |
+| [0031 Daemon JSON source-gen](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON on Daemon wires |
 | [`2026-08-02-mcp-advanced-features-adoption.md`](../../plans/completed/2026-08-02-mcp-advanced-features-adoption.md) | Feature adoption session |
 | [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md) | Historical G1 done; elicitation/progress closed by 0027 |

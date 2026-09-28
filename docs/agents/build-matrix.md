@@ -36,7 +36,7 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 
 ## DevTools.Daemon
 
-`DevTools.Daemon` is a standalone MewUI tray application (`DevTools.Daemon.exe`) that runs outside host processes. It bridges AI clients (Claude Desktop, Cursor) with host applications via named pipes, handles authentication, and manages multi-machine gateway connectivity.
+`DevTools.Daemon` is a standalone HandyControl WPF tray application (`DevTools.Daemon.exe`) that runs outside host processes. It bridges AI clients (Claude Desktop, Cursor) with host applications via named pipes, handles authentication, and manages multi-machine gateway connectivity.
 
 ### Publish & Deploy
 
@@ -53,7 +53,7 @@ dotnet publish source/DevTools.Daemon -c Release
 
 - Target: `net10.0-windows` / `win-x64`
 - Framework-dependent single-file (requires .NET 10 runtime)
-- MewUI tray app with embedded `appsettings.json` (CI/CD injects secrets)
+- HandyControl WPF tray app with embedded `appsettings.json` (CI/CD injects secrets)
 - Properties: `PublishSingleFile=true`, `SelfContained=false`
 
 ### Pipeline Integration

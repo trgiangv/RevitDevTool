@@ -7,10 +7,10 @@ parallel duplicate plans for the same workstream, and move a plan to
 
 ## Daemon
 
-Production publish is framework-dependent single-file. AOT spike:
-[completed](../completed/2026-09-03-daemon-aot-spike.md) (rolled back). UI/AOT:
-[0032](../../decisions/0032-daemon-mewui-and-aot.md). JSON facades:
-[0031](../../decisions/0031-daemon-json-source-gen.md) —
+Production publish is framework-dependent single-file. Native AOT is dropped
+([0032](../../decisions/0032-daemon-mewui-and-aot.md)); the spike stays
+[completed](../completed/2026-09-03-daemon-aot-spike.md) as history. JSON
+facades: [0031](../../decisions/0031-daemon-json-source-gen.md) —
 [plan completed](../completed/2026-09-03-stj-facade-0028.md). Remaining
 `object?` on invoke/batch DTOs is 0031 follow-up, not an active plan.
 

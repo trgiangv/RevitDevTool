@@ -20,7 +20,7 @@ public sealed class HostInstancesTests
 
         var hosts = new HostInstances(broker.Object, scanner.Object);
 
-        Assert.AreEqual(1, hosts.Count.Value);
+        Assert.AreEqual(1, hosts.Count);
         Assert.AreEqual(2, hosts.Rows.Count);
         Assert.Contains(row => row.Pid == 1001 && row.Status == "Connected", hosts.Rows);
         Assert.Contains(row => row.Pid == 2002 && row.Status == "Discovered", hosts.Rows);
@@ -36,7 +36,7 @@ public sealed class HostInstancesTests
 
         var hosts = new HostInstances(broker.Object, scanner.Object);
 
-        Assert.AreEqual(1, hosts.Count.Value);
+        Assert.AreEqual(1, hosts.Count);
         Enumerable.Single(hosts.Rows);
     }
 

@@ -1,63 +1,63 @@
-using Aprillz.MewUI;
+using CommunityToolkit.Mvvm.ComponentModel;
 using DevTools.Settings.Configs;
 using Microsoft.Win32;
 
 namespace DevTools.Daemon.Desktop;
 
-public sealed class Preferences
+public partial class Preferences : ObservableObject
 {
     private readonly UserSettingsStore _settings;
     private bool _suppressAutoStartSync;
 
-    public ObservableValue<bool> AutoStartEnabled { get; } = new();
-    public ObservableValue<AppTheme> Theme { get; }
+    [ObservableProperty]
+    public partial bool AutoStartEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial AppTheme Theme { get; set; }
+
     public IReadOnlyList<AppTheme> Themes { get; } = Enum.GetValues<AppTheme>();
 
     public Preferences(UserSettingsStore settings)
     {
         _settings = settings;
-        Theme = new ObservableValue<AppTheme>(settings.Current.Theme);
-
-        Theme.Changed += OnThemeChanged;
-        AutoStartEnabled.Changed += OnAutoStartChanged;
+        Theme = settings.Current.Theme;
 
         ReloadAutoStart();
-        ThemeHelper.Apply(Theme.Value);
+        ThemeHelper.Apply(Theme);
         SystemEvents.UserPreferenceChanged += OnSystemThemeChanged;
     }
 
     public void ReloadAutoStart()
     {
         _suppressAutoStartSync = true;
-        AutoStartEnabled.Value = AutoStart.IsEnabled;
+        AutoStartEnabled = AutoStart.IsEnabled;
         _suppressAutoStartSync = false;
     }
 
-    private void OnAutoStartChanged()
+    partial void OnAutoStartEnabledChanged(bool value)
     {
         if (_suppressAutoStartSync)
             return;
 
-        var enabled = AutoStartEnabled.Value;
-        if (enabled)
+        if (value)
             AutoStart.Enable();
         else
             AutoStart.Disable();
 
-        _settings.Update(s => s.AutoStartEnabled = enabled);
+        _settings.Update(s => s.AutoStartEnabled = value);
     }
 
-    private void OnThemeChanged()
+    partial void OnThemeChanged(AppTheme value)
     {
-        _settings.Update(s => s.Theme = Theme.Value);
-        ThemeHelper.Apply(Theme.Value);
+        _settings.Update(s => s.Theme = value);
+        ThemeHelper.Apply(value);
     }
 
     private void OnSystemThemeChanged(object sender, UserPreferenceChangedEventArgs e)
     {
         if (e.Category != UserPreferenceCategory.General)
             return;
-        if (Theme.Value != AppTheme.Auto)
+        if (Theme != AppTheme.Auto)
             return;
 
         UiDispatch.Post(() => ThemeHelper.Apply(AppTheme.Auto));

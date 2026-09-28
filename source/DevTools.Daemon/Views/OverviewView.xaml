@@ -1,0 +1,67 @@
+<UserControl x:Class="DevTools.Daemon.Views.OverviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:desktop="clr-namespace:DevTools.Daemon.Desktop"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DataContext="{d:DesignInstance desktop:AppState}"
+             d:DesignHeight="400"
+             d:DesignWidth="400"
+             mc:Ignorable="d">
+    <StackPanel Margin="16">
+        <TextBlock Margin="0,0,0,8"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource PrimaryTextBrush}"
+                   Text="Account" />
+
+        <StackPanel Margin="0,0,0,8"
+                    Orientation="Horizontal"
+                    Visibility="{Binding IsAuthenticated, Converter={StaticResource Boolean2VisibilityConverter}}">
+            <Ellipse Width="48"
+                     Height="48"
+                     Margin="0,0,12,0">
+                <Ellipse.Fill>
+                    <ImageBrush ImageSource="{Binding AvatarImage}"
+                                Stretch="UniformToFill" />
+                </Ellipse.Fill>
+            </Ellipse>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock FontWeight="SemiBold"
+                           Foreground="{DynamicResource PrimaryTextBrush}"
+                           Text="{Binding DisplayName}" />
+                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}"
+                           Text="{Binding Email}" />
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Margin="0,0,0,8"
+                    Visibility="{Binding IsAuthenticated, Converter={StaticResource Boolean2VisibilityReConverter}}">
+            <TextBlock Margin="0,0,0,8"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       Text="Not signed in" />
+            <Button HorizontalAlignment="Left"
+                    Command="{Binding SignInCommand}"
+                    Content="Sign In"
+                    Style="{StaticResource ButtonDefault}" />
+        </StackPanel>
+
+        <TextBlock Margin="0,24,0,8"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource PrimaryTextBrush}"
+                   Text="Gateway" />
+        <TextBlock Foreground="{DynamicResource PrimaryTextBrush}"
+                   Text="{Binding GatewayStatus}" />
+
+        <TextBlock Margin="0,24,0,8"
+                   FontSize="16"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource PrimaryTextBrush}"
+                   Text="Connected Hosts" />
+        <TextBlock Foreground="{DynamicResource PrimaryTextBrush}">
+            <Run Text="{Binding Hosts.Count, Mode=OneWay}" />
+            <Run Text=" host(s)" />
+        </TextBlock>
+    </StackPanel>
+</UserControl>

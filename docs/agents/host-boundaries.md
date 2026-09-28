@@ -70,7 +70,7 @@ Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`Di
 
 ## Standalone Daemon
 
-- `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (MewUI tray app).
+- `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (HandyControl WPF tray).
 - `HostBroker` discovers SDK MCP pipes (`DevToolsMcp_{Host}_{Version}_{PID}`) and owns `HostCatalog`.
 - Pytest/control uses `DevTools_{Host}_{Version}_{PID}` (`DevToolsPipeServer`).
 - Daemon external tools: infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.

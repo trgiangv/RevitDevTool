@@ -1,13 +1,15 @@
-using Aprillz.MewUI;
+using System.Windows;
 using DevTools.Settings.Configs;
+using HandyControl.Data;
+using HandyControl.Tools;
 using Microsoft.Win32;
+
 namespace DevTools.Daemon.Desktop;
 
 internal static class ThemeHelper
 {
     private const string PersonalizeKey = @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
     private const string AppsUseLightThemeValue = "AppsUseLightTheme";
-
     public static event Action? Changed;
 
     private static bool AppsUseLightTheme()
@@ -25,16 +27,30 @@ internal static class ThemeHelper
 
     public static void Apply(AppTheme theme)
     {
-        if (!Application.IsRunning)
+        var app = Application.Current;
+        if (app is null)
             return;
 
-        Application.Current.SetThemeMode(theme switch
+        if (!app.Dispatcher.CheckAccess())
         {
-            AppTheme.Light => ThemeVariant.Light,
-            AppTheme.Dark => ThemeVariant.Dark,
-            _ => ThemeVariant.System
-        });
+            app.Dispatcher.Invoke(() => Apply(theme));
+            return;
+        }
 
+        var actual = theme == AppTheme.Auto
+            ? IsLight(AppTheme.Auto) ? AppTheme.Light : AppTheme.Dark
+            : theme;
+        var dictionaries = app.Resources.MergedDictionaries;
+        if (dictionaries.Count < 2)
+            return;
+
+        dictionaries[0].MergedDictionaries.Clear();
+        dictionaries[0].MergedDictionaries.Add(
+            ResourceHelper.GetSkin(actual == AppTheme.Dark ? SkinType.Dark : SkinType.Default));
+        dictionaries[1].MergedDictionaries.Clear();
+        dictionaries[1].MergedDictionaries.Add(ResourceHelper.GetStandaloneTheme());
+        foreach (Window window in app.Windows)
+            window.OnApplyTemplate();
         Changed?.Invoke();
     }
 }

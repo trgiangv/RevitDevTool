@@ -66,7 +66,7 @@ or fake packed layouts just to raise coverage %.
 | **Optional artifacts / live pipe** | Sample `McpToolsetDemo` / `RevitMcpToolSet` DLLs, live `DevToolsMcp_*` pipe, ILRepack host layout, pythonnet bind failure on a given pixi: **Skip** with `OptionalArtifact` / packaging hints. | Do not Fail CI when samples or Revit are absent. Do not treat Skip as coverage debt to hack around. |
 | **coverlet.MTP is gone** | In-repo testhosts use MSTest.Sdk ([0035](../decisions/0035-mstest-sdk-repo-tests.md)). net48 has no collector. | Do not add `coverlet.MTP`, `coverlet.collector`, or VSTest collectors. |
 | **Two testhosts on the same `bin/`** | A second `dotnet run` on the same project can fail in seconds (`MSB3027`). That is not a hung test. | Do not spawn a second coverage run on a live testhost. Wait for the owner, or omit that project. |
-| **Daemon desktop is MewUI** | STA `Application.Create().UseWin32().UseDirect2D()` session (`MewUiSession`). Not WPF / FlaUI / WPF-MCP. | Do not Skip Daemon UI as “WPF tray”. A headless box without Win32/Direct2D is a real env gap. |
+| **Daemon desktop is WPF** | STA `System.Windows.Application` session (`WpfSession`). HandyControl skin and theme from `DevTools.UI`, merged on the test `Application`. | Do not start a MewUI or Direct2D session. A headless box without a WPF dispatcher is a real env gap. |
 | **In-host product** | `execute_*` on a live Revit/AutoCAD thread, `PytestRunner.py` inside the host, ILRepack year matrix, daemon hot-reload. | Out of `tests/` CI. Use `mcp-integration-test.md` / host pytest. |
 | **Pip embed vs pixi product default** | Pip facts still download a python.org embed zip. Product default Python is `%AppData%/RevitDevTool/pixi-env`. Pixi CLI is asserted via `PixiInstaller.SetupPixiAsync` (Skip only if download throws). | Do not re-gate pixi/pip behind `RUN_PIXI_SMOKE` / host-absent Skip. |
 
@@ -81,7 +81,7 @@ Last Coverlet snapshot below is historical (2026-09-04). New runs use `--coverag
 
 | Area | Relative coverage | Notes |
 |------|-------------------|-------|
-| MCP Core/Catalog/Server/Client + Daemon | **≥80% line** (last snapshot) | Daemon is **MewUI**, not WPF. Adapter/live pipe is host-process (out of gate). |
+| MCP Core/Catalog/Server/Client + Daemon | **≥80% line** (last snapshot) | Daemon desktop tests are WPF STA. Adapter/live pipe is host-process (out of gate). |
 | Execution | Tests exist in scoped MSTest.Sdk projects; measure with `--coverage` | Independent of Revit.exe — mock `IHostContextExecutor`. See Current gaps. |
 | Ipc | **Low in merge (~21%)** | No dedicated test project; framing covered via Execution / Testing.Transport. |
 | NUnit / Testing | **Medium–high** | In-host product; in-repo testhosts are MSTest.Sdk (out of process). |
@@ -93,7 +93,7 @@ Last Coverlet snapshot below is historical (2026-09-04). New runs use `--coverag
 
 Do **not** treat a coverage HTML merge as a replacement for this matrix. Snapshot and gate list: **Current gaps** above.
 
-Do **not** call Daemon “WPF tray” — desktop is MewUI Direct2D + `H.NotifyIcon.Core` (ADR 0032).
+Daemon desktop is HandyControl WPF, including `hc:NotifyIcon` (ADR 0032). Do not treat it as MewUI.
 Do **not** Skip pixi/pip because a host app is absent.
 
 `IHostContextExecutor` in Execution tests = inline mock, not Revit. Host adapters live in
@@ -148,7 +148,7 @@ Split by source module. Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, 
 ### Well covered
 
 - **Protocol & models** — JSON-RPC framing, host handler routing, conformance subset
-- **Daemon composition** — server builder, fixed tools, `search_dynamic` / `invoke_dynamic` harness; MewUI desktop session (STA Direct2D) for tray/control surfaces
+- **Daemon composition** — server builder, fixed tools, `search_dynamic` / `invoke_dynamic` harness; WPF desktop session (STA) for tray/control surfaces
 - **Catalog & encoding** — host catalog merge, list/response encoders, dynamic tool contracts
 - **Built-in registry** — `BuiltInMcpRegistryProvider` name/bindings; `DotnetMcpRegistryProvider` empty/missing paths (sample DLL Skip)
 - **Toolset discovery** — .NET + Python parsers, argument binding, result/MRTR mapping, ALC bridges

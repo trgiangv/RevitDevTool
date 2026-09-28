@@ -90,8 +90,8 @@ will not get them on `invoke_dynamic`.
 
 ## Follow-Up
 
-- Daemon AOT / MewUI: [0032](0032-daemon-mewui-and-aot.md). JSON source-gen
-  that unblocks AOT: [0031](0031-daemon-json-source-gen.md).
+- Daemon UI: [0032](0032-daemon-mewui-and-aot.md) (HandyControl WPF; AOT
+  dropped). JSON source-gen: [0031](0031-daemon-json-source-gen.md).
 - ALC packaging (S1/S2) stays in the completed S5 plan
   ([`2026-09-03-mcp-layer-identity-s5`](../plans/completed/2026-09-03-mcp-layer-identity-s5.md))
   — not this ADR.

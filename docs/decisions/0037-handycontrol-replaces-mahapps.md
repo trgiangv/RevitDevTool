@@ -81,6 +81,13 @@ subclass, or a control-level overlay. Dialogs that are ordinary
    use `HandyControl.Controls.Window` or a control overlay on that
    window. Do not introduce a `MetroWindow` equivalent that restyles
    every `Window` in the tree.
+6. **Daemon is the exception for `Application.Resources`.** Standalone
+   `DevTools.Daemon` merges the HandyControl skin and theme compiled into
+   `DevTools.UI` at application scope
+   ([0032](0032-daemon-mewui-and-aot.md)). That reload does not call
+   `ThemeManager`, so host views that merge `Theme/Theme.xaml` on each
+   control are unchanged. That process does not host another add-in.
+   Host add-ins still follow rule 3.
 
 ## Alternatives Considered
 

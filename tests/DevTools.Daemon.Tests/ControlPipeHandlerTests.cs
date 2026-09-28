@@ -15,7 +15,7 @@ namespace DevTools.Daemon.Tests;
 
 [DoNotParallelize]
 [TestClass]
-public sealed class ControlPipeHandlerTests : MewUiApplicationTestBase
+public sealed class ControlPipeHandlerTests : WpfApplicationTestBase
 {
     [TestMethod]
     public void HandleRequestAsync_Status_ReturnsRunningVersion()
@@ -123,13 +123,12 @@ public sealed class ControlPipeHandlerTests : MewUiApplicationTestBase
         var auth = DaemonTestDoubles.CreateAuthService();
         var broker = DaemonTestDoubles.CreateHostBroker();
         var handler = default(ControlPipeHandler);
-        var tray = default(TrayMenu);
 
         RunOnUi(() =>
         {
             var state = CreateAppState(auth.Object, broker.Object);
             var window = new MainWindow(state);
-            tray = new TrayMenu(state, window);
+            var tray = new TrayMenu(state, window);
             handler = new ControlPipeHandler(auth.Object, broker.Object, tray);
         });
 
@@ -161,7 +160,6 @@ public sealed class ControlPipeHandlerTests : MewUiApplicationTestBase
         {
             await cts.CancelAsync();
             await service.StopAsync(CancellationToken.None);
-            tray?.Dispose();
         }
     }
 
@@ -177,7 +175,7 @@ public sealed class ControlPipeHandlerTests : MewUiApplicationTestBase
         {
             var state = CreateAppState(auth.Object, broker.Object);
             var window = new MainWindow(state);
-            using var tray = new TrayMenu(state, window);
+            var tray = new TrayMenu(state, window);
             var handler = new ControlPipeHandler(auth.Object, broker.Object, tray);
             body(handler).GetAwaiter().GetResult();
         });
