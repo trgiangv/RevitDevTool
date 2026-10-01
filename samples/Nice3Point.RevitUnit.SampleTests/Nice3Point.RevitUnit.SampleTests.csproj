@@ -1,0 +1,14 @@
+<Project Sdk="Nice3point.Revit.Sdk/6.1.2">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
+        <UseRevit>true</UseRevit>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Nice3point.TUnit.Revit" VersionOverride="$(RevitVersion).*"/>
+        <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+    </ItemGroup>
+
+</Project>
