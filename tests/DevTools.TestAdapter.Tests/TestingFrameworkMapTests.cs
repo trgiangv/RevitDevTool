@@ -40,7 +40,7 @@ public sealed class TestingFrameworkMapTests
             var stderr = process.StandardError.ReadToEnd();
             process.WaitForExit();
             Assert.IsTrue(process.ExitCode != 0, stdout + stderr);
-            Assert.Contains("nunit or tunit", stdout + stderr, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("nunit, tunit, or mstest", stdout + stderr, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
@@ -88,6 +88,52 @@ public sealed class TestingFrameworkMapTests
             Assert.Contains("DevTools.TUnit.MTP", stdout, StringComparison.Ordinal);
             Assert.Contains("DevTools.TUnit.MTP.TUnitMtpBuilderHook", stdout, StringComparison.Ordinal);
             Assert.DoesNotContain("DevTools.NUnit.MTP", stdout, StringComparison.Ordinal);
+        }
+        finally
+        {
+            if (Directory.Exists(work))
+                Directory.Delete(work, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public void Consumer_TestingFramework_mstest_selects_the_mstest_sibling()
+    {
+        var root = FindRepositoryRoot();
+        var buildDir = Path.Combine(root, "source", "DevTools.TestAdapter", "build");
+        var work = Path.Combine(Path.GetTempPath(), "DevTools.MTPMap", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(work);
+
+        File.WriteAllText(Path.Combine(work, "MSTestMap.proj"), $"""
+            <Project>
+              <Import Project="{Path.Combine(buildDir, "RevitDevTool.TestAdapter.props").Replace('\\', '/')}"/>
+              <PropertyGroup>
+                <TestingFramework>mstest</TestingFramework>
+              </PropertyGroup>
+              <Import Project="{Path.Combine(buildDir, "RevitDevTool.TestAdapter.targets").Replace('\\', '/')}"/>
+            </Project>
+            """);
+
+        try
+        {
+            var start = new ProcessStartInfo(
+                "dotnet",
+                "msbuild MSTestMap.proj -nologo -v:q -getProperty:_MtpSiblingName -getProperty:_MtpHookType")
+            {
+                WorkingDirectory = work,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            using var process = Process.Start(start) ?? throw new InvalidOperationException("Could not start msbuild.");
+            var stdout = process.StandardOutput.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            Assert.IsTrue(process.ExitCode == 0, stdout + stderr);
+            Assert.Contains("DevTools.MSTest.MTP", stdout, StringComparison.Ordinal);
+            Assert.Contains("DevTools.MSTest.MTP.MSTestMtpBuilderHook", stdout, StringComparison.Ordinal);
+            Assert.DoesNotContain("DevTools.NUnit.MTP", stdout, StringComparison.Ordinal);
+            Assert.DoesNotContain("DevTools.TUnit.MTP", stdout, StringComparison.Ordinal);
         }
         finally
         {

@@ -1,0 +1,24 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <RootNamespace>DevTools.MSTest.Runtime.Tests.Fixtures</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <EnableMSTestRunner>false</EnableMSTestRunner>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="MSTest.TestFramework" Version="4.4.1" />
+    <PackageReference Include="MSTest.TestFramework">
+      <ExcludeAssets>analyzers;build;buildTransitive</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <Target Name="RemoveMSTestAnalyzers" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="$([System.String]::Copy('%(Filename)').StartsWith('MSTest'))" />
+    </ItemGroup>
+  </Target>
+</Project>

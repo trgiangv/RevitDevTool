@@ -17,15 +17,22 @@ public sealed class ProviderHostingTests
         {
             services.AddNUnitHostServices();
             services.AddTUnitHostServices();
+            services.AddMsTestHostServices();
         });
-        var tunitFirst = CountProviderDescriptors(services =>
+        var mstestFirst = CountProviderDescriptors(services =>
         {
+            services.AddMsTestHostServices();
             services.AddTUnitHostServices();
             services.AddNUnitHostServices();
         });
 
-        Assert.AreEqual(2, nunitFirst);
-        Assert.AreEqual(2, tunitFirst);
+        Assert.AreEqual(3, nunitFirst);
+        Assert.AreEqual(3, mstestFirst);
+
+        var repeated = new ServiceCollection();
+        repeated.AddNUnitHostServices();
+        repeated.AddNUnitHostServices();
+        Assert.AreEqual(1, repeated.Count(descriptor => descriptor.ServiceType == typeof(ITestFrameworkProvider)));
     }
 
     [TestMethod]
@@ -39,6 +46,7 @@ public sealed class ProviderHostingTests
 
         Assert.AreEqual(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
         Assert.AreEqual(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
+        Assert.AreEqual(TestFrameworkId.MSTest, registry.GetRequired(TestFrameworkId.MSTest).FrameworkId);
     }
 
     [TestMethod]
@@ -52,6 +60,7 @@ public sealed class ProviderHostingTests
 
         Assert.AreEqual(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
         Assert.AreEqual(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
+        Assert.AreEqual(TestFrameworkId.MSTest, registry.GetRequired(TestFrameworkId.MSTest).FrameworkId);
     }
 
     [TestMethod]
@@ -60,6 +69,7 @@ public sealed class ProviderHostingTests
         var services = new ServiceCollection();
         services.AddNUnitHostServices();
         services.AddTUnitHostServices();
+        services.AddMsTestHostServices();
 
         Assert.IsFalse(services.Any(descriptor => descriptor.ServiceType == typeof(TestingGenerationStore)));
         Assert.IsFalse(services.Any(descriptor => descriptor.ServiceType == typeof(ITestingGenerationPolicy)));

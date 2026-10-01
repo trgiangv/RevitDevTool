@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\Fixture.props" />
+  <PropertyGroup>
+    <AssemblyName>DevTools.MSTest.IdentityProbe</AssemblyName>
+    <DefineConstants>$(DefineConstants);MARKER_B</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\IdentityA\Probe.cs" Link="Probe.cs" />
+  </ItemGroup>
+</Project>

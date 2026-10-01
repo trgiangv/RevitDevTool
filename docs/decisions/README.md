@@ -25,7 +25,7 @@ here.
   (in-process PyDev.Debugger 2.8.0; VS Code client is `debugpy` on 4567).
   CPython stays `debugpy` on 5678 (0025).
   [0034](0034-execution-mstest-sdk-scoped-tests.md) is **Accepted** Execution
-  unit tests: scoped MSTest.Sdk 4.4.0 projects + first-party `--coverage`.
+  unit tests: scoped MSTest.Sdk 4.4.1 projects + first-party `--coverage`.
   [0035](0035-mstest-sdk-repo-tests.md) is **Accepted** remaining in-repo
   `tests/*.Tests` on the same SDK and collector (no xUnit, no Coverlet).
   [0036](0036-revit-monitor-link-element-tokens.md) is **Accepted** Revit
@@ -35,6 +35,10 @@ here.
   [0037](0037-handycontrol-replaces-mahapps.md) is **Accepted** and landed.
   HandyControl source compiles into loose `DevTools.UI`. Hosts do not
   ILRepack WPF. MahApps, ControlzEx, and Xaml Behaviors are gone.
+  [0038](0038-mstest-host-provider.md) is **Accepted**. In-host MSTest 4.4.1
+  with Microsoft.Testing.Platform 2.4.1 is a third provider on the existing
+  testing kernel. NUnit stays the default. Live two-generation Revit proof
+  is still an open plan item.
 
 ## Index
 
@@ -71,6 +75,7 @@ here.
 | [0032](0032-daemon-mewui-and-aot.md) | Daemon desktop is HandyControl WPF; Native AOT is dropped | Accepted — amended 2026-09-27 |
 | [0033](0033-ironpython-pydevd-debugger.md) | IronPython debug via vendored PyDev.Debugger 2.8.0 | Accepted |
 | [0034](0034-execution-mstest-sdk-scoped-tests.md) | Execution tests: scoped MSTest.Sdk + first-party coverage | Accepted |
-| [0035](0035-mstest-sdk-repo-tests.md) | In-repo tests: MSTest.Sdk 4.4.0 + first-party coverage | Accepted |
+| [0035](0035-mstest-sdk-repo-tests.md) | In-repo tests: MSTest.Sdk 4.4.1 + first-party coverage | Accepted |
 | [0036](0036-revit-monitor-link-element-tokens.md) | Revit link tokens, Element Finder, `RevitDevTool.Tools` | Accepted |
 | [0037](0037-handycontrol-replaces-mahapps.md) | HandyControl compiles into loose `DevTools.UI`; WPF stays out of ILRepack | Accepted |
+| [0038](0038-mstest-host-provider.md) | MSTest 4.4.1 + MTP 2.4.1 in-host provider on the existing testing kernel | Accepted |

@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+    <RootNamespace>DevTools.MSTest.Runtime</RootNamespace>
+    <AssemblyName>DevTools.MSTest.Runtime</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <EnableMSTestRunner>false</EnableMSTestRunner>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="MSTest.TestFramework" Version="4.4.1" />
+    <PackageVersion Include="MSTest.TestAdapter" Version="4.4.1" />
+    <PackageReference Include="MSTest.TestFramework">
+      <ExcludeAssets>analyzers</ExcludeAssets>
+    </PackageReference>
+    <PackageReference Include="MSTest.TestAdapter">
+      <ExcludeAssets>analyzers</ExcludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Testing.Platform" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"
+                      Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="DevTools.MSTest.Runtime.Tests" />
+  </ItemGroup>
+
+  <!-- Same listing and [DependsOn] closure the testhost uses. A run by id must
+       include prerequisites even when an older testhost sends only the selected uid. -->
+  <ItemGroup>
+    <Compile Include="..\DevTools.MSTest.MTP\MSTestListing.cs" Link="MSTestListing.cs" />
+    <Compile Include="..\DevTools.MSTest.MTP\MSTestExpansion.cs" Link="MSTestExpansion.cs" />
+    <Compile Include="..\DevTools.MSTest.MTP\MtpDiscoveryInternals.cs" Link="MtpDiscoveryInternals.cs" />
+  </ItemGroup>
+
+  <Target Name="RemoveMSTestAnalyzers" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="$([System.String]::Copy('%(Filename)').StartsWith('MSTest'))" />
+    </ItemGroup>
+  </Target>
+
+  <Import Project="build\MSTestRuntimePayload.targets" />
+</Project>

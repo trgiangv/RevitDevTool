@@ -4,18 +4,18 @@
       Architecture: docs/architecture/Testing/README.md
 
       Pack order, per TFM (net48; net8.0-windows; net10.0-windows):
-        1. BuildNUnitMTPForPack / BuildTUnitMTPForPack — build the testhost siblings.
+        1. BuildMtpSiblingsForPack — build the NUnit / TUnit / MSTest testhost siblings (MtpSibling items).
         2. ILRepack — merge copy-local (Transport, Ipc, net48 STJ BCL) into
            TestAdapter.dll; keep Testing.Abstractions.dll so testhost MTP shares
            TestingDiscovery.
-        3. PackNUnitMTP / PackTUnitMTP — MTP siblings + Abstractions to build/runtime/{tfm}.
+        3. PackMtpSiblings — MTP siblings + Abstractions to build/runtime/{tfm}.
         4. build/*.props|targets (+ build/netfx source shim) — the consumer build order
            lives in those files. The selected sibling is a normal Reference, not a
            runtime plugin.
 
       Constraints:
         - Do not flatten obj/bin: the three TFMs would collide (CS2012 / MSB3713).
-        - Microsoft.Testing.Platform.MSBuild 2.4.0 is a real dependency with all
+        - Microsoft.Testing.Platform.MSBuild 2.4.1 is a real dependency with all
           assets (PrivateAssets=none): an NUnit-only consumer has no other source of
           the testhost or Microsoft.Testing.Platform.dll. RepackBinariesExcludes keeps
           those DLLs out of the merged adapter. Every other graph reference stays
@@ -36,14 +36,14 @@
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/trgiangv/RevitDevTool</PackageProjectUrl>
-        <Description>Microsoft Testing Platform adapter that allows running NUnit or TUnit tests inside Autodesk hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
+        <Description>Microsoft Testing Platform adapter that allows running NUnit, TUnit, or MSTest tests inside Autodesk hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
         <PackageTags>testing;revit;autocad;adapter</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>DevTools-32-Light.png</PackageIcon>
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <NoPackageAnalysis>true</NoPackageAnalysis>
-        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackNUnitMTP;PackTUnitMTP</TargetsForTfmSpecificContentInPackage>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackMtpSiblings</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
         <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
         <DisableTestingPlatformServerCapability>true</DisableTestingPlatformServerCapability>
@@ -63,77 +63,57 @@
         <None Include="build\netfx\ModuleInitializerAttribute.cs" Pack="true" PackagePath="build\netfx\"/>
         <None Include="build\hooks\NUnitMtpBuilderHook.cs" Pack="true" PackagePath="build\hooks\"/>
         <None Include="build\hooks\TUnitMtpBuilderHook.cs" Pack="true" PackagePath="build\hooks\"/>
+        <None Include="build\hooks\MSTestMtpBuilderHook.cs" Pack="true" PackagePath="build\hooks\"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
         <None Include="..\DevTools.UI\Resources\icons\DevTools-32-Light.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
-    <Target Name="BuildTUnitMTPForPack">
-        <PropertyGroup>
-            <_TUnitMTPProject>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\DevTools.TUnit.MTP.csproj</_TUnitMTPProject>
-            <_TUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_TUnitMTPDll>
-        </PropertyGroup>
-        <MSBuild Condition="!Exists('$(_TUnitMTPDll)')"
-                 Projects="$(_TUnitMTPProject)" Targets="Restore"
-                 Properties="Configuration=$(Configuration)" RemoveProperties="TargetFramework"/>
-        <MSBuild Condition="!Exists('$(_TUnitMTPDll)')"
-                 Projects="$(_TUnitMTPProject)" Targets="Build"
-                 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
-    </Target>
+    <!-- Testhost siblings packed beside the adapter: one row per TestingFramework. -->
+    <ItemGroup>
+        <MtpSibling Include="NUnit;TUnit;MSTest"/>
+    </ItemGroup>
 
-    <Target Name="PackTUnitMTP"
-            DependsOnTargets="BuildTUnitMTPForPack">
+    <Target Name="_ResolveMtpSiblings">
         <PropertyGroup>
-            <_TUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.TUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.TUnit.MTP.dll</_TUnitMTPDll>
-            <_TUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_TUnitMTPPackageRuntime>
-            <_TUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_TUnitMTPPackageRuntime>
+            <_MtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_MtpPackageRuntime>
+            <_MtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_MtpPackageRuntime>
         </PropertyGroup>
-        <Error Condition="!Exists('$(_TUnitMTPDll)')"
-               Text="Pack requires DevTools.TUnit.MTP.dll at $(_TUnitMTPDll)."/>
         <ItemGroup>
-            <TfmSpecificPackageFile Include="$(_TUnitMTPDll)">
-                <PackagePath>$(_TUnitMTPPackageRuntime)</PackagePath>
-            </TfmSpecificPackageFile>
+            <_MtpSibling Include="@(MtpSibling)">
+                <Project>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).MTP\DevTools.%(Identity).MTP.csproj</Project>
+                <Dll>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.%(Identity).MTP.dll</Dll>
+            </_MtpSibling>
         </ItemGroup>
     </Target>
 
-    <!-- 1. testhost sibling: restore/build if this TFM DLL is missing -->
-    <Target Name="BuildNUnitMTPForPack">
-        <PropertyGroup>
-            <_NUnitMTPProject>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\DevTools.NUnit.MTP.csproj</_NUnitMTPProject>
-            <_NUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_NUnitMTPDll>
-        </PropertyGroup>
-        <MSBuild Condition="!Exists('$(_NUnitMTPDll)')"
-                 Projects="$(_NUnitMTPProject)"
+    <!-- 1. testhost siblings: restore/build any whose TFM DLL is missing -->
+    <Target Name="BuildMtpSiblingsForPack" DependsOnTargets="_ResolveMtpSiblings">
+        <MSBuild Condition="!Exists('%(_MtpSibling.Dll)')"
+                 Projects="%(_MtpSibling.Project)"
                  Targets="Restore"
                  Properties="Configuration=$(Configuration)"
                  RemoveProperties="TargetFramework"/>
-        <MSBuild Condition="!Exists('$(_NUnitMTPDll)')"
-                 Projects="$(_NUnitMTPProject)"
+        <MSBuild Condition="!Exists('%(_MtpSibling.Dll)')"
+                 Projects="%(_MtpSibling.Project)"
                  Targets="Build"
                  Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
     </Target>
 
-    <!-- 3. testhost sibling + kept Abstractions into build/runtime/{tfm} -->
-    <Target Name="PackNUnitMTP" DependsOnTargets="BuildNUnitMTPForPack">
-        <PropertyGroup>
-            <_NUnitMTPDll>$(MSBuildThisFileDirectory)..\DevTools.NUnit.MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.NUnit.MTP.dll</_NUnitMTPDll>
-            <_NUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_NUnitMTPPackageRuntime>
-            <_NUnitMTPPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_NUnitMTPPackageRuntime>
-        </PropertyGroup>
-        <Error Condition="!Exists('$(_NUnitMTPDll)')"
-               Text="Pack requires DevTools.NUnit.MTP.dll at $(_NUnitMTPDll)."/>
+    <!-- 3. testhost siblings + shared Abstractions into build/runtime/{tfm} -->
+    <Target Name="PackMtpSiblings" DependsOnTargets="BuildMtpSiblingsForPack">
+        <Error Condition="!Exists('%(_MtpSibling.Dll)')"
+               Text="Pack requires DevTools.%(_MtpSibling.Identity).MTP.dll at %(_MtpSibling.Dll)."/>
         <Error Condition="!Exists('$(TargetDir)DevTools.Testing.Abstractions.dll')"
                Text="Pack requires DevTools.Testing.Abstractions.dll beside the adapter so testhost MTP shares TestingDiscovery."/>
         <ItemGroup>
-            <TfmSpecificPackageFile Include="$(_NUnitMTPDll)">
-                <PackagePath>$(_NUnitMTPPackageRuntime)</PackagePath>
+            <TfmSpecificPackageFile Include="@(_MtpSibling->'%(Dll)')">
+                <PackagePath>$(_MtpPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
             <TfmSpecificPackageFile Include="$(TargetDir)DevTools.Testing.Abstractions.dll">
-                <PackagePath>$(_NUnitMTPPackageRuntime)</PackagePath>
+                <PackagePath>$(_MtpPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>
     </Target>
-
     <!-- Compile: MTP (testhost hook). STJ/BCL copy-local comes from Transport/Ipc on net48. -->
     <ItemGroup>
         <PackageReference Include="Microsoft.Testing.Platform">

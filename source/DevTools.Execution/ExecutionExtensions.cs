@@ -34,7 +34,7 @@ public static class ExecutionExtensions
     /// <summary>
     /// Registers execution orchestration, script/assembly providers, MCP registry, and in-proc pipe server.
     /// From the add-in host: after registering bridges/adapters on <see cref="HostApplicationBuilder.Services"/>, call <c>services.AddExecutionServices()</c>.
-    /// In-host testing (NUnit and TUnit) is registered separately via <c>AddTestingHostServices()</c> from <c>DevTools.Testing.Host</c>.
+    /// In-host testing (NUnit, TUnit, MSTest) is registered separately via <c>AddTestingHostServices()</c> from <c>DevTools.Testing.Host</c>.
     /// </summary>
     public static IServiceCollection AddExecutionServices(
         this IServiceCollection services,

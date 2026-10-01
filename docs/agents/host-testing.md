@@ -1,18 +1,21 @@
 # MTP Host Testing (Agent Digest)
 
 `RevitDevTool.TestAdapter` (NuGet) is the only supported test integration. NUnit is
-the default engine, TUnit is opt-in. Product: `docs/product/host-testing.md` ·
-`docs/product/tunit-host-testing.md`. Structure: `docs/architecture/Testing/README.md`.
+the default engine. TUnit and MSTest are opt-in (`TestingFramework` `tunit` or
+`mstest`). Product: `docs/product/host-testing.md` ·
+`docs/product/tunit-host-testing.md`. MSTest pin: `docs/decisions/0038-mstest-host-provider.md`.
+Structure: `docs/architecture/Testing/README.md`.
 Run/author tests: `.agents/skills/revit-test/SKILL.md`.
+Consumer setup: `source/DevTools.TestAdapter/README.md`.
 
 ## Main flow
 
 ```text
-test csproj (HostName, HostVersion, NUnit|TUnit)
-  -> package targets: Reference the selected DevTools.{NUnit|TUnit}.MTP.dll
+test csproj (HostName, HostVersion, NUnit|TUnit|MSTest)
+  -> package targets: Reference the selected DevTools.{NUnit|TUnit|MSTest}.MTP.dll
      + Abstractions, write discovery-refs.txt and [AssemblyName].testconfig.json
   -> generated MTP entry point calls adapter hook + selected sibling hook
-  -> discovery: local ExploreTests / TUnit catalog in the testhost, no host process
+  -> discovery: local ExploreTests / TUnit catalog / MSTest --list-tests, no host process
   -> run: TestRunner.exe locates or launches the host, then testing/hello|run|cancel
 ```
 
@@ -52,8 +55,9 @@ so the next sample restore cannot keep a previous extraction of the packed versi
 ## Rules
 
 - Consumer properties: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`,
-  `LaunchTimeout`, `TestingFramework` (`nunit` default, `tunit` opt-in). `UseRevit` /
-  `UseAutoCad` are this repo's sample compile flags, not package settings.
+  `LaunchTimeout`, `TestingFramework` (`nunit` default, `tunit` or `mstest` opt-in).
+  An `mstest` project is `Sdk="MSTest.Sdk"` (or `EnableMSTestRunner=true`) pinned
+  at 4.4.1.
 - Do not set `RuntimeIdentifier` on net8 / net10 test projects. The package sets
   `AppendRuntimeIdentifierToOutputPath=false`. A RID on net8 (Revit 2025)
   nests testhost output under `win-x64`. Samples set `win-x64` only when
@@ -111,7 +115,7 @@ so the next sample restore cannot keep a previous extraction of the packed versi
 - Do not add a Host `TraceListener` or `ILogger` dump of `CaseResult.Output`; Trace/Debug
   already fan out and Console is write-through at case finish
   ([0017](../decisions/0017-nunit-host-test-output-routing.md)).
-- TUnit in-host `MissingMethodException` on `ClientInfoService`: MTP 2.4.0 needs
+- TUnit in-host `MissingMethodException` on `ClientInfoService`: MTP 2.4.1 needs
   `IClientInfo` + `IClientCapabilities`; the Runtime registers `TUnitEngineClientInfo` and
   ships in the installer, so redeploy the host (not the nupkg).
 - Visual Studio **Debug** attaches the testhost, then the Runner EnvDTE-attaches that VS

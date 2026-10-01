@@ -1,6 +1,7 @@
 using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.MSTest;
 using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Host.Runtime;
 using DevTools.Testing.Host.TUnit;
@@ -14,7 +15,7 @@ public static class TestingHostingExtensions
     extension(IServiceCollection services)
     {
         /// <summary>
-        /// Registers first-party in-host providers (NUnit, TUnit) and the
+        /// Registers first-party in-host providers (NUnit, TUnit, MSTest) and the
         /// <c>testing/*</c> bridge handler. Call from Revit/AutoCAD hosting after
         /// <c>AddExecutionServices()</c>.
         /// </summary>
@@ -22,6 +23,7 @@ public static class TestingHostingExtensions
         {
             services.AddNUnitHostServices();
             services.AddTUnitHostServices();
+            services.AddMsTestHostServices();
             return services.AddGenericTestingHostServices();
         }
         
@@ -62,6 +64,22 @@ public static class TestingHostingExtensions
                 policy => new FrameworkProvider(
                     policy,
                     new ManifestRuntimeSessionFactory(TUnitGenerationPolicy.RuntimeSessionTypeName)));
+            return services;
+        }
+        
+        public IServiceCollection AddMsTestHostServices()
+        {
+            services.TryAddSingleton<MSTestGenerationPolicy>(_ =>
+                new MSTestGenerationPolicy(() =>
+                    RuntimeSource.ResolveBeside(
+                        typeof(TestingHostingExtensions).Assembly,
+                        MSTestGenerationPolicy.RuntimeFolderName,
+                        MSTestGenerationPolicy.RuntimeAssemblyFileName)));
+            AddFrameworkProvider<MSTestGenerationPolicy>(
+                services,
+                policy => new FrameworkProvider(
+                    policy,
+                    new ManifestRuntimeSessionFactory(MSTestGenerationPolicy.RuntimeSessionTypeName)));
             return services;
         }
     }

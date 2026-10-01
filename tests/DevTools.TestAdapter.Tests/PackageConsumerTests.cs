@@ -218,6 +218,33 @@ public sealed class PackageConsumerTests
                         }
                         """,
                     expectedMtpAssembly: "DevTools.TUnit.MTP.dll");
+
+                AssertDiscovers(
+                    work,
+                    globalPackages,
+                    $"MSTestDiscovery{suffix}",
+                    packageVersion,
+                    tfm,
+                    engine: "mstest",
+                    framework: """
+                        <PackageReference Include="MSTest.TestFramework" Version="4.4.1">
+                          <ExcludeAssets>analyzers</ExcludeAssets>
+                        </PackageReference>
+                        <PackageReference Include="MSTest.TestAdapter" Version="4.4.1">
+                          <ExcludeAssets>analyzers</ExcludeAssets>
+                        </PackageReference>
+                        """,
+                    test: """
+                        using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+                        [TestClass]
+                        public class DiscoveredTests
+                        {
+                            [TestMethod]
+                            public void Runs_in_host() { }
+                        }
+                        """,
+                    expectedMtpAssembly: "DevTools.MSTest.MTP.dll");
             }
         }
         finally
@@ -250,6 +277,7 @@ public sealed class PackageConsumerTests
                 <HostVersion>2025</HostVersion>
                 {(netFx ? "<RuntimeIdentifier>win-x64</RuntimeIdentifier>" : "")}
                 {(engine is null ? "" : $"<TestingFramework>{engine}</TestingFramework>")}
+                {(engine == "mstest" ? "<EnableMSTestRunner>true</EnableMSTestRunner>" : "")}
               </PropertyGroup>
               <ItemGroup>
                 <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
@@ -362,6 +390,7 @@ public sealed class PackageConsumerTests
         // is not a stale Debug leftover. Same order as scripts/pack-test-adapter.ps1.
         Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.NUnit.MTP", "DevTools.NUnit.MTP.csproj")}\" -c Release");
         Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.TUnit.MTP", "DevTools.TUnit.MTP.csproj")}\" -c Release");
+        Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.MSTest.MTP", "DevTools.MSTest.MTP.csproj")}\" -c Release");
         Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
         var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
         return (nupkg, Path.GetFileNameWithoutExtension(nupkg)["RevitDevTool.TestAdapter.".Length..]);
@@ -394,6 +423,7 @@ public sealed class PackageConsumerTests
         Assert.Contains("build/netfx/ModuleInitializerAttribute.cs", entries, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("build/hooks/NUnitMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("build/hooks/TUnitMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("build/hooks/MSTestMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
         // The dev-loop targets stay in the checkout: a consumer build must not see repo paths
         // or this repo's Autodesk configuration names.
         Assert.DoesNotContain("build/RevitDevTool.TestAdapter.Local.targets", entries, StringComparer.OrdinalIgnoreCase);
@@ -410,6 +440,7 @@ public sealed class PackageConsumerTests
 
             Assert.Contains($"build/runtime/{tfm}/DevTools.NUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.Contains($"build/runtime/{tfm}/DevTools.TUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
+            Assert.Contains($"build/runtime/{tfm}/DevTools.MSTest.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.Contains($"build/runtime/{tfm}/DevTools.Testing.Abstractions.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.Ipc.dll", entries, StringComparer.OrdinalIgnoreCase);

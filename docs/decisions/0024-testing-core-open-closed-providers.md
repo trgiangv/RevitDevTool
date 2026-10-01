@@ -35,7 +35,7 @@ kernel catalog.
 
 **Amendment 2026-08-29.** Public MSBuild names dropped the `DevTools` prefix:
 `TestingRunnerPath`. Ipc/Transport are ILRepacked into the adapter. In-host
-`testing/*` is `MarshaledTestRequestHandler` → `DotnetTestRequestHandler`.
+`testing/*` is `MarshaledTestRequestHandler` → `TestingRequestHandler`.
 Merge task is `MergeTestConfig`. JSON `frameworkId` is unchanged.
 
 Reviewed twice on 2026-08-22 (SOLID / fail-closed / YAGNI). Second pass closed
@@ -217,7 +217,7 @@ Public members of `TestingGenerationFiles` (Host):
   add, or replace **only if content differs**. Destination `relativePath` is
   chosen by the caller (runtime assembly / symbol names stay provider
   constants).
-- `NormalizeRelativePath`, `GetRelativePath`, `IsVolatileGenerationOutput` —
+- `GetRelativePath`, `IsVolatileGenerationOutput` —
   net48-safe path helpers. `TestingGenerationPaths` stays **internal**.
 
 Do **not** add `MergeRuntime(HostRuntimeSource, …)` or a `RuntimeMergeConflict`
@@ -270,7 +270,7 @@ same change. The same YAGNI bar forbids a one-value merge-policy enum.
 - `HostTestDiscovery` static assignment (net48 identity).
 - Coherent generation retry, content-hash publish, `GenerationLocks` on the
   store.
-- `MarshaledTestRequestHandler` vs `DotnetTestRequestHandler`.
+- `MarshaledTestRequestHandler` vs `TestingRequestHandler`.
 - `TestingDiscoveryHints` (optional; TUnit consumes, NUnit ignores).
 - `TestingProviderPayload` on the wire (reserved from 0021). Removing it is a
   published IPC break; unused store setters are not on the wire, so they

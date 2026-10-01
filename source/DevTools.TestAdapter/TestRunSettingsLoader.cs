@@ -38,7 +38,7 @@ internal static class TestRunSettingsLoader
         {
             throw new InvalidOperationException(
                 "RevitDevTool.TestAdapter requires 'devtools.frameworkId' in testconfig.json to be "
-                + nameof(TestFrameworkId.NUnit) + " or " + nameof(TestFrameworkId.TUnit) + ".");
+                + nameof(TestFrameworkId.NUnit) + ", " + nameof(TestFrameworkId.TUnit) + ", or " + nameof(TestFrameworkId.MSTest) + ".");
         }
         var runnerPath = TestingRunnerPaths.ReadEnvironment(TestingRunnerPaths.RunnerPathEnvironmentVariable)
             ?? ReadKey(configuration, TestConfig.Keys.RunnerPath);

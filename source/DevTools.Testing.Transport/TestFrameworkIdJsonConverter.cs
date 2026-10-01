@@ -16,7 +16,7 @@ public sealed class TestFrameworkIdJsonConverter : JsonConverter<TestFrameworkId
             || !Enum.TryParse(text, ignoreCase: true, out TestFrameworkId id)
             || !Enum.IsDefined(id))
         {
-            throw new JsonException("framework_id must be NUnit or TUnit.");
+            throw new JsonException("framework_id must be NUnit, TUnit, or MSTest.");
         }
 
         return id;

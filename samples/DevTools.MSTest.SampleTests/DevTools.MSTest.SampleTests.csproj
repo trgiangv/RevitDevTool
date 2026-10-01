@@ -1,0 +1,18 @@
+<Project Sdk="MSTest.Sdk">
+  <PropertyGroup>
+    <UseRevit>true</UseRevit>
+    <IsTestProject>true</IsTestProject>
+    <TestingFramework>mstest</TestingFramework>
+    <HostName>Revit</HostName>
+    <HostVersion>$(RevitVersion)</HostVersion>
+    <ForceLaunch>false</ForceLaunch>
+    <PerTestTimeout>60</PerTestTimeout>
+    <LaunchTimeout>360</LaunchTimeout>
+    <RuntimeIdentifier Condition="$(TargetFramework.StartsWith('net4'))">win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Nice3point.Revit.Toolkit" VersionOverride="$(RevitVersion).*"/>
+    <PackageReference Include="RevitDevTool.TestAdapter"/>
+  </ItemGroup>
+</Project>

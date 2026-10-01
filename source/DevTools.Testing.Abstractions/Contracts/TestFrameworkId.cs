@@ -4,4 +4,5 @@ public enum TestFrameworkId
 {
     NUnit,
     TUnit,
+    MSTest,
 }

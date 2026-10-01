@@ -3,7 +3,7 @@
     Pack the RevitDevTool.TestAdapter NuGet package from DevTools.TestAdapter.
 .DESCRIPTION
     Uses <Version> in source/DevTools.TestAdapter/DevTools.TestAdapter.csproj.
-    Restores and builds DevTools.NUnit.MTP for all TFMs, then packs the adapter.
+    Restores and builds DevTools.NUnit.MTP, DevTools.TUnit.MTP, and DevTools.MSTest.MTP for all TFMs, then packs the adapter.
     Writes to output/nuget (repo NuGet.config maps RevitDevTool.TestAdapter there)
     and deletes the extracted copy of this version from the global packages
     folder so samples restore the nupkg just packed. Same-version re-pack is
@@ -38,13 +38,16 @@ if ([string]::IsNullOrWhiteSpace($version)) {
 
 $nunitMtpCsproj = Join-RepoPath 'source/DevTools.NUnit.MTP/DevTools.NUnit.MTP.csproj'
 $tunitMtpCsproj = Join-RepoPath 'source/DevTools.TUnit.MTP/DevTools.TUnit.MTP.csproj'
+$mstestMtpCsproj = Join-RepoPath 'source/DevTools.MSTest.MTP/DevTools.MSTest.MTP.csproj'
 
-Write-Host "Restoring $csproj, $nunitMtpCsproj, and $tunitMtpCsproj"
+Write-Host "Restoring $csproj, $nunitMtpCsproj, $tunitMtpCsproj, and $mstestMtpCsproj"
 dotnet restore $csproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet restore $nunitMtpCsproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 dotnet restore $tunitMtpCsproj
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+dotnet restore $mstestMtpCsproj
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Building $nunitMtpCsproj (all TargetFrameworks)"
@@ -53,6 +56,10 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Building $tunitMtpCsproj (all TargetFrameworks)"
 dotnet build $tunitMtpCsproj -c Release --no-restore
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "Building $mstestMtpCsproj (all TargetFrameworks)"
+dotnet build $mstestMtpCsproj -c Release --no-restore
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "Packing RevitDevTool.TestAdapter $version"

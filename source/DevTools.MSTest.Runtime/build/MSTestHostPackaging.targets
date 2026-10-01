@@ -1,0 +1,41 @@
+<Project>
+  <PropertyGroup>
+    <MSTestRuntimeProject Condition="'$(MSTestRuntimeProject)' == ''">$(MSBuildThisFileDirectory)..\DevTools.MSTest.Runtime.csproj</MSTestRuntimeProject>
+  </PropertyGroup>
+
+  <Target Name="CopyMSTestRuntimeBootstrap"
+          AfterTargets="Build"
+          BeforeTargets="RepackAddinFiles"
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_MSTestRuntimeDeployDir>$([System.IO.Path]::GetFullPath('$(TargetDir)MSTestRuntime\'))</_MSTestRuntimeDeployDir>
+    </PropertyGroup>
+    <MSBuild Projects="$(MSTestRuntimeProject)"
+             Targets="GetMSTestRuntimePayload"
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+      <Output TaskParameter="TargetOutputs" ItemName="_MSTestRuntimePayload" />
+    </MSBuild>
+    <Error Condition="'@(_MSTestRuntimePayload)' == ''"
+           Text="MSTest runtime payload from '$(MSTestRuntimeProject)' was empty." />
+    <RemoveDir Directories="$(_MSTestRuntimeDeployDir)" Condition="Exists('$(_MSTestRuntimeDeployDir)')" />
+    <MakeDir Directories="$(_MSTestRuntimeDeployDir)" />
+    <Copy SourceFiles="@(_MSTestRuntimePayload)"
+          DestinationFolder="$(_MSTestRuntimeDeployDir)"
+          SkipUnchangedFiles="false" />
+  </Target>
+
+  <Target Name="AssertMSTestRuntimeLayout"
+          AfterTargets="RepackAddinFiles"
+          Condition="'$(TargetDir)' != ''">
+    <Error Condition="!Exists('$(TargetDir)MSTestRuntime\MSTest.TestFramework.dll')"
+           Text="MSTest.TestFramework.dll must be deployed under MSTestRuntime\." />
+    <Error Condition="!Exists('$(TargetDir)MSTestRuntime\MSTest.TestAdapter.dll')"
+           Text="MSTest.TestAdapter.dll must be deployed under MSTestRuntime\." />
+    <Error Condition="!Exists('$(TargetDir)MSTestRuntime\MSTestAdapter.PlatformServices.dll')"
+           Text="MSTestAdapter.PlatformServices.dll must be deployed under MSTestRuntime\." />
+    <Error Condition="!Exists('$(TargetDir)MSTestRuntime\Microsoft.Testing.Platform.dll')"
+           Text="Microsoft.Testing.Platform.dll must be deployed under MSTestRuntime\." />
+    <Error Condition="Exists('$(TargetDir)MSTest.TestFramework.dll') OR Exists('$(TargetDir)MSTest.TestAdapter.dll') OR Exists('$(TargetDir)MSTestAdapter.PlatformServices.dll') OR Exists('$(TargetDir)Microsoft.Testing.Platform.dll')"
+           Text="MSTest and MTP assemblies must not be copied at the add-in root." />
+  </Target>
+</Project>

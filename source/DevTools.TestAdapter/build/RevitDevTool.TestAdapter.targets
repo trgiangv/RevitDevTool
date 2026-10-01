@@ -21,8 +21,10 @@
   <PropertyGroup>
     <_MtpSiblingName Condition="'$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP</_MtpSiblingName>
     <_MtpSiblingName Condition="'$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP</_MtpSiblingName>
+    <_MtpSiblingName Condition="'$(TestingFramework)' == 'mstest'">DevTools.MSTest.MTP</_MtpSiblingName>
     <_MtpHookType Condition="'$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.NUnitMtpBuilderHook</_MtpHookType>
     <_MtpHookType Condition="'$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.TUnitMtpBuilderHook</_MtpHookType>
+    <_MtpHookType Condition="'$(TestingFramework)' == 'mstest'">DevTools.MSTest.MTP.MSTestMtpBuilderHook</_MtpHookType>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(_MtpHookType)' != ''">
@@ -36,6 +38,9 @@
   </ItemGroup>
   <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true' And '$(TestingFramework)' == 'tunit'">
     <Compile Include="$(MSBuildThisFileDirectory)hooks\TUnitMtpBuilderHook.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(IsTestingPlatformApplication)' == 'true' And '$(TestingFramework)' == 'mstest'">
+    <Compile Include="$(MSBuildThisFileDirectory)hooks\MSTestMtpBuilderHook.cs" />
   </ItemGroup>
 
   <!-- net48 testhost binds MTP's BCL closure through binding redirects. -->
@@ -52,6 +57,10 @@
        the outer testhost so execution remains TestRunner -> testing/run IPC. -->
   <ItemGroup Condition="'$(TestingFramework)' == 'tunit'">
     <TestingPlatformBuilderHook Remove="6ADF853A-6945-4A06-9A4B-D99BC1DC1094" />
+  </ItemGroup>
+  <!-- MSTest.TestAdapter 4.4.1 buildTransitive props registers this outer hook. -->
+  <ItemGroup Condition="'$(TestingFramework)' == 'mstest'">
+    <TestingPlatformBuilderHook Remove="031F8871-2660-4208-8F6B-FC142B40ABFF" />
   </ItemGroup>
 
   <!-- net4x + TUnit: the generated infrastructure applies [ModuleInitializer], which
@@ -162,8 +171,11 @@
         Condition="Exists('$(_RuntimeRoot)') And ('$(_PackageRuntimeDir)' == '' Or !Exists('$(_PackageRuntimeDir)'))"
         Text="RevitDevTool.TestAdapter has no runtime assets for $(TargetFramework). The package ships net48, net8.0-windows, and net10.0-windows under build/runtime. A matching or nearest-lower folder is required so the selected MTP sibling and Abstractions copy next to the test exe." />
     <Error
+        Condition="'$(TestingFramework)' == 'mstest' And '$(EnableMSTestRunner)' != 'true'"
+        Text="RevitDevTool.TestAdapter with TestingFramework=mstest needs the MSTest runner: use Sdk=&quot;MSTest.Sdk&quot; or set &lt;EnableMSTestRunner&gt;true&lt;/EnableMSTestRunner&gt;. Without it MSTest.TestAdapter turns off Microsoft.Testing.Platform (IsTestingPlatformApplication=false) and no testhost entry point is generated." />
+    <Error
         Condition="'$(IsTestingPlatformApplication)' == 'true' And '$(_MtpHookType)' == ''"
-        Text="RevitDevTool.TestAdapter requires TestingFramework nunit or tunit (got '$(TestingFramework)')." />
+        Text="RevitDevTool.TestAdapter requires TestingFramework nunit, tunit, or mstest (got '$(TestingFramework)')." />
     <Error
         Condition="'$(IsTestingPlatformApplication)' == 'true' And '$(_SelectedMtpHintPath)' != '' And !Exists('$(_SelectedMtpHintPath)')"
         Text="RevitDevTool.TestAdapter could not reference $(_MtpSiblingName).dll for $(TargetFramework). The package ships it under build/runtime." />
@@ -211,7 +223,7 @@
         Text="RevitDevTool.TestAdapter test projects must declare &lt;HostVersion&gt; (for example 2025) in the .csproj." />
     <Error
         Condition="'$(_MtpHookType)' == ''"
-        Text="RevitDevTool.TestAdapter requires TestingFramework nunit or tunit (got '$(TestingFramework)')." />
+        Text="RevitDevTool.TestAdapter requires TestingFramework nunit, tunit, or mstest (got '$(TestingFramework)')." />
     <PropertyGroup>
       <_RunnerPath Condition="'$(TestingRunnerPath)' != ''">$(TestingRunnerPath)</_RunnerPath>
       <_RunnerPath Condition="'$(_RunnerPath)' == ''">$([System.Environment]::GetFolderPath(SpecialFolder.ApplicationData))\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.TestRunner.exe</_RunnerPath>

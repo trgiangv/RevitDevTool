@@ -1,0 +1,17 @@
+<Project Sdk="MSTest.Sdk">
+  <PropertyGroup>
+    <UseAutoCad>true</UseAutoCad>
+    <IsTestProject>true</IsTestProject>
+    <TestingFramework>mstest</TestingFramework>
+    <HostName>Civil3D</HostName>
+    <HostVersion>$(AutoCadVersion)</HostVersion>
+    <ForceLaunch>false</ForceLaunch>
+    <PerTestTimeout>60</PerTestTimeout>
+    <LaunchTimeout>360</LaunchTimeout>
+    <RuntimeIdentifier Condition="$(TargetFramework.StartsWith('net4'))">win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RevitDevTool.TestAdapter"/>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,50 @@
+<Project>
+  <Target Name="PrepareMSTestRuntimePayload"
+          AfterTargets="Build"
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_MSTestRuntimeOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_MSTestRuntimeOutputDir>
+      <_MSTestRuntimePayloadDir>$([System.IO.Path]::Combine('$(_MSTestRuntimeOutputDir)', 'MSTestRuntimePayload'))</_MSTestRuntimePayloadDir>
+      <_MSTestRuntimeMtpPath>$([System.IO.Path]::Combine('$(_MSTestRuntimeOutputDir)', 'Microsoft.Testing.Platform.dll'))</_MSTestRuntimeMtpPath>
+    </PropertyGroup>
+    <ItemGroup>
+      <_MSTestRuntimePayload Include="$(_MSTestRuntimeOutputDir)*.dll" />
+      <_MSTestRuntimePayload Include="$(_MSTestRuntimeOutputDir)$(TargetName).pdb"
+                            Condition="Exists('$(_MSTestRuntimeOutputDir)$(TargetName).pdb')" />
+    </ItemGroup>
+
+    <Error Condition="!Exists('$(_MSTestRuntimeOutputDir)MSTest.TestFramework.dll')"
+           Text="MSTest runtime payload requires MSTest.TestFramework.dll under '$(_MSTestRuntimeOutputDir)'." />
+    <Error Condition="!Exists('$(_MSTestRuntimeOutputDir)MSTest.TestAdapter.dll')"
+           Text="MSTest runtime payload requires MSTest.TestAdapter.dll under '$(_MSTestRuntimeOutputDir)'." />
+    <Error Condition="!Exists('$(_MSTestRuntimeOutputDir)MSTestAdapter.PlatformServices.dll')"
+           Text="MSTest runtime payload requires MSTestAdapter.PlatformServices.dll under '$(_MSTestRuntimeOutputDir)'." />
+    <Error Condition="!Exists('$(_MSTestRuntimeMtpPath)')"
+           Text="MSTest runtime payload requires Microsoft.Testing.Platform.dll under '$(_MSTestRuntimeOutputDir)'." />
+
+    <GetAssemblyIdentity AssemblyFiles="$(_MSTestRuntimeMtpPath)">
+      <Output TaskParameter="Assemblies" ItemName="_MSTestRuntimeMtpIdentity" />
+    </GetAssemblyIdentity>
+    <Error Condition="'%(_MSTestRuntimeMtpIdentity.Version)' != '2.4.1.0'"
+           Text="MSTest runtime payload requires Microsoft.Testing.Platform 2.4.1 (assembly version 2.4.1.0). Found '%(_MSTestRuntimeMtpIdentity.Version)' at '$(_MSTestRuntimeMtpPath)'." />
+
+    <RemoveDir Directories="$(_MSTestRuntimePayloadDir)" Condition="Exists('$(_MSTestRuntimePayloadDir)')" />
+    <MakeDir Directories="$(_MSTestRuntimePayloadDir)" />
+    <Copy SourceFiles="@(_MSTestRuntimePayload)"
+          DestinationFolder="$(_MSTestRuntimePayloadDir)"
+          SkipUnchangedFiles="false" />
+  </Target>
+
+  <Target Name="GetMSTestRuntimePayload"
+          DependsOnTargets="Build"
+          Returns="@(MSTestRuntimePayloadFile)"
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_MSTestRuntimeOutputDir>$([System.IO.Path]::GetFullPath('$(TargetDir)'))</_MSTestRuntimeOutputDir>
+      <_MSTestRuntimePayloadDir>$([System.IO.Path]::Combine('$(_MSTestRuntimeOutputDir)', 'MSTestRuntimePayload'))</_MSTestRuntimePayloadDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <MSTestRuntimePayloadFile Include="$(_MSTestRuntimePayloadDir)\*.*" />
+    </ItemGroup>
+  </Target>
+</Project>

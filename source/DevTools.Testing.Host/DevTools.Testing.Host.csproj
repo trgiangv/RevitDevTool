@@ -24,5 +24,8 @@
         <ProjectReference Include="..\DevTools.TUnit.Runtime\DevTools.TUnit.Runtime.csproj"
                           ReferenceOutputAssembly="false"
                           SetTargetFramework="TargetFramework=$(TargetFramework)"/>
+        <ProjectReference Include="..\DevTools.MSTest.Runtime\DevTools.MSTest.Runtime.csproj"
+                          ReferenceOutputAssembly="false"
+                          SetTargetFramework="TargetFramework=$(TargetFramework)"/>
     </ItemGroup>
 </Project>

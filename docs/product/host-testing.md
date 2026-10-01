@@ -2,22 +2,29 @@
 
 RevitDevTool runs tests inside Revit, AutoCAD, and Civil 3D through
 Microsoft.Testing.Platform. `RevitDevTool.TestAdapter` is the only public test
-integration package. NUnit is the default engine; TUnit is an opt-in provider
-([tunit-host-testing.md](tunit-host-testing.md)). The VSTest adapter and
+integration package. NUnit is the default engine. TUnit
+([tunit-host-testing.md](tunit-host-testing.md)) and MSTest
+([0038](../decisions/0038-mstest-host-provider.md)) are opt-in providers.
+The VSTest adapter and
 NUnit-specific bridge protocol are not part of the supported product on
 `develop`; their final baseline is retained on branch `testing/nunit-vstest`.
 
 ## Test project contract
 
 - Reference `RevitDevTool.TestAdapter` (depends on
-  `Microsoft.Testing.Platform.MSBuild` 2.4.0). Framework package (default NUnit
-  4.6.1) is a local choice, not a package dependency. Package props set
+  `Microsoft.Testing.Platform.MSBuild` 2.4.1). Framework package (default NUnit
+  5.0.0) is a local choice, not a package dependency. Package props set
   `OutputType=Exe`. Declare `HostName`, `HostVersion`, optional `ForceLaunch`,
   `PerTestTimeout`, `LaunchTimeout`. `ForceLaunch=true` always starts a new host
   (skip reuse). `PerTestTimeout` is the per-test budget after the host is ready; `testing/run`
   pipe wait = budget × test count. `LaunchTimeout` waits for the host pipe after
-  process start. `TestingFramework` (`nunit` default, `tunit` opt-in) overrides
-  the in-host engine without changing the NuGet.
+  process start. `TestingFramework` (`nunit` default, `tunit` or `mstest`
+  opt-in) overrides the in-host engine without changing the NuGet. An `mstest`
+  project references MSTest.TestFramework 4.4.1. The in-host closure is that
+  version plus Microsoft.Testing.Platform 2.4.1, private to `MSTestRuntime\`.
+  An `mstest` project uses `Sdk="MSTest.Sdk"`, or `Microsoft.NET.Sdk` with
+  `<EnableMSTestRunner>true</EnableMSTestRunner>` (the build fails with that
+  hint otherwise). The adapter testhost package is the same 2.4.1.
 - `testconfig.json` is generated from csproj properties; incremental build
   refreshes `[AssemblyName].testconfig.json` (no Rebuild after `HostName`,
   `ForceLaunch`, `PerTestTimeout`, or `LaunchTimeout` changes).
@@ -46,9 +53,11 @@ NUnit-specific bridge protocol are not part of the supported product on
 
 ## Discovery
 
-- Host-free IDE discovery: `DevTools.NUnit.MTP` + NUnit `ExploreTests` when the
-  assembly loads in the MTP process. Host API refs (`Revit_All_Main_Versions_API_x64`
-  for Revit) are compile-only (`Copy Local false`). Build writes
+- Host-free IDE discovery. NUnit uses `DevTools.NUnit.MTP` + `ExploreTests`.
+  TUnit lists `Sources.TestEntries`. MSTest lists with
+  `TestApplication --list-tests` and does not run test bodies. Host API refs
+  (`Revit_All_Main_Versions_API_x64` for Revit) are compile-only
+  (`Copy Local false`). Build writes
   `$(TargetName).discovery-refs.txt` from compile-only NuGet `ReferencePath`;
   testhost resolves via `AssemblyResolve` (API DLLs not beside the exe). With
   that file, discovery loads an isolated copy of the test assembly and resolves
@@ -129,10 +138,12 @@ NUnit-specific bridge protocol are not part of the supported product on
 |---|---|
 | `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts, plus testhost discovery (`ITestDiscoverer`). MTP compiles against this assembly, not `DevTools.TestAdapter` |
 | `DevTools.Testing.Transport` | `testing/*` JSON, pipe methods, and TestRunner process client |
-| `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, runtime-session lifecycle, and first-party NUnit/TUnit providers (closure/version policy, Dynamo-safe NUnit framework sharing, isolated runtime activation, `TestingSelection` → NUnit filter XML) |
-| `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, TestNode publish). References the selected `DevTools.{NUnit\|TUnit}.MTP.dll` as a testhost assembly. Does not parse NUnit names |
+| `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, runtime-session lifecycle, and first-party NUnit/TUnit/MSTest providers (closure/version policy, Dynamo-safe NUnit framework sharing, isolated runtime activation, the testhost run mapper's selection → NUnit `filter-xml` or MSTest `--filter-uid`) |
+| `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, TestNode publish). References the selected `DevTools.{NUnit\|TUnit\|MSTest}.MTP.dll` as a testhost assembly. Does not parse NUnit names |
 | `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`), metadata `TypeName`, DisplayName suffix, host filter XML, and result fold. Build-selected testhost sibling; not ILRepacked into the adapter |
 | `DevTools.NUnit.Runtime` | Default in-host engine: NUnit execution inside an isolated generation |
+| `DevTools.MSTest.MTP` | Testhost discovery via `TestApplication` `--list-tests`. Does not run test bodies. Maps Names to MTP node-uid test ids |
+| `DevTools.MSTest.Runtime` | In-host MSTest 4.4.1 session on the assembly the generation already loaded. `mstest:output:captureTrace` stays off |
 | `DevTools.TestRunner.Core` | Framework-neutral host locate/launch/reuse, debugger attach, and `testing/*` pipe client |
 | `DevTools.TestRunner` | Southbound executable: locate/launch the host and send `testing/run`. Framework id is a CLI option from the adapter `devtools` section |
 
@@ -146,6 +157,11 @@ target is removed.
 Samples: `samples/DevTools.NUnit.SampleTests` (Revit),
 `samples/DevTools.NUnit.Civil3D.SampleTests` (Civil 3D). Those samples still
 use NUnit attributes because NUnit is the default engine.
+`samples/DevTools.TUnit.SampleTests` and
+`samples/DevTools.TUnit.Civil3D.SampleTests` opt in with `TestingFramework=tunit`.
+`samples/DevTools.MSTest.SampleTests` and
+`samples/DevTools.MSTest.Civil3D.SampleTests` opt in with
+`TestingFramework=mstest` and MSTest.Sdk 4.4.1.
 `samples/ricaun.NUnit.SampleTests` is a comparison sample: it links the same
 `HostSmokeTests` and runs them through `ricaun.RevitTest.TestAdapter` (VSTest).
 It is not the product contract — do not use it as the verify path, and do not
@@ -154,9 +170,10 @@ try to make it MTP.
 Run the generated test executable or use the Microsoft.Testing.Platform
 `dotnet test`/IDE surface. This repo puts the MTP runner on the root
 `global.json`; `samples/ricaun.NUnit.SampleTests` overrides with `"runner":
-"VSTest"` and must be run from that folder. The adapter copies
-`DevTools.NUnit.MTP.dll` next to the test exe. Consumers reference NUnit; they
-do not add `DevTools.NUnit.MTP` as a ProjectReference.
+"VSTest"` and must be run from that folder. The adapter copies the selected
+sibling (`DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, or
+`DevTools.MSTest.MTP.dll`) next to the test exe. Consumers reference the
+framework package; they do not add that sibling as a ProjectReference.
 
 Use an Autodesk configuration (`Debug.Autodesk.2024`, `Release.Autodesk.2024`,
 …). Plain `Debug` / `Release` do not set `RevitVersion` / `TargetFramework`;
@@ -205,7 +222,7 @@ not pack the host bundle.
   only the platform adapter compile surface.
 - **Installer / bundle** — `scripts/pack.ps1` / `PublishRelease.yml`. Ships
   `DevTools.TestRunner.exe` and the in-host testing stack
-  (`Testing.Host` with NUnit/TUnit providers, `NUnit.Runtime` / `TUnit.Runtime`).
+  (`Testing.Host` with NUnit/TUnit/MSTest providers, `NUnit.Runtime` / `TUnit.Runtime` / `MSTest.Runtime`).
   Required for live runs;
   the NuGet does not replace it.
 
