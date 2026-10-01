@@ -13,6 +13,17 @@
         <Reference Include="System.Net.Http" />
     </ItemGroup>
 
+    <!-- Polyfill compiles ArrayBufferWriter only when System.Memory is already
+         referenced, which is also when ZLogger's Utf8StringInterpolation ships the
+         same public type. Drop the source copy so net48 binds the imported one.
+         The remove has to run in a target: %(NuGetPackageId) is custom metadata. -->
+    <Target Name="RemovePolyfillArrayBufferWriter" BeforeTargets="CoreCompile" Condition="'$(TargetFramework)' == 'net48'">
+        <ItemGroup>
+            <_PolyfillCompile Include="@(Compile -> WithMetadataValue('NuGetPackageId', 'Polyfill'))" />
+            <Compile Remove="@(_PolyfillCompile)" Condition="'%(Filename)' == 'ArrayBufferWriter'" />
+        </ItemGroup>
+    </Target>
+
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" />
     </ItemGroup>
