@@ -7,13 +7,13 @@ using static DevTools.NUnit.Runtime.NUnitNameSyntax;
 
 namespace DevTools.NUnit.Runtime;
 
-internal sealed class NUnitSourceLocationProvider
+internal sealed class NUnitLocationProvider
 {
     private readonly string _assemblyPath;
     private readonly string? _probeDirectory;
     private readonly Dictionary<string, (string File, int Line)?> _cache = new(StringComparer.Ordinal);
 
-    public NUnitSourceLocationProvider(string assemblyPath)
+    public NUnitLocationProvider(string assemblyPath)
     {
         _assemblyPath = Path.GetFullPath(assemblyPath);
         _probeDirectory = Path.GetDirectoryName(_assemblyPath);

@@ -13,7 +13,7 @@ public static class TestingProtocol
     public const string Cancel = "testing/cancel";
     public const string Progress = "testing/progress";
 
-    public const string IncompatibleCode = "testing/protocol_incompatible";
+    public const string IncompatibleCode = TestingErrorCodes.ProtocolIncompatible;
 
     public static bool IsCompatible(int protocolVersion) =>
         protocolVersion == CurrentVersion;

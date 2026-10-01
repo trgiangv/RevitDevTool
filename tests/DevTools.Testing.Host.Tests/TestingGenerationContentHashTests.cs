@@ -21,8 +21,8 @@ public sealed class TestingGenerationContentHashTests
                 ("alpha.txt", firstPath),
             };
 
-            var first = TestingGenerationContentHash.ComputeGenerationId(entries);
-            var second = TestingGenerationContentHash.ComputeGenerationId(entries.Reverse());
+            var first = TestingGenerationPublish.ComputeGenerationId(entries);
+            var second = TestingGenerationPublish.ComputeGenerationId(entries.Reverse());
 
             Assert.AreEqual(first, second);
             Assert.IsTrue(System.Text.RegularExpressions.Regex.IsMatch(first, "^[0-9a-f]{64}$"));
@@ -41,9 +41,9 @@ public sealed class TestingGenerationContentHashTests
         {
             var path = Path.Combine(directory, "payload.txt");
             File.WriteAllText(path, "v1");
-            var before = TestingGenerationContentHash.ComputeGenerationId([("payload.txt", path)]);
+            var before = TestingGenerationPublish.ComputeGenerationId([("payload.txt", path)]);
             File.WriteAllText(path, "v2");
-            var after = TestingGenerationContentHash.ComputeGenerationId([("payload.txt", path)]);
+            var after = TestingGenerationPublish.ComputeGenerationId([("payload.txt", path)]);
 
             Assert.AreNotEqual(before, after);
         }

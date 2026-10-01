@@ -9,7 +9,7 @@ namespace DevTools.Testing.Host;
 /// <summary>Runs <c>testing/run</c> on the host context while leaving control messages on the pipe thread.</summary>
 public sealed class MarshaledTestRequestHandler : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
-    private readonly DotnetTestRequestHandler _inner;
+    private readonly TestingRequestHandler _inner;
     private readonly IHostContextExecutor _hostContext;
 
     public MarshaledTestRequestHandler(
@@ -19,7 +19,7 @@ public sealed class MarshaledTestRequestHandler : IBridgeRequestHandler, IBridge
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(hostInfo);
-        _inner = new DotnetTestRequestHandler(registry, hostInfo.Host.ToString(), hostInfo.VersionNumber);
+        _inner = new TestingRequestHandler(registry, hostInfo.Host.ToString(), hostInfo.VersionNumber);
         _hostContext = hostContext ?? throw new ArgumentNullException(nameof(hostContext));
     }
 
@@ -44,6 +44,8 @@ public sealed class MarshaledTestRequestHandler : IBridgeRequestHandler, IBridge
         // Do not pass the pipe-disconnect token into ExecuteAsync. Cancelling the
         // dispatcher Task while the test is frozen at a breakpoint leaves idle
         // work running with a disposed CTS and parks later testing/run forever.
+
+        // ReSharper disable once MethodSupportsCancellation
         return await _hostContext.ExecuteAsync(
                 () => _inner.HandleAsync(requestId, method, @params, ct).GetAwaiter().GetResult())
             .ConfigureAwait(false);

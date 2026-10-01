@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Text;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.NUnit.Loading;
+using DevTools.Testing.Host.NUnit;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests;
 
@@ -72,7 +72,7 @@ public static class NetFrameworkGenerationTestEnvironment
     public static NetFrameworkGenerationHarness CreateBuilder(string generationsRoot) =>
         new(
             new TestingGenerationStore(generationsRoot),
-            new NUnitGenerationPolicy(() => new HostRuntimeSource(
+            new NUnitGenerationPolicy(() => new RuntimeSource(
                 RuntimeAssemblyPath,
                 File.Exists(RuntimeSymbolPath) ? RuntimeSymbolPath : null,
                 RuntimeDependencyPaths())));

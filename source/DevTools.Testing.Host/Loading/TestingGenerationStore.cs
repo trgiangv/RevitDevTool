@@ -5,7 +5,7 @@ namespace DevTools.Testing.Host.Loading;
 
 public sealed class TestingGenerationStore(string? generationsRootDirectory = null)
 {
-    private const int MaxSnapshotAttempts = 3;
+    private const int MaxPublishAttempts = 3;
     private static readonly ConcurrentDictionary<string, Lock> GenerationLocks = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _generationsRootDirectory = generationsRootDirectory
                                                         ?? Path.Combine(Path.GetTempPath(), "DevTools.Testing");
@@ -20,14 +20,14 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
         ValidateSources(plan, testAssemblyPath);
         string? lastFailure = null;
 
-        for (var attempt = 0; attempt < MaxSnapshotAttempts; attempt++)
+        for (var attempt = 0; attempt < MaxPublishAttempts; attempt++)
         {
             if (TryBuild(policy, plan, out var manifest, out lastFailure))
                 return manifest!;
         }
 
         throw new TestingGenerationBuildException(
-            $"Failed to create a coherent generation snapshot after {MaxSnapshotAttempts} attempts. Last failure: {lastFailure ?? "unknown"}.");
+            $"Failed to publish a coherent generation after {MaxPublishAttempts} attempts. Last failure: {lastFailure ?? "unknown"}.");
     }
 
     private bool TryBuild(
@@ -45,7 +45,7 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
             var metadata = plan.Files.Select(file => (File: file, Metadata: SourceMetadata.Capture(file.SourcePath))).ToList();
             foreach (var item in metadata)
             {
-                TestingGenerationSnapshot.CopyFile(item.File.SourcePath, Path.Combine(staging, item.File.RelativePath));
+                TestingGenerationPublish.CopyFile(item.File.SourcePath, Path.Combine(staging, item.File.RelativePath));
                 AfterFileCopied?.Invoke(item.File.SourcePath);
             }
 
@@ -56,10 +56,10 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
             }
 
             var contentPaths = plan.Files.Select(file => file.RelativePath).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList();
-            var generationId = TestingGenerationSnapshot.ComputeGenerationId(staging, contentPaths);
-            if (!string.Equals(generationId, TestingGenerationSnapshot.ComputeGenerationId(staging, contentPaths), StringComparison.Ordinal))
+            var generationId = TestingGenerationPublish.ComputeGenerationId(staging, contentPaths);
+            if (!string.Equals(generationId, TestingGenerationPublish.ComputeGenerationId(staging, contentPaths), StringComparison.Ordinal))
             {
-                failure = "snapshot changed before publication";
+                failure = "staged generation changed before publication";
                 return false;
             }
 
@@ -71,12 +71,12 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
                 {
                     if (Directory.Exists(shadowDirectory))
                     {
-                        TestingGenerationSnapshot.EnsurePublishedIsValid(shadowDirectory, generationId);
+                        TestingGenerationPublish.EnsurePublishedIsValid(shadowDirectory, generationId);
                     }
                     else
                     {
-                        TestingGenerationSnapshot.Publish(staging, shadowDirectory, generationId);
-                        TestingGenerationSnapshot.EnsurePublishedIsValid(shadowDirectory, generationId);
+                        TestingGenerationPublish.Publish(staging, shadowDirectory, generationId);
+                        TestingGenerationPublish.EnsurePublishedIsValid(shadowDirectory, generationId);
                     }
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -86,7 +86,7 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
                 }
             }
 
-            manifest = CreateManifest(plan, generationId, shadowDirectory);
+            manifest = plan.ToManifest(generationId, shadowDirectory);
             policy.ValidatePublished(manifest);
             return true;
         }
@@ -112,30 +112,6 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
             if (string.IsNullOrWhiteSpace(file.SourcePath) || !File.Exists(file.SourcePath))
                 throw new TestingGenerationBuildException($"Generation file not found: {file.SourcePath}");
         }
-    }
-
-    private static TestingGenerationManifest CreateManifest(
-        TestingGenerationPlan plan,
-        string generationId,
-        string shadowDirectory)
-    {
-        var sourceFile = plan.Files.SingleOrDefault(file => string.Equals(
-                             Path.GetFullPath(file.SourcePath), Path.GetFullPath(plan.SourceAssemblyPath), StringComparison.OrdinalIgnoreCase))
-                         ?? throw new TestingGenerationBuildException("Generation plan does not include its source assembly.");
-
-        return new TestingGenerationManifest(
-            generationId,
-            plan.FrameworkId,
-            Path.GetFullPath(plan.SourceAssemblyPath),
-            shadowDirectory,
-            Resolve(sourceFile.RelativePath),
-            Resolve(plan.RuntimeAssemblyRelativePath),
-            plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Managed).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
-            plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Native).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
-            plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Symbols).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList(),
-            plan.Files.Where(file => file.Kind == TestingGenerationFileKind.Other).Select(file => Resolve(file.RelativePath)).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList());
-
-        string Resolve(string relative) => Path.Combine(shadowDirectory, TestingGenerationPaths.NormalizeRelativePath(relative));
     }
 
     private sealed record SourceMetadata(long Length, DateTime LastWriteUtc, string ContentHash)

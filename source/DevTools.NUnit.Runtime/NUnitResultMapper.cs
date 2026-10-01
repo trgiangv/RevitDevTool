@@ -10,16 +10,16 @@ internal static class NUnitResultMapper
 {
     public static IReadOnlyList<TestCaseResult> MapRunResults(
         ITestResult root,
-        NUnitSourceLocationProvider? sourceLocationProvider)
+        NUnitLocationProvider? locationProvider)
     {
         var cases = new List<TestCaseResult>();
-        CollectCaseResults(root, sourceLocationProvider, cases);
+        CollectCaseResults(root, locationProvider, cases);
         return cases;
     }
 
     public static TestCaseResult MapCaseResult(
         ITestResult result,
-        NUnitSourceLocationProvider? sourceLocationProvider)
+        NUnitLocationProvider? locationProvider)
     {
         var test = result.Test;
         return new TestCaseResult(
@@ -30,7 +30,7 @@ internal static class NUnitResultMapper
             MapMessage(result),
             result.StackTrace,
             string.IsNullOrWhiteSpace(result.Output) ? null : result.Output,
-            MapSource(test, sourceLocationProvider),
+            MapSource(test, locationProvider),
             MapTraits(test),
             MapAttachments(result),
             NUnitTestIdentity.ParentId(test),
@@ -56,17 +56,17 @@ internal static class NUnitResultMapper
 
     private static void CollectCaseResults(
         ITestResult result,
-        NUnitSourceLocationProvider? sourceLocationProvider,
+        NUnitLocationProvider? locationProvider,
         List<TestCaseResult> cases)
     {
         if (!result.Test.IsSuite)
         {
-            cases.Add(MapCaseResult(result, sourceLocationProvider));
+            cases.Add(MapCaseResult(result, locationProvider));
             return;
         }
 
         foreach (var child in result.Children)
-            CollectCaseResults(child, sourceLocationProvider, cases);
+            CollectCaseResults(child, locationProvider, cases);
     }
 
     internal static string MapOutcome(ResultState resultState)
@@ -211,12 +211,12 @@ internal static class NUnitResultMapper
 
     internal static TestSourceLocation? MapSource(
         ITest test,
-        NUnitSourceLocationProvider? sourceLocationProvider)
+        NUnitLocationProvider? locationProvider)
     {
-        if (sourceLocationProvider is null)
+        if (locationProvider is null)
             return null;
 
-        if (!sourceLocationProvider.TryGetSourceLocation(test, out var filePath, out var lineNumber))
+        if (!locationProvider.TryGetSourceLocation(test, out var filePath, out var lineNumber))
             return null;
 
         return new TestSourceLocation(filePath!, lineNumber);

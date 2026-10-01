@@ -2,27 +2,21 @@ using System.Text.Json;
 using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
+using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Transport;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Testing.Host;
 
-public static class TestingErrorCodes
-{
-    public const string InvalidRequest = "testing/invalid_request";
-    public const string SessionPoisoned = "testing/session_poisoned";
-    public const string ProviderFailed = "testing/provider_failed";
-}
-
 /// <summary>
 /// Host-side handler for the framework-neutral <c>testing/*</c> protocol.
 /// </summary>
-public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, string host, string hostVersion) : IBridgeRequestHandler, IBridgeNotificationPublisher
+public sealed class TestingRequestHandler(TestingProviderRegistry registry, string host, string hostVersion) : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
     private readonly TestingProviderRegistry _registry = registry ?? throw new ArgumentNullException(nameof(registry));
     private readonly string _host = host ?? throw new ArgumentNullException(nameof(host));
     private readonly string _hostVersion = hostVersion ?? throw new ArgumentNullException(nameof(hostVersion));
-    private readonly TestingCancellationStateMachine _cancellation = new();
+    private readonly TestingCancellation _cancellation = new();
     private int _isBusy;
 
     public Action<string, JsonElement?>? NotificationSender { get; set; }
@@ -44,7 +38,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
     {
         if (string.Equals(method, TestingProtocol.Hello, StringComparison.OrdinalIgnoreCase))
         {
-            if (TestingCancellationStateMachine.IsTerminal(_cancellation.State))
+            if (_cancellation.IsTerminal)
                 _cancellation.Reset();
 
             return Task.FromResult(HandleHello(requestId, @params));
@@ -250,13 +244,9 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         try
         {
             request = @params.Value.Deserialize(TestingJsonContext.Default.TestHelloRequest);
-            if (request is null)
-            {
-                error = "Empty hello request.";
-                return false;
-            }
-
-            return true;
+            if (request is not null) return true;
+            error = "Empty hello request.";
+            return false;
         }
         catch (Exception ex)
         {
@@ -281,13 +271,9 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         try
         {
             request = @params.Value.Deserialize(TestingJsonContext.Default.TestRunRequest);
-            if (request is null)
-            {
-                error = "Empty run request.";
-                return false;
-            }
-
-            return true;
+            if (request is not null) return true;
+            error = "Empty run request.";
+            return false;
         }
         catch (Exception ex)
         {
@@ -312,13 +298,9 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
         try
         {
             request = @params.Value.Deserialize(TestingJsonContext.Default.TestCancelRequest);
-            if (request is null)
-            {
-                error = "Empty cancel request.";
-                return false;
-            }
-
-            return true;
+            if (request is not null) return true;
+            error = "Empty cancel request.";
+            return false;
         }
         catch (Exception ex)
         {
@@ -330,7 +312,7 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
     private static BridgeMessage Invalid(string requestId, string error) =>
         BridgeMessage.Error(requestId, TestingErrorCodes.InvalidRequest, error);
 
-    private sealed class HandlerEventSink(DotnetTestRequestHandler owner) : ITestEventSink
+    private sealed class HandlerEventSink(TestingRequestHandler owner) : ITestEventSink
     {
         public void Publish(TestEvent testingEvent)
         {
@@ -338,10 +320,8 @@ public sealed class DotnetTestRequestHandler(TestingProviderRegistry registry, s
                 owner._cancellation.TryTransition(TestCancellationState.Acknowledged);
 
             var sender = owner.NotificationSender;
-            if (sender is null)
-                return;
 
-            sender(
+            sender?.Invoke(
                 TestingProtocol.Progress,
                 JsonSerializer.SerializeToElement(testingEvent, TestingJsonContext.Default.TestEvent));
         }

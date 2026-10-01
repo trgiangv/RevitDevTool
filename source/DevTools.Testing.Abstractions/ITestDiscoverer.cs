@@ -38,10 +38,14 @@ public static class TestingDiscovery
 
     public static ITestRunMapper? RunMapper => Current?.RunMapper;
 
-    public static void Register(ITestDiscoverer discoverer, ITestRunMapper runMapper)
+    /// <summary>
+    /// Registers the discoverer with its run mapper. A provider whose MTP uid is also the
+    /// in-host id (TUnit, MSTest) passes no mapper and gets the default one.
+    /// </summary>
+    public static void Register(ITestDiscoverer discoverer, ITestRunMapper? runMapper = null)
     {
         ArgumentNullException.ThrowIfNull(discoverer);
-        ArgumentNullException.ThrowIfNull(runMapper);
+        runMapper ??= DefaultRunMapper.Instance;
         var bridge = new TestingDiscoveryBridge(discoverer, runMapper);
         lock (Gate)
         {

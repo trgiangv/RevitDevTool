@@ -32,10 +32,29 @@ public sealed class TestingDiscoveryTests
     }
 
     [TestMethod]
-    public void Register_rejects_a_null_mapper()
+    public void Register_without_a_mapper_uses_the_default_mapper()
     {
-        Assert.ThrowsExactly<ArgumentNullException>(
-            () => TestingDiscovery.Register(new StubDiscoverer(), null!));
+        lock (Gate)
+        {
+            var previous = TestingDiscovery.Current;
+            try
+            {
+                TestingDiscovery.Clear();
+                TestingDiscovery.Register(new StubDiscoverer());
+
+                Assert.AreSame(DefaultRunMapper.Instance, TestingDiscovery.RunMapper);
+            }
+            finally
+            {
+                Restore(previous);
+            }
+        }
+    }
+
+    [TestMethod]
+    public void Register_rejects_a_null_discoverer()
+    {
+        Assert.ThrowsExactly<ArgumentNullException>(() => TestingDiscovery.Register(null!));
     }
 
     [TestMethod]

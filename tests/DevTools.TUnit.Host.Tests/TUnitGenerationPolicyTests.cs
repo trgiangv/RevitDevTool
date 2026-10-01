@@ -10,14 +10,17 @@ public sealed class TUnitGenerationPolicyTests
     [TestMethod]
     public void Policy_pins_tunit_and_mtp_assembly_versions()
     {
-        TUnitGenerationPolicy.ValidateMtpAssemblyVersion(typeof(ICommandLineOptions).Assembly.Location);
+        ValidatePin("Microsoft.Testing.Platform.dll", typeof(ICommandLineOptions).Assembly.Location);
 
         var tunit = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
-            TUnitGenerationPolicy.ValidateTUnitFrameworkVersion(typeof(TUnitGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("1.67.0.0", tunit.Message, StringComparison.Ordinal);
+            ValidatePin("TUnit.Core.dll", typeof(TUnitGenerationPolicyTests).Assembly.Location));
+        Assert.Contains("1.72.10.0", tunit.Message, StringComparison.Ordinal);
 
         var mtp = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
-            TUnitGenerationPolicy.ValidateMtpAssemblyVersion(typeof(TUnitGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("2.4.0.0", mtp.Message, StringComparison.Ordinal);
+            ValidatePin("Microsoft.Testing.Platform.dll", typeof(TUnitGenerationPolicyTests).Assembly.Location));
+        Assert.Contains("2.4.1.0", mtp.Message, StringComparison.Ordinal);
     }
+
+    private static void ValidatePin(string fileName, string path) =>
+        TUnitGenerationPolicy.Spec.Pins.Single(pin => pin.FileName == fileName).Validate(path, null);
 }

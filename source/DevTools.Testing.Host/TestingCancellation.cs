@@ -2,9 +2,12 @@ using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.Testing.Host;
 
-public sealed class TestingCancellationStateMachine
+public sealed class TestingCancellation
 {
     public TestCancellationState State { get; private set; } = TestCancellationState.None;
+
+    public bool IsTerminal =>
+        State is TestCancellationState.Completed or TestCancellationState.Poisoned;
 
     public bool TryTransition(TestCancellationState next)
     {
@@ -25,9 +28,6 @@ public sealed class TestingCancellationStateMachine
     }
 
     public void Reset() => State = TestCancellationState.None;
-
-    public static bool IsTerminal(TestCancellationState state) =>
-        state is TestCancellationState.Completed or TestCancellationState.Poisoned;
 
     private static bool IsAllowed(TestCancellationState current, TestCancellationState next) =>
         current switch

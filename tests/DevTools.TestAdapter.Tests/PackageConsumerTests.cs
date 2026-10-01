@@ -40,7 +40,7 @@ public sealed class PackageConsumerTests
                   </PropertyGroup>
                   <ItemGroup>
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="NUnit" Version="4.6.1" />
+                    <PackageReference Include="NUnit" Version="5.0.0" />
                   </ItemGroup>
                 </Project>
                 """);
@@ -85,7 +85,7 @@ public sealed class PackageConsumerTests
                   <ItemGroup>
                     <Compile Remove="ProviderLeak.cs" />
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="NUnit" Version="4.6.1" />
+                    <PackageReference Include="NUnit" Version="5.0.0" />
                   </ItemGroup>
                 </Project>
                 """);
@@ -112,7 +112,7 @@ public sealed class PackageConsumerTests
                   <ItemGroup>
                     <Compile Include="ProviderLeak.cs" />
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="NUnit" Version="4.6.1" />
+                    <PackageReference Include="NUnit" Version="5.0.0" />
                   </ItemGroup>
                 </Project>
                 """);
@@ -188,7 +188,7 @@ public sealed class PackageConsumerTests
                     packageVersion,
                     tfm,
                     engine: null,
-                    framework: """<PackageReference Include="NUnit" Version="4.6.1" />""",
+                    framework: """<PackageReference Include="NUnit" Version="5.0.0" />""",
                     test: """
                         using NUnit.Framework;
 
@@ -209,7 +209,7 @@ public sealed class PackageConsumerTests
                     packageVersion,
                     tfm,
                     engine: "tunit",
-                    framework: """<PackageReference Include="TUnit" Version="1.67.0" />""",
+                    framework: """<PackageReference Include="TUnit" Version="1.72.10" />""",
                     test: """
                         public class DiscoveredTests
                         {
@@ -386,7 +386,7 @@ public sealed class PackageConsumerTests
                      line.Contains("id=\"Microsoft.Testing.Platform.MSBuild\"", StringComparison.Ordinal)))
         {
             Assert.DoesNotContain("Build,Analyzers", dependency, StringComparison.Ordinal);
-            Assert.Contains("2.4.0", dependency, StringComparison.Ordinal);
+            Assert.Contains("2.4.1", dependency, StringComparison.Ordinal);
         }
 
         Assert.Contains("build/RevitDevTool.TestAdapter.props", entries, StringComparer.OrdinalIgnoreCase);

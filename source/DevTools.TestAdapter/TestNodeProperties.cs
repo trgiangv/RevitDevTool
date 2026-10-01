@@ -103,4 +103,103 @@ internal static class TestNodeProperties
 
         return new InvalidOperationException($"{result.Message}{Environment.NewLine}{result.StackTrace}");
     }
+
+    internal static TestNode ToDiscoveredNode(TestDiscoveredTest test, string? assemblyPath = null)
+    {
+        var properties = new List<IProperty> { DiscoveredTestNodeStateProperty.CachedInstance };
+        AddMethodIdentifier(properties, test, assemblyPath);
+        TestNodeProperties.AddSource(properties, test.Source);
+        return new TestNode
+        {
+            Uid = new TestNodeUid(OpaqueUid(test.TestId, test.FullName, test.DisplayName)),
+            DisplayName = test.DisplayName,
+            Properties = new PropertyBag(properties),
+        };
+    }
+
+    internal static TestNode ToResultNode(
+        TestCaseResult result,
+        string? assemblyPath = null,
+        IReadOnlyList<TestDiscoveredTest>? discovered = null)
+    {
+        var properties = new List<IProperty>();
+        TestNodeProperties.AddCommonResultProperties(properties, result);
+        AddMethodIdentifier(properties, FindDiscovered(discovered, result), assemblyPath);
+
+        return new TestNode
+        {
+            Uid = new TestNodeUid(OpaqueUid(result.TestId, result.FullName, result.DisplayName)),
+            DisplayName = result.DisplayName,
+            Properties = new PropertyBag(properties),
+        };
+    }
+
+    private static TestDiscoveredTest? FindDiscovered(
+        IReadOnlyList<TestDiscoveredTest>? discovered,
+        TestCaseResult result)
+    {
+        if (discovered is null || discovered.Count == 0)
+            return null;
+
+        return discovered.FirstOrDefault(test =>
+            string.Equals(test.TestId, result.TestId, StringComparison.Ordinal));
+    }
+
+    private static string OpaqueUid(string id, string? fullName, string name)
+    {
+        if (!string.IsNullOrWhiteSpace(id))
+            return id;
+        if (!string.IsNullOrWhiteSpace(fullName))
+            return fullName!;
+        return name;
+    }
+
+    private static void AddMethodIdentifier(
+        List<IProperty> properties,
+        TestDiscoveredTest? test,
+        string? assemblyPath)
+    {
+        if (test is null)
+            return;
+        if (string.IsNullOrWhiteSpace(test.TypeName) || string.IsNullOrWhiteSpace(test.MethodName))
+            return;
+
+        properties.Add(new TestMethodIdentifierProperty(
+            ResolveAssemblyFullName(assemblyPath),
+            test.Namespace ?? string.Empty,
+            test.TypeName!,
+            test.MethodName!,
+            test.MethodArity,
+            ToParameterTypes(test.ParameterTypeFullNames),
+            string.IsNullOrWhiteSpace(test.ReturnTypeFullName) ? "System.Void" : test.ReturnTypeFullName!));
+    }
+
+    private static string[] ToParameterTypes(IReadOnlyList<string>? types)
+    {
+        if (types is null || types.Count == 0)
+            return [];
+        if (types is string[] array)
+            return array;
+        return types.ToArray();
+    }
+
+    private static string ResolveAssemblyFullName(string? assemblyPath)
+    {
+        if (!string.IsNullOrWhiteSpace(assemblyPath) && File.Exists(assemblyPath))
+        {
+            try
+            {
+                return System.Reflection.AssemblyName.GetAssemblyName(assemblyPath!).FullName;
+            }
+            catch
+            {
+                // Fall through to the file name.
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(assemblyPath))
+            return Path.GetFileNameWithoutExtension(assemblyPath);
+
+        return System.Reflection.Assembly.GetEntryAssembly()?.GetName().FullName ?? string.Empty;
+    }
 }

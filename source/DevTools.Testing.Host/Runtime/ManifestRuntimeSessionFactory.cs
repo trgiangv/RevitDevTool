@@ -2,15 +2,14 @@ using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Sources;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.Runtime;
-namespace DevTools.Testing.Host.TUnit;
 
-public sealed class TUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
+namespace DevTools.Testing.Host.Runtime;
+
+internal sealed class ManifestRuntimeSessionFactory(string runtimeSessionTypeName) : ITestingRuntimeSessionFactory
 {
-    private const string RuntimeSessionTypeName = "DevTools.TUnit.Runtime.TUnitRuntimeSession";
-
     public ITestingRuntimeSession Create(TestingGenerationManifest generation)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeSessionTypeName);
         var root = Path.GetFullPath(generation.ShadowDirectory);
         var plan = AssemblyIsolationPlan.Create(generation.RuntimeAssemblyPath)
             .WithKind(AssemblyIsolationKind.Isolated)
@@ -20,14 +19,12 @@ public sealed class TUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
             .Pin(typeof(ITestingRuntimeSession).Assembly)
             .AddManagedSource(new ManifestAssemblySource(
                 generation.ManagedAssemblies.Select(path =>
-                    new AssemblyCandidate(path, root))))
-            .WithGenerationNatives(generation.ShadowAssemblyPath);
+                    new AssemblyCandidate(path, root))));
 
         return IsolatedRuntimeActivator.Activate(
             generation,
             plan,
-            RuntimeSessionTypeName,
-            testAssembly => [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId],
-            (inner, isolation, shadow) => new IsolatedRuntimeSessionHandle(inner, isolation, shadow));
+            runtimeSessionTypeName,
+            testAssembly => [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId]);
     }
 }

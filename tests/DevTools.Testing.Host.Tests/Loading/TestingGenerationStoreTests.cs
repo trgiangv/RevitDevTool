@@ -17,8 +17,8 @@ public sealed class TestingGenerationStoreTests
         var assembly = workspace.CopyManaged("sample.dll");
         var text = workspace.Write("content/readme.txt", "same");
         var plan = workspace.Plan(assembly, [
-            new TestingGenerationFile(text, "content/readme.txt", TestingGenerationFileKind.Other),
-            new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed),
+            (text, @"content\readme.txt"),
+            (assembly, "sample.dll"),
         ]);
 
         var first = workspace.Store.Build(new FixedPolicy(plan), assembly);
@@ -28,14 +28,14 @@ public sealed class TestingGenerationStoreTests
     }
 
     [TestMethod]
-    public void Build_retries_when_a_source_changes_during_snapshot()
+    public void Build_retries_when_a_source_changes_during_publish()
     {
         using var workspace = new GenerationWorkspace();
         var assembly = workspace.CopyManaged("sample.dll");
         var changing = workspace.Write("content/changing.txt", "before");
         var plan = workspace.Plan(assembly, [
-            new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed),
-            new TestingGenerationFile(changing, "content/changing.txt", TestingGenerationFileKind.Other),
+            (assembly, "sample.dll"),
+            (changing, @"content\changing.txt"),
         ]);
         var changed = false;
         workspace.Store.AfterFileCopied = source =>
@@ -61,8 +61,8 @@ public sealed class TestingGenerationStoreTests
         var changing = workspace.Write("content/changing.txt", "before");
         var originalTimestamp = File.GetLastWriteTimeUtc(changing);
         var plan = workspace.Plan(assembly, [
-            new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed),
-            new TestingGenerationFile(changing, "content/changing.txt", TestingGenerationFileKind.Other),
+            (assembly, "sample.dll"),
+            (changing, @"content\changing.txt"),
         ]);
         var changed = false;
         workspace.Store.AfterFileCopied = source =>
@@ -86,7 +86,7 @@ public sealed class TestingGenerationStoreTests
     {
         using var workspace = new GenerationWorkspace();
         var assembly = workspace.CopyManaged("sample.dll");
-        var plan = workspace.Plan(assembly, [new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed)]);
+        var plan = workspace.Plan(assembly, [(assembly, "sample.dll")]);
         var policy = new FixedPolicy(plan);
         var published = workspace.Store.Build(policy, assembly);
         File.AppendAllText(published.ShadowAssemblyPath, "corrupt");
@@ -99,8 +99,8 @@ public sealed class TestingGenerationStoreTests
     {
         using var workspace = new GenerationWorkspace();
         var assembly = workspace.CopyManaged("sample.dll");
-        var plan = workspace.Plan(assembly, [new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed)]);
-        var generationId = TestingGenerationContentHash.ComputeGenerationId([
+        var plan = workspace.Plan(assembly, [(assembly, "sample.dll")]);
+        var generationId = TestingGenerationPublish.ComputeGenerationId([
             ("sample.dll", assembly),
         ]);
         Directory.CreateDirectory(Path.Combine(workspace.GenerationsRoot, generationId));
@@ -117,8 +117,8 @@ public sealed class TestingGenerationStoreTests
         var assembly = workspace.CopyManaged("sample.dll");
         var extra = workspace.Write("content/data.bin", "data");
         var plan = workspace.Plan(assembly, [
-            new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed),
-            new TestingGenerationFile(extra, "content/data.bin", TestingGenerationFileKind.Other),
+            (assembly, "sample.dll"),
+            (extra, @"content\data.bin"),
         ]);
 
         var manifests = Enumerable.Range(0, 8)
@@ -141,13 +141,13 @@ public sealed class TestingGenerationStoreTests
         Directory.CreateDirectory(Path.Combine(staging, "nested"));
         Directory.CreateDirectory(Path.Combine(staging, "empty"));
         File.WriteAllText(Path.Combine(staging, "nested", "payload.txt"), "ok");
-        File.WriteAllText(Path.Combine(staging, TestingGenerationPaths.GenerationCompleteMarkerFileName), string.Empty);
+        File.WriteAllText(Path.Combine(staging, TestingGenerationPublish.CompleteMarkerFileName), string.Empty);
 
-        TestingGenerationSnapshot.CopyDirectory(staging, shadow);
+        TestingGenerationPublish.CopyDirectory(staging, shadow);
 
         Assert.AreEqual("ok", File.ReadAllText(Path.Combine(shadow, "nested", "payload.txt")));
         Assert.IsTrue(Directory.Exists(Path.Combine(shadow, "empty")));
-        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
+        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPublish.CompleteMarkerFileName)));
     }
 
     [TestMethod]
@@ -159,42 +159,43 @@ public sealed class TestingGenerationStoreTests
         Directory.CreateDirectory(staging);
         var payload = Path.Combine(staging, "payload.txt");
         File.WriteAllText(payload, "ok");
-        var generationId = TestingGenerationSnapshot.ComputeGenerationId(
+        var generationId = TestingGenerationPublish.ComputeGenerationId(
             staging,
-            TestingGenerationSnapshot.ReadContentRelativePaths(staging));
+            TestingGenerationPublish.ReadContentRelativePaths(staging));
 
         using (var stream = new FileStream(payload, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
         {
-            TestingGenerationSnapshot.Publish(staging, shadow, generationId);
+            TestingGenerationPublish.Publish(staging, shadow, generationId);
             GC.KeepAlive(stream);
         }
 
         Assert.IsTrue(Directory.Exists(shadow));
         Assert.AreEqual("ok", File.ReadAllText(Path.Combine(shadow, "payload.txt")));
-        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPaths.GenerationCompleteMarkerFileName)));
+        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPublish.CompleteMarkerFileName)));
     }
 
     [TestMethod]
-    public void Build_indexes_each_declared_file_kind_without_filename_policy()
+    public void Build_publishes_every_plan_file_and_indexes_only_managed_identities()
     {
         using var workspace = new GenerationWorkspace();
-        var managed = workspace.CopyManaged("provider/module.bin");
+        var managed = workspace.CopyManaged("provider/module.dll");
         var native = workspace.Write("native/asset.bin", "native");
         var symbols = workspace.Write("symbols/debug.bin", "symbols");
         var other = workspace.Write("data/config.bin", "other");
         var plan = workspace.Plan(managed, [
-            new TestingGenerationFile(managed, "provider/module.bin", TestingGenerationFileKind.Managed),
-            new TestingGenerationFile(native, "native/asset.bin", TestingGenerationFileKind.Native),
-            new TestingGenerationFile(symbols, "symbols/debug.bin", TestingGenerationFileKind.Symbols),
-            new TestingGenerationFile(other, "data/config.bin", TestingGenerationFileKind.Other),
+            (managed, @"provider\module.dll"),
+            (native, @"native\asset.bin"),
+            (symbols, @"symbols\debug.bin"),
+            (other, @"data\config.bin"),
         ]);
 
         var manifest = workspace.Store.Build(new FixedPolicy(plan), managed);
 
         Assert.ContainsSingle(manifest.ManagedAssemblies);
-        Assert.ContainsSingle(manifest.NativeAssets);
-        Assert.ContainsSingle(manifest.SymbolFiles);
-        Assert.ContainsSingle(manifest.OtherFiles);
+        Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, "provider", "module.dll")));
+        Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, "native", "asset.bin")));
+        Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, "symbols", "debug.bin")));
+        Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, "data", "config.bin")));
     }
 
     [TestMethod]
@@ -203,13 +204,13 @@ public sealed class TestingGenerationStoreTests
         using var workspace = new GenerationWorkspace();
         var first = workspace.CopyManaged("first.dll");
         var second = workspace.CopyManaged("second.dll");
-        var policy = new MappingPolicy(first, workspace.Plan(first, [new TestingGenerationFile(first, "first.dll", TestingGenerationFileKind.Managed)]),
-            second, workspace.Plan(second, [new TestingGenerationFile(second, "second.dll", TestingGenerationFileKind.Managed)]));
+        var policy = new MappingPolicy(first, workspace.Plan(first, [(first, "first.dll")]),
+            second, workspace.Plan(second, [(second, "second.dll")]));
         var factory = new RecordingSessionFactory();
         using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
 
-        manager.Run(Request(first), NullTestingRuntimeEventSink.Instance, TestContext.CancellationToken);
-        manager.Run(Request(second), NullTestingRuntimeEventSink.Instance, TestContext.CancellationToken);
+        manager.Run(Request(first), NullTestEventSink.Instance, TestContext.CancellationToken);
+        manager.Run(Request(second), NullTestEventSink.Instance, TestContext.CancellationToken);
 
         Assert.IsTrue(factory.Sessions.Single(session => session.GenerationId != manager.CurrentGenerationId).Disposed);
         Assert.AreEqual(0, manager.RetainedGenerationCount);
@@ -220,12 +221,12 @@ public sealed class TestingGenerationStoreTests
     {
         using var workspace = new GenerationWorkspace();
         var assembly = workspace.CopyManaged("sample.dll");
-        var policy = new FixedPolicy(workspace.Plan(assembly, [new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed)]));
+        var policy = new FixedPolicy(workspace.Plan(assembly, [(assembly, "sample.dll")]));
         var factory = new RecordingSessionFactory(blockRuns: true);
         using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
         var request = Request(assembly);
 
-        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.CancellationToken);
+        var run = Task.Run(() => manager.Run(request, NullTestEventSink.Instance), TestContext.CancellationToken);
         Assert.IsTrue(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
         manager.Cancel(request.RunId);
         await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
@@ -238,12 +239,12 @@ public sealed class TestingGenerationStoreTests
     {
         using var workspace = new GenerationWorkspace();
         var assembly = workspace.CopyManaged("sample.dll");
-        var policy = new FixedPolicy(workspace.Plan(assembly, [new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed)]));
+        var policy = new FixedPolicy(workspace.Plan(assembly, [(assembly, "sample.dll")]));
         var factory = new RecordingSessionFactory(blockRuns: true, throwOnCancel: true);
         using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
         var request = Request(assembly);
 
-        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.CancellationToken);
+        var run = Task.Run(() => manager.Run(request, NullTestEventSink.Instance), TestContext.CancellationToken);
         Assert.IsTrue(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
         Assert.IsFalse(manager.Cancel(request.RunId));
         await run.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
@@ -254,12 +255,12 @@ public sealed class TestingGenerationStoreTests
     {
         using var workspace = new GenerationWorkspace();
         var assembly = workspace.CopyManaged("sample.dll");
-        var policy = new FixedPolicy(workspace.Plan(assembly, [new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed)]));
+        var policy = new FixedPolicy(workspace.Plan(assembly, [(assembly, "sample.dll")]));
         var factory = new RecordingSessionFactory(blockUntilReleasedAfterCancel: true, retainOnDispose: true);
         var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
         var request = Request(assembly);
 
-        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.CancellationToken);
+        var run = Task.Run(() => manager.Run(request, NullTestEventSink.Instance), TestContext.CancellationToken);
         Assert.IsTrue(factory.RunStarted.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
         var disposing = Task.Run(manager.Dispose, TestContext.CancellationToken);
         Assert.IsTrue(factory.CancelObserved.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
@@ -279,7 +280,7 @@ public sealed class TestingGenerationStoreTests
     {
         using var workspace = new GenerationWorkspace();
         var assembly = workspace.CopyManaged("sample.dll");
-        var policy = new FixedPolicy(workspace.Plan(assembly, [new TestingGenerationFile(assembly, "sample.dll", TestingGenerationFileKind.Managed)]));
+        var policy = new FixedPolicy(workspace.Plan(assembly, [(assembly, "sample.dll")]));
         var factory = new RecordingSessionFactory(blockUntilReleasedAfterCancel: true, retainOnDispose: true);
         var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
         var request = Request(assembly);
@@ -291,7 +292,7 @@ public sealed class TestingGenerationStoreTests
             allowRegistration.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
         };
 
-        var run = Task.Run(() => manager.Run(request, NullTestingRuntimeEventSink.Instance), TestContext.CancellationToken);
+        var run = Task.Run(() => manager.Run(request, NullTestEventSink.Instance), TestContext.CancellationToken);
         Assert.IsTrue(registrationGateReached.Wait(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
         var disposing = Task.Run(manager.Dispose, TestContext.CancellationToken);
         Assert.IsFalse(disposing.IsCompleted);
@@ -313,13 +314,13 @@ public sealed class TestingGenerationStoreTests
         using var workspace = new GenerationWorkspace();
         var first = workspace.CopyManaged("first.dll");
         var second = workspace.CopyManaged("second.dll");
-        var policy = new MappingPolicy(first, workspace.Plan(first, [new TestingGenerationFile(first, "first.dll", TestingGenerationFileKind.Managed)]),
-            second, workspace.Plan(second, [new TestingGenerationFile(second, "second.dll", TestingGenerationFileKind.Managed)]));
+        var policy = new MappingPolicy(first, workspace.Plan(first, [(first, "first.dll")]),
+            second, workspace.Plan(second, [(second, "second.dll")]));
         var factory = new RecordingSessionFactory(retainOnDispose: true);
         using var manager = new TestingRuntimeSessionManager(workspace.Store, policy, factory);
 
-        manager.Run(Request(first), NullTestingRuntimeEventSink.Instance, TestContext.CancellationToken);
-        manager.Run(Request(second), NullTestingRuntimeEventSink.Instance, TestContext.CancellationToken);
+        manager.Run(Request(first), NullTestEventSink.Instance, TestContext.CancellationToken);
+        manager.Run(Request(second), NullTestEventSink.Instance, TestContext.CancellationToken);
 
         var diagnostic = Assert.ContainsSingle(manager.RetainedGenerationDiagnostics);
         Assert.AreEqual("generation.retained", diagnostic.Code);
@@ -331,12 +332,16 @@ public sealed class TestingGenerationStoreTests
 
     private sealed class FixedPolicy(TestingGenerationPlan plan) : ITestingGenerationPolicy
     {
+        public TestFrameworkId FrameworkId => plan.FrameworkId;
+
         public TestingGenerationPlan CreatePlan(string testAssemblyPath) => plan;
         public void ValidatePublished(TestingGenerationManifest manifest) { }
     }
 
     private sealed class MappingPolicy(string firstPath, TestingGenerationPlan first, string secondPath, TestingGenerationPlan second) : ITestingGenerationPolicy
     {
+        public TestFrameworkId FrameworkId => first.FrameworkId;
+
         public TestingGenerationPlan CreatePlan(string testAssemblyPath)
         {
             if (string.Equals(Path.GetFullPath(testAssemblyPath), Path.GetFullPath(firstPath), StringComparison.OrdinalIgnoreCase))
@@ -369,7 +374,7 @@ public sealed class TestingGenerationStoreTests
         public string GenerationId { get; } = generationId;
         public bool Cancelled { get; private set; }
         public bool Disposed { get; private set; }
-        public TestRunResponse Run(TestRunRequest request, ITestingRuntimeEventSink eventSink, CancellationToken cancellationToken)
+        public TestRunResponse Run(TestRunRequest request, ITestEventSink eventSink, CancellationToken cancellationToken)
         {
             runStarted.Set();
             if (blockRuns)
@@ -420,7 +425,7 @@ public sealed class TestingGenerationStoreTests
             File.WriteAllText(destination, contents);
             return destination;
         }
-        public TestingGenerationPlan Plan(string assembly, IReadOnlyList<TestingGenerationFile> files) =>
+        public TestingGenerationPlan Plan(string assembly, IReadOnlyList<(string SourcePath, string RelativePath)> files) =>
             new(TestFrameworkId.NUnit, assembly, files, files[0].RelativePath);
         public void Dispose()
         {

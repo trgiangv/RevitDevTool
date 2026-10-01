@@ -2,26 +2,33 @@ using System.Reflection;
 
 namespace DevTools.Testing.Host.Loading;
 
-public static class HostRuntimeSources
+/// <summary>
+/// Runtime closure merged into a generation plan. The add-in resolves it from
+/// the folder deployed beside itself; a policy checks the files and copies them.
+/// </summary>
+public sealed record RuntimeSource(
+    string AssemblyPath,
+    string? SymbolPath,
+    IReadOnlyList<string> DependencyPaths)
 {
-    public static HostRuntimeSource ResolveBesideHost(
-        Assembly hostAssembly,
+    public static RuntimeSource ResolveBeside(
+        Assembly addinAssembly,
         string runtimeFolderName,
         string runtimeAssemblyFileName,
         string? runtimeSymbolFileName = null)
     {
-        ArgumentNullException.ThrowIfNull(hostAssembly);
+        ArgumentNullException.ThrowIfNull(addinAssembly);
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeFolderName);
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeAssemblyFileName);
 
-        var hostDirectory = Path.GetDirectoryName(hostAssembly.Location) ?? AppContext.BaseDirectory;
-        var runtimeDirectory = Path.Combine(hostDirectory, runtimeFolderName);
+        var addinDirectory = Path.GetDirectoryName(addinAssembly.Location) ?? AppContext.BaseDirectory;
+        var runtimeDirectory = Path.Combine(addinDirectory, runtimeFolderName);
         var assemblyPath = Path.Combine(runtimeDirectory, runtimeAssemblyFileName);
         if (!File.Exists(assemblyPath))
         {
             throw new InvalidOperationException(
-                $"Runtime assembly not found beside the host at '{assemblyPath}'. " +
-                $"Deploy {runtimeAssemblyFileName} under {runtimeFolderName}\\ with the host add-in.");
+                $"Runtime assembly not found beside the add-in at '{assemblyPath}'. " +
+                $"Deploy {runtimeAssemblyFileName} under {runtimeFolderName}\\ with the add-in.");
         }
 
         string? symbolPath = null;
@@ -40,38 +47,35 @@ public static class HostRuntimeSources
                 .ToList()
             : [];
 
-        return new HostRuntimeSource(assemblyPath, symbolPath, dependencies);
+        return new RuntimeSource(assemblyPath, symbolPath, dependencies);
     }
 
-    public static HostRuntimeSource Normalize(
-        HostRuntimeSource source,
-        Func<string, Exception> throwMissing)
+    public RuntimeSource RequirePresent(Func<string, Exception> throwMissing)
     {
-        ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(throwMissing);
 
-        if (string.IsNullOrWhiteSpace(source.AssemblyPath))
+        if (string.IsNullOrWhiteSpace(AssemblyPath))
             throw throwMissing("Runtime assembly path provider returned an empty path.");
 
-        var assemblyPath = Path.GetFullPath(source.AssemblyPath);
+        var assemblyPath = Path.GetFullPath(AssemblyPath);
         if (!File.Exists(assemblyPath))
             throw throwMissing($"Runtime assembly not found: {assemblyPath}");
 
         string? symbolPath = null;
-        if (!string.IsNullOrWhiteSpace(source.SymbolPath))
+        if (!string.IsNullOrWhiteSpace(SymbolPath))
         {
-            symbolPath = Path.GetFullPath(source.SymbolPath!);
+            symbolPath = Path.GetFullPath(SymbolPath!);
             if (!File.Exists(symbolPath))
                 throw throwMissing($"Runtime symbol file not found: {symbolPath}");
         }
 
-        var dependencies = source.DependencyPaths.Select(Path.GetFullPath).ToList();
+        var dependencies = DependencyPaths.Select(Path.GetFullPath).ToList();
         foreach (var dependency in dependencies)
         {
             if (!File.Exists(dependency))
                 throw throwMissing($"Runtime dependency not found: {dependency}");
         }
 
-        return new HostRuntimeSource(assemblyPath, symbolPath, dependencies);
+        return new RuntimeSource(assemblyPath, symbolPath, dependencies);
     }
 }

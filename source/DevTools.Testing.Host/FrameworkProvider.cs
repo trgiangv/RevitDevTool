@@ -7,30 +7,26 @@ using DevTools.Testing.Host.Runtime;
 namespace DevTools.Testing.Host;
 
 /// <summary>
-/// Shared in-host provider: framework-id check, assembly preflight, optional
-/// selection adapt, then <see cref="TestingRuntimeSessionManager"/>. First-party
-/// NUnit/TUnit providers only differ in policy, factory, and adapt.
+/// Shared in-host provider: framework-id check, assembly preflight, then
+/// <see cref="TestingRuntimeSessionManager"/>. The request selection is already
+/// in the shape the runtime accepts (the testhost run mapper resolved it).
 /// </summary>
 internal sealed class FrameworkProvider : ITestFrameworkProvider, IDisposable
 {
     private readonly TestingRuntimeSessionManager _sessions;
-    private readonly Func<TestRunRequest, TestRunRequest>? _adapt;
 
     public FrameworkProvider(
-        TestFrameworkId frameworkId,
         ITestingGenerationPolicy policy,
-        ITestingRuntimeSessionFactory factory,
-        Func<TestRunRequest, TestRunRequest>? adapt = null)
+        ITestingRuntimeSessionFactory factory)
     {
-        if (!Enum.IsDefined(frameworkId))
-            throw new ArgumentOutOfRangeException(nameof(frameworkId), frameworkId, "Unknown test framework.");
         ArgumentNullException.ThrowIfNull(policy);
         ArgumentNullException.ThrowIfNull(factory);
+        if (!Enum.IsDefined(policy.FrameworkId))
+            throw new ArgumentOutOfRangeException(nameof(policy), policy.FrameworkId, "Unknown test framework.");
 
-        FrameworkId = frameworkId;
-        _adapt = adapt;
+        FrameworkId = policy.FrameworkId;
         _sessions = new TestingRuntimeSessionManager(
-            new TestingGenerationStore(Path.Combine(Path.GetTempPath(), "DevTools." + frameworkId)),
+            new TestingGenerationStore(Path.Combine(Path.GetTempPath(), "DevTools." + policy.FrameworkId)),
             policy,
             factory);
     }
@@ -51,20 +47,12 @@ internal sealed class FrameworkProvider : ITestFrameworkProvider, IDisposable
                 nameof(request));
         }
 
-        var assemblyPath = TestingAssemblyPreflight.ResolveAndEnsureLoadable(request.Assembly.Path);
-        var adapted = request with { Assembly = request.Assembly with { Path = assemblyPath } };
-        if (_adapt is not null)
-            adapted = _adapt(adapted);
-
-        return _sessions.Run(adapted, new EventSink(eventSink), cancellationToken);
+        var assemblyPath = TestingGenerationFiles.RequireManagedAssembly(request.Assembly.Path);
+        var resolved = request with { Assembly = new TestAssemblyReference(Path: assemblyPath) };
+        return _sessions.Run(resolved, eventSink, cancellationToken);
     }
 
     public bool Cancel(Guid runId) => _sessions.Cancel(runId);
 
     public void Dispose() => _sessions.Dispose();
-
-    private sealed class EventSink(ITestEventSink sink) : ITestingRuntimeEventSink
-    {
-        public void Publish(TestEvent testingEvent) => sink.Publish(testingEvent);
-    }
 }

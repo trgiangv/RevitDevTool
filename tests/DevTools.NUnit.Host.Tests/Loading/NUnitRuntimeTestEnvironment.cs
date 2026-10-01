@@ -1,5 +1,5 @@
+using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 
@@ -26,7 +26,7 @@ internal static class NUnitRuntimeTestEnvironment
     public static NUnitGenerationHarness CreateBuilder(string generationsRoot) =>
         new(
             new TestingGenerationStore(generationsRoot),
-            new NUnitGenerationPolicy(() => new HostRuntimeSource(
+            new NUnitGenerationPolicy(() => new RuntimeSource(
                 RuntimeAssemblyPath,
                 File.Exists(RuntimeSymbolPath) ? RuntimeSymbolPath : null,
                 RuntimeDependencyPaths())));

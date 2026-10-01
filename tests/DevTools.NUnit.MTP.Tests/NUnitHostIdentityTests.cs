@@ -30,7 +30,7 @@ public sealed class NUnitHostIdentityTests
     }
 
     [TestMethod]
-    public void ToRunSelection_keeps_cli_name_filters()
+    public void ToRunSelection_turns_cli_name_filters_into_name_regex_xml()
     {
         var selection = TestSelection.FromNames(["Span_is_one_on_each_axis"]);
         var stub = new TestDiscoveredTest(
@@ -42,8 +42,26 @@ public sealed class NUnitHostIdentityTests
 
         var host = new NUnitTestRunMapper().ToRunSelection(selection, [stub]);
 
+        Assert.AreEqual(TestSelectionKind.FrameworkFilter, host.Kind);
+        Assert.AreEqual("filter-xml", host.FilterFormat);
+        Assert.AreEqual("<filter><name re=\"1\">Span_is_one_on_each_axis</name></filter>", host.FilterData);
         Assert.IsEmpty(host.TestIds);
-        Assert.AreEqual("Span_is_one_on_each_axis", host.Names!.Single());
+        Assert.IsEmpty(host.Names);
+    }
+
+    [TestMethod]
+    public void ToRunSelection_maps_empty_selections_to_the_run_nothing_filter()
+    {
+        var mapper = new NUnitTestRunMapper();
+
+        foreach (var requested in new[] { TestSelection.FromTestIds([]), TestSelection.FromNames([" "]) })
+        {
+            var host = mapper.ToRunSelection(requested, []);
+
+            Assert.AreEqual(TestSelectionKind.FrameworkFilter, host.Kind);
+            Assert.AreEqual("filter-xml", host.FilterFormat);
+            Assert.AreEqual("<filter><not><test>*</test></not></filter>", host.FilterData);
+        }
     }
 
     [TestMethod]

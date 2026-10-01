@@ -22,12 +22,11 @@ public sealed class NUnitTestRunMapper : ITestRunMapper
         {
             case TestSelectionKind.All:
                 return TestSelection.All;
-            case TestSelectionKind.Names or TestSelectionKind.FrameworkFilter:
+            case TestSelectionKind.FrameworkFilter:
                 return requested;
+            case TestSelectionKind.Names:
+                return XmlFilter(NUnitSelectionXml.ToFilterXml(requested.Names));
         }
-
-        if (requested is { Kind: TestSelectionKind.TestIds, TestIds.Count: 0 })
-            return TestSelection.FromTestIds([]);
 
         var ids = (discovered.Count > 0
                 ? discovered.Select(test => test.FullName ?? test.TestId)
@@ -36,17 +35,15 @@ public sealed class NUnitTestRunMapper : ITestRunMapper
             .Select(id => id.Trim())
             .Distinct(StringComparer.Ordinal)
             .ToList();
-        if (ids.Count == 0)
-            return TestSelection.FromTestIds([]);
 
-        var xml = NUnitCollapsedSelection.ToFilterXml(ids);
-        if (string.IsNullOrWhiteSpace(xml))
-            return TestSelection.FromTestIds([]);
-
-        return TestSelection.FromFrameworkFilter(
-            NUnitSelectionXml.XmlFilterFormat,
-            xml!);
+        return XmlFilter(ids.Count == 0 ? null : NUnitCollapsedSelection.ToFilterXml(ids));
     }
+
+    /// <summary>The in-host NUnit runtime only accepts All or filter XML; no XML means run nothing.</summary>
+    private static TestSelection XmlFilter(string? xml) =>
+        TestSelection.FromFrameworkFilter(
+            NUnitFilterFactory.XmlFilterFormat,
+            string.IsNullOrWhiteSpace(xml) ? NUnitFilterFactory.RunNothingXml : xml!);
 
     public IReadOnlyList<TestCaseResult> FoldResults(
         TestSelection requested,

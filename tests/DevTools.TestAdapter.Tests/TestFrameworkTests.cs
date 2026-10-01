@@ -149,7 +149,7 @@ public sealed class TestFrameworkTests
     [TestMethod]
     public void Name_filter_round_trips_through_generic_selection()
     {
-        var selection = TestFramework.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
+        var selection = TestExecutionFilters.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
 
         Assert.AreEqual(TestSelectionKind.Names, selection.Kind);
         Assert.AreSequenceEqual(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
@@ -308,7 +308,7 @@ public sealed class TestNodeMapperTests
     [TestMethod]
     public void ToDiscoveredNode_uses_test_id_as_uid()
     {
-        var node = TestFramework.ToDiscoveredNode(
+        var node = TestNodeProperties.ToDiscoveredNode(
             new TestDiscoveredTest(
                 "HostSmokeTests.Arithmetic",
                 "Arithmetic",
@@ -331,7 +331,7 @@ public sealed class TestNodeMapperTests
     [TestMethod]
     public void ToDiscoveredNode_copies_parameter_and_return_types()
     {
-        var node = TestFramework.ToDiscoveredNode(
+        var node = TestNodeProperties.ToDiscoveredNode(
             new TestDiscoveredTest(
                 "ArgumentsDataSourceTests.Named_basis_length_is_one",
                 "Unit_X",
@@ -354,7 +354,7 @@ public sealed class TestNodeMapperTests
     {
         var fullName =
             "DevTools.NUnit.SampleTests.NamedFixtureSourceTests(\"alpha.rvt\").Fixture_argument_is_preserved";
-        var node = TestFramework.ToDiscoveredNode(
+        var node = TestNodeProperties.ToDiscoveredNode(
             new TestDiscoveredTest(
                 fullName,
                 "Fixture_argument_is_preserved(\"alpha.rvt\")",
@@ -379,7 +379,7 @@ public sealed class TestNodeMapperTests
     [TestMethod]
     public void ToDiscoveredNode_omits_identifier_when_provider_did_not_supply_metadata()
     {
-        var node = TestFramework.ToDiscoveredNode(
+        var node = TestNodeProperties.ToDiscoveredNode(
             new TestDiscoveredTest("HostSmokeTests.Arithmetic", "Arithmetic", "HostSmokeTests.Arithmetic"));
 
         Assert.AreEqual("HostSmokeTests.Arithmetic", node.Uid.Value);
@@ -393,7 +393,7 @@ public sealed class TestNodeMapperTests
     [DataRow("Error", typeof(ErrorTestNodeStateProperty))]
     public void ToResultNode_maps_outcomes(string outcome, Type stateType)
     {
-        var node = TestFramework.ToResultNode(
+        var node = TestNodeProperties.ToResultNode(
             new TestCaseResult("id", "Case", outcome, 12, "msg", null, null, null, [], [], SkipReason: "ignored"));
 
         Assert.AreEqual("Case", node.DisplayName);
@@ -412,7 +412,7 @@ public sealed class TestNodeMapperTests
             "Arithmetic",
             Namespace: "",
             TypeName: "HostSmokeTests");
-        var node = TestFramework.ToResultNode(
+        var node = TestNodeProperties.ToResultNode(
             new TestCaseResult(
                 "HostSmokeTests.Arithmetic",
                 "Arithmetic",
@@ -447,9 +447,9 @@ public sealed class TestNodeMapperTests
             Namespace: "DevTools.NUnit.Runtime.Fixtures",
             TypeName: "TestNameCaseFixture");
 
-        var discoveredId = TestFramework.ToDiscoveredNode(discovered)
+        var discoveredId = TestNodeProperties.ToDiscoveredNode(discovered)
             .Properties.Single<TestMethodIdentifierProperty>();
-        var resultId = TestFramework.ToResultNode(
+        var resultId = TestNodeProperties.ToResultNode(
                 new TestCaseResult(
                     uid,
                     "Named_one",
@@ -475,7 +475,7 @@ public sealed class TestNodeMapperTests
     [TestMethod]
     public void ToResultNode_without_discovery_omits_method_identifier()
     {
-        var identity = TestFramework.ToResultNode(
+        var identity = TestNodeProperties.ToResultNode(
                 new TestCaseResult(
                     "DevTools.NUnit.Runtime.Fixtures.TestNameCaseFixture.Named_one",
                     "Named_one",
@@ -496,7 +496,7 @@ public sealed class TestNodeMapperTests
     [TestMethod]
     public void ToResultNode_maps_standard_output()
     {
-        var node = TestFramework.ToResultNode(
+        var node = TestNodeProperties.ToResultNode(
             new TestCaseResult(
                 "id",
                 "Writes_output",
@@ -518,7 +518,7 @@ public sealed class TestNodeMapperTests
     public void ToRunnerFilter_prefers_selected_uids()
     {
         var filter = new TestNodeUidListFilter([new TestNodeUid("HostSmokeTests.Arithmetic")]);
-        var selection = TestFramework.ToRunnerFilter(filter, "Intentional_failure_for_demo");
+        var selection = TestExecutionFilters.ToRunnerFilter(filter, "Intentional_failure_for_demo");
         Assert.AreSequenceEqual(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
         Assert.AreEqual(TestSelectionKind.TestIds, selection.Kind);
     }
@@ -530,7 +530,7 @@ public sealed class TestNodeMapperTests
         var filter = new CompositeTestExecutionFilter(
             TestExecutionFilterOperator.And,
             [uidFilter, new NopFilter()]);
-        var selection = TestFramework.ToRunnerFilter(filter);
+        var selection = TestExecutionFilters.ToRunnerFilter(filter);
         Assert.AreSequenceEqual(["HostSmokeTests.Arithmetic"], selection.TestIds.ToArray());
         Assert.AreEqual(TestSelectionKind.TestIds, selection.Kind);
     }
@@ -538,7 +538,7 @@ public sealed class TestNodeMapperTests
     [TestMethod]
     public void ToRunnerFilter_empty_uid_list_is_constrained()
     {
-        var selection = TestFramework.ToRunnerFilter(new TestNodeUidListFilter([]));
+        var selection = TestExecutionFilters.ToRunnerFilter(new TestNodeUidListFilter([]));
         Assert.AreEqual(TestSelectionKind.TestIds, selection.Kind);
         Assert.IsEmpty(selection.TestIds);
         Assert.IsTrue(selection.IsConstrained);
@@ -547,7 +547,7 @@ public sealed class TestNodeMapperTests
     [TestMethod]
     public void ToDiscoverFilter_empty_uid_list_is_all()
     {
-        var selection = TestFramework.ToDiscoverFilter(new TestNodeUidListFilter([]));
+        var selection = TestExecutionFilters.ToDiscoverFilter(new TestNodeUidListFilter([]));
         Assert.AreEqual(TestSelectionKind.All, selection.Kind);
         Assert.IsFalse(selection.IsConstrained);
     }
@@ -564,7 +564,7 @@ public sealed class TestNodeMapperTests
             Namespace: "Ns",
             TypeName: "Box");
 
-        var paths = TestFramework.MtpTreePaths(leaf).ToArray();
+        var paths = TestExecutionFilters.MtpTreePaths(leaf).ToArray();
         Assert.Contains("/Ns/Box/Bottom_corners_share_min_z", paths, StringComparer.Ordinal);
         Assert.Contains("/" + Uri.EscapeDataString(leaf.TestId), paths, StringComparer.Ordinal);
     }
@@ -572,7 +572,7 @@ public sealed class TestNodeMapperTests
     [TestMethod]
     public void ToRunnerFilter_uses_method_name_when_no_uid_list()
     {
-        var selection = TestFramework.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
+        var selection = TestExecutionFilters.ToRunnerFilter(null, nameFilter: "Arithmetic_runs_inside_host");
         Assert.AreSequenceEqual(["Arithmetic_runs_inside_host"], selection.Names.ToArray());
         Assert.IsEmpty(selection.TestIds);
         Assert.AreEqual(TestSelectionKind.Names, selection.Kind);

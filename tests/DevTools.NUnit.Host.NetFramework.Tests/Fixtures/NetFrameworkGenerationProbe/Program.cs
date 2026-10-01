@@ -4,7 +4,7 @@ using DevTools.NUnit.Host.NetFramework.Tests;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.NUnit;
-using DevTools.Testing.Host.NUnit.Loading;
+using DevTools.Testing.Host.Loading;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests.Probe;
 
@@ -45,7 +45,7 @@ internal static class Program
         if (!string.Equals(conflicting.GetName().Name, "nunit.framework", StringComparison.OrdinalIgnoreCase))
             return 1;
 
-        var testHostNunit = FindLoadedNUnit(new Version(4, 6, 0, 0));
+        var testHostNunit = FindLoadedNUnit(new Version(5, 0, 0, 0));
         if (testHostNunit is not null)
             return 2;
 
@@ -205,9 +205,9 @@ internal static class Program
         new TestAssemblyReference(assemblyPath),
         string.IsNullOrWhiteSpace(filter)
             ? TestSelection.All
-            : TestSelection.FromFrameworkFilter(NUnitSelectionFilter.XmlFilterFormat, filter!));
+            : TestSelection.FromFrameworkFilter("filter-xml", filter!));
 
-    private sealed class NoOpEventSink : ITestingRuntimeEventSink
+    private sealed class NoOpEventSink : ITestEventSink
     {
         public void Publish(TestEvent runtimeEvent)
         {

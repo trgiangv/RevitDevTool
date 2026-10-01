@@ -9,8 +9,6 @@ namespace DevTools.NUnit.MTP;
 /// </summary>
 internal static class NUnitSelectionXml
 {
-    public const string XmlFilterFormat = "filter-xml";
-
     public static string? ToFilterXml(IReadOnlyList<string>? names)
     {
         var cleaned = Clean(names);

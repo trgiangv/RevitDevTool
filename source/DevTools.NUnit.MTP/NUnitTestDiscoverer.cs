@@ -76,7 +76,7 @@ public sealed class NUnitTestDiscoverer : ITestDiscoverer
             .ToList();
     }
 
-    private static TestDiscoveredTest ToDiscovered(ITest test, NUnitSourceLocationProvider? source)
+    private static TestDiscoveredTest ToDiscovered(ITest test, NUnitLocationProvider? source)
     {
         NUnitTestNameParser.SplitIde(
             test.FullName,
@@ -154,7 +154,7 @@ internal sealed class NUnitLocalExploration : IDisposable
     private NUnitLocalExploration(
         NUnitTestAssemblyRunner? runner,
         IReadOnlyList<ITest> leaves,
-        NUnitSourceLocationProvider? source,
+        NUnitLocationProvider? source,
         DiscoveryAssemblyLoad? load)
     {
         _runner = runner;
@@ -165,7 +165,7 @@ internal sealed class NUnitLocalExploration : IDisposable
 
     public IReadOnlyList<ITest> Leaves { get; }
 
-    public NUnitSourceLocationProvider? Source { get; }
+    public NUnitLocationProvider? Source { get; }
 
     public static NUnitLocalExploration Load(string assemblyPath)
     {
@@ -199,7 +199,7 @@ internal sealed class NUnitLocalExploration : IDisposable
             return new NUnitLocalExploration(
                 runner,
                 leaves,
-                new NUnitSourceLocationProvider(assemblyPath),
+                new NUnitLocationProvider(assemblyPath),
                 load);
         }
         catch

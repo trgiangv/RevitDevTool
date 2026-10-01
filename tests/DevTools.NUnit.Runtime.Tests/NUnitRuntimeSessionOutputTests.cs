@@ -88,7 +88,7 @@ public sealed class NUnitRuntimeSessionOutputTests
             ? TestSelection.All
             : TestSelection.FromFrameworkFilter("filter-xml", filter);
 
-    private sealed class RecordingSink : ITestingRuntimeEventSink
+    private sealed class RecordingSink : ITestEventSink
     {
         public void Publish(TestEvent testingEvent) { }
     }

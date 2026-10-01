@@ -7,7 +7,6 @@ using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
-using DevTools.Testing.Host.NUnit.Loading;
 using DevTools.Testing.Host.Runtime;
 using NUnit.Framework;
 using Assert = NUnit.Framework.Assert;
@@ -101,7 +100,7 @@ public sealed class NetFrameworkGenerationTests
 
         var testHostNUnit = FindTestHostNUnitAssembly();
         Assert.That(testHostNUnit, Is.Not.Null);
-        Assert.That(testHostNUnit!.GetName().Version, Is.EqualTo(new Version(4, 6, 0, 0)));
+        Assert.That(testHostNUnit!.GetName().Version, Is.EqualTo(new Version(5, 0, 0, 0)));
 
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         Assert.That(
@@ -119,7 +118,7 @@ public sealed class NetFrameworkGenerationTests
         var probe = RunGenerationProbe(TestContext, "costura-binding");
         Assert.That(probe.ExitCode, Is.EqualTo(0), probe.Output);
         Assert.That(probe.Output, Does.Contain("GenerationFrameworkIdentity="));
-        Assert.That(probe.Output, Does.Contain("Version=4.6.0.0"));
+        Assert.That(probe.Output, Does.Contain("Version=5.0.0.0"));
     }
 
     [TestMethod]
@@ -310,8 +309,9 @@ public sealed class NetFrameworkGenerationTests
             Assert.That(run.Wait(TimeSpan.FromSeconds(15)), Is.True, "The cancelled run did not complete.");
             var response = run.GetAwaiter().GetResult();
             Assert.That(remaining.WaitOne(0), Is.False, "The remaining test body ran after cancellation.");
-            Assert.That(response.Results, Has.None.Matches<TestCaseResult>(testCase =>
-                testCase.DisplayName == "RemainingTest_MustNotRunAfterCancellation"));
+            Assert.That(
+                response.Results.Select(testCase => testCase.DisplayName),
+                Does.Not.Contain("RemainingTest_MustNotRunAfterCancellation"));
         }
         finally
         {
@@ -416,7 +416,7 @@ public sealed class NetFrameworkGenerationTests
         return run.Results.Single();
     }
 
-    private sealed class NoOpEventSink : ITestingRuntimeEventSink
+    private sealed class NoOpEventSink : ITestEventSink
     {
         public void Publish(TestEvent runtimeEvent)
         {
@@ -426,9 +426,9 @@ public sealed class NetFrameworkGenerationTests
     private static TestRunRequest CreateTestingRequest(Guid runId, string assemblyPath, string? filter) => new(
         1,
         runId,
-        NUnitGenerationPolicy.FrameworkId,
+        TestFrameworkId.NUnit,
         new TestAssemblyReference(assemblyPath),
         string.IsNullOrWhiteSpace(filter)
             ? TestSelection.All
-            : TestSelection.FromFrameworkFilter(NUnitSelectionFilter.XmlFilterFormat, filter!));
+            : TestSelection.FromFrameworkFilter("filter-xml", filter!));
 }

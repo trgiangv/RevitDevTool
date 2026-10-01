@@ -18,7 +18,6 @@ public static class TUnitMtpBuilderHook
         if (testApplicationBuilder is null)
             throw new ArgumentNullException(nameof(testApplicationBuilder));
         _ = arguments;
-        var discoverer = new TUnitTestDiscoverer();
-        TestingDiscovery.Register(discoverer, discoverer);
+        TestingDiscovery.Register(new TUnitTestDiscoverer());
     }
 }

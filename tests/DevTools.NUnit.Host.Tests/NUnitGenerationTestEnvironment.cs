@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.NUnit.Loading;
+using DevTools.Testing.Host.NUnit;
 
 namespace DevTools.NUnit.Host.Tests;
 
@@ -112,7 +112,7 @@ internal static class NUnitGenerationTestEnvironment
         return Path.Combine(outputDirectory, "DevTools.NUnit.Runtime.Fixtures.dll");
     }
 
-    public static HostRuntimeSource CreateRuntimeStub(string parentDirectory)
+    public static RuntimeSource CreateRuntimeStub(string parentDirectory)
     {
         var runtimeDirectory = Path.Combine(parentDirectory, "runtime-source");
         Directory.CreateDirectory(runtimeDirectory);
@@ -129,7 +129,7 @@ internal static class NUnitGenerationTestEnvironment
         if (File.Exists(sourceSymbolPath))
             File.Copy(sourceSymbolPath, symbolPath, overwrite: true);
 
-        return new HostRuntimeSource(
+        return new RuntimeSource(
             assemblyPath,
             File.Exists(symbolPath) ? symbolPath : null,
             Array.Empty<string>());

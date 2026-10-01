@@ -1,4 +1,4 @@
-using DevTools.Testing.Host;
+using DevTools.Testing.Host.Loading;
 
 namespace DevTools.Testing.Host.Tests;
 
@@ -6,20 +6,20 @@ namespace DevTools.Testing.Host.Tests;
 public sealed class TestingAssemblyPreflightTests
 {
     [TestMethod]
-    public void Preflight_reports_a_missing_assembly_without_framework_types()
+    public void RequireManagedAssembly_rejects_a_missing_file()
     {
-        var result = TestingAssemblyPreflight.Check(@"C:\missing\assembly.dll");
+        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
+            TestingGenerationFiles.RequireManagedAssembly(@"C:\missing\assembly.dll"));
 
-        Assert.IsFalse(result.Success);
-        Assert.Contains("not found", result.Message!, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not found", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [TestMethod]
-    public void ResolveAndEnsureLoadable_returns_the_normalized_managed_assembly_path()
+    public void RequireManagedAssembly_returns_the_full_path_of_a_managed_assembly()
     {
         var path = typeof(TestingAssemblyPreflightTests).Assembly.Location;
 
-        var resolved = TestingAssemblyPreflight.ResolveAndEnsureLoadable(path);
+        var resolved = TestingGenerationFiles.RequireManagedAssembly(path);
 
         Assert.AreEqual(Path.GetFullPath(path), resolved);
     }

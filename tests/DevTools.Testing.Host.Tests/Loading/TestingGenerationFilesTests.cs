@@ -6,16 +6,16 @@ namespace DevTools.Testing.Host.Tests.Loading;
 public sealed class TestingGenerationFilesTests
 {
     [TestMethod]
-    [DataRow("sample.pdb", TestingGenerationFileKind.Symbols)]
-    [DataRow("native.dll", TestingGenerationFileKind.Native)]
-    [DataRow("readme.txt", TestingGenerationFileKind.Other)]
-    public void Classify_handles_non_managed_outputs(string fileName, TestingGenerationFileKind expected)
+    [DataRow("sample.pdb")]
+    [DataRow("native.dll")]
+    [DataRow("readme.txt")]
+    public void IsManagedIdentity_rejects_non_assemblies(string fileName)
     {
         using var workspace = new TemporaryDirectory();
         var path = Path.Combine(workspace.Path, fileName);
         File.WriteAllText(path, "not-a-pe");
 
-        Assert.AreEqual(expected, TestingGenerationFiles.Classify(path));
+        Assert.IsFalse(TestingGenerationFiles.IsManagedIdentity(path));
     }
 
     [TestMethod]
@@ -24,7 +24,6 @@ public sealed class TestingGenerationFilesTests
         Assert.IsTrue(TestingGenerationFiles.IsVolatileGenerationOutput(@"TestResults\out.trx"));
         Assert.IsTrue(TestingGenerationFiles.IsVolatileGenerationOutput(@"Log\host.log"));
         Assert.IsFalse(TestingGenerationFiles.IsVolatileGenerationOutput(@"bin\sample.dll"));
-        Assert.AreEqual(@"folder\file.dll", TestingGenerationFiles.NormalizeRelativePath("folder/file.dll"));
     }
 
     [TestMethod]
@@ -76,9 +75,9 @@ public sealed class TestingGenerationFilesTests
         File.WriteAllText(replacement, "version-two");
         File.WriteAllText(unchanged, "version-one");
 
-        var files = new Dictionary<string, TestingGenerationFile>(StringComparer.OrdinalIgnoreCase)
+        var files = new Dictionary<string, (string SourcePath, string RelativePath)>(StringComparer.OrdinalIgnoreCase)
         {
-            ["asset.bin"] = new TestingGenerationFile(original, "asset.bin", TestingGenerationFileKind.Other),
+            ["asset.bin"] = (original, "asset.bin"),
         };
 
         TestingGenerationFiles.MergeFile(files, unchanged, "asset.bin");
@@ -86,7 +85,68 @@ public sealed class TestingGenerationFilesTests
 
         TestingGenerationFiles.MergeFile(files, replacement, "asset.bin");
         Assert.AreEqual(replacement, files["asset.bin"].SourcePath);
-        Assert.AreEqual(TestingGenerationFileKind.Other, files["asset.bin"].Kind);
+    }
+
+    [TestMethod]
+    public void MergeRuntimeDependency_keeps_a_newer_consumer_assembly()
+    {
+        using var workspace = new TemporaryDirectory();
+        var consumer = WriteAssembly(workspace.Path, "consumer", "Shared.Lib", new Version(4, 2, 4, 0));
+        var runtime = WriteAssembly(workspace.Path, "runtime", "Shared.Lib", new Version(4, 2, 0, 1));
+        var files = new Dictionary<string, (string SourcePath, string RelativePath)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Shared.Lib.dll"] = (consumer, "Shared.Lib.dll"),
+        };
+
+        TestingGenerationFiles.MergeRuntimeDependency(files, runtime, "Shared.Lib.dll");
+
+        Assert.AreEqual(consumer, files["Shared.Lib.dll"].SourcePath);
+    }
+
+    [TestMethod]
+    public void MergeRuntimeDependency_replaces_an_older_or_equal_consumer_assembly()
+    {
+        using var workspace = new TemporaryDirectory();
+        var older = WriteAssembly(workspace.Path, "older", "Shared.Lib", new Version(1, 0, 0, 0));
+        var newer = WriteAssembly(workspace.Path, "newer", "Shared.Lib", new Version(2, 0, 0, 0));
+        var equal = WriteAssembly(workspace.Path, "equal", "Shared.Lib", new Version(2, 0, 0, 0), marker: "different");
+        var files = new Dictionary<string, (string SourcePath, string RelativePath)>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Shared.Lib.dll"] = (older, "Shared.Lib.dll"),
+        };
+
+        TestingGenerationFiles.MergeRuntimeDependency(files, newer, "Shared.Lib.dll");
+        Assert.AreEqual(newer, files["Shared.Lib.dll"].SourcePath);
+
+        TestingGenerationFiles.MergeRuntimeDependency(files, equal, "Shared.Lib.dll");
+        Assert.AreEqual(equal, files["Shared.Lib.dll"].SourcePath);
+    }
+
+    [TestMethod]
+    public void MergeRuntimeDependency_adds_files_that_are_not_present()
+    {
+        using var workspace = new TemporaryDirectory();
+        var runtime = WriteAssembly(workspace.Path, "runtime", "Shared.Lib", new Version(1, 0, 0, 0));
+        var files = new Dictionary<string, (string SourcePath, string RelativePath)>(StringComparer.OrdinalIgnoreCase);
+
+        TestingGenerationFiles.MergeRuntimeDependency(files, runtime, "Shared.Lib.dll");
+
+        Assert.AreEqual(runtime, files["Shared.Lib.dll"].SourcePath);
+    }
+
+    static string WriteAssembly(string root, string folder, string name, Version version, string? marker = null)
+    {
+        var directory = System.IO.Path.Combine(root, folder);
+        Directory.CreateDirectory(directory);
+        var path = System.IO.Path.Combine(directory, name + ".dll");
+        var builder = new System.Reflection.Emit.PersistedAssemblyBuilder(
+            new System.Reflection.AssemblyName(name) { Version = version },
+            typeof(object).Assembly);
+        var module = builder.DefineDynamicModule(name);
+        module.DefineType(marker ?? "Marker", System.Reflection.TypeAttributes.Public | System.Reflection.TypeAttributes.Class)
+            .CreateType();
+        builder.Save(path);
+        return path;
     }
 
     sealed class TemporaryDirectory : IDisposable

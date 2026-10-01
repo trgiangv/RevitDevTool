@@ -12,13 +12,13 @@ public static class PartialCancelState
 [TestFixture]
 public sealed class PartialCancelFixture
 {
-    [Test, Order(1)]
+    [Test]
     public void CompletesFirst()
     {
         Interlocked.Exchange(ref PartialCancelState.FirstCompleted, 1);
     }
 
-    [Test, Order(2)]
+    [Test, DependsOnTest(nameof(CompletesFirst))]
     public void BlocksSecond()
     {
         Interlocked.Exchange(ref PartialCancelState.SecondEntered, 1);

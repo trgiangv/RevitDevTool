@@ -1,16 +1,11 @@
 using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
-using Microsoft.Testing.Platform.Capabilities.TestFramework;
-using Microsoft.Testing.Platform.CommandLine;
-using Microsoft.Testing.Platform.Extensions;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
 using ReflectionAssembly = System.Reflection.Assembly;
-using MtpTestSessionContext = Microsoft.Testing.Platform.TestHost.TestSessionContext;
 using SessionUid = Microsoft.Testing.Platform.TestHost.SessionUid;
-using BindingFlags = System.Reflection.BindingFlags;
 
 namespace DevTools.TUnit.Runtime;
 
@@ -18,12 +13,6 @@ namespace DevTools.TUnit.Runtime;
 
 internal static class TUnitEngineHost
 {
-    private const string EngineAssemblyName = "TUnit.Engine";
-    private const string ExtensionTypeName = "TUnit.Engine.Framework.TUnitExtension";
-    private const string FrameworkTypeName = "TUnit.Engine.Framework.TUnitTestFramework";
-    private const string ServiceProviderTypeName = "Microsoft.Testing.Platform.Services.ServiceProvider";
-    private const string OutputDeviceTypeName = "Microsoft.Testing.Platform.OutputDevice.NopPlatformOutputDevice";
-
     public static IReadOnlyList<TestCaseResult> Run(
         ReflectionAssembly testAssembly,
         TestSelection selection,
@@ -53,29 +42,17 @@ internal static class TUnitEngineHost
         TestSelection selection,
         CancellationToken cancellationToken)
     {
-        var workingDirectory = Directory.GetCurrentDirectory();
+        var bindings = TUnitEngineBindings.Instance;
         var resultDirectory = Path.Combine(Path.GetTempPath(), "DevTools.tunit");
         Directory.CreateDirectory(resultDirectory);
 
-        var platform = typeof(ICommandLineOptions).Assembly;
-        var services = CreateServiceProvider(platform, workingDirectory, resultDirectory);
-        var engine = ReflectionAssembly.Load(EngineAssemblyName);
-        var extension = (IExtension)Activator.CreateInstance(RequiredType(engine, ExtensionTypeName))!;
-        var framework = (ITestFramework)Activator.CreateInstance(
-            RequiredType(engine, FrameworkTypeName),
-            extension,
-            services,
-            new TestFrameworkCapabilities())!;
+        var services = bindings.CreateServices(Directory.GetCurrentDirectory(), resultDirectory);
+        var framework = bindings.CreateFramework(services);
 
         var sessionUid = new SessionUid(Guid.NewGuid().ToString("N"));
-        var session = (MtpTestSessionContext)Activator.CreateInstance(
-            typeof(MtpTestSessionContext),
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            args: [sessionUid],
-            culture: null)!;
-        var filter = CreateFilter(selection);
-        var request = new RunTestExecutionRequest(session, filter);
+        var request = new RunTestExecutionRequest(
+            bindings.CreateSessionContext(sessionUid),
+            CreateFilter(selection));
         using var traceScope = new TestRunTraceScope();
         var messageBus = new TUnitEngineMessageBus(traceScope);
         var executeContext = new ExecuteRequestContext(
@@ -83,18 +60,8 @@ internal static class TUnitEngineHost
             messageBus,
             new TUnitEngineCompletionNotifier(),
             cancellationToken);
-        var createContext = (CreateTestSessionContext)Activator.CreateInstance(
-            typeof(CreateTestSessionContext),
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            args: [sessionUid, cancellationToken],
-            culture: null)!;
-        var closeContext = (CloseTestSessionContext)Activator.CreateInstance(
-            typeof(CloseTestSessionContext),
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            args: [sessionUid, cancellationToken],
-            culture: null)!;
+        var createContext = bindings.CreateCreateContext(sessionUid, cancellationToken);
+        var closeContext = bindings.CreateCloseContext(sessionUid, cancellationToken);
 
         framework.CreateTestSessionAsync(createContext).GetAwaiter().GetResult();
         try
@@ -108,7 +75,6 @@ internal static class TUnitEngineHost
 
         return TUnitEngineResults.Map(messageBus.Nodes.Values, messageBus.CapturedByUid);
     }
-
     private static ITestExecutionFilter CreateFilter(TestSelection selection)
     {
         if (selection.Kind == TestSelectionKind.All)
@@ -129,22 +95,4 @@ internal static class TUnitEngineHost
             .ToArray();
         return new TestNodeUidListFilter(ids);
     }
-
-    private static object CreateServiceProvider(ReflectionAssembly platform, string workingDirectory, string resultDirectory)
-    {
-        var provider = Activator.CreateInstance(RequiredType(platform, ServiceProviderTypeName))!;
-        var add = provider.GetType().GetMethod("AddService", [typeof(object), typeof(bool)])
-            ?? throw new InvalidOperationException("MTP ServiceProvider.AddService was not found.");
-        add.Invoke(provider, [new TUnitEngineLoggerFactory(), false]);
-        add.Invoke(provider, [new TUnitEngineCommandLine(), false]);
-        add.Invoke(provider, [new TUnitEngineConfiguration(workingDirectory, resultDirectory), false]);
-        add.Invoke(provider, [new TUnitEngineOutputDevice(), false]);
-        add.Invoke(provider, [Activator.CreateInstance(RequiredType(platform, OutputDeviceTypeName))!, false]);
-        add.Invoke(provider, [new TUnitEngineClientInfo(), false]);
-        return provider;
-    }
-
-    private static Type RequiredType(ReflectionAssembly assembly, string typeName) =>
-        assembly.GetType(typeName, throwOnError: true)
-        ?? throw new InvalidOperationException($"Type '{typeName}' was not found in '{assembly.GetName().Name}'.");
 }

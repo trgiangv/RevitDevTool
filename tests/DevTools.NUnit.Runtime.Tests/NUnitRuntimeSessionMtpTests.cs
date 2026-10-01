@@ -153,7 +153,32 @@ public sealed class NUnitRuntimeSessionMtpTests
     }
 
     [TestMethod]
-    public async Task Cancel_stops_a_blocking_run_through_the_neutral_contract()
+    public void Run_accepts_only_all_or_filter_xml_selections()
+    {
+        using var session = FixtureTestHarness.CreateSession();
+        var selections = new[]
+        {
+            TestSelection.FromTestIds(["DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes"]),
+            TestSelection.FromNames(["PlainTest_Passes"]),
+            TestSelection.FromFrameworkFilter("nunit/filter-xml", "<filter><test>x</test></filter>"),
+        };
+
+        foreach (var selection in selections)
+        {
+            var request = new TestRunRequest(
+                1,
+                Guid.NewGuid(),
+                TestFrameworkId.NUnit,
+                new TestAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),
+                selection);
+
+            var exception = Assert.ThrowsExactly<ArgumentException>(
+                () => session.Run(request, new RecordingSink(), TestContext.CancellationToken));
+            Assert.Contains("filter-xml", exception.Message, StringComparison.Ordinal);
+        }
+    }
+    [TestMethod]
+    public async Task Cancel_returns_once_a_blocking_test_that_cannot_be_interrupted_completes()
     {
         DedicatedTestFixturesHarness.ResetBlockingState();
         using var session = DedicatedTestFixturesHarness.CreateSession();
@@ -174,9 +199,10 @@ public sealed class NUnitRuntimeSessionMtpTests
         session.Cancel(runId);
         Volatile.Write(ref Fixtures.BlockingRunState.Release, 1);
 
+        // NUnit 5 cannot interrupt a running test (StopRun has no force): the session
+        // asks the runner to stop and the run ends once the blocked body returns.
         var response = await runTask.WaitAsync(TimeSpan.FromSeconds(15), TestContext.CancellationToken);
-        Assert.AreEqual(TestOutcomes.Cancelled, response.Results.Single().Outcome);
-        Assert.AreEqual(TestCancellationState.Completed, response.CancellationState);
+        Assert.AreEqual(TestOutcomes.Passed, response.Results.Single().Outcome);
     }
 
     private static TestRunRequest CreateRequest(string? filter) => new(
@@ -191,7 +217,7 @@ public sealed class NUnitRuntimeSessionMtpTests
             ? TestSelection.All
             : TestSelection.FromFrameworkFilter("filter-xml", filter);
 
-    private sealed class RecordingSink : ITestingRuntimeEventSink
+    private sealed class RecordingSink : ITestEventSink
     {
         internal List<TestEvent> Events { get; } = [];
         public void Publish(TestEvent testingEvent) => Events.Add(testingEvent);

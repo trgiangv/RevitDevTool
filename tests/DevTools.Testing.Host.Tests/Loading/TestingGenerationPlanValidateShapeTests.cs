@@ -12,7 +12,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
         var plan = new TestingGenerationPlan(
             (TestFrameworkId)42,
             @"C:\tests\sample.dll",
-            [new TestingGenerationFile(@"C:\tests\sample.dll", "sample.dll", TestingGenerationFileKind.Managed)],
+            [(@"C:\tests\sample.dll", "sample.dll")],
             "sample.dll");
 
         var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
@@ -40,7 +40,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
         var plan = new TestingGenerationPlan(
             TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
-            [new TestingGenerationFile(@"C:\tests\sample.dll", @"C:\evil.dll", TestingGenerationFileKind.Managed)],
+            [(@"C:\tests\sample.dll", @"C:\evil.dll")],
             @"C:\evil.dll");
 
         Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
@@ -52,23 +52,23 @@ public sealed class TestingGenerationPlanValidateShapeTests
         var plan = new TestingGenerationPlan(
             TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
-            [new TestingGenerationFile(@"C:\tests\sample.dll", "..\\sample.dll", TestingGenerationFileKind.Managed)],
+            [(@"C:\tests\sample.dll", "..\\sample.dll")],
             "..\\sample.dll");
 
         Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
     }
 
     [TestMethod]
-    public void ValidateShape_rejects_duplicate_normalized_paths()
+    public void ValidateShape_rejects_duplicate_paths()
     {
         var plan = new TestingGenerationPlan(
             TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
             [
-                new TestingGenerationFile(@"C:\tests\sample.dll", "folder\\sample.dll", TestingGenerationFileKind.Managed),
-                new TestingGenerationFile(@"C:\tests\other.dll", "folder/sample.dll", TestingGenerationFileKind.Managed),
+                (@"C:\tests\sample.dll", @"folder\sample.dll"),
+                (@"C:\tests\other.dll", @"folder\sample.dll"),
             ],
-            "folder\\sample.dll");
+            @"folder\sample.dll");
 
         var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());
 
@@ -81,7 +81,7 @@ public sealed class TestingGenerationPlanValidateShapeTests
         var plan = new TestingGenerationPlan(
             TestFrameworkId.NUnit,
             @"C:\tests\sample.dll",
-            [new TestingGenerationFile(@"C:\tests\sample.dll", "sample.dll", TestingGenerationFileKind.Managed)],
+            [(@"C:\tests\sample.dll", "sample.dll")],
             "runtime.dll");
 
         var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => plan.ValidateShape());

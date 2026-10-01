@@ -2,7 +2,7 @@ using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.Testing.Abstractions.Runtime;
 
-public interface ITestingRuntimeEventSink
+public interface ITestEventSink
 {
     void Publish(TestEvent testingEvent);
 }
@@ -13,7 +13,7 @@ public interface ITestingRuntimeSession : IDisposable
 
     TestRunResponse Run(
         TestRunRequest request,
-        ITestingRuntimeEventSink eventSink,
+        ITestEventSink eventSink,
         CancellationToken cancellationToken);
 
     void Cancel(Guid runId);

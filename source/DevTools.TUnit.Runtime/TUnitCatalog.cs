@@ -10,20 +10,16 @@ internal static class TUnitCatalog
 {
     public static IReadOnlyList<TestDiscoveredTest> Discover(
         string assemblyPath,
-        TestSelection selection,
-        ReflectionAssembly? alreadyLoaded = null) =>
-        Enumerate(assemblyPath, selection, "discovery", alreadyLoaded);
+        TestSelection selection) =>
+        Enumerate(assemblyPath, selection, "discovery");
 
     private static List<TestDiscoveredTest> Enumerate(
         string assemblyPath,
         TestSelection selection,
-        string sessionId,
-        ReflectionAssembly? alreadyLoaded)
+        string sessionId)
     {
-        EnsureLoaded(assemblyPath, alreadyLoaded);
-        var ids = selection.Kind == TestSelectionKind.TestIds ? Clean(selection.TestIds) : [];
-        var names = selection.Kind == TestSelectionKind.Names ? Clean(selection.Names) : [];
-        var tests = EnumerateMatches(sessionId, ids, names, matchAll: selection.Kind == TestSelectionKind.All).ToList();
+        EnsureLoaded(assemblyPath);
+        var tests = EnumerateMatches(sessionId, TestSelectionMatcher.For(selection)).ToList();
         if (tests.Count == 0 && ShouldReportEmptyRegistrar(selection))
         {
             throw new TestingDiscoveryFailedException(
@@ -36,9 +32,7 @@ internal static class TUnitCatalog
 
     private static IEnumerable<TestDiscoveredTest> EnumerateMatches(
         string sessionId,
-        HashSet<string> ids,
-        HashSet<string> names,
-        bool matchAll)
+        TestSelectionMatcher matcher)
     {
         foreach (var source in Sources.TestEntries.Values)
         {
@@ -49,7 +43,10 @@ internal static class TUnitCatalog
                 foreach (var combination in expansion.Combinations)
                 {
                     var discovered = Map(source, filter, expansion.Metadata, combination);
-                    if (MatchesSelection(discovered, filter, expansion.Metadata, ids, names, matchAll))
+                    if (matcher.Matches(
+                            discovered,
+                            filter.MethodName,
+                            () => expansion.Metadata is null ? null : TUnitTestIdentity.Deferred(expansion.Metadata)))
                         yield return discovered;
                 }
             }
@@ -134,15 +131,9 @@ internal static class TUnitCatalog
         _ => Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture) ?? "?",
     };
 
-    private static void EnsureLoaded(string assemblyPath, ReflectionAssembly? alreadyLoaded)
+    private static void EnsureLoaded(string assemblyPath)
     {
         SourceRegistrar.IsEnabled = true;
-        if (alreadyLoaded is not null)
-        {
-            Bind(alreadyLoaded);
-            return;
-        }
-
         assemblyPath = Path.GetFullPath(assemblyPath);
         if (!File.Exists(assemblyPath))
             throw new TestingDiscoveryFailedException($"TUnit test assembly not found: {assemblyPath}");
@@ -175,42 +166,4 @@ internal static class TUnitCatalog
         RuntimeHelpers.RunModuleConstructor(testAssembly.ManifestModule.ModuleHandle);
         TUnitSourceCatalog.Retain(testAssembly);
     }
-
-    private static bool MatchesSelection(
-        TestDiscoveredTest test,
-        TestEntryFilterData filter,
-        TestMetadata? metadata,
-        HashSet<string> ids,
-        HashSet<string> names,
-        bool matchAll)
-    {
-        if (matchAll)
-            return true;
-
-        if (ids.Count == 0 && names.Count == 0)
-            return false;
-
-        if (ids.Contains(test.TestId)
-            || (!string.IsNullOrWhiteSpace(test.FullName) && ids.Contains(test.FullName!)))
-        {
-            return true;
-        }
-
-        if (metadata is not null && ids.Contains(TUnitTestIdentity.Deferred(metadata)))
-            return true;
-
-        return names.Any(name =>
-            string.Equals(test.FullName, name, StringComparison.Ordinal)
-            || string.Equals(test.DisplayName, name, StringComparison.Ordinal)
-            || (test.FullName?.Contains(name, StringComparison.OrdinalIgnoreCase) ?? false)
-            || test.TestId.Contains(name, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(filter.MethodName, name, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static HashSet<string> Clean(IReadOnlyList<string>? values) =>
-        values is null
-            ? new HashSet<string>(StringComparer.Ordinal)
-            : values.Where(value => !string.IsNullOrWhiteSpace(value))
-                .Select(value => value.Trim())
-                .ToHashSet(StringComparer.Ordinal);
 }

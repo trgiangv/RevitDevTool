@@ -6,8 +6,8 @@ using DevTools.Ipc;
 using DevTools.Hosting;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
+using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host;
-using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Transport;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -39,14 +39,18 @@ public sealed class BridgeHandlerRegistrationTests
         Assert.Contains(typeof(IpyTestRequestHandler), implementationTypes);
         Assert.Contains(typeof(MarshaledTestRequestHandler), implementationTypes);
 
-        Assert.IsTrue(services.Any(descriptor =>
-            descriptor.ServiceType == typeof(ITestFrameworkProvider)
-            && descriptor.ImplementationType == typeof(NUnitTestFrameworkProvider)));
+        using (var provider = services.BuildServiceProvider())
+        {
+            Assert.AreEqual(
+                TestFrameworkId.NUnit,
+                provider.GetRequiredService<TestingProviderRegistry>().GetRequired(TestFrameworkId.NUnit).FrameworkId);
+        }
+
         Assert.IsTrue(services.Any(descriptor => descriptor.ServiceType == typeof(TestingProviderRegistry)));
 
         var methods = new InstanceRequestHandler(new FakeHostAppInfo()).SupportedMethods
             .Concat([PytestBridgeMethods.TestsRun, PytestBridgeMethods.IpyTestsRun])
-            .Concat(new DotnetTestRequestHandler(
+            .Concat(new TestingRequestHandler(
                 new TestingProviderRegistry([new NoOpTestingProvider()]),
                 "Revit",
                 "2025").SupportedMethods)

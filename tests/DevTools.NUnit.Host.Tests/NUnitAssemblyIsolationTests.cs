@@ -7,7 +7,6 @@ using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
-using DevTools.Testing.Host.NUnit.Loading;
 using DevTools.Testing.Host.Runtime;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -92,7 +91,8 @@ public sealed class NUnitAssemblyIsolationTests
 
         var plan = NUnitRuntimeSessionFactory.CreateIsolationPlan(manifest, framework);
 
-        Assert.IsInstanceOfType<ResolverNativeAssemblySource>(plan.NativeSources.Single());
+        // The native resolver is added by IsolatedRuntimeActivator, not cataloged by the plan.
+        Assert.AreEqual(0, plan.NativeSources.Count);
     }
 
     [TestMethod]
@@ -144,7 +144,7 @@ public sealed class NUnitAssemblyIsolationTests
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(manifest.ShadowAssemblyPath),
                 TestSelection.FromFrameworkFilter(
-                    NUnitSelectionFilter.XmlFilterFormat,
+                    "filter-xml",
                     "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.PlainTest_Passes</test></filter>")),
             sink,
             TestContext.CancellationToken);
@@ -219,7 +219,7 @@ public sealed class NUnitAssemblyIsolationTests
         }
     }
 
-    private sealed class RecordingSink : ITestingRuntimeEventSink
+    private sealed class RecordingSink : ITestEventSink
     {
         internal List<TestEvent> Events { get; } = [];
 

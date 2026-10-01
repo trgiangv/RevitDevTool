@@ -29,7 +29,7 @@ internal sealed class IsolatedRuntimeSessionHandle : ITestingRuntimeSession, ITe
 
     public TestRunResponse Run(
         TestRunRequest request,
-        ITestingRuntimeEventSink eventSink,
+        ITestEventSink eventSink,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);

@@ -1,11 +1,7 @@
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.Testing.Abstractions.Providers;
-
-public interface ITestEventSink
-{
-    void Publish(TestEvent testingEvent);
-}
 
 public interface ITestFrameworkProvider
 {

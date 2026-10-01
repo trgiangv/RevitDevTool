@@ -156,7 +156,7 @@ public sealed class FullSemanticsFixture
 [TestFixture]
 public sealed class CancellationForwardingFixture
 {
-    [Test, Order(1)]
+    [Test]
     public void BlockingTest_WaitsForCooperativeRelease()
     {
         using var entered = EventWaitHandle.OpenExisting(GetRequiredEventName("DEVTOOLS_NUNIT_CANCELLATION_ENTERED_EVENT"));
@@ -165,7 +165,7 @@ public sealed class CancellationForwardingFixture
         release.WaitOne();
     }
 
-    [Test, Order(2)]
+    [Test, DependsOnTest(nameof(BlockingTest_WaitsForCooperativeRelease))]
     public void RemainingTest_MustNotRunAfterCancellation()
     {
         using var entered = EventWaitHandle.OpenExisting(GetRequiredEventName("DEVTOOLS_NUNIT_CANCELLATION_REMAINING_EVENT"));
@@ -181,14 +181,14 @@ public sealed class CancellationForwardingFixture
 [TestFixture]
 public sealed class OrderedSemanticsFixture
 {
-    [Test, Order(1)]
+    [Test]
     public void Ordered_First()
     {
         AcceptanceRunContext.AppendToken("OrderedSemanticsFixture.Ordered_First");
         Assert.Pass();
     }
 
-    [Test, Order(2)]
+    [Test, DependsOnTest(nameof(Ordered_First))]
     public void Ordered_Second()
     {
         AcceptanceRunContext.AppendToken("OrderedSemanticsFixture.Ordered_Second");

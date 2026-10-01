@@ -10,20 +10,20 @@ namespace DevTools.NUnit.Runtime;
 internal sealed class NUnitEventListener : ITestListener
 {
     private readonly Guid _runId;
-    private readonly ITestingRuntimeEventSink _eventSink;
-    private readonly NUnitSourceLocationProvider? _sourceLocationProvider;
+    private readonly ITestEventSink _eventSink;
+    private readonly NUnitLocationProvider? _locationProvider;
     private readonly TestRunTraceScope _traceScope;
     private readonly HashSet<ITest> _terminalCases = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<ITest> _startedCases = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<string, string?> _traceByFullName = new(StringComparer.Ordinal);
 
-    public NUnitEventListener(Guid runId, ITestingRuntimeEventSink eventSink,
-        NUnitSourceLocationProvider? sourceLocationProvider,
+    public NUnitEventListener(Guid runId, ITestEventSink eventSink,
+        NUnitLocationProvider? locationProvider,
         TestRunTraceScope traceScope)
     {
         _runId = runId;
         _eventSink = eventSink;
-        _sourceLocationProvider = sourceLocationProvider;
+        _locationProvider = locationProvider;
         _traceScope = traceScope;
     }
 
@@ -52,7 +52,7 @@ internal sealed class NUnitEventListener : ITestListener
         foreach (var attachment in NUnitResultMapper.MapAttachments(result))
             Publish(TestEventKinds.Attachment, null, null, attachment);
 
-        var mapped = NUnitResultMapper.MapCaseResult(result, _sourceLocationProvider);
+        var mapped = NUnitResultMapper.MapCaseResult(result, _locationProvider);
         if (_traceByFullName.TryGetValue(result.Test.FullName, out var captured))
             mapped = mapped with { Output = TestRunTraceScope.Merge(mapped.Output, captured) };
         Publish(TestEventKinds.Case, mapped, null, null);
@@ -72,7 +72,7 @@ internal sealed class NUnitEventListener : ITestListener
         foreach (var test in _startedCases)
             cases.Add(new TestCaseResult(
                 NUnitTestIdentity.Id(test), test.Name, TestOutcomes.Cancelled, 0,
-                null, null, null, NUnitResultMapper.MapSource(test, _sourceLocationProvider), [], [],
+                null, null, null, NUnitResultMapper.MapSource(test, _locationProvider), [], [],
                 NUnitTestIdentity.ParentId(test), test.FullName));
         return cases;
     }

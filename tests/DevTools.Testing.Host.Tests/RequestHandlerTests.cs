@@ -42,7 +42,7 @@ public sealed class RequestHandlerTests
     [TestMethod]
     public async Task Hello_does_not_default_a_missing_provider_id()
     {
-        var handler = new DotnetTestRequestHandler(
+        var handler = new TestingRequestHandler(
             new TestingProviderRegistry([new FakeProvider(TestFrameworkId.NUnit)]),
             "Revit",
             "2025");
@@ -247,7 +247,7 @@ public sealed class RequestHandlerTests
     [TestMethod]
     public void Supported_methods_are_testing_only()
     {
-        var handler = new DotnetTestRequestHandler(
+        var handler = new TestingRequestHandler(
             new TestingProviderRegistry([new FakeProvider(TestFrameworkId.NUnit)]),
             "Revit",
             "2025");
@@ -257,10 +257,10 @@ public sealed class RequestHandlerTests
             handler.SupportedMethods.ToArray());
     }
 
-    static DotnetTestRequestHandler CreateHandler(out FakeProvider provider)
+    static TestingRequestHandler CreateHandler(out FakeProvider provider)
     {
         provider = new FakeProvider(TestFrameworkId.NUnit);
-        return new DotnetTestRequestHandler(
+        return new TestingRequestHandler(
             new TestingProviderRegistry([provider]),
             "Revit",
             "2025");
@@ -275,7 +275,7 @@ public sealed class RequestHandlerTests
             TestSelection.FromTestIds(["id-1"]));
 
     static Task<BridgeMessage> Handle(
-        DotnetTestRequestHandler handler,
+        TestingRequestHandler handler,
         string requestId,
         string method,
         JsonElement? @params) =>

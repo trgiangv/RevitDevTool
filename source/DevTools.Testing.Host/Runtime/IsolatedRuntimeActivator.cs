@@ -1,5 +1,8 @@
 using System.Reflection;
 using DevTools.AssemblyIsolation;
+#if NET
+using DevTools.AssemblyIsolation.Sources;
+#endif
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
 
@@ -11,15 +14,16 @@ internal static class IsolatedRuntimeActivator
         TestingGenerationManifest generation,
         AssemblyIsolationPlan plan,
         string runtimeSessionTypeName,
-        Func<Assembly, object[]> constructorArguments,
-        Func<ITestingRuntimeSession, AssemblyIsolationSession, string, ITestingRuntimeSession> wrap)
+        Func<Assembly, object[]> constructorArguments)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentException.ThrowIfNullOrWhiteSpace(runtimeSessionTypeName);
         ArgumentNullException.ThrowIfNull(constructorArguments);
-        ArgumentNullException.ThrowIfNull(wrap);
 
+#if NET
+        plan = plan.AddNativeSource(new ResolverNativeAssemblySource(generation.ShadowAssemblyPath));
+#endif
         var isolation = AssemblyIsolationSession.Create(plan);
         try
         {
@@ -32,7 +36,7 @@ internal static class IsolatedRuntimeActivator
                 binder: null,
                 args: constructorArguments(testAssembly),
                 culture: null)!;
-            return wrap(inner, isolation, generation.ShadowAssemblyPath);
+            return new IsolatedRuntimeSessionHandle(inner, isolation, generation.ShadowAssemblyPath);
         }
         catch
         {

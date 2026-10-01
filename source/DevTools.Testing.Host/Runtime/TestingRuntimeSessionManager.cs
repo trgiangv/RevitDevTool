@@ -19,10 +19,10 @@ public interface ITestingRuntimeSessionRetirementDiagnostics
     TestingGenerationRetirementDiagnostic? GetRetirementDiagnostic();
 }
 
-public sealed class NullTestingRuntimeEventSink : ITestingRuntimeEventSink
+public sealed class NullTestEventSink : ITestEventSink
 {
-    public static NullTestingRuntimeEventSink Instance { get; } = new();
-    private NullTestingRuntimeEventSink() { }
+    public static NullTestEventSink Instance { get; } = new();
+    private NullTestEventSink() { }
     public void Publish(TestEvent testingEvent) { }
 }
 
@@ -49,7 +49,7 @@ public sealed class TestingRuntimeSessionManager(TestingGenerationStore generati
         get { lock (_stateLock) return _retainedDiagnostics.ToList(); }
     }
 
-    public TestRunResponse Run(TestRunRequest request, ITestingRuntimeEventSink eventSink, CancellationToken cancellationToken = default)
+    public TestRunResponse Run(TestRunRequest request, ITestEventSink eventSink, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(eventSink);

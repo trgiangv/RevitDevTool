@@ -15,7 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\DevTools.NUnit.Runtime\NUnitSourceLocationProvider.cs" Link="NUnitSourceLocationProvider.cs"/>
+        <Compile Include="..\DevTools.NUnit.Runtime\NUnitLocationProvider.cs" Link="NUnitLocationProvider.cs"/>
         <Compile Include="..\DevTools.NUnit.Runtime\NUnitNameSyntax.cs" Link="NUnitNameSyntax.cs"/>
         <Compile Include="..\DevTools.NUnit.Runtime\NUnitFilterFactory.cs" Link="NUnitFilterFactory.cs"/>
         <Compile Include="..\DevTools.NUnit.Runtime\NUnitTestNameParser.cs" Link="NUnitTestNameParser.cs"/>

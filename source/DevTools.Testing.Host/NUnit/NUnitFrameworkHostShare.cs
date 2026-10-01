@@ -5,7 +5,7 @@ using DevTools.AssemblyIsolation.Loading;
 using System.Runtime.Loader;
 #endif
 
-namespace DevTools.Testing.Host.NUnit.Loading;
+namespace DevTools.Testing.Host.NUnit;
 
 /// <summary>
 /// Loads our generation's <c>nunit.framework</c> once into the host context so

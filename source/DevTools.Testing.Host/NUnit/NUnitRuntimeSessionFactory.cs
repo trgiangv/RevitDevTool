@@ -5,8 +5,7 @@ using DevTools.AssemblyIsolation.Sources;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.Runtime;
-
-namespace DevTools.Testing.Host.NUnit.Loading;
+namespace DevTools.Testing.Host.NUnit;
 
 public sealed class NUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
 {
@@ -22,8 +21,7 @@ public sealed class NUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
             generation,
             CreateIsolationPlan(generation, frameworkAssembly),
             RuntimeSessionTypeName,
-            testAssembly => [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId, true],
-            (inner, isolation, shadow) => new IsolatedRuntimeSessionHandle(inner, isolation, shadow));
+            testAssembly => [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId, true]);
     }
 
     internal static AssemblyIsolationPlan CreateIsolationPlan(
@@ -52,7 +50,6 @@ public sealed class NUnitRuntimeSessionFactory : ITestingRuntimeSessionFactory
 #endif
             .Pin(frameworkAssembly)
             .Pin(typeof(ITestingRuntimeSession).Assembly)
-            .AddManagedSource(new ManifestAssemblySource(managedCandidates))
-            .WithGenerationNatives(manifest.ShadowAssemblyPath);
+            .AddManagedSource(new ManifestAssemblySource(managedCandidates));
     }
 }

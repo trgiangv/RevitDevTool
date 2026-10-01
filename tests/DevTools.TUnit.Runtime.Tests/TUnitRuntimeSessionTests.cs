@@ -10,7 +10,7 @@ public sealed class TUnitRuntimeSessionTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public void Names_map_to_test_ids_and_do_not_throw()
+    public void Names_return_invalid_request_because_the_testhost_mapper_resolves_them()
     {
         var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
         using var session = new TUnitRuntimeSession(assembly, assembly.Location, "gen");
@@ -19,7 +19,8 @@ public sealed class TUnitRuntimeSessionTests
             NullSink.Instance,
             TestContext.CancellationToken);
 
-        Assert.IsNull(response.DiagnosticCode);
+        Assert.AreEqual("testing/invalid_request", response.DiagnosticCode);
+        Assert.Contains("Names", response.DiagnosticMessage!, StringComparison.Ordinal);
         Assert.IsEmpty(response.Results);
         Assert.AreEqual(TestCancellationState.None, response.CancellationState);
     }
@@ -35,7 +36,7 @@ public sealed class TUnitRuntimeSessionTests
             TestContext.CancellationToken);
 
         Assert.AreEqual("testing/invalid_request", response.DiagnosticCode);
-        Assert.Contains("--name", response.DiagnosticMessage!, StringComparison.Ordinal);
+        Assert.Contains("All or TestIds", response.DiagnosticMessage!, StringComparison.Ordinal);
         Assert.IsEmpty(response.Results);
         Assert.AreEqual(TestCancellationState.None, response.CancellationState);
     }
@@ -72,19 +73,6 @@ public sealed class TUnitRuntimeSessionTests
         Assert.AreEqual(TestCancellationState.None, response.CancellationState);
     }
 
-    [TestMethod]
-    public void MapToEngineSelection_converts_names_to_test_ids()
-    {
-        var assembly = typeof(TUnitRuntimeSessionTests).Assembly;
-        var mapped = TUnitRuntimeSession.MapToEngineSelection(
-            TestSelection.FromNames(["DoesNotExist"]),
-            assembly.Location,
-            assembly);
-
-        Assert.AreEqual(TestSelectionKind.TestIds, mapped.Kind);
-        Assert.IsEmpty(mapped.TestIds);
-    }
-
     private static TestRunRequest CreateRequest(TestSelection selection, Guid? runId = null) =>
         new(
             2,
@@ -93,7 +81,7 @@ public sealed class TUnitRuntimeSessionTests
             new TestAssemblyReference(typeof(TUnitRuntimeSessionTests).Assembly.Location),
             selection);
 
-    private sealed class NullSink : ITestingRuntimeEventSink
+    private sealed class NullSink : ITestEventSink
     {
         public static NullSink Instance { get; } = new();
 

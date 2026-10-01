@@ -89,7 +89,7 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
         TestSelection selection)
     {
         var cases = SelectCases(assemblyPath, selection);
-        return cases.Select(discovered => ToDiscoveredNode(discovered, assemblyPath)).ToList();
+        return cases.Select(discovered => TestNodeProperties.ToDiscoveredNode(discovered, assemblyPath)).ToList();
     }
 
     private async Task PublishDiscoveredAsync(
@@ -252,7 +252,7 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
                 this,
                 new TestNodeUpdateMessage(
                     publish.Request.Session.SessionUid,
-                    ToResultNode(mapped, publish.AssemblyPath, publish.Cases)))
+                    TestNodeProperties.ToResultNode(mapped, publish.AssemblyPath, publish.Cases)))
             .GetAwaiter()
             .GetResult();
     }
@@ -313,7 +313,7 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
                     this,
                     new TestNodeUpdateMessage(
                         publish.Request.Session.SessionUid,
-                        ToResultNode(result, publish.AssemblyPath, publish.Cases)))
+                        TestNodeProperties.ToResultNode(result, publish.AssemblyPath, publish.Cases)))
                 .ConfigureAwait(false);
         }
     }
@@ -336,67 +336,6 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
             ? options with { DebugParentPid = Process.GetCurrentProcess().Id }
             : options;
 
-    internal static TestSelection ToRunnerFilter(
-        ITestExecutionFilter? filter,
-        string? nameFilter = null)
-    {
-        var uids = CollectUidList(filter);
-        if (HasUidListFilter(filter))
-            return TestSelection.FromTestIds(uids);
-
-        return string.IsNullOrWhiteSpace(nameFilter) 
-            ? TestSelection.All 
-            : TestSelection.FromNames([nameFilter!.Trim()]);
-    }
-
-    /// <summary>
-    /// Visual Studio / Rider may send an empty <see cref="TestNodeUidListFilter"/>
-    /// on discover-all. That is not a run of zero tests — publish the assembly.
-    /// </summary>
-    internal static TestSelection ToDiscoverFilter(
-        ITestExecutionFilter? filter,
-        string? nameFilter = null)
-    {
-        var selection = ToRunnerFilter(filter, nameFilter);
-        return selection is { Kind: TestSelectionKind.TestIds, TestIds.Count: 0 } 
-            ? TestSelection.All 
-            : selection;
-    }
-
-    private static bool HasUidListFilter(ITestExecutionFilter? filter) =>
-        filter switch
-        {
-            TestNodeUidListFilter => true,
-            CompositeTestExecutionFilter composite => composite.Filters.Any(HasUidListFilter),
-            _ => false,
-        };
-
-    private static List<string> CollectUidList(ITestExecutionFilter? filter)
-    {
-        var uids = new List<string>();
-        CollectUidList(filter, uids);
-        return uids
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(value => value.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-    }
-
-    private static void CollectUidList(ITestExecutionFilter? filter, List<string> uids)
-    {
-        switch (filter)
-        {
-            case TestNodeUidListFilter uidFilter:
-                foreach (var uid in uidFilter.TestNodeUids)
-                    uids.Add(uid.Value);
-                break;
-            case CompositeTestExecutionFilter composite:
-                foreach (var child in composite.Filters)
-                    CollectUidList(child, uids);
-                break;
-        }
-    }
-
     internal static IReadOnlyList<TestDiscoveredTest> SelectCases(
         string assemblyPath,
         TestSelection selection) =>
@@ -418,7 +357,7 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
                     this,
                     new TestNodeUpdateMessage(
                         publish.Request.Session.SessionUid,
-                        ToResultNode(result, publish.AssemblyPath, publish.Cases)))
+                        TestNodeProperties.ToResultNode(result, publish.AssemblyPath, publish.Cases)))
                 .ConfigureAwait(false);
             published++;
         }
@@ -446,85 +385,20 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
         string assemblyPath,
         ITestExecutionFilter? filter)
     {
-        var selection = ToDiscoverFilter(filter, ReadOption(TestCommandLineProvider.FilterOptionName));
-        if (selection.Kind != TestSelectionKind.All || !HasTreeNodeFilter(filter))
+        var selection = TestExecutionFilters.ToDiscoverFilter(filter, ReadOption(TestCommandLineProvider.FilterOptionName));
+        if (selection.Kind != TestSelectionKind.All || !TestExecutionFilters.HasTreeNodeFilter(filter))
             return selection;
-        return ExpandTreeFilter(filter, SelectCases(assemblyPath, TestSelection.All));
+        return TestExecutionFilters.ExpandTreeFilter(filter, SelectCases(assemblyPath, TestSelection.All));
     }
 
     private TestSelection ResolveExecutionSelection(
         string assemblyPath,
         ITestExecutionFilter? filter)
     {
-        var selection = ToRunnerFilter(filter, ReadOption(TestCommandLineProvider.FilterOptionName));
-        if (selection.Kind != TestSelectionKind.All || !HasTreeNodeFilter(filter))
+        var selection = TestExecutionFilters.ToRunnerFilter(filter, ReadOption(TestCommandLineProvider.FilterOptionName));
+        if (selection.Kind != TestSelectionKind.All || !TestExecutionFilters.HasTreeNodeFilter(filter))
             return selection;
-        return ExpandTreeFilter(filter, SelectCases(assemblyPath, TestSelection.All));
-    }
-
-    internal static bool HasTreeNodeFilter(ITestExecutionFilter? filter) =>
-        FindTreeNodeFilter(filter) is not null;
-
-    internal static TestSelection ExpandTreeFilter(
-        ITestExecutionFilter? filter,
-        IReadOnlyList<TestDiscoveredTest> all)
-    {
-        var tree = FindTreeNodeFilter(filter);
-        if (tree is null)
-            return TestSelection.All;
-
-        var ids = all
-            .Where(test => MatchesTree(tree, test))
-            .Select(test => test.TestId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-        return TestSelection.FromTestIds(ids);
-    }
-
-    private static TreeNodeFilter? FindTreeNodeFilter(ITestExecutionFilter? filter) =>
-        filter switch
-        {
-            TreeNodeFilter tree => tree,
-            CompositeTestExecutionFilter composite => composite.Filters
-                .Select(FindTreeNodeFilter)
-                .FirstOrDefault(child => child is not null),
-            _ => null,
-        };
-
-    internal static bool MatchesTree(TreeNodeFilter tree, TestDiscoveredTest test)
-    {
-        var bag = new PropertyBag();
-        foreach (var path in MtpTreePaths(test))
-        {
-            if (tree.MatchesFilter(path, bag))
-                return true;
-        }
-
-        return false;
-    }
-
-    internal static IEnumerable<string> MtpTreePaths(TestDiscoveredTest test)
-    {
-        yield return "/" + Uri.EscapeDataString(test.TestId);
-        if (!string.IsNullOrWhiteSpace(test.DisplayName))
-            yield return "/" + Uri.EscapeDataString(test.DisplayName);
-        if (string.IsNullOrWhiteSpace(test.Namespace)
-            || string.IsNullOrWhiteSpace(test.TypeName)
-            || string.IsNullOrWhiteSpace(test.MethodName))
-            yield break;
-
-        yield return string.Concat(
-            "/", Uri.EscapeDataString(test.Namespace!),
-            "/", Uri.EscapeDataString(test.TypeName!),
-            "/", Uri.EscapeDataString(test.MethodName!));
-        if (!string.IsNullOrWhiteSpace(test.DisplayName))
-        {
-            yield return string.Concat(
-                "/", Uri.EscapeDataString(test.Namespace!),
-                "/", Uri.EscapeDataString(test.TypeName!),
-                "/", Uri.EscapeDataString(test.DisplayName));
-        }
+        return TestExecutionFilters.ExpandTreeFilter(filter, SelectCases(assemblyPath, TestSelection.All));
     }
 
     private string? ReadOption(string name)
@@ -546,7 +420,7 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
         TestingDiscovery.Current
         ?? throw new InvalidOperationException(
             "Local discovery requires TestingDiscovery.Register from the selected MTP provider hook. "
-            + "Set TestingFramework to nunit or tunit so RevitDevTool.TestAdapter references the matching sibling.");
+            + "Set TestingFramework to nunit, tunit, or mstest so RevitDevTool.TestAdapter references the matching sibling.");
 
     private static ITestDiscoverer RequireDiscoverer() => RequireBridge().Discoverer;
 
@@ -566,105 +440,6 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
         _ownedTransport = new ProcessTestRunnerClient(runnerPath);
         _session = new TestRunSession(_ownedTransport);
         return _session;
-    }
-
-    internal static TestNode ToDiscoveredNode(TestDiscoveredTest test, string? assemblyPath = null)
-    {
-        var properties = new List<IProperty> { DiscoveredTestNodeStateProperty.CachedInstance };
-        AddMethodIdentifier(properties, test, assemblyPath);
-        TestNodeProperties.AddSource(properties, test.Source);
-        return new TestNode
-        {
-            Uid = new TestNodeUid(OpaqueUid(test.TestId, test.FullName, test.DisplayName)),
-            DisplayName = test.DisplayName,
-            Properties = new PropertyBag(properties),
-        };
-    }
-
-    internal static TestNode ToResultNode(
-        TestCaseResult result,
-        string? assemblyPath = null,
-        IReadOnlyList<TestDiscoveredTest>? discovered = null)
-    {
-        var properties = new List<IProperty>();
-        TestNodeProperties.AddCommonResultProperties(properties, result);
-        AddMethodIdentifier(properties, FindDiscovered(discovered, result), assemblyPath);
-
-        return new TestNode
-        {
-            Uid = new TestNodeUid(OpaqueUid(result.TestId, result.FullName, result.DisplayName)),
-            DisplayName = result.DisplayName,
-            Properties = new PropertyBag(properties),
-        };
-    }
-
-    private static TestDiscoveredTest? FindDiscovered(
-        IReadOnlyList<TestDiscoveredTest>? discovered,
-        TestCaseResult result)
-    {
-        if (discovered is null || discovered.Count == 0)
-            return null;
-
-        return discovered.FirstOrDefault(test =>
-            string.Equals(test.TestId, result.TestId, StringComparison.Ordinal));
-    }
-
-    private static string OpaqueUid(string id, string? fullName, string name)
-    {
-        if (!string.IsNullOrWhiteSpace(id))
-            return id;
-        if (!string.IsNullOrWhiteSpace(fullName))
-            return fullName!;
-        return name;
-    }
-
-    private static void AddMethodIdentifier(
-        List<IProperty> properties,
-        TestDiscoveredTest? test,
-        string? assemblyPath)
-    {
-        if (test is null)
-            return;
-        if (string.IsNullOrWhiteSpace(test.TypeName) || string.IsNullOrWhiteSpace(test.MethodName))
-            return;
-
-        properties.Add(new TestMethodIdentifierProperty(
-            ResolveAssemblyFullName(assemblyPath),
-            test.Namespace ?? string.Empty,
-            test.TypeName!,
-            test.MethodName!,
-            test.MethodArity,
-            ToParameterTypes(test.ParameterTypeFullNames),
-            string.IsNullOrWhiteSpace(test.ReturnTypeFullName) ? "System.Void" : test.ReturnTypeFullName!));
-    }
-
-    private static string[] ToParameterTypes(IReadOnlyList<string>? types)
-    {
-        if (types is null || types.Count == 0)
-            return [];
-        if (types is string[] array)
-            return array;
-        return types.ToArray();
-    }
-
-    private static string ResolveAssemblyFullName(string? assemblyPath)
-    {
-        if (!string.IsNullOrWhiteSpace(assemblyPath) && File.Exists(assemblyPath))
-        {
-            try
-            {
-                return System.Reflection.AssemblyName.GetAssemblyName(assemblyPath!).FullName;
-            }
-            catch
-            {
-                // Fall through to the file name.
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(assemblyPath))
-            return Path.GetFileNameWithoutExtension(assemblyPath);
-
-        return System.Reflection.Assembly.GetEntryAssembly()?.GetName().FullName ?? string.Empty;
     }
 
     private static string ResolveTestAssemblyPath()

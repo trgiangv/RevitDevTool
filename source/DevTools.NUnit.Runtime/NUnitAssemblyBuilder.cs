@@ -1,3 +1,4 @@
+using DevTools.Testing.Abstractions.Runtime;
 using System.Diagnostics;
 using System.Reflection;
 using NUnit;
@@ -80,7 +81,7 @@ internal sealed class NUnitAssemblyBuilder : ITestAssemblyBuilder
 
     /// <summary>
     /// Same process-wide NUnit state <see cref="DefaultTestAssemblyBuilder"/> sets.
-    /// <c>TestContext.DefaultWorkDirectory</c> is internal on NUnit 4.6.1.
+    /// <c>TestContext.DefaultWorkDirectory</c> is internal on NUnit 5.0.0.
     /// </summary>
     internal static void ApplyBuilderOptions(IDictionary<string, object> options)
     {
@@ -102,19 +103,9 @@ internal sealed class NUnitAssemblyBuilder : ITestAssemblyBuilder
         SetDefaultWorkDirectory(workDirectory);
     }
 
-    internal static void SetDefaultWorkDirectory(string workDirectory)
-    {
-        var field = typeof(TestContext).GetField(
-            "DefaultWorkDirectory",
-            BindingFlags.Static | BindingFlags.NonPublic);
-        if (field is null)
-        {
-            throw new InvalidOperationException(
-                "NUnit TestContext.DefaultWorkDirectory is missing; WorkDirectory cannot be initialized.");
-        }
-
-        field.SetValue(null, workDirectory);
-    }
+    internal static void SetDefaultWorkDirectory(string workDirectory) =>
+        InternalMembers.Field(typeof(TestContext), "DefaultWorkDirectory", isStatic: true)
+            .SetValue(null, workDirectory);
 
     internal static IReadOnlyList<Type> GetLoadableTypes(Assembly assembly)
     {

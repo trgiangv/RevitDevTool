@@ -111,8 +111,11 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("AddTUnit()", host, StringComparison.Ordinal);
         Assert.DoesNotContain("TestApplication", host, StringComparison.Ordinal);
         Assert.Contains("TUnitEngineHost.Run(_testAssembly", session, StringComparison.Ordinal);
-        Assert.Contains("_executionGate", session, StringComparison.Ordinal);
-        Assert.Contains("_runControl", session, StringComparison.Ordinal);
+        Assert.Contains("CancellableRuntimeSession", session, StringComparison.Ordinal);
+        var lifecycle = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "source", "DevTools.Testing.Abstractions", "Runtime", "CancellableRuntimeSession.cs"));
+        Assert.Contains("_executionGate", lifecycle, StringComparison.Ordinal);
+        Assert.Contains("_runControl", lifecycle, StringComparison.Ordinal);
         Assert.Contains("ExecuteRequestAsync", host, StringComparison.Ordinal);
         Assert.Contains("TestNodeUidListFilter", host, StringComparison.Ordinal);
         Assert.Contains("SourceRegistrar.IsEnabled", host, StringComparison.Ordinal);
@@ -147,7 +150,7 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("TUnitEngineMessageBus(traceScope)", host, StringComparison.Ordinal);
         Assert.Contains("TestRunTraceScope", File.ReadAllText(Path.Combine(runtimeDir, "TUnitEnginePlatform.cs")), StringComparison.Ordinal);
         Assert.Contains("TestRunTraceScope.Merge", File.ReadAllText(Path.Combine(runtimeDir, "TUnitEngineResults.cs")), StringComparison.Ordinal);
-        Assert.Contains("TestEventKinds.Output", session, StringComparison.Ordinal);
+        Assert.Contains("TestEventKinds.Output", lifecycle, StringComparison.Ordinal);
 
         var expansion = File.ReadAllText(Path.Combine(runtimeDir, "TUnitExpansion.cs"));
         Assert.Contains("GetDataRowsAsync", expansion, StringComparison.Ordinal);

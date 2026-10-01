@@ -1,6 +1,6 @@
+using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.Tests;
 
@@ -50,12 +50,15 @@ public sealed class NUnitGenerationPolicyTests
     {
         var frameworkPath = Path.Combine(NUnitGenerationTestEnvironment.FixtureOutputDirectory,
             NUnitGenerationPolicy.FrameworkAssemblyFileName);
-        NUnitGenerationPolicy.ValidateNUnitFrameworkVersion(frameworkPath);
+        ValidatePin(frameworkPath);
 
         var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
-            NUnitGenerationPolicy.ValidateNUnitFrameworkVersion(typeof(NUnitGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("4.6.1.0", exception.Message, StringComparison.Ordinal);
+            ValidatePin(typeof(NUnitGenerationPolicyTests).Assembly.Location));
+        Assert.Contains("5.0.0.0", exception.Message, StringComparison.Ordinal);
     }
+
+    private static void ValidatePin(string path) =>
+        NUnitGenerationPolicy.Spec.Pins.Single(pin => pin.FileName == NUnitGenerationPolicy.FrameworkAssemblyFileName).Validate(path, null);
 
     [TestMethod]
     public void Policy_keeps_Microsoft_and_System_dependencies_generation_private()
@@ -109,7 +112,7 @@ public sealed class NUnitGenerationPolicyTests
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
         Assert.IsFalse(manifest.ManagedAssemblies.Any(path  => path.EndsWith(resourceFile, StringComparison.OrdinalIgnoreCase)));
-        Assert.IsTrue(manifest.OtherFiles.Any(path => path.EndsWith(Path.Combine(culture, resourceFile), StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, culture, resourceFile)));
     }
 
     [TestMethod]
@@ -126,8 +129,9 @@ public sealed class NUnitGenerationPolicyTests
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
-        Assert.IsTrue(manifest.NativeAssets.Any(path  => path.EndsWith("root.native.dll", StringComparison.OrdinalIgnoreCase)));
-        Assert.IsFalse(manifest.OtherFiles.Any(path  => path.EndsWith("run.diag", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, "root.native.dll")));
+        Assert.IsFalse(manifest.ManagedAssemblies.Any(path => path.EndsWith("root.native.dll", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(File.Exists(Path.Combine(manifest.ShadowDirectory, "Log", "run.diag")));
         Assert.IsTrue(NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest).StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase));
     }
 

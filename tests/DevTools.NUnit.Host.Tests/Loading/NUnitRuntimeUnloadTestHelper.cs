@@ -1,5 +1,5 @@
+using DevTools.Testing.Host.NUnit;
 using System.Reflection;
-using DevTools.Testing.Host.NUnit.Loading;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 
