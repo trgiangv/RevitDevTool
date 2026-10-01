@@ -12,20 +12,21 @@ namespace DevTools.Testing.Abstractions.Runtime;
 /// </summary>
 public sealed class TestRunTraceScope : IDisposable
 {
-    private readonly Listener _listener = new();
+    private readonly Listener _listener;
     private readonly TraceListener[] _snapshot;
     private bool _disposed;
 
-    public TestRunTraceScope()
+    public TestRunTraceScope(Func<string?>? caseKey = null)
     {
+        _listener = new Listener(caseKey);
         _snapshot = SnapshotListeners();
         EnsureRegistered();
     }
 
-    public string? CompleteCase()
+    public string? CompleteCase(string? caseKey = null)
     {
         EnsureRegistered();
-        return _listener.Take();
+        return _listener.Take(caseKey);
     }
 
     /// <summary>
@@ -114,13 +115,19 @@ public sealed class TestRunTraceScope : IDisposable
             Trace.Listeners.Add(listener);
     }
 
-    private sealed class Listener : TraceListener
+    private sealed class Listener(Func<string?>? caseKey) : TraceListener
     {
         private readonly Lock _sync = new();
-        private readonly StringBuilder _buffer = new();
+        private readonly Dictionary<string, StringBuilder> _buckets = new(StringComparer.Ordinal);
         private int _suspendCount;
 
         public override bool IsThreadSafe => true;
+
+        private string CurrentKey()
+        {
+            var key = caseKey?.Invoke();
+            return string.IsNullOrEmpty(key) ? string.Empty : key!;
+        }
 
         public void SuspendCapture()
         {
@@ -137,6 +144,17 @@ public sealed class TestRunTraceScope : IDisposable
             }
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                lock (_sync)
+                    _buckets.Clear();
+            }
+
+            base.Dispose(disposing);
+        }
+
         public override void Write(string? message)
         {
             if (string.IsNullOrEmpty(message))
@@ -147,7 +165,14 @@ public sealed class TestRunTraceScope : IDisposable
                 if (_suspendCount > 0)
                     return;
 
-                _buffer.Append(message);
+                var key = CurrentKey();
+                if (!_buckets.TryGetValue(key, out var buffer))
+                {
+                    buffer = new StringBuilder();
+                    _buckets[key] = buffer;
+                }
+
+                buffer.Append(message);
             }
         }
 
@@ -160,12 +185,16 @@ public sealed class TestRunTraceScope : IDisposable
         public override void WriteLine(string? message, string? category) =>
             WriteLine(string.IsNullOrWhiteSpace(category) ? message : $"[{category}] {message}");
 
-        public string? Take()
+        public string? Take(string? key)
         {
+            key ??= string.Empty;
             lock (_sync)
             {
-                var text = _buffer.ToString();
-                _buffer.Clear();
+                if (!_buckets.TryGetValue(key, out var buffer))
+                    return null;
+
+                _buckets.Remove(key);
+                var text = buffer.ToString();
                 return string.IsNullOrWhiteSpace(text) ? null : text;
             }
         }

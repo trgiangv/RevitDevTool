@@ -6,7 +6,7 @@ namespace DevTools.Testing.Host.MSTest;
 /// <summary>
 /// MSTest file names and versions. Planning uses <c>TestingGenerationSpec</c>.
 /// </summary>
-public sealed class MSTestGenerationPolicy : ITestingGenerationPolicy
+public sealed class MSTestGenerationPolicy(Func<RuntimeSource> runtimeSourceProvider) : ITestingGenerationPolicy
 {
     private const string TestFrameworkFileName = "MSTest.TestFramework.dll";
     private const string TestAdapterFileName = "MSTest.TestAdapter.dll";
@@ -32,10 +32,7 @@ public sealed class MSTestGenerationPolicy : ITestingGenerationPolicy
         ],
         RuntimeOwnsDependencyClosure: false);
 
-    private readonly Func<RuntimeSource> _runtimeSourceProvider;
-
-    public MSTestGenerationPolicy(Func<RuntimeSource> runtimeSourceProvider) =>
-        _runtimeSourceProvider = runtimeSourceProvider ?? throw new ArgumentNullException(nameof(runtimeSourceProvider));
+    private readonly Func<RuntimeSource> _runtimeSourceProvider = runtimeSourceProvider ?? throw new ArgumentNullException(nameof(runtimeSourceProvider));
 
     public TestFrameworkId FrameworkId => Spec.FrameworkId;
 

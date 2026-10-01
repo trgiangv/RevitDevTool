@@ -245,7 +245,9 @@ FrameworkFilter / Names, so `ResultsForUnreported` is empty) publishes a
 
 Streamed `testing/progress` events reach the adapter. Folded host results
 remain authoritative for Test Explorer; live Case updates publish only when
-the `TestId` is in the testhost-discovered set.
+the `TestId` is in the testhost-discovered set. A test the caller named by id
+that gets no host result is an error. An unfiltered run publishes no node for
+a test the engine leaves out (TUnit `[Explicit]`): it was not run.
 
 Testhost never loads Autodesk APIs. Host execution stays in the add-in.
 
@@ -402,9 +404,15 @@ and must not sit at the add-in root.
 
 ### Test output
 
-`TestRunTraceScope` buffers `Trace` / `Debug` per case. NUnit, TUnit, and MSTest
-merge that buffer with Console into `CaseResult.Output` (IDE) and write Console
-through to process `Trace` (pane). See [0017](../../decisions/0017-nunit-host-test-output-routing.md).
+`TestRunTraceScope` buffers `Trace` / `Debug` per case. The bucket key is the
+test that is executing at the moment of the write (NUnit `ITest.FullName`,
+TUnit `TestDetails.TestId` = the node `Uid`, MSTest display name). The terminal
+node reads that bucket. One shared buffer drained when the node arrives mixes
+fast data rows. Output no case claims (fixture setup, engine threads) is not
+attached to any result; the pane already has it from the live `Trace`. NUnit,
+TUnit, and MSTest merge that buffer with Console into `CaseResult.Output`
+(IDE) and write Console through to process `Trace` (pane). See
+[0017](../../decisions/0017-nunit-host-test-output-routing.md).
 NUnit and TUnit read Console from the engine. MSTest sets
 `mstest:output:captureTrace` to false in the run's testconfig, so the runtime
 buffers `Console.Out` and `Console.Error` and restores the original writers

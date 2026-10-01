@@ -70,7 +70,7 @@ internal sealed class MSTestNodeConsumer : IDataConsumer
             if (!_capturedByUid.ContainsKey(uid))
             {
                 var console = _consoleCapture.CompleteCase(node.DisplayName);
-                var trace = _traceScope.CompleteCase();
+                var trace = _traceScope.CompleteCase(node.DisplayName);
                 _capturedByUid[uid] = new MSTestCaseOutput(console, trace);
             }
 

@@ -65,14 +65,24 @@ public sealed class DefaultRunMapperTests
     }
 
     [TestMethod]
-    public void Unreported_cases_are_reported_as_errors()
+    public void Unreported_requested_cases_are_reported_as_errors()
     {
         var host = new[] { new TestCaseResult("uid-1", "One", TestOutcomes.Passed, 0, null, null, null, null, [], []) };
 
-        var missing = _mapper.ResultsForUnreported(TestSelection.All, Discovered, host).Single();
+        var missing = _mapper
+            .ResultsForUnreported(TestSelection.FromTestIds(["uid-1", "uid-2"]), Discovered, host)
+            .Single();
 
         Assert.AreEqual("uid-2", missing.TestId);
         Assert.AreEqual(TestOutcomes.Error, missing.Outcome);
         Assert.Contains("did not report a result", missing.Message!, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void Unfiltered_run_does_not_invent_results_for_tests_the_engine_left_out()
+    {
+        var host = new[] { new TestCaseResult("uid-1", "One", TestOutcomes.Passed, 0, null, null, null, null, [], []) };
+
+        Assert.IsEmpty(_mapper.ResultsForUnreported(TestSelection.All, Discovered, host));
     }
 }

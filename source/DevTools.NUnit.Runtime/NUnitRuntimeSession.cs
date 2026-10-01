@@ -47,7 +47,7 @@ public sealed class NUnitRuntimeSession : CancellableRuntimeSession
                 + "' FrameworkFilter. The testhost run mapper resolves TestIds and Names.",
                 nameof(request)),
         };
-        using var traceScope = new TestRunTraceScope();
+        using var traceScope = new TestRunTraceScope(CurrentTestFullName);
         var listener = new NUnitEventListener(
             request.RunId,
             eventSink,
@@ -92,6 +92,12 @@ public sealed class NUnitRuntimeSession : CancellableRuntimeSession
         {
             // NUnit's MainThreadWorkItemDispatcher cannot cancel in-flight tests.
         }
+    }
+
+    private static string? CurrentTestFullName()
+    {
+        var name = global::NUnit.Framework.Internal.TestExecutionContext.CurrentContext.CurrentTest.FullName;
+        return string.IsNullOrEmpty(name) ? null : name;
     }
 
     private void EnsureLoaded()

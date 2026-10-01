@@ -121,7 +121,7 @@ internal sealed class TUnitEngineMessageBus(TestRunTraceScope traceScope) : IMes
         if (!TUnitEngineResults.IsTerminal(node))
             return Task.CompletedTask;
 
-        var captured = traceScope.CompleteCase();
+        var captured = traceScope.CompleteCase(uid);
         CapturedByUid.TryGetValue(uid, out var previous);
         CapturedByUid[uid] = TestRunTraceScope.Merge(previous, captured);
 

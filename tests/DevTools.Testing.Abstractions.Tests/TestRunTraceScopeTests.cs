@@ -96,6 +96,49 @@ public sealed class TestRunTraceScopeTests
         Assert.IsNull(TestRunTraceScope.Merge(" ", null));
     }
 
+    [TestMethod]
+    public void CompleteCase_keeps_each_key_in_its_own_bucket()
+    {
+        var key = "row-a";
+        using var scope = new TestRunTraceScope(() => key);
+        Trace.WriteLine("trace-row-a");
+        key = "row-b";
+        Trace.WriteLine("trace-row-b");
+
+        var first = scope.CompleteCase("row-a");
+        var second = scope.CompleteCase("row-b");
+
+        Assert.Contains("trace-row-a", first!, StringComparison.Ordinal);
+        Assert.IsFalse(first!.Contains("trace-row-b", StringComparison.Ordinal));
+        Assert.Contains("trace-row-b", second!, StringComparison.Ordinal);
+        Assert.IsFalse(second!.Contains("trace-row-a", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void Output_no_case_claims_reaches_the_pane_but_not_a_case()
+    {
+        var pane = new RecordingTraceListener();
+        Trace.Listeners.Add(pane);
+        try
+        {
+            var key = "fixture-setup";
+            using var scope = new TestRunTraceScope(() => key);
+            Trace.WriteLine("setup-marker");
+            key = "case-a";
+            Trace.WriteLine("case-marker");
+
+            var captured = scope.CompleteCase("case-a")!;
+
+            Assert.Contains("case-marker", captured, StringComparison.Ordinal);
+            Assert.IsFalse(captured.Contains("setup-marker", StringComparison.Ordinal));
+            Assert.Contains("setup-marker", pane.Text, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Trace.Listeners.Remove(pane);
+        }
+    }
+
     private sealed class RecordingTraceListener : TraceListener
     {
         private readonly System.Text.StringBuilder _buffer = new();

@@ -127,7 +127,7 @@ public sealed class NUnitRuntimeArchitectureTests
         var session = File.ReadAllText(Path.Combine(runtimeDirectory, "NUnitRuntimeSession.cs"));
         Assert.Contains("TestRunTraceScope", listener, StringComparison.Ordinal);
         Assert.Contains("TestRunTraceScope.Merge", listener, StringComparison.Ordinal);
-        Assert.Contains("new TestRunTraceScope()", session, StringComparison.Ordinal);
+        Assert.Contains("new TestRunTraceScope(", session, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitRunTraceScope", listener, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitRunTraceScope", session, StringComparison.Ordinal);
     }

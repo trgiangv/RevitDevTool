@@ -254,12 +254,16 @@ public static class Program
         {
             var result = response.Results.SingleOrDefault(item => item.DisplayName == row.Item1);
             var output = result?.Output ?? string.Empty;
-            if (result is null || result.Outcome != TestOutcomes.Passed || !output.Contains(row.Item2))
+            var trace = "trace-basis:" + row.Item2.Substring("row:".Length);
+            if (result is null || result.Outcome != TestOutcomes.Passed
+                || !output.Contains(row.Item2) || !output.Contains(trace))
                 return row.Item1 + " output '" + output + "'";
 
-            foreach (var other in new[] { "row:1.0,0.0,0.0", "row:0.0,1.0,0.0", "row:0.0,0.0,1.0" })
+            foreach (var other in new[] { "1.0,0.0,0.0", "0.0,1.0,0.0", "0.0,0.0,1.0" })
             {
-                if (!string.Equals(other, row.Item2, StringComparison.Ordinal) && output.Contains(other))
+                if (row.Item2.EndsWith(other, StringComparison.Ordinal))
+                    continue;
+                if (output.Contains("row:" + other) || output.Contains("trace-basis:" + other))
                     return row.Item1 + " also contains " + other + " output '" + output + "'";
             }
         }

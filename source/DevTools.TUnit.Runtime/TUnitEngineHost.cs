@@ -53,7 +53,7 @@ internal static class TUnitEngineHost
         var request = new RunTestExecutionRequest(
             bindings.CreateSessionContext(sessionUid),
             CreateFilter(selection));
-        using var traceScope = new TestRunTraceScope();
+        using var traceScope = new TestRunTraceScope(CurrentTestId);
         var messageBus = new TUnitEngineMessageBus(traceScope);
         var executeContext = new ExecuteRequestContext(
             request,
@@ -75,6 +75,15 @@ internal static class TUnitEngineHost
 
         return TUnitEngineResults.Map(messageBus.Nodes.Values, messageBus.CapturedByUid);
     }
+
+    // Same id the engine publishes as TestNode.Uid. Metadata.DisplayName is not the node's
+    // DisplayName (that one is TestContext.GetDisplayName(), with the row arguments).
+    private static string? CurrentTestId()
+    {
+        var id = TestContext.Current?.Metadata.TestDetails.TestId;
+        return string.IsNullOrEmpty(id) ? null : id;
+    }
+
     private static ITestExecutionFilter CreateFilter(TestSelection selection)
     {
         if (selection.Kind == TestSelectionKind.All)

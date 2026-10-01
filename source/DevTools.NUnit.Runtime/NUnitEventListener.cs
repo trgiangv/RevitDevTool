@@ -7,25 +7,15 @@ using TestCaseResult = DevTools.Testing.Abstractions.Contracts.TestCaseResult;
 
 namespace DevTools.NUnit.Runtime;
 
-internal sealed class NUnitEventListener : ITestListener
+internal sealed class NUnitEventListener(
+    Guid runId, 
+    ITestEventSink eventSink, 
+    NUnitLocationProvider? locationProvider, 
+    TestRunTraceScope traceScope) : ITestListener
 {
-    private readonly Guid _runId;
-    private readonly ITestEventSink _eventSink;
-    private readonly NUnitLocationProvider? _locationProvider;
-    private readonly TestRunTraceScope _traceScope;
     private readonly HashSet<ITest> _terminalCases = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<ITest> _startedCases = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<string, string?> _traceByFullName = new(StringComparer.Ordinal);
-
-    public NUnitEventListener(Guid runId, ITestEventSink eventSink,
-        NUnitLocationProvider? locationProvider,
-        TestRunTraceScope traceScope)
-    {
-        _runId = runId;
-        _eventSink = eventSink;
-        _locationProvider = locationProvider;
-        _traceScope = traceScope;
-    }
 
     public void TestStarted(ITest test)
     {
@@ -38,7 +28,7 @@ internal sealed class NUnitEventListener : ITestListener
         if (result.Test.IsSuite)
             return;
         _startedCases.Remove(result.Test);
-        var traceOutput = _traceScope.CompleteCase();
+        var traceOutput = traceScope.CompleteCase(result.Test.FullName);
         if (!string.IsNullOrWhiteSpace(traceOutput))
             _traceByFullName[result.Test.FullName] = traceOutput;
         if (!_terminalCases.Add(result.Test))
@@ -46,13 +36,13 @@ internal sealed class NUnitEventListener : ITestListener
 
         if (!string.IsNullOrWhiteSpace(result.Output))
         {
-            _traceScope.WriteThrough(result.Output);
+            traceScope.WriteThrough(result.Output);
             Publish(TestEventKinds.Output, null, result.Output, null);
         }
         foreach (var attachment in NUnitResultMapper.MapAttachments(result))
             Publish(TestEventKinds.Attachment, null, null, attachment);
 
-        var mapped = NUnitResultMapper.MapCaseResult(result, _locationProvider);
+        var mapped = NUnitResultMapper.MapCaseResult(result, locationProvider);
         if (_traceByFullName.TryGetValue(result.Test.FullName, out var captured))
             mapped = mapped with { Output = TestRunTraceScope.Merge(mapped.Output, captured) };
         Publish(TestEventKinds.Case, mapped, null, null);
@@ -72,7 +62,7 @@ internal sealed class NUnitEventListener : ITestListener
         foreach (var test in _startedCases)
             cases.Add(new TestCaseResult(
                 NUnitTestIdentity.Id(test), test.Name, TestOutcomes.Cancelled, 0,
-                null, null, null, NUnitResultMapper.MapSource(test, _locationProvider), [], [],
+                null, null, null, NUnitResultMapper.MapSource(test, locationProvider), [], [],
                 NUnitTestIdentity.ParentId(test), test.FullName));
         return cases;
     }
@@ -91,8 +81,8 @@ internal sealed class NUnitEventListener : ITestListener
     }
 
     private void Publish(string kind, TestCaseResult? testCase, string? message, TestAttachment? attachment) =>
-        _eventSink.Publish(new TestEvent(
-            _runId, kind, testCase, message, attachment, TestCancellationState.None));
+        eventSink.Publish(new TestEvent(
+            runId, kind, testCase, message, attachment, TestCancellationState.None));
 
     private sealed class ReferenceEqualityComparer : IEqualityComparer<ITest>
     {

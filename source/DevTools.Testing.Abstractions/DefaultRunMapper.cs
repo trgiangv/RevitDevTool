@@ -53,6 +53,11 @@ internal sealed class DefaultRunMapper : ITestRunMapper
         ArgumentNullException.ThrowIfNull(discovered);
         ArgumentNullException.ThrowIfNull(hostResults);
 
+        // Only a test the caller named must come back. An unfiltered run may leave tests out
+        // (TUnit skips [Explicit] silently); that is "not run", as it is outside the host.
+        if (requested.Kind != TestSelectionKind.TestIds)
+            return [];
+
         var reported = hostResults.Select(result => result.TestId).ToHashSet(StringComparer.Ordinal);
         return discovered
             .Where(test => !reported.Contains(test.TestId))

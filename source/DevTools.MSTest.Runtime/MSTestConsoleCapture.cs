@@ -1,5 +1,5 @@
 using System.Text;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.MSTest.Runtime;
 
@@ -20,6 +20,14 @@ internal sealed class MSTestConsoleCapture : IDisposable
     private readonly BufferWriter _stderr = new();
     private bool _started;
     private bool _disposed;
+
+    internal static string? CurrentDisplayName()
+    {
+#pragma warning disable MSTESTEXP // TestContext.Current is the row that is executing.
+        var displayName = TestContext.Current?.TestDisplayName;
+#pragma warning restore MSTESTEXP
+        return string.IsNullOrEmpty(displayName) ? null : displayName;
+    }
 
     public void Start()
     {
@@ -100,17 +108,9 @@ internal sealed class MSTestConsoleCapture : IDisposable
             }
         }
 
-        private static string CaseKey()
-        {
-#pragma warning disable MSTESTEXP // TestContext.Current is the row that is executing.
-            var displayName = TestContext.Current?.TestDisplayName;
-#pragma warning restore MSTESTEXP
-            return string.IsNullOrEmpty(displayName) ? string.Empty : displayName!;
-        }
-
         private void Append(string value)
         {
-            var key = CaseKey();
+            var key = CurrentDisplayName() ?? string.Empty;
             lock (_gate)
             {
                 if (!_buckets.TryGetValue(key, out var buffer))
@@ -125,10 +125,9 @@ internal sealed class MSTestConsoleCapture : IDisposable
 
         private string? Remove(string key)
         {
-            if (!_buckets.TryGetValue(key, out var buffer))
+            if (!_buckets.Remove(key, out var buffer))
                 return null;
 
-            _buckets.Remove(key);
             return buffer.Length == 0 ? null : buffer.ToString();
         }
     }

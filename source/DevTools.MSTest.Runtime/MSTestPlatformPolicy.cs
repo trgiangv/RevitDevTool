@@ -1,6 +1,5 @@
 using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Builder;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DevTools.MSTest.Runtime;
 

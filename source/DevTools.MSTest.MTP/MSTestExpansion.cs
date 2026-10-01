@@ -1,6 +1,5 @@
 using System.Reflection;
 using DevTools.Testing.Abstractions.Contracts;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DevTools.MSTest.MTP;
 
@@ -25,39 +24,56 @@ internal static class MSTestExpansion
         ArgumentNullException.ThrowIfNull(all);
         ArgumentNullException.ThrowIfNull(selectedIds);
 
-        var byId = new Dictionary<string, TestDiscoveredTest>(StringComparer.Ordinal);
-        foreach (var test in all)
-            byId.TryAdd(test.TestId, test);
-
+        var byId = IndexById(all);
         var types = IndexTypes(assembly);
         var ordered = new List<string>();
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var pending = new Queue<string>();
         foreach (var id in selectedIds)
-        {
-            if (seen.Add(id))
-            {
-                ordered.Add(id);
-                pending.Enqueue(id);
-            }
-        }
+            Enqueue(id, ordered, seen, pending);
 
         while (pending.Count > 0)
-        {
-            if (!byId.TryGetValue(pending.Dequeue(), out var test))
-                continue;
-
-            foreach (var prerequisite in Prerequisites(test, all, types))
-            {
-                if (!seen.Add(prerequisite.TestId))
-                    continue;
-
-                ordered.Add(prerequisite.TestId);
-                pending.Enqueue(prerequisite.TestId);
-            }
-        }
+            AppendPrerequisites(pending.Dequeue(), byId, all, types, ordered, seen, pending);
 
         return ordered;
+    }
+
+    private static Dictionary<string, TestDiscoveredTest> IndexById(IReadOnlyList<TestDiscoveredTest> all)
+    {
+        var byId = new Dictionary<string, TestDiscoveredTest>(StringComparer.Ordinal);
+        foreach (var test in all)
+            byId.TryAdd(test.TestId, test);
+
+        return byId;
+    }
+
+    private static void Enqueue(
+        string id,
+        List<string> ordered,
+        HashSet<string> seen,
+        Queue<string> pending)
+    {
+        if (!seen.Add(id))
+            return;
+
+        ordered.Add(id);
+        pending.Enqueue(id);
+    }
+
+    private static void AppendPrerequisites(
+        string id,
+        Dictionary<string, TestDiscoveredTest> byId,
+        IReadOnlyList<TestDiscoveredTest> all,
+        Dictionary<string, Type> types,
+        List<string> ordered,
+        HashSet<string> seen,
+        Queue<string> pending)
+    {
+        if (!byId.TryGetValue(id, out var test))
+            return;
+
+        foreach (var prerequisite in Prerequisites(test, all, types))
+            Enqueue(prerequisite.TestId, ordered, seen, pending);
     }
 
     private static IEnumerable<TestDiscoveredTest> Prerequisites(
@@ -65,35 +81,79 @@ internal static class MSTestExpansion
         IReadOnlyList<TestDiscoveredTest> all,
         Dictionary<string, Type> types)
     {
-        if (test.ClassName is null || test.MethodName is null || !types.TryGetValue(Normalize(test.ClassName), out var type))
+        if (!TryResolve(test, types, out var type))
             yield break;
 
-        var edges = new List<DependsOnAttribute>();
-        edges.AddRange(type.GetCustomAttributes(typeof(DependsOnAttribute), inherit: false).OfType<DependsOnAttribute>());
-        foreach (var method in type.GetMethods(Members).Where(method => method.Name == test.MethodName))
-            edges.AddRange(method.GetCustomAttributes(typeof(DependsOnAttribute), inherit: false).OfType<DependsOnAttribute>());
-
-        foreach (var edge in edges)
+        foreach (var edge in Edges(type, test.MethodName!))
         {
-            var targetClass = Normalize((edge.TestClass ?? type).FullName ?? string.Empty);
-            foreach (var candidate in all)
-            {
-                if (candidate.ClassName is null
-                    || !string.Equals(Normalize(candidate.ClassName), targetClass, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (edge.TestMethodName is not null
-                    && !string.Equals(candidate.MethodName, edge.TestMethodName, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (!string.Equals(candidate.TestId, test.TestId, StringComparison.Ordinal))
-                    yield return candidate;
-            }
+            foreach (var candidate in Matches(all, test, type, edge))
+                yield return candidate;
         }
+    }
+
+    private static bool TryResolve(
+        TestDiscoveredTest test,
+        Dictionary<string, Type> types,
+        out Type type)
+    {
+        if (test.ClassName is not null
+            && test.MethodName is not null
+            && types.TryGetValue(Normalize(test.ClassName), out type!))
+            return true;
+
+        type = null!;
+        return false;
+    }
+
+    private static IEnumerable<DependsOnAttribute> Edges(Type type, string methodName)
+    {
+        foreach (var attribute in Attributes(type))
+            yield return attribute;
+
+        foreach (var method in type.GetMethods(Members))
+        {
+            if (method.Name != methodName)
+                continue;
+
+            foreach (var attribute in Attributes(method))
+                yield return attribute;
+        }
+    }
+
+    private static IEnumerable<DependsOnAttribute> Attributes(MemberInfo member) =>
+        member.GetCustomAttributes(typeof(DependsOnAttribute), inherit: false).OfType<DependsOnAttribute>();
+
+    private static IEnumerable<TestDiscoveredTest> Matches(
+        IReadOnlyList<TestDiscoveredTest> all,
+        TestDiscoveredTest test,
+        Type type,
+        DependsOnAttribute edge)
+    {
+        var targetClass = Normalize((edge.TestClass ?? type).FullName ?? string.Empty);
+        foreach (var candidate in all)
+        {
+            if (IsPrerequisite(candidate, test, targetClass, edge))
+                yield return candidate;
+        }
+    }
+
+    private static bool IsPrerequisite(
+        TestDiscoveredTest candidate,
+        TestDiscoveredTest test,
+        string targetClass,
+        DependsOnAttribute edge)
+    {
+        if (candidate.ClassName is null)
+            return false;
+
+        if (!string.Equals(Normalize(candidate.ClassName), targetClass, StringComparison.Ordinal))
+            return false;
+
+        if (edge.TestMethodName is not null
+            && !string.Equals(candidate.MethodName, edge.TestMethodName, StringComparison.Ordinal))
+            return false;
+
+        return !string.Equals(candidate.TestId, test.TestId, StringComparison.Ordinal);
     }
 
     private static Dictionary<string, Type> IndexTypes(Assembly assembly)
@@ -105,6 +165,7 @@ internal static class MSTestExpansion
         }
         catch (ReflectionTypeLoadException ex)
         {
+            // ReSharper disable once RedundantSuppressNullableWarningExpression
             loadable = ex.Types.Where(type => type is not null).ToArray()!;
         }
 

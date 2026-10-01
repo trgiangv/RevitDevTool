@@ -56,4 +56,10 @@ internal static class DedicatedTestFixturesHarness
 
     public const string OutputCaptureFilter =
         "<filter><test>DevTools.NUnit.Runtime.Tests.Fixtures.OutputCaptureFixture.Writes_console_trace_and_debug_markers</test></filter>";
+
+    public const string TraceRowFilter =
+        "<filter><class>DevTools.NUnit.Runtime.Tests.Fixtures.TraceRowFixture</class></filter>";
+
+    public const string NullDocumentCaseSourceFilter =
+        "<filter><class>DevTools.NUnit.Runtime.Tests.Fixtures.NullDocumentCaseSourceFixture</class></filter>";
 }

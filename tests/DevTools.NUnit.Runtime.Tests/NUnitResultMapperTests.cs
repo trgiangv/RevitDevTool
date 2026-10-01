@@ -26,4 +26,10 @@ public sealed class NUnitResultMapperTests
             .GetValue(null)!;
         Assert.AreEqual(expected, NUnitResultMapper.MapOutcome((ResultState)state));
     }
+
+    [TestMethod]
+    public void MapOutcome_keeps_an_assertion_failure_as_failed()
+    {
+        Assert.AreEqual(TestOutcomes.Failed, NUnitResultMapper.MapOutcome(ResultState.Failure));
+    }
 }

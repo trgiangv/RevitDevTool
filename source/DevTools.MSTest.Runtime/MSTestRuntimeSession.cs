@@ -4,7 +4,6 @@ using DevTools.MSTest.MTP;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Builder;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DevTools.MSTest.Runtime;
 
@@ -30,14 +29,19 @@ public sealed class MSTestRuntimeSession : CancellableRuntimeSession
         if (cancellationToken.IsCancellationRequested)
             return CreateCancelledResponse(request);
 
-        if (request.Selection.Kind is TestSelectionKind.FrameworkFilter or TestSelectionKind.Names)
-            return CreateInvalidSelectionResponse(request, "MSTest does not accept that selection.");
+        switch (request.Selection.Kind)
+        {
+            case TestSelectionKind.FrameworkFilter or TestSelectionKind.Names:
+                return CreateInvalidSelectionResponse(request, "MSTest does not accept that selection.");
+            case TestSelectionKind.TestIds when request.Selection.TestIds.Count == 0:
+                return CreateEmptyResponse(request);
+            default:
+            {
+                var selection = WithDependencies(request.Selection);
+                return RunApplication(request, selection, eventSink, cancellationToken).GetAwaiter().GetResult();
+            }
+        }
 
-        if (request.Selection.Kind == TestSelectionKind.TestIds && request.Selection.TestIds.Count == 0)
-            return CreateEmptyResponse(request);
-
-        var selection = WithDependencies(request.Selection);
-        return RunApplication(request, selection, eventSink, cancellationToken).GetAwaiter().GetResult();
     }
 
     /// <summary>
@@ -73,13 +77,13 @@ public sealed class MSTestRuntimeSession : CancellableRuntimeSession
         CancellationTokenRegistration cancelRegistration = default;
         try
         {
-            using var traceScope = new TestRunTraceScope();
+            using var traceScope = new TestRunTraceScope(MSTestConsoleCapture.CurrentDisplayName);
             using var consoleCapture = new MSTestConsoleCapture();
             var builder = await TestApplication.CreateBuilderAsync(
                     BuildArguments(configPath, resultsDirectory, selection),
                     new TestApplicationOptions { EnableTelemetry = false })
                 .ConfigureAwait(false);
-            builder.AddMSTest(() => new[] { _testAssembly });
+            builder.AddMSTest(() => [_testAssembly]);
             var consumer = new MSTestNodeConsumer(traceScope, consoleCapture);
             builder.TestHost.AddDataConsumer(_ => consumer);
             application = await builder.BuildAsync().ConfigureAwait(false);
@@ -130,14 +134,11 @@ public sealed class MSTestRuntimeSession : CancellableRuntimeSession
             "--results-directory",
             resultsDirectory,
         };
+
         if (selection.Kind == TestSelectionKind.TestIds)
         {
             args.Add("--filter-uid");
-            foreach (var testId in selection.TestIds)
-            {
-                if (!string.IsNullOrWhiteSpace(testId))
-                    args.Add(testId);
-            }
+            args.AddRange(selection.TestIds.Where(testId => !string.IsNullOrWhiteSpace(testId)));
         }
 
         return args.ToArray();

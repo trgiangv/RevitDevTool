@@ -24,5 +24,8 @@ public class OutputTests
         Console.WriteLine("row:" + x.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
             + "," + y.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
             + "," + z.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+        Trace.WriteLine("trace-basis:" + x.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+            + "," + y.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+            + "," + z.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
     }
 }
