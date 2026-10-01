@@ -2,26 +2,27 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <MsVersion>10.0.11</MsVersion>
+        <MsVersion>10.0.12</MsVersion>
     </PropertyGroup>
     <ItemGroup>
         <!--Mirosoft-->
         <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="$(MsVersion)" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions"
-            Version="$(MsVersion)" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(MsVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyModel" Version="$(MsVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(MsVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Options" Version="$(MsVersion)" />
-        <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions"
-            Version="$(MsVersion)" />
+        <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="$(MsVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="$(MsVersion)" />
+        <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsVersion)" />
         <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="$(MsVersion)" />
         <PackageVersion Include="System.Reflection.Metadata" Version="$(MsVersion)" />
         <PackageVersion Include="System.Reflection.MetadataLoadContext" Version="$(MsVersion)" />
         <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="$(MsVersion)" />
         <PackageVersion Include="System.Text.Json" Version="$(MsVersion)" />
-        <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="$(MsVersion)" />
+        <PackageVersion Include="System.Drawing.Common" Version="$(MsVersion)" />
+        <PackageVersion Include="System.Net.Http" Version="4.3.4" />
+        <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
         <!--Python-->
         <PackageVersion Include="pythonnet" Version="3.1.0" />
         <PackageVersion Include="IronPython" Version="3.4.2" />
@@ -34,18 +35,15 @@
         <!--CSharp-->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
         <!--Telemetry-->
-        <PackageVersion Include="Sentry" Version="6.9.0" />
+        <PackageVersion Include="Sentry" Version="6.11.1" />
         <!--Logging-->
         <PackageVersion Include="ZLogger" Version="2.5.10" />
         <PackageVersion Include="ZLogger.Scintilla" Version="0.0.9" />
         <PackageVersion Include="Scintilla5.NET" Version="7.0.0" />
         <!--Utilities-->
         <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
-        <GlobalPackageReference Include="Polyfill" Version="11.2.0" />
+        <GlobalPackageReference Include="Polyfill" Version="11.4.1" />
         <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
-        <PackageVersion Include="System.Drawing.Common" Version="8.0.25" />
-        <PackageVersion Include="System.Net.Http" Version="4.3.4" />
-        <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
         <!--Auth-->
         <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.0" />
         <!--Console-->
@@ -65,9 +63,9 @@
         <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
         <PackageVersion Include="Microsoft.VisualStudio.Interop" Version="17.14.40260" />
         <!--FileIO-->
-        <PackageVersion Include="OpenMcdf" Version="3.2.0" />
+        <PackageVersion Include="OpenMcdf" Version="3.3.0" />
         <!--AutoCad-->
-        <PackageVersion Include="ACadSharp" Version="3.7.1" />
+        <PackageVersion Include="ACadSharp" Version="3.8.0" />
         <PackageVersion Include="ricaun.AutoCAD.UI" Version="0.5.0" />
         <!--Tests-->
         <PackageVersion Include="NUnit" Version="4.6.1" />
@@ -77,7 +75,7 @@
         <PackageVersion Include="Microsoft.Testing.Platform" Version="2.4.0" />
         <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.4.0" />
         <PackageVersion Include="RevitDevTool.TestAdapter" Version="0.1.1" />
-        <PackageVersion Include="Moq" Version="4.20.72" />
+        <PackageVersion Include="Moq" Version="4.21.0" />
         <PackageVersion Include="Bogus" Version="35.6.5" />
     </ItemGroup>
 </Project>
