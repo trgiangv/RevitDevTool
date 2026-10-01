@@ -16,21 +16,22 @@ Run commands stay in [SKILL.md](../SKILL.md).
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.1" />
-  <PackageReference Include="NUnit" Version="4.6.1" />
+  <PackageReference Include="NUnit" Version="5.0.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
 ```
 
-Pin framework versions — the adapter does not pull NUnit or TUnit:
+Pin framework versions — the adapter does not pull NUnit, TUnit, or MSTest:
 
 | Package | Version |
 |---------|---------|
-| `NUnit` | 4.6.1 |
-| `TUnit` | 1.67.0 |
-| `Microsoft.Testing.Platform.MSBuild` | 2.4.0 (transitive from adapter — do not override) |
+| `NUnit` | 5.0.0 |
+| `TUnit` | 1.72.10 |
+| `MSTest.Sdk` / `MSTest.TestFramework` | 4.4.1 |
+| `Microsoft.Testing.Platform.MSBuild` | 2.4.1 (transitive from adapter — do not override) |
 
-The adapter depends on `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do not add
+The adapter depends on `Microsoft.Testing.Platform.MSBuild` 2.4.1. Do not add
 `Microsoft.Testing.Platform` as a compile package or override MTP.MSBuild.
 
 ### Host properties
@@ -42,7 +43,7 @@ The adapter depends on `Microsoft.Testing.Platform.MSBuild` 2.4.0. Do not add
 | `ForceLaunch` | `false` = reuse matching host, start if none. `true` = always start new |
 | `PerTestTimeout` | Per-test budget (seconds). Pipe wait ≈ this × tests in the run |
 | `LaunchTimeout` | Seconds to wait for a launched host pipe |
-| `TestingFramework` | Default `nunit`. Set `tunit` for TUnit |
+| `TestingFramework` | Default `nunit`. Set `tunit` or `mstest` |
 | `NetFxModuleInitializer` | net48 TUnit only. Default on. Set `false` if another polyfill already defines `[ModuleInitializer]` |
 | `TestingRunnerPath` | Override when `DevTools.TestRunner.exe` is not in the default bundle path |
 
@@ -57,9 +58,6 @@ Common choices (pick one that matches your repo):
 |------|-----------------|
 | Revit | `Revit_All_Main_Versions_API_x64`, `Nice3point.Revit.Toolkit` |
 | AutoCAD / Civil3D | Product-specific NuGet or internal refs with `IncludeAssets="build; compile"` |
-
-Repo-specific MSBuild flags like `UseRevit` are **not** package settings — they
-only affect how your solution selects API packages.
 
 ### testconfig.json
 
@@ -111,8 +109,9 @@ Do not add a second test adapter to the same project:
 - `Microsoft.Testing.Extensions.VSTestBridge`
 
 If the repo has `<GlobalPackageReference Include="Polyfill" />`, remove it on
-the host-test project (`<GlobalPackageReference Remove="Polyfill" />`). NUnit
-does not need it; net48 TUnit gets `[ModuleInitializer]` from the adapter package.
+a net48 TUnit project (`<GlobalPackageReference Remove="Polyfill" />`). NUnit
+and MSTest do not need it; net48 TUnit gets `[ModuleInitializer]` from the
+adapter package.
 
 ## Runner install
 

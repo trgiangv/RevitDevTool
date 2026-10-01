@@ -32,6 +32,7 @@ const sidebars: SidebarsConfig = {
       { type: 'category', label: 'Microsoft Testing Platform', className: 'sidebar-icon sidebar-icon--microsoft', items: [
         { type: 'doc', id: 'testing/NUnit', className: 'sidebar-icon sidebar-icon--nunit' },
         { type: 'doc', id: 'testing/TUnit', className: 'sidebar-icon sidebar-icon--tunit' },
+        { type: 'doc', id: 'testing/MSTest' },
       ] },
       { type: 'category', label: 'Python Test', className: 'sidebar-icon sidebar-icon--python', items: [
         { type: 'doc', id: 'testing/pytest', className: 'sidebar-icon sidebar-icon--pytest' },

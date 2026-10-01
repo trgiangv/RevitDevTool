@@ -1,6 +1,6 @@
 # TUnit
 
-Run TUnit `1.66.27` tests inside a live Autodesk host through Microsoft Testing Platform and the `DevTools.TestAdapter` assembly. The adapter is distributed as the public NuGet package `RevitDevTool.TestAdapter` `0.0.7`. The host lifecycle is the same as for [NUnit](/docs/testing/NUnit); only the test framework and attributes differ.
+Run TUnit `1.72.10` tests inside a live Autodesk host through Microsoft Testing Platform and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.1`. Pin TUnit with Microsoft.Testing.Platform `2.4.1` (the adapter already depends on that MSBuild package; do not override it). The host lifecycle is the same as for [NUnit](/docs/testing/NUnit); only the test framework and attributes differ.
 
 ## Project setup
 
@@ -17,8 +17,8 @@ Configure MTP and replace NUnit with TUnit:
 </PropertyGroup>
 
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.7" />
-  <PackageReference Include="TUnit" Version="1.66.27" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.1" />
+  <PackageReference Include="TUnit" Version="1.72.10" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
@@ -33,9 +33,9 @@ Create the MTP `global.json` beside the test `.csproj`:
 }
 ```
 
-The repository currently aligns Microsoft Testing Platform packages to `2.4.0`. Do not add VSTest adapters.
+Do not add VSTest adapters or a `.runsettings` file. Do not set `<RuntimeIdentifier>` on net8 / net10. On net48, set `win-x64` only when the SDK requires it for an x64 executable.
 
-On `net48` targets (host 2024 and older) add `<RuntimeIdentifier>win-x64</RuntimeIdentifier>` — the test project is an executable and NuGet restore cannot take the RID from a package (`NETSDK1047`). Nothing else: TUnit's generated infrastructure uses `[ModuleInitializer]`, which .NET Framework does not declare, and the adapter compiles that attribute into the project. It stands down when the project already references `Polyfill` or declares its own `ModuleInitializerAttribute.cs`; `<DevToolsNetFxModuleInitializer>false</DevToolsNetFxModuleInitializer>` turns it off.
+TUnit's generated infrastructure uses `[ModuleInitializer]`, which .NET Framework does not declare. The adapter compiles that attribute into net4x TUnit projects. It stands down when the project already references `Polyfill` or compiles its own `ModuleInitializerAttribute.cs`. Set `<NetFxModuleInitializer>false</NetFxModuleInitializer>` when that skip cannot see your type (a differently named file, PolySharp, or a polyfill package not named `Polyfill`). NUnit, MSTest, and net8 / net10 ignore the property. If the repo has a central `GlobalPackageReference` named `Polyfill`, remove it on the net48 TUnit project (`NU1504` / `CS0436`).
 
 Use the same project-level host settings as NUnit. `HostName` is `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`, `AcadElec`, `AcadMep`, or `AcadMap3D`.
 

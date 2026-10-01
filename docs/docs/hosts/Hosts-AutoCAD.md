@@ -78,7 +78,7 @@ host_name = "autocad"
 host_version = "2026"
 ```
 
-Run the test suite with `uv run pytest -v`. .NET tests use the [NUnit](/docs/testing/NUnit) or [TUnit](/docs/testing/TUnit) pages under Microsoft Testing Platform.
+Run the test suite with `uv run pytest -v`. .NET tests use [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit), or [MSTest](/docs/testing/MSTest) under Microsoft Testing Platform.
 
 ## MCP and logging
 

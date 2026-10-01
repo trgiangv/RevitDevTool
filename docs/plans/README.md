@@ -31,6 +31,7 @@ Rename an active plan when its ADR number or workstream id changed.
 
 ## Active Plans
 
+- [2026-09-28-mstest-host-provider.md](active/2026-09-28-mstest-host-provider.md) — MSTest 4.4.1 host provider ([0038](../decisions/0038-mstest-host-provider.md))
 - [2026-09-04-mcp-test-project-split.md](active/2026-09-04-mcp-test-project-split.md) — MCP test project split
 
 ## Recently Completed

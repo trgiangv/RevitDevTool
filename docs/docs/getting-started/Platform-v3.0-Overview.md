@@ -9,7 +9,7 @@ RevitDevTool v3.0 is a development platform for .NET-based CAD/BIM applications.
 | Pillar | What it covers | Key entry points |
 |--------|----------------|------------------|
 | **Execution** | CPython, IronPython, C# / F# scripts, .NET assemblies | [Run Code Overview](/docs/execution/Execution-Overview), [Modern Python Scripting](/docs/execution/python/Execution-Python) |
-| **Testing** | pytest bridge + MTP TestAdapter for in-host tests | [Testing Overview](/docs/testing/Testing-Overview), [pytest](/docs/testing/pytest), [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit) |
+| **Testing** | pytest bridge + MTP TestAdapter for in-host tests | [Testing Overview](/docs/testing/Testing-Overview), [pytest](/docs/testing/pytest), [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest) |
 | **AI Tool Integration** | Local MCP v2 clients via `DevTools.Daemon.exe --stdio` | [MCP .NET](/docs/mcp/MCP-CSharp), [MCP Python](/docs/mcp/MCP-Python) |
 | **Logging** | Log level, Monitor, File, and HTTP output + Revit geometry visualization | [Log Level](/docs/logging/Logging-Overview), [Log Output](/docs/logging/Observability-Http), [Geometry Visualization](/docs/logging/Visualization-Overview) |
 
@@ -38,7 +38,7 @@ RevitDevTool markets two host products. AutoCAD-family verticals (Architecture, 
 
 ### Testing
 - **PyTest bridge** — CPython pytest and IronPython unittest run inside the selected host
-- **MTP TestAdapter** — NUnit `4.6.1` / TUnit `1.66.27` inside live hosts via `DevTools.TestAdapter` (NuGet `RevitDevTool.TestAdapter` `0.0.7`)
+- **MTP TestAdapter** — NUnit `5.0.0`, TUnit `1.72.10`, or MSTest `4.4.1` inside live hosts via `RevitDevTool.TestAdapter` `0.1.1`
 - `--host revit`, `--host autocad`, and other AutoCAD-family names; `--force-launch`, `--per-test-timeout`
 
 ### AI Tool Integration

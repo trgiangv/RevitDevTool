@@ -1,6 +1,6 @@
 # NUnit
 
-Run NUnit `4.6.1` tests inside a live Revit or AutoCAD-family host through Microsoft Testing Platform (MTP) and the `DevTools.TestAdapter` assembly. The adapter is distributed as the public NuGet package `RevitDevTool.TestAdapter` `0.0.7`.
+Run NUnit `5.0.0` tests inside a live Revit or AutoCAD-family host through Microsoft Testing Platform (MTP) and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.1`. NUnit is the default engine. TUnit and MSTest are opt-in: [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest).
 
 ## Project setup
 
@@ -13,12 +13,11 @@ Add the adapter and NUnit to the test project:
   <ForceLaunch>false</ForceLaunch>
   <PerTestTimeout>60</PerTestTimeout>
   <LaunchTimeout>360</LaunchTimeout>
-  <TestingPlatformCommandLineArguments>--report-trx</TestingPlatformCommandLineArguments>
 </PropertyGroup>
 
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.0.7" />
-  <PackageReference Include="NUnit" Version="4.6.1" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.1" />
+  <PackageReference Include="NUnit" Version="5.0.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
@@ -33,9 +32,9 @@ Create `global.json` beside the test `.csproj` so this project uses Microsoft Te
 }
 ```
 
-The adapter is MTP-native. Do not add `NUnit3TestAdapter` or configure the project as a VSTest project.
+The adapter is MTP-native. Do not add `NUnit3TestAdapter`, `Microsoft.Testing.Extensions.VSTestBridge`, or a `.runsettings` file.
 
-On `net48` targets (host 2024 and older) add `<RuntimeIdentifier>win-x64</RuntimeIdentifier>` — the test project is an executable and NuGet restore cannot take the RID from a package (`NETSDK1047`).
+Do not set `<RuntimeIdentifier>` on net8 / net10. On net48, set `win-x64` only when the SDK requires it for an x64 executable. The package flattens testhost output so a leftover RID does not nest under `win-x64`.
 
 The host properties in the project file select the Autodesk application. `HostName` is `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`, `AcadElec`, `AcadMep`, or `AcadMap3D`. The host year must match the API references used to compile the test assembly.
 

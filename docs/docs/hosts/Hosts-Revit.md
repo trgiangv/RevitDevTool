@@ -5,7 +5,7 @@ Revit is the primary RevitDevTool v3.0 host — full [four pillars](/docs/gettin
 | Pillar | Entry points |
 |--------|--------------|
 | **Execution** | [Execution Overview](/docs/execution/Execution-Overview), [Modern Python Scripting](/docs/execution/python/Execution-Python), [C# Scripts](/docs/execution/csharp-script/Execution-CSharp), [F# Scripts](/docs/execution/fsharp-script/Execution-FSharp), [.NET Assembly](/docs/execution/dotnet-assembly/Execution-Assembly) |
-| **Testing** | [pytest](/docs/testing/pytest), [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit) |
+| **Testing** | [pytest](/docs/testing/pytest), [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest) |
 | **AI Tool Integration** | [MCP .NET](/docs/mcp/MCP-CSharp), [MCP Python](/docs/mcp/MCP-Python) |
 | **Observability** | [Log Level](/docs/logging/Logging-Overview), [Geometry Visualization](/docs/logging/Visualization-Overview) |
 
@@ -30,7 +30,7 @@ The current build matrix supports Autodesk/Revit configurations from 2022 throug
 - visualize temporary Revit geometry;
 - expose selected tools through MCP;
 - run pytest-style checks that need Revit context;
-- run NUnit or TUnit tests inside a live Revit session;
+- run NUnit, TUnit, or MSTest inside a live Revit session;
 - search and run commands through Command Browser;
 - watch memory usage when diagnosing heavy scripts.
 
@@ -44,7 +44,7 @@ The current build matrix supports Autodesk/Revit configurations from 2022 throug
 | Visual geometry debugging | [Geometry Visualization](/docs/logging/Visualization-Overview) |
 | AI-assisted tool access | [MCP .NET](/docs/mcp/MCP-CSharp), [MCP Python](/docs/mcp/MCP-Python) |
 | Tests that need Revit API context (pytest) | [pytest](/docs/testing/pytest) |
-| Tests that need Revit API context (NUnit/TUnit) | [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit) |
+| Tests that need Revit API context (NUnit/TUnit/MSTest) | [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest) |
 
 ## Python Runtime
 

@@ -34,7 +34,7 @@ Documentation is organized around **four pillars:** Execution, Testing, AI Tool 
 | Execution | IronPython | First-class script mode; Revit prefers pyRevit engine (default IronPython 2.7.12) — **no debugger** |
 | Execution | C# / F# scripts | Roslyn-based script execution |
 | Testing | PyTest multi-host | `--host revit`, `--host autocad`, and other AutoCAD-family names |
-| Testing | MTP TestAdapter | NUnit `4.6.1` / TUnit `1.66.27` inside live hosts via `DevTools.TestAdapter` (NuGet `RevitDevTool.TestAdapter` `0.0.7`) |
+| Testing | MTP TestAdapter | NUnit, TUnit, or MSTest inside live hosts via `RevitDevTool.TestAdapter` |
 | Testing | IronPython tests | `test_*_ipy.py` with unittest semantics |
 | AI Tool Integration | MCP | `DevTools.Daemon.exe --stdio` discovers running hosts |
 | AI Tool Integration | MCP in-host tools | `search_dynamic` / `invoke_dynamic` for host capabilities |
@@ -56,7 +56,7 @@ Changes after the initial v3.0 release:
 | MCP discovery | Infrastructure tools plus **`search_dynamic`** / **`invoke_dynamic`** for host-registered capabilities |
 | pytest 0.4.0 | **`--force-launch`** and **`--per-test-timeout`** options |
 | Python runtime | **Pixi-owned** CPython 3.14 by default; **uv sidecar only on Plant 3D** |
-| Host testing | **MTP TestAdapter** (`DevTools.TestAdapter` from NuGet `RevitDevTool.TestAdapter` `0.0.7` + Microsoft Testing Platform `2.4.0`) |
+| Host testing | **MTP TestAdapter** (`RevitDevTool.TestAdapter` `0.1.1`, MTP `2.4.1`): NUnit `5.0.0` default, TUnit `1.72.10`, MSTest `4.4.1` |
 | IronPython tests | `test_*_ipy.py` with unittest semantics; Revit prefers pyRevit engine |
 | Startup diagnostics | `crash_{app}_{ver}_{pid}.log` under `%APPDATA%\RevitDevTool\{Year}\Logs\` when startup fails |
 | Sample layout | Lowercase **`samples/`** at repo root |

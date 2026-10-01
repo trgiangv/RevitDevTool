@@ -13,7 +13,7 @@ notes belong in `docs/agents/`.
 | [execution.md](execution.md) | Code/script execution behavior |
 | [mcp.md](mcp.md) | MCP entry points and host bridging |
 | [pytest-bridge.md](pytest-bridge.md) | Remote pytest via Named Pipe |
-| [host-testing.md](host-testing.md) | MTP in-host testing (NUnit default, TUnit opt-in) |
+| [host-testing.md](host-testing.md) | MTP in-host testing (NUnit default, TUnit and MSTest opt-in) |
 | [tunit-host-testing.md](tunit-host-testing.md) | TUnit provider contract |
 | [logging.md](logging.md) | Logging sinks and redirection |
 | [visualization.md](visualization.md) | Revit-only DirectContext3D overlays |

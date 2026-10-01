@@ -72,6 +72,7 @@ host-space zoom) + later Tools / Element Finder ownership:
 | Open-closed providers | [0024](../../decisions/0024-testing-core-open-closed-providers.md) | [completed](../completed/2026-08-22-testing-core-open-closed.md) | Landed |
 | Contract narrow | — | [completed](../completed/2026-09-10-testing-contracts-narrow.md) | Landed 2026-09-10 — `machine-run` rename deferred |
 | TUnit spike | — | [completed](../completed/2026-08-21-tunit-revit-testhost.md) | Closed 2026-09-04 — not a production track |
+| MSTest provider | [0038](../../decisions/0038-mstest-host-provider.md) | [active](2026-09-28-mstest-host-provider.md) | Wired — live Revit two-generation gate open |
 
 NUnit MTP-only ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)) is
 [completed](../completed/2026-08-18-nunit-mtp-only.md).

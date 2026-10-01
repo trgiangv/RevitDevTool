@@ -8,4 +8,4 @@ The testing integrations run against an actual Autodesk process so tests can obs
 edit code → build → test runner → host bridge → Autodesk API
 ```
 
-Supported workflows include NUnit and TUnit host testing, plus the separate `RevitDevTool.PyTest` client for pytest. See the [host-testing product contract](https://github.com/trgiangv/RevitDevTool/blob/develop/docs/product/host-testing.md) and [pytest bridge contract](https://github.com/trgiangv/RevitDevTool/blob/develop/docs/product/pytest-bridge.md) for exact behavior.
+Supported workflows include NUnit, TUnit, and MSTest host testing, plus the separate `RevitDevTool.PyTest` client for pytest. See the [host-testing product contract](https://github.com/trgiangv/RevitDevTool/blob/develop/docs/product/host-testing.md) and [pytest bridge contract](https://github.com/trgiangv/RevitDevTool/blob/develop/docs/product/pytest-bridge.md) for exact behavior.

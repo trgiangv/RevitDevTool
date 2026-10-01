@@ -1,6 +1,7 @@
 # 0035 In-Repo Tests Use MSTest.Sdk And First-Party Coverage
 
 Date: 2026-09-13
+Updated: 2026-09-29
 
 ## Status
 
@@ -23,8 +24,11 @@ xUnit.
 
 ## Decision
 
-Every in-repo `tests/*.Tests` executable uses **MSTest.Sdk 4.4.0** (version
+Every in-repo `tests/*.Tests` executable uses **MSTest.Sdk 4.4.1** (version
 from `global.json`) and does **not** reference `xunit.v3` or `coverlet.MTP`.
+4.4.1 is the patch for 4.4.0: it restores `Assert.Contains` / `Assert.DoesNotContain`
+overload resolution below C# 14. The coverage profile is unchanged. Central
+`Microsoft.Testing.Platform` stays 2.4.1 with NUnit and TUnit.
 
 ### Coverage
 

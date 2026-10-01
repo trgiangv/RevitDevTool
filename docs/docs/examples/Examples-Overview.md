@@ -30,7 +30,7 @@ Additional scripts in the demo folder: [logging batch](https://github.com/trgian
 |---------|-------------|
 | [Civil 3D Examples — pytest section](/docs/examples/Examples-Civil3D#using-pytest-for-validation) | `uv run pytest --host civil3d` with `acad_*` fixtures |
 
-Setup and multi-host configuration: [pytest](/docs/testing/pytest) · NUnit/TUnit: [NUnit](/docs/testing/NUnit) and [TUnit](/docs/testing/TUnit)
+Setup and multi-host configuration: [pytest](/docs/testing/pytest) · .NET: [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest)
 
 ---
 

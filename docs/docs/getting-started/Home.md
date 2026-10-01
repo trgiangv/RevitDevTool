@@ -68,13 +68,13 @@ RevitDevTool is organized around four pillars. Each pillar is a first-class capa
 **Automated tests against live host processes**
 
 - **pytest** — CPython and IronPython tests inside a live host
-- **Host tests (MTP)** — NUnit `4.6.1` / TUnit `1.66.27` inside the host via `DevTools.TestAdapter` (NuGet `RevitDevTool.TestAdapter` `0.0.7`)
+- **Host tests (MTP)** — NUnit `5.0.0` (default), TUnit `1.72.10`, or MSTest `4.4.1` inside the host via `RevitDevTool.TestAdapter` `0.1.1`
 - Auto-discovery, suite leasing, IDE integration (VS Code, Cursor, PyCharm)
 - `--host revit`, `--host autocad`, and other AutoCAD-family verticals
 
 **Use when:** You need repeatable API tests that run inside a real Revit or AutoCAD-family instance.
 
-**Learn more:** [Testing Overview](/docs/testing/Testing-Overview) | [pytest](/docs/testing/pytest) | [NUnit](/docs/testing/NUnit) | [TUnit](/docs/testing/TUnit)
+**Learn more:** [Testing Overview](/docs/testing/Testing-Overview) | [pytest](/docs/testing/pytest) | [NUnit](/docs/testing/NUnit) | [TUnit](/docs/testing/TUnit) | [MSTest](/docs/testing/MSTest)
 
 ---
 
@@ -144,7 +144,7 @@ flowchart TD
 | Use AI to interact with Revit or AutoCAD-family | [MCP .NET](/docs/mcp/MCP-CSharp) or [MCP Python](/docs/mcp/MCP-Python) |
 | Understand testing options | [Testing Overview](/docs/testing/Testing-Overview) |
 | Run pytest against a live host | [pytest](/docs/testing/pytest) |
-| Run NUnit tests in a live host | [NUnit](/docs/testing/NUnit) |
+| Run NUnit, TUnit, or MSTest in a live host | [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest) |
 | See trace output with colors | [Log Level](/docs/logging/Logging-Overview) |
 | Stream logs over HTTP | [Log Output](/docs/logging/Observability-Http) |
 | Visualize geometry in 3D | [Geometry Visualization](/docs/logging/Visualization-Overview) |

@@ -3,7 +3,7 @@ name: revit-test
 description: >
   Configure and run in-host CAD/BIM tests with RevitDevTool.TestAdapter (Microsoft
   Testing Platform). Use when a repo references that NuGet package; writing or running
-  NUnit or TUnit inside Revit, AutoCAD, Civil3D, or family; setting HostName,
+  NUnit, TUnit, or MSTest inside Revit, AutoCAD, Civil3D, or family; setting HostName,
   HostVersion, or ForceLaunch; using dotnet test --filter; selecting [Explicit]
   tests; or diagnosing MTP exit code 8 / zero tests discovered.
 ---
@@ -20,7 +20,7 @@ on the machine (provides `DevTools.TestRunner` and the host add-in).
 
 ```text
 dotnet test → MTP testhost (discover locally, no host)
-           → DevTools.TestRunner → host pipe → NUnit | TUnit in host
+           → DevTools.TestRunner → host pipe → NUnit | TUnit | MSTest in host
 ```
 
 Test bodies never run in the MTP process.
@@ -38,7 +38,8 @@ Do **not** add `NUnit3TestAdapter`, `ricaun.RevitTest.TestAdapter`, or
 
 ## Quick start
 
-Default engine: **NUnit 4.6.1**. TUnit: `TestingFramework=tunit` + pin **TUnit 1.67.0**.
+Default engine: **NUnit 5.0.0**. TUnit: `TestingFramework=tunit` + pin **TUnit 1.72.10**.
+MSTest: `Sdk="MSTest.Sdk/4.4.1"` + `TestingFramework=mstest`.
 
 ```xml
 <PropertyGroup>
@@ -50,7 +51,7 @@ Default engine: **NUnit 4.6.1**. TUnit: `TestingFramework=tunit` + pin **TUnit 1
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.1" />
-  <PackageReference Include="NUnit" Version="4.6.1" />
+  <PackageReference Include="NUnit" Version="5.0.0" />
   <!-- compile-only host API — pick a package that matches HostVersion -->
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
@@ -102,6 +103,7 @@ do not use it for assets or reports. Details: [test-patterns.md](references/test
 | Shared (paths, smoke, stdout) | [test-patterns.md](references/test-patterns.md) |
 | NUnit (default) | [nunit.md](references/nunit.md) |
 | TUnit (`TestingFramework=tunit`) | [tunit.md](references/tunit.md) |
+| MSTest (`TestingFramework=mstest`) | [mstest.md](references/mstest.md) |
 
 ## Troubleshooting
 

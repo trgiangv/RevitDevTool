@@ -2,7 +2,7 @@
 
 | Flag | Owner | What it becomes |
 |------|--------|-----------------|
-| `--filter` | adapter | NUnit `<name re="1">` regex on `ITest.Name` |
+| `--filter` | adapter | Method name or substring. NUnit sends it as `<name re="1">`. TUnit and MSTest match method name, display name, full name, or a case-insensitive substring |
 | `--filter-uid` | MTP | Exact TestNode uid → host `<test>` |
 | `--treenode-filter` | MTP | Discovered leaves under `/ns/type/method` (never whole assembly) |
 | `--list-tests` | MTP | text = DisplayName; `json` = includes `uid` |

@@ -1,6 +1,6 @@
 # NUnit patterns
 
-Default engine (`TestingFramework` unset or `nunit`). Pin **NUnit 4.6.1** — the
+Default engine (`TestingFramework` unset or `nunit`). Pin **NUnit 5.0.0** — the
 host rejects a missing or mismatched `nunit.framework`.
 
 Shared rules: [test-patterns.md](test-patterns.md). Filters: [mtp-filter.md](mtp-filter.md).
