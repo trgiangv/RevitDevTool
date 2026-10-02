@@ -10,7 +10,7 @@ Automated tests run **inside a live host** so they can work with the active docu
 
 | Stack | Framework | Package | Entry doc |
 | --- | --- | --- | --- |
-| **.NET** | NUnit `5.0.0` (default), TUnit `1.72.10`, or MSTest `4.4.1` | NuGet: [RevitDevTool.TestAdapter 0.1.1](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.1) | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) |
+| **.NET** | NUnit `5.0.0` (default), TUnit `1.72.10`, or MSTest `4.4.1` | NuGet: [RevitDevTool.TestAdapter 0.1.2](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.2) | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) |
 | **CPython** | pytest | PyPI: [revitdevtool_pytest 0.4.0](https://pypi.org/project/revitdevtool_pytest/0.4.0/) | [pytest](/docs/testing/pytest) |
 | **IronPython** | unittest (`TestCase`) | Name files `test_*_ipy.py`; pytest discovers them as IronPython tests | [unittest](/docs/testing/unittest) |
 

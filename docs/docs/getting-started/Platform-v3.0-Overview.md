@@ -38,7 +38,7 @@ RevitDevTool markets two host products. AutoCAD-family verticals (Architecture, 
 
 ### Testing
 - **PyTest bridge** — CPython pytest and IronPython unittest run inside the selected host
-- **MTP TestAdapter** — NUnit `5.0.0`, TUnit `1.72.10`, or MSTest `4.4.1` inside live hosts via `RevitDevTool.TestAdapter` `0.1.1`
+- **MTP TestAdapter** — NUnit `5.0.0`, TUnit `1.72.10`, or MSTest `4.4.1` inside live hosts via `RevitDevTool.TestAdapter` `0.1.2`
 - `--host revit`, `--host autocad`, and other AutoCAD-family names; `--force-launch`, `--per-test-timeout`
 
 ### AI Tool Integration

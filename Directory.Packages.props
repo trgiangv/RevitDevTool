@@ -74,7 +74,7 @@
         <PackageVersion Include="TUnit.Engine" Version="1.72.10" />
         <PackageVersion Include="Microsoft.Testing.Platform" Version="2.4.1" />
         <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.4.1" />
-        <PackageVersion Include="RevitDevTool.TestAdapter" Version="0.1.1" />
+        <PackageVersion Include="RevitDevTool.TestAdapter" Version="0.1.2" />
         <PackageVersion Include="Moq" Version="4.21.0" />
         <PackageVersion Include="Bogus" Version="35.6.5" />
     </ItemGroup>

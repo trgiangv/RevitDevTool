@@ -1,6 +1,6 @@
 # NUnit
 
-Run NUnit `5.0.0` tests inside a live Revit or AutoCAD-family host through Microsoft Testing Platform (MTP) and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.1`. NUnit is the default engine. TUnit and MSTest are opt-in: [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest).
+Run NUnit `5.0.0` tests inside a live Revit or AutoCAD-family host through Microsoft Testing Platform (MTP) and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.2`. NUnit is the default engine. TUnit and MSTest are opt-in: [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest).
 
 ## Project setup
 
@@ -16,7 +16,7 @@ Add the adapter and NUnit to the test project:
 </PropertyGroup>
 
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.1" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.2" />
   <PackageReference Include="NUnit" Version="5.0.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
