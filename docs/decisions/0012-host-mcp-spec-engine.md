@@ -4,12 +4,15 @@ Date: 2026-08-02
 
 ## Status
 
-Accepted — **partially superseded** by [0027](0027-mcp-product-surface.md).
+Accepted — **partially superseded** by [0027](0027-mcp-product-surface.md) and
+host-wire shape superseded by [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)
+(**As implemented**).
 
 Rules **3** (host removes the MCP SDK entirely) and **7** (ILRepack
 must not embed `ModelContextProtocol*`) are withdrawn. The host named
-pipe still must not run SDK `McpServer` / `McpSession`; SDK **types
-and constants** are allowed on the host. Rules 1–2 and 4–6 stand.
+pipe now runs SDK **`McpServer`** per connection (daemon client only).
+SDK **types and constants** are allowed on the host. Rules 1–2 and 4–6 stand
+where not contradicted by later ADRs.
 
 ## Context
 
@@ -27,12 +30,14 @@ stable fix.
 ## Decision
 
 1. **Daemon + external clients** keep the official MCP SDK (`DevTools.Daemon`,
-   `DevTools.Mcp.Server`, `DevTools.Mcp.Client`).
+   including `Daemon/Mcp/`; former `DevTools.Mcp.Server` / `.Client` projects merged
+   per [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)).
 2. **Third-party toolsets** keep the official MCP SDK (`[McpServerTool]`,
    `CallToolResult`, MRTR exceptions).
-3. **Withdrawn ([0027](0027-mcp-product-surface.md)).** Host may
-   reference and ILRepack SDK types. The named pipe still must not run
-   `McpServer` / `McpSession`.
+3. **Withdrawn ([0027](0027-mcp-product-surface.md), host session shape
+   [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)).** Host may reference
+   and ILRepack SDK types. The named pipe **runs** SDK `McpServer` per connection
+   (daemon `McpClient` only).
 4. **Toolset invoke boundary** is JSON-only: host reflects and invokes toolset
    methods; results serialize in the toolset assembly domain and deserialize into
    `McpInvocationResponse`. Host never pattern-matches SDK `ContentBlock` types.
@@ -49,15 +54,16 @@ stable fix.
    [0019](0019-ilrepack-and-polyfill-isolated-alc.md)).** Host may ILRepack
    MCP. Do not exclude `ModelContextProtocol*` by filename.
 
-> **0027:** Items 3 and 7 are withdrawn. Host pipe still must not run
-> `McpServer` / `McpSession`. SDK types may live on the host and may be
-> ILRepacked. See [0027](0027-mcp-product-surface.md).
+> **0027 / 0039:** Items 3 and 7 are withdrawn. Host pipe runs SDK `McpServer`
+> per connection; SDK types may live on the host and may be ILRepacked.
+> See [0027](0027-mcp-product-surface.md) and 0039 **As implemented**.
 
 ## Consequences
 
 Positive:
 
-- Host pipe stays spec-first (`IMcpHandler`); no SDK session in the CAD process.
+- *Historical:* host pipe was spec-first (`McpHandler`). **As of 2026-10-03**
+  the pipe uses SDK `McpServer` ([0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)).
 - **Toolset ALC** (`McpToolsetContext` + `ToolsetResultSerializer` JSON bridge)
   retained; toolsets keep compile-only MCP refs (`ExcludeAssets=runtime`).
 - Host image carries MCP for ALC bind ([0019](0019-ilrepack-and-polyfill-isolated-alc.md)).
@@ -66,7 +72,8 @@ Positive:
 Tradeoffs:
 
 - Host must track MCP spec wire changes (mitigated by conformance tests).
-- One-time migration across `Adapter`, `Catalog`, `Execution`, `Core`.
+- One-time migration across former `Adapter` / `Core` / `Client` / `Server` into
+  `Catalog` + `Daemon/Mcp` + `Execution` (done 2026-10-03).
 - Host Tasks extension on pipe deferred unless explicitly scoped later.
 
 ## References

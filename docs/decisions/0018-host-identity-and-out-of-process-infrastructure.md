@@ -14,6 +14,17 @@ stays true. This ADR adds two more axes: **UI-free** and **identity-not-in-Loggi
 
 Implementation is a multi-PR sequence. This document is the review contract.
 
+### As implemented (MCP layout, 2026-10-03)
+
+[MCP flow simplification](../plans/completed/2026-10-03-mcp-flow-simplification.md) folded
+`DevTools.Mcp.Server`, `DevTools.Mcp.Client`, `DevTools.Mcp.Adapter`, and shared
+`DevTools.Mcp.Core` contracts into **`DevTools.Daemon/Mcp/`** and
+**`DevTools.Mcp.Catalog/`** ([0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)
+**As implemented**). Daemon pipe discovery is **`IProcessSessions`** /
+`ProcessSessions`, not **`IHostBroker`**. Context tables below that name
+`Mcp.Server` / `Mcp.Adapter` describe the **pre-merge** layout unless a step
+explicitly says otherwise.
+
 ## Context
 
 ### Jobs that currently share names and project references
@@ -346,7 +357,7 @@ fixed 90s clock from `Process.Start`. Timeout is caller-owned
 `DEFAULT_LAUNCH_TIMEOUT_S`; NUnit `HostLaunchTimeout` may be longer).
 
 `tryGetReady: int pid → T?` is the expansion joint. Hosting never names
-`DevToolsMcp_*` or `DevTools_*`. MCP passes `IHostBroker.GetByProcessId`.
+`DevToolsMcp_*` or `DevTools_*`. MCP passes `IProcessSessions.GetByProcessId`.
 NUnit passes `HostLocator.Discover` filtered to the spawned PID. A later
 host adds a probe, not a wait type.
 

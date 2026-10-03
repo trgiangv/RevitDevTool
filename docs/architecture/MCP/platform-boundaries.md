@@ -4,19 +4,15 @@ Authoritative map of **where** MCP SDK behavior is applied and **where** the hos
 spec wire DTOs. Product scope is [0027](../../decisions/0027-mcp-product-surface.md)
 (Daemon envelope + search→invoke; not full protocol).
 
-Last updated: 2026-09-04
+Last updated: 2026-10-03
 
-> **ADR 0027:** Host named pipe does **not** run MCP SDK session/server (`McpServer`,
-> `McpSession`, `initialize` handshake). Host implements spec-first JSON-RPC
-> (`server/discover` + per-request `_meta`) via `McpHandler`. SDK DTOs and constants
-> **are** allowed on host and may be ILRepacked into the add-in.
-> See [`docs/decisions/0027-mcp-product-surface.md`](../../decisions/0027-mcp-product-surface.md).
-> Original host-pipe ADR: [0012](../../decisions/0012-host-mcp-spec-engine.md)
-> (rules 3 and 7 withdrawn).
+> **ADR 0027 (amended 2026-10-03):** External clients still use only the Daemon envelope.
+> The host pipe runs SDK **`McpServer`** per connection; see [0039](../../decisions/0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) **As implemented**.
+> [0012](../../decisions/0012-host-mcp-spec-engine.md) spec-handler text is historical.
 
 ## Audience
 
-- Reviewers validating that new code stays in the correct layer (`Core` vs `Catalog` vs `Server`).
+- Reviewers validating that new code stays in the correct layer (`Daemon/Mcp` vs `Catalog` vs `Execution`).
 
 Product behavior contracts: [`docs/product/mcp.md`](../../product/mcp.md).
 MRTR session plan (closed): [`docs/plans/completed/2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md).
@@ -29,24 +25,24 @@ MRTR session plan (closed): [`docs/plans/completed/2026-08-02-mrtr-implementatio
 External AI client
   │  tools/call: search_dynamic | invoke_dynamic | infrastructure
   ▼
-DevTools.Daemon (MCP server, SDK)          DevTools.Mcp.Server
-  │  HostBroker (MCP client, SDK)
+DevTools.Daemon (MCP server, SDK; McpEngine in Daemon/Mcp)
+  │  ProcessSessions (MCP client, SDK)
   │  Named pipe: DevToolsMcp_{Host}_{Version}_{PID}
   ▼
 Host process (Revit / AutoCAD)
-  HostMcpPipeServer → McpHandler (spec wire) → McpPrimitiveDispatcher
+  McpPipeServer → SDK McpServer → IMcpSource backends
 ```
 
 **Invariant:** External clients never call host tool names (`revit_find_elements`) on the
-daemon. They use opaque `capabilityId` from `search_dynamic` → `invoke_dynamic`.
+daemon. They use opaque `id` from `search_dynamic` → `invoke_dynamic`.
 
 **Dynamic invoke path:**
 
 ```text
 invoke_dynamic (daemon)
-  → HostSession.CallToolPassthroughAsync(CallToolRequestParams)
-  → host tools/call (McpHandler)
-  → McpPrimitiveDispatcher
+  → ProcessSession.CallToolPassthroughAsync(CallToolRequestParams)
+  → host tools/call (SDK McpServer)
+  → BuiltInSource | DotnetSource | PythonSource
   → built-in | .NET toolset ALC | Python toolset
 ```
 
@@ -56,52 +52,48 @@ invoke_dynamic (daemon)
 
 | Layer | Owns | Does **not** own |
 |-------|------|------------------|
-| `DevTools.Mcp.Core` | Wire DTOs, `IHostSession`, `HostToolCallOutcome`, broker contracts | Tool-specific MRTR schemas, ALC mapping |
-| `DevTools.Mcp.Client` | `HostSession`, `McpClientPassthrough`, `ConnectedHostCatalog` | Host dispatch, catalog parsing |
-| `DevTools.Mcp.Server` | Daemon fixed tools; `search_dynamic` / `invoke_dynamic`; MRTR re-throw | Host tool execution |
-| `DevTools.Mcp.Catalog` | Discovery/store and ALC lifecycle; SDK-contract JSON boundary for isolated results | Daemon external tool surface; Python runtime invocation |
-| `DevTools.Mcp.Adapter` | `McpHandler`, `HostMcpPipeServer`; host composition registers it explicitly | Dynamic capability IDs; execution services |
-| `DevTools.Execution` | Thin primitive router plus .NET/Python/built-in backend implementations | Daemon catalog search; host JSON-RPC; public Python protocol helpers; Adapter project reference |
+| `DevTools.Daemon` (`Mcp/`) | External MCP surface; `ProcessSessions`; `search_dynamic` / `invoke_dynamic`; `McpClientPassthrough` | Host tool execution |
+| `DevTools.Mcp.Catalog` | Host pipe server, `McpCatalogStore`, discovery, ALC lifecycle, `McpSpecKeys`, host `McpLogFilters` | Daemon auth/gateway |
+| `DevTools.Execution` (`External/Mcp/`) | `IMcpSource` backends, built-in execute tools, `McpConnectTracker`, `McpCallFilter` | Daemon catalog search |
+| `DevTools.Mcp.Revit` / `.Acad` | Host built-in tools/resources | Transport |
 | `samples/*` | Business logic, structured output, product policies | Transport, toolset loading |
 
 **Pass-through rules:**
 
-1. Discovery from `ConnectedHostCatalog` schema only — no runtime inference on daemon.
+1. Discovery from `ProcessCatalogs` / host list results only — no runtime inference on daemon.
 2. `invoke_dynamic` forwards `arguments`, `inputResponses`, and `requestState` on `CallToolRequestParams` (not `progressToken` — host progress is a 0027 non-goal).
 3. Success results pass `Content`, `StructuredContent`, `Meta`, `IsError` without re-wrapping business payloads.
 4. Isolated .NET toolsets cross the ALC boundary as SDK-contract JSON; no second content-block model is maintained.
 
 ### Invocation request boundaries
 
-SDK `CallToolRequestParams` is the shared DTO ([0027](../../decisions/0027-mcp-product-surface.md)). `InvocationRequestReader.FromWire` deserializes with `ToolHelpers.ProtocolOptions`. `progressToken` is read from `_meta` only.
+SDK `CallToolRequestParams` is the shared DTO ([0027](../../decisions/0027-mcp-product-surface.md)). The SDK server deserializes `tools/call`. `RequestFactory` builds the `RequestContext` a .NET tool needs. An isolated toolset result becomes a host `CallToolResult` in `ResultBridge.ToHostCallToolResult`.
 
 | Layer | Type | Role |
 |-------|------|------|
-| `DevTools.Mcp.Core` | `InvocationRequestReader.FromWire` | JSON-RPC `tools/call` params → `CallToolRequestParams` |
-| `DevTools.Mcp.Catalog` | `RequestFactory.ToToolContext` | `CallToolRequestParams` → SDK `RequestContext` for .NET toolsets |
+| SDK server | `CallToolRequestParams` | `tools/call` params |
+| `DevTools.Mcp.Catalog` | `RequestFactory.ToToolContext` | params → SDK `RequestContext` for .NET toolsets |
+| `DevTools.Mcp.Catalog` | `ResultBridge.ToHostCallToolResult` | toolset object → host `CallToolResult` |
 | Python MCP backend | private request/result operations | host request → embedded Python bridge JSON → result |
 
-Wire: list/read results are SDK `ListToolsResult` / `ListResourcesResult` /
-`ListResourceTemplatesResult` / `ReadResourceResult` via
-`McpJsonUtilities.DefaultOptions`. Tool-call encode is `HostToolResultJson`
-(`PrepareForWire` once there); Catalog `ToolsetResultSerializer` maps to
-`McpInvocationResponse` without a second wire-safe pass.
-In-process MRTR uses `McpInvocationResponse.InputRequired`; the named-pipe
-bytes are still SDK `InputRequiredResult` (`McpJsonUtilities.DefaultOptions`).
+List and read results are SDK `ListToolsResult` / `ListResourcesResult` /
+`ListResourceTemplatesResult` / `ReadResourceResult`. A tool result leaves the
+host as `CallToolResult`. Daemon passthrough reads that JSON back into
+`CallToolResult` or `InputRequiredResult`.
 
 ### Catalog ports
 
 | Port | Implementation | Role |
 |------|----------------|------|
-| `IConnectedHostCatalog` | `ConnectedHostCatalog` (Client) | Daemon: capabilities from connected host sessions |
+| Daemon catalog index | `ProcessCatalogs` (`ProcessSessions`) | Search hits from connected host sessions |
 
-Host in-process catalog is `McpCatalogStore` (Catalog). Adapter and UI inject the store directly (`CatalogChanged`, `ReloadAsync`, SDK descriptors). There is no separate read-only registry port.
+Host in-process catalog is `McpCatalogStore` (Catalog). UI injects the store directly (`CatalogChanged`, `ReloadAsync`, SDK descriptors).
 
 ---
 
 ## Dispatch paths by backend
 
-`McpPrimitiveDispatcher.DispatchToolAsync` routes on `McpRegisteredTool.Binding.SourceKind`:
+`IMcpSource` routing uses `RegisteredTool.Binding.SourceKind` (`PrimitiveBinding`):
 
 | Backend | Invoke mechanism | MRTR | ALC notes |
 |---------|------------------|------|-----------|
@@ -151,7 +143,7 @@ chosen ([S5 strategy gate](../../plans/completed/2026-09-03-mcp-layer-identity-s
 
 ### Tests
 
-- `tests/DevTools.Mcp.Catalog.Tests/ToolsetResultSerializerTests.cs`
+- `tests/DevTools.Mcp.Catalog.Tests/AlcCallToolResultBridgeReproTests.cs`
 - `tests/DevTools.Mcp.Catalog.Tests/ToolsetInvokerTests.cs`
 - Live checklist: `docs/agents/mcp-integration-test.md`
 
@@ -171,10 +163,10 @@ chosen ([S5 strategy gate](../../plans/completed/2026-09-03-mcp-layer-identity-s
 
 | Hop | Behavior | Source |
 |-----|----------|--------|
-| Daemon → host (dynamic tool) | **Single round-trip** per `invoke_dynamic` call; no `McpClient.CallToolAsync` auto-retry | `HostSession.CallToolPassthroughAsync` |
-| Host returns `input_required` | Deserialized to `HostToolCallOutcome.FromInputRequired` | `HostSession` |
-| Daemon → external client | `InvokeDynamicTool` throws `InputRequiredException` with `ForwardInputRequired` — embeds `InvokeDynamicMrtrState` in daemon `requestState` | `InvokeDynamicTool.cs` |
-| Client retry `invoke_dynamic` | Parses `InvokeDynamicMrtrState`; forwards `inputResponses` + host `requestState` on `CallToolRequestParams` | `InvokeDynamicTool.InvokeSingleAsync` |
+| Daemon → host (dynamic tool) | **Single round-trip** per `invoke_dynamic` call; `McpClientPassthrough` avoids auto-MRTR | `ProcessSession.CallToolPassthroughAsync` |
+| Host returns `input_required` | Deserialized from host JSON in passthrough | `ProcessSession` |
+| Daemon → external client | `InvokeTool` throws `InputRequiredException` with `ForwardInputRequired` — embeds `InvokeState` in daemon `requestState` | `InvokeTool.cs` |
+| Client retry `invoke_dynamic` | Parses `InvokeState`; forwards `inputResponses` + host `requestState` on `CallToolRequestParams` | `InvokeTool` |
 | Mock proof | `InvokeDynamic_ForwardsHostInputRequired`, `InvokeDynamic_MrtrRetry_ForwardsInputResponses…` | `InvokeDynamicSdkHarnessTests.cs` |
 
 ### Closed gaps and non-goals
@@ -194,17 +186,17 @@ They are **not** a delivery backlog ([0027](../../decisions/0027-mcp-product-sur
 ### Double-hop MRTR flow (plumbing only — not a product loop)
 
 ```text
-1. Client: invoke_dynamic(capabilityId, arguments={...})
+1. Client: invoke_dynamic(id, arguments={...})
 2. Daemon → Host tools/call (passthrough)
 3. Host tool throws InputRequiredException OR host server serializes input_required
-4. Daemon invoke_dynamic → InputRequiredException (daemon requestState wraps capabilityId + arguments + host requestState)
+4. Daemon invoke_dynamic → InputRequiredException (daemon requestState wraps id + arguments + host requestState)
 5. External client fulfills elicitation (MRTR-capable connector)
-6. Client: invoke_dynamic(same capabilityId, inputResponses=..., requestState=daemon state)
+6. Client: invoke_dynamic(same id, inputResponses=..., requestState=daemon state)
 7. Daemon forwards inputResponses + host requestState to host tools/call
 8. Host completes → CallToolResult pass-through to client
 ```
 
-**Do not reintroduce:** `__mcp*` argument augmentation, `DotnetToolProtocolBridge`, Core `McpMrtrMeta` — rejected as over-engineering; MRTR state stays in protocol fields + `InvokeDynamicMrtrState`.
+**Do not reintroduce:** `__mcp*` argument augmentation or parallel MRTR meta keys — MRTR state stays in protocol fields + daemon `InvokeState`.
 
 ### ALC MRTR policy
 
@@ -249,7 +241,7 @@ See **[SDK gap matrix](sdk-gap-matrix.md)** for the living ✅/⚠️/⏸ table 
 | Resource templates | ✅ | C# + Python samples; batch `reads[]` |
 | `CallToolRequestParams` full shape | ✅ | Passthrough on dynamic invoke |
 | MRTR wire (`InputRequiredResult`) | ✅ | Forward + mocks + ALC retry (G1); product G2=B warning-first |
-| MCP Tasks Optional | ✅ | Export + execute tools |
+| MCP Tasks | ✅ | **Synchronous** or **Optional** only. **Required** unused until clients advertise `io.modelcontextprotocol/tasks` |
 | `ResourceLinkBlock` pass-through | ✅ | No auto-fetch |
 | Image / audio `ContentBlock` | ✅ | `view_screenshot`, harness |
 | Progress notifications | ⚠️ Daemon fixed tools ✅; host pipe / `invoke_dynamic` / ALC / Python / built-ins ❌ | [0027](../../decisions/0027-mcp-product-surface.md) non-goal |
@@ -259,7 +251,7 @@ See **[SDK gap matrix](sdk-gap-matrix.md)** for the living ✅/⚠️/⏸ table 
 
 **Custom patterns (intentional):**
 
-- Opaque `capabilityId` locators (daemon-local, catalog-versioned).
+- Opaque `id` locators (`CatalogId` / `dci2.*`; daemon-local, content-hash freshness).
 - `CallToolPassthroughAsync` instead of client auto-MRTR on daemon→host leg.
 - ALC `AIFunction` invoker + JSON return mapper (not in SDK).
 
@@ -314,12 +306,11 @@ dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.c
 
 | Topic | Primary files |
 |-------|----------------|
-| Daemon invoke + MRTR forward | `source/DevTools.Mcp.Server/Tools/InvokeDynamicTool.cs` |
-| MRTR state envelope | `source/DevTools.Mcp.Server/Contracts/InvokeDynamicMrtrState.cs` |
-| Host passthrough | `source/DevTools.Mcp.Client/HostSession.cs` |
-| Outcome union | `source/DevTools.Mcp.Core/HostToolCallOutcome.cs` |
-| Dispatcher | `source/DevTools.Execution/External/Mcp/Dispatchers/McpPrimitiveDispatcher.cs` |
-| ALC invoke + map | `source/DevTools.Mcp.Catalog/Discovery/ToolsetInvoker.cs`, `ToolsetResultSerializer.cs` |
+| Daemon invoke + MRTR forward | `source/DevTools.Daemon/Mcp/Tools/InvokeTool.cs` |
+| MRTR state envelope | `source/DevTools.Daemon/Mcp/Contracts/DynamicContracts.cs` (`InvokeState`) |
+| Host passthrough | `source/DevTools.Daemon/Mcp/Processes/ProcessSession.cs`, `McpClientPassthrough.cs` |
+| IMcpSource backends | `source/DevTools.Execution/External/Mcp/Backends/` |
+| ALC result bridge | `source/DevTools.Mcp.Catalog/Discovery/ResultBridge.cs` |
 | Toolset load | `source/DevTools.Mcp.Catalog/Isolation/McpToolsetContext.cs`, `McpToolsetIsolationPlan.cs` |
-| Host adapter | `source/DevTools.Mcp.Adapter/Host/McpHandler.cs` |
+| Host pipe server | `source/DevTools.Mcp.Catalog/Transport/McpPipeServer.cs` |
 | Mock MRTR harness | `tests/DevTools.Mcp.Server.Tests/Harness/McpSdkTestHarness.cs` |

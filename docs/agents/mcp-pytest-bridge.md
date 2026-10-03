@@ -6,14 +6,14 @@ Deep sources: `docs/architecture/MCP/README.md`, `docs/architecture/Execution/py
 
 | Pipe | Server | Use |
 |------|--------|-----|
-| `DevToolsMcp_{Host}_{Version}_{PID}` | `HostMcpPipeServer` | MCP SDK (NDJSON) |
+| `DevToolsMcp_{Host}_{Version}_{PID}` | `McpPipeServer` | MCP SDK (NDJSON) |
 | `DevTools_{Host}_{Version}_{PID}` | `DevToolsPipeServer` | pytest + control (`BridgeMessage`) |
 
 Never mix NDJSON and `BridgeMessage` on one pipe.
 
 ## MCP
 
-Daemon (`--stdio` or Gateway) exposes infrastructure tools plus `search_dynamic` / `invoke_dynamic`. Host tools stay in `ConnectedHostCatalog`. In-host built-ins: `execute_csharp_code`, `execute_python_code`, `open_document`, `navigate_history`. See [MCP/tools.md](../architecture/MCP/tools.md).
+Daemon (`--stdio` or Gateway) exposes infrastructure tools plus `search_dynamic` / `invoke_dynamic`. Host tools are indexed in `ProcessCatalogs` (not on daemon `tools/list`). In-host built-ins: `execute_csharp_code`, `execute_python_code`, `open_document`, `navigate_history`. See [MCP/tools.md](../architecture/MCP/tools.md).
 
 Paths: `DevTools.Ipc`, `DevTools.Mcp.*`, `DevTools.Daemon`, `DevTools.Execution/External/`.
 

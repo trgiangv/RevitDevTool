@@ -23,7 +23,7 @@ flowchart LR
         Daemon1 --> McpPipe["DevToolsMcp_* SDK NDJSON"]
         Daemon2 --> McpPipe
         PytestClient["pytest / control"] --> PytestPipe["DevTools_* BridgeMessage"]
-        McpPipe --> HostWire["HostMcpPipeServer + McpHandler"]
+        McpPipe --> HostWire["McpPipeServer + SDK McpServer"]
         PytestPipe --> PytestServer["DevToolsPipeServer"]
     end
 ```
@@ -38,13 +38,13 @@ flowchart LR
 | Pipe | Format | Protocol | Owner |
 |------|--------|----------|-------|
 | `DevTools_{Host}_{Version}_{PID}` | Length-prefixed `BridgeMessage` | Pytest + control IPC | `DevToolsPipeServer` |
-| `DevToolsMcp_{Host}_{Version}_{PID}` | Newline-delimited JSON-RPC | Spec wire `2026-07-28` (`server/discover`) | `HostMcpPipeServer` + `McpHandler` |
+| `DevToolsMcp_{Host}_{Version}_{PID}` | Newline-delimited JSON-RPC | MCP `2026-07-28` (SDK session) | `McpPipeServer` + per-connection `McpServer` |
 
 Do not multiplex SDK frames onto the pytest pipe (or the reverse).
 
 ## Stdio Mode
 
-When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server on stdin/stdout. It boots its own `McpEngine`, `HostBroker`, and `DiscoveryHostedService` independently.
+When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server on stdin/stdout. It boots its own `McpEngine`, `ProcessSessions`, and `DiscoveryHostedService` independently.
 
 Key properties:
 - Custom process entrypoint handles `--stdio` before the WPF tray starts.
@@ -73,4 +73,4 @@ One user can have Daemons on multiple machines connected to the same Gateway. Th
 - **Single machine** → AI requests auto-route (no header needed)
 - **Multiple machines** → AI must include `x-target-machine: <machine_id>` header
 - **Discovery** → `GET /machines` or `list_machines` MCP tool lists connected machines
-- **Dynamic invoke** → `search_dynamic` / `invoke_dynamic` include `machineId` + `hostInstanceId`
+- **Dynamic invoke** → locators embed `processId`; Gateway routing uses `machineId` when multiple machines are connected

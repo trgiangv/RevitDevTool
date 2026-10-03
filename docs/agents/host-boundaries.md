@@ -7,11 +7,12 @@ The platform is host-agnostic by design. Every feature should be sharable across
 Keep these host-neutral — this is the default for all new functionality:
 
 - `source/DevTools.Hosting/` — `HostApp`, `IHostAppInfo`, generic launch engine (`AddHostLaunchCore`, `HostLaunchWaiter`). No Revit/Acad product strings, dialog catalogs, or assembly-load policy. Stays `net48;net8.0-windows;net10.0-windows` because add-ins and `Testing.Host` load identity types in-process.
-- `source/DevTools.FileMetadata.Core/` — `IFileReader` / `FileInfoResult` (MCP `read_file_info`). Takes `HostApp` as a result field only. `net10.0-windows` only (Daemon / Mcp.Server / Runner).
+- `source/DevTools.FileMetadata.Core/` — `IFileReader` / `FileInfoResult` (MCP `read_file_info`). Takes `HostApp` as a result field only. `net10.0-windows` only (Daemon / Catalog / Runner).
 - `source/DevTools.Execution/` — execution engine, script providers, MCP in-host runtime
 - `source/DevTools.Execution.Abstractions/` — host-neutral contracts (`IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, `IDocumentBridge`, enums)
 - `source/DevTools.Ipc/` — IPC transport (BridgeMessage, pipe connection, wire protocol)
-- `source/DevTools.Mcp.Core/`, `DevTools.Mcp.Catalog/`, `DevTools.Mcp.Adapter/`, `DevTools.Mcp.Client/`, `DevTools.Mcp.Server/` — MCP platform modules
+- `source/DevTools.Mcp.Catalog/` — host MCP catalog, pipe server, and SDK `McpServer` transport. No reference to `DevTools.Execution`.
+- `source/DevTools.Daemon/Mcp/` — Daemon MCP surface: six fixed tools, `ProcessSessions`, `CatalogId`.
 - `source/DevTools.Logging/`
 - `source/DevTools.Presentation/`
 - `source/DevTools.Settings/`
@@ -71,7 +72,7 @@ Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`Di
 ## Standalone Daemon
 
 - `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (HandyControl WPF tray).
-- `HostBroker` discovers SDK MCP pipes (`DevToolsMcp_{Host}_{Version}_{PID}`) and owns `HostCatalog`.
+- `ProcessSessions` discovers SDK MCP pipes (`DevToolsMcp_{Host}_{Version}_{PID}`) and owns one catalog per process.
 - Pytest/control uses `DevTools_{Host}_{Version}_{PID}` (`DevToolsPipeServer`).
 - Daemon external tools: infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.
 - Fixed prompts (`revit_code`, `acad_code`) are daemon-owned.

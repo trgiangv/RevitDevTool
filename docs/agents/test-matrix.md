@@ -13,11 +13,16 @@ code here is in scope.
 Passing unit tests does not prove live host behavior, daemon reload, or full
 year-matrix packaging.
 
-## Current gaps (2026-09-04)
+## Current gaps (2026-10-03)
 
-Out-of-host **≥80% line** target: Daemon, Execution, MCP Core/Catalog/Server/Client,
-Ipc, Settings, Logging, Telemetry, Utilities, FileMetadata.Core.
-**Not in that gate:** Adapter, Hosting.Revit/Acad, Presentation/UI, RevitDevTool, AcadDevTool, net48 `*.NetFramework.Tests`.
+Out-of-host **≥80% line** target: Daemon (includes `Daemon/Mcp/`), Execution,
+**`DevTools.Mcp.Catalog`**, Ipc, Settings, Logging, Telemetry, Utilities,
+FileMetadata.Core.
+**Not in that gate:** Hosting.Revit/Acad, Presentation/UI, RevitDevTool, AcadDevTool, net48 `*.NetFramework.Tests`.
+
+**MCP test projects:** `tests/DevTools.Mcp.*.Tests` names are **legacy** (pre-merge
+layout). They reference **`DevTools.Daemon`** + **`DevTools.Mcp.Catalog`**; there is
+no `source/DevTools.Mcp.Core` / `.Server` / `.Client` / `.Adapter` project anymore.
 
 | Gap | Why it is still open | What agents must not do |
 |-----|----------------------|-------------------------|
@@ -32,18 +37,34 @@ Ipc, Settings, Logging, Telemetry, Utilities, FileMetadata.Core.
 
 HTML (gitignored): `artifacts/coverage-html/index.html`. Merged **Total 40.3%** is misleading (transitive 0% + missing Execution).
 
-### Last Coverlet snapshot (owned-module line %)
+### Last MCP coverage snapshot (Microsoft.Testing `--coverage`, 2026-10-03)
 
-Sequential `dotnet run … --coverlet` 2026-09-04 16:28–16:37 + Daemon retry 16:37. Execution omitted.
+Sequential `dotnet run … -f net10.0-windows -- --coverage --coverage-output-format cobertura --coverage-settings <repo>/tests/mstest-coverage.xml`
+(one testhost at a time; artifacts under `artifacts/coverage-mcp-20261003/`). **Merged** line % = union of
+instrumented `(file, line)` hits across all seven MCP testhosts below (not Coverlet “owned module”).
 
-| Product assembly | Line % | Test project (this run) |
+| Product assembly | Merged line % (MCP suite) | Gate (≥80%) |
+|------------------|---------------------------|-------------|
+| `DevTools.Mcp.Catalog` | **83.4%** (2352 / 2820 lines) | ✅ |
+| `DevTools.Daemon` (incl. `Daemon/Mcp/`) | **84.2%** (6384 / 7582 lines) | ✅ |
+
+| Test project | Pass | Skip | Fail | Single-run line % (primary assembly) |
+|--------------|------|------|------|--------------------------------------|
+| `DevTools.Mcp.Catalog.Tests` | 124 | 4 | 0 | Catalog **50.8%** |
+| `DevTools.Mcp.Core.Tests` | 38 | 0 | 0 | Catalog 3.5% |
+| `DevTools.Mcp.Client.Tests` | 23 | 0 | 0 | Daemon 7.0% |
+| `DevTools.Mcp.Server.Tests` | 58 | 0 | 0 | Daemon **49.5%** |
+| `DevTools.Mcp.Adapter.Tests` | 17 | 0 | 1 | Catalog 35.9% |
+| `DevTools.Execution.Mcp.Tests` | 29 | 0 | 0 | `DevTools.Execution` 3.0% (scoped; whole Execution not gated here) |
+| `DevTools.Daemon.Tests` | 88 | 0 | 0 | Daemon **67.0%** |
+
+Adapter failure: `LiveHost_ExecuteCsharp_SyncAndTasksOptIn` — live `DevToolsMcp_*` host without `tasks/get` (Skip when no pipe; fails when an old host is connected). Coverage still collected.
+
+Non-MCP rows below are still the **2026-09-04 Coverlet** snapshot until re-run.
+
+| Product assembly | Line % | Test project (2026-09-04) |
 |------------------|--------|-------------------------|
-| `DevTools.Mcp.Core` | 82.9% owned / 94.7% merged | 62 pass |
-| `DevTools.Mcp.Catalog` | **88.8%** | 152 pass / 9 skip |
-| `DevTools.Mcp.Server` | **91.6%** | 61 pass |
-| `DevTools.Mcp.Client` | **90.5%** | 20 pass |
-| `DevTools.Daemon` | **80.4%** | 76 pass |
-| `DevTools.Execution` | **not in last Coverlet merge** | MSTest.Sdk `--coverage` (0034); run scoped projects |
+| `DevTools.Execution` (full) | **not in last merge** | scoped MSTest.Sdk projects + `--coverage` |
 | `DevTools.Testing.Abstractions` | 79.9% | 57 pass |
 | `DevTools.Utilities` | **94.9%** | 18 pass |
 | `DevTools.Settings` | **93.3%** | 12 pass |
@@ -75,13 +96,13 @@ excludes `*.Tests`. **Owned-module row is the truth**; Total % is misleading.
 Run coverage **one project at a time**. If instrumentation fails immediately, stop —
 do not wait for `--timeout`.
 
-Last Coverlet snapshot below is historical (2026-09-04). New runs use `--coverage`.
+MCP merged snapshot: **2026-10-03** (`--coverage`). Other assemblies in the table below: **2026-09-04 Coverlet** until re-run.
 
 ## Summary
 
 | Area | Relative coverage | Notes |
 |------|-------------------|-------|
-| MCP Core/Catalog/Server/Client + Daemon | **≥80% line** (last snapshot) | Daemon desktop tests are WPF STA. Adapter/live pipe is host-process (out of gate). |
+| MCP Catalog + Daemon `Mcp/` + legacy `Mcp.*.Tests` | **83–84% merged line** (2026-10-03 `--coverage`) | Daemon desktop tests are WPF STA. Adapter live-pipe test fails if a connected host lacks Tasks; headless conformance still runs. |
 | Execution | Tests exist in scoped MSTest.Sdk projects; measure with `--coverage` | Independent of Revit.exe — mock `IHostContextExecutor`. See Current gaps. |
 | Ipc | **Low in merge (~21%)** | No dedicated test project; framing covered via Execution / Testing.Transport. |
 | NUnit / Testing | **Medium–high** | In-host product; in-repo testhosts are MSTest.Sdk (out of process). |
@@ -115,7 +136,7 @@ per run**, not a CI gate.
 | `coverlet.collector` / `coverlet.msbuild` | `--collect` | **No.** VSTest-only. |
 
 ```powershell
-dotnet run --project tests/DevTools.Execution.CSharp.Tests/DevTools.Execution.CSharp.Tests.csproj -c Debug -- --coverage --coverage-output-format cobertura --coverage-settings coverage.xml
+dotnet run --project tests/DevTools.Execution.CSharp.Tests/DevTools.Execution.CSharp.Tests.csproj -c Debug -f net10.0-windows -- --coverage --coverage-output-format cobertura --coverage-settings tests/mstest-coverage.xml
 ```
 
 Sequential merge (one project at a time; shared `--results-directory`):
@@ -123,7 +144,7 @@ Sequential merge (one project at a time; shared `--results-directory`):
 ```powershell
 $out = "$PWD\artifacts\coverage"
 # then for each out-of-host net10 *.Tests.csproj:
-dotnet run --project tests/<proj>/<proj>.csproj -c Debug -- --coverage --results-directory $out --coverage-output-format cobertura --coverage-settings coverage.xml
+dotnet run --project tests/<proj>/<proj>.csproj -c Debug -f net10.0-windows -- --coverage --results-directory $out --coverage-output-format cobertura --coverage-settings tests/mstest-coverage.xml
 ```
 
 HTML: ReportGenerator on `artifacts/coverage/coverage.cobertura*.xml` (gitignored). Check **Current gaps** before claiming a new Total %.
@@ -134,26 +155,33 @@ Include filter is `DevTools.*` (see `coverage.xml`). If MSBuild `MSB3027` on `te
 
 ## MCP
 
-Split by source module. Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, pixi, live `DevToolsMcp_Revit_*`) **Skip** — they must not fail a headless run.
+Production assemblies: **`DevTools.Mcp.Catalog`** (host pipe + store + `DevTools.Mcp.Core.*`
+namespaces under `Core/`) and **`DevTools.Daemon/Mcp/`** (fixed tools, `ProcessSessions`,
+`search_dynamic` / `invoke_dynamic`). Test project names predate the merge.
 
-| Project | Scope |
-|---------|--------|
-| `tests/DevTools.Mcp.Core.Tests` | Contracts, protocol models, list/invocation JSON |
-| `tests/DevTools.Mcp.Catalog.Tests` | Store, parsers, invoker, ALC/isolation (pythonnet only here), built-in registry |
-| `tests/DevTools.Mcp.Adapter.Tests` | Host wire, handler, JSON-RPC, conformance |
-| `tests/DevTools.Mcp.Client.Tests` | Passthrough surface, pipe scanner, SDK stream/named-pipe |
-| `tests/DevTools.Mcp.Server.Tests` | `search_dynamic` / `invoke_dynamic` harness, daemon options |
-| `tests/DevTools.Daemon.Tests` | `ServerHostBuilder` composition, control JSON |
+Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, pixi, live `DevToolsMcp_Revit_*`) **Skip** — they must not fail a headless run.
+
+| Project | Scope (maps to code today) |
+|---------|----------------------------|
+| `tests/DevTools.Mcp.Core.Tests` | `Catalog/Core/` protocol models, `CatalogId`, JSON contracts |
+| `tests/DevTools.Mcp.Catalog.Tests` | Store, parsers, ALC/isolation (pythonnet only here), built-in registry |
+| `tests/DevTools.Mcp.Adapter.Tests` | Host SDK `McpServer` harness, named-pipe conformance |
+| `tests/DevTools.Mcp.Client.Tests` | `McpClientPassthrough`, pipe scanner, SDK stream transport |
+| `tests/DevTools.Mcp.Server.Tests` | Daemon `SearchTool` / `InvokeTool`, MRTR harness, task selection |
+| `tests/DevTools.Execution.Mcp.Tests` | `IMcpSource` backends (`BuiltInSource`, `DotnetSource`, …), built-in tools |
+| `tests/DevTools.Daemon.Tests` | `ServerHostBuilder` composition, control JSON, loopback auth callback. Headless: tests pass a no-op URL opener |
+
+`AuthBrowser` opens the sign-in URL with `Process.Start` and `UseShellExecute = true`. Production login still does that. Tests pass `openUrl: _ => { }` and never start a process. `about:blank` has no registered application, so the real opener shows a modal "Pick an app" dialog and does not return until it is closed.
 
 ### Well covered
 
-- **Protocol & models** — JSON-RPC framing, host handler routing, conformance subset
+- **Protocol & models** — SDK session framing, host `McpServer` routing, conformance subset
 - **Daemon composition** — server builder, fixed tools, `search_dynamic` / `invoke_dynamic` harness; WPF desktop session (STA) for tray/control surfaces
 - **Catalog & encoding** — host catalog merge, list/response encoders, dynamic tool contracts
 - **Built-in registry** — `BuiltInMcpRegistryProvider` name/bindings; `DotnetMcpRegistryProvider` empty/missing paths (sample DLL Skip)
 - **Toolset discovery** — .NET + Python parsers, argument binding, result/MRTR mapping, ALC bridges
 - **SDK integration** — stream transport contracts, in-process named-pipe round-trip (mock host)
-- **Connection tracking** — `McpConnectState` headless via `HostUiHelper.RunOnMainThread` inline when no dispatcher (`DevTools.Execution.Mcp.Tests` / `Services.Tests`)
+- **Connection tracking** — `McpConnectTracker` headless via `HostUiHelper.RunOnMainThread` inline when no dispatcher (`DevTools.Execution.Mcp.Tests` / `Services.Tests`)
 
 ### Partial / fragile
 
@@ -232,7 +260,7 @@ Measure Execution (and other net10 testhosts) with `--coverage`.
   pixi partition, `IPythonPackageStore` DI, pip-list JSON parse; Parser installed-state
   via list JSON; pixi CLI (`--version` / `--help`) after `SetupPixiAsync`
 - **Execution guard** — `ExecutionGuardContext` ambient mode / rollback summary
-- **MCP dispatch** — `McpPrimitiveDispatcher` unsupported mode / success / exception / `InputRequiredException`
+- **MCP dispatch** — `IMcpSource.InvokeToolAsync` / resource read; built-in and dotnet backends (`DevTools.Execution.Mcp.Tests`)
 - **Built-in tools (headless)** — `open_document` via mock `IDocumentBridge`; `execute_csharp_code` empty + compile-fail; `execute_python_code` empty (before pythonnet init, else Skip)
 - **Orchestration load** — `ExecutionOrchestrator.LoadFromPathAsync` no-provider / covered-root skip / watch + `TreeChanged`
 - **C# directives** — `#r nuget` + `#load` graph (`CSharpDirectiveParser`)
@@ -255,7 +283,7 @@ Measure Execution (and other net10 testhosts) with `--coverage`.
 
 | Goal | Command |
 |------|---------|
-| MCP tests | `dotnet run --project tests/DevTools.Mcp.Core.Tests/DevTools.Mcp.Core.Tests.csproj` (also Catalog, Adapter, Client, Server) |
+| MCP tests | `dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj` (also Core, Server, Client, Adapter, `DevTools.Execution.Mcp.Tests`) |
 | .NET tests | `dotnet run --project tests/<project>/<project>.csproj` |
 | Python parser | `scripts/test-python.ps1` |
 | Live MCP | `docs/agents/mcp-integration-test.md` |

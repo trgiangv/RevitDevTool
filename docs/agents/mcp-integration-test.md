@@ -197,20 +197,20 @@ resolve becomes ambiguous.
 
 ```
 1. launch_host(hostApp="Revit", filePath="C:\Program Files\Autodesk\Revit 2025\Samples\Snowdon Towers Sample Architectural.rvt")
-2. search_dynamic(query="execute") → note capabilityId for execute_csharp_code / execute_python_code
+2. search_dynamic(query="execute") → note id for execute_csharp_code / execute_python_code
 3. Execute C# — create wall:
-   invoke_dynamic(capabilityId=<id>, arguments={code: <IExternalCommand creating a wall>})
+   invoke_dynamic(id=<id>, arguments={code: <IExternalCommand creating a wall>})
    Expected: "Wall created" or similar success
 4. Execute C# — intentional error (missing using):
-   invoke_dynamic(capabilityId=<csharp_id>, arguments={code: <code without System.Collections.Generic>})
+   invoke_dynamic(id=<csharp_id>, arguments={code: <code without System.Collections.Generic>})
    Expected: [COMPILATION ERROR] with CS0246
 5. Execute C# — fix and retry
    Expected: Success
 6. Execute Python — query elements:
-   invoke_dynamic(capabilityId=<python_id>, arguments={code: <query all walls, print count>})
+   invoke_dynamic(id=<python_id>, arguments={code: <query all walls, print count>})
    Expected: Element count printed
 7. Execute Python — data analysis with PEP 723:
-   invoke_dynamic(capabilityId=<python_id>, arguments={code: <script with # /// script requiring polars>})
+   invoke_dynamic(id=<python_id>, arguments={code: <script with # /// script requiring polars>})
    Expected: Package auto-installs, results printed
 ```
 
@@ -222,20 +222,20 @@ resolve becomes ambiguous.
 
 ```
 1. Create 3 transactions in Revit (wall, floor, column)
-2. invoke_dynamic(capabilityId=<navigate_id>, arguments={direction:"back", steps:2})
+2. invoke_dynamic(id=<navigate_id>, arguments={direction:"back", steps:2})
    Expected: {navigated: 2, operations: [...], back_remaining: 1, forward_available: 2}
-3. invoke_dynamic(capabilityId=<navigate_id>, arguments={direction:"forward", steps:1})
+3. invoke_dynamic(id=<navigate_id>, arguments={direction:"forward", steps:1})
    Expected: {navigated: 1, forward_available: 1}
-4. invoke_dynamic(capabilityId=<navigate_id>, arguments={direction:"back", steps:99})
+4. invoke_dynamic(id=<navigate_id>, arguments={direction:"back", steps:99})
    Expected: Bounded to available stack, undo all
-5. invoke_dynamic(capabilityId=<navigate_id>, arguments={direction:"forward", steps:99}) on empty forward stack
+5. invoke_dynamic(id=<navigate_id>, arguments={direction:"forward", steps:99}) on empty forward stack
    Expected: "Nothing to redo. Forward stack is empty."
 ```
 
-Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered by that host's `hostInstanceId`):
+Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered by that host's `processId`):
 ```
 6. Create entities in Civil 3D (line, circle, polyline)
-7. invoke_dynamic(capabilityId=<civil_navigate_id>, arguments={direction:"back", steps:1})
+7. invoke_dynamic(id=<civil_navigate_id>, arguments={direction:"back", steps:1})
    Expected: {navigated: 1, operations: ["Group of commands"], ...}
 ```
 
@@ -246,10 +246,10 @@ Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered b
 **Goal**: Verify `revit://view/screenshot` returns usable image for AI inspection.
 
 ```
-1. search_dynamic(query="screenshot") → capabilityId for revit://view/screenshot
-2. invoke_dynamic(capabilityId=<screenshot_id>) → expect PNG blob
+1. search_dynamic(query="screenshot") → id for revit://view/screenshot
+2. invoke_dynamic(id=<screenshot_id>) → expect PNG blob
 3. Execute code that changes geometry (add wall)
-4. invoke_dynamic(capabilityId=<screenshot_id>) → expect different image
+4. invoke_dynamic(id=<screenshot_id>) → expect different image
 5. Compare: AI confirms visual change occurred
 ```
 
@@ -260,15 +260,15 @@ Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered b
 **Goal**: Full workflow using resources → code → verify → undo cycle.
 
 ```
-1. search_dynamic → obtain capabilityIds for cheatsheet / model/context / version / execute / screenshot / warnings / navigate
-2. invoke_dynamic(capabilityId=<cheatsheet_id>) (once per session)
-3. invoke_dynamic(capabilityId=<context_id>) → get levels, categories, units
-4. invoke_dynamic(capabilityId=<version_id>) → confirm API version
+1. search_dynamic → obtain ids for cheatsheet / model/context / version / execute / screenshot / warnings / navigate
+2. invoke_dynamic(id=<cheatsheet_id>) (once per session)
+3. invoke_dynamic(id=<context_id>) → get levels, categories, units
+4. invoke_dynamic(id=<version_id>) → confirm API version
 5. Plan: create 3-story building structure
-6. Execute C# code (level by level) via invoke_dynamic(capabilityId=<csharp_id>, arguments={code:...})
-7. invoke_dynamic(capabilityId=<screenshot_id>) → verify
-8. If wrong: invoke_dynamic(capabilityId=<navigate_id>, arguments={direction:"back"}) → retry
-9. invoke_dynamic(capabilityId=<warnings_id>) → check for constraint violations
+6. Execute C# code (level by level) via invoke_dynamic(id=<csharp_id>, arguments={code:...})
+7. invoke_dynamic(id=<screenshot_id>) → verify
+8. If wrong: invoke_dynamic(id=<navigate_id>, arguments={direction:"back"}) → retry
+9. invoke_dynamic(id=<warnings_id>) → check for constraint violations
 ```
 
 **Token estimate**: 
@@ -305,17 +305,17 @@ Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered b
 **Prerequisite**: McpRegistryConfig.json configured + host restarted.
 
 ```
-1. Restart host after McpRegistryConfig.json change → HostBroker refreshes catalog automatically
-2. search_dynamic(query="revit_") → expect 32+ tools (hasMore) from RevitMcpToolSet; note capabilityIds
-3. invoke_dynamic(capabilityId=<find_id>, arguments={filters:{filters:[{type:"category",names:["Walls"]}]}, maxResults:5}) → element IDs
-4. invoke_dynamic(capabilityId=<status_or_info_id>, ...) → parameters / health as applicable
-5. invoke_dynamic(capabilityId=<create_or_place_id>, ...) → new element when testing mutating tools
-6. invoke_dynamic(capabilityId=<modify_id>, ...) → update when testing mutating tools
-7. invoke_dynamic(capabilityId=<delete_id>, arguments={elementIds:[...], dryRun:true}) → preview delete
-8. invoke_dynamic(capabilityId=<export_id>, ...) → file output when testing export
+1. Restart host after McpRegistryConfig.json change → host reloads catalog (`McpPipeServer` / store); Daemon `ProcessSessions` picks up `list_changed` on refresh
+2. search_dynamic(query="revit_") → expect 32+ tools (hasMore) from RevitMcpToolSet; note ids
+3. invoke_dynamic(id=<find_id>, arguments={filters:{filters:[{type:"category",names:["Walls"]}]}, maxResults:5}) → element IDs
+4. invoke_dynamic(id=<status_or_info_id>, ...) → parameters / health as applicable
+5. invoke_dynamic(id=<create_or_place_id>, ...) → new element when testing mutating tools
+6. invoke_dynamic(id=<modify_id>, ...) → update when testing mutating tools
+7. invoke_dynamic(id=<delete_id>, arguments={elementIds:[...], dryRun:true}) → preview delete
+8. invoke_dynamic(id=<export_id>, ...) → file output when testing export
 ```
 
-**Wire note:** After the platform-split contract, always `search_dynamic` → `capabilityId` → `invoke_dynamic`. Do not pass retired `kind`/`target`/`hostInstanceId` invoke fields.
+**Wire note:** After the platform-split contract, always `search_dynamic` → `id` → `invoke_dynamic`. Do not pass retired `kind`/`target`/`hostInstanceId` invoke fields.
 
 ### Scenario 7: Multi-Host Simultaneous
 
@@ -325,10 +325,10 @@ Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered b
 1. launch_host(hostApp="Revit", filePath=<sample>)
 2. launch_host(hostApp="Civil3D", versionNumber="2026")
 3. list_host_instances → confirm both connected (distinct processId / hostApp)
-4. search_dynamic(query="execute") → see registrations with hostInstanceId per host; pick capabilityIds per host
-5. Execute on Revit: invoke_dynamic(capabilityId=<revit_csharp_id>, arguments={...})
-6. Execute on Civil3D: invoke_dynamic(capabilityId=<civil_python_or_csharp_id>, arguments={...})
-7. navigate_history on each host independently via that host's capabilityId
+4. search_dynamic(query="execute") → hits include `processId` per host; pick each host's tool `id`
+5. Execute on Revit: invoke_dynamic(id=<revit_csharp_id>, arguments={...})
+6. Execute on Civil3D: invoke_dynamic(id=<civil_python_or_csharp_id>, arguments={...})
+7. navigate_history on each host independently via that host's id
 ```
 
 ### Scenario 8: NuGet + PEP 723 Package Install
@@ -358,24 +358,24 @@ Expected: Auto-installs polars, executes
 
 ```
 1. search_dynamic(query="element", kinds=["resource_template"])
-   Expected: hit for revit://element/{elementId} with capabilityId and argsHint (elementId)
-2. invoke_dynamic(capabilityId=<element_template_id>, arguments={elementId: <known_wall_id>})
+   Expected: hit for revit://element/{elementId} with id and argsHint (elementId)
+2. invoke_dynamic(id=<element_template_id>, arguments={elementId: <known_wall_id>})
    Expected: application/json with id, category, level, boundingBox
 3. search_dynamic(query="schedule", kinds=["resource_template"])
    Expected: hit for revit://schedule/{scheduleId}/preview
-4. invoke_dynamic(capabilityId=<schedule_template_id>, arguments={scheduleId: <known_schedule_id>})
+4. invoke_dynamic(id=<schedule_template_id>, arguments={scheduleId: <known_schedule_id>})
    Expected: text/csv with header row + preview rows
 5. Batch read (fixed + template):
-   search_dynamic → note capabilityIds for revit://toolset/capabilities, revit://model/selection, element template
+   search_dynamic → note ids for revit://toolset/capabilities, revit://model/selection, element template
    invoke_dynamic(reads=[
-     { capabilityId: <capabilities_id> },
-     { capabilityId: <selection_id> },
-     { capabilityId: <element_template_id>, arguments: { elementId: <known_id> } }
+     { id: <capabilities_id> },
+     { id: <selection_id> },
+     { id: <element_template_id>, arguments: { elementId: <known_id> } }
    ])
    Expected: three results in one response; no mutating tools in reads[]
 ```
 
-**Wire note:** Template arguments use the parameter names from the template (`elementId`, `scheduleId`). Stale `capabilityId` after catalog refresh returns `stale_capability` — re-run `search_dynamic`.
+**Wire note:** Template arguments use the parameter names from the template (`elementId`, `scheduleId`). Stale `id` after catalog refresh returns `stale_capability` — re-run `search_dynamic`.
 
 ### Scenario 10: Bulk delete warning (dryRun)
 
@@ -387,9 +387,9 @@ Expected: Auto-installs polars, executes
 
 ```
 1. search_dynamic(query="delete_elements")
-2. invoke_dynamic(capabilityId=<delete_id>, arguments={ elementIds: [<51+ ids>], dryRun: false })
+2. invoke_dynamic(id=<delete_id>, arguments={ elementIds: [<51+ ids>], dryRun: false })
    Expected: CallToolResult with structured warning, deleted_count=0, short text summary (not empty)
-3. invoke_dynamic(capabilityId=<delete_id>, arguments={ elementIds: [<ids>], dryRun: true })
+3. invoke_dynamic(id=<delete_id>, arguments={ elementIds: [<ids>], dryRun: true })
    Expected: structured preview (dryRunResults / count), no mutation
 ```
 
@@ -423,8 +423,8 @@ Daemon `invoke_dynamic` pass-through only — no auto-retry on daemon→host hop
 
 ```
 1. search_dynamic(query="test_mrtr_confirm")
-   Expected: capabilityId for tool name test_mrtr_confirm
-2. invoke_dynamic(capabilityId=<id>)
+   Expected: id for tool name test_mrtr_confirm
+2. invoke_dynamic(id=<id>)
    Expected: input_required (elicitation confirm) or soft text if client lacks MRTR
 3. Client fulfills elicitation; retry invoke_dynamic with inputResponses + echoed requestState
    Expected: text "confirmed"
@@ -490,7 +490,7 @@ After host deploy (`scripts/build-host.ps1 -Year 2025`), open Snowdon Towers and
 **3 sequential** resource reads (no parallel calls):
 
 ```
-invoke_dynamic(capabilityId=<context_id>)
+invoke_dynamic(id=<context_id>)
 ```
 
 Record `durationMs` from daemon or host `resources/read` log lines:
@@ -504,7 +504,7 @@ Verify element counts match pre-optimization output for the same model.
 
 ### Agent sequencing
 
-- Do **not** parallelize mutating `invoke_dynamic` tool calls on the same `hostInstanceId`
+- Do **not** parallelize mutating `invoke_dynamic` tool calls on the same host (`processId` / same catalog `id` family)
   (e.g. create geometry + `navigate_history` concurrently).
 
 ### What to Report
@@ -560,6 +560,6 @@ Recommended sequence for a full integration pass:
 - **Large models (>50MB) take 30-60s to open** — `launch_host` timeout accounts for this
 - **AutoCAD undo is async** — `navigate_history` on AutoCAD queues commands, stack counts are estimates
 - **Revit undo is synchronous** — exact stack state returned immediately
-- **`hostInstanceId` is the PID** — use `list_host_instances` or `search_dynamic` hits to discover; invoke with the hit's `capabilityId`
-- **Cursor tool schema cache** — after daemon publish/reload, agent-side `GetMcpTools` may still show retired `kind`/`target`/`includeSchema` fields while live `tools/list` is correct. Trust runtime/`tools/list` (`capabilityId`, `detail`); force a full MCP reconnect if schemas stay stale
-- **Dynamic contract** — `docs/product/mcp.md` is authority: `search_dynamic` → `capabilityId` → `invoke_dynamic` (no `kind`/`target` invoke fields)
+- **`processId` is the host PID** — use `list_host_instances` or `search_dynamic` (`processId` filter); invoke with each hit's opaque **`id`**
+- **Cursor tool schema cache** — after daemon publish/reload, agent-side `GetMcpTools` may still show retired `kind`/`target`/`includeSchema` fields while live `tools/list` is correct. Trust runtime/`tools/list` (`id`, `detail`); force a full MCP reconnect if schemas stay stale
+- **Dynamic contract** — `docs/product/mcp.md` is authority: `search_dynamic` → `id` → `invoke_dynamic` (no `kind`/`target` invoke fields)

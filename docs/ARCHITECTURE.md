@@ -43,7 +43,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 
 ## Source Layout
 
-- Shared: `source/DevTools.*` (Hosting, Hosting.Revit, Hosting.Acad, Execution, Execution.Abstractions, Ipc, Mcp.Core/Catalog/Adapter/Client/Server, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon, Testing.Abstractions/Transport/Host, NUnit.MTP/Runtime, TUnit.MTP/Runtime, TestAdapter, TestRunner)
+- Shared: `source/DevTools.*` (Hosting, Hosting.Revit, Hosting.Acad, Execution, Execution.Abstractions, Ipc, Mcp.Catalog + Mcp.Revit/Acad, FileMetadata.Core/Revit/Acad, Logging, Presentation, Settings, Telemetry, UI, Utilities, Daemon, Testing.Abstractions/Transport/Host, NUnit.MTP/Runtime, TUnit.MTP/Runtime, TestAdapter, TestRunner)
 - Revit host: `source/RevitDevTool/`; Revit-only helpers: `source/RevitDevTool.Core/`; in-host MCP tools: `source/DevTools.Mcp.Revit/`
 - AutoCAD host: `source/AcadDevTool/`; in-host MCP tools: `source/DevTools.Mcp.Acad/`
 - Samples: `samples/`; build: `build/`; scripts: `scripts/`

@@ -18,9 +18,9 @@ flowchart LR
 
 ### Key Points
 
-- Discover host targets with `search_dynamic` (includes `machineId` + `hostInstanceId`)
-- Read resources via `invoke_dynamic` with `kind=resource` (or `resource_template`)
-- Execute with `invoke_dynamic` `kind=tool` `target=execute_csharp_code`
+- Discover host targets with `search_dynamic` (each hit includes opaque `id` and `processId`)
+- Read resources via `invoke_dynamic` with the resource/template `id` from search
+- Execute tools via `invoke_dynamic` with the tool `id` and `arguments`
 - Error responses are categorized: `[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`
 
 ---
@@ -51,7 +51,7 @@ flowchart LR
 ### Key Points
 
 - `navigate_history`: `direction="back"|"forward"`, `steps=N`
-- Always pass `hostInstanceId` when multiple hosts are connected
+- Use `search_dynamic(processId=…)` when multiple host processes are connected
 
 ---
 
@@ -80,7 +80,7 @@ flowchart TD
 1. **search_dynamic is local** — repeated searches do not open host pipes
 2. **Read cheatsheet once per session** — cache it, don't re-read every call
 3. **Read model context before each operation** — live and cheap
-4. **Do not expect external tool list changes** — `ConnectedHostCatalog` refreshes internally only
+4. **Do not expect external tool list changes** — `ProcessCatalogs` refreshes internally only
 5. **Structured errors save retries** — read the error category before regenerating code
 
 ---
@@ -91,8 +91,7 @@ flowchart TD
 {
   "name": "invoke_dynamic",
   "arguments": {
-    "capabilityId": "<from search_dynamic>",
-    "hostInstanceId": 12345,
+    "id": "<from search_dynamic>",
     "arguments": { "code": "..." }
   }
 }

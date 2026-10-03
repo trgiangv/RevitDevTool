@@ -2,9 +2,10 @@
 
 ## Overview
 
-MCP tools and resources execute inside the host process behind a **spec-first** named-pipe
-server (`HostMcpPipeServer` + `McpHandler`). The handler routes `tools/call` and
-`resources/read` through `IMcpPrimitiveDispatcher` on the host thread.
+MCP tools and resources execute inside the host process behind an SDK **`McpServer`**
+on `DevToolsMcp_*`. Each pipe connection gets `McpServer.Create(StreamServerTransport, …)`
+with tools/resources populated from `McpCatalogStore` and invoked via **`IMcpSource`**
+backends on the host thread.
 
 ---
 
@@ -12,13 +13,13 @@ server (`HostMcpPipeServer` + `McpHandler`). The handler routes `tools/call` and
 
 | File | Role |
 |------|------|
-| `source/DevTools.Mcp.Adapter/External/HostMcpPipeServer.cs` | Newline-delimited JSON-RPC on `DevToolsMcp_*` |
-| `source/DevTools.Mcp.Adapter/Host/McpHandler.cs` | Spec wire handler (`2026-07-28`, `server/discover`) |
-| `source/DevTools.Mcp.Core/Protocol/` | Wire DTOs, encoders, `McpSpecKeys` |
-| `source/DevTools.Mcp.Catalog/McpCatalogStore.cs` | Tool/resource registry |
-| `source/DevTools.Mcp.Catalog/Discovery/ToolsetInvoker.cs` | .NET toolset invoke + `ToolsetResultSerializer` |
-| `source/DevTools.Execution/External/Mcp/Dispatchers/McpPrimitiveDispatcher.cs` | Dispatch implementation |
-| `source/DevTools.Execution/External/Mcp/BuiltIn/CSharpCodeTool.cs` | Built-in: `execute_csharp_code` |
+| `source/DevTools.Mcp.Catalog/Transport/McpPipeServer.cs` | Accept loop; per-connection `PipeEndpoint` + SDK server |
+| `source/DevTools.Mcp.Catalog/Hosting/McpServerCollections.cs` | Fill SDK tool/resource collections from catalog |
+| `source/DevTools.Mcp.Catalog/Core/Protocol/McpSpecKeys.cs` | Wire names (`Tool.Invoke` = `invoke_dynamic`, etc.) |
+| `source/DevTools.Mcp.Catalog/McpCatalogStore.cs` | `RegisteredTool` / `RegisteredResource` / `RegistryCatalog` |
+| `source/DevTools.Mcp.Catalog/Discovery/ResultBridge.cs` | toolset object → host `CallToolResult` |
+| `source/DevTools.Execution/External/Mcp/Backends/*.cs` | `BuiltInSource`, `DotnetSource`, `PythonSource` |
+| `source/DevTools.Execution/External/Mcp/Hosting/McpCallFilter.cs` | Host `InputRequiredException` → wire shape |
 | `source/DevTools.Execution/External/DevToolsPipeServer.cs` | Pytest/control pipe only |
 
 ---
@@ -27,34 +28,30 @@ server (`HostMcpPipeServer` + `McpHandler`). The handler routes `tools/call` and
 
 ```mermaid
 sequenceDiagram
-    participant Daemon as DevTools.Daemon HostBroker
+    participant Daemon as ProcessSessions
     participant Pipe as DevToolsMcp_* pipe
-    participant Server as HostMcpPipeServer
-    participant Handler as McpHandler
-    participant Dispatcher as McpPrimitiveDispatcher
+    participant Server as McpPipeServer / McpServer
+    participant Source as IMcpSource
     participant Host as IHostContextExecutor
 
     Daemon->>Pipe: tools/call {name, arguments, _meta}
-    Pipe->>Server: McpPipeSession
-    Server->>Handler: HandleAsync
-    Handler->>Dispatcher: DispatchToolAsync
-    Dispatcher->>Host: ExecuteAsync
-    Host-->>Dispatcher: McpInvocationResponse
-    Dispatcher-->>Handler: Result
-    Handler-->>Daemon: CallToolResult (wire JSON)
+    Pipe->>Server: SDK session handler
+    Server->>Source: SdkCollectionTool.InvokeAsync
+    Source->>Host: ExecuteAsync (main thread)
+    Host-->>Source: CallToolResult
+    Source-->>Daemon: CallToolResult (wire JSON)
 ```
 
 ---
 
 ## Backend Routing
 
-`McpPrimitiveDispatcher.DispatchToolAsync` routes on `McpRegisteredTool.Binding.SourceKind`:
+Routing uses `RegisteredTool.Binding` (`PrimitiveBinding`) and `SourceKind`:
 
 | Backend | Invoke mechanism |
 |---------|------------------|
-| Built-in C# (`IBuiltInMcpTool`) | Direct invoke on host assembly |
-| .NET toolset (ALC) | `ToolsetInvoker` + JSON bridge (`ToolsetResultSerializer`) |
-| Python toolset | `PythonExecutor.Execute(initializer, …)` + `ToolInvoke.py` |
-| Ad-hoc C# (`ExecutionMode.CSharp`) | Rare catalog path |
+| Built-in C# (`IBuiltInMcpTool`) | `BuiltInSource` |
+| .NET toolset (ALC) | `DotnetSource` + `ResultBridge.ToHostCallToolResult` |
+| Python toolset | `PythonSource` + `ToolInvoke.py` (SDK in-process client) |
 
 See [Platform boundaries](../MCP/platform-boundaries.md) for MRTR and ALC detail.

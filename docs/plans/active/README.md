@@ -58,8 +58,11 @@ host-space zoom) + later Tools / Element Finder ownership:
 - Host-wire 2.2: [2026-08-31](../completed/2026-08-31-mcp-sdk-2-2-host-wire.md).
 - Spec engine: [2026-08-02](../completed/2026-08-02-host-mcp-spec-engine.md).
 - Layer identity S5: [2026-09-03](../completed/2026-09-03-mcp-layer-identity-s5.md)
-  — landed. **Open follow-on (no plan yet):** S1 vs S2 packaging gate; SDK-free
-  host contracts.
+  — landed. S1 vs S2 packaging is not a blocker for the flow plan. The JSON
+  bridge stays ([0039](../../decisions/0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) A4).
+- Flow simplification: [completed](../completed/2026-10-03-mcp-flow-simplification.md)
+  ([0039](../../decisions/0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)).
+  B2, passthrough removal, and a durable task store stay open.
 - MRTR: [2026-08-02](../completed/2026-08-02-mrtr-implementation.md) — G1
   landed; elicitation/progress not product (0027).
 

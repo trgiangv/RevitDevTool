@@ -1,14 +1,23 @@
 # 0027 MCP Product Surface — Daemon Envelope, Not Full Protocol
 
 Date: 2026-08-31
-Amended: 2026-09-04
+Amended: 2026-09-04; **2026-10-03** (host pipe — see below)
 
 ## Status
 
 Accepted. Does not change [0010](0010-daemon-sole-mcp-host.md).
 Partially supersedes [0012](0012-host-mcp-spec-engine.md) (SDK types and
-ILRepack allowed; host pipe still has no `McpServer` session).
+ILRepack allowed).
 Pin: **ModelContextProtocol 2.2.0** (`2026-07-28`).
+
+### As implemented (2026-10-03)
+
+[0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) decision 3 landed: the host
+named pipe runs SDK **`McpServer`** per connection (`McpPipeServer` in Catalog).
+External clients still never initialize that pipe — only `ProcessSessions` does.
+Product locator wire field is **`id`** (`CatalogId`, `dci2.*`), not `capabilityId`.
+Search filter field is **`processId`**. Architecture:
+[`docs/architecture/MCP/README.md`](../architecture/MCP/README.md).
 
 Product contract: [`docs/product/mcp.md`](../product/mcp.md).
 Layer map: [`docs/architecture/MCP/platform-boundaries.md`](../architecture/MCP/platform-boundaries.md).
@@ -20,8 +29,7 @@ The product client (Cursor) talks to **Daemon**. `tools/list` is a small
 **envelope**: infrastructure (`list_host_instances`, `launch_host`,
 `read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.
 Host CAD capabilities never appear there. The agent loop is search → opaque
-`capabilityId` → invoke → text / image / `dryRun` / execute error tags, then
-retry.
+`id` → invoke → text / image / `dryRun` / execute error tags, then retry.
 
 That loop is why most of the MCP spec is **not** product work. Gaps are
 **use-case limits**, not unfinished adoption.
@@ -34,7 +42,7 @@ hop — not a client-visible flow.
 ## Decision
 
 1. **The shipped MCP product is the Daemon envelope.** Clients never call
-   host tool names. Host catalog stays behind `capabilityId`. One overlapping
+   host tool names. Host catalog stays behind opaque `id`. One overlapping
    dynamic toolset at a time.
 
 2. **Stabilize that hop’s schema and errors**, not the rest of the protocol.
@@ -45,12 +53,13 @@ hop — not a client-visible flow.
    Stale locators retry by `research_then_reinvoke`. Destructive tools: warning
    + `dryRun`, not elicitation.
 
-3. **The host pipe is not an MCP session.** `McpHandler` speaks spec JSON-RPC
-   (`server/discover`, reject `initialize`). SDK **types** are allowed on the
-   host because the hop serializes SDK result shapes — not because Revit runs
-   `McpServer`. `RequestFactory` + `ToolExecutionTransport` only manufacture
-   `RequestContext<T>` in-process (`SendMessageAsync` is a no-op). ILRepack
-   of `ModelContextProtocol*` is allowed ([0019](0019-ilrepack-and-polyfill-isolated-alc.md)).
+3. **The host pipe is not a client-visible MCP session.** External agents still
+   use only the Daemon envelope. Behind `invoke_dynamic`, the hop is a full SDK
+   **`McpServer`** on `StreamServerTransport` (one server per pipe connection).
+   ILRepack of `ModelContextProtocol*` is allowed
+   ([0019](0019-ilrepack-and-polyfill-isolated-alc.md)). *Historical:* rule 3
+   previously rejected in-host `McpServer`; that choice was reversed in
+   [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) decision 3.
 
 4. **Out of product scope** (do not schedule as “SDK gaps”):
    - `notifications/progress` on `invoke_dynamic` / host / toolsets
@@ -70,8 +79,10 @@ hop — not a client-visible flow.
 
 ## Alternatives Considered
 
-1. **Full MCP on the host pipe** (`McpServer` + `initialize`). Rejected —
-   client never talks to that pipe; catalog and main-thread marshalling stay.
+1. **Full MCP on the host pipe** (`McpServer` + `initialize`). Rejected for
+   *client* exposure — agents never talk to that pipe. **Amended 2026-10-03:**
+   the host still runs `McpServer` for the daemon client leg; main-thread
+   marshalling stays in tool handlers.
 2. **Finish the spec** (progress, elicitation, subscribe) as remaining adoption.
    Rejected — the agent loop does not use them.
 3. **Strip the SDK from the host.** Rejected — the hop already serializes SDK
@@ -82,7 +93,7 @@ hop — not a client-visible flow.
 ## Consequences
 
 Agents inherit the envelope loop and the refuse list. They do not re-propose
-host `McpServer`, envelope `UseStructuredContent`, or spec-completeness
+client-visible host MCP, envelope `UseStructuredContent`, or spec-completeness
 workstreams.
 
 Tradeoff: spec-capable connectors that expect elicitation or host progress

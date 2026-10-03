@@ -1,12 +1,14 @@
 # MCP C# SDK gap matrix
 
 Living comparison between **ModelContextProtocol 2.2.0** (`2026-07-28` protocol family) and
-the DevTools stack as of 2026-09-04.
+the DevTools stack as of **2026-10-03**.
 
 **Packages:** `Directory.Packages.props` → `ModelContextProtocol` + `ModelContextProtocol.Extensions.Tasks` **2.2.0**.
 
-**Host wire policy:** [0027](../../decisions/0027-mcp-product-surface.md) — SDK DTOs/constants
-allowed on host; host named pipe does **not** run `McpServer` / `McpSession`.
+**Host wire policy:** [0027](../../decisions/0027-mcp-product-surface.md) (amended) — external clients
+use only the Daemon envelope; the host MCP pipe runs SDK **`McpServer`** per connection
+([0039](../../decisions/0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) **As implemented**).
+[0012](../../decisions/0012-host-mcp-spec-engine.md) spec-handler narrative is historical.
 
 **Product limits:** [0027](../../decisions/0027-mcp-product-surface.md) —
 stabilize host↔daemon schema and errors; MRTR is not a product workflow.
@@ -34,14 +36,14 @@ are frozen in [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-0
 
 | SDK / spec capability | DevTools | Notes |
 |-----------------------|----------|-------|
-| Protocol `2026-07-28` negotiation | ✅ | Daemon SDK server; host spec wire (`server/discover`) |
+| Protocol `2026-07-28` negotiation | ✅ | Daemon SDK server; host SDK `McpServer` session on `DevToolsMcp_*` |
 | `tools/list` + `listChanged` | ✅ Host; daemon `ListChanged=false` | By design |
 | `resources/list` + templates | ✅ | Host catalog; daemon via `search_dynamic` |
 | `resources/subscribe` | ⏸ | `Subscribe=false` on host — noisy on live BIM |
 | `prompts/list` / `prompts/get` | ✅ Daemon-only | Host prompts not registered |
-| `completions` | ⏸ | Low ROI for opaque `capabilityId` flow |
-| Progress notifications | ⚠️ Daemon fixed tools ✅; host pipe / `invoke_dynamic` / ALC / Python / built-ins ❌ | Daemon SDK `McpServer` can emit `notifications/progress`. Host path does not: `InvokeDynamicTool` omits `Meta` (including `progressToken`); ALC `ToolsetProgressReporter` calls `McpServer.NotifyProgressAsync` on a `RequestFactory` server whose `ToolExecutionTransport` swallows outbound messages. [0027](../../decisions/0027-mcp-product-surface.md) non-goal. |
-| MCP Tasks extension | ✅ | `WithTasks`; `Optional` on export + execute tools; client `_meta` opt-in |
+| `completions` | ⏸ | Low ROI for opaque `id` search→invoke flow |
+| Progress notifications | ⚠️ Daemon fixed tools ✅; host pipe / `invoke_dynamic` / ALC / Python / built-ins ❌ | Daemon SDK `McpServer` can emit `notifications/progress`. Host path does not surface progress to external clients: `InvokeTool` pass-through omits forwarding `Meta` (including `progressToken`); ALC `ToolsetProgressReporter` may call `NotifyProgressAsync` on a request-factory server whose transport swallows outbound messages. [0027](../../decisions/0027-mcp-product-surface.md) non-goal. |
+| MCP Tasks extension | ✅ | `WithTasks`. **Synchronous** or **Optional** only. **Required** unused until clients advertise `io.modelcontextprotocol/tasks` |
 
 ---
 
@@ -64,7 +66,7 @@ are frozen in [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-0
 | Field | Daemon fixed tools | Host built-in | Host .NET toolset (ALC) | `invoke_dynamic` |
 |-------|-------------------|---------------|-------------------------|------------------|
 | `Content` | ✅ compact text mirror | ✅ SDK path | ✅ via `ReturnMapper` | ✅ pass-through |
-| `StructuredContent` | ✅ manual on daemon envelope tools | ✅ wire DTO | ✅ via `ToolsetResultSerializer` | ✅ pass-through |
+| `StructuredContent` | ✅ manual on daemon envelope tools | ✅ SDK path | ✅ via `ResultBridge` | ✅ pass-through |
 | `OutputSchema` on tool def | ⏸ daemon envelope tools (Cursor workaround) | ✅ wire list | ✅ parser metadata | via `detail=schema` search |
 | `UseStructuredContent` | ⏸ daemon envelope tools | — | ✅ toolsets | — |
 | `IsError` | ✅ | ✅ | ✅ | ✅ harness |
@@ -81,7 +83,7 @@ See [`platform-boundaries.md`](platform-boundaries.md).
 |-------|--------|-------|
 | SDK types on wire | ✅ | `InputRequiredResult`, `InputRequiredException` |
 | Daemon → host single round-trip | ✅ | `CallToolPassthroughAsync` (≈ python `allow_input_required`) |
-| Daemon → external client forward | ✅ | `InvokeDynamicTool` + `InvokeDynamicMrtrState` |
+| Daemon → external client forward | ✅ | `InvokeTool` + `InvokeState` (`DevTools.Daemon/Mcp/Tools/`) |
 | Mock tests (daemon hop) | ✅ | `InvokeDynamicSdkHarnessTests` T-D-* |
 | ALC create-time `IsAugmentedWith` bind | ✅ | Local mirror of SDK four augmented types |
 | ALC low-level throw/retry via `Params` | ✅ | T-ALC-10..15 unit/harness |
@@ -104,7 +106,7 @@ Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/complete
 | Resource templates | ✅ | `revit://element/{elementId}`, schedule preview |
 | Template read via `invoke_dynamic` | ✅ | `arguments` + batch `reads[]` |
 | `UriTemplate` from catalog metadata | ✅ | `DotnetMcpCatalogCreateOptions` |
-| Resource `listChanged` | ✅ | Host broker refresh |
+| Resource `listChanged` | ✅ | `ProcessSessions` catalog refresh on host `list_changed` |
 
 ---
 
@@ -112,11 +114,10 @@ Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/complete
 
 | Pattern | Why |
 |---------|-----|
-| Opaque `capabilityId` | Daemon-local locator; external surface stays two tools |
-| `CallToolPassthroughAsync` | Avoid client auto-MRTR on daemon→host hop |
-| `ToolsetInvoker` + `ToolsetResultSerializer` | ALC toolset invoke + JSON bridge to host wire DTOs |
-| `ToolsetInvocationServices` | Mirror SDK internal request DI without `InternalsVisibleTo` |
-| `InvokeDynamicMrtrState` | Embed `capabilityId` in daemon `requestState` (protocol field, not `__mcp*`) |
+| Opaque `id` (`CatalogId` / `dci2.*`) | Daemon-local locator; external surface stays two dynamic tools |
+| `CallToolPassthroughAsync` | Avoid client auto-MRTR on daemon→host hop (`McpClientPassthrough`) |
+| `ResultBridge` | ALC toolset object → host `CallToolResult` |
+| `InvokeState` | Embed locator `id` in daemon `requestState` on MRTR plumbing hops |
 | Toolset MCP `ExcludeAssets=runtime` | Toolset-only | Compile against MCP; no MCP DLLs in toolset output; `McpToolsetContext` + `AssemblyResolve` maps to host MCP. |
 
 ---
@@ -165,7 +166,7 @@ These are **product choices**, not incomplete adoption:
 | [`tools.md`](tools.md) | Daemon/host tool inventory |
 | [`product/mcp.md`](../../product/mcp.md) | External behavior contract |
 | [0027 MCP product surface](../../decisions/0027-mcp-product-surface.md) | Daemon envelope; not full protocol |
-| [0012 Host MCP spec engine](../../decisions/0012-host-mcp-spec-engine.md) | Host pipe; partially superseded by 0027 |
+| [0012 Host MCP spec engine](../../decisions/0012-host-mcp-spec-engine.md) | Historical spec-handler ADR; host wire superseded by 0027 + SDK `McpServer` |
 | [0031 Daemon JSON source-gen](../../decisions/0031-daemon-json-source-gen.md) | Source-gen JSON on Daemon wires |
 | [`2026-08-02-mcp-advanced-features-adoption.md`](../../plans/completed/2026-08-02-mcp-advanced-features-adoption.md) | Feature adoption session |
 | [`2026-08-02-mrtr-implementation.md`](../../plans/completed/2026-08-02-mrtr-implementation.md) | Historical G1 done; elicitation/progress closed by 0027 |

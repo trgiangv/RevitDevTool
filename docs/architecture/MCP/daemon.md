@@ -34,7 +34,7 @@ Stdio and desktop processes are fully independent — no IPC between them. Both 
 | Main window + views + tray | `source/DevTools.Daemon/Views/` |
 | Icon / theme / UI dispatch | `source/DevTools.Daemon/Desktop/` |
 | App entry point | `source/DevTools.Daemon/Program.cs` |
-| External MCP surface | `source/DevTools.Mcp.Server/` |
+| External MCP surface (`McpEngine`, tools, prompts) | `source/DevTools.Daemon/Mcp/` |
 
 Duende `OidcClient` owns PKCE, ID-token validation, and refresh. Local code is DPAPI `TokenStore`, `LoopbackBrowser`, and token revoke (`LogoutAsync` is a browser end-session, not revoke).
 

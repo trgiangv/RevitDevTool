@@ -53,7 +53,7 @@ from the SDK **Default** profile. They do not use xUnit or `coverlet.MTP`.
 | `DevTools.Execution.Mcp.Tests` | Primitive dispatcher, Dotnet/BuiltIn backends, connection tracker |
 | `DevTools.Execution.Services.Tests` | Orchestrator, watcher, tree, packages, `HostUiHelper` |
 
-Python MCP backends (`PythonMcpToolBackend*`, `PythonMcpRegistryProvider`,
+Python MCP backends (`PythonSource*`, `PythonMcpRegistryProvider`,
 `PythonCodeTool`) live in **Python.Tests** because they initialize pythonnet.
 C# / OpenDocument built-in tools stay in CSharp.Tests / Mcp.Tests.
 
@@ -79,8 +79,8 @@ Execution scoped projects set `UseMicrosoftCodeCoverage=true`. That:
 - **does not** reference `coverlet.MTP`.
 
 Collect with `--coverage`, not `--coverlet`. Shared settings:
-`tests/mstest-coverage.xml` (include `DevTools.*`, exclude `*.Tests` and
-vendored UI assemblies). Default output format for merges is **cobertura**
+`tests/mstest-coverage.xml` (include `DevTools.*`, exclude `*.Tests` /
+`*.Fixtures`). Default output format for merges is **cobertura**
 (`--coverage-output-format cobertura`).
 
 This is **managed** Microsoft Code Coverage. Do **not** set
