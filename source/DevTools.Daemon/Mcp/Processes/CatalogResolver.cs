@@ -13,17 +13,17 @@ public static class CatalogResolver
     public static CatalogLookup Resolve(IProcessSessions sessions, string id)
     {
         if (!CatalogId.TryDecode(id, out var locator) || locator is null)
-            return new(null, null, Error("validation_error", "id is malformed."));
+            return new CatalogLookup(null, null, Error("validation_error", "id is malformed."));
 
         var catalog = sessions.Catalog.List().FirstOrDefault(item => item.ProcessId == locator.ProcessId);
         var session = sessions.GetByProcessId(locator.ProcessId);
         if (catalog is null || session is null || !session.IsConnected)
-            return new(locator, null, Stale("host_disconnected", "The host session is no longer connected."));
+            return new CatalogLookup(locator, null, Stale("host_disconnected", "The host session is no longer connected."));
 
         var stale = Validate(sessions, locator);
         return stale is null
-            ? new(locator, session, null)
-            : new(locator, session, stale);
+            ? new CatalogLookup(locator, session, null)
+            : new CatalogLookup(locator, session, stale);
     }
 
     private static InvokeResponse? Validate(IProcessSessions sessions, CatalogId locator)

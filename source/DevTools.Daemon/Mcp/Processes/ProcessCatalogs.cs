@@ -6,7 +6,7 @@ namespace DevTools.Daemon.Mcp.Processes;
 public sealed class ProcessCatalogs
 {
     private static readonly CatalogType[] AllKinds = Enum.GetValues<CatalogType>();
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly Dictionary<int, ProcessCatalog> _catalogs = new();
     private readonly SearchIndex _index = new();
 

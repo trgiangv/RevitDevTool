@@ -34,14 +34,14 @@ public sealed class ListProcessesTool(IProcessSessions sessions, IMcpPipeScanner
 
         var result = new ListInstancesResult(
             connected.Select(e => new ConnectedInstance(
-                (HostAppParsing.ParseHostApp(e.Instance.HostApp)
-                    ?? HostAppParsing.FromPipeName(e.PipeName))?.ToString(),
+                (HostAppParser.ParseHostApp(e.Instance.HostApp)
+                    ?? HostAppParser.FromPipeName(e.PipeName))?.ToString(),
                 e.Instance.ProcessId,
                 e.Instance.VersionNumber)).ToArray(),
             discoveredPipes
                 .Select(p => new DiscoveredPipe(
                     p,
-                    HostAppParsing.FromPipeName(p)?.ToString()))
+                    HostAppParser.FromPipeName(p)?.ToString()))
                 .ToArray(),
             connected.Count,
             discoveredPipes.Count);

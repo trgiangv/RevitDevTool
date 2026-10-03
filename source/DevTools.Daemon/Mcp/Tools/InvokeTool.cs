@@ -5,7 +5,6 @@ using DevTools.Daemon.Mcp.Processes;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Utils;
 using DevTools.Daemon.Mcp.Contracts;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -77,38 +76,40 @@ public sealed class InvokeTool(IProcessSessions sessions)
 
     private static CallToolResult ToHostCallToolResult(object? result)
     {
-        if (result is CallToolResult toolResult)
-            return toolResult;
-
-        if (result is ReadResourceResult resourceResult)
-            return new CallToolResult
+        return result switch
+        {
+            CallToolResult toolResult => toolResult,
+            ReadResourceResult resourceResult => new CallToolResult
             {
-                Content = resourceResult.Contents
-                    .Select(static resource => new EmbeddedResourceBlock { Resource = resource })
-                    .Cast<ContentBlock>()
-                    .ToList()
-            };
+                Content =
+                [
+                    .. resourceResult.Contents.Select(static resource => new EmbeddedResourceBlock
+                    {
+                        Resource = resource
+                    })
+                ]
+            },
+            _ => ToolResults.Result(new InvokeResponse(true, true, result), McpServerJsonContext.Default.InvokeResponse)
+        };
 
-        return ToolResults.Result(new InvokeResponse(true, true, result), McpServerJsonContext.Default.InvokeResponse);
     }
 
     private async Task<CallToolResult> InvokeReadsAsync(IReadOnlyList<ResourceReadRequest> reads, CancellationToken ct)
     {
         var results = new List<ResourceReadResult>();
-        var budget = InvokeValidator.DefaultResultBudgetBytes;
         var used = Utf8Size("{\"ok\":true,\"executionStarted\":true,\"results\":[]}");
         foreach (var (read, index) in reads.Select((value, index) => (value, index)))
         {
             var item = await InvokeSingleAsync(null, read.Id!, ToElement(read.Arguments), ct).ConfigureAwait(false);
             var resourceResult = new ResourceReadResult(index, item.Response!.Ok, item.Response.Result, item.Response.Error);
             var itemBytes = PackedUtf8Size(resourceResult);
-            if (itemBytes > InvokeValidator.HardResultBudgetBytes || itemBytes > budget)
+            if (itemBytes is > InvokeValidator.HardResultBudgetBytes or > InvokeValidator.DefaultResultBudgetBytes)
             {
                 results.Add(new ResourceReadResult(index, false, null,
                     new InvocationError("result_too_large", "The complete item exceeds the result budget.")));
                 continue;
             }
-            if (used + itemBytes > budget)
+            if (used + itemBytes > InvokeValidator.DefaultResultBudgetBytes)
                 break;
             results.Add(resourceResult);
             used += itemBytes;
@@ -174,10 +175,9 @@ public sealed class InvokeTool(IProcessSessions sessions)
         var outcome = await session.CallToolPassthroughAsync(hostParams, ct).ConfigureAwait(false);
         if (outcome is InputRequiredResult inputRequired)
             return HostResult.FromInputRequired(inputRequired);
-        if (outcome is not CallToolResult toolResult)
-            throw new InvalidOperationException($"Host tools/call returned {outcome.GetType().Name}.");
-
-        return HostResult.FromResponse(new InvokeResponse(true, true, toolResult));
+        return outcome is not CallToolResult toolResult 
+            ? throw new InvalidOperationException($"Host tools/call returned {outcome.GetType().Name}.") 
+            : HostResult.FromResponse(new InvokeResponse(true, true, toolResult));
     }
 
     private static async Task<object> ReadCatalogItemAsync(

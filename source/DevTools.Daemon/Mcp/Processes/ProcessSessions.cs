@@ -14,7 +14,7 @@ public sealed class ProcessSessions(
     private readonly ConcurrentDictionary<string, ProcessSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _publishedPipes = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _knownPipes = new(StringComparer.OrdinalIgnoreCase);
-    private readonly object _knownPipesLock = new();
+    private readonly Lock _knownPipesLock = new();
 
     public ProcessCatalogs Catalog { get; } = new();
     public event Action? Changed;
@@ -75,11 +75,9 @@ public sealed class ProcessSessions(
 
         foreach (var pipeName in newPipes)
         {
-            if (await TryConnectAsync(pipeName, ct).ConfigureAwait(false))
-            {
-                lock (_knownPipesLock)
-                    _knownPipes.Add(pipeName);
-            }
+            if (!await TryConnectAsync(pipeName, ct).ConfigureAwait(false)) continue;
+            lock (_knownPipesLock)
+                _knownPipes.Add(pipeName);
         }
 
         if (!_publishedPipes.SetEquals(currentPipes))

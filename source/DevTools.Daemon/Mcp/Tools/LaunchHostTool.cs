@@ -51,7 +51,7 @@ public sealed class LaunchHostTool(IProcessSessions sessions, IHostLaunchService
         string? filePath = null,
         CancellationToken cancellationToken = default)
     {
-        var parsedHost = HostAppParsing.ParseHostApp(hostApp);
+        var parsedHost = HostAppParser.ParseHostApp(hostApp);
         if (parsedHost is null && !string.IsNullOrWhiteSpace(filePath))
             parsedHost = HostAppExtensions.FromExtension(Path.GetExtension(filePath));
 

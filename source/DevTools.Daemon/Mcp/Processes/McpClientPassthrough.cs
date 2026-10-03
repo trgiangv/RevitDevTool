@@ -2,7 +2,6 @@ using System.Reflection;
 using System.Text.Json;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Utils;
-using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 

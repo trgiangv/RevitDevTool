@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using DevTools.Daemon.Mcp.Contracts;
 using DevTools.Daemon.Mcp.Processes;
-using DevTools.Daemon.Mcp.Search;
 using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
