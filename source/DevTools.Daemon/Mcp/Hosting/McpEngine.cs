@@ -1,9 +1,11 @@
+using DevTools.Daemon.Auth;
+using DevTools.Daemon.Gateway;
 using DevTools.Daemon.Mcp.Prompts;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.FileMetadata.Core;
 using DevTools.Hosting;
-using DevTools.Daemon.Mcp.Contracts;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Hosting;
@@ -23,13 +25,14 @@ public sealed class McpEngine
         IProcessSessions sessions,
         IMcpPipeScanner pipeScanner,
         IHostLaunchService launchService,
-        IMachineLister machineLister,
+        IAuthService authService,
+        IOptions<GatewayOptions> gatewayOptions,
         IFileReaderCatalog fileInfoCatalog)
     {
         ToolCollection = [];
         PromptCollection = [];
 
-        LocalTools = CreateLocalTools(sessions, pipeScanner, launchService, machineLister, fileInfoCatalog);
+        LocalTools = CreateLocalTools(sessions, pipeScanner, launchService, authService, gatewayOptions, fileInfoCatalog);
         foreach (var tool in LocalTools)
             ToolCollection.TryAdd(tool);
 
@@ -41,10 +44,11 @@ public sealed class McpEngine
         IProcessSessions sessions,
         IMcpPipeScanner pipeScanner,
         IHostLaunchService launchService,
-        IMachineLister machineLister,
+        IAuthService authService,
+        IOptions<GatewayOptions> gatewayOptions,
         IFileReaderCatalog fileInfoCatalog) =>
     [
-        ListMachinesTool.Create(machineLister),
+        ListMachinesTool.Create(authService, gatewayOptions),
         ListProcessesTool.Create(sessions, pipeScanner),
         LaunchHostTool.Create(sessions, launchService),
         ReadFileInfoTool.Create(fileInfoCatalog),

@@ -2,8 +2,8 @@ using System.Text;
 using System.Text.Json;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
-using DevTools.Daemon.Tools;
 using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using DevTools.Daemon.Tests.Support;
@@ -122,24 +122,24 @@ public sealed class AuthComponentTests
     }
 
     [TestMethod]
-    public async Task MachineLister_ReturnsErrorWhenNotAuthenticated()
+    public async Task ListMachinesTool_ReturnsErrorWhenNotAuthenticated()
     {
         var auth = DaemonTestDoubles.CreateAuthService(authenticated: false);
-        var lister = new MachineLister(auth.Object, Options.Create(new GatewayOptions()));
-        var result = await lister.ListAsync(TestContext.CancellationToken);
+        var tool = new ListMachinesTool(auth.Object, Options.Create(new GatewayOptions()));
+        var result = await tool.ListAsync(TestContext.CancellationToken);
         var text = Assert.IsInstanceOfType<ModelContextProtocol.Protocol.TextContentBlock>(result.Content[0]).Text;
         Assert.Contains("Not authenticated", text, StringComparison.Ordinal);
     }
 
     [TestMethod]
-    public async Task MachineLister_ReturnsErrorWhenGatewayUnreachable()
+    public async Task ListMachinesTool_ReturnsErrorWhenGatewayUnreachable()
     {
         var auth = DaemonTestDoubles.CreateAuthService(authenticated: true, accessToken: "token");
-        var lister = new MachineLister(
+        var tool = new ListMachinesTool(
             auth.Object,
             Options.Create(new GatewayOptions { Url = "wss://127.0.0.1:9/tunnel" }));
 
-        var result = await lister.ListAsync(TestContext.CancellationToken);
+        var result = await tool.ListAsync(TestContext.CancellationToken);
         var text = Assert.IsInstanceOfType<ModelContextProtocol.Protocol.TextContentBlock>(result.Content[0]).Text;
         Assert.Contains("Failed to list machines", text, StringComparison.Ordinal);
     }

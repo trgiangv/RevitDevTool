@@ -5,8 +5,10 @@ using DevTools.FileMetadata.Core;
 using DevTools.Hosting;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Mcp.Processes;
-using DevTools.Daemon.Mcp.Contracts;
+using DevTools.Daemon.Auth;
+using DevTools.Daemon.Gateway;
 using DevTools.Daemon.Mcp.Hosting;
+using Microsoft.Extensions.Options;
 using DevTools.Daemon.Mcp.Prompts;
 using DevTools.Mcp.Server.Tests.Harness;
 using DevTools.Daemon.Mcp.Tools;
@@ -32,7 +34,8 @@ public sealed class LocalToolsAndPromptsTests
             broker.Object,
             Mock.Of<IMcpPipeScanner>(),
             Mock.Of<IHostLaunchService>(),
-            Mock.Of<IMachineLister>(),
+            Mock.Of<IAuthService>(),
+            Options.Create(new GatewayOptions()),
             Mock.Of<IFileReaderCatalog>());
 
         Assert.AreEqual(6, engine.LocalTools.Count);
@@ -43,16 +46,15 @@ public sealed class LocalToolsAndPromptsTests
     }
 
     [TestMethod]
-    public async Task ListMachinesTool_ReturnsListerPayload()
+    public async Task ListMachinesTool_ReturnsErrorWhenNotAuthenticated()
     {
-        var lister = new Mock<IMachineLister>();
-        lister.Setup(l => l.ListAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CallToolResult { Content = [new TextContentBlock { Text = "machines" }] });
+        var auth = new Mock<IAuthService>();
+        auth.Setup(a => a.IsAuthenticated).Returns(false);
 
-        var tool = ListMachinesTool.Create(lister.Object);
+        var tool = ListMachinesTool.Create(auth.Object, Options.Create(new GatewayOptions()));
         var result = await McpToolInvoke.Invoke(tool, "list_machines", new { });
 
-        Assert.AreEqual("machines", McpToolInvoke.Text(result));
+        StringAssert.Contains(McpToolInvoke.Text(result), "Not authenticated");
     }
 
     [TestMethod]

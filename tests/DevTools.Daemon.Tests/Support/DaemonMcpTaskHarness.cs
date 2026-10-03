@@ -2,14 +2,16 @@
 
 using System.IO.Pipelines;
 using System.Text.Json;
+using DevTools.Daemon.Auth;
+using DevTools.Daemon.Gateway;
 using DevTools.Daemon.Mcp;
-using DevTools.Daemon.Mcp.Contracts;
 using DevTools.Daemon.Mcp.Hosting;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.FileMetadata.Core;
 using DevTools.Hosting;
 using DevTools.Ipc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol;
@@ -192,7 +194,8 @@ internal sealed class DaemonMcpTaskHarness : IAsyncDisposable
         services.AddSingleton<IProcessSessions>(sessions);
         services.AddSingleton(Mock.Of<IMcpPipeScanner>());
         services.AddSingleton(Mock.Of<IHostLaunchService>());
-        services.AddSingleton(Mock.Of<IMachineLister>());
+        services.AddSingleton(Mock.Of<IAuthService>());
+        services.AddSingleton(Options.Create(new GatewayOptions()));
         services.AddSingleton(Mock.Of<IFileReaderCatalog>());
         services.AddSingleton<McpEngine>();
 
