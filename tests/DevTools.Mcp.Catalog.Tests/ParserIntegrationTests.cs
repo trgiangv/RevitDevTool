@@ -1,4 +1,7 @@
 using System.Text.Json;
+using DevTools.Execution.Providers.Python;
+using DevTools.Mcp.Catalog.Tests.Harness;
+using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
 namespace DevTools.Mcp.Catalog.Tests;
@@ -6,7 +9,7 @@ namespace DevTools.Mcp.Catalog.Tests;
 [TestClass]
 public sealed class ParserIntegrationTests
 {
-    private static readonly PythonToolsetParser PythonParser = new(NullLogger<PythonToolsetParser>.Instance);
+    private static readonly McpPythonParser PythonParser = new(NullLogger<McpPythonParser>.Instance);
     private static readonly McpAssemblyParser Parser = new(NullLogger<McpAssemblyParser>.Instance);
     [TestMethod]
     public void DotnetParser_ExtractsSampleToolAnnotations()
@@ -42,15 +45,26 @@ public sealed class ParserIntegrationTests
     }
 
     [TestMethod]
+    public void PythonRuntime_BindsPixiVersionedDll()
+    {
+        McpPythonParserTestSupport.BindPixiPython();
+        Assert.IsTrue(Python.Runtime.PythonEngine.IsInitialized);
+        Assert.IsFalse(
+            PythonNativeEnvironment.IsStableAbiForwarder(Python.Runtime.Runtime.PythonDLL ?? ""),
+            Python.Runtime.Runtime.PythonDLL);
+    }
+
+    [TestMethod]
+    [DependsOn(nameof(PythonRuntime_BindsPixiVersionedDll))]
     public void PythonParser_ExtractsSampleToolAnnotations()
     {
-        var toolsetDirectory = GetPythonToolsetDirectory();
+        var toolsetDirectory = GetPythonDirectory();
         var sampleModulePath = Path.Combine(toolsetDirectory, "tests", "parser_annotation_sample.py");
 
         OptionalArtifact.RequireDirectory(toolsetDirectory, $"Expected Python sample toolset at '{toolsetDirectory}'.");
         OptionalArtifact.RequireFile(sampleModulePath, $"Expected parser sample module at '{sampleModulePath}'.");
 
-        var tools = PythonParser.ParseDirectoryCatalog(toolsetDirectory, GetPythonExecutablePath(), GetToolParserScriptPath()).Tools;
+        var tools = ParsePythonCatalog(toolsetDirectory).Tools;
         var toolRegistration = tools.Single(item => item.Descriptor.Name == "get_parser_sample_status");
         var tool = toolRegistration.Descriptor;
 
@@ -72,15 +86,16 @@ public sealed class ParserIntegrationTests
     }
 
     [TestMethod]
+    [DependsOn(nameof(PythonRuntime_BindsPixiVersionedDll))]
     public void PythonParser_ExtractsLowLevelToolsAndResources()
     {
-        var toolsetDirectory = GetPythonToolsetDirectory();
+        var toolsetDirectory = GetPythonDirectory();
         OptionalArtifact.RequireDirectory(toolsetDirectory, $"Expected Python sample toolset at '{toolsetDirectory}'.");
         OptionalArtifact.RequireFile(
             Path.Combine(toolsetDirectory, "tests", "parser_lowlevel_sample.py"),
             "Expected parser_lowlevel_sample.py in samples/PythonDemo/mcp_toolset/tests.");
 
-        var catalog = PythonParser.ParseDirectoryCatalog(toolsetDirectory, GetPythonExecutablePath(), GetToolParserScriptPath());
+        var catalog = ParsePythonCatalog(toolsetDirectory);
         var toolRegistration = catalog.Tools.FirstOrDefault(item => item.Descriptor.Name == "parser_lowlevel_tool");
         if (toolRegistration is null)
             Assert.Inconclusive("parser_lowlevel_tool not discovered. Ensure ToolParser.py scans tests/parser_lowlevel_sample.py.");
@@ -111,9 +126,10 @@ public sealed class ParserIntegrationTests
     }
 
     [TestMethod]
+    [DependsOn(nameof(PythonRuntime_BindsPixiVersionedDll))]
     public void PythonParser_ExtractsMcpServerResources()
     {
-        var resources = PythonParser.ParseDirectoryCatalog(GetPythonToolsetDirectory(), GetPythonExecutablePath(), GetToolParserScriptPath()).Resources;
+        var resources = ParsePythonCatalog(GetPythonDirectory()).Resources;
         var directReg = resources.Single(item => item.Descriptor?.Name == "parser_status_resource");
         var templatedReg = resources.Single(item => item.TemplateDescriptor?.Name == "parser_view_resource");
         var direct = directReg.Descriptor!;
@@ -282,7 +298,7 @@ public sealed class ParserIntegrationTests
         return sampleAssembly;
     }
 
-    private static string GetPythonToolsetDirectory()
+    private static string GetPythonDirectory()
     {
         return Path.Combine(
             FindRepositoryRoot(),
@@ -291,18 +307,13 @@ public sealed class ParserIntegrationTests
             "mcp_toolset");
     }
 
-    private static string GetPythonExecutablePath()
+    private static RegistryCatalog ParsePythonCatalog(string toolsetDirectory)
     {
-        var pythonExecutablePath = OptionalArtifact.PixiPythonExePath;
-        OptionalArtifact.RequireFile(pythonExecutablePath, OptionalArtifact.PixiPythonHint);
-        return pythonExecutablePath;
-    }
-
-    private static string GetToolParserScriptPath()
-    {
-        var path = Path.Combine(FindRepositoryRoot(), "source", "DevTools.Execution", "Resources", "scripts", "ToolParser.py");
-        OptionalArtifact.RequireFile(path, $"Expected ToolParser.py at '{path}'.");
-        return path;
+        OptionalArtifact.RequireDirectory(toolsetDirectory, $"Expected Python sample toolset at '{toolsetDirectory}'.");
+        var parserOutput = McpPythonParserTestSupport.RunInProcessParser(toolsetDirectory);
+        Assert.IsNotNull(parserOutput);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(parserOutput));
+        return PythonParser.ParseCatalogFromDirectory(toolsetDirectory, _ => parserOutput);
     }
 
     private static void AssertJsonObjectHasProperty(string json, string parentProperty, string childProperty)

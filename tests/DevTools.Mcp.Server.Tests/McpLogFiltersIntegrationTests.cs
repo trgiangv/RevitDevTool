@@ -1,5 +1,5 @@
 using System.IO.Pipelines;
-using DevTools.Mcp.Server.Hosting;
+using DevTools.Daemon.Mcp.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

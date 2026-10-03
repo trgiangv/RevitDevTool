@@ -1,4 +1,5 @@
-using DevTools.Mcp.Server.Contracts;
+using DevTools.Daemon.Mcp.Contracts;
+using DevTools.Daemon.Mcp.Processes;
 using DevTools.Mcp.Server.Tests.Harness;
 using ModelContextProtocol.Protocol;
 
@@ -17,13 +18,13 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         const string toolName = "plain_tool";
         var harness = McpSdkTestHarness.ForTool(toolName, behavior);
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = toolName });
+        var id = await harness.SearchFirstId(new { query = toolName });
 
-        var result = await harness.InvokeCapability(capabilityId, new { category = "Walls" });
+        var result = await harness.InvokeId(id, new { category = "Walls" });
 
         Assert.Contains(expectedTextFragment, McpToolInvoke.Text(result), StringComparison.Ordinal);
         Assert.AreEqual(1, harness.Session.PassthroughCount);
-        Assert.AreEqual(harness.Session.Key, harness.Broker.RequestedHostKey);
+        Assert.AreEqual(101, harness.Session.ProcessId);
     }
 
     [TestMethod]
@@ -31,9 +32,9 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         const string toolName = "view_screenshot";
         var harness = McpSdkTestHarness.ForTool(toolName, McpToolBehavior.ImagePng);
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = toolName });
+        var id = await harness.SearchFirstId(new { query = toolName });
 
-        var result = await harness.InvokeCapability(capabilityId);
+        var result = await harness.InvokeId(id);
         var image = Assert.IsInstanceOfType<ImageContentBlock>(Enumerable.Single(result.Content));
 
         Assert.AreEqual("image/png", image.MimeType);
@@ -45,9 +46,9 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         const string toolName = "failing_tool";
         var harness = McpSdkTestHarness.ForTool(toolName, McpToolBehavior.ErrorWithMeta);
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = "failing" });
+        var id = await harness.SearchFirstId(new { query = "failing" });
 
-        var result = await harness.InvokeCapability(capabilityId);
+        var result = await harness.InvokeId(id);
 
         Assert.IsTrue(result.IsError);
         Assert.AreEqual("meta", result.Meta!["response"]!.GetValue<string>());
@@ -60,9 +61,9 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         const string toolName = "mixed_tool";
         var harness = McpSdkTestHarness.ForTool(toolName, McpToolBehavior.MixedTextAndImage);
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = "mixed" });
+        var id = await harness.SearchFirstId(new { query = "mixed" });
 
-        var result = await harness.InvokeCapability(capabilityId);
+        var result = await harness.InvokeId(id);
 
         Assert.AreEqual(2, result.Content.Count);
         Assert.AreEqual("screenshot attached", ((TextContentBlock)result.Content[0]).Text);
@@ -75,9 +76,9 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         const string toolName = "revit_find_elements";
         var harness = McpSdkTestHarness.ForTool(toolName, McpToolBehavior.StructuredFind);
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = "find" });
+        var id = await harness.SearchFirstId(new { query = "find" });
 
-        var result = await harness.InvokeCapability(capabilityId, new { category = "Walls" });
+        var result = await harness.InvokeId(id, new { category = "Walls" });
 
         Assert.AreEqual(240, result.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
         Assert.IsTrue(result.StructuredContent.Value.GetProperty("hasMore").GetBoolean());
@@ -91,14 +92,14 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         const string toolName = "mrtr_confirm";
         var harness = McpSdkTestHarness.ForTool(toolName, McpToolBehavior.MrtrElicitationConfirm);
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = toolName });
+        var id = await harness.SearchFirstId(new { query = toolName });
 
-        var ex = await harness.InvokeExpectingInputRequired(capabilityId);
+        var ex = await harness.InvokeExpectingInputRequired(id);
 
         Assert.IsNotNull(ex.Result.InputRequests);
         Assert.Contains("confirm", ex.Result.InputRequests!.Keys);
         Assert.IsNotNull(ex.Result.RequestState);
-        Assert.Contains(capabilityId, ex.Result.RequestState!, StringComparison.Ordinal);
+        Assert.Contains(id, ex.Result.RequestState!, StringComparison.Ordinal);
         Assert.AreEqual(1, harness.Session.PassthroughCount);
     }
 
@@ -107,11 +108,11 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         const string toolName = "mrtr_confirm";
         var harness = McpSdkTestHarness.ForTool(toolName, McpToolBehavior.MrtrElicitationConfirm);
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = toolName });
+        var id = await harness.SearchFirstId(new { query = toolName });
 
-        var first = await harness.InvokeExpectingInputRequired(capabilityId);
+        var first = await harness.InvokeExpectingInputRequired(id);
         var result = await harness.InvokeMrtrRetry(
-            capabilityId,
+            id,
             first,
             new Dictionary<string, object> { ["confirm"] = new { action = "accept" } });
 
@@ -123,16 +124,16 @@ public sealed class InvokeDynamicSdkHarnessTests
     public async Task InvokeDynamic_StaleLocator_RequiresResearchBeforeExecution()
     {
         var harness = McpSdkTestHarness.Create();
-        var oldId = await harness.SearchFirstCapabilityId(new { query = "find" });
-        harness.ReplaceCatalog(McpSdkCatalogOptions.Default);
+        var oldId = await harness.SearchFirstId(new { query = "find" });
+        harness.ReplaceCatalog(McpSdkCatalogOptions.Default with { BumpToolSchema = true });
 
-        var response = McpToolInvoke.Parse<InvokeCapabilityResponse>(
-            await harness.InvokeDynamic(new { capabilityId = oldId }));
+        var response = McpToolInvoke.Parse<InvokeResponse>(
+            await harness.InvokeDynamic(new { id = oldId }));
 
         Assert.IsFalse(response.Ok);
         Assert.IsFalse(response.ExecutionStarted);
         Assert.IsTrue(response.Error!.Retryable);
-        Assert.AreEqual("host_catalog_changed", response.Error.Reason);
+        Assert.AreEqual("changed", response.Error.Reason);
         Assert.AreEqual("research_then_reinvoke", response.Error.Retry);
         Assert.AreEqual(0, harness.Session.PassthroughCount);
     }
@@ -142,15 +143,15 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         var harness = McpSdkTestHarness.Create(McpSdkCatalogOptions.WithTemplates());
         var capabilities = await harness.Search(new { kinds = new[] { "resource", "resource_template" } });
-        var resourceId = capabilities.Items.Single(item => item.Kind == "resource").CapabilityId;
-        var templateId = capabilities.Items.First(item => item.Kind == "resource_template" && item.Target.Contains("element", StringComparison.Ordinal)).CapabilityId;
+        var resourceId = capabilities.Items.Single(item => item.Kind == CatalogType.Resource).Id;
+        var templateId = capabilities.Items.First(item => item.Kind == CatalogType.ResourceTemplate && item.Target.Contains("element", StringComparison.Ordinal)).Id;
 
-        var response = McpToolInvoke.Parse<InvokeCapabilityResponse>(await harness.InvokeDynamic(new
+        var response = McpToolInvoke.Parse<InvokeResponse>(await harness.InvokeDynamic(new
         {
             reads = new object[]
             {
-                new { capabilityId = resourceId },
-                new { capabilityId = templateId, arguments = new { elementId = 99 } },
+                new { id = resourceId },
+                new { id = templateId, arguments = new { elementId = 99 } },
             },
         }));
 
@@ -166,14 +167,14 @@ public sealed class InvokeDynamicSdkHarnessTests
     {
         var harness = McpSdkTestHarness.Create(McpSdkCatalogOptions.WithTemplates());
         var capabilities = await harness.Search(new { });
-        var toolId = capabilities.Items.Single(item => item.Kind == "tool").CapabilityId;
-        var resourceId = capabilities.Items.Single(item => item.Kind == "resource").CapabilityId;
+        var toolId = capabilities.Items.Single(item => item.Kind == CatalogType.Tool).Id;
+        var resourceId = capabilities.Items.Single(item => item.Kind == CatalogType.Resource).Id;
 
-        var mixed = await harness.InvokeDynamic(new { capabilityId = toolId, reads = new[] { new { capabilityId = resourceId } } });
-        var toolRead = await harness.InvokeDynamic(new { reads = new[] { new { capabilityId = toolId } } });
+        var mixed = await harness.InvokeDynamic(new { id = toolId, reads = new[] { new { id = resourceId } } });
+        var toolRead = await harness.InvokeDynamic(new { reads = new[] { new { id = toolId } } });
         var tooMany = await harness.InvokeDynamic(new
         {
-            reads = Enumerable.Range(0, 17).Select(_ => new { capabilityId = resourceId }).ToArray(),
+            reads = Enumerable.Range(0, 17).Select(_ => new { id = resourceId }).ToArray(),
         });
 
         Assert.Contains("cannot be combined", McpToolInvoke.Text(mixed), StringComparison.Ordinal);

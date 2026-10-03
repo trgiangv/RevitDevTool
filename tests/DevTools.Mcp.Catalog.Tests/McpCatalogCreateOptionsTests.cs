@@ -1,5 +1,5 @@
 using DevTools.Mcp.Core.Models;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
@@ -10,7 +10,7 @@ public sealed class McpCatalogCreateOptionsTests
     [TestMethod]
     public void ForResource_UsesCatalogUriTemplate_NotSdkFallback()
     {
-        var resource = new McpRegisteredResource
+        var resource = new RegisteredResource
         {
             Id = "revit_element",
             TemplateDescriptor = new ResourceTemplate
@@ -19,11 +19,13 @@ public sealed class McpCatalogCreateOptionsTests
                 UriTemplate = "revit://element/{elementId}",
                 MimeType = "application/json",
             },
-            Binding = McpPrimitiveBinding.Create(
+            Binding = PrimitiveBinding.Create(
                 ExecutionMode.Dotnet,
                 "toolset.dll",
                 "RevitMcpToolSet.Resources",
-                "GetElement"),
+                "GetElement",
+                "",
+                ""),
         };
 
         var options = McpCatalogCreateOptions.ForResource(resource);
@@ -36,7 +38,7 @@ public sealed class McpCatalogCreateOptionsTests
     [TestMethod]
     public void ForTool_PropagatesStructuredOutputFlag()
     {
-        var tool = new McpRegisteredTool
+        var tool = new RegisteredTool
         {
             Id = "revit_find_elements",
             Descriptor = new Tool
@@ -46,11 +48,13 @@ public sealed class McpCatalogCreateOptionsTests
                 Description = "Find",
                 OutputSchema = System.Text.Json.JsonSerializer.SerializeToElement(new { type = "object" }),
             },
-            Binding = McpPrimitiveBinding.Create(
+            Binding = PrimitiveBinding.Create(
                 ExecutionMode.Dotnet,
                 "toolset.dll",
                 "RevitMcpToolSet.Tools",
-                "FindElements"),
+                "FindElements",
+                "",
+                ""),
         };
 
         var options = McpCatalogCreateOptions.ForTool(tool);

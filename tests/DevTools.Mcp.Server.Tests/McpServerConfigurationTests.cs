@@ -1,5 +1,5 @@
-using DevTools.Mcp.Server.Hosting;
-using DevTools.Mcp.Server.Tools;
+using DevTools.Daemon.Mcp.Hosting;
+using DevTools.Daemon.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -60,42 +60,6 @@ public sealed class McpServerConfigurationTests
         Assert.Contains("io.modelcontextprotocol/tasks", options.Capabilities.Extensions!.Keys);
         Assert.IsNotNull(options.RequestHandlers);
         Assert.Contains(handler => handler.Method == "tasks/get", options.RequestHandlers);
-    }
-
-    [TestMethod]
-    public void TaskExecutionMeta_MatchesProductPolicy()
-    {
-        var broker = new Mock<IHostBroker>();
-        var invoke = InvokeDynamicTool.Create(broker.Object);
-        var search = SearchDynamicTool.Create(broker.Object);
-        var optional = TaskModeFixture.CreateOptionalTool("execute_csharp_code");
-
-        Assert.AreEqual(
-            McpTaskExecutionMode.Synchronous,
-            McpTaskExecutionMeta.SelectForRequest(CreateToolRequest(invoke)));
-        Assert.AreEqual(
-            McpTaskExecutionMode.Synchronous,
-            McpTaskExecutionMeta.SelectForRequest(CreateToolRequest(search)));
-        Assert.AreEqual(
-            McpTaskExecutionMode.Optional,
-            McpTaskExecutionMeta.SelectForRequest(CreateToolRequest(optional)));
-        Assert.AreEqual(
-            McpTaskExecutionMode.Synchronous,
-            McpTaskExecutionMeta.SelectForRequest(CreateToolRequest("unknown_tool")));
-        Assert.AreEqual(
-            McpTaskExecutionMode.Optional,
-            McpTaskExecutionMeta.ParseMode(optional.ProtocolTool.Meta));
-    }
-
-    private static RequestContext<CallToolRequestParams> CreateToolRequest(string toolName)
-    {
-        var options = new McpServerOptions();
-        var server = new Mock<McpServer>();
-        server.Setup(s => s.ServerOptions).Returns(options);
-        return new RequestContext<CallToolRequestParams>(
-            server.Object,
-            new JsonRpcRequest { Method = "tools/call", Id = new RequestId("1") },
-            new CallToolRequestParams { Name = toolName });
     }
 
     internal static McpServerOptions CreateDaemonOptions() =>

@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DevTools.Mcp.Adapter;
+using DevTools.Mcp;
 using DevTools.Execution.External.Mcp.Backends;
 using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol;
@@ -16,9 +16,9 @@ public sealed class PythonToolsetMrtrBridgeTests
     };
 
     [TestMethod]
-    public void PayloadNormalizer_ArgumentsOnly_RemainsLegacyShape()
+    public void PayloadNormalizer_ArgumentsOnly_UsesStructuredShape()
     {
-        var json = PythonMcpToolBackend.WriteRequest(new CallToolRequestParams
+        var json = PythonSource.WriteRequest(new CallToolRequestParams
         {
             Name = "stub",
             Arguments = new Dictionary<string, JsonElement>
@@ -30,7 +30,7 @@ public sealed class PythonToolsetMrtrBridgeTests
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         Assert.AreEqual(JsonValueKind.Object, root.ValueKind);
-        Assert.AreEqual("Walls", root.GetProperty("category").GetString());
+        Assert.AreEqual("Walls", root.GetProperty("arguments").GetProperty("category").GetString());
         Assert.IsFalse(root.TryGetProperty("inputResponses", out _));
         Assert.IsFalse(root.TryGetProperty("requestState", out _));
     }
@@ -38,19 +38,19 @@ public sealed class PythonToolsetMrtrBridgeTests
     [TestMethod]
     public void PayloadNormalizer_NullParams_ReturnsEmptyObject()
     {
-        Assert.AreEqual("{}", PythonMcpToolBackend.WriteRequest(null));
+        Assert.AreEqual("{}", PythonSource.WriteRequest(null));
     }
 
     [TestMethod]
     public void PayloadNormalizer_NoArguments_ReturnsEmptyObject()
     {
-        Assert.AreEqual("{}", PythonMcpToolBackend.WriteRequest(new CallToolRequestParams { Name = "stub" }));
+        Assert.AreEqual("{}", PythonSource.WriteRequest(new CallToolRequestParams { Name = "stub" }));
     }
 
     [TestMethod]
-    public void PayloadNormalizer_IncludesInputResponsesAndRequestState()
+    public void PayloadNormalizer_DropsInputResponsesAndRequestState()
     {
-        var json = PythonMcpToolBackend.WriteRequest(new CallToolRequestParams
+        var json = PythonSource.WriteRequest(new CallToolRequestParams
         {
             Name = "stub",
             Arguments = new Dictionary<string, JsonElement>
@@ -67,32 +67,26 @@ public sealed class PythonToolsetMrtrBridgeTests
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
         Assert.IsTrue(root.GetProperty("arguments").GetProperty("dryRun").GetBoolean());
-        Assert.IsTrue(root.TryGetProperty("inputResponses", out var responses));
-        Assert.IsTrue(responses.GetProperty("confirm").TryGetProperty("action", out var action));
-        Assert.AreEqual("accept", action.GetString());
-        Assert.AreEqual("round-1", root.GetProperty("requestState").GetString());
+        Assert.IsFalse(root.TryGetProperty("inputResponses", out _));
+        Assert.IsFalse(root.TryGetProperty("requestState", out _));
     }
 
     [TestMethod]
-    public void PayloadNormalizer_RequestStateOnly_UsesStructuredShape()
+    public void PayloadNormalizer_RequestStateOnly_ReturnsEmptyObject()
     {
-        var json = PythonMcpToolBackend.WriteRequest(new CallToolRequestParams
+        var json = PythonSource.WriteRequest(new CallToolRequestParams
         {
             Name = "stub",
             RequestState = "poll-only",
         });
 
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
-        Assert.AreEqual("poll-only", root.GetProperty("requestState").GetString());
-        Assert.IsFalse(root.TryGetProperty("inputResponses", out _));
-        Assert.IsFalse(root.TryGetProperty("arguments", out _));
+        Assert.AreEqual("{}", json);
     }
 
     [TestMethod]
-    public void PayloadNormalizer_InputResponsesWithoutArguments_IncludesResponsesOnly()
+    public void PayloadNormalizer_InputResponsesWithoutArguments_ReturnsEmptyObject()
     {
-        var json = PythonMcpToolBackend.WriteRequest(new CallToolRequestParams
+        var json = PythonSource.WriteRequest(new CallToolRequestParams
         {
             Name = "stub",
             InputResponses = new Dictionary<string, InputResponse>
@@ -101,10 +95,7 @@ public sealed class PythonToolsetMrtrBridgeTests
             },
         });
 
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
-        Assert.IsTrue(root.TryGetProperty("inputResponses", out _));
-        Assert.IsFalse(root.TryGetProperty("arguments", out _));
+        Assert.AreEqual("{}", json);
     }
 
     [TestMethod]
@@ -115,14 +106,14 @@ public sealed class PythonToolsetMrtrBridgeTests
             Content = [new TextContentBlock { Text = "ok" }],
         };
         var json = JsonSerializer.Serialize(expected, McpJsonUtilities.DefaultOptions);
-        var actual = PythonMcpToolBackend.ReadToolResult(json);
+        var actual = PythonSource.ReadToolResult(json);
 
         Assert.HasCount(1, actual.Content);
         Assert.AreEqual("ok", ((TextContentBlock)actual.Content[0]).Text);
     }
 
     [TestMethod]
-    public void ParseCallToolResult_InputRequired_ThrowsWithRequestsAndState()
+    public void ParseCallToolResult_InputRequired_ReturnsHostError()
     {
         var inputRequired = new InputRequiredResult
         {
@@ -134,34 +125,31 @@ public sealed class PythonToolsetMrtrBridgeTests
         };
         var json = JsonSerializer.Serialize(inputRequired, McpJsonUtilities.DefaultOptions);
 
-        var ex = Assert.ThrowsExactly<InputRequiredException>(() => PythonMcpToolBackend.ReadToolResult(json));
+        var result = PythonSource.ReadToolResult(json);
 
-        Assert.IsNotNull(ex.Result.InputRequests);
-        Assert.Contains("confirm", ex.Result.InputRequests!.Keys);
-        Assert.AreEqual("demo-state", ex.Result.RequestState);
-        Assert.AreEqual("input_required", ex.Result.ResultType);
+        Assert.IsTrue(result.IsError);
+        Assert.Contains("not supported", Assert.IsInstanceOfType<TextContentBlock>(result.Content.Single()).Text, StringComparison.Ordinal);
     }
 
     [TestMethod]
-    public void ParseCallToolResult_RequestStateOnly_ThrowsInputRequiredException()
+    public void ParseCallToolResult_RequestStateOnly_ReturnsHostError()
     {
         var inputRequired = new InputRequiredResult { RequestState = "state-only" };
         var json = JsonSerializer.Serialize(inputRequired, McpJsonUtilities.DefaultOptions);
 
-        var ex = Assert.ThrowsExactly<InputRequiredException>(() => PythonMcpToolBackend.ReadToolResult(json));
+        var result = PythonSource.ReadToolResult(json);
 
-        Assert.IsNull(ex.Result.InputRequests);
-        Assert.AreEqual("state-only", ex.Result.RequestState);
+        Assert.IsTrue(result.IsError);
     }
 
     [TestMethod]
-    public void ParseCallToolResult_MalformedInputRequired_ThrowsClearError()
+    public void ParseCallToolResult_MalformedInputRequired_ReturnsHostError()
     {
         const string json = """{"resultType":"input_required","inputRequests":"not-a-map"}""";
 
-        var ex = Assert.ThrowsExactly<InvalidOperationException>(() => PythonMcpToolBackend.ReadToolResult(json));
-        Assert.Contains("malformed", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.IsNotNull(ex.InnerException);
+        var result = PythonSource.ReadToolResult(json);
+
+        Assert.IsTrue(result.IsError);
     }
 
     [TestMethod]
@@ -169,7 +157,7 @@ public sealed class PythonToolsetMrtrBridgeTests
     {
         const string json = """{"structuredContent":{"ok":true}}""";
 
-        var actual = PythonMcpToolBackend.ReadToolResult(json);
+        var actual = PythonSource.ReadToolResult(json);
         Assert.IsTrue(actual.StructuredContent.HasValue);
         Assert.AreEqual(JsonValueKind.True, actual.StructuredContent.Value.GetProperty("ok").ValueKind);
     }

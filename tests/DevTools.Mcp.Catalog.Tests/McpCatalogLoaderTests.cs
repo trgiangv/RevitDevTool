@@ -58,21 +58,21 @@ public sealed class McpCatalogLoaderTests
         Assert.AreEqual(ExecutionMode.Dotnet, catalog.Tools[0].Binding.SourceKind);
     }
 
-    private static McpRegistryCatalog CreateCatalog(params McpRegisteredTool[] tools) => new()
+    private static RegistryCatalog CreateCatalog(params RegisteredTool[] tools) => new()
     {
         Tools = tools,
         Resources = [],
     };
 
-    private static McpRegisteredTool Tool(string name) => McpHostTestHarness.CreateRegisteredTool(name);
+    private static RegisteredTool Tool(string name) => McpHostTestHarness.CreateRegisteredTool(name);
 
-    private sealed class StubProvider(string name, ExecutionMode sourceKind, params McpRegisteredTool[] tools) : IMcpRegistryProvider
+    private sealed class StubProvider(string name, ExecutionMode sourceKind, params RegisteredTool[] tools) : IRegistryProvider
     {
         public string Name { get; } = name;
         public ExecutionMode SourceKind { get; } = sourceKind;
-        public McpRegistryCatalog Catalog { get; set; } = CreateCatalog(tools);
+        public RegistryCatalog Catalog { get; set; } = CreateCatalog(tools);
         public void ConfigurePaths(IReadOnlyList<string> paths) { }
-        public McpRegistryCatalog LoadCatalog() => Catalog;
+        public RegistryCatalog LoadCatalog() => Catalog;
     }
 
     private sealed class CapturingLogger<T> : ILogger<T>

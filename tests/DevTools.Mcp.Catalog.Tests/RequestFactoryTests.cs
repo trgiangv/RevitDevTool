@@ -1,4 +1,4 @@
-using DevTools.Mcp.Catalog.Bridging;
+using DevTools.Mcp.Bridging;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;

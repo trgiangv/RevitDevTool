@@ -1,5 +1,5 @@
 using System.Text.Json.Nodes;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 
 namespace DevTools.Mcp.Catalog.Tests;
 

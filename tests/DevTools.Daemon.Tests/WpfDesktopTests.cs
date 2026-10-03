@@ -257,7 +257,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     {
         auth ??= DaemonTestDoubles.CreateAuthService().Object;
         tunnel ??= DaemonTestDoubles.CreateTunnelStatus().Object;
-        var broker = DaemonTestDoubles.CreateHostBroker().Object;
+        var broker = DaemonTestDoubles.CreateProcessSessions().Object;
         var scanner = DaemonTestDoubles.CreatePipeScanner().Object;
         var store = DaemonTestDoubles.CreateUserSettingsStore();
         return new AppState(auth, broker, scanner, store, tunnel);

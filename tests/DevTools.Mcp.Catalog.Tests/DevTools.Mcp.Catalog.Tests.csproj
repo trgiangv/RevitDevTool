@@ -33,11 +33,9 @@
 
     <ItemGroup>
 
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj"/>
-
         <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
 
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Adapter\DevTools.Mcp.Adapter.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
 
         <ProjectReference Include="..\..\source\DevTools.Settings\DevTools.Settings.csproj"/>
 
@@ -46,8 +44,6 @@
         <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj"/>
 
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
-
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj"/>
 
     </ItemGroup>
 
@@ -63,23 +59,19 @@
 
         <Using Include="DevTools.Mcp.Core.Catalog"/>
 
-        <Using Include="DevTools.Mcp.Core.Invocation"/>
-
         <Using Include="DevTools.Mcp.Core.Models"/>
 
         <Using Include="DevTools.Mcp.Core.Protocol"/>
-
-        <Using Include="DevTools.Mcp.Core.Protocol.Invocation"/>
 
         <Using Include="DevTools.Mcp.Core.Results"/>
 
         <Using Include="DevTools.Mcp.Core.Sessions"/>
 
-        <Using Include="DevTools.Mcp.Catalog"/>
+        <Using Include="DevTools.Mcp"/>
 
-        <Using Include="DevTools.Mcp.Catalog.Discovery"/>
+        <Using Include="DevTools.Mcp.Discovery"/>
 
-        <Using Include="DevTools.Mcp.Catalog.Isolation"/>
+        <Using Include="DevTools.Mcp.Isolation"/>
 
         <Using Include="DevTools.Mcp.Core.Utils"/>
 

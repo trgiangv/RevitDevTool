@@ -13,10 +13,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Daemon\DevTools.Daemon.csproj" AdditionalProperties="SelfContained=false;PublishSingleFile=false"/>
         <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
     </ItemGroup>
 
@@ -24,9 +22,10 @@
         <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
         <Using Include="DevTools.Ipc"/>
         <Using Include="DevTools.Mcp.Core"/>
-        <Using Include="DevTools.Mcp.Core.Catalog"/>
-        <Using Include="DevTools.Mcp.Catalog"/>
-        <Using Include="DevTools.Mcp.Server.Hosting"/>
+        <Using Include="DevTools.Daemon.Mcp.Processes"/>
+        <Using Include="DevTools.Daemon.Mcp.Hosting"/>
+        <Using Include="DevTools.Daemon.Mcp.Search"/>
+        <Using Include="DevTools.Daemon.Mcp.Contracts"/>
     </ItemGroup>
 
 </Project>

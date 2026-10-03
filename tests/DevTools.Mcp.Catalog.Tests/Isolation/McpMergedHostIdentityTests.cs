@@ -1,5 +1,5 @@
 using System.Reflection;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using ModelContextProtocol.Protocol;
 

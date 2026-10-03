@@ -1,15 +1,14 @@
 using System.Diagnostics;
 using DevTools.Ipc;
-using DevTools.Mcp.Client;
+using DevTools.Daemon.Mcp.Processes;
 using DevTools.Mcp.Client.Tests.Harness;
-using DevTools.Mcp.Core.Sessions;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Client.Tests;
 
 [TestClass]
-public sealed class HostBrokerIntegrationTests
+public sealed class ProcessSessionsIntegrationTests
 {
     public TestContext TestContext { get; set; } = null!;
 
@@ -20,7 +19,7 @@ public sealed class HostBrokerIntegrationTests
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        await using var broker = new HostBroker(scanner, NullLogger<HostBroker>.Instance, NullLoggerFactory.Instance);
+        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -32,13 +31,10 @@ public sealed class HostBrokerIntegrationTests
             TimeSpan.FromSeconds(10),
             TestContext.CancellationToken);
 
-        var session = Assert.IsInstanceOfType<HostSession>(broker.GetByProcessId(Environment.ProcessId));
+        var session = Assert.IsInstanceOfType<ProcessSession>(broker.GetByProcessId(Environment.ProcessId));
         Assert.IsNotNull(session);
         Assert.IsTrue(session.IsConnected);
         Assert.AreEqual(host.PipeName, session.PipeName);
-
-        var byKey = broker.GetByHostKey(session.Key);
-        Assert.AreSame(session, byKey);
 
         await WaitUntilAsync(
             () => broker.Catalog.List().Count > 0,
@@ -62,12 +58,88 @@ public sealed class HostBrokerIntegrationTests
     }
 
     [TestMethod]
+    public async Task RunAsync_ReconnectsWhenTransportDropsButPipeStillDiscovered()
+    {
+        await using var host = await FakeMcpHostPipe.StartAsync(cancellationToken: TestContext.CancellationToken);
+
+        var scanner = new FakePipeScanner();
+        scanner.SetPipes(host.PipeName);
+        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+
+        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        var runTask = broker.RunAsync(runCts.Token);
+
+        await WaitUntilAsync(
+            () => broker.GetByProcessId(Environment.ProcessId) is { IsConnected: true },
+            TimeSpan.FromSeconds(10),
+            TestContext.CancellationToken);
+
+        await host.EndCurrentSessionAsync(TestContext.CancellationToken);
+
+        await WaitUntilAsync(
+            () => broker.GetByProcessId(Environment.ProcessId) is null,
+            TimeSpan.FromSeconds(10),
+            TestContext.CancellationToken);
+
+        await WaitUntilAsync(
+            () => host.ListenGeneration >= 2,
+            TimeSpan.FromSeconds(10),
+            TestContext.CancellationToken);
+
+        await WaitUntilAsync(
+            () => broker.GetByProcessId(Environment.ProcessId) is { IsConnected: true },
+            TimeSpan.FromSeconds(15),
+            TestContext.CancellationToken);
+
+        await WaitUntilAsync(
+            () => broker.Catalog.List().Count > 0,
+            TimeSpan.FromSeconds(10),
+            TestContext.CancellationToken);
+
+        await runCts.CancelAsync();
+        try { await runTask; } catch (OperationCanceledException) { /* expected */ }
+    }
+
+    [TestMethod]
+    public async Task RunAsync_DoesNotReconnectWhenPipeDisappearsFromDiscovery()
+    {
+        await using var host = await FakeMcpHostPipe.StartAsync(cancellationToken: TestContext.CancellationToken);
+
+        var scanner = new FakePipeScanner();
+        scanner.SetPipes(host.PipeName);
+        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+
+        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        var runTask = broker.RunAsync(runCts.Token);
+
+        await WaitUntilAsync(
+            () => broker.GetByProcessId(Environment.ProcessId) is { IsConnected: true },
+            TimeSpan.FromSeconds(10),
+            TestContext.CancellationToken);
+
+        scanner.SetPipes();
+
+        await WaitUntilAsync(
+            () => broker.GetByProcessId(Environment.ProcessId) is null,
+            TimeSpan.FromSeconds(10),
+            TestContext.CancellationToken);
+
+        await Task.Delay(2500, TestContext.CancellationToken);
+
+        Assert.IsNull(broker.GetByProcessId(Environment.ProcessId));
+        Assert.IsEmpty(broker.Catalog.List());
+
+        await runCts.CancelAsync();
+        try { await runTask; } catch (OperationCanceledException) { /* expected */ }
+    }
+
+    [TestMethod]
     public async Task RunAsync_IgnoresUnreachablePipe()
     {
         var deadPipe = HostPipeName.FormatMcp("Revit", "2025", int.MaxValue);
         var scanner = new FakePipeScanner();
         scanner.SetPipes(deadPipe);
-        await using var broker = new HostBroker(scanner, NullLogger<HostBroker>.Instance, NullLoggerFactory.Instance);
+        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -88,7 +160,7 @@ public sealed class HostBrokerIntegrationTests
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        var broker = new HostBroker(scanner, NullLogger<HostBroker>.Instance, NullLoggerFactory.Instance);
+        var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -116,4 +188,5 @@ public sealed class HostBrokerIntegrationTests
             await Task.Delay(50, cancellationToken);
         }
     }
+
 }

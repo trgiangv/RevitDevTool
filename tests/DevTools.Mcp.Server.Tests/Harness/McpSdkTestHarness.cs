@@ -1,11 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Bogus;
-using DevTools.Mcp.Client;
+using DevTools.Daemon.Mcp.Processes;
+using DevTools.Ipc;
 using DevTools.Mcp.Core;
-using DevTools.Mcp.Core.Invocation;
-using DevTools.Mcp.Server.Contracts;
-using DevTools.Mcp.Server.Tools;
+using DevTools.Daemon.Mcp.Contracts;
+using DevTools.Daemon.Mcp.Tools;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -32,7 +32,8 @@ internal sealed record McpSdkCatalogOptions(
     IReadOnlyList<string> Resources,
     IReadOnlyList<string> ResourceTemplates,
     string? LargeResourceText = null,
-    IReadOnlyDictionary<string, McpToolBehavior>? ToolBehaviors = null)
+    IReadOnlyDictionary<string, McpToolBehavior>? ToolBehaviors = null,
+    bool BumpToolSchema = false)
 {
     public static McpSdkCatalogOptions Default { get; } = new(
         ["revit_find_elements"],
@@ -76,58 +77,58 @@ internal sealed class McpSdkTestHarness
 {
     private static readonly Faker Faker = new();
 
-    public McpSdkHostBroker Broker { get; }
-    public McpSdkHostSession Session { get; }
+    public McpSdkProcessSessions Broker { get; }
+    public McpSdkProcessSession Session { get; }
     public McpServerTool SearchTool { get; }
     public McpServerTool InvokeTool { get; }
 
-    private McpSdkTestHarness(McpSdkHostBroker broker, McpSdkHostSession session)
+    private McpSdkTestHarness(McpSdkProcessSessions broker, McpSdkProcessSession session)
     {
         Broker = broker;
         Session = session;
-        SearchTool = SearchDynamicTool.Create(broker);
-        InvokeTool = InvokeDynamicTool.Create(broker);
+        SearchTool = DevTools.Daemon.Mcp.Tools.SearchTool.Create(broker);
+        InvokeTool = DevTools.Daemon.Mcp.Tools.InvokeTool.Create(broker);
     }
 
     public static McpSdkTestHarness Create(McpSdkCatalogOptions? options = null)
     {
         options ??= McpSdkCatalogOptions.Default;
-        var session = new McpSdkHostSession(101, options);
-        var broker = new McpSdkHostBroker(session);
-        broker.Catalog.Replace(McpSdkCatalogBuilder.BuildEntry(session, options));
+        var session = new McpSdkProcessSession(101, options);
+        var broker = new McpSdkProcessSessions(session);
+        broker.Catalog.Replace(McpSdkCatalogBuilder.BuildCatalog(session, options));
         return new McpSdkTestHarness(broker, session);
     }
 
     public static McpSdkTestHarness ForTool(string toolName, McpToolBehavior behavior) =>
         Create(McpSdkCatalogOptions.ForTool(toolName, behavior));
 
-    public async Task<SearchCapabilitiesResponse> Search(object args) =>
-        McpToolInvoke.Parse<SearchCapabilitiesResponse>(await McpToolInvoke.Invoke(SearchTool, "search_dynamic", args));
+    public async Task<SearchResponse> Search(object args) =>
+        McpToolInvoke.Parse<SearchResponse>(await McpToolInvoke.Invoke(SearchTool, "search_dynamic", args));
 
-    public async Task<string> SearchFirstCapabilityId(object args)
+    public async Task<string> SearchFirstId(object args)
     {
         var response = await Search(args);
-        return Enumerable.Single(response.Items).CapabilityId;
+        return Enumerable.Single(response.Items).Id;
     }
 
     public async Task<CallToolResult> InvokeDynamic(object args) =>
         await McpToolInvoke.Invoke(InvokeTool, "invoke_dynamic", args);
 
-    public async Task<CallToolResult> InvokeCapability(string capabilityId, object? arguments = null) =>
-        await InvokeDynamic(new { capabilityId, arguments });
+    public async Task<CallToolResult> InvokeId(string id, object? arguments = null) =>
+        await InvokeDynamic(new { id, arguments });
 
-    public async Task<InputRequiredException> InvokeExpectingInputRequired(string capabilityId, object? arguments = null) =>
-        await Assert.ThrowsExactlyAsync<InputRequiredException>(() => InvokeCapability(capabilityId, arguments));
+    public async Task<InputRequiredException> InvokeExpectingInputRequired(string id, object? arguments = null) =>
+        await Assert.ThrowsExactlyAsync<InputRequiredException>(() => InvokeId(id, arguments));
 
     public async Task<CallToolResult> InvokeMrtrRetry(
-        string capabilityId,
+        string id,
         InputRequiredException firstRound,
         IDictionary<string, object> inputResponses,
         object? arguments = null)
     {
         return await InvokeDynamic(new Dictionary<string, object>
         {
-            ["capabilityId"] = capabilityId,
+            ["id"] = id,
             ["arguments"] = arguments ?? new { },
             ["inputResponses"] = inputResponses,
             ["requestState"] = firstRound.Result.RequestState!,
@@ -135,7 +136,7 @@ internal sealed class McpSdkTestHarness
     }
 
     public void ReplaceCatalog(McpSdkCatalogOptions options) =>
-        Broker.Catalog.Replace(McpSdkCatalogBuilder.BuildEntry(Session, options));
+        Broker.Catalog.Replace(McpSdkCatalogBuilder.BuildCatalog(Session, options));
 }
 
 internal static class McpToolInvoke
@@ -170,9 +171,6 @@ internal static class McpToolInvoke
     public static string Text(CallToolResult result) =>
         result.Content.OfType<TextContentBlock>().Single().Text;
 
-    public static string Text(McpInvocationResponse result) =>
-        result.Content.OfType<McpTextContent>().Single().Text;
-
     public static T Parse<T>(CallToolResult result)
     {
         var text = Text(result);
@@ -192,24 +190,19 @@ internal static class McpToolInvoke
     }
 }
 
-internal sealed class McpSdkHostBroker(McpSdkHostSession session) : IHostBroker
+internal sealed class McpSdkProcessSessions(McpSdkProcessSession session) : IProcessSessions
 {
-    public IConnectedHostCatalog Catalog { get; } = new ConnectedHostCatalog();
-    public HostKey? RequestedHostKey { get; private set; }
+    public ProcessCatalogs Catalog { get; } = new();
     public event Action? Changed { add { } remove { } }
 
-    public IHostSession? GetByProcessId(int processId) =>
-        processId == session.Key.ProcessId ? session : null;
+    public IProcessSession? GetByProcessId(int processId) =>
+        processId == session.ProcessId ? session : null;
 
-    public IHostSession? GetByHostKey(HostKey key)
-    {
-        RequestedHostKey = key;
-        return key.Equals(session.Key) ? session : null;
-    }
+    public Task RunAsync(CancellationToken ct) => Task.CompletedTask;
 }
 
 /// <summary>Mock host session: one passthrough round per SDK MRTR semantics (no client auto-retry).</summary>
-internal sealed class McpSdkHostSession(int pid, McpSdkCatalogOptions options) : IHostSession
+internal sealed class McpSdkProcessSession(int pid, McpSdkCatalogOptions options) : IProcessSession
 {
   private readonly Dictionary<string, McpToolBehavior> _behaviors =
       options.ToolBehaviors?.ToDictionary(
@@ -218,20 +211,22 @@ internal sealed class McpSdkHostSession(int pid, McpSdkCatalogOptions options) :
           StringComparer.OrdinalIgnoreCase)
       ?? new Dictionary<string, McpToolBehavior>(StringComparer.OrdinalIgnoreCase);
 
-  public HostKey Key { get; } = new("test-machine", pid);
+  public int ProcessId => pid;
+  public string PipeName { get; } = $"DevToolsMcp_Revit_2025_{pid}";
+  public InstanceInfo Info { get; } = new() { HostApp = "Revit", ProcessId = pid, VersionNumber = "2025" };
   public bool IsConnected => true;
   public int PassthroughCount { get; private set; }
   public int ReadCount { get; private set; }
   public int TemplateReadCount { get; private set; }
 
-  public Task<HostToolCallOutcome> CallToolPassthroughAsync(CallToolRequestParams parameters, CancellationToken ct = default)
+  public Task<Result> CallToolPassthroughAsync(CallToolRequestParams parameters, CancellationToken ct = default)
   {
     PassthroughCount++;
     var behavior = ResolveBehavior(parameters.Name);
     if (behavior is McpToolBehavior.MrtrElicitationConfirm)
       return Task.FromResult(BuildMrtrOutcome(parameters));
 
-    return Task.FromResult(HostToolCallOutcome.FromToolResult(BuildToolResult(parameters.Name)));
+    return Task.FromResult<Result>(BuildToolResult(parameters.Name));
   }
 
   public Task<ReadResourceResult> ReadResourceAsync(string uri, CancellationToken ct = default)
@@ -267,10 +262,10 @@ internal sealed class McpSdkHostSession(int pid, McpSdkCatalogOptions options) :
   private McpToolBehavior ResolveBehavior(string toolName) =>
       _behaviors.TryGetValue(toolName, out var behavior) ? behavior : McpToolBehavior.PlainText;
 
-  private HostToolCallOutcome BuildMrtrOutcome(CallToolRequestParams parameters)
+  private Result BuildMrtrOutcome(CallToolRequestParams parameters)
   {
     if (parameters.InputResponses is null)
-      return HostToolCallOutcome.FromInputRequired(new InputRequiredResult
+      return new InputRequiredResult
       {
         InputRequests = new Dictionary<string, InputRequest>
         {
@@ -287,12 +282,12 @@ internal sealed class McpSdkHostSession(int pid, McpSdkCatalogOptions options) :
           }),
         },
         RequestState = "host-round1",
-      });
+      };
 
-    return HostToolCallOutcome.FromToolResult(new CallToolResult
+    return new CallToolResult
     {
       Content = [new TextContentBlock { Text = "confirmed" }],
-    });
+    };
   }
 
   private CallToolResult BuildToolResult(string toolName)
@@ -333,23 +328,18 @@ internal sealed class McpSdkHostSession(int pid, McpSdkCatalogOptions options) :
 
 internal static class McpSdkCatalogBuilder
 {
-  internal static HostCatalogEntry BuildEntry(McpSdkHostSession session, McpSdkCatalogOptions options) => new()
+  internal static ProcessCatalog BuildCatalog(McpSdkProcessSession session, McpSdkCatalogOptions options) => new()
   {
-    Key = session.Key,
-    Instance = new InstanceInfo { ProcessId = session.Key.ProcessId, HostApp = "Revit", VersionNumber = "2025" },
-    PipeName = $"DevToolsMcp_Revit_2025_{session.Key.ProcessId}",
+    ProcessId = session.ProcessId,
+    Instance = session.Info,
+    PipeName = session.PipeName,
     Tools = options.Tools.Select(name => new Tool
     {
       Name = name,
       Description = DescribeTool(name),
       InputSchema = name.Contains("screenshot", StringComparison.OrdinalIgnoreCase)
           ? JsonSerializer.SerializeToElement(new { type = "object" })
-          : JsonSerializer.SerializeToElement(new
-          {
-            type = "object",
-            required = new[] { "category" },
-            properties = new { category = new { type = "string" }, selected_only = new { type = "boolean" } },
-          }),
+          : SerializeFindToolSchema(options.BumpToolSchema),
     }).ToArray(),
     Resources = options.Resources.Select(uri => new Resource
     {
@@ -370,4 +360,24 @@ internal static class McpSdkCatalogBuilder
       name.Contains("screenshot", StringComparison.OrdinalIgnoreCase) ? "Capture view screenshot"
       : name.Contains("walls", StringComparison.OrdinalIgnoreCase) ? "Find walls"
       : "Find elements";
+
+  private static JsonElement SerializeFindToolSchema(bool bumpToolSchema) =>
+      bumpToolSchema
+          ? JsonSerializer.SerializeToElement(new
+          {
+              type = "object",
+              required = new[] { "category", "limit" },
+              properties = new
+              {
+                  category = new { type = "string" },
+                  selected_only = new { type = "boolean" },
+                  limit = new { type = "integer" },
+              },
+          })
+          : JsonSerializer.SerializeToElement(new
+          {
+              type = "object",
+              required = new[] { "category" },
+              properties = new { category = new { type = "string" }, selected_only = new { type = "boolean" } },
+          });
 }

@@ -1,5 +1,5 @@
 using DevTools.Daemon.Desktop;
-using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Tests.Support;
 using DevTools.Ipc;
 
@@ -14,7 +14,7 @@ public sealed class HostInstancesTests
     public void Refresh_ListsConnectedAndDiscoveredHosts()
     {
         var connected = DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 1001);
-        var broker = DaemonTestDoubles.CreateHostBroker([connected]);
+        var broker = DaemonTestDoubles.CreateProcessSessions([connected]);
         var discoveredPipe = HostPipeName.FormatMcp("AutoCad", "2026", 2002);
         var scanner = DaemonTestDoubles.CreatePipeScanner([discoveredPipe]);
 
@@ -30,7 +30,7 @@ public sealed class HostInstancesTests
     public void Refresh_SkipsDuplicateDiscoveredPid()
     {
         var connected = DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 1001);
-        var broker = DaemonTestDoubles.CreateHostBroker([connected]);
+        var broker = DaemonTestDoubles.CreateProcessSessions([connected]);
         var discoveredPipe = HostPipeName.FormatMcp("Revit", "2025", 1001);
         var scanner = DaemonTestDoubles.CreatePipeScanner([discoveredPipe]);
 
@@ -43,16 +43,14 @@ public sealed class HostInstancesTests
     [TestMethod]
     public void Refresh_PicksUpNewlyConnectedHosts()
     {
-        var entries = new List<DevTools.Mcp.Core.Sessions.HostCatalogEntry>();
-        var catalog = new Moq.Mock<DevTools.Mcp.Core.Sessions.IConnectedHostCatalog>();
-        catalog.Setup(c => c.List()).Returns(() => entries);
-        var broker = new Moq.Mock<DevTools.Mcp.Core.Sessions.IHostBroker>();
-        broker.Setup(b => b.Catalog).Returns(catalog.Object);
+        var catalog = new ProcessCatalogs();
+        var broker = new Moq.Mock<IProcessSessions>();
+        broker.Setup(b => b.Catalog).Returns(catalog);
         var scanner = DaemonTestDoubles.CreatePipeScanner();
         var hosts = new HostInstances(broker.Object, scanner.Object);
         Assert.IsEmpty(hosts.Rows);
 
-        entries.Add(DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 42));
+        catalog.Replace(DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 42));
         hosts.Refresh();
         Enumerable.Single(hosts.Rows);
     }

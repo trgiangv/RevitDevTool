@@ -201,7 +201,7 @@ public sealed class AdapterArchitectureTests
         var forbidden = new[]
         {
             "HostLocator",
-            "IHostSession",
+            "IProcessSession",
             "ITestSession",
             "Revit.exe",
             "acad.exe",

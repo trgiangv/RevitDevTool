@@ -4,6 +4,7 @@ using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
+using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -36,13 +37,20 @@ public sealed class CSharpCodeToolSuccessTests
         var compiler = new CSharpCompiler(
             NullLogger<CSharpCompiler>.Instance,
             new NugetManager(NullLogger<NugetManager>.Instance));
-        var tool = new CSharpCodeTool(bridge, compiler, hostContext.Object, commandRunner.Object);
+        var tool = new CSharpCodeTool(bridge, compiler, hostContext.Object, commandRunner.Object, Host());
 
         var result = await InvokeToolAsync(tool, new { code }, TestContext.CancellationToken);
 
         Assert.AreNotEqual(true, result.IsError);
         Assert.Contains("ok", Text(result), StringComparison.Ordinal);
         commandRunner.Verify(r => r.RunCompiledCommand(It.IsAny<object>()), Times.Once);
+    }
+
+    private static IHostAppInfo Host()
+    {
+        var info = new Mock<IHostAppInfo>();
+        info.Setup(item => item.Host).Returns(HostApp.Revit);
+        return info.Object;
     }
 
     private static async Task<CallToolResult> InvokeToolAsync(CSharpCodeTool tool, object args, CancellationToken cancellationToken)

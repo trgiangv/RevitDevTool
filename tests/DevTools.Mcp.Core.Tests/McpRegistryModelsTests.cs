@@ -8,14 +8,14 @@ namespace DevTools.Mcp.Core.Tests;
 public sealed class McpRegistryModelsTests
 {
     [TestMethod]
-    public void McpRegistryCatalog_Merge_CombinesToolsAndResources()
+    public void RegistryCatalog_Merge_CombinesToolsAndResources()
     {
-        var left = new McpRegistryCatalog
+        var left = new RegistryCatalog
         {
             Tools = [CreateTool("left")],
             Resources = [CreateResource("left://resource")],
         };
-        var right = new McpRegistryCatalog
+        var right = new RegistryCatalog
         {
             Tools = [CreateTool("right")],
             Resources = [CreateResource("right://resource")],
@@ -28,65 +28,51 @@ public sealed class McpRegistryModelsTests
     }
 
     [TestMethod]
-    public void McpRegistryCatalog_Empty_IsSingleton()
+    public void RegistryCatalog_Empty_IsSingleton()
     {
-        Assert.IsEmpty(McpRegistryCatalog.Empty.Tools);
-        Assert.IsEmpty(McpRegistryCatalog.Empty.Resources);
+        Assert.IsEmpty(RegistryCatalog.Empty.Tools);
+        Assert.IsEmpty(RegistryCatalog.Empty.Resources);
     }
 
     [TestMethod]
-    public void McpPrimitiveBinding_Create_BuildsFallbackAddressAndGroup()
+    public void PrimitiveBinding_CreatePrimitiveId_KeepsNameAndAddress()
     {
-        var binding = McpPrimitiveBinding.Create(
-            ExecutionMode.Python,
-            sourcePath: @"C:\toolsets\demo\tools.py",
-            containerType: "DemoTools",
-            methodName: "ping");
+        var id = PrimitiveBinding.CreatePrimitiveId("My Tool", @"pkg\tool.py:Main.run");
 
-        Assert.AreEqual(ExecutionMode.Python, binding.SourceKind);
-        Assert.AreEqual("tools:DemoTools.ping", binding.SourceAddress);
-        Assert.AreEqual("demo", binding.GroupName);
+        Assert.AreEqual(@"My Tool_[pkg\tool.py:Main.run]", id);
     }
 
     [TestMethod]
-    public void McpPrimitiveBinding_CreatePrimitiveId_NormalizesSegments()
+    public void RegisteredResource_DisplayName_PrefersDescriptorName()
     {
-        var id = McpPrimitiveBinding.CreatePrimitiveId("My Tool", @"pkg\tool.py:Main.run");
-
-        Assert.AreEqual("My-Tool_[pkg/tool.py:Main.run]", id);
-    }
-
-    [TestMethod]
-    public void McpRegisteredResource_DisplayName_PrefersDescriptorName()
-    {
-        var fromDescriptor = new McpRegisteredResource
+        var fromDescriptor = new RegisteredResource
         {
             Id = "r1",
             Descriptor = new Resource { Name = "demo_status", Uri = "demo://status" },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, "x.dll", "X", "Read"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, "x.dll", "X", "Read", "", ""),
         };
-        var fromTemplate = new McpRegisteredResource
+        var fromTemplate = new RegisteredResource
         {
             Id = "r2",
             TemplateDescriptor = new ResourceTemplate { Name = "template_name", UriTemplate = "demo://{id}" },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, "x.dll", "X", "Read"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, "x.dll", "X", "Read", "", ""),
         };
 
         Assert.AreEqual("demo_status", fromDescriptor.DisplayName);
         Assert.AreEqual("template_name", fromTemplate.DisplayName);
     }
 
-    private static McpRegisteredTool CreateTool(string id) => new()
+    private static RegisteredTool CreateTool(string id) => new()
     {
         Id = id,
         Descriptor = new Tool { Name = id, InputSchema = System.Text.Json.JsonSerializer.SerializeToElement(new { type = "object" }) },
-        Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, "stub.dll", "Stub", id),
+        Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, "stub.dll", "Stub", id, "", ""),
     };
 
-    private static McpRegisteredResource CreateResource(string uri) => new()
+    private static RegisteredResource CreateResource(string uri) => new()
     {
         Id = uri,
         Descriptor = new Resource { Name = uri, Uri = uri },
-        Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, "stub.dll", "Stub", "Read"),
+        Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, "stub.dll", "Stub", "Read", "", ""),
     };
 }

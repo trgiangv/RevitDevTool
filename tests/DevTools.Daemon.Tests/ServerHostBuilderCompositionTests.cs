@@ -1,12 +1,10 @@
 using System.IO.Pipelines;
 using System.Text.Json;
 using DevTools.Daemon.Composition;
-using DevTools.Mcp.Server.Hosting;
+using DevTools.Daemon.Mcp.Hosting;
 using DevTools.FileMetadata.Core;
-using DevTools.Mcp.Core;
-using DevTools.Mcp.Core.Sessions;
+using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -24,7 +22,7 @@ public sealed class ServerHostBuilderCompositionTests
         using var host = ServerHostBuilder.CreateStdioHostForTests();
         var services = host.Services;
 
-        Assert.IsNotNull(services.GetRequiredService<IHostBroker>());
+        Assert.IsNotNull(services.GetRequiredService<IProcessSessions>());
         Assert.IsNotNull(services.GetRequiredService<IFileReaderCatalog>());
         Assert.IsNotNull(services.GetRequiredService<McpEngine>());
     }

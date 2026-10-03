@@ -1,5 +1,5 @@
 using System.Reflection;
-using DevTools.Mcp.Catalog.Isolation;
+using DevTools.Mcp.Isolation;
 
 namespace DevTools.Mcp.Catalog.Tests;
 
@@ -7,7 +7,7 @@ namespace DevTools.Mcp.Catalog.Tests;
 public sealed class MetadataAssemblyPathCollectorTests
 {
     private static readonly Type CollectorType =
-        typeof(McpToolsetContext).Assembly.GetType("DevTools.Mcp.Catalog.Isolation.MetadataAssemblyPathCollector", throwOnError: true)!;
+        typeof(McpToolsetContext).Assembly.GetType("DevTools.Mcp.Isolation.MetadataAssemblyPathCollector", throwOnError: true)!;
 
     [TestMethod]
     public void Collect_IncludesEntryDirectoryAndExplicitDependencies()

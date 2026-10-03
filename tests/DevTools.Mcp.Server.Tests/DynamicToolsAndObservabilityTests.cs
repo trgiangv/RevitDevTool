@@ -1,5 +1,6 @@
-using DevTools.Mcp.Server.Contracts;
-using DevTools.Mcp.Server.Tools;
+using DevTools.Daemon.Mcp.Contracts;
+using DevTools.Daemon.Mcp.Processes;
+using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Server.Tests.Harness;
 using ModelContextProtocol.Server;
 
@@ -18,9 +19,9 @@ public sealed class DynamicToolsAndObservabilityTests
         var item = Enumerable.Single((await harness.Search(new { query = "find" })).Items);
 
         Assert.AreEqual("revit_find_elements", item.Target);
-        Assert.AreNotEqual("revit_find_elements", item.CapabilityId);
-        Assert.IsTrue(DynamicCapabilityId.TryDecode(item.CapabilityId, out var locator));
-        Assert.AreEqual(101, locator!.HostInstanceId);
+        Assert.AreNotEqual("revit_find_elements", item.Id);
+        Assert.IsTrue(CatalogId.TryDecode(item.Id, out var locator));
+        Assert.AreEqual(101, locator!.ProcessId);
         Assert.AreEqual(0, harness.Session.PassthroughCount);
         Assert.AreEqual(0, harness.Session.ReadCount);
     }
@@ -69,8 +70,11 @@ public sealed class DynamicToolsAndObservabilityTests
         var response = await harness.Search(new { query = "element", kinds = new[] { "resource_template" } });
         var item = Enumerable.Single(response.Items);
 
-        Assert.AreEqual("resource_template", item.Kind);
+        Assert.AreEqual(CatalogType.ResourceTemplate, item.Kind);
         Assert.AreEqual("revit://element/{elementId}", item.Target);
+        var json = System.Text.Json.JsonSerializer.Serialize(item, McpServerJsonContext.Default.SearchItem);
+        Assert.Contains("\"kind\":\"resource_template\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"id\":\"dci2.", json, StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -89,14 +93,14 @@ public sealed class DynamicToolsAndObservabilityTests
     public async Task InvokeDynamic_RoutesSingleCapabilityWithoutChangingFixedSurface()
     {
         var harness = McpSdkTestHarness.Create();
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = "find" });
+        var id = await harness.SearchFirstId(new { query = "find" });
         var collection = new McpServerPrimitiveCollection<McpServerTool> { harness.SearchTool, harness.InvokeTool };
 
-        var result = await harness.InvokeCapability(capabilityId, new { category = "Walls" });
+        var result = await harness.InvokeId(id, new { category = "Walls" });
 
         Assert.AreEqual("called:revit_find_elements", McpToolInvoke.Text(result));
         Assert.AreEqual(1, harness.Session.PassthroughCount);
-        Assert.AreEqual(harness.Session.Key, harness.Broker.RequestedHostKey);
+        Assert.AreEqual(101, harness.Session.ProcessId);
         Assert.AreSequenceEqual(["invoke_dynamic", "search_dynamic"], collection.Select(tool => tool.ProtocolTool.Name).OrderBy(name => name).ToArray());
     }
 
@@ -107,12 +111,12 @@ public sealed class DynamicToolsAndObservabilityTests
             ["revit_find_elements"],
             ["revit://version"],
             [],
-            new string('x', InvokeDynamicLimits.HardResultBudgetBytes + 1)));
-        var resourceId = (await harness.Search(new { kinds = new[] { "resource" } })).Items.Single().CapabilityId;
+            new string('x', InvokeValidator.HardResultBudgetBytes + 1)));
+        var resourceId = (await harness.Search(new { kinds = new[] { "resource" } })).Items.Single().Id;
 
-        var response = McpToolInvoke.Parse<InvokeCapabilityResponse>(await harness.InvokeDynamic(new
+        var response = McpToolInvoke.Parse<InvokeResponse>(await harness.InvokeDynamic(new
         {
-            reads = new[] { new { capabilityId = resourceId } },
+            reads = new[] { new { id = resourceId } },
         }));
 
         var item = Enumerable.Single(response.Results!);
@@ -122,11 +126,11 @@ public sealed class DynamicToolsAndObservabilityTests
     }
 
     [TestMethod]
-    public void InvokeCapabilityRequestValidator_RejectsMalformedArguments()
+    public void InvokeRequest_RejectsMalformedArguments()
     {
-        var problems = InvokeCapabilityValidator.Validate(
-            new InvokeCapabilityRequest("bad", System.Text.Json.JsonSerializer.SerializeToElement("not-an-object")));
-        Assert.Contains(problem => problem.Name == "capabilityId", problems);
+        var problems = InvokeValidator.Validate(
+            new InvokeRequest("bad", System.Text.Json.JsonSerializer.SerializeToElement("not-an-object")));
+        Assert.Contains(problem => problem.Name == "id", problems);
         Assert.Contains(problem => problem.Name == "arguments", problems);
     }
 }

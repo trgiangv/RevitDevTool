@@ -1,8 +1,8 @@
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.Backends;
 using DevTools.Execution.Services;
-using DevTools.Mcp.Catalog.Discovery;
-using DevTools.Mcp.Catalog.Isolation;
+using DevTools.Mcp.Discovery;
+using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +13,7 @@ using ModelContextProtocol.Server;
 namespace DevTools.Execution.Tests;
 
 [TestClass]
-public sealed class DotnetMcpToolBackendInvokeTests
+public sealed class DotnetSourceInvokeTests
 {
     public TestContext TestContext { get; set; } = null!;
 
@@ -21,15 +21,17 @@ public sealed class DotnetMcpToolBackendInvokeTests
     public async Task InvokeToolAsync_ResolvesStaticTool_ReturnsSuccess()
     {
         var backend = CreateBackend();
-        var tool = new McpRegisteredTool
+        var tool = new RegisteredTool
         {
             Id = "execution-echo",
             Descriptor = new Tool { Name = "execution_echo" },
-            Binding = McpPrimitiveBinding.Create(
+            Binding = PrimitiveBinding.Create(
                 ExecutionMode.Dotnet,
                 typeof(ExecutionDotnetMcpStubs).Assembly.Location,
                 typeof(ExecutionDotnetMcpStubs).FullName!,
-                nameof(ExecutionDotnetMcpStubs.Echo)),
+                nameof(ExecutionDotnetMcpStubs.Echo),
+                "",
+                ""),
         };
 
         var result = await backend.InvokeToolAsync(
@@ -45,19 +47,18 @@ public sealed class DotnetMcpToolBackendInvokeTests
             ExecutionTestHelpers.InlineHostContext(),
             TestContext.CancellationToken);
 
-        Assert.IsTrue(result.IsSuccess, result.Error?.Message);
-        Assert.IsNotNull(result.Value);
+        Assert.AreNotEqual(true, result.IsError);
     }
 
     [TestMethod]
     public async Task InvokeToolAsync_UnknownTool_ReturnsFailure()
     {
         var backend = CreateBackend();
-        var tool = new McpRegisteredTool
+        var tool = new RegisteredTool
         {
             Id = "missing",
             Descriptor = new Tool { Name = "missing" },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, string.Empty, "Missing", "Run"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, string.Empty, "Missing", "Run", "", ""),
         };
 
         var result = await backend.InvokeToolAsync(
@@ -66,22 +67,24 @@ public sealed class DotnetMcpToolBackendInvokeTests
             ExecutionTestHelpers.InlineHostContext(),
             TestContext.CancellationToken);
 
-        Assert.IsFalse(result.IsSuccess);
+        Assert.IsTrue(result.IsError);
     }
 
     [TestMethod]
     public async Task InvokeToolAsync_SecondCall_UsesCachedTool()
     {
         var backend = CreateBackend();
-        var tool = new McpRegisteredTool
+        var tool = new RegisteredTool
         {
             Id = "execution-echo-cache",
             Descriptor = new Tool { Name = "execution_echo" },
-            Binding = McpPrimitiveBinding.Create(
+            Binding = PrimitiveBinding.Create(
                 ExecutionMode.Dotnet,
                 typeof(ExecutionDotnetMcpStubs).Assembly.Location,
                 typeof(ExecutionDotnetMcpStubs).FullName!,
-                nameof(ExecutionDotnetMcpStubs.Echo)),
+                nameof(ExecutionDotnetMcpStubs.Echo),
+                "",
+                ""),
         };
 
         var request = new CallToolRequestParams
@@ -96,8 +99,8 @@ public sealed class DotnetMcpToolBackendInvokeTests
         var first = await backend.InvokeToolAsync(tool, request, ExecutionTestHelpers.InlineHostContext(), TestContext.CancellationToken);
         var second = await backend.InvokeToolAsync(tool, request, ExecutionTestHelpers.InlineHostContext(), TestContext.CancellationToken);
 
-        Assert.IsTrue(first.IsSuccess);
-        Assert.IsTrue(second.IsSuccess);
+        Assert.AreNotEqual(true, first.IsError);
+        Assert.AreNotEqual(true, second.IsError);
         backend.ClearCaches();
     }
 
@@ -105,15 +108,17 @@ public sealed class DotnetMcpToolBackendInvokeTests
     public async Task InvokeToolAsync_InstanceTool_ReturnsSuccess()
     {
         var backend = CreateBackend();
-        var tool = new McpRegisteredTool
+        var tool = new RegisteredTool
         {
             Id = "execution-instance",
             Descriptor = new Tool { Name = "execution_instance" },
-            Binding = McpPrimitiveBinding.Create(
+            Binding = PrimitiveBinding.Create(
                 ExecutionMode.Dotnet,
                 typeof(ExecutionDotnetMcpInstanceStubs).Assembly.Location,
                 typeof(ExecutionDotnetMcpInstanceStubs).FullName!,
-                nameof(ExecutionDotnetMcpInstanceStubs.InstanceEcho)),
+                nameof(ExecutionDotnetMcpInstanceStubs.InstanceEcho),
+                "",
+                ""),
         };
 
         var result = await backend.InvokeToolAsync(
@@ -129,15 +134,15 @@ public sealed class DotnetMcpToolBackendInvokeTests
             ExecutionTestHelpers.InlineHostContext(),
             TestContext.CancellationToken);
 
-        Assert.IsTrue(result.IsSuccess, result.Error?.Message);
+        Assert.AreNotEqual(true, result.IsError);
     }
 
-    private static DotnetMcpToolBackend CreateBackend()
+    private static DotnetSource CreateBackend()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         var provider = services.BuildServiceProvider();
-        return new DotnetMcpToolBackend(
+        return new DotnetSource(
             provider,
             new DotnetMethodResolver(
                 new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance),

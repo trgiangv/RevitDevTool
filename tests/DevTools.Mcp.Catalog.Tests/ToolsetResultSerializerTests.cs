@@ -1,9 +1,6 @@
 using System.Text.Json;
-using DevTools.Mcp.Adapter.Bridging;
-using DevTools.Mcp.Adapter;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
@@ -26,7 +23,7 @@ public sealed class ToolsetResultSerializerTests
         };
 
         var outputSchema = JsonSerializer.SerializeToElement(new { type = "object" });
-        var result = ToolsetResultSerializer.ToInvocationResponse(alcShaped, outputSchema);
+        var result = ResultBridge.ToHostCallToolResult(alcShaped, outputSchema);
 
         Assert.AreEqual(240, result.StructuredContent!.Value.GetProperty("count").GetInt32());
         Assert.Contains("Found 3 elements", McpToolInvoke.Text(result), StringComparison.Ordinal);
@@ -39,7 +36,7 @@ public sealed class ToolsetResultSerializerTests
         var payload = new { moved_count = 2, failures = (string[]?)null };
         var outputSchema = JsonSerializer.SerializeToElement(new { type = "object" });
 
-        var result = ToolsetResultSerializer.ToInvocationResponse(payload, outputSchema);
+        var result = ResultBridge.ToHostCallToolResult(payload, outputSchema);
 
         Assert.AreEqual(2, result.StructuredContent!.Value.GetProperty("moved_count").GetInt32());
         Assert.Contains("moved_count", McpToolInvoke.Text(result), StringComparison.Ordinal);
@@ -55,32 +52,14 @@ public sealed class ToolsetResultSerializerTests
         };
 
         var outputSchema = JsonSerializer.SerializeToElement(new { type = "object" });
-        var result = ToolsetResultSerializer.ToInvocationResponse(original, outputSchema);
+        var result = ResultBridge.ToHostCallToolResult(original, outputSchema);
 
         Assert.AreEqual("ok", McpToolInvoke.Text(result));
         Assert.IsTrue(result.StructuredContent!.Value.GetProperty("healthy").GetBoolean());
     }
 
     [TestMethod]
-    public void ToSdk_SerializeDeserialize_PreservesText()
-    {
-        var original = new McpInvocationResponse
-        {
-            Content = [new McpTextContent("Model healthy, 0 selected")],
-            StructuredContent = JsonSerializer.SerializeToElement(new { healthy = true }),
-        };
-
-        var sdk = SdkInvocationMapper.ToSdk(original);
-        var roundTripped = JsonSerializer.Deserialize<CallToolResult>(
-            JsonSerializer.Serialize(sdk, ToolHelpers.ProtocolOptions),
-            ToolHelpers.ProtocolOptions)!;
-
-        Assert.AreEqual(McpToolInvoke.Text(original), ((TextContentBlock)sdk.Content[0]).Text);
-        Assert.AreEqual(((TextContentBlock)sdk.Content[0]).Text, ((TextContentBlock)roundTripped.Content[0]).Text);
-    }
-
-    [TestMethod]
-    public void ToInvocationResponse_UnsupportedHostBlock_Throws()
+    public void ToHostCallToolResult_HostContentBlock_IsKept()
     {
         var block = new ToolUseContentBlock
         {
@@ -89,10 +68,9 @@ public sealed class ToolsetResultSerializerTests
             Input = JsonSerializer.SerializeToElement(new { }),
         };
 
-        var ex = Assert.ThrowsExactly<NotSupportedException>(
-            () => ToolsetResultSerializer.ToInvocationResponse(block, outputSchema: null));
+        var result = ResultBridge.ToHostCallToolResult(block, outputSchema: null);
 
-        Assert.Contains("Unsupported host content block", ex.Message, StringComparison.Ordinal);
-        Assert.Contains(nameof(ToolUseContentBlock), ex.Message, StringComparison.Ordinal);
+        Assert.HasCount(1, result.Content);
+        Assert.IsInstanceOfType<ToolUseContentBlock>(result.Content[0]);
     }
 }

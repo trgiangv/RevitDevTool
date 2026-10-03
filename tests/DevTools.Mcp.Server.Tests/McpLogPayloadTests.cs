@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DevTools.Mcp.Server.Hosting;
+using DevTools.Daemon.Mcp.Hosting;
 using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;

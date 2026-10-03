@@ -5,7 +5,7 @@ using ModelContextProtocol.Protocol;
 namespace DevTools.Mcp.Client.Tests;
 
 /// <summary>
-/// Guards <see cref="DevTools.Mcp.Client.McpClientPassthrough"/> reflection against SDK 2.2.0 surface drift (ADR 0027).
+/// Guards <see cref="DevTools.Daemon.Mcp.Processes.McpClientPassthrough"/> reflection against SDK 2.2.0 surface drift (ADR 0027).
 /// </summary>
 [TestClass]
 public sealed class McpClientPassthroughSurfaceTests

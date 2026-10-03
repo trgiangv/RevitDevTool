@@ -1,8 +1,8 @@
-using DevTools.Mcp.Catalog;
+using DevTools.Daemon.Mcp;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using ModelContextProtocol.Server;
+
 namespace DevTools.Mcp.Server.Tests;
 
 internal static class TestMcpAppServices
@@ -11,7 +11,7 @@ internal static class TestMcpAppServices
     {
         var services = new ServiceCollection();
         services.AddSingleton(loggerFactory ?? NullLoggerFactory.Instance);
-        services.AddMcp();
+        McpServiceCollectionExtensions.AddMcp(services);
         return services.BuildServiceProvider();
     }
 }

@@ -1,7 +1,7 @@
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.Backends;
 using DevTools.Execution.External.Mcp.BuiltIn;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
 using DevTools.Mcp.Core.Models;
 using ModelContextProtocol.Protocol;
 using Moq;
@@ -9,7 +9,7 @@ using Moq;
 namespace DevTools.Execution.Tests;
 
 [TestClass]
-public sealed class BuiltInMcpToolBackendTests
+public sealed class BuiltInSourceTests
 {
     public TestContext TestContext { get; set; } = null!;
 
@@ -31,11 +31,11 @@ public sealed class BuiltInMcpToolBackendTests
     public async Task InvokeToolAsync_UnknownTool_ReturnsFailure()
     {
         var backend = CreateBackend();
-        var tool = new McpRegisteredTool
+        var tool = new RegisteredTool
         {
             Id = "missing",
             Descriptor = new Tool { Name = "missing-tool" },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "tool", "run"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "tool", "run", "", ""),
         };
 
         var result = await backend.InvokeToolAsync(
@@ -44,8 +44,8 @@ public sealed class BuiltInMcpToolBackendTests
             ExecutionTestHelpers.InlineHostContext(),
             TestContext.CancellationToken);
 
-        Assert.IsFalse(result.IsSuccess);
-        Assert.Contains("No built-in tool registered", result.Error!.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.IsTrue(result.IsError);
+        Assert.Contains("No built-in tool registered", Assert.IsInstanceOfType<TextContentBlock>(result.Content.Single()).Text, StringComparison.OrdinalIgnoreCase);
     }
 
     [TestMethod]
@@ -62,12 +62,12 @@ public sealed class BuiltInMcpToolBackendTests
                 .ReturnsAsync(new DocumentOperationResult(true, "Opened", "Project1"));
 
             var openDocument = new OpenDocumentTool(bridge.Object);
-            var backend = new BuiltInMcpToolBackend([openDocument], []);
-            var tool = new McpRegisteredTool
+            var backend = new BuiltInSource([openDocument], []);
+            var tool = new RegisteredTool
             {
                 Id = openDocument.Name,
                 Descriptor = new Tool { Name = openDocument.Name },
-                Binding = McpPrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "OpenDocumentTool", "Open"),
+                Binding = PrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "OpenDocumentTool", "Open", "", ""),
             };
 
             var result = await backend.InvokeToolAsync(
@@ -83,7 +83,7 @@ public sealed class BuiltInMcpToolBackendTests
                 ExecutionTestHelpers.InlineHostContext(),
                 TestContext.CancellationToken);
 
-            Assert.IsTrue(result.IsSuccess);
+            Assert.AreNotEqual(true, result.IsError);
             bridge.Verify(b => b.OpenDocumentAsync(tempFile, It.IsAny<CancellationToken>()), Times.Once);
         }
         finally
@@ -94,38 +94,38 @@ public sealed class BuiltInMcpToolBackendTests
     }
 
     [TestMethod]
-    public void ReadResource_UnknownTemplate_Throws()
+    public async Task ReadResourceAsync_UnknownTemplate_Throws()
     {
         var backend = CreateBackend();
-        var resource = new McpRegisteredResource
+        var resource = new RegisteredResource
         {
             Id = "missing",
             Descriptor = new Resource { Uri = "test://missing", Name = "missing" },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "res", "read"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "res", "read", "", ""),
         };
 
-        Assert.ThrowsExactly<InvalidOperationException>(
-            () => backend.ReadResource(resource, "test://missing", TestContext.CancellationToken));
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            backend.ReadResourceAsync(resource, "test://missing", TestContext.CancellationToken));
     }
 
     [TestMethod]
-    public void ReadResource_KnownTemplate_ReturnsBuiltInPayload()
+    public async Task ReadResourceAsync_KnownTemplate_ReturnsBuiltInPayload()
     {
         var builtInResource = new StubBuiltInResource("test://docs/{name}", "docs/{name}", "hello");
-        var backend = new BuiltInMcpToolBackend([], [builtInResource]);
-        var resource = new McpRegisteredResource
+        var backend = new BuiltInSource([], [builtInResource]);
+        var resource = new RegisteredResource
         {
             Id = "docs",
             TemplateDescriptor = new ResourceTemplate { UriTemplate = "test://docs/{name}", Name = "docs" },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "docs", "read"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "docs", "read", "", ""),
         };
 
-        var result = backend.ReadResource(resource, "test://docs/readme", TestContext.CancellationToken);
+        var result = await backend.ReadResourceAsync(resource, "test://docs/readme", TestContext.CancellationToken);
         var text = Assert.IsInstanceOfType<TextResourceContents>(result.Contents.Single());
         Assert.AreEqual("hello", text.Text);
     }
 
-    private static BuiltInMcpToolBackend CreateBackend() =>
+    private static BuiltInSource CreateBackend() =>
         new([], []);
 
     private sealed class StubBuiltInResource(string uriTemplate, string protocolUri, string body) : IBuiltInMcpResource

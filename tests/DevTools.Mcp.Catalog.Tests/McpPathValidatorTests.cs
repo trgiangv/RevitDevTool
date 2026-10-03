@@ -18,14 +18,14 @@ public sealed class McpPathValidatorTests
     }
 
     [TestMethod]
-    public void ClassifyInputPath_DetectsPythonToolset()
+    public void ClassifyInputPath_DetectsPythonDirectory()
     {
-        var directory = CreatePythonToolsetDirectory();
+        var directory = CreatePythonDirectory();
 
         try
         {
             Assert.AreEqual(ExecutionMode.Python, McpPathValidator.ClassifyInputPath(directory));
-            Assert.IsTrue(McpPathValidator.IsValidPythonToolsetPath(directory));
+            Assert.IsTrue(McpPathValidator.IsValidPythonPath(directory));
         }
         finally
         {
@@ -37,8 +37,8 @@ public sealed class McpPathValidatorTests
     public void ClassifyInputPath_ReturnsUnsupported_ForMissingPath()
     {
         Assert.AreEqual(ExecutionMode.Unsupported, McpPathValidator.ClassifyInputPath(@"C:\missing\path.dll"));
-        Assert.IsFalse(McpPathValidator.IsValidDotnetAssemblyPath(null));
-        Assert.IsFalse(McpPathValidator.IsValidDotnetAssemblyPath("readme.txt"));
+        Assert.IsFalse(McpPathValidator.IsValidAssemblyPath(null));
+        Assert.IsFalse(McpPathValidator.IsValidAssemblyPath("readme.txt"));
     }
 
     [TestMethod]
@@ -49,7 +49,7 @@ public sealed class McpPathValidatorTests
         Directory.CreateDirectory(Path.GetDirectoryName(nested)!);
         File.WriteAllText(nested, "# stub");
 
-        var catalog = new McpRegistryCatalog
+        var catalog = new RegistryCatalog
         {
             Tools =
             [
@@ -88,7 +88,7 @@ public sealed class McpPathValidatorTests
         var dll = typeof(McpPathValidatorTests).Assembly.Location;
         var resolved = McpPathValidator.ResolvePaths(
             [dll, @"C:\missing.dll", dll.ToUpperInvariant()],
-            McpPathValidator.IsValidDotnetAssemblyPath);
+            McpPathValidator.IsValidAssemblyPath);
 
         Assert.HasCount(1, resolved);
         Assert.AreEqual(Path.GetFullPath(dll), resolved[0]);
@@ -100,9 +100,9 @@ public sealed class McpPathValidatorTests
         var config = new McpRegistryConfig
         {
             DotnetPaths = [@"C:\missing\demo.dll"],
-            PythonToolsetPaths = [@"C:\missing\toolset"],
+            PythonPaths = [@"C:\missing\toolset"],
         };
-        var catalog = new McpRegistryCatalog
+        var catalog = new RegistryCatalog
         {
             Tools = [CreateBoundTool("live", typeof(McpPathValidatorTests).Assembly.Location)],
             Resources = [],
@@ -111,10 +111,10 @@ public sealed class McpPathValidatorTests
         McpPathValidator.PruneInvalidConfiguredPaths(config, catalog, NullLogger.Instance);
 
         Assert.IsEmpty(config.DotnetPaths);
-        Assert.IsEmpty(config.PythonToolsetPaths);
+        Assert.IsEmpty(config.PythonPaths);
     }
 
-    private static string CreatePythonToolsetDirectory()
+    private static string CreatePythonDirectory()
     {
         var directory = Path.Combine(Path.GetTempPath(), "DevTools.Mcp.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
@@ -122,10 +122,10 @@ public sealed class McpPathValidatorTests
         return directory;
     }
 
-    private static McpRegisteredTool CreateBoundTool(string name, string sourcePath) => new()
+    private static RegisteredTool CreateBoundTool(string name, string sourcePath) => new()
     {
         Id = name,
         Descriptor = new Tool { Name = name, InputSchema = System.Text.Json.JsonSerializer.SerializeToElement(new { type = "object" }) },
-        Binding = McpPrimitiveBinding.Create(ExecutionMode.Python, sourcePath, "Container", name),
+        Binding = PrimitiveBinding.Create(ExecutionMode.Python, sourcePath, "Container", name, "", ""),
     };
 }

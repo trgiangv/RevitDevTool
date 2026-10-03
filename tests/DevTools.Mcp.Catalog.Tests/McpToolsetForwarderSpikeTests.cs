@@ -1,9 +1,8 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
-using DevTools.Mcp.Adapter.Bridging;
-using DevTools.Mcp.Adapter;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp;
+using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -31,6 +30,7 @@ public sealed class McpToolsetForwarderSpikeTests
         var mcpRefs = toolsetAsm.GetReferencedAssemblies()
             .Where(static name => name.Name?.StartsWith("ModelContextProtocol", StringComparison.Ordinal) == true)
             .Select(static name => name.Name)
+            .OfType<string>()
             .ToList();
 
         Assert.Contains("ModelContextProtocol.Core", mcpRefs);
@@ -71,12 +71,11 @@ public sealed class McpToolsetForwarderSpikeTests
         Assert.IsNotNull(raw);
         Assert.AreSame(typeof(CallToolResult), raw.GetType());
 
-        var mapped = ToolsetResultSerializer.ToInvocationResponse(raw, null);
-        Assert.AreEqual("forwarder-spike-ok", McpToolInvoke.Text(mapped));
+        var result = ResultBridge.ToHostCallToolResult(raw, null);
+        Assert.AreEqual("forwarder-spike-ok", McpToolInvoke.Text(result));
 
-        var sdk = SdkInvocationMapper.ToSdk(mapped);
-        var wire = JsonSerializer.Serialize(sdk, McpJsonUtilities.DefaultOptions);
-        Assert.Contains("\"text\":\"forwarder-spike-ok\"", wire, StringComparison.Ordinal);
+        var json = JsonSerializer.Serialize(result, McpJsonUtilities.DefaultOptions);
+        Assert.Contains("\"text\":\"forwarder-spike-ok\"", json, StringComparison.Ordinal);
     }
 
     private static string ResolveToolsetDllPath()

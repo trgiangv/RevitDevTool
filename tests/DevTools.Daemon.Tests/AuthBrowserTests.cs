@@ -13,7 +13,7 @@ public sealed class AuthBrowserTests
     {
         var port = GetFreePort();
         var callback = $"http://127.0.0.1:{port}/callback";
-        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = port });
+        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = port }, static _ => { });
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(100);
 
@@ -29,7 +29,7 @@ public sealed class AuthBrowserTests
     [TestMethod]
     public async Task InvokeAsync_InvalidPrefix_ReturnsUnknownError()
     {
-        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = 1 });
+        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = 1 }, static _ => { });
         var result = await browser.InvokeAsync(
             new BrowserOptions("about:blank", "http://127.0.0.1:1/callback"),
             TestContext.CancellationToken);

@@ -1,4 +1,4 @@
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Mcp.Catalog.Tests;

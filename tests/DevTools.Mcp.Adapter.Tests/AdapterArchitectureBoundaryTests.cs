@@ -6,11 +6,11 @@ namespace DevTools.Mcp.Adapter.Tests;
 public sealed class AdapterArchitectureBoundaryTests
 {
     [TestMethod]
-    public void Execution_DoesNotReferenceHostMcpAdapter()
+    public void Catalog_DoesNotReferenceExecution()
     {
-        var executionReferences = Assembly.Load("DevTools.Execution").GetReferencedAssemblies();
+        var catalogReferences = typeof(DevTools.Mcp.McpCatalogStore).Assembly.GetReferencedAssemblies();
 
-        Assert.IsFalse(executionReferences.Any(reference =>
-            string.Equals(reference.Name, "DevTools.Mcp.Adapter", StringComparison.Ordinal)));
+        Assert.IsFalse(catalogReferences.Any(reference =>
+            string.Equals(reference.Name, "DevTools.Execution", StringComparison.Ordinal)));
     }
 }

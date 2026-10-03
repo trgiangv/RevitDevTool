@@ -2,7 +2,7 @@ using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using DevTools.Ipc;
-using DevTools.Mcp.Client;
+using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Mcp.Client.Tests;

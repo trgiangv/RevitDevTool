@@ -1,7 +1,5 @@
 using System.Text.Json;
-using DevTools.Mcp.Adapter.Bridging;
-using DevTools.Mcp.Adapter;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -45,7 +43,7 @@ public sealed class AlcCallToolResultBridgeReproTests
             IsError = false,
         };
 
-        var bridged = ToolsetResultSerializer.ToInvocationResponse(foreign, null);
+        var bridged = ResultBridge.ToHostCallToolResult(foreign, null);
         Assert.AreEqual("Model healthy, 0 selected", McpToolInvoke.Text(bridged));
         Assert.IsTrue(bridged.StructuredContent!.Value.GetProperty("healthy").GetBoolean());
         Assert.IsFalse(bridged.IsError);
@@ -60,14 +58,13 @@ public sealed class AlcCallToolResultBridgeReproTests
             StructuredContent = JsonSerializer.SerializeToElement(new { healthy = true }),
         };
 
-        var bridged = ToolsetResultSerializer.ToInvocationResponse(foreign, null);
-        var sdk = SdkInvocationMapper.ToSdk(InvocationResponseEncoder.PrepareForWire(bridged));
-        var wire = JsonSerializer.Serialize(sdk, McpJsonUtilities.DefaultOptions);
+        var bridged = ResultBridge.ToHostCallToolResult(foreign, null);
+        var json = JsonSerializer.Serialize(bridged, McpJsonUtilities.DefaultOptions);
 
-        Assert.Contains("\"text\":\"ok\"", wire, StringComparison.Ordinal);
-        Assert.DoesNotContain("""{"type":"text"}""", wire, StringComparison.Ordinal);
+        Assert.Contains("\"text\":\"ok\"", json, StringComparison.Ordinal);
+        Assert.DoesNotContain("""{"type":"text"}""", json, StringComparison.Ordinal);
 
-        var roundTrip = JsonSerializer.Deserialize<CallToolResult>(wire, McpJsonUtilities.DefaultOptions);
+        var roundTrip = JsonSerializer.Deserialize<CallToolResult>(json, McpJsonUtilities.DefaultOptions);
         Assert.HasCount(1, roundTrip!.Content);
         Assert.AreEqual("ok", Assert.IsInstanceOfType<TextContentBlock>(roundTrip.Content[0]).Text);
     }
@@ -82,7 +79,7 @@ public sealed class AlcCallToolResultBridgeReproTests
         };
 
         var outputSchema = JsonSerializer.SerializeToElement(new { type = "object" });
-        var result = ToolsetResultSerializer.ToInvocationResponse(foreign, outputSchema);
+        var result = ResultBridge.ToHostCallToolResult(foreign, outputSchema);
         Assert.AreEqual("Found 3 elements", McpToolInvoke.Text(result));
         Assert.AreEqual(240, result.StructuredContent!.Value.GetProperty("count").GetInt32());
     }
@@ -91,12 +88,11 @@ public sealed class AlcCallToolResultBridgeReproTests
     public void ToInvocationResponse_BareForeignTextBlock_DoesNotStripText()
     {
         var foreign = new ForeignMcp.TextContentBlock { Text = "bare text block" };
-        var result = ToolsetResultSerializer.ToInvocationResponse(foreign, null);
-        var sdk = SdkInvocationMapper.ToSdk(result);
-        var wire = JsonSerializer.Serialize(sdk, McpJsonUtilities.DefaultOptions);
+        var result = ResultBridge.ToHostCallToolResult(foreign, null);
+        var json = JsonSerializer.Serialize(result, McpJsonUtilities.DefaultOptions);
 
         Assert.AreEqual("bare text block", McpToolInvoke.Text(result));
-        Assert.Contains("\"text\":\"bare text block\"", wire, StringComparison.Ordinal);
+        Assert.Contains("\"text\":\"bare text block\"", json, StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -115,11 +111,11 @@ public sealed class AlcCallToolResultBridgeReproTests
             ],
         };
 
-        var bridged = ToolsetResultSerializer.ToInvocationResponse(foreign, null);
+        var bridged = ResultBridge.ToHostCallToolResult(foreign, null);
         Assert.HasCount(1, bridged.Content);
-        var image = Assert.IsInstanceOfType<McpImageContent>(bridged.Content[0]);
+        var image = Assert.IsInstanceOfType<ImageContentBlock>(bridged.Content[0]);
         Assert.AreEqual("image/png", image.MimeType);
-        Assert.IsTrue(image.Data.AsSpan().SequenceEqual(png));
+        Assert.IsTrue(image.DecodedData.Span.SequenceEqual(png));
     }
 
     [TestMethod]
@@ -137,7 +133,7 @@ public sealed class AlcCallToolResultBridgeReproTests
         };
 
         var outputSchema = JsonSerializer.SerializeToElement(new { type = "object" });
-        var result = ToolsetResultSerializer.ToInvocationResponse(alcShaped, outputSchema);
+        var result = ResultBridge.ToHostCallToolResult(alcShaped, outputSchema);
         Assert.Contains("Found 3 elements", McpToolInvoke.Text(result));
         Assert.AreEqual(240, result.StructuredContent!.Value.GetProperty("count").GetInt32());
     }
@@ -151,7 +147,7 @@ public sealed class AlcCallToolResultBridgeReproTests
         };
 
         var ex = Assert.ThrowsExactly<InvalidOperationException>(
-            () => ToolsetResultSerializer.ToInvocationResponse(foreign, null));
+            () => ResultBridge.ToHostCallToolResult(foreign, null));
 
         Assert.Contains("SDK contract", ex.Message, StringComparison.Ordinal);
     }

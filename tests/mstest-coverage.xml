@@ -9,9 +9,6 @@
         <ModulePath>.*\.Tests\.</ModulePath>
         <ModulePath>.*Tests\.Shared.*</ModulePath>
         <ModulePath>.*\.Fixtures\.</ModulePath>
-        <ModulePath>.*MahApps\.Metro.*</ModulePath>
-        <ModulePath>.*ControlzEx.*</ModulePath>
-        <ModulePath>.*Xaml\.Behaviors.*</ModulePath>
       </Exclude>
     </ModulePaths>
     <UseVerifiableInstrumentation>True</UseVerifiableInstrumentation>

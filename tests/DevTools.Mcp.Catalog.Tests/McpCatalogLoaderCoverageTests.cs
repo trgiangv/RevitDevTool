@@ -1,4 +1,4 @@
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -39,7 +39,7 @@ public sealed class McpCatalogLoaderCoverageTests
         Assert.IsTrue(logger.Messages.Any(message => message.Contains("empty name", StringComparison.Ordinal)));
     }
 
-    private static McpRegisteredTool ToolWithEmptyName() => new()
+    private static RegisteredTool ToolWithEmptyName() => new()
     {
         Id = "empty",
         Descriptor = new Tool
@@ -47,23 +47,23 @@ public sealed class McpCatalogLoaderCoverageTests
             Name = "",
             InputSchema = System.Text.Json.JsonSerializer.SerializeToElement(new { type = "object" }),
         },
-        Binding = McpPrimitiveBinding.Create(ExecutionMode.CSharp, "", "BuiltIn", ""),
+        Binding = PrimitiveBinding.Create(ExecutionMode.CSharp, "", "BuiltIn", "", "", ""),
     };
 
-    private sealed class ThrowingProvider(string name, ExecutionMode sourceKind) : IMcpRegistryProvider
+    private sealed class ThrowingProvider(string name, ExecutionMode sourceKind) : IRegistryProvider
     {
         public string Name { get; } = name;
         public ExecutionMode SourceKind { get; } = sourceKind;
         public void ConfigurePaths(IReadOnlyList<string> paths) { }
-        public McpRegistryCatalog LoadCatalog() => throw new InvalidOperationException("boom");
+        public RegistryCatalog LoadCatalog() => throw new InvalidOperationException("boom");
     }
 
-    private sealed class StubProvider(string name, ExecutionMode sourceKind, params McpRegisteredTool[] tools) : IMcpRegistryProvider
+    private sealed class StubProvider(string name, ExecutionMode sourceKind, params RegisteredTool[] tools) : IRegistryProvider
     {
         public string Name { get; } = name;
         public ExecutionMode SourceKind { get; } = sourceKind;
         public void ConfigurePaths(IReadOnlyList<string> paths) { }
-        public McpRegistryCatalog LoadCatalog() => new() { Tools = tools, Resources = [] };
+        public RegistryCatalog LoadCatalog() => new() { Tools = tools, Resources = [] };
     }
 
     private sealed class CapturingLogger<T> : ILogger<T>

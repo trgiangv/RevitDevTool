@@ -1,7 +1,7 @@
-using DevTools.Mcp.Catalog;
-using DevTools.Mcp.Client;
+using DevTools.Mcp;
+using DevTools.Daemon.Mcp.Processes;
 using DevTools.Mcp.Core;
-using DevTools.Mcp.Server.Tools;
+using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Server.Tests.Harness;
 using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
@@ -31,9 +31,9 @@ public sealed class StructuredOutputTests
     {
         const string toolName = "revit_find_elements";
         var harness = McpSdkTestHarness.ForTool(toolName, McpToolBehavior.StructuredFind);
-        var capabilityId = await harness.SearchFirstCapabilityId(new { query = "find" });
+        var id = await harness.SearchFirstId(new { query = "find" });
 
-        var result = await harness.InvokeCapability(capabilityId, new { category = "Walls" });
+        var result = await harness.InvokeId(id, new { category = "Walls" });
 
         Assert.IsNotNull(result.StructuredContent);
         Assert.AreEqual(240, result.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
@@ -47,12 +47,12 @@ public sealed class StructuredOutputTests
     [TestMethod]
     public async Task ListHostInstances_EmitsStructuredContent()
     {
-        var broker = new Mock<IHostBroker>();
-        broker.Setup(b => b.Catalog.List()).Returns([]);
+        var broker = new Mock<IProcessSessions>();
+        broker.Setup(b => b.Catalog).Returns(new ProcessCatalogs());
         var scanner = new Mock<IMcpPipeScanner>();
         scanner.Setup(s => s.Discover()).Returns([]);
 
-        var tool = ListHostInstancesTool.Create(broker.Object, scanner.Object);
+        var tool = ListProcessesTool.Create(broker.Object, scanner.Object);
         var result = await McpToolInvoke.Invoke(tool, "list_host_instances", new { });
 
         Assert.IsNotNull(result.StructuredContent);
@@ -60,39 +60,4 @@ public sealed class StructuredOutputTests
         Assert.AreEqual(0, result.StructuredContent!.Value.GetProperty("totalConnected").GetInt32());
     }
 
-    [TestMethod]
-    public void McpTaskExecutionSelector_UsesPerToolMeta()
-    {
-        var broker = new Mock<IHostBroker>();
-        var invoke = InvokeDynamicTool.Create(broker.Object);
-        var search = SearchDynamicTool.Create(broker.Object);
-        var optional = TaskModeFixture.CreateOptionalTool("execute_csharp_code");
-
-        Assert.AreEqual(
-            McpTaskExecutionMode.Synchronous,
-            McpTaskExecutionMeta.SelectForRequest(McpServerConfigurationTests.CreateToolRequest(invoke)));
-        Assert.AreEqual(
-            McpTaskExecutionMode.Synchronous,
-            McpTaskExecutionMeta.SelectForRequest(McpServerConfigurationTests.CreateToolRequest(search)));
-        Assert.AreEqual(
-            McpTaskExecutionMode.Optional,
-            McpTaskExecutionMeta.SelectForRequest(McpServerConfigurationTests.CreateToolRequest(optional)));
-        Assert.AreEqual(
-            McpTaskExecutionMode.Synchronous,
-            McpTaskExecutionMeta.SelectForRequest(CreateRequestContext("unknown_tool")));
-        Assert.AreEqual(
-            McpTaskExecutionMode.Optional,
-            McpTaskExecutionMeta.ParseMode(optional.ProtocolTool.Meta));
-    }
-
-    private static RequestContext<CallToolRequestParams> CreateRequestContext(string toolName)
-    {
-        var options = new McpServerOptions();
-        var server = new Mock<McpServer>();
-        server.Setup(s => s.ServerOptions).Returns(options);
-        return new RequestContext<CallToolRequestParams>(
-            server.Object,
-            new JsonRpcRequest { Method = "tools/call", Id = new RequestId("1") },
-            new CallToolRequestParams { Name = toolName });
-    }
 }

@@ -6,7 +6,7 @@ using DevTools.Daemon.Control;
 using DevTools.Daemon.Desktop;
 using DevTools.Daemon.Views;
 using DevTools.Ipc;
-using DevTools.Mcp.Core.Sessions;
+using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Tests.Support;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -69,7 +69,7 @@ public sealed class ControlPipeHandlerTests : WpfApplicationTestBase
     public void HandleRequestAsync_ConnectedHosts_ReturnsCatalogEntries()
     {
         var entry = DaemonTestDoubles.CreateCatalogEntry("Revit", "2025", 4242);
-        var broker = DaemonTestDoubles.CreateHostBroker([entry]);
+        var broker = DaemonTestDoubles.CreateProcessSessions([entry]);
         RunHandler(async handler =>
         {
             var response = await handler.HandleRequestAsync(
@@ -121,7 +121,7 @@ public sealed class ControlPipeHandlerTests : WpfApplicationTestBase
     public async Task ControlPipeHostedService_RespondsToClientRequest()
     {
         var auth = DaemonTestDoubles.CreateAuthService();
-        var broker = DaemonTestDoubles.CreateHostBroker();
+        var broker = DaemonTestDoubles.CreateProcessSessions();
         var handler = default(ControlPipeHandler);
 
         RunOnUi(() =>
@@ -166,10 +166,10 @@ public sealed class ControlPipeHandlerTests : WpfApplicationTestBase
     private void RunHandler(
         Func<ControlPipeHandler, Task> body,
         Mock<IAuthService>? auth = null,
-        Mock<IHostBroker>? broker = null)
+        Mock<IProcessSessions>? broker = null)
     {
         auth ??= DaemonTestDoubles.CreateAuthService();
-        broker ??= DaemonTestDoubles.CreateHostBroker();
+        broker ??= DaemonTestDoubles.CreateProcessSessions();
 
         RunOnUi(() =>
         {
@@ -181,7 +181,7 @@ public sealed class ControlPipeHandlerTests : WpfApplicationTestBase
         });
     }
 
-    private static AppState CreateAppState(IAuthService auth, IHostBroker broker)
+    private static AppState CreateAppState(IAuthService auth, IProcessSessions broker)
     {
         var scanner = DaemonTestDoubles.CreatePipeScanner();
         var store = DaemonTestDoubles.CreateUserSettingsStore();

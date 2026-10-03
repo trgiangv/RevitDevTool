@@ -1,6 +1,6 @@
 using System.Reflection;
 using DevTools.AssemblyIsolation;
-using DevTools.Mcp.Catalog.Isolation;
+using DevTools.Mcp.Isolation;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 

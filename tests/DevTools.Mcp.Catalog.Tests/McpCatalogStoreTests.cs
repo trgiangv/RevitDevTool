@@ -26,7 +26,7 @@ public sealed class McpCatalogStoreTests
     [TestMethod]
     public async Task ReloadAsync_RaisesCatalogChanged_WhenNewToolIdAppears()
     {
-        var tools = new List<McpRegisteredTool> { Tool("execute_csharp_code") };
+        var tools = new List<RegisteredTool> { Tool("execute_csharp_code") };
         var store = CreateStore(() => Catalog(tools.ToArray()));
         var raised = 0;
         store.CatalogChanged += (_, _) => raised++;
@@ -42,7 +42,7 @@ public sealed class McpCatalogStoreTests
     [TestMethod]
     public async Task ReloadAsync_RaisesCatalogChanged_WhenToolIdRemoved()
     {
-        var tools = new List<McpRegisteredTool> { Tool("a"), Tool("b") };
+        var tools = new List<RegisteredTool> { Tool("a"), Tool("b") };
         var store = CreateStore(() => Catalog(tools.ToArray()));
         var raised = 0;
         store.CatalogChanged += (_, _) => raised++;
@@ -55,9 +55,9 @@ public sealed class McpCatalogStoreTests
         Assert.HasCount(1, store.RegisteredTools);
     }
 
-    private static McpCatalogStore CreateStore(Func<McpRegistryCatalog> catalogFactory)
+    private static McpCatalogStore CreateStore(Func<RegistryCatalog> catalogFactory)
     {
-        var loader = new Mock<IMcpCatalogLoader>();
+        var loader = new Mock<ICatalogLoader>();
         loader
             .Setup(l => l.LoadCatalog(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<string>>()))
             .Returns(catalogFactory);
@@ -67,11 +67,11 @@ public sealed class McpCatalogStoreTests
         return new McpCatalogStore(loader.Object, settings.Object);
     }
 
-    private static McpRegistryCatalog Catalog(params McpRegisteredTool[] tools) => new()
+    private static RegistryCatalog Catalog(params RegisteredTool[] tools) => new()
     {
         Tools = tools,
         Resources = [],
     };
 
-    private static McpRegisteredTool Tool(string name) => McpHostTestHarness.CreateRegisteredTool(name);
+    private static RegisteredTool Tool(string name) => McpHostTestHarness.CreateRegisteredTool(name);
 }

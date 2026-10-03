@@ -1,8 +1,8 @@
 using DevTools.Daemon.Auth;
 using System.Text.Json;
 using DevTools.Daemon.Composition;
+using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Desktop;
-using DevTools.Daemon.Gateway;
 using DevTools.Daemon.Tests.Support;
 using DevTools.Settings.Configs;
 using DevTools.Utilities;
@@ -164,7 +164,7 @@ public sealed class DesktopComponentTests
     [TestMethod]
     public async Task DiscoveryHostedService_StartsAndStops()
     {
-        var discovery = new Mock<DevTools.Mcp.Client.IHostDiscovery>();
+        var discovery = new Mock<IProcessSessions>();
         discovery.Setup(d => d.RunAsync(It.IsAny<CancellationToken>()))
             .Returns<CancellationToken>(ct => Task.Delay(Timeout.Infinite, ct));
 

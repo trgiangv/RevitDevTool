@@ -1,13 +1,19 @@
 using System.IO.Pipes;
-using System.Security.AccessControl;
-using System.Security.Principal;
-using System.Text;
-using System.Text.Json.Nodes;
-using DevTools.Mcp.Adapter.Host;
 using DevTools.Mcp.Adapter.Tests.Harness;
+using DevTools.Mcp.Hosting;
+using DevTools.Mcp.Isolation;
+using DevTools.Mcp.Transport;
+using DevTools.Mcp.Core.Catalog;
+using DevTools.Mcp.Core.Models;
+using DevTools.Execution.Abstractions;
+using DevTools.Settings;
+using DevTools.Settings.Configs;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
+using Moq;
 
 namespace DevTools.Mcp.Adapter.Tests.Host;
 
@@ -23,16 +29,21 @@ public sealed class NamedPipeIntegrationTests
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(20));
 
-        var (handler, _) = McpHostTestHarness.CreateWithTool("ping", "pong", "Ping");
+        var (options, _, _, appServices) = McpHostTestHarness.CreateServerOptionsWithTool("ping", "pong", "Ping");
 
-        await using var serverPipe = CreateServerPipe(pipeName);
+        using var serverPipe = NamedPipes.Open(pipeName);
         var acceptTask = serverPipe.WaitForConnectionAsync(cts.Token);
 
-        await using var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        using var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         await clientPipe.ConnectAsync(cts.Token);
         await acceptTask;
 
-        await using var session = McpPipeSession.Start(serverPipe, handler, cts.Token);
+        await using var endpoint = PipeEndpoint.Create(
+            serverPipe,
+            options,
+            appServices,
+            "test-host");
+        var serverTask = endpoint.RunAsync(cts.Token);
 
         await using var client = await McpClient.CreateAsync(
             new StreamClientTransport(clientPipe, clientPipe, NullLoggerFactory.Instance),
@@ -48,6 +59,8 @@ public sealed class NamedPipeIntegrationTests
 
         await client.DisposeAsync();
         await cts.CancelAsync();
+        try { await serverTask; } catch { /* ignored */ }
+        appServices.Dispose();
     }
 
     [TestMethod]
@@ -57,16 +70,24 @@ public sealed class NamedPipeIntegrationTests
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         cts.CancelAfter(TimeSpan.FromSeconds(20));
 
-        var (handler, _) = McpHostTestHarness.CreateWithTool("ping", "pong", "Ping");
+        var (options, source, _, appServices) = McpHostTestHarness.CreateServerOptionsWithTool("ping", "pong", "Ping");
+        options.ProtocolVersion = "2025-11-25";
+        var hostContext = appServices.GetRequiredService<IHostContextExecutor>();
+        var toolsetContexts = new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance);
 
-        await using var serverPipe = CreateServerPipe(pipeName);
+        using var serverPipe = NamedPipes.Open(pipeName);
         var acceptTask = serverPipe.WaitForConnectionAsync(cts.Token);
 
-        await using var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        using var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         await clientPipe.ConnectAsync(cts.Token);
         await acceptTask;
 
-        await using var session = McpPipeSession.Start(serverPipe, handler, cts.Token);
+        await using var endpoint = PipeEndpoint.Create(
+            serverPipe,
+            options,
+            appServices,
+            "test-host");
+        var serverTask = endpoint.RunAsync(cts.Token);
 
         await using var client = await McpClient.CreateAsync(
             new StreamClientTransport(clientPipe, clientPipe, NullLoggerFactory.Instance),
@@ -82,75 +103,38 @@ public sealed class NamedPipeIntegrationTests
                 return default;
             });
 
-        await session.SendNotificationAsync(NotificationMethods.ToolListChangedNotification, cts.Token);
+        _ = await client.ListToolsAsync(cancellationToken: cts.Token);
+
+        var loader = new Mock<ICatalogLoader>();
+        loader
+            .Setup(l => l.LoadCatalog(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<string>>()))
+            .Returns(new RegistryCatalog
+            {
+                Tools =
+                [
+                    McpHostTestHarness.CreateRegisteredTool("ping"),
+                    McpHostTestHarness.CreateRegisteredTool("added"),
+                ],
+                Resources = [],
+            });
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.McpRegistryConfig).Returns(new McpRegistryConfig());
+        var reloadedStore = new McpCatalogStore(loader.Object, settings.Object);
+        reloadedStore.EnsureLoaded();
+
+        McpServerCollections.RebuildCollections(
+            reloadedStore,
+            [source],
+            hostContext,
+            toolsetContexts,
+            options.ToolCollection!,
+            options.ResourceCollection!);
+
         await notificationReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), cts.Token);
 
         await client.DisposeAsync();
         await cts.CancelAsync();
+        try { await serverTask; } catch { /* ignored */ }
+        appServices.Dispose();
     }
-
-    [TestMethod]
-    public async Task NamedPipe_HandlerException_ReturnsJsonRpcInternalError()
-    {
-        var pipeName = HostPipeName.FormatMcp("TestHost", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(20));
-
-        await using var serverPipe = CreateServerPipe(pipeName);
-        var acceptTask = serverPipe.WaitForConnectionAsync(cts.Token);
-
-        await using var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-        await clientPipe.ConnectAsync(cts.Token);
-        await acceptTask;
-
-        await using var session = McpPipeSession.Start(serverPipe, new ThrowingMcpHandler(), cts.Token);
-
-        var request = """{"jsonrpc":"2.0","id":7,"method":"tools/list"}""" + "\n";
-        var bytes = Encoding.UTF8.GetBytes(request);
-        await clientPipe.WriteAsync(bytes, cts.Token);
-        await clientPipe.FlushAsync(cts.Token);
-
-        using var reader = new StreamReader(
-            clientPipe,
-            Encoding.UTF8,
-            detectEncodingFromByteOrderMarks: false,
-            bufferSize: 1024,
-            leaveOpen: true);
-        var line = await reader.ReadLineAsync(cts.Token);
-        Assert.IsNotNull(line);
-
-        var json = JsonNode.Parse(line)!.AsObject();
-        Assert.AreEqual(7, json["id"]!.GetValue<int>());
-        Assert.AreEqual((int)ModelContextProtocol.McpErrorCode.InternalError, json["error"]!["code"]!.GetValue<int>());
-        Assert.Contains("boom", json["error"]!["message"]!.GetValue<string>(), StringComparison.Ordinal);
-
-        await cts.CancelAsync();
-    }
-
-    private static NamedPipeServerStream CreateServerPipe(string pipeName)
-    {
-        var security = new PipeSecurity();
-        var currentUser = WindowsIdentity.GetCurrent();
-        Assert.IsNotNull(currentUser.User);
-        security.AddAccessRule(new PipeAccessRule(
-            currentUser.User,
-            PipeAccessRights.FullControl,
-            AccessControlType.Allow));
-
-        return NamedPipeServerStreamAcl.Create(
-            pipeName,
-            PipeDirection.InOut,
-            1,
-            PipeTransmissionMode.Byte,
-            PipeOptions.Asynchronous,
-            0,
-            0,
-            security);
-    }
-}
-
-file sealed class ThrowingMcpHandler : IMcpHandler
-{
-    public ValueTask<JsonObject?> HandleAsync(JsonObject request, CancellationToken cancellationToken = default) =>
-        throw new InvalidOperationException("boom");
 }

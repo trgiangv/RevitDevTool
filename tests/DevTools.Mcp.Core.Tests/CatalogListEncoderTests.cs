@@ -133,19 +133,4 @@ public sealed class CatalogListEncoderTests
         Assert.AreEqual(JsonValueKind.Object, coerced.ValueKind);
         Assert.AreEqual("object", coerced.GetProperty("type").GetString());
     }
-
-    [TestMethod]
-    public void NormalizeTool_InvalidInputSchema_DoesNotThrow()
-    {
-        var tool = new Tool
-        {
-            Name = "safe_tool",
-            InputSchema = DescriptorFactory.CoerceInputSchema(JsonSerializer.SerializeToElement(new { type = "array" })),
-        };
-
-        var normalized = DescriptorFactory.NormalizeTool(tool);
-
-        Assert.AreEqual("safe_tool", normalized.Name);
-        Assert.AreEqual("object", normalized.InputSchema.GetProperty("type").GetString());
-    }
 }

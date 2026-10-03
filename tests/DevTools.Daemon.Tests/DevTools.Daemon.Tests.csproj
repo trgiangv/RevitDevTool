@@ -12,6 +12,7 @@
     <ItemGroup>
         <PackageReference Include="Moq"/>
         <PackageReference Include="ModelContextProtocol"/>
+        <PackageReference Include="ModelContextProtocol.Extensions.Tasks"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection"/>
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions"/>
@@ -19,9 +20,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Daemon\DevTools.Daemon.csproj" AdditionalProperties="SelfContained=false;PublishSingleFile=false"/>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Hosting\DevTools.Hosting.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Settings\DevTools.Settings.csproj"/>

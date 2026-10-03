@@ -2,16 +2,14 @@ using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
-using DevTools.Daemon.Auth;
 using DevTools.Daemon.Composition;
 using DevTools.Daemon.Gateway;
 using DevTools.Daemon.Tests.Support;
-using DevTools.Mcp.Server.Hosting;
-using DevTools.Mcp.Client;
+using DevTools.Daemon.Mcp.Hosting;
+using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Moq;
 
 namespace DevTools.Daemon.Tests;
 

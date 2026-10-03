@@ -1,7 +1,4 @@
 using System.Text.Json;
-using DevTools.Mcp.Adapter.Host;
-using DevTools.Mcp.Core.Protocol;
-using DevTools.Mcp.Core.Protocol.Invocation;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
@@ -64,10 +61,9 @@ public sealed class McpHostConformanceTests
     [TestMethod]
     public void ToolCallResult_MatchesGoldenTextContent()
     {
-        var json = HostToolResultJson.ToNode(new McpInvocationResponse
-        {
-            Content = [new McpTextContent("ok")],
-        });
+        var json = JsonSerializer.SerializeToNode(
+            new CallToolResult { Content = [new TextContentBlock { Text = "ok" }] },
+            McpJsonUtilities.DefaultOptions)!;
 
         Assert.AreEqual(
             """{"content":[{"type":"text","text":"ok"}]}""",

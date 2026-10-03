@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Moq;
 
 namespace DevTools.Daemon.Tests;
 
@@ -52,8 +51,8 @@ public sealed class CompositionIntegrationTests
         var auth = DaemonTestDoubles.CreateAuthService(authenticated: true, accessToken: "token");
         var gateway = new GatewayHostedService(
             auth.Object,
-            host.Services.GetRequiredService<DevTools.Mcp.Server.Hosting.McpEngine>(),
-            host.Services.GetRequiredService<DevTools.Mcp.Client.IMcpPipeScanner>(),
+            host.Services.GetRequiredService<DevTools.Daemon.Mcp.Hosting.McpEngine>(),
+            host.Services.GetRequiredService<DevTools.Daemon.Mcp.Processes.IMcpPipeScanner>(),
             Options.Create(new GatewayOptions { Url = "ws://127.0.0.1:9/tunnel" }),
             NullLoggerFactory.Instance,
             host.Services,

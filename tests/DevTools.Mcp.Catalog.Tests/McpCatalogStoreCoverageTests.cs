@@ -1,4 +1,6 @@
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Execution.Abstractions;
+using DevTools.Mcp.Discovery;
+using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
@@ -43,19 +45,21 @@ public sealed class McpCatalogStoreCoverageTests
     }
 
     [TestMethod]
-    public void TryResolveResourceByUri_MatchesDirectAndTemplateUris()
+    public void SdkResource_MatchesDirectAndTemplateUris()
     {
-        var direct = CreateResource("demo_status", uri: "sample://demo/status");
-        var template = CreateTemplateResource("demo_view", "sample://demo/views/{viewId}");
-        var store = CreateStore([], [direct, template]);
-        store.EnsureLoaded();
+        var direct = SdkCollectionResource.Create(
+            CreateResource("demo_status", uri: "sample://demo/status"),
+            Mock.Of<IHostContextExecutor>(),
+            (_, _) => Task.FromResult(new ReadResourceResult()));
+        var template = SdkCollectionResource.Create(
+            CreateTemplateResource("demo_view", "sample://demo/views/{viewId}"),
+            Mock.Of<IHostContextExecutor>(),
+            (_, _) => Task.FromResult(new ReadResourceResult()));
 
-        Assert.IsTrue(store.TryResolveResourceByUri("sample://demo/status", out var resolvedDirect));
-        Assert.AreSame(direct, resolvedDirect);
-        Assert.IsTrue(store.TryResolveResourceByUri("sample://demo/views/wall-1", out var resolvedTemplate));
-        Assert.AreSame(template, resolvedTemplate);
-        Assert.IsFalse(store.TryResolveResourceByUri("sample://missing", out _));
-        Assert.IsFalse(store.TryResolveResourceByUri("", out _));
+        Assert.IsTrue(direct.IsMatch("sample://demo/status"));
+        Assert.IsTrue(template.IsMatch("sample://demo/views/wall-1"));
+        Assert.IsFalse(direct.IsMatch("sample://missing"));
+        Assert.IsFalse(direct.IsMatch(""));
     }
 
     [TestMethod]
@@ -71,7 +75,7 @@ public sealed class McpCatalogStoreCoverageTests
 
         Assert.AreEqual(0, raised);
         Assert.IsEmpty(config.DotnetPaths);
-        Assert.IsEmpty(config.PythonToolsetPaths);
+        Assert.IsEmpty(config.PythonPaths);
     }
 
     [TestMethod]
@@ -96,30 +100,30 @@ public sealed class McpCatalogStoreCoverageTests
     {
         var pythonRoot = Path.Combine(FindRepositoryRoot(), "samples", "PythonDemo", "mcp_toolset");
         OptionalArtifact.RequireDirectory(pythonRoot, $"Expected Python sample toolset at '{pythonRoot}'.");
-        if (!McpPathValidator.IsValidPythonToolsetPath(pythonRoot))
+        if (!McpPathValidator.IsValidPythonPath(pythonRoot))
             Assert.Inconclusive("Python sample toolset does not contain *mcp.py files.");
 
-        var tool = new McpRegisteredTool
+        var tool = new RegisteredTool
         {
             Id = "python_tool",
             Descriptor = new Tool { Name = "python_tool", InputSchema = System.Text.Json.JsonSerializer.SerializeToElement(new { type = "object" }) },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.Python, pythonRoot, "module", "run"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.Python, pythonRoot, "module", "run", "", ""),
         };
         var config = new McpRegistryConfig();
         var store = CreateStore([tool], [], config);
 
         await store.AddPathAsync(pythonRoot);
 
-        Assert.IsTrue(config.PythonToolsetPaths.Any(path => string.Equals(Path.GetFullPath(path), Path.GetFullPath(pythonRoot), StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(config.PythonPaths.Any(path => string.Equals(Path.GetFullPath(path), Path.GetFullPath(pythonRoot), StringComparison.OrdinalIgnoreCase)));
     }
 
     private static McpCatalogStore CreateStore(
-        McpRegisteredTool[] tools,
-        McpRegisteredResource[] resources,
+        RegisteredTool[] tools,
+        RegisteredResource[] resources,
         McpRegistryConfig? config = null)
     {
-        var catalog = new McpRegistryCatalog { Tools = tools, Resources = resources };
-        var loader = new Mock<IMcpCatalogLoader>();
+        var catalog = new RegistryCatalog { Tools = tools, Resources = resources };
+        var loader = new Mock<ICatalogLoader>();
         loader
             .Setup(l => l.LoadCatalog(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<IReadOnlyCollection<string>>()))
             .Returns(catalog);
@@ -130,18 +134,18 @@ public sealed class McpCatalogStoreCoverageTests
         return new McpCatalogStore(loader.Object, settings.Object);
     }
 
-    private static McpRegisteredResource CreateResource(string name, string uri) => new()
+    private static RegisteredResource CreateResource(string name, string uri) => new()
     {
         Id = name,
         Descriptor = new Resource { Name = name, Uri = uri, MimeType = "text/plain" },
-        Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, "stub.dll", "Stub", name),
+        Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, "stub.dll", "Stub", name, "", ""),
     };
 
-    private static McpRegisteredResource CreateTemplateResource(string name, string uriTemplate) => new()
+    private static RegisteredResource CreateTemplateResource(string name, string uriTemplate) => new()
     {
         Id = name,
         TemplateDescriptor = new ResourceTemplate { Name = name, UriTemplate = uriTemplate, MimeType = "application/json" },
-        Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, "stub.dll", "Stub", name),
+        Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, "stub.dll", "Stub", name, "", ""),
     };
 
     private static string FindRepositoryRoot()

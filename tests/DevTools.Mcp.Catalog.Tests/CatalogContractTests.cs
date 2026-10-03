@@ -1,4 +1,4 @@
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
 using DevTools.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -28,37 +28,37 @@ public sealed class CatalogContractTests
         using var provider = services.BuildServiceProvider();
 
         Assert.IsNotNull(provider.GetRequiredService<McpCatalogStore>());
-        Assert.IsNotNull(provider.GetRequiredService<IMcpCatalogLoader>());
-        Assert.IsTrue(provider.GetServices<IMcpRegistryProvider>().Any(registry => registry is DotnetMcpRegistryProvider));
-        Assert.IsTrue(provider.GetServices<IMcpRegistryProvider>().Any(registry => registry is BuiltInMcpRegistryProvider));
+        Assert.IsNotNull(provider.GetRequiredService<ICatalogLoader>());
+        Assert.IsTrue(provider.GetServices<IRegistryProvider>().Any(registry => registry is DotnetMcpRegistryProvider));
+        Assert.IsTrue(provider.GetServices<IRegistryProvider>().Any(registry => registry is BuiltInMcpRegistryProvider));
     }
 
     [TestMethod]
-    public void McpRegistryCatalog_DefaultsAreEmpty()
+    public void RegistryCatalog_DefaultsAreEmpty()
     {
-        var catalog = new McpRegistryCatalog();
+        var catalog = new RegistryCatalog();
         Assert.IsEmpty(catalog.Tools);
         Assert.IsEmpty(catalog.Resources);
 
-        var emptyA = McpRegistryCatalog.Empty;
-        var emptyB = McpRegistryCatalog.Empty;
+        var emptyA = RegistryCatalog.Empty;
+        var emptyB = RegistryCatalog.Empty;
         Assert.AreSame(emptyA, emptyB);
     }
 
     [TestMethod]
-    public void McpPrimitiveBinding_CreatePrimitiveId_NormalizesDisplayNameAndToolId()
+    public void PrimitiveBinding_CreatePrimitiveId_KeepsNameAndAddress()
     {
-        var id = McpPrimitiveBinding.CreatePrimitiveId("Read Walls", "Tools/Wall Tools");
-        Assert.AreEqual("Read-Walls_[Tools/Wall-Tools]", id);
+        var id = PrimitiveBinding.CreatePrimitiveId("Read Walls", "Tools/Wall Tools");
+        Assert.AreEqual("Read Walls_[Tools/Wall Tools]", id);
 
-        var idWithSpaces = McpPrimitiveBinding.CreatePrimitiveId("read_walls", "sample:read_walls");
+        var idWithSpaces = PrimitiveBinding.CreatePrimitiveId("read_walls", "sample:read_walls");
         Assert.AreEqual("read_walls_[sample:read_walls]", idWithSpaces);
     }
 
     [TestMethod]
-    public void McpPrimitiveBinding_CreatePrimitiveId_ForResources()
+    public void PrimitiveBinding_CreatePrimitiveId_ForResources()
     {
-        var resourceId = McpPrimitiveBinding.CreatePrimitiveId(
+        var resourceId = PrimitiveBinding.CreatePrimitiveId(
             "demo_view",
             "sample.dll:McpToolsetDemo.McpSampleResources.DemoView");
 
@@ -66,12 +66,12 @@ public sealed class CatalogContractTests
     }
 
     [TestMethod]
-    public void McpPrimitiveBinding_CreatePrimitiveId_HandlesNullAndEmpty()
+    public void PrimitiveBinding_CreatePrimitiveId_HandlesNullAndEmpty()
     {
-        var id = McpPrimitiveBinding.CreatePrimitiveId(null, null);
-        Assert.AreEqual("unknown_[unknown]", id);
+        var id = PrimitiveBinding.CreatePrimitiveId(null, null);
+        Assert.AreEqual("_[]", id);
 
-        var idWithName = McpPrimitiveBinding.CreatePrimitiveId("tool", null);
-        Assert.AreEqual("tool_[unknown]", idWithName);
+        var idWithName = PrimitiveBinding.CreatePrimitiveId("tool", null);
+        Assert.AreEqual("tool_[]", idWithName);
     }
 }

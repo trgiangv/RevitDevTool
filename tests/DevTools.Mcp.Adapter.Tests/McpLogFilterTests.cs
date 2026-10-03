@@ -1,5 +1,5 @@
 using System.Text.Json;
-using DevTools.Mcp.Server.Hosting;
+using DevTools.Mcp.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
@@ -9,7 +9,7 @@ using Moq;
 namespace DevTools.Mcp.Adapter.Tests;
 
 [TestClass]
-public class HostCallLoggingFilterTests
+public class McpLogFilterTests
 {
     public TestContext TestContext { get; set; } = null!;
 

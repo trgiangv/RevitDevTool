@@ -1,14 +1,14 @@
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.Backends;
-using DevTools.Mcp.Catalog.Discovery;
-using DevTools.Mcp.Catalog.Isolation;
+using DevTools.Mcp.Discovery;
+using DevTools.Mcp.Isolation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Execution.Tests;
 
 [TestClass]
-public sealed class DotnetMcpToolBackendTests
+public sealed class DotnetSourceTests
 {
     [TestMethod]
     public void SourceKind_IsDotnet()
@@ -25,12 +25,12 @@ public sealed class DotnetMcpToolBackendTests
         backend.ClearCaches();
     }
 
-    private static DotnetMcpToolBackend CreateBackend()
+    private static DotnetSource CreateBackend()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         var provider = services.BuildServiceProvider();
-        return new DotnetMcpToolBackend(
+        return new DotnetSource(
             provider,
             new DotnetMethodResolver(
                 new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance),

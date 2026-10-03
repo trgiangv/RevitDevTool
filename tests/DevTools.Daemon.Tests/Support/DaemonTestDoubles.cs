@@ -2,8 +2,7 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Desktop;
 using DevTools.Daemon.Gateway;
 using DevTools.Ipc;
-using DevTools.Mcp.Client;
-using DevTools.Mcp.Core.Sessions;
+using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -50,27 +49,29 @@ internal static class DaemonTestDoubles
         return auth;
     }
 
-    public static Mock<IHostBroker> CreateHostBroker(IReadOnlyList<HostCatalogEntry>? entries = null)
+    public static Mock<IProcessSessions> CreateProcessSessions(IReadOnlyList<ProcessCatalog>? entries = null)
     {
         entries ??= [];
-        var catalog = new Mock<IConnectedHostCatalog>();
-        catalog.Setup(c => c.List()).Returns(entries);
+        var catalog = new ProcessCatalogs();
+        foreach (var entry in entries)
+            catalog.Replace(entry);
 
-        var broker = new Mock<IHostBroker>();
-        broker.Setup(b => b.Catalog).Returns(catalog.Object);
+        var broker = new Mock<IProcessSessions>();
+        broker.Setup(b => b.Catalog).Returns(catalog);
+        broker.Setup(b => b.RunAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         return broker;
     }
 
-    public static HostCatalogEntry CreateCatalogEntry(
+    public static ProcessCatalog CreateCatalogEntry(
         string hostApp,
         string version,
         int pid,
         string? pipeName = null)
     {
         pipeName ??= HostPipeName.FormatMcp(hostApp, version, pid);
-        return new HostCatalogEntry
+        return new ProcessCatalog
         {
-            Key = new HostKey("machine-1", pid),
+            ProcessId = pid,
             Instance = new InstanceInfo
             {
                 HostApp = hostApp,

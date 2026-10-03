@@ -1,6 +1,6 @@
 using System.Text.Json;
 using DevTools.Hosting;
-using DevTools.Mcp.Server.Contracts;
+using DevTools.Daemon.Mcp.Contracts;
 
 namespace DevTools.Daemon.Tests;
 
@@ -8,10 +8,10 @@ namespace DevTools.Daemon.Tests;
 public sealed class HostLaunchCompositionBoundaryTests
 {
     [TestMethod]
-    public void Mcp_Server_forbids_FileMetadata_Revit_and_Hosting_Revit()
+    public void Mcp_Catalog_forbids_FileMetadata_Revit_and_Hosting_Revit()
     {
         var csproj = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(), "source", "DevTools.Mcp.Server", "DevTools.Mcp.Server.csproj"));
+            FindRepositoryRoot(), "source", "DevTools.Mcp.Catalog", "DevTools.Mcp.Catalog.csproj"));
         Assert.DoesNotContain("FileMetadata.Revit", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("Hosting.Revit", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("Hosting.Acad", csproj, StringComparison.Ordinal);
@@ -50,7 +50,7 @@ public sealed class HostLaunchCompositionBoundaryTests
     public void LaunchHostTool_uses_HostLaunchWaiter_and_culture_language()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindRepositoryRoot(), "source", "DevTools.Mcp.Server", "Tools", "LaunchHostTool.cs"));
+            FindRepositoryRoot(), "source", "DevTools.Daemon", "Mcp", "Tools", "LaunchHostTool.cs"));
         Assert.Contains("HostLaunchWaiter.UntilAsync", source, StringComparison.Ordinal);
         Assert.Contains("en-US", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Revit ENU", source, StringComparison.Ordinal);

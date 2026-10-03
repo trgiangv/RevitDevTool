@@ -4,6 +4,8 @@ using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
+using DevTools.Hosting;
+using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
@@ -29,11 +31,11 @@ public sealed class CSharpCodeToolTests
             NullLogger<CSharpCompiler>.Instance,
             new NugetManager(NullLogger<NugetManager>.Instance));
 
-        var tool = new CSharpCodeTool(bridge.Object, compiler, hostContext.Object, commandRunner.Object);
+        var tool = new CSharpCodeTool(bridge.Object, compiler, hostContext.Object, commandRunner.Object, Host(HostApp.Revit));
         var result = await InvokeToolAsync(tool, new { code }, TestContext.CancellationToken);
 
         Assert.IsTrue(result.IsError);
-        Assert.Contains("[COMPILATION ERROR]", Text(result));
+        Assert.Contains(McpSpecKeys.Result.Compilation, Text(result));
         hostContext.Verify(
             h => h.ExecuteAsync(It.IsAny<Func<Execution.Models.ExecutionResult>>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -52,15 +54,60 @@ public sealed class CSharpCodeToolTests
             NullLogger<CSharpCompiler>.Instance,
             new NugetManager(NullLogger<NugetManager>.Instance));
 
-        var tool = new CSharpCodeTool(bridge.Object, compiler, hostContext.Object, commandRunner.Object);
+        var tool = new CSharpCodeTool(bridge.Object, compiler, hostContext.Object, commandRunner.Object, Host(HostApp.Revit));
         var result = await InvokeToolAsync(tool, new { code = "public class {{" }, TestContext.CancellationToken);
 
         Assert.IsTrue(result.IsError);
-        Assert.Contains("[COMPILATION ERROR]", Text(result));
+        Assert.Contains(McpSpecKeys.Result.Compilation, Text(result));
         hostContext.Verify(
             h => h.ExecuteAsync(It.IsAny<Func<Execution.Models.ExecutionResult>>(), It.IsAny<CancellationToken>()),
             Times.Never);
         commandRunner.Verify(r => r.RunCompiledCommand(It.IsAny<object>()), Times.Never);
+    }
+
+    [TestMethod]
+    public void RevitDescription_RequiresIExternalCommandAndRevitCheatsheet()
+    {
+        var description = Advertise(HostApp.Revit);
+
+        Assert.Contains("IExternalCommand", description, StringComparison.Ordinal);
+        Assert.Contains(McpSpecKeys.Resource.RevitCSharpCheatsheet, description, StringComparison.Ordinal);
+        Assert.Contains("ExternalCommandData commandData", description, StringComparison.Ordinal);
+        Assert.Contains(McpSpecKeys.Tool.ExecutePython, description, StringComparison.Ordinal);
+        Assert.DoesNotContain("TransactionMode.ReadOnly", description, StringComparison.Ordinal);
+        Assert.DoesNotContain(McpSpecKeys.Resource.AcadCSharpCheatsheet, description, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void AutoCadDescription_RequiresCommandMethodAndAcadCheatsheet()
+    {
+        var description = Advertise(HostApp.AutoCad);
+
+        Assert.Contains("[CommandMethod]", description, StringComparison.Ordinal);
+        Assert.Contains(McpSpecKeys.Resource.AcadCSharpCheatsheet, description, StringComparison.Ordinal);
+        Assert.Contains("CommandFlags.Session", description, StringComparison.Ordinal);
+        Assert.Contains(McpSpecKeys.Tool.ExecutePython, description, StringComparison.Ordinal);
+        Assert.DoesNotContain(McpSpecKeys.Resource.RevitCSharpCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain("IExternalCommand", description, StringComparison.Ordinal);
+    }
+
+    private static string Advertise(HostApp host)
+    {
+        var tool = new CSharpCodeTool(
+            Mock.Of<ICompiledScriptBridge>(),
+            new CSharpCompiler(NullLogger<CSharpCompiler>.Instance, new NugetManager(NullLogger<NugetManager>.Instance)),
+            Mock.Of<IHostContextExecutor>(),
+            Mock.Of<ICommandRunner>(),
+            Host(host));
+
+        return tool.ServerTool.ProtocolTool.Description ?? "";
+    }
+
+    private static IHostAppInfo Host(HostApp host)
+    {
+        var info = new Mock<IHostAppInfo>();
+        info.Setup(item => item.Host).Returns(host);
+        return info.Object;
     }
 
     private static async Task<CallToolResult> InvokeToolAsync(CSharpCodeTool tool, object args, CancellationToken cancellationToken)

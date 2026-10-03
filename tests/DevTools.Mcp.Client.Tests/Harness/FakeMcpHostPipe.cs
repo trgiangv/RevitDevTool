@@ -15,11 +15,12 @@ namespace DevTools.Mcp.Client.Tests.Harness;
 internal sealed class FakeMcpHostPipe : IAsyncDisposable
 {
     private readonly CancellationTokenSource _cts = new();
-    private readonly Task _bootstrapTask;
-    private Task? _serverTask;
-    private McpServer? _server;
-    private readonly NamedPipeServerStream _serverPipe;
+    private readonly McpServerOptions _options;
     private readonly ServiceProvider _appServices;
+    private readonly Task _bootstrapTask;
+    private NamedPipeServerStream _serverPipe;
+    private McpServer? _activeServer;
+    private TaskCompletionSource _acceptingConnection = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private FakeMcpHostPipe(
         string pipeName,
@@ -29,11 +30,14 @@ internal sealed class FakeMcpHostPipe : IAsyncDisposable
     {
         PipeName = pipeName;
         _serverPipe = serverPipe;
+        _options = options;
         _appServices = appServices;
-        _bootstrapTask = BootstrapAsync(serverPipe, options, _cts.Token);
+        _bootstrapTask = BootstrapAsync(_cts.Token);
     }
 
     public string PipeName { get; }
+
+    public int ListenGeneration { get; private set; }
 
     public static Task<FakeMcpHostPipe> StartAsync(
         string? version = null,
@@ -65,13 +69,24 @@ internal sealed class FakeMcpHostPipe : IAsyncDisposable
             }
         };
 
-        var appServices = TestMcpAppServices.Create();
+        var appServices = new ServiceCollection()
+            .AddSingleton(NullLoggerFactory.Instance)
+            .BuildServiceProvider();
         return Task.FromResult(new FakeMcpHostPipe(pipeName, serverPipe, options, appServices));
+    }
+
+    public async Task EndCurrentSessionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_activeServer is null)
+            return;
+
+        await _activeServer.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5), cancellationToken).ConfigureAwait(false);
+        _activeServer = null;
     }
 
     public async Task<McpClient> ConnectClientAsync(CancellationToken cancellationToken = default)
     {
-        await _bootstrapTask.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await _acceptingConnection.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         var clientPipe = new NamedPipeClientStream(".", PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         await clientPipe.ConnectAsync(cancellationToken).ConfigureAwait(false);
         return await McpClient.CreateAsync(
@@ -84,25 +99,62 @@ internal sealed class FakeMcpHostPipe : IAsyncDisposable
     {
         await _cts.CancelAsync().ConfigureAwait(false);
         try { await _bootstrapTask.ConfigureAwait(false); } catch { /* ignored */ }
-        if (_serverTask is not null)
-        {
-            try { await _serverTask.ConfigureAwait(false); } catch { /* ignored */ }
-        }
-
-        if (_server is not null)
-            await _server.DisposeAsync().ConfigureAwait(false);
 
         await _serverPipe.DisposeAsync().ConfigureAwait(false);
         _cts.Dispose();
         _appServices.Dispose();
     }
 
-    private async Task BootstrapAsync(NamedPipeServerStream serverPipe, McpServerOptions options, CancellationToken ct)
+    private async Task BootstrapAsync(CancellationToken ct)
     {
-        await serverPipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
-        var transport = new StreamServerTransport(serverPipe, serverPipe, "fake-host", NullLoggerFactory.Instance);
-        _server = McpServer.Create(transport, options, NullLoggerFactory.Instance, _appServices);
-        _serverTask = _server.RunAsync(ct);
+        while (!ct.IsCancellationRequested)
+        {
+            var listening = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _acceptingConnection = listening;
+            listening.SetResult();
+            ListenGeneration++;
+
+            try
+            {
+                await _serverPipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return;
+            }
+
+            var transport = new StreamServerTransport(_serverPipe, _serverPipe, "fake-host", NullLoggerFactory.Instance);
+            var server = McpServer.Create(transport, _options, NullLoggerFactory.Instance, _appServices);
+            _activeServer = server;
+            try
+            {
+                await server.RunAsync(ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return;
+            }
+            catch
+            {
+                /* client disconnected */
+            }
+            finally
+            {
+                if (ReferenceEquals(_activeServer, server))
+                    _activeServer = null;
+
+                await server.DisposeAsync().ConfigureAwait(false);
+            }
+
+            if (ct.IsCancellationRequested)
+                return;
+
+            if (_serverPipe.IsConnected)
+                _serverPipe.Disconnect();
+
+            await _serverPipe.DisposeAsync().ConfigureAwait(false);
+            _serverPipe = CreateServerPipe(PipeName);
+        }
     }
 
     private static IEnumerable<McpServerTool> DefaultTools() =>
@@ -149,7 +201,7 @@ internal sealed class FakeMcpHostPipe : IAsyncDisposable
         return NamedPipeServerStreamAcl.Create(
             pipeName,
             PipeDirection.InOut,
-            1,
+            5,
             PipeTransmissionMode.Byte,
             PipeOptions.Asynchronous,
             0,

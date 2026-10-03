@@ -27,7 +27,7 @@ public sealed class PythonResourceResultParserTests
         };
         var json = JsonSerializer.Serialize(expected, McpJsonUtilities.DefaultOptions);
 
-        var actual = PythonMcpToolBackend.ReadResourceResult(json);
+        var actual = PythonSource.ReadResourceResult(json);
         Assert.HasCount(1, actual.Contents);
         var text = Assert.IsInstanceOfType<TextResourceContents>(actual.Contents[0]);
 
@@ -42,7 +42,7 @@ public sealed class PythonResourceResultParserTests
         const string json = """{"contents":[{"content":"hello","mime_type":"text/plain"}]}""";
 
         var ex = Assert.ThrowsExactly<InvalidOperationException>(
-            () => PythonMcpToolBackend.ReadResourceResult(json));
+            () => PythonSource.ReadResourceResult(json));
         Assert.Contains("resource", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -52,11 +52,11 @@ public sealed class PythonResourceResultParserTests
         const string json = """{"contents":["hello"]}""";
 
         Assert.ThrowsExactly<InvalidOperationException>(
-            () => PythonMcpToolBackend.ReadResourceResult(json));
+            () => PythonSource.ReadResourceResult(json));
     }
 
     [TestMethod]
-    public void ParseReadResourceResult_InputRequired_ThrowsWithRequestsAndState()
+    public void ParseReadResourceResult_InputRequired_Throws()
     {
         var inputRequired = new InputRequiredResult
         {
@@ -68,12 +68,9 @@ public sealed class PythonResourceResultParserTests
         };
         var json = JsonSerializer.Serialize(inputRequired, McpJsonUtilities.DefaultOptions);
 
-        var ex = Assert.ThrowsExactly<InputRequiredException>(() =>
-            PythonMcpToolBackend.ReadResourceResult(json));
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(() =>
+            PythonSource.ReadResourceResult(json));
 
-        Assert.IsNotNull(ex.Result.InputRequests);
-        Assert.Contains("confirm", ex.Result.InputRequests!.Keys);
-        Assert.AreEqual("resource-round-1", ex.Result.RequestState);
-        Assert.AreEqual("input_required", ex.Result.ResultType);
+        Assert.Contains("not supported", ex.Message, StringComparison.Ordinal);
     }
 }

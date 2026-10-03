@@ -2,7 +2,6 @@ using System.IO.Pipes;
 using System.Text.Json;
 using DevTools.Execution.External;
 using DevTools.Execution.External.Handlers;
-using DevTools.Execution.External.Mcp.Connections;
 using DevTools.Hosting;
 using DevTools.Ipc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -100,7 +99,6 @@ public sealed class DevToolsPipeServerTests
 
     private static DevToolsPipeServer CreateServer(IHostAppInfo hostInfo, params IBridgeRequestHandler[] handlers) =>
         new(
-            new McpConnectState(NullLogger<McpConnectState>.Instance),
             hostInfo,
             handlers,
             NullLogger<DevToolsPipeServer>.Instance);

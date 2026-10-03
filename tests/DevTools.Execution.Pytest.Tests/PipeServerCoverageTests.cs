@@ -1,7 +1,6 @@
 using System.Text.Json;
 using DevTools.Execution.External;
 using DevTools.Execution.External.Handlers;
-using DevTools.Execution.External.Mcp.Connections;
 using DevTools.Hosting;
 using DevTools.Ipc;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -22,7 +21,6 @@ public sealed class PipeServerCoverageTests
         var hostInfo = new StubHostAppInfo(Guid.NewGuid().ToString("N"));
         var handler = new NotificationPingHandler();
         using var server = new DevToolsPipeServer(
-            new McpConnectState(NullLogger<McpConnectState>.Instance),
             hostInfo,
             [handler, new InstanceRequestHandler(hostInfo)],
             NullLogger<DevToolsPipeServer>.Instance);

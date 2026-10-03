@@ -1,7 +1,6 @@
 using System.Text.Json;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
-using DevTools.Mcp.Core.Results;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;
@@ -12,7 +11,7 @@ public sealed class ToolsetResultSerializerCoverageTests
     [TestMethod]
     public void ToInvocationResponse_NullRaw_ReturnsEmptyContent()
     {
-        var result = ToolsetResultSerializer.ToInvocationResponse(null, outputSchema: null);
+        var result = ResultBridge.ToHostCallToolResult(null, outputSchema: null);
 
         Assert.IsEmpty(result.Content);
     }
@@ -20,7 +19,7 @@ public sealed class ToolsetResultSerializerCoverageTests
     [TestMethod]
     public void ToInvocationResponse_BoolResult_MarksErrorState()
     {
-        var result = ToolsetResultSerializer.ToInvocationResponse(true, outputSchema: null);
+        var result = ResultBridge.ToHostCallToolResult(true, outputSchema: null);
 
         Assert.IsTrue(result.IsError);
         Assert.AreEqual("true", McpToolInvoke.Text(result));
@@ -31,7 +30,7 @@ public sealed class ToolsetResultSerializerCoverageTests
     {
         var block = new TextContentBlock { Text = "block-text" };
 
-        var result = ToolsetResultSerializer.ToInvocationResponse(block, outputSchema: null);
+        var result = ResultBridge.ToHostCallToolResult(block, outputSchema: null);
 
         Assert.AreEqual("block-text", McpToolInvoke.Text(result));
     }
@@ -49,10 +48,10 @@ public sealed class ToolsetResultSerializerCoverageTests
             Size = 12,
         };
 
-        var result = ToolsetResultSerializer.ToInvocationResponse(block, outputSchema: null);
+        var result = ResultBridge.ToHostCallToolResult(block, outputSchema: null);
 
         Assert.HasCount(1, result.Content);
-        Assert.IsInstanceOfType<McpResourceLinkContent>(result.Content[0]);
+        Assert.IsInstanceOfType<ResourceLinkBlock>(result.Content[0]);
     }
 
     [TestMethod]
@@ -68,10 +67,11 @@ public sealed class ToolsetResultSerializerCoverageTests
             },
         };
 
-        var result = ToolsetResultSerializer.ToInvocationResponse(block, outputSchema: null);
+        var result = ResultBridge.ToHostCallToolResult(block, outputSchema: null);
 
         Assert.HasCount(1, result.Content);
-        Assert.IsInstanceOfType<McpEmbeddedTextResourceContent>(result.Content[0]);
+        var embedded = Assert.IsInstanceOfType<EmbeddedResourceBlock>(result.Content[0]);
+        Assert.IsInstanceOfType<TextResourceContents>(embedded.Resource);
     }
 
     [TestMethod]
@@ -80,7 +80,7 @@ public sealed class ToolsetResultSerializerCoverageTests
         var invalid = JsonSerializer.SerializeToElement(new { content = new[] { new { type = 123 } } });
 
         var ex = Assert.ThrowsExactly<InvalidOperationException>(
-            () => ToolsetResultSerializer.ToInvocationResponse(invalid, outputSchema: null));
+            () => ResultBridge.ToHostCallToolResult(invalid, outputSchema: null));
 
         Assert.Contains("SDK contract", ex.Message, StringComparison.Ordinal);
     }

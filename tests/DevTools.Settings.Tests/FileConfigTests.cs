@@ -24,7 +24,6 @@ public sealed class FileConfigTests
             var expected = new GeneralConfig
             {
                 Theme = AppTheme.Dark,
-                UseHardwareRendering = false,
                 EnableTelemetry = false,
             };
 
@@ -32,7 +31,6 @@ public sealed class FileConfigTests
             var loaded = config.Load<GeneralConfig>();
             Assert.IsNotNull(loaded);
             Assert.AreEqual(expected.Theme, loaded.Theme);
-            Assert.AreEqual(expected.UseHardwareRendering, loaded.UseHardwareRendering);
             Assert.AreEqual(expected.EnableTelemetry, loaded.EnableTelemetry);
         }
         finally

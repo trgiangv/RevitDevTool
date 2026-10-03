@@ -1,24 +1,20 @@
-using DevTools.Mcp.Client;
-using DevTools.Mcp.Core.Sessions;
+using DevTools.Daemon.Composition;
+using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace DevTools.Mcp.Client.Tests;
 
 [TestClass]
-public sealed class McpHostClientExtensionsTests
+public sealed class McpServiceCollectionExtensionsTests
 {
     [TestMethod]
-    public void AddMcpHostClient_RegistersBrokerScannerAndDiscovery()
+    public void AddMcp_RegistersProcessSessionsScannerAndEngine()
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddMcpHostClient();
-        var provider = services.BuildServiceProvider();
+        using var host = ServerHostBuilder.CreateStdioHostForTests();
+        var provider = host.Services;
 
         Assert.IsInstanceOfType<McpPipeScanner>(provider.GetRequiredService<IMcpPipeScanner>());
-        Assert.IsInstanceOfType<HostBroker>(provider.GetRequiredService<HostBroker>());
-        Assert.AreSame(provider.GetRequiredService<HostBroker>(), provider.GetRequiredService<IHostBroker>());
-        Assert.AreSame(provider.GetRequiredService<HostBroker>(), provider.GetRequiredService<IHostDiscovery>());
+        Assert.IsInstanceOfType<ProcessSessions>(provider.GetRequiredService<ProcessSessions>());
+        Assert.IsNotNull(provider.GetRequiredService<IProcessSessions>());
     }
 }

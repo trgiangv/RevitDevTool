@@ -1,5 +1,5 @@
 using System.Reflection;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
 
 namespace DevTools.Mcp.Catalog.Tests;
 

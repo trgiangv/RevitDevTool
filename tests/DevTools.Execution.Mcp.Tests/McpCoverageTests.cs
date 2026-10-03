@@ -3,9 +3,9 @@ using DevTools.Execution.External.Mcp.Backends;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.External.Mcp.Connections;
 using DevTools.Execution.Interfaces;
-using DevTools.Mcp.Catalog;
-using DevTools.Mcp.Catalog.Discovery;
-using DevTools.Mcp.Catalog.Isolation;
+using DevTools.Mcp;
+using DevTools.Mcp.Discovery;
+using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,59 +21,63 @@ public sealed class McpCoverageTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public void DotnetMcpToolBackend_ReadResource_ResolvesStaticResource()
+    public async Task DotnetSource_ReadResource_ResolvesStaticResource()
     {
         var backend = CreateDotnetBackend();
-        var resource = new McpRegisteredResource
+        var resource = new RegisteredResource
         {
             Id = "execution-status",
             Descriptor = new Resource { Uri = "execution://status", Name = "execution_status" },
-            Binding = McpPrimitiveBinding.Create(
+            Binding = PrimitiveBinding.Create(
                 ExecutionMode.Dotnet,
                 typeof(ExecutionDotnetMcpResourceStubs).Assembly.Location,
                 typeof(ExecutionDotnetMcpResourceStubs).FullName!,
-                nameof(ExecutionDotnetMcpResourceStubs.Status)),
+                nameof(ExecutionDotnetMcpResourceStubs.Status),
+                "",
+                ""),
         };
 
-        var result = backend.ReadResource(resource, "execution://status", TestContext.CancellationToken);
+        var result = await backend.ReadResourceAsync(resource, "execution://status", TestContext.CancellationToken);
 
         Assert.IsNotNull(result.Contents);
         Assert.IsNotEmpty(result.Contents);
     }
 
     [TestMethod]
-    public void DotnetMcpToolBackend_ReadResource_UnknownResource_Throws()
+    public async Task DotnetSource_ReadResource_UnknownResource_Throws()
     {
         var backend = CreateDotnetBackend();
-        var resource = new McpRegisteredResource
+        var resource = new RegisteredResource
         {
             Id = "missing",
             Descriptor = new Resource { Uri = "execution://missing", Name = "missing_resource" },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, string.Empty, "Missing", "Run"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, string.Empty, "Missing", "Run", "", ""),
         };
 
-        Assert.ThrowsExactly<InvalidOperationException>(() =>
-            backend.ReadResource(resource, "execution://missing", TestContext.CancellationToken));
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            backend.ReadResourceAsync(resource, "execution://missing", TestContext.CancellationToken));
     }
 
     [TestMethod]
-    public void DotnetMcpToolBackend_ClearCaches_AfterResourceRead_AllowsRebind()
+    public async Task DotnetSource_ClearCaches_AfterResourceRead_AllowsRebind()
     {
         var backend = CreateDotnetBackend();
-        var resource = new McpRegisteredResource
+        var resource = new RegisteredResource
         {
             Id = "execution-status-2",
             Descriptor = new Resource { Uri = "execution://status", Name = "execution_status" },
-            Binding = McpPrimitiveBinding.Create(
+            Binding = PrimitiveBinding.Create(
                 ExecutionMode.Dotnet,
                 typeof(ExecutionDotnetMcpResourceStubs).Assembly.Location,
                 typeof(ExecutionDotnetMcpResourceStubs).FullName!,
-                nameof(ExecutionDotnetMcpResourceStubs.Status)),
+                nameof(ExecutionDotnetMcpResourceStubs.Status),
+                "",
+                ""),
         };
 
-        backend.ReadResource(resource, "execution://status", TestContext.CancellationToken);
+        await backend.ReadResourceAsync(resource, "execution://status", TestContext.CancellationToken);
         backend.ClearCaches();
-        var second = backend.ReadResource(resource, "execution://status", TestContext.CancellationToken);
+        var second = await backend.ReadResourceAsync(resource, "execution://status", TestContext.CancellationToken);
         Assert.IsNotEmpty(second.Contents);
     }
 
@@ -91,26 +95,26 @@ public sealed class McpCoverageTests
     }
 
     [TestMethod]
-    public void BuiltInMcpToolBackend_ReadResource_KnownTemplate_ReturnsPayload()
+    public async Task BuiltInSource_ReadResource_KnownTemplate_ReturnsPayload()
     {
-        var backend = new BuiltInMcpToolBackend([], [new StubBuiltInResource("test://docs/{name}", "docs/{name}", "hello")]);
-        var resource = new McpRegisteredResource
+        var backend = new BuiltInSource([], [new StubBuiltInResource("test://docs/{name}", "docs/{name}", "hello")]);
+        var resource = new RegisteredResource
         {
             Id = "docs",
             TemplateDescriptor = new ResourceTemplate { UriTemplate = "test://docs/{name}", Name = "docs" },
-            Binding = McpPrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "docs", "read"),
+            Binding = PrimitiveBinding.Create(ExecutionMode.CSharp, string.Empty, "docs", "read", "", ""),
         };
 
-        var result = backend.ReadResource(resource, "test://docs/readme", TestContext.CancellationToken);
+        var result = await backend.ReadResourceAsync(resource, "test://docs/readme", TestContext.CancellationToken);
         var text = (TextResourceContents)result.Contents.Single();
         Assert.IsInstanceOfType<TextResourceContents>(text);
         Assert.AreEqual("hello", text.Text);
     }
 
     [TestMethod]
-    public void McpConnectState_RecordsToolCallsAndExecutionScope()
+    public void McpConnectTracker_RecordsToolCallsAndExecutionScope()
     {
-        var state = new McpConnectState(NullLogger<McpConnectState>.Instance);
+        var state = new McpConnectTracker(NullLogger<McpConnectTracker>.Instance);
         state.RecordCall("id-1", "echo");
         state.RecordCall("id-1", "echo");
 
@@ -127,7 +131,7 @@ public sealed class McpCoverageTests
     [TestMethod]
     public void McpExecutionTracker_ForwardsToConnectState()
     {
-        var state = new McpConnectState(NullLogger<McpConnectState>.Instance);
+        var state = new McpConnectTracker(NullLogger<McpConnectTracker>.Instance);
         var tracker = new McpExecutionTracker(state);
 
         tracker.RecordCall("tool-id", "sample");
@@ -138,12 +142,12 @@ public sealed class McpCoverageTests
         Assert.AreEqual(1, state.TotalToolCalls);
     }
 
-    private static DotnetMcpToolBackend CreateDotnetBackend()
+    private static DotnetSource CreateDotnetBackend()
     {
         var services = new ServiceCollection();
         services.AddLogging();
         var provider = services.BuildServiceProvider();
-        return new DotnetMcpToolBackend(
+        return new DotnetSource(
             provider,
             new DotnetMethodResolver(
                 new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance),

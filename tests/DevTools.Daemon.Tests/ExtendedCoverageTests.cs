@@ -1,5 +1,4 @@
 using System.Net;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -28,7 +27,7 @@ public sealed class ExtendedCoverageTests
     {
         var port = GetFreePort();
         var callback = $"http://127.0.0.1:{port}/callback";
-        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = port });
+        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = port }, static _ => { });
         var invoke = Task.Run(() => browser.InvokeAsync(
             new BrowserOptions("about:blank", callback),
             TestContext.CancellationToken));
@@ -57,7 +56,7 @@ public sealed class ExtendedCoverageTests
     {
         var port = GetFreePort();
         var callback = $"http://127.0.0.1:{port}/callback";
-        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = port });
+        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = port }, static _ => { });
         var invoke = Task.Run(() => browser.InvokeAsync(
             new BrowserOptions("about:blank", callback),
             TestContext.CancellationToken));
@@ -142,9 +141,9 @@ public sealed class ExtendedCoverageTests
     public async Task GatewayTunnelClient_ConnectsAndReconnectsUntilCancelled()
     {
         using var host = ServerHostBuilder.CreateStdioHostForTests();
-        var engine = host.Services.GetRequiredService<DevTools.Mcp.Server.Hosting.McpEngine>();
+        var engine = host.Services.GetRequiredService<DevTools.Daemon.Mcp.Hosting.McpEngine>();
         var scanner = DaemonTestDoubles.CreatePipeScanner();
-        var options = DevTools.Mcp.Server.Hosting.McpServerFactory.CreateOptions(
+        var options = DevTools.Daemon.Mcp.Hosting.McpServerFactory.CreateOptions(
             engine.ToolCollection, engine.PromptCollection, host.Services);
 
         var client = new GatewayTunnelClient(
@@ -189,7 +188,7 @@ public sealed class ExtendedCoverageTests
 
         private static AppState CreateAppState(IAuthService auth)
         {
-            var broker = DaemonTestDoubles.CreateHostBroker().Object;
+            var broker = DaemonTestDoubles.CreateProcessSessions().Object;
             var scanner = DaemonTestDoubles.CreatePipeScanner().Object;
             var store = DaemonTestDoubles.CreateUserSettingsStore();
             var tunnel = DaemonTestDoubles.CreateTunnelStatus(TunnelStatus.Connected).Object;

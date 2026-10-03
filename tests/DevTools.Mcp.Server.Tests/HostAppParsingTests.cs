@@ -1,6 +1,6 @@
 using DevTools.Hosting;
 using DevTools.Ipc;
-using DevTools.Mcp.Server.Utils;
+using DevTools.Daemon.Mcp.Utils;
 
 namespace DevTools.Mcp.Server.Tests;
 

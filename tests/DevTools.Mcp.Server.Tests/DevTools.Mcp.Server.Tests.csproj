@@ -17,10 +17,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj"/>
+        <ProjectReference Include="..\..\source\DevTools.Daemon\DevTools.Daemon.csproj" AdditionalProperties="SelfContained=false;PublishSingleFile=false"/>
         <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Settings\DevTools.Settings.csproj"/>
@@ -34,9 +32,10 @@
         <Using Include="DevTools.Mcp.Core.Models"/>
         <Using Include="DevTools.Mcp.Core.Protocol"/>
         <Using Include="DevTools.Mcp.Core.Results"/>
-        <Using Include="DevTools.Mcp.Core.Sessions"/>
-        <Using Include="DevTools.Mcp.Catalog"/>
-        <Using Include="DevTools.Mcp.Server.Hosting"/>
+        <Using Include="DevTools.Daemon.Mcp.Processes"/>
+        <Using Include="DevTools.Mcp"/>
+        <Using Include="DevTools.Daemon.Mcp.Hosting"/>
+        <Using Include="DevTools.Daemon.Mcp.Contracts"/>
         <Using Include="DevTools.Mcp.Core.Utils"/>
     </ItemGroup>
 

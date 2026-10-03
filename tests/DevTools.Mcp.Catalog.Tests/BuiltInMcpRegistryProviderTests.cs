@@ -67,7 +67,7 @@ public sealed class BuiltInMcpRegistryProviderTests
         Assert.IsEmpty(registered.Binding.SourcePath);
         Assert.AreEqual("BuiltIn.open_document", registered.Binding.SourceAddress);
 
-        var expectedId = McpPrimitiveBinding.CreatePrimitiveId("open_document", "BuiltIn.open_document");
+        var expectedId = PrimitiveBinding.CreatePrimitiveId("open_document", "BuiltIn.open_document");
         Assert.AreEqual(expectedId, registered.Id);
     }
 
@@ -101,7 +101,7 @@ public sealed class BuiltInMcpRegistryProviderTests
         Assert.IsEmpty(registered.Binding.SourcePath);
         Assert.AreEqual("BuiltIn.test_resource", registered.Binding.SourceAddress);
 
-        var expectedId = McpPrimitiveBinding.CreatePrimitiveId("test_resource", "BuiltIn.test_resource");
+        var expectedId = PrimitiveBinding.CreatePrimitiveId("test_resource", "BuiltIn.test_resource");
         Assert.AreEqual(expectedId, registered.Id);
     }
 }

@@ -1,9 +1,7 @@
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
-using DevTools.Daemon.Desktop;
 using DevTools.Daemon.Tools;
 using DevTools.Daemon.Gateway;
 using Microsoft.Extensions.Logging.Abstractions;

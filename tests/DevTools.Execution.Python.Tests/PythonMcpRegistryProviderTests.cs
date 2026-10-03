@@ -1,7 +1,7 @@
 using DevTools.Execution.External.Mcp.Registry;
 using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using Microsoft.Extensions.Logging.Abstractions;
 using Python.Runtime;
 
@@ -21,7 +21,7 @@ public sealed class PythonMcpRegistryProviderTests
     {
         var provider = new PythonMcpRegistryProvider(
             ExecutionTestHelpers.CreatePythonInitializer(),
-            new PythonToolsetParser(NullLogger<PythonToolsetParser>.Instance),
+            new McpPythonParser(NullLogger<McpPythonParser>.Instance),
             NullLogger<PythonMcpRegistryProvider>.Instance);
 
         provider.ConfigurePaths([ExecutionTestHelpers.CreateTempDirectory("mcp-empty")]);
@@ -107,7 +107,7 @@ public sealed class PythonMcpRegistryProviderTests
     private static PythonMcpRegistryProvider CreateProvider(PythonInitializer initializer) =>
         new(
             initializer,
-            new PythonToolsetParser(NullLogger<PythonToolsetParser>.Instance),
+            new McpPythonParser(NullLogger<McpPythonParser>.Instance),
             NullLogger<PythonMcpRegistryProvider>.Instance);
 
     private static void TryDeleteDirectory(string path)

@@ -6,7 +6,7 @@ using ModelContextProtocol.Protocol;
 namespace DevTools.Execution.Tests;
 
 [TestClass]
-public sealed class PythonMcpToolBackendResultTests
+public sealed class PythonSourceResultTests
 {
     [TestMethod]
     public void PythonResultParser_PreservesNativeSdkResponseSemantics()
@@ -26,7 +26,7 @@ public sealed class PythonMcpToolBackendResultTests
             ]
         };
 
-        var actual = PythonMcpToolBackend.ReadToolResult(
+        var actual = PythonSource.ReadToolResult(
             JsonSerializer.Serialize(expected, ModelContextProtocol.McpJsonUtilities.DefaultOptions));
 
         Assert.IsTrue(actual.IsError);

@@ -1,7 +1,7 @@
 namespace DevTools.TestRunner.Tests;
 
 [TestClass]
-public sealed class HostSessionPolicyTests
+public sealed class ProcessSessionPolicyTests
 {
     [TestMethod]
     public void ForceLaunch_false_reuses_matching_host_then_falls_back_to_spawn()

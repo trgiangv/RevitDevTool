@@ -1,5 +1,5 @@
-using DevTools.Mcp.Catalog.Discovery;
-using DevTools.Mcp.Catalog.Isolation;
+using DevTools.Mcp.Discovery;
+using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
@@ -76,7 +76,7 @@ public sealed class DotnetMethodResolverTests
     private static DotnetMethodResolver CreateResolver() =>
         new(new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance), NullLogger<DotnetMethodResolver>.Instance);
 
-    private static McpRegisteredTool CreateToolRegistration(string name, string sourcePath, string containerType, string methodName) => new()
+    private static RegisteredTool CreateToolRegistration(string name, string sourcePath, string containerType, string methodName) => new()
     {
         Id = name,
         Descriptor = new Tool
@@ -84,7 +84,7 @@ public sealed class DotnetMethodResolverTests
             Name = name,
             InputSchema = System.Text.Json.JsonSerializer.SerializeToElement(new { type = "object" }),
         },
-        Binding = McpPrimitiveBinding.Create(ExecutionMode.Dotnet, sourcePath, containerType, methodName),
+        Binding = PrimitiveBinding.Create(ExecutionMode.Dotnet, sourcePath, containerType, methodName, "", ""),
     };
 
     private static string FindRepositoryRoot()

@@ -222,7 +222,9 @@ public sealed class PythonCoverageTests
     public async Task PythonCodeTool_ExecutesInlineCode_WhenPythonReady()
     {
         var initializer = await ExecutionTestHelpers.EnsurePixiPythonInitializedAsync();
-        var tool = new PythonCodeTool(initializer, ExecutionTestHelpers.InlineHostContext());
+        var host = new Mock<IHostAppInfo>();
+        host.Setup(item => item.Host).Returns(HostApp.Revit);
+        var tool = new PythonCodeTool(initializer, ExecutionTestHelpers.InlineHostContext(), host.Object);
 
         var result = await InvokeToolAsync(tool, new { code = "print('coverage-boost')" }, TestContext.CancellationToken);
 
