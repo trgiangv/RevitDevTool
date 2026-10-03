@@ -1,0 +1,36 @@
+using System.Text.Json.Serialization;
+using DevTools.Ipc;
+using DevTools.Hosting;
+
+namespace DevTools.Daemon.Mcp.Contracts;
+
+[UsedImplicitly]
+public sealed record LaunchHostResult(
+    [property: JsonPropertyName(IpcPropertyNames.HostApp)]
+    [property: JsonConverter(typeof(JsonStringEnumConverter<HostApp>))]
+    HostApp HostApp,
+    [property: JsonPropertyName(IpcPropertyNames.ProcessId)] int ProcessId,
+    [property: JsonPropertyName(IpcPropertyNames.Version)] string? Version,
+    [property: JsonPropertyName("path")] string? Path,
+    [property: JsonPropertyName(IpcPropertyNames.Arguments)] string? Arguments,
+    [property: JsonPropertyName("languageCode")] string? LanguageCode,
+    [property: JsonPropertyName(IpcPropertyNames.BridgeConnected)] bool BridgeConnected,
+    [property: JsonPropertyName("dialogResult")] StartupDialogResult? DialogResult = null);
+
+[UsedImplicitly]
+public sealed record ConnectedInstance(
+    [property: JsonPropertyName(IpcPropertyNames.HostApp)] string? HostApp,
+    [property: JsonPropertyName(IpcPropertyNames.ProcessId)] int ProcessId,
+    [property: JsonPropertyName(IpcPropertyNames.VersionNumber)] string? VersionNumber);
+
+[UsedImplicitly]
+public sealed record DiscoveredPipe(
+    [property: JsonPropertyName(IpcPropertyNames.PipeName)] string PipeName,
+    [property: JsonPropertyName(IpcPropertyNames.HostApp)] string? HostApp);
+
+[UsedImplicitly]
+public sealed record ListInstancesResult(
+    [property: JsonPropertyName("connectedInstances")] IReadOnlyList<ConnectedInstance> ConnectedInstances,
+    [property: JsonPropertyName("discoveredPipes")] IReadOnlyList<DiscoveredPipe> DiscoveredPipes,
+    [property: JsonPropertyName("totalConnected")] int TotalConnected,
+    [property: JsonPropertyName("totalDiscovered")] int TotalDiscovered);

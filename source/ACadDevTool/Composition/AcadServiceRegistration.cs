@@ -6,8 +6,7 @@ using DevTools.Execution.Interfaces;
 using DevTools.Hosting;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
-using DevTools.Mcp.Catalog;
-using DevTools.Mcp.Adapter;
+using DevTools.Mcp;
 using DevTools.Testing.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
@@ -94,7 +93,7 @@ internal static class AcadServiceRegistration
         services.AddSingleton<IIronPythonBridge, AcadIronPythonBridge>();
 
         services.AddExecutionServices();
-        services.AddMcpHostAdapter();
+        services.AddMcpAdapter();
         services.AddTestingHostServices();
 
         services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();

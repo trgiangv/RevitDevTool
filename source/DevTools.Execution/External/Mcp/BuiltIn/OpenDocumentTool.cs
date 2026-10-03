@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.IO;
 using System.Text.Json.Serialization;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -18,7 +20,7 @@ public sealed class OpenDocumentTool : IBuiltInMcpTool
             OpenAsync,
             new McpServerToolCreateOptions
             {
-                Name = "open_document",
+                Name = McpSpecKeys.Tool.OpenDocument,
                 Title = "Open Document",
                 Description =
                     "Open a document file in the running host process.\n" +
@@ -29,7 +31,7 @@ public sealed class OpenDocumentTool : IBuiltInMcpTool
             });
     }
 
-    public string Name => "open_document";
+    public string Name => McpSpecKeys.Tool.OpenDocument;
     public McpServerTool ServerTool { get; }
 
     [Description("Open a document file in the running host process.")]

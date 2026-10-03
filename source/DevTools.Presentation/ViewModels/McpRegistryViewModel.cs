@@ -21,7 +21,7 @@ namespace DevTools.Presentation.ViewModels;
 public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewModel, IDisposable
 {
     private readonly McpCatalogStore _catalogStore;
-    private readonly McpConnectState _bridgeState;
+    private readonly McpConnectTracker _bridgeState;
     private readonly ILogger<McpRegistryViewModel> _logger;
     private readonly DispatcherTimer _searchDebounceTimer;
     private readonly DispatcherTimer _elapsedTimer;
@@ -70,7 +70,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
     public McpRegistryViewModel(
         McpCatalogStore catalogStore,
-        McpConnectState bridgeState,
+        McpConnectTracker bridgeState,
         ILogger<McpRegistryViewModel> logger)
     {
         _catalogStore = catalogStore;
@@ -130,14 +130,14 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
     public async Task AddDroppedPathAsync(string path)
     {
-        await this.WhileBusy($"Parsing MCP toolset from '{Path.GetFileName(path)}'...", async () =>
+        await this.WhileBusy($"Parsing '{Path.GetFileName(path)}'...", async () =>
         {
             await _catalogStore.AddPathAsync(path).ConfigureAwait(true);
         });
     }
 
     [RelayCommand]
-    private async Task LoadDotnetToolsetAsync()
+    private async Task LoadAssemblyAsync()
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
@@ -152,11 +152,11 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
     }
 
     [RelayCommand]
-    private async Task LoadPythonToolsetAsync()
+    private async Task LoadPythonAsync()
     {
-        var selectedFolder = AppUtils.SelectFolder("Select Python MCP Toolset Folder");
+        var selectedFolder = AppUtils.SelectFolder("Select Python MCP Folder");
         if (string.IsNullOrWhiteSpace(selectedFolder)) return;
-        await this.WhileBusy($"Parsing MCP toolset from '{Path.GetFileName(selectedFolder)}'...", async () =>
+        await this.WhileBusy($"Parsing '{Path.GetFileName(selectedFolder)}'...", async () =>
         {
             await _catalogStore.AddPathAsync(selectedFolder).ConfigureAwait(true);
         });
@@ -257,18 +257,18 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
 
         switch (e.PropertyName)
         {
-            case nameof(McpConnectState.McpEndpoint):
-            case nameof(McpConnectState.McpClientCount):
+            case nameof(McpConnectTracker.McpEndpoint):
+            case nameof(McpConnectTracker.McpClientCount):
                 RefreshMcpConnectionDisplay();
                 break;
-            case nameof(McpConnectState.TotalToolCalls):
+            case nameof(McpConnectTracker.TotalToolCalls):
                 TotalCalled = _bridgeState.TotalToolCalls;
                 break;
-            case nameof(McpConnectState.IsExecuting):
+            case nameof(McpConnectTracker.IsExecuting):
                 RefreshExecutionState();
                 break;
-            case nameof(McpConnectState.CurrentToolName):
-            case nameof(McpConnectState.CurrentStatusMessage):
+            case nameof(McpConnectTracker.CurrentToolName):
+            case nameof(McpConnectTracker.CurrentStatusMessage):
                 UpdateElapsedDisplay();
                 break;
         }
@@ -350,7 +350,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         OnPropertyChanged(nameof(StatusPanelText));
     }
 
-    private static string BuildToolTipText(McpRegisteredTool tool)
+    private static string BuildToolTipText(RegisteredTool tool)
     {
         var protocolTool = tool.Descriptor;
         var binding = tool.Binding;
@@ -364,7 +364,7 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         var arguments = protocolTool.InputSchema.ValueKind == JsonValueKind.Object
             ? BuildArgumentSummary(protocolTool.InputSchema.GetRawText())
             : string.Empty;
-        if (string.IsNullOrWhiteSpace(arguments)) 
+        if (string.IsNullOrWhiteSpace(arguments))
             return builder.ToString().TrimEnd();
         builder.AppendLine();
         builder.AppendLine("Args:");

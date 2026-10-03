@@ -34,15 +34,4 @@ public sealed class AcadHostContextExecutor : IHostContextExecutor
 
         return Task.CompletedTask;
     }
-
-    public async Task<T> ExecuteAsync<T>(Func<Task<T>> asyncHandler, CancellationToken token = default)
-    {
-        token.ThrowIfCancellationRequested();
-        var doc = AcadApp.DocumentManager.MdiActiveDocument;
-        if (doc == null)
-            return await asyncHandler().ConfigureAwait(false);
-
-        using (doc.LockDocument())
-            return await asyncHandler().ConfigureAwait(false);
-    }
 }

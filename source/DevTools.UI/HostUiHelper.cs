@@ -1,5 +1,4 @@
 using System.Windows.Interop;
-using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace DevTools.UI;
@@ -39,15 +38,6 @@ public static class HostUiHelper
             action();
         else
             HostDispatcher.BeginInvoke(action);
-    }
-
-    /// <summary>
-    /// Toggles WPF hardware/software rendering mode on the main UI thread.
-    /// </summary>
-    public static void ToggleHardwareRendering(bool useHardware)
-    {
-        RunOnMainThread(() =>
-            RenderOptions.ProcessRenderMode = useHardware ? RenderMode.Default : RenderMode.SoftwareOnly);
     }
 
     /// <summary>

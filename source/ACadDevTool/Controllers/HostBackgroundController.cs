@@ -5,7 +5,6 @@ using DevTools.Hosting;
 using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
-using DevTools.Mcp.Catalog;
 using DevTools.UI;
 using DevTools.UI.Theme;
 using Microsoft.Extensions.Hosting;
@@ -16,11 +15,8 @@ public sealed class HostBackgroundController(
     IHostAppInfo hostAppInfo,
     IAcadSettingsService settingsService,
     PythonInitializer pythonInitializer,
-    IronPythonInitializer ironPythonInitializer,
-    McpCatalogStore catalogStore) : IHostedService
+    IronPythonInitializer ironPythonInitializer) : IHostedService
 {
-    private Task _runtimeInit = Task.CompletedTask;
-
     public Task StartAsync(CancellationToken cancellationToken)
     {
         HostUiHelper.Initialize(ComponentManager.ApplicationWindow, ComponentManager.Ribbon.Dispatcher);
@@ -31,26 +27,15 @@ public sealed class HostBackgroundController(
 
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme((AppTheme)settingsService.GeneralConfig.Theme);
-        HostUiHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
         pythonInitializer.ReserveDebugPort();
         ironPythonInitializer.ReserveDebugPort();
-        _runtimeInit = InitializeRuntimesAsync();
-        return Task.CompletedTask;
+        return InitializeRuntimesAsync();
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         settingsService.SaveSettings();
         CleanLogFolder();
-        try
-        {
-            await _runtimeInit.ConfigureAwait(false);
-        }
-        catch
-        {
-            // InitializeAsync / pydevd already log failures.
-        }
-
         await pythonInitializer.ShutdownAsync().ConfigureAwait(false);
         await ironPythonInitializer.ShutdownAsync().ConfigureAwait(false);
     }
@@ -59,17 +44,8 @@ public sealed class HostBackgroundController(
     {
         await Task.WhenAll(
             pythonInitializer.InitializeAsync(),
-            ironPythonInitializer.InitializeAsync())
-            .ConfigureAwait(false);
-
-        try
-        {
-            await catalogStore.ReloadAsync().ConfigureAwait(false);
-        }
-        catch
-        {
-            // Built-in MCP tools remain; Python toolsets retry on the next ReloadAsync.
-        }
+            ironPythonInitializer.InitializeAsync()
+        ).ConfigureAwait(false);
     }
 
     private void CleanLogFolder()

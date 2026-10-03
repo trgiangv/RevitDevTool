@@ -4,18 +4,32 @@ using Duende.IdentityModel.OidcClient.Browser;
 
 namespace DevTools.Daemon.Auth;
 
-public sealed class AuthBrowser(AuthOptions authOptions) : IBrowser
+public sealed class AuthBrowser : IBrowser
 {
+    private readonly AuthOptions _authOptions;
+    private readonly Action<string> _openUrl;
+
+    public AuthBrowser(AuthOptions authOptions)
+        : this(authOptions, OpenInShell)
+    {
+    }
+
+    internal AuthBrowser(AuthOptions authOptions, Action<string> openUrl)
+    {
+        _authOptions = authOptions;
+        _openUrl = openUrl;
+    }
+
     public async Task<BrowserResult> InvokeAsync(BrowserOptions options, CancellationToken ct = default)
     {
         HttpListener? listener = null;
         try
         {
             listener = new HttpListener();
-            listener.Prefixes.Add(authOptions.UriPrefix);
+            listener.Prefixes.Add(_authOptions.UriPrefix);
             listener.Start();
 
-            Process.Start(new ProcessStartInfo(options.StartUrl) { UseShellExecute = true });
+            _openUrl(options.StartUrl);
 
             var callbackUrl = await WaitForCallbackAsync(listener, ct).ConfigureAwait(false);
             return new BrowserResult { Response = callbackUrl, ResultType = BrowserResultType.Success };
@@ -51,6 +65,9 @@ public sealed class AuthBrowser(AuthOptions authOptions) : IBrowser
 
         return callbackUrl;
     }
+
+    private static void OpenInShell(string url) =>
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
 
     private static readonly byte[] SucceededHtml = """
         <html>

@@ -2,116 +2,82 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using DevTools.AssemblyIsolation.Metadata;
-using DevTools.Mcp.Catalog.Isolation;
-using DevTools.Execution.Abstractions;
+using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 using ZLogger;
 using SdkAttr = DevTools.Mcp.Core.Protocol.McpSpecKeys.SdkAttributes;
 using SchemaKeys = DevTools.Mcp.Core.Protocol.McpSpecKeys.JsonSchema;
-// ReSharper disable RedundantSuppressNullableWarningExpression
-namespace DevTools.Mcp.Catalog.Discovery;
+
+namespace DevTools.Mcp.Discovery;
 
 /// <summary>
-/// Reflects MCP SDK attributes from ALC-loaded toolset assemblies into catalog entries.
-/// JSON schema fragments use runtime <see cref="JsonSerializer"/> — no closed source-gen context.
+/// Reflects MCP SDK attributes from MetadataLoadContext assemblies into catalog entries.
 /// </summary>
 public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
 {
-    private IReadOnlyList<string> _metadataDependencyPaths = [];
-    private readonly string _mcpToolTypeAttributeName = typeof(McpServerToolTypeAttribute).FullName!;
-    private readonly string _mcpToolAttributeName = typeof(McpServerToolAttribute).FullName!;
-    private readonly string _mcpResourceTypeAttributeName = typeof(McpServerResourceTypeAttribute).FullName!;
-    private readonly string _mcpResourceAttributeName = typeof(McpServerResourceAttribute).FullName!;
-    private readonly string _mcpMetaAttributeName = typeof(McpMetaAttribute).FullName!;
-    private readonly string _descriptionAttributeTypeName = typeof(System.ComponentModel.DescriptionAttribute).FullName!;
-    private readonly string _fromKeyedServicesAttributeFullName = typeof(FromKeyedServicesAttribute).FullName!;
-    private readonly string _iProgressGenericFullName = typeof(IProgress<>).FullName!;
-    private readonly string _requestContextGenericFullName = typeof(RequestContext<>).FullName!;
+    private readonly MethodLookup _lookup = new();
 
-    public McpRegistryCatalog ParseCatalogFromAssembly(string assemblyPath)
+    public RegistryCatalog ParseCatalogFromAssembly(string assemblyPath)
     {
-        var tools = new List<McpRegisteredTool>();
-        var resources = new List<McpRegisteredResource>();
-        var resolutionPaths = MetadataAssemblyPathCollector.Collect(assemblyPath, _metadataDependencyPaths);
+        var tools = new List<RegisteredTool>();
+        var resources = new List<RegisteredResource>();
+        var resolutionPaths = MetadataAssemblyPathCollector.Collect(assemblyPath);
         using var metadataSession = MetadataAssemblySession.Create(assemblyPath, resolutionPaths);
         var assembly = metadataSession.LoadEntryAssembly();
 
-        foreach (var type in MetadataAssemblyPathCollector.GetMetadataTypes(assembly).OrderBy(item => item.FullName, StringComparer.OrdinalIgnoreCase))
-        {
-            if (HasAttribute(type.CustomAttributes, _mcpToolTypeAttributeName))
-                tools.AddRange(ParseTools(type, assemblyPath));
+        foreach (var (type, method) in _lookup.EnumerateToolMethods(assembly))
+            tools.AddRange(TryBuildTool(type, method, assemblyPath) is { } tool ? [tool] : []);
 
-            if (HasAttribute(type.CustomAttributes, _mcpResourceTypeAttributeName))
-                resources.AddRange(ParseResources(type, assemblyPath));
-        }
+        foreach (var (type, method) in _lookup.EnumerateResourceMethods(assembly))
+            resources.AddRange(TryBuildResource(type, method, assemblyPath) is { } resource ? [resource] : []);
 
-        return new McpRegistryCatalog
+        return new RegistryCatalog
         {
             Tools = tools,
             Resources = resources,
         };
     }
 
-    public void ConfigureMetadataDependencies(IReadOnlyList<string> paths) =>
-        _metadataDependencyPaths = paths;
-
-    private IEnumerable<McpRegisteredTool> ParseTools(Type type, string assemblyPath)
-    {
-        return GetCandidateMethods(type).Select(method => TryBuildTool(type, method, assemblyPath)).OfType<McpRegisteredTool>();
-    }
-
-    private IEnumerable<McpRegisteredResource> ParseResources(Type type, string assemblyPath)
-    {
-        return GetCandidateMethods(type).Select(method => TryBuildResource(type, method, assemblyPath)).OfType<McpRegisteredResource>();
-    }
-
-    private static IEnumerable<MethodInfo> GetCandidateMethods(Type type)
-    {
-        return type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance)
-            .OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase);
-    }
-
-    private McpRegisteredTool? TryBuildTool(Type type, MethodInfo method, string assemblyPath)
+    private RegisteredTool? TryBuildTool(Type type, MethodInfo method, string assemblyPath)
     {
         try
         {
-            var toolAttribute = FindAttribute(method, _mcpToolAttributeName);
+            var toolAttribute = MethodLookup.FindAttribute(method, _lookup.McpToolAttributeName);
             if (toolAttribute is null)
                 return null;
 
-            var name = ExtractNamedArg<string>(toolAttribute, SdkAttr.Name) ?? method.Name;
-            var title = ExtractNamedArg<string>(toolAttribute, SdkAttr.Title);
-            var rawDescription = ExtractNamedArg<string>(toolAttribute, SdkAttr.Description) ?? ReadDescription(method.CustomAttributes);
+            var name = MethodLookup.ExtractNamedArg<string>(toolAttribute, SdkAttr.Name) ?? method.Name;
+            var title = MethodLookup.ExtractNamedArg<string>(toolAttribute, SdkAttr.Title);
+            var rawDescription = MethodLookup.ExtractNamedArg<string>(toolAttribute, SdkAttr.Description)
+                                 ?? ReadDescription(method.CustomAttributes);
             var description = !string.IsNullOrWhiteSpace(rawDescription)
                 ? rawDescription!.Trim()
                 : $"MCP tool from {type.FullName}";
-            var binding = BuildBinding(assemblyPath, type, method);
-            var id = McpPrimitiveBinding.CreatePrimitiveId(name, binding.SourceAddress);
+            var binding = MethodLookup.BuildBinding(assemblyPath, type, method);
+            var id = PrimitiveBinding.CreatePrimitiveId(name, binding.SourceAddress);
             var descriptor = new Tool
             {
                 Name = name,
                 Title = title ?? name,
                 Description = description,
                 InputSchema = DescriptorFactory.CoerceInputSchema(BuildInputSchema(method)),
-                OutputSchema = ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.UseStructuredContent) is true
+                OutputSchema = MethodLookup.ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.UseStructuredContent) is true
                     ? JsonSerializer.SerializeToElement(McpSchemaBuilder.BuildSchema(method.ReturnType))
                     : null,
                 Annotations = DescriptorFactory.BuildToolAnnotations(
                     title,
-                    readOnly: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.ReadOnly),
-                    destructive: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.Destructive),
-                    idempotent: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.Idempotent),
-                    openWorld: ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.OpenWorld)),
+                    readOnly: MethodLookup.ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.ReadOnly),
+                    destructive: MethodLookup.ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.Destructive),
+                    idempotent: MethodLookup.ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.Idempotent),
+                    openWorld: MethodLookup.ExtractNamedValueArg<bool>(toolAttribute, SdkAttr.OpenWorld)),
                 Meta = BuildMeta(method),
-                Icons = DescriptorFactory.ParseIcons(ExtractNamedArg<string>(toolAttribute, SdkAttr.IconSource)),
+                Icons = DescriptorFactory.ParseIcons(MethodLookup.ExtractNamedArg<string>(toolAttribute, SdkAttr.IconSource)),
             };
 
-            return new McpRegisteredTool
+            return new RegisteredTool
             {
                 Id = id,
                 Descriptor = descriptor,
@@ -125,21 +91,22 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
         }
     }
 
-    private McpRegisteredResource? TryBuildResource(Type type, MethodInfo method, string assemblyPath)
+    private RegisteredResource? TryBuildResource(Type type, MethodInfo method, string assemblyPath)
     {
         try
         {
-            var resourceAttribute = FindAttribute(method, _mcpResourceAttributeName);
+            var resourceAttribute = MethodLookup.FindAttribute(method, _lookup.McpResourceAttributeName);
             if (resourceAttribute is null)
                 return null;
 
-            var name = ExtractNamedArg<string>(resourceAttribute, SdkAttr.Name) ?? method.Name;
-            var title = ExtractNamedArg<string>(resourceAttribute, SdkAttr.Title);
+            var name = MethodLookup.ExtractNamedArg<string>(resourceAttribute, SdkAttr.Name) ?? method.Name;
+            var title = MethodLookup.ExtractNamedArg<string>(resourceAttribute, SdkAttr.Title);
             var description = ReadDescription(method.CustomAttributes) ?? $"MCP resource from {type.FullName}";
-            var uriTemplate = ExtractNamedArg<string>(resourceAttribute, SdkAttr.UriTemplate) ?? BuildFallbackUriTemplate(name, method);
-            var mimeType = ExtractNamedArg<string>(resourceAttribute, SdkAttr.MimeType);
-            var binding = BuildBinding(assemblyPath, type, method);
-            var id = McpPrimitiveBinding.CreatePrimitiveId(name, binding.SourceAddress);
+            var uriTemplate = MethodLookup.ExtractNamedArg<string>(resourceAttribute, SdkAttr.UriTemplate)
+                              ?? BuildFallbackUriTemplate(name, method);
+            var mimeType = MethodLookup.ExtractNamedArg<string>(resourceAttribute, SdkAttr.MimeType);
+            var binding = MethodLookup.BuildBinding(assemblyPath, type, method);
+            var id = PrimitiveBinding.CreatePrimitiveId(name, binding.SourceAddress);
             var isTemplate = uriTemplate.Contains('{');
 
             Resource? protocolResource = null;
@@ -154,7 +121,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
                     UriTemplate = uriTemplate,
                     Description = description,
                     MimeType = mimeType,
-                    Icons = DescriptorFactory.ParseIcons(ExtractNamedArg<string>(resourceAttribute, SdkAttr.IconSource)),
+                    Icons = DescriptorFactory.ParseIcons(MethodLookup.ExtractNamedArg<string>(resourceAttribute, SdkAttr.IconSource)),
                     Meta = BuildMeta(method),
                 };
             }
@@ -167,12 +134,12 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
                     Uri = uriTemplate,
                     Description = description,
                     MimeType = mimeType,
-                    Icons = DescriptorFactory.ParseIcons(ExtractNamedArg<string>(resourceAttribute, SdkAttr.IconSource)),
+                    Icons = DescriptorFactory.ParseIcons(MethodLookup.ExtractNamedArg<string>(resourceAttribute, SdkAttr.IconSource)),
                     Meta = BuildMeta(method),
                 };
             }
 
-            return new McpRegisteredResource
+            return new RegisteredResource
             {
                 Id = id,
                 Descriptor = protocolResource,
@@ -187,50 +154,10 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
         }
     }
 
-    private static McpPrimitiveBinding BuildBinding(string assemblyPath, Type type, MethodInfo method)
-    {
-        var assemblyName = Path.GetFileName(assemblyPath);
-        var sourceAddress = $"{assemblyName}:{type.FullName}.{method.Name}";
-        return McpPrimitiveBinding.Create(
-            ExecutionMode.Dotnet,
-            assemblyPath,
-            type.FullName,
-            method.Name,
-            sourceAddress,
-            assemblyName);
-    }
-
-    private readonly HashSet<string> _infrastructureTypeNames = new(StringComparer.Ordinal)
-    {
-        typeof(CancellationToken).FullName!,
-        typeof(IServiceProvider).FullName!,
-        typeof(McpServer).FullName!,
-    };
-
-    private bool IsInfrastructureParameter(ParameterInfo parameter)
-    {
-        var paramType = parameter.ParameterType;
-        var fullName = paramType.FullName ?? paramType.Name;
-
-        if (_infrastructureTypeNames.Contains(fullName))
-            return true;
-
-        if (paramType.IsGenericType)
-        {
-            var genericDefFullName = paramType.GetGenericTypeDefinition().FullName;
-            if (string.Equals(genericDefFullName, _iProgressGenericFullName, StringComparison.Ordinal) ||
-                string.Equals(genericDefFullName, _requestContextGenericFullName, StringComparison.Ordinal))
-                return true;
-        }
-
-        return parameter.CustomAttributes.Any(a =>
-            string.Equals(a.AttributeType.FullName, _fromKeyedServicesAttributeFullName, StringComparison.Ordinal));
-    }
-
     private JsonElement BuildInputSchema(MethodInfo method)
     {
         var parameters = method.GetParameters()
-            .Where(p => !IsInfrastructureParameter(p))
+            .Where(p => !_lookup.IsInfrastructureParameter(p))
             .ToList();
 
         var properties = new JsonObject();
@@ -238,14 +165,13 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
 
         foreach (var p in parameters)
         {
-            var prop = McpSchemaBuilder.BuildSchema(p.ParameterType);
-            var desc = ReadDescription(p.CustomAttributes);
-            if (!string.IsNullOrWhiteSpace(desc))
-                prop[SchemaKeys.Description] = desc;
+            if (p.Name is not { Length: > 0 } name)
+                continue;
 
-            properties[p.Name ?? "arg"] = prop;
+            var prop = McpSchemaBuilder.BuildSchema(p.ParameterType, ReadDescription(p.CustomAttributes));
+            properties[name] = prop;
             if (p is { HasDefaultValue: false, IsOptional: false })
-                required.Add(p.Name ?? "arg");
+                required.Add(name);
         }
 
         var schema = new JsonObject
@@ -261,28 +187,23 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
 
     private string BuildFallbackUriTemplate(string name, MethodInfo method)
     {
-        var normalizedName = string.IsNullOrWhiteSpace(name)
-            ? method.Name.ToLowerInvariant()
-            : name.Trim().Replace(' ', '-').ToLowerInvariant();
+        var resourceName = string.IsNullOrWhiteSpace(name) ? method.Name : name;
         var parameters = method.GetParameters()
-            .Where(p => !IsInfrastructureParameter(p))
-            .Select(p => $"{{{p.Name}}}")
+            .Where(p => !_lookup.IsInfrastructureParameter(p))
+            .Select(p => p.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => $"{{{name}}}")
             .ToList();
 
         return parameters.Count == 0
-            ? $"resource://{normalizedName}"
-            : $"resource://{normalizedName}/{string.Join("/", parameters)}";
-    }
-
-    private static CustomAttributeData? FindAttribute(MemberInfo member, string attributeFullName)
-    {
-        return member.CustomAttributes.FirstOrDefault(attr => attr.AttributeType.FullName == attributeFullName);
+            ? $"resource://{resourceName}"
+            : $"resource://{resourceName}/{string.Join("/", parameters)}";
     }
 
     private JsonObject? BuildMeta(MethodInfo method)
     {
         var metaAttributes = method.CustomAttributes
-            .Where(attr => string.Equals(attr.AttributeType.FullName, _mcpMetaAttributeName, StringComparison.Ordinal))
+            .Where(attr => string.Equals(attr.AttributeType.FullName, _lookup.McpMetaAttributeName, StringComparison.Ordinal))
             .ToList();
         if (metaAttributes.Count == 0)
             return null;
@@ -303,7 +224,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
 
     private string? ReadMetaJsonValue(CustomAttributeData attribute)
     {
-        var namedJsonValue = ExtractNamedArg<string>(attribute, SdkAttr.JsonValue);
+        var namedJsonValue = MethodLookup.ExtractNamedArg<string>(attribute, SdkAttr.JsonValue);
         if (!string.IsNullOrWhiteSpace(namedJsonValue))
             return namedJsonValue;
 
@@ -323,44 +244,11 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
         return null;
     }
 
-    private static T? ExtractNamedArg<T>(CustomAttributeData? attr, string memberName) where T : class
-    {
-        var namedAgrs = attr?.NamedArguments;
-        if (namedAgrs == null) return null;
-        foreach (var namedArg in namedAgrs)
-        {
-            if (namedArg.MemberName == memberName && namedArg.TypedValue.Value is T value)
-                return value;
-        }
-
-        return null;
-    }
-
-    private static T? ExtractNamedValueArg<T>(CustomAttributeData? attr, string memberName) where T : struct
-    {
-        var namedAgrs = attr?.NamedArguments;
-        if (namedAgrs == null) return null;
-        foreach (var namedArg in namedAgrs)
-        {
-            if (namedArg.MemberName == memberName && namedArg.TypedValue.Value is T value)
-                return value;
-        }
-
-        return null;
-    }
-
-    private string? ReadDescription(IEnumerable<CustomAttributeData> customAttributes)
-    {
-        return customAttributes
-            .Where(attr => string.Equals(attr.AttributeType.FullName, _descriptionAttributeTypeName, StringComparison.Ordinal))
+    private string? ReadDescription(IEnumerable<CustomAttributeData> customAttributes) =>
+        customAttributes
+            .Where(attr => string.Equals(attr.AttributeType.FullName, _lookup.DescriptionAttributeTypeName, StringComparison.Ordinal))
             .Select(attr => attr.ConstructorArguments.Count == 1 ? attr.ConstructorArguments[0].Value as string : null)
             .FirstOrDefault(text => !string.IsNullOrWhiteSpace(text));
-    }
-
-    private static bool HasAttribute(IEnumerable<CustomAttributeData> attrs, string fullName)
-    {
-        return attrs.Any(attr => attr.AttributeType.FullName == fullName);
-    }
 
     private void WarnSkipped(string kind, Type type, MethodInfo method, string assemblyPath, Exception ex)
     {

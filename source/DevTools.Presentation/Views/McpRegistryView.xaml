@@ -222,7 +222,7 @@
                         <Button Height="30"
                                 Margin="0,0,5,0"
                                 HorizontalAlignment="Stretch"
-                                Command="{Binding LoadDotnetToolsetCommand}"
+                                Command="{Binding LoadAssemblyCommand}"
                                 ToolTip="Load .NET Assembly">
                             <StackPanel Orientation="Horizontal">
                                 <Image Width="16"
@@ -237,7 +237,7 @@
                         <Button Grid.Column="1"
                                 Height="30"
                                 HorizontalAlignment="Stretch"
-                                Command="{Binding LoadPythonToolsetCommand}"
+                                Command="{Binding LoadPythonCommand}"
                                 ToolTip="Load Python Folder">
                             <StackPanel Orientation="Horizontal">
                                 <Image Width="16"
@@ -305,7 +305,7 @@
                            HorizontalAlignment="Center"
                            FontSize="11"
                            Foreground="#FFD0D0D0"
-                           Text="Direct .dll files or Python toolset folders are supported" />
+                           Text="Direct .dll files or Python folders are supported" />
             </StackPanel>
         </Border>
     </Grid>

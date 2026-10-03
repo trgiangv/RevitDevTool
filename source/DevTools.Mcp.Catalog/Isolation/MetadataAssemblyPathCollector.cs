@@ -2,7 +2,7 @@ using System.Reflection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace DevTools.Mcp.Catalog.Isolation;
+namespace DevTools.Mcp.Isolation;
 
 internal static class MetadataAssemblyPathCollector
 {

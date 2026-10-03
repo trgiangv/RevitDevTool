@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Windows.Threading;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
 using DevTools.Presentation.Services;
 using DevTools.Settings;
 // ReSharper disable RedundantSuppressNullableWarningExpression
@@ -93,7 +93,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
 
         var config = _settingsService.McpRegistryConfig;
         config.DotnetPaths = config.DotnetPaths.Where(p => p != source).ToList();
-        config.PythonToolsetPaths = config.PythonToolsetPaths.Where(p => p != source).ToList();
+        config.PythonPaths = config.PythonPaths.Where(p => p != source).ToList();
 
         await _catalogStore.ReloadAsync().ConfigureAwait(true);
     }
@@ -104,7 +104,7 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
         var config = _settingsService.McpRegistryConfig;
         foreach (var path in config.DotnetPaths)
             ToolsetSources.Add(path);
-        foreach (var path in config.PythonToolsetPaths)
+        foreach (var path in config.PythonPaths)
             ToolsetSources.Add(path);
     }
 

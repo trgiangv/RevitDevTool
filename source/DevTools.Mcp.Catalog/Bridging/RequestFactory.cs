@@ -1,10 +1,10 @@
 using System.Text.Json;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
-namespace DevTools.Mcp.Catalog.Bridging;
+namespace DevTools.Mcp.Bridging;
 
 /// <summary>Builds request contexts for catalog-resolved tool and resource execution.</summary>
 public static class RequestFactory

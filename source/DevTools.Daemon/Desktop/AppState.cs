@@ -8,8 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Gateway;
-using DevTools.Mcp.Client;
-using DevTools.Mcp.Core.Sessions;
+using DevTools.Daemon.Mcp.Processes;
 
 namespace DevTools.Daemon.Desktop;
 
@@ -52,14 +51,14 @@ public partial class AppState : ObservableObject
 
     public AppState(
         IAuthService authService,
-        IHostBroker hostBroker,
+        IProcessSessions sessions,
         IMcpPipeScanner pipeScanner,
         UserSettingsStore settings,
         ITunnelStatusProvider tunnelStatus)
     {
         _authService = authService;
         _tunnelStatus = tunnelStatus;
-        Hosts = new HostInstances(hostBroker, pipeScanner);
+        Hosts = new HostInstances(sessions, pipeScanner);
         Preferences = new Preferences(settings);
         Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? DefaultVersion;
 

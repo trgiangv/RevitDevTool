@@ -5,7 +5,7 @@ using DevTools.Daemon.Auth;
 using DevTools.Daemon.Gateway;
 using DevTools.Ipc;
 using DevTools.Mcp.Core.Utils;
-using DevTools.Mcp.Server.Contracts;
+using DevTools.Daemon.Mcp.Contracts;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 

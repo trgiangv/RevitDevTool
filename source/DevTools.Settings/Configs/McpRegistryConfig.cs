@@ -8,5 +8,5 @@ public class McpRegistryConfig
     public List<string> DotnetPaths { get; set; } = [];
     
     [JsonPropertyName("pythonToolsetPaths")]
-    public List<string> PythonToolsetPaths { get; set; } = [];
+    public List<string> PythonPaths { get; set; } = [];
 }

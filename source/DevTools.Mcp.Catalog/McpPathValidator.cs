@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using ZLogger;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace DevTools.Mcp.Catalog;
+namespace DevTools.Mcp;
 
 public static class McpPathValidator
 {
@@ -14,25 +14,25 @@ public static class McpPathValidator
 
     public static ExecutionMode ClassifyInputPath(string path)
     {
-        if (IsValidDotnetAssemblyPath(path))
+        if (IsValidAssemblyPath(path))
             return ExecutionMode.Dotnet;
-        if (IsValidPythonToolsetPath(path))
+        if (IsValidPythonPath(path))
             return ExecutionMode.Python;
 
         return ExecutionMode.Unsupported;
     }
 
-    public static bool IsValidDotnetAssemblyPath(string? path) =>
+    public static bool IsValidAssemblyPath(string? path) =>
         !string.IsNullOrWhiteSpace(path)
         && File.Exists(path)
         && string.Equals(Path.GetExtension(path), DotnetToolPattern, StringComparison.OrdinalIgnoreCase);
 
-    public static bool IsValidPythonToolsetPath(string? path) =>
+    public static bool IsValidPythonPath(string? path) =>
         !string.IsNullOrWhiteSpace(path)
         && Directory.Exists(path)
         && Directory.EnumerateFiles(path!, PythonToolPattern, SearchOption.AllDirectories).Any();
 
-    public static bool PathProducesCatalogItems(string path, ExecutionMode mode, McpRegistryCatalog catalog)
+    public static bool PathProducesCatalogItems(string path, ExecutionMode mode, RegistryCatalog catalog)
     {
         if (string.IsNullOrWhiteSpace(path))
             return false;
@@ -61,7 +61,7 @@ public static class McpPathValidator
     private static void RemoveInvalidPaths(
         List<string> paths,
         ExecutionMode mode,
-        McpRegistryCatalog catalog,
+        RegistryCatalog catalog,
         ILogger? logger = null)
     {
         for (var i = paths.Count - 1; i >= 0; i--)
@@ -76,11 +76,11 @@ public static class McpPathValidator
 
     public static void PruneInvalidConfiguredPaths(
         McpRegistryConfig config,
-        McpRegistryCatalog loadedCatalog,
+        RegistryCatalog loadedCatalog,
         ILogger? logger = null)
     {
         RemoveInvalidPaths(config.DotnetPaths, ExecutionMode.Dotnet, loadedCatalog, logger);
-        RemoveInvalidPaths(config.PythonToolsetPaths, ExecutionMode.Python, loadedCatalog, logger);
+        RemoveInvalidPaths(config.PythonPaths, ExecutionMode.Python, loadedCatalog, logger);
     }
 
     private static string NormalizePath(string path) =>

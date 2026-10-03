@@ -4,7 +4,7 @@ using DevTools.AssemblyIsolation.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
-namespace DevTools.Mcp.Catalog.Isolation;
+namespace DevTools.Mcp.Isolation;
 
 /// <summary>
 /// Wraps a per-toolset kernel isolation session.

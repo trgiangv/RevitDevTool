@@ -1,7 +1,7 @@
 using System.Reflection;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace DevTools.Mcp.Catalog.Discovery;
+namespace DevTools.Mcp.Discovery;
 
 internal static class MethodResolutionHelper
 {

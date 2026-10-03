@@ -1,7 +1,7 @@
 using DevTools.Mcp.Core.Models;
 using ModelContextProtocol.Server;
 
-namespace DevTools.Mcp.Catalog.Discovery;
+namespace DevTools.Mcp.Discovery;
 
 /// <summary>
 /// Builds SDK <see cref="McpServerResourceCreateOptions"/> / <see cref="McpServerToolCreateOptions"/>
@@ -10,7 +10,7 @@ namespace DevTools.Mcp.Catalog.Discovery;
 /// </summary>
 public static class McpCatalogCreateOptions
 {
-    public static McpServerResourceCreateOptions ForResource(McpRegisteredResource resource, IServiceProvider? services = null)
+    public static McpServerResourceCreateOptions ForResource(RegisteredResource resource, IServiceProvider? services = null)
     {
         var template = resource.TemplateDescriptor;
         var fixedResource = resource.Descriptor;
@@ -27,7 +27,7 @@ public static class McpCatalogCreateOptions
         };
     }
 
-    public static McpServerToolCreateOptions ForTool(McpRegisteredTool tool, IServiceProvider? services = null)
+    public static McpServerToolCreateOptions ForTool(RegisteredTool tool, IServiceProvider? services = null)
     {
         var descriptor = tool.Descriptor;
         return new McpServerToolCreateOptions
@@ -37,6 +37,7 @@ public static class McpCatalogCreateOptions
             Title = descriptor.Title,
             Description = descriptor.Description,
             UseStructuredContent = descriptor.OutputSchema is not null,
+            Icons = descriptor.Icons,
             Meta = descriptor.Meta,
         };
     }

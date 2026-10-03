@@ -1,18 +1,18 @@
 using System.Reflection;
-using DevTools.Mcp.Catalog.Isolation;
+using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Core.Models;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using ZLogger;
 
-namespace DevTools.Mcp.Catalog.Discovery;
+namespace DevTools.Mcp.Discovery;
 
 public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager, ILogger<DotnetMethodResolver> logger)
 {
     private static readonly string McpToolAttributeFullName = typeof(McpServerToolAttribute).FullName!;
     private static readonly string McpResourceAttributeFullName = typeof(McpServerResourceAttribute).FullName!;
 
-    public MethodInfo? ResolveTool(McpRegisteredTool tool)
+    public MethodInfo? ResolveTool(RegisteredTool tool)
     {
         return Resolve(
             tool.Descriptor.Name,
@@ -23,7 +23,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
             method => ExtractNamedArg(FindAttributeByName(method, McpToolAttributeFullName), "Name"));
     }
 
-    public MethodInfo? ResolveResource(McpRegisteredResource resource)
+    public MethodInfo? ResolveResource(RegisteredResource resource)
     {
         var name = resource.DisplayName;
         return Resolve(
@@ -53,7 +53,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
 
     private MethodInfo? Resolve(
         string targetName,
-        McpPrimitiveBinding binding,
+        PrimitiveBinding binding,
         Type containerAttributeType,
         bool requireAttribute,
         Func<MethodInfo, bool> attributeChecker,
@@ -70,7 +70,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
 
     private static MethodInfo? ResolveFromLoadedAssemblies(
         string targetName,
-        McpPrimitiveBinding binding,
+        PrimitiveBinding binding,
         Type containerAttributeType,
         bool requireAttribute,
         Func<MethodInfo, bool> attributeChecker,
@@ -96,7 +96,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
 
     private MethodInfo? ResolveFromToolsetContext(
         string targetName,
-        McpPrimitiveBinding binding,
+        PrimitiveBinding binding,
         Type containerAttributeType,
         bool requireAttribute,
         Func<MethodInfo, bool> attributeChecker,
@@ -123,7 +123,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
     private static MethodInfo? ResolveFromAssembly(
         Assembly assembly,
         string targetName,
-        McpPrimitiveBinding binding,
+        PrimitiveBinding binding,
         Type containerAttributeType,
         bool requireAttribute,
         Func<MethodInfo, bool> attributeChecker,
@@ -145,7 +145,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
     private static MethodInfo? FindMatchingMethod(
         Type type,
         string targetName,
-        McpPrimitiveBinding binding,
+        PrimitiveBinding binding,
         bool requireAttribute,
         Func<MethodInfo, bool> attributeChecker,
         Func<MethodInfo, string?> configuredNameSelector)

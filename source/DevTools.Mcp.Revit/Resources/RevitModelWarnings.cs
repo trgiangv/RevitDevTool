@@ -1,5 +1,6 @@
 using System.Text;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Core;
 
@@ -13,11 +14,11 @@ public sealed class RevitModelWarnings : IBuiltInMcpResource
 {
     private const int MaxWarnings = 50;
 
-    public string UriTemplate => "revit://model/warnings";
+    public string UriTemplate => McpSpecKeys.Resource.RevitModelWarnings;
 
     public Resource ProtocolResource { get; } = new()
     {
-        Uri = "revit://model/warnings",
+        Uri = McpSpecKeys.Resource.RevitModelWarnings,
         Name = "Revit Model Warnings",
         Description = "Active warnings in the current document (duplicates, overlaps, constraints). Read to understand existing conflicts before modifications.",
         MimeType = "text/markdown"

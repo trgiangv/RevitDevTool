@@ -7,8 +7,7 @@ using DevTools.Execution.Providers;
 using DevTools.Hosting;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
-using DevTools.Mcp.Catalog;
-using DevTools.Mcp.Adapter;
+using DevTools.Mcp;
 using DevTools.Testing.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
@@ -141,7 +140,7 @@ internal static class RevitServiceRegistration
         services.AddSingleton<IIronPythonBridge, RevitIronPythonBridge>();
 
         services.AddExecutionServices(registerDefaultScriptProvider: false);
-        services.AddMcpHostAdapter();
+        services.AddMcpAdapter();
         services.AddTestingHostServices();
         services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
         services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();

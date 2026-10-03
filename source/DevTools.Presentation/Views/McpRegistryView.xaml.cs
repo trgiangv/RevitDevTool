@@ -11,9 +11,9 @@ public partial class McpRegistryView
     private readonly ILogger<McpRegistryView> _logger;
 
     private const string ValidDropTitle = "Drop to load";
-    private const string ValidDropHint = "Direct .dll files or Python toolset folders are supported";
+    private const string ValidDropHint = "Direct .dll files or Python folders are supported";
     private const string InvalidDropTitle = "Unsupported drop";
-    private const string InvalidDropHint = "Only direct .dll files or Python toolset folders are supported";
+    private const string InvalidDropHint = "Only direct .dll files or Python folders are supported";
 
     public McpRegistryView(McpRegistryViewModel viewModel, ILogger<McpRegistryView> logger)
     {
@@ -71,7 +71,7 @@ public partial class McpRegistryView
     }
 
     private static bool IsSupportedPath(string path) =>
-        McpPathValidator.IsValidDotnetAssemblyPath(path) || McpPathValidator.IsValidPythonToolsetPath(path);
+        McpPathValidator.IsValidAssemblyPath(path) || McpPathValidator.IsValidPythonPath(path);
 
     private static bool IsValidDropData(DragEventArgs e) =>
         TryGetDroppedPaths(e, out var droppedPaths) && droppedPaths.All(IsSupportedPath);

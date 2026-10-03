@@ -2,7 +2,7 @@ using DevTools.Mcp.Core.Protocol;
 using System.Reflection;
 using System.Text.Json.Nodes;
 
-namespace DevTools.Mcp.Catalog.Discovery;
+namespace DevTools.Mcp.Discovery;
 
 using JsonTypes = McpSpecKeys.JsonSchema.Types;
 
@@ -17,6 +17,7 @@ public static class McpSchemaBuilder
     private const string TaskGenericFullName = "System.Threading.Tasks.Task`1";
     private const string ValueTaskGenericFullName = "System.Threading.Tasks.ValueTask`1";
     private const string JsonIgnoreAttributeFullName = "System.Text.Json.Serialization.JsonIgnoreAttribute";
+    private const string DescriptionAttributeFullName = "System.ComponentModel.DescriptionAttribute";
 
     /// <summary>
     /// Maps a CLR type (including MetadataLoadContext types matched by FullName)
@@ -36,31 +37,40 @@ public static class McpSchemaBuilder
         };
     }
 
-    /// <summary>Builds the useful JSON Schema subset without requiring the SDK runtime assembly.</summary>
-    public static JsonObject BuildSchema(Type type, int depth = 0)
+    /// <summary>Builds the JSON Schema subset expressible from metadata attributes.</summary>
+    public static JsonObject BuildSchema(Type type, string? description = null)
     {
-        return depth > 4 ? [] : BuildSchemaNode(UnwrapReturnType(UnwrapNullable(type)), depth);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+        var schema = BuildSchemaNode(UnwrapReturnType(UnwrapNullable(type)), visited);
+        if (!string.IsNullOrWhiteSpace(description))
+            schema[McpSpecKeys.JsonSchema.Description] = description;
+
+        return schema;
     }
 
-    private static JsonObject BuildSchemaNode(Type type, int depth)
+    private static JsonObject BuildSchemaNode(Type type, HashSet<string> visited)
     {
+        var typeKey = type.FullName ?? type.Name;
+        if (!visited.Add(typeKey))
+            return new JsonObject { [McpSpecKeys.JsonSchema.Type] = JsonTypes.Object };
+
         if (type.IsEnum)
             return BuildEnumSchema(type);
 
         if (TryGetCollectionElement(type, out var elementType))
-            return BuildCollectionSchema(elementType, depth);
+            return BuildCollectionSchema(elementType, visited);
 
         if (TryGetDictionaryValue(type, out var valueType))
-            return BuildDictionarySchema(valueType, depth);
+            return BuildDictionarySchema(valueType, visited);
 
         var primitive = FromClrType(type);
         if (primitive is JsonTypes.String or JsonTypes.Integer or JsonTypes.Number or JsonTypes.Boolean)
             return new JsonObject { [McpSpecKeys.JsonSchema.Type] = primitive };
 
         if (type == typeof(object))
-            return [];
+            return new JsonObject { [McpSpecKeys.JsonSchema.Type] = JsonTypes.Object };
 
-        return BuildObjectSchema(type, depth);
+        return BuildObjectSchema(type, visited);
     }
 
     private static JsonObject BuildEnumSchema(Type type)
@@ -71,37 +81,39 @@ public static class McpSchemaBuilder
         return new JsonObject { [McpSpecKeys.JsonSchema.Type] = JsonTypes.String, ["enum"] = values };
     }
 
-    private static JsonObject BuildCollectionSchema(Type elementType, int depth) =>
+    private static JsonObject BuildCollectionSchema(Type elementType, HashSet<string> visited) =>
         new()
         {
             [McpSpecKeys.JsonSchema.Type] = JsonTypes.Array,
-            [McpSpecKeys.JsonSchema.Items] = BuildSchema(elementType, depth + 1),
+            [McpSpecKeys.JsonSchema.Items] = BuildSchemaNode(UnwrapNullable(elementType), visited),
         };
 
-    private static JsonObject BuildDictionarySchema(Type valueType, int depth) =>
+    private static JsonObject BuildDictionarySchema(Type valueType, HashSet<string> visited) =>
         new()
         {
             [McpSpecKeys.JsonSchema.Type] = JsonTypes.Object,
-            [McpSpecKeys.JsonSchema.AdditionalProperties] = BuildSchema(valueType, depth + 1),
+            [McpSpecKeys.JsonSchema.AdditionalProperties] = BuildSchemaNode(UnwrapNullable(valueType), visited),
         };
 
-    private static JsonObject BuildObjectSchema(Type type, int depth)
+    private static JsonObject BuildObjectSchema(Type type, HashSet<string> visited)
     {
         var properties = new JsonObject();
         foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
             if (!property.CanRead || property.GetIndexParameters().Length != 0 || IsJsonIgnored(property))
                 continue;
-            properties[ToCamel(property.Name)] = BuildSchema(property.PropertyType, depth + 1);
+            var propSchema = BuildSchemaNode(UnwrapNullable(property.PropertyType), visited);
+            var propDescription = ReadDescription(property.CustomAttributes);
+            if (!string.IsNullOrWhiteSpace(propDescription))
+                propSchema[McpSpecKeys.JsonSchema.Description] = propDescription;
+            properties[ToCamel(property.Name)] = propSchema;
         }
 
-        return properties.Count == 0
-            ? []
-            : new JsonObject
-            {
-                [McpSpecKeys.JsonSchema.Type] = JsonTypes.Object,
-                [McpSpecKeys.JsonSchema.Properties] = properties,
-            };
+        return new JsonObject
+        {
+            [McpSpecKeys.JsonSchema.Type] = JsonTypes.Object,
+            [McpSpecKeys.JsonSchema.Properties] = properties,
+        };
     }
 
     private static Type UnwrapNullable(Type type)
@@ -190,4 +202,10 @@ public static class McpSchemaBuilder
 
         return false;
     }
+
+    private static string? ReadDescription(IEnumerable<CustomAttributeData> customAttributes) =>
+        customAttributes
+            .Where(attr => string.Equals(attr.AttributeType.FullName, DescriptionAttributeFullName, StringComparison.Ordinal))
+            .Select(attr => attr.ConstructorArguments.Count == 1 ? attr.ConstructorArguments[0].Value as string : null)
+            .FirstOrDefault(text => !string.IsNullOrWhiteSpace(text));
 }

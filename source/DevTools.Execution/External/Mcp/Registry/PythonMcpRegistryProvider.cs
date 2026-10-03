@@ -9,46 +9,46 @@ namespace DevTools.Execution.External.Mcp.Registry;
 
 public sealed class PythonMcpRegistryProvider(
     PythonInitializer pythonInitializer,
-    PythonToolsetParser toolsetParser,
-    ILogger<PythonMcpRegistryProvider> logger) : IMcpRegistryProvider
+    McpPythonParser parser,
+    ILogger<PythonMcpRegistryProvider> logger) : IRegistryProvider
 {
     public string Name => "python-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Python;
 
-    private IReadOnlyList<string> ToolsetDirectories { get; set; } = [];
+    private IReadOnlyList<string> Directories { get; set; } = [];
 
     public void ConfigurePaths(IReadOnlyList<string> paths)
     {
-        ToolsetDirectories = paths;
+        Directories = paths;
     }
 
-    public McpRegistryCatalog LoadCatalog()
+    public RegistryCatalog LoadCatalog()
     {
-        if (ToolsetDirectories.Count == 0)
-            return McpRegistryCatalog.Empty;
+        if (Directories.Count == 0)
+            return RegistryCatalog.Empty;
 
         if (!pythonInitializer.IsInitialized)
         {
             logger.ZLogWarning($"Python environment is not ready. Skipping Python MCP registry discovery");
-            return McpRegistryCatalog.Empty;
+            return RegistryCatalog.Empty;
         }
 
-        PreResolveDependencies(ToolsetDirectories);
+        PreResolveDependencies(Directories);
 
-        var all = McpRegistryCatalog.Empty;
+        var all = RegistryCatalog.Empty;
 
-        foreach (var dir in ToolsetDirectories
+        foreach (var dir in Directories
                      .Where(Directory.Exists)
                      .Distinct(StringComparer.OrdinalIgnoreCase)
                      .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
             try
             {
-                all = all.Merge(toolsetParser.ParseDirectoryCatalog(dir, ParseDirectory));
+                all = all.Merge(parser.ParseCatalogFromDirectory(dir, ParseDirectory));
             }
             catch (Exception ex)
             {
-                logger.ZLogWarning($"Failed to parse toolset '{dir}': {ex.Message}\n{ex.StackTrace}");
+                logger.ZLogWarning($"Failed to parse Python directory '{dir}': {ex.Message}\n{ex.StackTrace}");
             }
         }
 
@@ -87,19 +87,19 @@ public sealed class PythonMcpRegistryProvider(
             .OrderBy(f => f, StringComparer.OrdinalIgnoreCase);
     }
 
-    private string? ParseDirectory(string toolsetDirectory)
+    private string? ParseDirectory(string directory)
     {
         if (!pythonInitializer.IsInitialized)
             return null;
 
-        var anchorFile = Path.Combine(toolsetDirectory, "__mcp_registry__.py");
+        var anchorFile = Path.Combine(directory, "__mcp_registry__.py");
         return PythonExecutor.Execute(
             pythonInitializer,
             anchorFile,
-            toolsetDirectory,
+            directory,
             scope =>
             {
-            scope.Set(PythonInstances.ToolsetDirectory, new PyString(toolsetDirectory));
+            scope.Set(PythonInstances.ToolsetDirectory, new PyString(directory));
             scope.Exec(PythonEmbedded.ToolParserScript);
             return scope.Get(PythonInstances.ParserResult).As<string>();
             });
@@ -107,12 +107,12 @@ public sealed class PythonMcpRegistryProvider(
 
     private void LogMissingDirectories()
     {
-        foreach (var missingDir in ToolsetDirectories
+        foreach (var missingDir in Directories
                      .Where(path => !Directory.Exists(path))
                      .Distinct(StringComparer.OrdinalIgnoreCase)
                      .OrderBy(path => path, StringComparer.OrdinalIgnoreCase))
         {
-            logger.ZLogWarning($"Toolset directory not found: {missingDir}");
+            logger.ZLogWarning($"Python directory not found: {missingDir}");
         }
     }
 }

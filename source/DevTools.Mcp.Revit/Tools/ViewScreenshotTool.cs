@@ -1,7 +1,8 @@
 using System.ComponentModel;
 using System.IO;
 using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -23,7 +24,7 @@ public sealed class ViewScreenshotTool : IBuiltInMcpTool
             CaptureAsync,
             new McpServerToolCreateOptions
             {
-                Name = "view_screenshot",
+                Name = McpSpecKeys.Tool.ViewScreenshot,
                 Title = "View Screenshot",
                 Description =
                     "Capture the active Revit view as a PNG image. " +
@@ -34,7 +35,7 @@ public sealed class ViewScreenshotTool : IBuiltInMcpTool
             });
     }
 
-    public string Name => "view_screenshot";
+    public string Name => McpSpecKeys.Tool.ViewScreenshot;
     public McpServerTool ServerTool { get; }
 
     [Description("Capture the active view as PNG image content.")]

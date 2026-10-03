@@ -1,5 +1,6 @@
 using System.Reflection;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Revit.Resources;
@@ -12,13 +13,13 @@ public sealed class RevitPythonCheatsheet : IBuiltInMcpResource
 {
     private static readonly Lazy<string> Content = new(LoadEmbeddedContent);
 
-    public string UriTemplate => "revit://python-cheatsheet";
+    public string UriTemplate => McpSpecKeys.Resource.RevitPythonCheatsheet;
 
     public Resource ProtocolResource { get; } = new()
     {
-        Uri = "revit://python-cheatsheet",
+        Uri = McpSpecKeys.Resource.RevitPythonCheatsheet,
         Name = "Revit Python Cheatsheet",
-        Description = "Revit Python.NET patterns, builtins, transactions, queries, and PEP 723 deps. Read before writing execute_python_code.",
+        Description = $"Revit Python.NET patterns, builtins, transactions, queries, and PEP 723 deps. Read before writing {McpSpecKeys.Tool.ExecutePython}.",
         MimeType = "text/markdown"
     };
 

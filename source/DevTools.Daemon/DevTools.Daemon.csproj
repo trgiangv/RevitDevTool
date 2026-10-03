@@ -48,6 +48,12 @@
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
     </ItemGroup>
     <ItemGroup>
+        <InternalsVisibleTo Include="DevTools.Mcp.Client.Tests" />
+        <InternalsVisibleTo Include="DevTools.Daemon.Tests" />
+        <InternalsVisibleTo Include="DevTools.Mcp.Server.Tests" />
+        <InternalsVisibleTo Include="DevTools.Daemon.Tests" />
+    </ItemGroup>
+    <ItemGroup>
         <EmbeddedResource Include="appsettings.json" LogicalName="appsettings.json"/>
         <EmbeddedResource Include="..\DevTools.UI\Resources\icons\DevTools-32-Dark.ico" LogicalName="DevTools.Daemon.Icons.Dark.ico"/>
         <EmbeddedResource Include="..\DevTools.UI\Resources\icons\DevTools-32-Light.ico" LogicalName="DevTools.Daemon.Icons.Light.ico"/>
@@ -57,10 +63,7 @@
         <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj"/>
         <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
-        <ProjectReference Include="..\DevTools.Mcp.Core\DevTools.Mcp.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
-        <ProjectReference Include="..\DevTools.Mcp.Client\DevTools.Mcp.Client.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
-        <ProjectReference Include="..\DevTools.Mcp.Server\DevTools.Mcp.Server.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.FileMetadata.Core\DevTools.FileMetadata.Core.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.FileMetadata.Revit\DevTools.FileMetadata.Revit.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />
         <ProjectReference Include="..\DevTools.FileMetadata.Acad\DevTools.FileMetadata.Acad.csproj" SetTargetFramework="TargetFramework=$(TargetFramework)" />

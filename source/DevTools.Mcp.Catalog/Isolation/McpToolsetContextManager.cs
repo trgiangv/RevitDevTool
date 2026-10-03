@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
-namespace DevTools.Mcp.Catalog.Isolation;
+namespace DevTools.Mcp.Isolation;
 
 /// <summary>
 /// Manages per-toolset load contexts. One context per unique DLL path.

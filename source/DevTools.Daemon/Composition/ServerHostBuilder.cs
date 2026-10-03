@@ -11,10 +11,9 @@ using DevTools.FileMetadata.Revit;
 using DevTools.Hosting;
 using DevTools.Hosting.Acad;
 using DevTools.Hosting.Revit;
-using DevTools.Mcp.Catalog;
-using DevTools.Mcp.Client;
-using DevTools.Mcp.Server.Contracts;
-using DevTools.Mcp.Server.Hosting;
+using DevTools.Daemon.Mcp;
+using DevTools.Daemon.Mcp.Contracts;
+using DevTools.Daemon.Mcp.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -86,15 +85,12 @@ public static class ServerHostBuilder
             .AddFileMetadataReaders()
             .AddRevitFileMetadataReader()
             .AddAcadFileMetadataReader();
-        builder.Services
-            .AddMcp()
-            .AddMcpHostClient();
+        builder.Services.AddMcp();
         builder.Services.AddSingleton<IAuthService, AuthService>();
         builder.Services.AddSingleton<IMachineLister, MachineLister>();
         builder.Services.AddHostLaunchCore();
         builder.Services.AddRevitLaunch(RevitFileMetadataReader.TryReadRevitVersion);
         builder.Services.AddAcadLaunch();
-        builder.Services.AddSingleton<McpEngine>();
         builder.Services.AddHostedService<DiscoveryHostedService>();
 
         return builder;

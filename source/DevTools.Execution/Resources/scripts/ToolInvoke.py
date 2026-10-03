@@ -1,22 +1,21 @@
-import base64
+import asyncio
+import hashlib
 import importlib.util
 import json
 import sys
-import uuid
+import threading
 from collections.abc import Mapping
 from types import ModuleType
 from typing import Any, TypeAlias, cast
 
-import anyio
-from mcp import types
-from mcp.server.context import ServerRequestContext
+from mcp.client import Client
 from mcp.server.lowlevel import Server as LowLevelServer
 from mcp.server.mcpserver import MCPServer
-from mcp.types.version import LATEST_HANDSHAKE_VERSION, LATEST_MODERN_VERSION
 from pydantic import BaseModel
 
 PrimitiveServer: TypeAlias = MCPServer | LowLevelServer[Any]
 InvokeScope: TypeAlias = Mapping[str, object]
+CacheDict: TypeAlias = dict[tuple[str, int], dict[str, object]]
 
 _SCOPE_FILE = "__file__"
 _SCOPE_ROOT = "__root__"
@@ -25,12 +24,13 @@ _SCOPE_OPERATION = "__operation__"
 _SCOPE_TOOL_NAME = "__tool_name__"
 _SCOPE_PAYLOAD_JSON = "__payload_json__"
 _SCOPE_RESOURCE_URI = "__resource_uri__"
+_SCOPE_CACHE = "__mcp_client_cache__"
+_SCOPE_MTIME_TICKS = "__mtime_ticks__"
 
 _OP_TOOL = "tool"
 _OP_RESOURCE = "resource"
-
-_LOWLEVEL_METHOD_CALL_TOOL = "tools/call"
-_LOWLEVEL_METHOD_READ_RESOURCE = "resources/read"
+_OP_ENSURE_SERVER = "ensure_server"
+_OP_CLEAR_CACHE = "clear_cache"
 
 
 def __dump_mcp_result(result: object) -> dict[str, object]:
@@ -42,68 +42,25 @@ def __dump_mcp_result(result: object) -> dict[str, object]:
     raise RuntimeError(f"Unexpected MCP result type: {type(result)!r}")
 
 
-def __resolve_lowlevel_server(server: PrimitiveServer) -> LowLevelServer[Any]:
-    if isinstance(server, MCPServer):
-        return server._lowlevel_server
-    if isinstance(server, LowLevelServer):
-        return server
-    raise RuntimeError(f"Unsupported MCP server type: {type(server)!r}")
-
-
-def __fallback_read_resource_helper(server: MCPServer, uri: str) -> dict[str, object]:
-    """Same wire as MCPServer._handle_read_resource when that handler is missing."""
-    results = anyio.run(server.read_resource, uri)
-    if isinstance(results, BaseModel):
-        return __dump_mcp_result(results)
-
-    contents: list[types.TextResourceContents | types.BlobResourceContents] = []
-    for item in results:
-        content = item.content
-        if isinstance(content, bytes):
-            contents.append(
-                types.BlobResourceContents(
-                    uri=uri,
-                    blob=base64.b64encode(content).decode(),
-                    mime_type=item.mime_type or "application/octet-stream",
-                )
-            )
-        else:
-            contents.append(
-                types.TextResourceContents(
-                    uri=uri,
-                    text=content,
-                    mime_type=item.mime_type or "text/plain",
-                )
-            )
-    return __dump_mcp_result(types.ReadResourceResult(contents=contents))
-
-
-def __invoke_read_resource(server: PrimitiveServer, uri: str) -> dict[str, object]:
-    lowlevel = __resolve_lowlevel_server(server)
-    entry = lowlevel.get_request_handler(_LOWLEVEL_METHOD_READ_RESOURCE)
-    if entry is not None:
-        params = types.ReadResourceRequestParams(uri=uri)
-        ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_READ_RESOURCE)
-        result = anyio.run(entry.handler, ctx, params)
-        return __dump_mcp_result(result)
-
-    if isinstance(server, MCPServer):
-        return __fallback_read_resource_helper(server, uri)
-
-    raise RuntimeError("Low-level MCP server does not register a resources/read handler.")
-
-
 def __read_scope_string(scope: InvokeScope, key: str, default: str = "") -> str:
     value = scope.get(key, default)
     return value if isinstance(value, str) else default
 
 
-def __parse_payload(payload_json: str) -> dict[str, object]:
-    payload = json.loads(payload_json) if payload_json else {}
-    if not isinstance(payload, dict):
-        raise TypeError("Tool payload must be a JSON object.")
+def __read_scope_int(scope: InvokeScope, key: str) -> int:
+    value = scope.get(key, 0)
+    if isinstance(value, int):
+        return value
+    if hasattr(value, "__int__"):
+        return int(value)
+    return 0
 
-    return payload
+
+def __read_cache(scope: InvokeScope) -> CacheDict:
+    cache = scope.get(_SCOPE_CACHE)
+    if isinstance(cache, dict):
+        return cast(CacheDict, cache)
+    raise RuntimeError("MCP client cache is required.")
 
 
 def __add_root_to_sys_path(root_path: str) -> None:
@@ -115,151 +72,230 @@ def __is_supported_server(obj: object) -> bool:
     return isinstance(obj, (MCPServer, LowLevelServer))
 
 
-def __find_server(module: ModuleType) -> PrimitiveServer | None:
+def __find_server(module: ModuleType) -> PrimitiveServer:
     for obj in vars(module).values():
         if __is_supported_server(obj):
             return obj
-    return None
+    raise RuntimeError("No supported MCP server found in toolset module.")
 
 
-def __load_module(module_path: str) -> ModuleType:
-    module_name = f"rdt_invoke_{uuid.uuid4().hex}"
+def __stable_module_name(module_path: str) -> str:
+    digest = hashlib.sha256(module_path.encode("utf-8")).hexdigest()[:16]
+    return f"rdt_toolset_{digest}"
+
+
+def __load_server(module_path: str, root_path: str) -> tuple[ModuleType, PrimitiveServer]:
+    __add_root_to_sys_path(root_path)
+    module_name = __stable_module_name(module_path)
+    sys.modules.pop(module_name, None)
     module_spec = importlib.util.spec_from_file_location(module_name, module_path)
     if module_spec is None or module_spec.loader is None:
         raise RuntimeError(f"Cannot load module: {module_path}")
-
     module = importlib.util.module_from_spec(module_spec)
+    sys.modules[module_name] = module
     module_spec.loader.exec_module(module)
-    return module
+    server = __find_server(module)
+    return module, server
 
 
-def __make_lowlevel_context(
-    method: str,
-    protocol_version: str = LATEST_HANDSHAKE_VERSION,
-) -> ServerRequestContext[Any]:
-    return ServerRequestContext(
-        session=cast(Any, None),
-        lifespan_context={},
-        protocol_version=protocol_version,
-        method=method,
-    )
+def __cache_key(module_path: str, mtime_ticks: int) -> tuple[str, int]:
+    return (module_path, mtime_ticks)
 
 
-def __build_call_tool_params(tool_name: str, payload: dict[str, object]) -> types.CallToolRequestParams:
-    input_responses_raw = payload.get("inputResponses")
-    if input_responses_raw is None:
-        input_responses_raw = payload.get("input_responses")
-    request_state_raw = payload.get("requestState")
-    if request_state_raw is None:
-        request_state_raw = payload.get("request_state")
-    has_mrtr = input_responses_raw is not None or request_state_raw is not None
+def __drop_other_mtimes(cache: CacheDict, module_path: str, keep: tuple[str, int]) -> None:
+    """Drop older snapshots of the same file. A loop is closed only on its owner thread."""
+    thread_id = threading.get_ident()
+    for key in list(cache):
+        if key[0] != module_path or key == keep:
+            continue
+        entry = cache.get(key)
+        if not isinstance(entry, dict):
+            cache.pop(key, None)
+            continue
+        owner = entry.get("thread_id")
+        if owner is not None and owner != thread_id:
+            continue
+        cache.pop(key, None)
+        __dispose_entry(entry)
 
-    if not has_mrtr:
-        return types.CallToolRequestParams(name=tool_name, arguments=dict(payload))
+
+def __ensure_server_loaded(cache: CacheDict, module_path: str, root_path: str, mtime_ticks: int) -> dict[str, object]:
+    key = __cache_key(module_path, mtime_ticks)
+    __drop_other_mtimes(cache, module_path, key)
+    entry = cache.get(key)
+    if entry is not None and entry.get("server") is not None:
+        return entry
+
+    module, server = __load_server(module_path, root_path)
+    entry = {
+        "module": module,
+        "server": server,
+        "client": None,
+        "loop": None,
+        "thread_id": None,
+    }
+    cache[key] = entry
+    return entry
+
+
+async def __enter_client(server: PrimitiveServer) -> Client:
+    client = Client(server)
+    await client.__aenter__()
+    return client
+
+
+async def __exit_client(client: Client) -> None:
+    await client.__aexit__(None, None, None)
+
+
+def __dispose_entry(entry: dict[str, object]) -> None:
+    client = entry.get("client")
+    loop = entry.get("loop")
+    if isinstance(client, Client) and isinstance(loop, asyncio.AbstractEventLoop):
+        try:
+            loop.run_until_complete(__exit_client(client))
+        except Exception:
+            pass
+        try:
+            loop.close()
+        except Exception:
+            pass
+    entry["client"] = None
+    entry["loop"] = None
+    entry["thread_id"] = None
+
+
+def __ensure_client_entered(entry: dict[str, object]) -> tuple[Client, asyncio.AbstractEventLoop]:
+    thread_id = threading.get_ident()
+    client = entry.get("client")
+    loop = entry.get("loop")
+    if isinstance(client, Client) and isinstance(loop, asyncio.AbstractEventLoop) and entry.get("thread_id") == thread_id:
+        return client, loop
+
+    if client is not None:
+        __dispose_entry(entry)
+
+    server = entry.get("server")
+    if not __is_supported_server(server):
+        raise RuntimeError("Cached MCP server is missing or invalid.")
+
+    loop = asyncio.new_event_loop()
+    try:
+        entered = loop.run_until_complete(__enter_client(server))
+    except Exception:
+        loop.close()
+        raise
+
+    entry["client"] = entered
+    entry["loop"] = loop
+    entry["thread_id"] = thread_id
+    return entered, loop
+
+
+def __parse_payload(payload_json: str) -> dict[str, object]:
+    payload = json.loads(payload_json) if payload_json else {}
+    if not isinstance(payload, dict):
+        raise TypeError("Tool payload must be a JSON object.")
 
     arguments_raw = payload.get("arguments")
-    arguments = dict(arguments_raw) if isinstance(arguments_raw, dict) else {}
-    kwargs: dict[str, object] = {"name": tool_name, "arguments": arguments}
-    if input_responses_raw is not None:
-        kwargs["input_responses"] = input_responses_raw
-    if isinstance(request_state_raw, str):
-        kwargs["request_state"] = request_state_raw
-    return types.CallToolRequestParams.model_validate(kwargs)
+    if arguments_raw is None:
+        return {}
+    if isinstance(arguments_raw, dict):
+        return dict(arguments_raw)
+    raise TypeError("Tool arguments must be a JSON object.")
 
 
-def __invoke_mcpserver(server: MCPServer, params: types.CallToolRequestParams, has_mrtr: bool) -> object:
-    if has_mrtr:
-        entry = server._lowlevel_server.get_request_handler(_LOWLEVEL_METHOD_CALL_TOOL)
-        if entry is None:
-            raise RuntimeError("MCPServer does not register a tools/call handler.")
-        ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_CALL_TOOL, LATEST_MODERN_VERSION)
-        return anyio.run(entry.handler, ctx, params)
+def __run_call_tool(
+    client: Client,
+    loop: asyncio.AbstractEventLoop,
+    tool_name: str,
+    arguments: dict[str, object],
+) -> dict[str, object]:
+    async def _call() -> object:
+        return await client.session.call_tool(tool_name, arguments)
 
-    return anyio.run(server.call_tool, params.name, params.arguments or {})
-
-
-def __invoke_lowlevel(
-    server: LowLevelServer[Any],
-    params: types.CallToolRequestParams,
-    has_mrtr: bool,
-) -> object:
-    entry = server.get_request_handler(_LOWLEVEL_METHOD_CALL_TOOL)
-    if entry is None:
-        raise RuntimeError("Low-level MCP server does not register a tools/call handler.")
-
-    protocol_version = LATEST_MODERN_VERSION if has_mrtr else LATEST_HANDSHAKE_VERSION
-    ctx = __make_lowlevel_context(_LOWLEVEL_METHOD_CALL_TOOL, protocol_version)
-    return anyio.run(entry.handler, ctx, params)
+    result = loop.run_until_complete(_call())
+    return __dump_mcp_result(result)
 
 
-def __invoke_server(server: PrimitiveServer, tool_name: str, payload: dict[str, object]) -> object:
-    params = __build_call_tool_params(tool_name, payload)
-    has_mrtr = params.input_responses is not None or params.request_state is not None
-    if isinstance(server, MCPServer):
-        return __invoke_mcpserver(server, params, has_mrtr)
-    if isinstance(server, LowLevelServer):
-        return __invoke_lowlevel(server, params, has_mrtr)
+def __run_read_resource(
+    client: Client,
+    loop: asyncio.AbstractEventLoop,
+    resource_uri: str,
+) -> dict[str, object]:
+    async def _read() -> object:
+        return await client.session.read_resource(resource_uri)
 
-    raise RuntimeError(f"Unsupported MCP server type: {type(server)!r}")
-
-
-def __invoke_resource_server(server: PrimitiveServer, uri: str) -> dict[str, object]:
-    return __invoke_read_resource(server, uri)
+    result = loop.run_until_complete(_read())
+    return __dump_mcp_result(result)
 
 
 def __invoke_tool(
+    cache: CacheDict,
     module_path: str,
     root_path: str,
-    source_file: str,
+    mtime_ticks: int,
     tool_name: str,
     payload_json: str,
 ) -> str:
-    payload = __parse_payload(payload_json)
-    __add_root_to_sys_path(root_path)
-    module = __load_module(module_path)
-    server = __find_server(module)
-    if server is None:
-        raise RuntimeError(f"No supported MCP server found in '{source_file}'.")
-
-    call_result = __invoke_server(server, tool_name, payload)
-    return json.dumps(__dump_mcp_result(call_result))
+    entry = __ensure_server_loaded(cache, module_path, root_path, mtime_ticks)
+    client, loop = __ensure_client_entered(entry)
+    arguments = __parse_payload(payload_json)
+    call_result = __run_call_tool(client, loop, tool_name, arguments)
+    return json.dumps(call_result)
 
 
 def __invoke_resource(
+    cache: CacheDict,
     module_path: str,
     root_path: str,
-    source_file: str,
+    mtime_ticks: int,
     resource_uri: str,
 ) -> str:
-    __add_root_to_sys_path(root_path)
-    module = __load_module(module_path)
-    server = __find_server(module)
-    if server is None:
-        raise RuntimeError(f"No supported MCP server found in '{source_file}'.")
-
-    resource_result = __invoke_resource_server(server, resource_uri)
+    entry = __ensure_server_loaded(cache, module_path, root_path, mtime_ticks)
+    client, loop = __ensure_client_entered(entry)
+    resource_result = __run_read_resource(client, loop, resource_uri)
     return json.dumps(resource_result)
 
 
+def __clear_client_cache(cache: CacheDict) -> None:
+    entries = [cache.pop(key) for key in list(cache)]
+    for entry in entries:
+        if isinstance(entry, dict):
+            __dispose_entry(entry)
+
+
 def __invoke_from_scope(scope: InvokeScope) -> str:
+    operation = __read_scope_string(scope, _SCOPE_OPERATION, _OP_TOOL)
+    cache = __read_cache(scope)
+
+    if operation == _OP_CLEAR_CACHE:
+        __clear_client_cache(cache)
+        return "{}"
+
     module_path = __read_scope_string(scope, _SCOPE_FILE)
     root_path = __read_scope_string(scope, _SCOPE_ROOT)
-    source_file = __read_scope_string(scope, _SCOPE_SOURCE_FILE, module_path)
-    operation = __read_scope_string(scope, _SCOPE_OPERATION, _OP_TOOL)
-    tool_name = __read_scope_string(scope, _SCOPE_TOOL_NAME)
-    payload_json = __read_scope_string(scope, _SCOPE_PAYLOAD_JSON)
-    resource_uri = __read_scope_string(scope, _SCOPE_RESOURCE_URI)
+    mtime_ticks = __read_scope_int(scope, _SCOPE_MTIME_TICKS)
 
     if not module_path:
         raise RuntimeError("Tool source file path is required.")
+
+    if operation == _OP_ENSURE_SERVER:
+        __ensure_server_loaded(cache, module_path, root_path, mtime_ticks)
+        return "{}"
+
     if operation == _OP_TOOL:
+        tool_name = __read_scope_string(scope, _SCOPE_TOOL_NAME)
         if not tool_name:
             raise RuntimeError("Tool name is required.")
-        return __invoke_tool(module_path, root_path, source_file, tool_name, payload_json)
+        payload_json = __read_scope_string(scope, _SCOPE_PAYLOAD_JSON)
+        return __invoke_tool(cache, module_path, root_path, mtime_ticks, tool_name, payload_json)
+
     if operation == _OP_RESOURCE:
+        resource_uri = __read_scope_string(scope, _SCOPE_RESOURCE_URI)
         if not resource_uri:
             raise RuntimeError("Resource URI is required.")
-        return __invoke_resource(module_path, root_path, source_file, resource_uri)
+        return __invoke_resource(cache, module_path, root_path, mtime_ticks, resource_uri)
 
     raise RuntimeError(f"Unsupported invoke operation: {operation}")
 

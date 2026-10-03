@@ -1,4 +1,4 @@
-using DevTools.Mcp.Server.Hosting;
+using DevTools.Daemon.Mcp.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;

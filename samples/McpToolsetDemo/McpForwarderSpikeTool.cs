@@ -7,7 +7,7 @@ namespace McpToolsetDemo;
 
 /// <summary>
 /// SPIKE (2025 ILRepack + TypeForwardedTo): returns native <see cref="CallToolResult"/>
-/// so host can map via <see cref="ToolsetResultSerializer"/> without foreign-type STJ.
+/// so the host reads it through <see cref="DevTools.Mcp.Discovery.ResultBridge"/> without a second content model.
 /// </summary>
 [McpServerToolType]
 public static class McpForwarderSpikeTool

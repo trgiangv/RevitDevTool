@@ -61,22 +61,6 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
                             <TextBlock FontWeight="SemiBold"
-                                       Text="Hardware graphics acceleration" />
-                            <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource SecondaryTextBrush}"
-                                       Text="Offloads graphic rendering from the CPU to the GPU" />
-                        </StackPanel>
-                        <ToggleButton Grid.Column="1"
-                                      IsChecked="{Binding UseHardwareRendering}"
-                                      Style="{StaticResource ToggleButtonSwitch}" />
-                    </Grid>
-                    <Grid Margin="8,0,8,8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
                                        Text="Memory monitor" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"

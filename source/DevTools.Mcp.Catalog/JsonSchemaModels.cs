@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using DevTools.Mcp.Core.Protocol;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace DevTools.Mcp.Catalog;
+namespace DevTools.Mcp;
 
 /// <summary>
 /// Typed model for parsing/reading a JSON Schema "object" (UI, mutation).

@@ -4,22 +4,22 @@ using DevTools.Mcp.Core.Models;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
-namespace DevTools.Mcp.Catalog;
+namespace DevTools.Mcp;
 
-public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers, ILogger<McpCatalogLoader> logger) : IMcpCatalogLoader
+public sealed class McpCatalogLoader(IEnumerable<IRegistryProvider> providers, ILogger<McpCatalogLoader> logger) : ICatalogLoader
 {
-    private readonly IReadOnlyList<IMcpRegistryProvider> _providers = providers.ToList();
+    private readonly IReadOnlyList<IRegistryProvider> _providers = providers.ToList();
     private readonly HashSet<string> _knownToolIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _knownResourceIds = new(StringComparer.OrdinalIgnoreCase);
 
-    public McpRegistryCatalog LoadCatalog(
+    public RegistryCatalog LoadCatalog(
         IReadOnlyCollection<string> dotnetPaths,
         IReadOnlyCollection<string> pythonPaths)
     {
         ConfigureProviderPaths(dotnetPaths, pythonPaths);
 
-        var toolMap = new Dictionary<string, McpRegisteredTool>(StringComparer.OrdinalIgnoreCase);
-        var resourceMap = new Dictionary<string, McpRegisteredResource>(StringComparer.OrdinalIgnoreCase);
+        var toolMap = new Dictionary<string, RegisteredTool>(StringComparer.OrdinalIgnoreCase);
+        var resourceMap = new Dictionary<string, RegisteredResource>(StringComparer.OrdinalIgnoreCase);
         var toolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var resourceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -46,7 +46,7 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
             }
         }
 
-        var loaded = new McpRegistryCatalog
+        var loaded = new RegistryCatalog
         {
             Tools = toolMap.Values
                 .OrderBy(tool => tool.Binding.GroupName, StringComparer.OrdinalIgnoreCase)
@@ -74,8 +74,8 @@ public sealed class McpCatalogLoader(IEnumerable<IMcpRegistryProvider> providers
 
     private void ConfigureProviderPaths(IEnumerable<string> dotnetPaths, IEnumerable<string> pythonPaths)
     {
-        var resolvedDotnet = McpPathValidator.ResolvePaths(dotnetPaths, McpPathValidator.IsValidDotnetAssemblyPath);
-        var resolvedPython = McpPathValidator.ResolvePaths(pythonPaths, McpPathValidator.IsValidPythonToolsetPath);
+        var resolvedDotnet = McpPathValidator.ResolvePaths(dotnetPaths, McpPathValidator.IsValidAssemblyPath);
+        var resolvedPython = McpPathValidator.ResolvePaths(pythonPaths, McpPathValidator.IsValidPythonPath);
 
         var pathsByMode = new Dictionary<ExecutionMode, IReadOnlyList<string>>
         {

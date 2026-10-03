@@ -1,5 +1,6 @@
 using System.Text;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Core;
 
@@ -11,11 +12,11 @@ namespace DevTools.Mcp.Revit.Resources;
 /// </summary>
 public sealed class RevitVersionInfo : IBuiltInMcpResource
 {
-    public string UriTemplate => "revit://version";
+    public string UriTemplate => McpSpecKeys.Resource.RevitVersion;
 
     public Resource ProtocolResource { get; } = new()
     {
-        Uri = "revit://version",
+        Uri = McpSpecKeys.Resource.RevitVersion,
         Name = "Revit Version Info",
         Description = "Host version, API version, runtime (.NET Framework or .NET 8+), and version-specific API notes.",
         MimeType = "text/markdown"

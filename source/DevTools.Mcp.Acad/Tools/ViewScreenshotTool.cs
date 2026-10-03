@@ -2,7 +2,8 @@ using System.ComponentModel;
 using System.Drawing.Imaging;
 using System.IO;
 using Autodesk.AutoCAD.ApplicationServices;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -24,18 +25,18 @@ public sealed class ViewScreenshotTool : IBuiltInMcpTool
             Capture,
             new McpServerToolCreateOptions
             {
-                Name = "view_screenshot",
+                Name = McpSpecKeys.Tool.ViewScreenshot,
                 Title = "View Screenshot",
                 Description =
                     "Capture the current viewport as PNG (1280x720) image content. " +
-                    "Captures exactly what the user sees. Zoom via execute_python_code first if needed.",
+                    $"Captures exactly what the user sees. Zoom via {McpSpecKeys.Tool.ExecutePython} first if needed.",
                 ReadOnly = true,
                 Destructive = false,
                 OpenWorld = false
             });
     }
 
-    public string Name => "view_screenshot";
+    public string Name => McpSpecKeys.Tool.ViewScreenshot;
     public McpServerTool ServerTool { get; }
 
     [Description("Capture the current viewport as PNG image content.")]

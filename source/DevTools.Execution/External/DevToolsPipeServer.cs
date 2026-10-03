@@ -1,11 +1,8 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
-using System.Security.AccessControl;
-using System.Security.Principal;
 using System.Text.Json;
 using DevTools.Hosting;
-using DevTools.Execution.External.Mcp.Connections;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZLogger;
@@ -19,13 +16,10 @@ namespace DevTools.Execution.External;
 /// </summary>
 [UsedImplicitly]
 public sealed class DevToolsPipeServer(
-    McpConnectState state,
     IHostAppInfo hostInfo,
     IEnumerable<IBridgeRequestHandler> handlers,
     ILogger<DevToolsPipeServer> logger) : IHostedService, IDisposable
 {
-    private const int MaxPipeInstances = 8;
-
     private Dictionary<string, IBridgeRequestHandler> HandlerMap =>
         field ??= BuildHandlerMap();
 
@@ -61,9 +55,6 @@ public sealed class DevToolsPipeServer(
     {
         if (_cts is not null) return Task.CompletedTask;
         _pipeName = HostPipeName.FormatTest(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId);
-        state.SetEndpoint(_pipeName);
-        state.SetConnectedState(0);
-        state.SetQueueDepth(0);
 
         var notificationPublishers = handlers.OfType<IBridgeNotificationPublisher>().ToList();
         foreach (var publisher in notificationPublishers)
@@ -104,9 +95,6 @@ public sealed class DevToolsPipeServer(
         _acceptLoopTask = null;
         _cts?.Dispose();
         _cts = null;
-
-        state.SetConnectedState(0);
-        state.SetQueueDepth(0);
     }
 
     private async Task AcceptLoopAsync(CancellationToken ct)
@@ -115,12 +103,12 @@ public sealed class DevToolsPipeServer(
         {
             try
             {
-                var pipe = CreateServerPipe(_pipeName!);
+                var pipe = NamedPipes.Open(_pipeName!);
                 await pipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
                 RegisterConnection(pipe);
             }
             catch (OperationCanceledException) { break; }
-            catch (IOException ex) when (IsPipeInstancesBusy(ex))
+            catch (IOException ex) when (NamedPipes.IsBusy(ex))
             {
                 await Task.Delay(200, ct).ConfigureAwait(false);
             }
@@ -139,7 +127,6 @@ public sealed class DevToolsPipeServer(
         var connectionId = Interlocked.Increment(ref _nextConnectionId);
         var entry = new ConnectionEntry(conn, requestCts);
         _connections[connectionId] = entry;
-        state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
 #if DEBUG
         logger.ZLogInformation($"Client connected. Active clients: {_connections.Count}");
 #endif
@@ -162,7 +149,6 @@ public sealed class DevToolsPipeServer(
         if (Volatile.Read(ref entry.InFlight) == 0)
             entry.DisposeRequestCts();
 
-        state.SetConnectedState(_connections.IsEmpty ? 0 : 1);
 #if DEBUG
         logger.ZLogInformation($"Client disconnected. Active clients: {_connections.Count}");
 #endif
@@ -248,35 +234,6 @@ public sealed class DevToolsPipeServer(
         {
             logger.ZLogError($"Unhandled error in SendNotification: {ex}");
         }
-    }
-
-    private static NamedPipeServerStream CreateServerPipe(string pipeName)
-    {
-        var security = new PipeSecurity();
-        var currentUser = WindowsIdentity.GetCurrent();
-        if (currentUser.User is null)
-            throw new InvalidOperationException("Cannot determine current user SID for pipe ACL.");
-
-        security.AddAccessRule(new PipeAccessRule(
-            currentUser.User,
-            PipeAccessRights.FullControl,
-            AccessControlType.Allow));
-
-#if NETFRAMEWORK
-        return new NamedPipeServerStream(pipeName, PipeDirection.InOut, MaxPipeInstances,
-            PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security);
-#else
-        return NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, MaxPipeInstances,
-            PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 0, 0, security);
-#endif
-    }
-
-    private static bool IsPipeInstancesBusy(IOException ex)
-    {
-        const int allPipeInstancesBusy = 231;
-        var win32Code = ex.HResult & 0xFFFF;
-        return win32Code == allPipeInstancesBusy ||
-               ex.Message.Contains("All pipe instances are busy", StringComparison.OrdinalIgnoreCase);
     }
 
     public void Dispose()

@@ -2,12 +2,12 @@ using System.Text.Json;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Views;
 using DevTools.Ipc;
-using DevTools.Mcp.Core.Sessions;
-using DevTools.Mcp.Server.Utils;
+using DevTools.Daemon.Mcp.Processes;
+using DevTools.Daemon.Mcp.Utils;
 
 namespace DevTools.Daemon.Control;
 
-public sealed class ControlPipeHandler(IAuthService authService, IHostBroker hostBroker, TrayMenu trayMenu)
+public sealed class ControlPipeHandler(IAuthService authService, IProcessSessions sessions, TrayMenu trayMenu)
 {
     private const string DefaultVersion = "0.0.0";
 
@@ -41,7 +41,7 @@ public sealed class ControlPipeHandler(IAuthService authService, IHostBroker hos
 
     private string HandleConnectedHosts()
     {
-        var hosts = hostBroker.Catalog.List()
+        var hosts = sessions.Catalog.List()
             .Select(e => new HostInfoEntry(
                 HostAppParsing.ParseHostApp(e.Instance.HostApp)
                 ?? HostAppParsing.FromPipeName(e.PipeName),

@@ -1,6 +1,6 @@
 using DevTools.Daemon.Auth;
-using DevTools.Mcp.Client;
-using DevTools.Mcp.Server.Hosting;
+using DevTools.Daemon.Mcp.Hosting;
+using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -17,6 +17,7 @@ internal sealed class GatewayHostedService(
     IServiceProvider appServices,
     ILogger<GatewayHostedService> logger) : BackgroundService, ITunnelStatusProvider
 {
+    private readonly SemaphoreSlim _tunnelGate = new(1, 1);
     private CancellationTokenSource? _tunnelCts;
     private Task? _tunnelTask;
 
@@ -111,8 +112,12 @@ internal sealed class GatewayHostedService(
 
     private async Task StopTunnelAsync()
     {
-        if (_tunnelCts is not null)
+        await _tunnelGate.WaitAsync().ConfigureAwait(false);
+        try
         {
+            if (_tunnelCts is null)
+                return;
+
             await _tunnelCts.CancelAsync().ConfigureAwait(false);
 
             if (_tunnelTask is not null)
@@ -124,6 +129,10 @@ internal sealed class GatewayHostedService(
             _tunnelCts.Dispose();
             _tunnelCts = null;
             _tunnelTask = null;
+        }
+        finally
+        {
+            _tunnelGate.Release();
         }
     }
 }

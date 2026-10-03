@@ -1,5 +1,8 @@
 using System.ComponentModel;
 using DevTools.Execution.Providers.Python;
+using DevTools.Hosting;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
@@ -15,7 +18,8 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
 
     public PythonCodeTool(
         PythonInitializer initializer,
-        IHostContextExecutor hostContext)
+        IHostContextExecutor hostContext,
+        IHostAppInfo hostApp)
     {
         _initializer = initializer;
         _hostContext = hostContext;
@@ -23,31 +27,20 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
             ExecuteAsync,
             new McpServerToolCreateOptions
             {
-                Name = "execute_python_code",
+                Name = McpSpecKeys.Tool.ExecutePython,
                 Title = "Execute Python Code",
-                Description =
-                    "Execute Python code in the host process via Python.NET. " +
-                    "Code runs in global scope with CLR references already added by host setup. " +
-                    "Use `# /// script` header for external packages (PEP 723).\n" +
-                    "RULES: Always include explicit imports for the host API namespace. " +
-                    "Wrap logic in def run(): ... run(). Use print() for output.\n" +
-                    "BEFORE WRITING CODE: Read python-cheatsheet resource for host API patterns.\n" +
-                    "Error responses: [RUNTIME ERROR] check logic/imports.",
+                Description = DescribeTool(hostApp.Host),
                 Destructive = true,
                 OpenWorld = true
             });
     }
 
-    public string Name => "execute_python_code";
+    public string Name => McpSpecKeys.Tool.ExecutePython;
     public McpServerTool ServerTool { get; }
 
-    [McpMeta(McpTaskExecutionMeta.MetaKey, McpTaskExecutionMeta.Mode.Optional)]
     [Description("Execute Python code in the host process via Python.NET.")]
     private async Task<CallToolResult> ExecuteAsync(
-        [Description(
-            "Python code with explicit imports. Host CLR references are pre-loaded; " +
-            "import the host API namespace you need (e.g. Autodesk.Revit or Autodesk.AutoCAD). " +
-            "Add PEP 723 `# /// script` metadata for external packages.")]
+        [Description("Python script for this host. Follow the pattern in this tool's description.")]
         string code,
         [Description("Short description of what the code does (for logging).")]
         string? description = null,
@@ -64,8 +57,8 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
         if (!await ResolveDepsAsync(code, cancellationToken).ConfigureAwait(false))
         {
             var detail = _lastDepError is not null
-                ? $"[DEPENDENCY ERROR] {_lastDepError}"
-                : "[DEPENDENCY ERROR] Failed to resolve or install PEP 723 dependencies.";
+                ? $"{McpSpecKeys.Result.Dependency} {_lastDepError}"
+                : $"{McpSpecKeys.Result.Dependency} Failed to resolve or install PEP 723 dependencies.";
             _lastDepError = null;
             return ToolHelpers.ErrorResult(detail);
         }
@@ -73,12 +66,12 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
         var result = await _hostContext.ExecuteAsync(() => RunCode(code), cancellationToken).ConfigureAwait(false);
 
         if (!result.Success)
-            return ToolHelpers.ErrorResult($"[RUNTIME ERROR] {result.Output}");
+            return ToolHelpers.ErrorResult($"{McpSpecKeys.Result.Runtime} {result.Output}");
 
         var output = result.Output;
         var rollback = ExecutionGuardContext.RollbackSummary;
         if (!string.IsNullOrEmpty(rollback))
-            output = $"{output}\n\n⚠️ {rollback}";
+            output = $"{output}\n\n {rollback}";
 
         return ToolHelpers.Result(output);
     }
@@ -109,7 +102,7 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
 
     private PythonExecutionOutcome RunCode(string code)
     {
-        return PythonExecutor.Execute(_initializer, "execute_python_code", rootFolder: null, scope =>
+        return PythonExecutor.Execute(_initializer, McpSpecKeys.Tool.ExecutePython, rootFolder: null, scope =>
         {
             scope.Set(PythonInstances.Source, new PyString(code));
             scope.Exec(StdoutCaptureBegin);
@@ -154,4 +147,26 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
         """;
 
     private sealed record PythonExecutionOutcome(bool Success, string Output);
+
+    private static string DescribeTool(HostApp host) => host switch
+    {
+        HostApp.Revit =>
+            "Execute one Python.NET script in Revit. " +
+            $"Read {McpSpecKeys.Resource.RevitPythonCheatsheet} and send that pattern: explicit imports, def run(): ... run(), print() for output. " +
+            "Read the document from RevitContext inside run(). " +
+            "Packages use a # /// script header. " +
+            $"This tool does not run IExternalCommand. For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}. " +
+            $"Errors: {McpSpecKeys.Result.Runtime} check logic/imports, {McpSpecKeys.Result.Dependency} fix the script header.",
+        _ when host.IsAcadFamily() =>
+            "Execute one Python.NET script in AutoCAD. " +
+            $"Read {McpSpecKeys.Resource.AcadPythonCheatsheet} and send that pattern: explicit imports, def run(): ... run(), print() for output. " +
+            "Lock the document inside run(). " +
+            "Packages use a # /// script header. " +
+            $"This tool does not run [CommandMethod]. For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}. " +
+            $"Errors: {McpSpecKeys.Result.Runtime} check logic/imports, {McpSpecKeys.Result.Dependency} fix the script header.",
+        _ =>
+            "Execute one Python.NET script in the host. " +
+            "Wrap logic in def run(): ... run() and use print() for output. " +
+            $"For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}."
+    };
 }

@@ -3,6 +3,9 @@ using System.Runtime.CompilerServices;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.CSharp;
+using DevTools.Hosting;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -22,7 +25,8 @@ public sealed class CSharpCodeTool : IBuiltInMcpTool
         ICompiledScriptBridge scriptBridge,
         CSharpCompiler compiler,
         IHostContextExecutor hostContext,
-        ICommandRunner commandRunner)
+        ICommandRunner commandRunner,
+        IHostAppInfo hostApp)
     {
         _scriptBridge = scriptBridge;
         _compiler = compiler;
@@ -32,32 +36,25 @@ public sealed class CSharpCodeTool : IBuiltInMcpTool
             ExecuteAsync,
             new McpServerToolCreateOptions
             {
-                Name = "execute_csharp_code",
+                Name = McpSpecKeys.Tool.ExecuteCSharp,
                 Title = "Execute C# Code",
-                Description =
-                    "Compile and execute C# code in the running host process. " +
-                    "Host API assemblies auto-referenced. Use #r for extras, #r \"nuget:\" for packages.\n" +
-                    "BEFORE WRITING CODE: Use search_dynamic / invoke_dynamic for resources with API patterns and model state.\n" +
-                    "Error responses: [COMPILATION ERROR] fix code, [RUNTIME ERROR] check logic, [ROLLBACK] constraint violation.",
+                Description = DescribeTool(hostApp.Host),
                 Destructive = true,
                 OpenWorld = true
             });
     }
 
-    public string Name => "execute_csharp_code";
+    public string Name => McpSpecKeys.Tool.ExecuteCSharp;
     public McpServerTool ServerTool { get; }
 
-    [McpMeta(McpTaskExecutionMeta.MetaKey, McpTaskExecutionMeta.Mode.Optional)]
     [Description("Compile and execute C# code in the running host process.")]
     private async Task<CallToolResult> ExecuteAsync(
-        [Description(
-            "Complete C# source. Revit: implement IExternalCommand, set 'message' ref param. " +
-            "AutoCAD: use [CommandMethod]. Include all usings and attributes.")]
+        [Description("Complete C# source for this host command entry point.")]
         string code,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(code))
-            return ToolHelpers.ErrorResult("[COMPILATION ERROR] Code parameter must not be empty.");
+            return ToolHelpers.ErrorResult($"{McpSpecKeys.Result.Compilation} Code parameter must not be empty.");
 
         ScriptCompilationResult? compilationResult = null;
         try
@@ -73,14 +70,14 @@ public sealed class CSharpCodeTool : IBuiltInMcpTool
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
-                return ToolHelpers.ErrorResult($"[COMPILATION ERROR] Timed out after {CompileTimeout.TotalSeconds}s. " +
+                return ToolHelpers.ErrorResult($"{McpSpecKeys.Result.Compilation} Timed out after {CompileTimeout.TotalSeconds}s. " +
                     "Simplify code or reduce #r nuget dependencies.");
             }
 
             if (!compilationResult.Success || compilationResult.Command is null)
             {
                 var diagnostics = compilationResult.FormatDiagnostics();
-                return ToolHelpers.ErrorResult($"[COMPILATION ERROR] Fix the code and retry.\n{diagnostics}");
+                return ToolHelpers.ErrorResult($"{McpSpecKeys.Result.Compilation} Fix the code and retry.\n{diagnostics}");
             }
 
             var result = await _hostContext
@@ -91,15 +88,15 @@ public sealed class CSharpCodeTool : IBuiltInMcpTool
             {
                 var error = result.Message;
                 var prefix = error.Contains("rolled back", StringComparison.OrdinalIgnoreCase)
-                    ? "[ROLLBACK] Transaction failed due to unresolvable constraint.\n"
-                    : "[RUNTIME ERROR] ";
+                    ? $"{McpSpecKeys.Result.Rollback} Transaction failed due to unresolvable constraint.\n"
+                    : $"{McpSpecKeys.Result.Runtime} ";
                 return ToolHelpers.ErrorResult($"{prefix}{error}");
             }
 
             var output = result.Message;
             var rollback = ExecutionGuardContext.RollbackSummary;
             if (!string.IsNullOrEmpty(rollback))
-                output = $"{output}\n\n⚠️ {rollback}";
+                output = $"{output}\n\n {rollback}";
 
             return ToolHelpers.Result(output);
         }
@@ -119,4 +116,28 @@ public sealed class CSharpCodeTool : IBuiltInMcpTool
         GC.WaitForPendingFinalizers();
 #endif
     }
+
+    private static string DescribeTool(HostApp host) => host switch
+    {
+        HostApp.Revit =>
+            "Compile and execute one public IExternalCommand in Revit. " +
+            $"Read {McpSpecKeys.Resource.RevitCSharpCheatsheet} and send that required pattern: " +
+            "[Transaction(TransactionMode.Manual)] and Execute(ExternalCommandData commandData, ref string message, ElementSet elements). " +
+            "Return Result.Succeeded and put caller-visible text in message. " +
+            "The host does not wrap a snippet into IExternalCommand. " +
+            $"For a Python script, use {McpSpecKeys.Tool.ExecutePython}. " +
+            "Use #r for extra assemblies and #r \"nuget:\" for packages. " +
+            $"Errors: {McpSpecKeys.Result.Compilation} fix the code, {McpSpecKeys.Result.Runtime} check logic, {McpSpecKeys.Result.Rollback} constraint violation.",
+        _ when host.IsAcadFamily() =>
+            "Compile and execute one public [CommandMethod] in AutoCAD. " +
+            $"Read {McpSpecKeys.Resource.AcadCSharpCheatsheet} and send that required pattern, including CommandFlags.Session and doc.LockDocument(). " +
+            "The host does not wrap a snippet into a command. " +
+            $"For a Python script, use {McpSpecKeys.Tool.ExecutePython}. " +
+            "Use #r for extra assemblies and #r \"nuget:\" for packages. " +
+            $"Errors: {McpSpecKeys.Result.Compilation} fix the code, {McpSpecKeys.Result.Runtime} check logic, {McpSpecKeys.Result.Rollback} constraint violation.",
+        _ =>
+            "Compile and execute C# in the host process. Send the host command entry type, not a snippet. " +
+            $"For a Python script, use {McpSpecKeys.Tool.ExecutePython}. " +
+            "Use #r for extra assemblies and #r \"nuget:\" for packages."
+    };
 }

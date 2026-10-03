@@ -7,10 +7,7 @@ public sealed class GeneralConfig
 {
     [JsonPropertyName("theme")]
     public AppTheme Theme { get; set; } = AppTheme.Light;
-    
-    [JsonPropertyName("useHardwareRendering")]
-    public bool UseHardwareRendering { get; set; } = true;
-    
+
     [JsonPropertyName("isTraceEnabled")]
     public bool IsTraceEnabled { get; set; } = true;
     

@@ -2,15 +2,12 @@ using System.IO;
 using Autodesk.Windows;
 using DevTools.Hosting;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
-using DevTools.Mcp.Catalog;
 using DevTools.UI;
 using RevitDevTool.Settings;
 using DevTools.UI.Theme;
-using ZLogger;
 
 namespace RevitDevTool.Controllers;
 
@@ -19,12 +16,8 @@ public sealed class HostBackgroundController(
     IHostAppInfo hostAppInfo,
     IRevitSettingsService settingsService,
     PythonInitializer pythonInitializer,
-    IronPythonInitializer ironPythonInitializer,
-    McpCatalogStore catalogStore,
-    ILogger<HostBackgroundController> logger) : IHostedService
+    IronPythonInitializer ironPythonInitializer) : IHostedService
 {
-    private Task _runtimeInit = Task.CompletedTask;
-
     public Task StartAsync(CancellationToken cancellationToken)
     {
         HostUiHelper.Initialize(ComponentManager.ApplicationWindow, ComponentManager.Ribbon.Dispatcher);
@@ -35,26 +28,15 @@ public sealed class HostBackgroundController(
 
         settingsService.LoadSettings();
         ThemeManager.Current.ApplySettingsTheme((AppTheme)settingsService.GeneralConfig.Theme);
-        HostUiHelper.ToggleHardwareRendering(settingsService.GeneralConfig.UseHardwareRendering);
         pythonInitializer.ReserveDebugPort();
         ironPythonInitializer.ReserveDebugPort();
-        _runtimeInit = InitializeRuntimesAsync();
-        return Task.CompletedTask;
+        return InitializeRuntimesAsync();
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         settingsService.SaveSettings();
         CleanLogFolder();
-        try
-        {
-            await _runtimeInit.ConfigureAwait(false);
-        }
-        catch
-        {
-            // InitializeAsync / pydevd already log failures.
-        }
-
         await pythonInitializer.ShutdownAsync().ConfigureAwait(false);
         await ironPythonInitializer.ShutdownAsync().ConfigureAwait(false);
     }
@@ -63,15 +45,8 @@ public sealed class HostBackgroundController(
     {
         await Task.WhenAll(
             pythonInitializer.InitializeAsync(),
-            ironPythonInitializer.InitializeAsync()).ConfigureAwait(false);
-        try
-        {
-            await catalogStore.ReloadAsync().ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            logger.ZLogWarning($"MCP catalog reload after Python init failed: {ex.Message}");
-        }
+            ironPythonInitializer.InitializeAsync()
+        ).ConfigureAwait(false);
     }
 
     private void CleanLogFolder()

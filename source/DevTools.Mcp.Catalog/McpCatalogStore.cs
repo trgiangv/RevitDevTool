@@ -1,5 +1,3 @@
-using System.Text;
-using System.Text.RegularExpressions;
 using DevTools.Execution.Abstractions;
 using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
@@ -7,19 +5,20 @@ using DevTools.Settings;
 using ModelContextProtocol.Protocol;
 // ReSharper disable RedundantSuppressNullableWarningExpression
 
-namespace DevTools.Mcp.Catalog;
+namespace DevTools.Mcp;
 
-public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsService settingsService)
+public sealed class McpCatalogStore(ICatalogLoader catalogLoader, ISettingsService settingsService)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly Dictionary<string, McpRegisteredTool> _byToolId = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<McpRegisteredTool>> _byToolName = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, McpRegisteredResource> _byResourceId = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, List<McpRegisteredResource>> _byResourceName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, RegisteredTool> _byToolId = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<RegisteredTool>> _byToolName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, RegisteredResource> _byResourceId = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<RegisteredResource>> _byResourceName = new(StringComparer.OrdinalIgnoreCase);
+    private string? _contentHash;
     public event EventHandler? CatalogChanged;
 
-    public IReadOnlyList<McpRegisteredTool> RegisteredTools { get; private set; } = [];
-    public IReadOnlyList<McpRegisteredResource> ResourceCatalog { get; private set; } = [];
+    public IReadOnlyList<RegisteredTool> RegisteredTools { get; private set; } = [];
+    public IReadOnlyList<RegisteredResource> ResourceCatalog { get; private set; } = [];
 
     public List<Tool> GetToolDescriptors() =>
         RegisteredTools.Select(tool => tool.Descriptor).ToList();
@@ -40,7 +39,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
             {
                 var catalog = catalogLoader.LoadCatalog(
                     settingsService.McpRegistryConfig.DotnetPaths,
-                    settingsService.McpRegistryConfig.PythonToolsetPaths);
+                    settingsService.McpRegistryConfig.PythonPaths);
 
                 McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
                 return catalog;
@@ -72,7 +71,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
         try
         {
             var dotnetCandidates = settingsService.McpRegistryConfig.DotnetPaths.ToList();
-            var pythonCandidates = settingsService.McpRegistryConfig.PythonToolsetPaths.ToList();
+            var pythonCandidates = settingsService.McpRegistryConfig.PythonPaths.ToList();
 
             if (inputKind == ExecutionMode.Dotnet)
                 McpPathValidator.AddDistinct(dotnetCandidates, normalizedPath);
@@ -94,28 +93,10 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
             CatalogChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public bool TryGetTool(string? toolId, string? toolName, out McpRegisteredTool? tool)
+    public bool TryGetTool(string? toolId, string? toolName, out RegisteredTool? tool)
     {
         EnsureLoaded();
         return TryGet(toolId, toolName, _byToolId, _byToolName, out tool);
-    }
-
-    public bool TryResolveResourceByUri(string uri, out McpRegisteredResource? resource)
-    {
-        EnsureLoaded();
-
-        resource = null;
-        if (string.IsNullOrWhiteSpace(uri))
-            return false;
-
-        foreach (var candidate in ResourceCatalog)
-        {
-            if (!UriMatches(candidate, uri)) continue;
-            resource = candidate;
-            return true;
-        }
-
-        return false;
     }
 
     private static bool TryGet<T>(
@@ -139,7 +120,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
         return false;
     }
 
-    public IReadOnlyList<McpRegisteredTool> EnsureLoaded()
+    public IReadOnlyList<RegisteredTool> EnsureLoaded()
     {
         _gate.Wait();
         try
@@ -149,7 +130,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
 
             var catalog = catalogLoader.LoadCatalog(
                 settingsService.McpRegistryConfig.DotnetPaths,
-                settingsService.McpRegistryConfig.PythonToolsetPaths);
+                settingsService.McpRegistryConfig.PythonPaths);
 
             TryApplyCatalog(catalog);
             McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
@@ -171,16 +152,18 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
                && IndexesMatchCatalog();
     }
 
-    private bool TryApplyCatalog(McpRegistryCatalog catalog)
+    private bool TryApplyCatalog(RegistryCatalog catalog)
     {
-        if (CatalogIdsMatch(catalog))
+        var hash = McpCatalogContentHash.Compute(catalog);
+        if (CatalogIdsMatch(catalog) && string.Equals(_contentHash, hash, StringComparison.Ordinal))
             return false;
 
         ApplyCatalog(catalog);
+        _contentHash = hash;
         return true;
     }
 
-    private bool CatalogIdsMatch(McpRegistryCatalog catalog)
+    private bool CatalogIdsMatch(RegistryCatalog catalog)
     {
         if (RegisteredTools.Count != catalog.Tools.Count || ResourceCatalog.Count != catalog.Resources.Count)
             return false;
@@ -200,7 +183,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
         return true;
     }
 
-    private void ApplyCatalog(McpRegistryCatalog catalog)
+    private void ApplyCatalog(RegistryCatalog catalog)
     {
         ClearIndexes();
 
@@ -261,7 +244,7 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
         }
     }
 
-    private void PersistAcceptedPath(ExecutionMode kind, string normalizedPath, McpRegistryCatalog loadedCatalog)
+    private void PersistAcceptedPath(ExecutionMode kind, string normalizedPath, RegistryCatalog loadedCatalog)
     {
         switch (kind)
         {
@@ -269,60 +252,8 @@ public sealed class McpCatalogStore(IMcpCatalogLoader catalogLoader, ISettingsSe
                 McpPathValidator.AddDistinct(settingsService.McpRegistryConfig.DotnetPaths, normalizedPath);
                 break;
             case ExecutionMode.Python when McpPathValidator.PathProducesCatalogItems(normalizedPath, ExecutionMode.Python, loadedCatalog):
-                McpPathValidator.AddDistinct(settingsService.McpRegistryConfig.PythonToolsetPaths, normalizedPath);
+                McpPathValidator.AddDistinct(settingsService.McpRegistryConfig.PythonPaths, normalizedPath);
                 break;
         }
-    }
-
-    private static bool UriMatches(McpRegisteredResource candidate, string uri)
-    {
-        var directUri = candidate.Descriptor?.Uri;
-        if (!string.IsNullOrWhiteSpace(directUri)
-            && string.Equals(directUri, uri, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        if (candidate.TemplateDescriptor?.UriTemplate is not { } uriTemplate || string.IsNullOrWhiteSpace(uriTemplate))
-            return false;
-
-        return TemplateMatches(uriTemplate, uri);
-    }
-
-    private static bool TemplateMatches(string uriTemplate, string uri)
-    {
-        var pattern = BuildTemplatePattern(uriTemplate);
-        return Regex.IsMatch(uri, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-    }
-
-    private static string BuildTemplatePattern(string uriTemplate)
-    {
-        var pattern = new StringBuilder("^");
-        var index = 0;
-
-        while (index < uriTemplate.Length)
-        {
-            var openBrace = uriTemplate.IndexOf('{', index);
-            if (openBrace < 0)
-            {
-                pattern.Append(Regex.Escape(uriTemplate[index..]));
-                break;
-            }
-
-            pattern.Append(Regex.Escape(uriTemplate[index..openBrace]));
-
-            var closeBrace = uriTemplate.IndexOf('}', openBrace + 1);
-            if (closeBrace < 0)
-            {
-                pattern.Append(Regex.Escape(uriTemplate[openBrace..]));
-                break;
-            }
-
-            pattern.Append("[^/]+?");
-            index = closeBrace + 1;
-        }
-
-        pattern.Append('$');
-        return pattern.ToString();
     }
 }

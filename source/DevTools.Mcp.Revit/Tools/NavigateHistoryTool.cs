@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -24,7 +25,7 @@ public sealed class NavigateHistoryTool : IBuiltInMcpTool
             NavigateAsync,
             new McpServerToolCreateOptions
             {
-                Name = "navigate_history",
+                Name = McpSpecKeys.Tool.NavigateHistory,
                 Title = "Navigate History",
                 Description =
                     "Navigate undo/redo history. " +
@@ -35,7 +36,7 @@ public sealed class NavigateHistoryTool : IBuiltInMcpTool
             });
     }
 
-    public string Name => "navigate_history";
+    public string Name => McpSpecKeys.Tool.NavigateHistory;
     public McpServerTool ServerTool { get; }
 
     [Description("Navigate undo/redo history.")]

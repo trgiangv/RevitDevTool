@@ -2,12 +2,12 @@ using DevTools.Execution.Abstractions;
 using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
 
-namespace DevTools.Mcp.Catalog;
+namespace DevTools.Mcp;
 
 /// <summary>Registers built-in MCP tools and resources into the host catalog. Prompts are daemon-owned.</summary>
 public sealed class BuiltInMcpRegistryProvider(
     IEnumerable<IBuiltInMcpTool> builtInTools,
-    IEnumerable<IBuiltInMcpResource> builtInResources) : IMcpRegistryProvider
+    IEnumerable<IBuiltInMcpResource> builtInResources) : IRegistryProvider
 {
     public string Name => "built-in";
     public ExecutionMode SourceKind => ExecutionMode.CSharp;
@@ -16,22 +16,24 @@ public sealed class BuiltInMcpRegistryProvider(
     {
     }
 
-    public McpRegistryCatalog LoadCatalog()
+    public RegistryCatalog LoadCatalog()
     {
-        var tools = new List<McpRegisteredTool>();
+        var tools = new List<RegisteredTool>();
         foreach (var builtIn in builtInTools)
         {
             var protocolTool = builtIn.ServerTool.ProtocolTool;
-            var binding = McpPrimitiveBinding.Create(
+            var sourceAddress = $"BuiltIn.{builtIn.Name}";
+            var binding = PrimitiveBinding.Create(
                 ExecutionMode.CSharp,
                 sourcePath: null,
                 containerType: "BuiltIn",
                 methodName: builtIn.Name,
+                sourceAddress: sourceAddress,
                 groupName: "Built-in");
 
-            var id = McpPrimitiveBinding.CreatePrimitiveId(protocolTool.Name, binding.SourceAddress);
+            var id = PrimitiveBinding.CreatePrimitiveId(protocolTool.Name, sourceAddress);
 
-            tools.Add(new McpRegisteredTool
+            tools.Add(new RegisteredTool
             {
                 Id = id,
                 Descriptor = protocolTool,
@@ -39,19 +41,21 @@ public sealed class BuiltInMcpRegistryProvider(
             });
         }
 
-        var resources = new List<McpRegisteredResource>();
+        var resources = new List<RegisteredResource>();
         foreach (var builtIn in builtInResources)
         {
-            var binding = McpPrimitiveBinding.Create(
+            var sourceAddress = $"BuiltIn.{builtIn.ProtocolResource.Name}";
+            var binding = PrimitiveBinding.Create(
                 ExecutionMode.CSharp,
                 sourcePath: null,
                 containerType: "BuiltIn",
                 methodName: builtIn.ProtocolResource.Name,
+                sourceAddress: sourceAddress,
                 groupName: "Built-in");
 
-            var id = McpPrimitiveBinding.CreatePrimitiveId(builtIn.ProtocolResource.Name, binding.SourceAddress);
+            var id = PrimitiveBinding.CreatePrimitiveId(builtIn.ProtocolResource.Name, sourceAddress);
 
-            resources.Add(new McpRegisteredResource
+            resources.Add(new RegisteredResource
             {
                 Id = id,
                 Descriptor = builtIn.ProtocolResource,
@@ -59,6 +63,6 @@ public sealed class BuiltInMcpRegistryProvider(
             });
         }
 
-        return new McpRegistryCatalog { Tools = tools, Resources = resources };
+        return new RegistryCatalog { Tools = tools, Resources = resources };
     }
 }

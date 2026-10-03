@@ -12,8 +12,14 @@ public static class PythonInstances
     public const string Root = "__root__";
 
     // MCP operations
+    public const string OperationTool = "tool";
     public const string OperationResource = "resource";
+    public const string OperationEnsureServer = "ensure_server";
+    public const string OperationClearCache = "clear_cache";
     public const string Operation = "__operation__";
+    public const string McpClientCache = "__mcp_client_cache__";
+    public const string SourceMtimeUtcTicks = "__mtime_ticks__";
+    public const string SourceFile = "__source_file__";
     public const string ToolName = "__tool_name__";
     public const string PayloadJson = "__payload_json__";
     public const string ResourceName = "__resource_name__";

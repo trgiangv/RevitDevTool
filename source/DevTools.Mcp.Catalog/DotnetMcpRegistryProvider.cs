@@ -1,15 +1,15 @@
 using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Catalog.Discovery;
+using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
-namespace DevTools.Mcp.Catalog;
+namespace DevTools.Mcp;
 
 public sealed class DotnetMcpRegistryProvider(
-    McpAssemblyParser assemblyParser,
-    ILogger<DotnetMcpRegistryProvider> logger) : IMcpRegistryProvider
+    McpAssemblyParser parser,
+    ILogger<DotnetMcpRegistryProvider> logger) : IRegistryProvider
 {
     public string Name => "dotnet-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Dotnet;
@@ -20,14 +20,14 @@ public sealed class DotnetMcpRegistryProvider(
         AssemblyPaths = paths;
     }
 
-    public McpRegistryCatalog LoadCatalog()
+    public RegistryCatalog LoadCatalog()
     {
-        var catalog = McpRegistryCatalog.Empty;
+        var catalog = RegistryCatalog.Empty;
         foreach (var assemblyPath in AssemblyPaths)
         {
             try
             {
-                catalog = catalog.Merge(assemblyParser.ParseCatalogFromAssembly(assemblyPath));
+                catalog = catalog.Merge(parser.ParseCatalogFromAssembly(assemblyPath));
             }
             catch (Exception ex)
             {

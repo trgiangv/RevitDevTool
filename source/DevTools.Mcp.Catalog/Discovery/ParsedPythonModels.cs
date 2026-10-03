@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace DevTools.Mcp.Catalog.Discovery;
+namespace DevTools.Mcp.Discovery;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed record PythonBindingInfo

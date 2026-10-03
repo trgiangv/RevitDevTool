@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
 
-namespace DevTools.Mcp.Catalog.Discovery;
+namespace DevTools.Mcp.Discovery;
 
 /// <summary>Non-network transport used while executing a catalog-resolved tool.</summary>
 internal sealed class ToolExecutionTransport : TransportBase

@@ -1,5 +1,6 @@
 using System.Text;
-using DevTools.Mcp.Catalog;
+using DevTools.Mcp;
+using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using RevitDevTool.Core;
 
@@ -27,11 +28,11 @@ public sealed class RevitModelContext : IBuiltInMcpResource
         ("Pipes", BuiltInCategory.OST_PipeCurves),
     ];
 
-    public string UriTemplate => "revit://model/context";
+    public string UriTemplate => McpSpecKeys.Resource.RevitModelContext;
 
     public Resource ProtocolResource { get; } = new()
     {
-        Uri = "revit://model/context",
+        Uri = McpSpecKeys.Resource.RevitModelContext,
         Name = "Revit Model Context",
         Description = "Live model snapshot: levels, categories with element counts, units, phases, active view. Read before writing code to avoid guessing.",
         MimeType = "text/markdown"

@@ -4,7 +4,6 @@ using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.UI.Theme;
-using DevTools.UI;
 namespace DevTools.Presentation.ViewModels.Settings;
 
 public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<ResetSettingsMessage>
@@ -32,9 +31,6 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     public partial AppTheme Theme { get; set; }
 
     [ObservableProperty]
-    public partial bool UseHardwareRendering { get; set; }
-
-    [ObservableProperty]
     public partial bool IsMemoryEnabled { get; set; }
 
     [ObservableProperty]
@@ -44,12 +40,6 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     {
         _settingsService.GeneralConfig.Theme = (DevTools.Settings.Configs.AppTheme)value;
         ThemeManager.Current.ApplySettingsTheme(value);
-    }
-
-    partial void OnUseHardwareRenderingChanged(bool value)
-    {
-        _settingsService.GeneralConfig.UseHardwareRendering = value;
-        HostUiHelper.ToggleHardwareRendering(value);
     }
 
     partial void OnIsMemoryEnabledChanged(bool value)
@@ -88,7 +78,6 @@ public partial class GeneralSettingsViewModel : ObservableValidator, IRecipient<
     private void LoadFromConfig()
     {
         Theme = (AppTheme)_settingsService.GeneralConfig.Theme;
-        UseHardwareRendering = _settingsService.GeneralConfig.UseHardwareRendering;
         IsMemoryEnabled = _settingsService.GeneralConfig.IsMemoryEnabled;
         EnableTelemetry = _settingsService.GeneralConfig.EnableTelemetry;
     }

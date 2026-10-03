@@ -110,7 +110,7 @@ public sealed class SettingsService(IFileConfig<PathOptions> fileConfig, ILogger
             string.IsNullOrWhiteSpace(path) ||
             !File.Exists(path) ||
             !string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase));
-        _mcpRegistryConfig.PythonToolsetPaths.RemoveAll(path =>
+        _mcpRegistryConfig.PythonPaths.RemoveAll(path =>
             string.IsNullOrWhiteSpace(path) || !Directory.Exists(path));
         fileConfig.Save(_mcpRegistryConfig);
     }
