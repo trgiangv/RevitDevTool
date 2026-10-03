@@ -1,19 +1,18 @@
 namespace RevitDevTool.Core.Dispatchers;
 
 /// <summary>
-///     Manages a FIFO queue of <see cref="IRevitRequest"/> items dispatched via
-///     <see cref="Autodesk.Revit.UI.ExternalEvent"/>. Callers enqueue work through this dispatcher;
-///     the dispatcher raises the external event, and Revit invokes
-///     <see cref="Autodesk.Revit.UI.IExternalEventHandler.Execute"/> on the main thread in a valid API context.
-///     A <c>while</c> loop inside <c>Execute</c> drains items added during processing,
-///     maximizing throughput through natural batching.
+/// FIFO queue drained on Revit's main thread through one <see cref="Autodesk.Revit.UI.ExternalEvent"/>.
+/// <see cref="Autodesk.Revit.UI.ExternalEvent.Raise"/> is a single signal:
+/// <see cref="Autodesk.Revit.UI.ExternalEventRequest.Accepted"/> and
+/// <see cref="Autodesk.Revit.UI.ExternalEventRequest.Pending"/> both mean a turn is already scheduled.
+/// <see cref="Execute"/> drains the queue; if items remain when it leaves, it raises once more.
 /// </summary>
 internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher, IDisposable
 {
     private readonly Lock _gate = new();
     private readonly Queue<IRevitRequest> _queue = new();
     private readonly ExternalEvent? _event;
-    private bool _raisePending;
+    private bool _insideExecute;
     private int _disposed;
 
     public RevitDispatcher()
@@ -26,23 +25,38 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
 
     public void Execute(UIApplication app)
     {
-        while (true)
-        {
-            IRevitRequest[] batch;
+        lock (_gate)
+            _insideExecute = true;
 
+        try
+        {
+            while (true)
+            {
+                IRevitRequest[] batch;
+                lock (_gate)
+                {
+                    if (_queue.Count == 0)
+                        break;
+
+                    batch = _queue.ToArray();
+                    _queue.Clear();
+                }
+
+                foreach (var request in batch)
+                    request.Execute(app);
+            }
+        }
+        finally
+        {
+            var raiseAgain = false;
             lock (_gate)
             {
-                if (_queue.Count == 0)
-                {
-                    _raisePending = false;
-                    return;
-                }
-                batch = _queue.ToArray();
-                _queue.Clear();
+                _insideExecute = false;
+                raiseAgain = _queue.Count > 0;
             }
 
-            foreach (var request in batch)
-                request.Execute(app);
+            if (raiseAgain)
+                RaiseExternalEvent();
         }
     }
 
@@ -178,7 +192,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
         {
             pending = _queue.ToArray();
             _queue.Clear();
-            _raisePending = false;
+            _insideExecute = false;
         }
 
         var exception = new ObjectDisposedException(nameof(RevitDispatcher));
@@ -189,21 +203,16 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
     }
 
     /// <summary>
-    /// Determines whether the caller is on the Revit thread in API mode and no requests are queued,
+    /// The caller is on the Revit thread in API mode. Nested work runs inline while
+    /// <see cref="Execute"/> is on the stack. Otherwise only an empty queue runs inline.
     /// </summary>
-    /// <returns>
-    ///     <see langword="true"/> when the caller is on the Revit thread in API mode
-    ///     and no requests are queued, allowing direct synchronous execution.
-    /// </returns>
     private bool AllowDirectInvocation()
     {
         if (_disposed != 0) return false;
         if (!RevitContext.IsRevitInApiMode) return false;
 
         lock (_gate)
-        {
-            return _queue.Count == 0 && !_raisePending;
-        }
+            return _insideExecute || _queue.Count == 0;
     }
 
     private void Enqueue(IRevitRequest request)
@@ -219,40 +228,28 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
             }
 
             _queue.Enqueue(request);
-
-            if (!_raisePending)
-            {
-                _raisePending = true;
-                shouldRaise = true;
-            }
+            shouldRaise = !_insideExecute;
         }
 
-        if (!shouldRaise)
-            return;
-
-        RaiseExternalEvent();
+        if (shouldRaise)
+            RaiseExternalEvent();
     }
 
     private void RaiseExternalEvent()
     {
         try
         {
-            var request = _event!.Raise();
-            if (IsAcceptedRequest(request))
+            var status = _event!.Raise();
+            if (status is ExternalEventRequest.Accepted or ExternalEventRequest.Pending)
                 return;
 
             FailPendingRequests(new InvalidOperationException(
-                $"ExternalEvent.Raise was not accepted. Request status: {request}."));
+                $"ExternalEvent.Raise was not accepted. Request status: {status}."));
         }
         catch (Exception exception)
         {
             FailPendingRequests(exception);
         }
-    }
-
-    private static bool IsAcceptedRequest(ExternalEventRequest request)
-    {
-        return request is ExternalEventRequest.Accepted or ExternalEventRequest.Pending;
     }
 
     private void FailPendingRequests(Exception exception)
@@ -263,7 +260,6 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
         {
             pending = _queue.ToArray();
             _queue.Clear();
-            _raisePending = false;
         }
 
         foreach (var request in pending)
