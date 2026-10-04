@@ -14,25 +14,30 @@ namespace DevTools.Daemon.Mcp.Processes;
 /// <summary>One SDK <see cref="McpClient"/> session over a DevToolsMcp named pipe.</summary>
 public sealed class ProcessSession : IProcessSession
 {
+    private static readonly TimeSpan CatalogListenAckTimeout = TimeSpan.FromSeconds(10);
+
+    private readonly ILogger _logger;
     private readonly List<IAsyncDisposable> _notificationRegs = [];
-    private volatile bool _connected = true;
+    private CancellationTokenSource? _listenCts;
+    private Task? _listen;
+    private int _disposed;
 
     internal SemaphoreSlim CatalogRefreshGate { get; } = new(1, 1);
 
-    public event Action? Disconnected;
     public event Action? CatalogChanged;
 
     public InstanceInfo Info { get; }
     public string PipeName { get; }
     public int ProcessId => Info.ProcessId;
-    public bool IsConnected => _connected;
+    public bool IsConnected => !Client.Completion.IsCompleted;
     public McpClient Client { get; }
 
-    private ProcessSession(string pipeName, InstanceInfo info, McpClient client)
+    private ProcessSession(string pipeName, InstanceInfo info, McpClient client, ILogger logger)
     {
         PipeName = pipeName;
         Info = info;
         Client = client;
+        _logger = logger;
     }
 
     public static async Task<ProcessSession> ConnectAsync(
@@ -44,57 +49,129 @@ public sealed class ProcessSession : IProcessSession
         if (!HostPipeName.TryParse(pipeName, out var host, out var version, out var pid))
             throw new InvalidOperationException($"Invalid MCP pipe name: {pipeName}");
 
-        NamedPipeClientStream? pipe = null;
+        var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
         try
         {
-            pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
             await pipe.ConnectAsync(ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            await pipe.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
 
-            var client = await McpClient.CreateAsync(
-                new StreamClientTransport(pipe, pipe, loggerFactory),
-                loggerFactory: loggerFactory,
-                cancellationToken: ct).ConfigureAwait(false);
+        var client = await McpClient.CreateAsync(
+            new StreamClientTransport(pipe, pipe, loggerFactory),
+            loggerFactory: loggerFactory,
+            cancellationToken: ct).ConfigureAwait(false);
 
-            var info = new InstanceInfo
-            {
-                HostApp = host,
-                VersionNumber = version,
-                ProcessId = pid
-            };
-            var session = new ProcessSession(pipeName, info, client);
-
-            session._notificationRegs.Add(client.RegisterNotificationHandler(
-                NotificationMethods.ToolListChangedNotification,
-                (_, _) =>
-                {
-                    session.CatalogChanged?.Invoke();
-                    return default;
-                }));
-            session._notificationRegs.Add(client.RegisterNotificationHandler(
-                NotificationMethods.ResourceListChangedNotification,
-                (_, _) =>
-                {
-                    session.CatalogChanged?.Invoke();
-                    return default;
-                }));
-
-            _ = client.Completion.ContinueWith(
-                _ =>
-                {
-                    session._connected = false;
-                    session.Disconnected?.Invoke();
-                },
-                TaskScheduler.Default);
-
+        var session = new ProcessSession(
+            pipeName,
+            new InstanceInfo { HostApp = host, VersionNumber = version, ProcessId = pid },
+            client,
+            logger);
+        try
+        {
+            session.RegisterCatalogNotifications();
+            await session.StartCatalogListenAsync(ct).ConfigureAwait(false);
             logger.ZLogDebug($"MCP session ready for {pipeName}");
             return session;
         }
         catch
         {
-            if (pipe is not null)
-                await pipe.DisposeAsync().ConfigureAwait(false);
+            await session.DisposeAsync().ConfigureAwait(false);
             throw;
         }
+    }
+
+    private void RegisterCatalogNotifications()
+    {
+        _notificationRegs.Add(Client.RegisterNotificationHandler(
+            NotificationMethods.ToolListChangedNotification,
+            (_, _) =>
+            {
+                CatalogChanged?.Invoke();
+                return default;
+            }));
+        _notificationRegs.Add(Client.RegisterNotificationHandler(
+            NotificationMethods.ResourceListChangedNotification,
+            (_, _) =>
+            {
+                CatalogChanged?.Invoke();
+                return default;
+            }));
+    }
+
+    /// <summary>
+    /// Protocol 2026-07-28 delivers <c>list_changed</c> only on <c>subscriptions/listen</c>.
+    /// Older initialize-handshake sessions still broadcast it on the pipe.
+    /// </summary>
+    private async Task StartCatalogListenAsync(CancellationToken ct)
+    {
+        if (!UsesPerRequestSubscriptions(Client))
+            return;
+
+        var acknowledged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _notificationRegs.Add(Client.RegisterNotificationHandler(
+            NotificationMethods.SubscriptionsAcknowledgedNotification,
+            (_, _) =>
+            {
+                acknowledged.TrySetResult();
+                return default;
+            }));
+
+        _listenCts = new CancellationTokenSource();
+        _listen = ListenForCatalogChangesAsync(_listenCts.Token);
+
+        using var ackCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        ackCts.CancelAfter(CatalogListenAckTimeout);
+        await acknowledged.Task.WaitAsync(ackCts.Token).ConfigureAwait(false);
+    }
+
+    private async Task ListenForCatalogChangesAsync(CancellationToken ct)
+    {
+        try
+        {
+            await Client.SendRequestAsync<SubscriptionsListenRequestParams, EmptyResult>(
+                RequestMethods.SubscriptionsListen,
+                new SubscriptionsListenRequestParams
+                {
+                    Notifications = new SubscriptionsListenNotifications
+                    {
+                        ToolsListChanged = true,
+                        ResourcesListChanged = true,
+                    }
+                },
+                cancellationToken: ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            _logger.ZLogWarning(ex, $"MCP catalog subscription ended for {PipeName}");
+        }
+    }
+
+    private static bool UsesPerRequestSubscriptions(McpClient client)
+    {
+        var version = client.NegotiatedProtocolVersion;
+        return !string.IsNullOrEmpty(version)
+            && string.CompareOrdinal(version, McpSpecKeys.ProtocolVersions.Current) >= 0;
+    }
+
+    private async Task StopCatalogListenAsync()
+    {
+        if (_listenCts is null)
+            return;
+
+        await _listenCts.CancelAsync().ConfigureAwait(false);
+        if (_listen is not null)
+            await _listen.ConfigureAwait(false);
+
+        _listenCts.Dispose();
+        _listenCts = null;
+        _listen = null;
     }
 
     public async Task<Result> CallToolPassthroughAsync(CallToolRequestParams parameters, CancellationToken ct = default)
@@ -127,11 +204,20 @@ public sealed class ProcessSession : IProcessSession
 
     public async ValueTask DisposeAsync()
     {
-        _connected = false;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
+
+        await StopCatalogListenAsync().ConfigureAwait(false);
         foreach (var registration in _notificationRegs)
         {
-            try { await registration.DisposeAsync().ConfigureAwait(false); }
-            catch { /* ignored */ }
+            try
+            {
+                await registration.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.ZLogWarning(ex, $"Failed to remove MCP notification handler for {PipeName}");
+            }
         }
 
         _notificationRegs.Clear();

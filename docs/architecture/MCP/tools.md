@@ -68,6 +68,13 @@ keyed by `processId`.
 On host `list_changed` notifications, only that process slice is re-listed.
 Disconnect removes the slice. External daemon `tools/list` is untouched.
 
+Protocol `2026-07-28` delivers those notifications only on `subscriptions/listen`.
+`ProcessSession` holds that request for the session (`toolsListChanged` and
+`resourcesListChanged`) and waits for `notifications/subscriptions/acknowledged`
+before the first catalog list. Initialize-handshake sessions (`2025-11-25` and
+earlier) still receive the session-wide broadcast; they do not open
+`subscriptions/listen`.
+
 **Search ranking** (`ProcessCatalogs.Search` / `SearchTool`): see product contract
 in `docs/product/mcp.md`. Invalid `kinds` are validation errors (no silent broaden).
 

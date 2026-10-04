@@ -4,6 +4,7 @@ using DevTools.Mcp.Client.Tests.Harness;
 using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Client.Tests;
 
@@ -36,6 +37,30 @@ public sealed class ProcessSessionIntegrationTests
                 new CallToolRequestParams { Name = "echo", Arguments = new Dictionary<string, JsonElement> { ["text"] = JsonSerializer.SerializeToElement("hi") } },
                 TestContext.CancellationToken);
             Assert.IsInstanceOfType<CallToolResult>(outcome);
+        }
+    }
+
+    [TestMethod]
+    public async Task ConnectAsync_RaisesCatalogChanged_WhenHostToolListChanges()
+    {
+        await using var host = await FakeMcpHostPipe.StartAsync(cancellationToken: TestContext.CancellationToken);
+
+        var session = await ProcessSession.ConnectAsync(
+            host.PipeName,
+            NullLoggerFactory.Instance,
+            NullLogger<ProcessSession>.Instance,
+            TestContext.CancellationToken);
+
+        await using (session)
+        {
+            var changed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            session.CatalogChanged += () => changed.TrySetResult();
+
+            Assert.IsTrue(host.AddTool(McpServerTool.Create(
+                () => "added",
+                new McpServerToolCreateOptions { Name = "added", Description = "Added after connect" })));
+
+            await changed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
         }
     }
 }

@@ -61,17 +61,20 @@ public sealed class ProcessSessions(
         foreach (var pipeName in vanishedPipes)
             await DisconnectAsync(pipeName).ConfigureAwait(false);
 
+        var droppedPipes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var pair in _sessions.ToArray())
         {
             if (pair.Value.IsConnected)
                 continue;
 
+            droppedPipes.Add(pair.Key);
+            await LogClosedSessionAsync(pair.Value).ConfigureAwait(false);
             await DisconnectSessionAsync(pair.Value).ConfigureAwait(false);
         }
 
         List<string> newPipes;
         lock (_knownPipesLock)
-            newPipes = currentPipes.Where(pipe => !_knownPipes.Contains(pipe)).ToList();
+            newPipes = currentPipes.Where(pipe => !_knownPipes.Contains(pipe) && !droppedPipes.Contains(pipe)).ToList();
 
         foreach (var pipeName in newPipes)
         {
@@ -96,7 +99,6 @@ public sealed class ProcessSessions(
             logger.ZLogInformation($"Connecting MCP client to {pipeName}...");
             var session = await ProcessSession.ConnectAsync(pipeName, loggerFactory, logger, ct).ConfigureAwait(false);
 
-            session.Disconnected += () => _ = DisconnectSessionAsync(session);
             session.CatalogChanged += () => _ = RefreshCatalogAsync(session, CancellationToken.None);
 
             _sessions[pipeName] = session;
@@ -188,6 +190,22 @@ public sealed class ProcessSessions(
         return _sessions.TryGetValue(pipeName, out var session)
             ? DisconnectSessionAsync(session)
             : Task.CompletedTask;
+    }
+
+    private async Task LogClosedSessionAsync(ProcessSession session)
+    {
+        try
+        {
+            var details = await session.Client.Completion.ConfigureAwait(false);
+            if (details.Exception is { } error)
+                logger.ZLogWarning(error, $"MCP session ended for {session.PipeName}");
+            else
+                logger.ZLogDebug($"MCP session closed for {session.PipeName}");
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogWarning(ex, $"MCP session ended for {session.PipeName}");
+        }
     }
 
     private async Task DisconnectSessionAsync(ProcessSession session)

@@ -75,6 +75,8 @@ internal sealed class FakeMcpHostPipe : IAsyncDisposable
         return Task.FromResult(new FakeMcpHostPipe(pipeName, serverPipe, options, appServices));
     }
 
+    public bool AddTool(McpServerTool tool) => _options.ToolCollection!.TryAdd(tool);
+
     public async Task EndCurrentSessionAsync(CancellationToken cancellationToken = default)
     {
         if (_activeServer is null)

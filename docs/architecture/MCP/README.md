@@ -70,7 +70,7 @@ Each process has one **app container** (Daemon `ServerHostBuilder` or host `AddE
 | `McpServer` (host) | Per pipe connection | `PipeEndpoint` — not in root DI |
 | `StdioHostedService` / `GatewayHostedService` | HostedService | Daemon transport sessions |
 
-**Session lifecycle (daemon):** `DiscoveryHostedService` drives `ProcessSessions.RunAsync` (2s). New pipe → `ProcessSession.ConnectAsync` → catalog list into `ProcessCatalogs`. Pipe gone or client completion → remove session and catalog slice. `launch_host` only starts the OS process; discovery opens the MCP session when the host pipe appears.
+**Session lifecycle (daemon):** `DiscoveryHostedService` drives `ProcessSessions.RunAsync` (2s). New pipe → `ProcessSession.ConnectAsync` → catalog list into `ProcessCatalogs`. Pipe gone or client completion → remove session and catalog slice; a pipe that is still discovered is connected again on the next poll. `launch_host` only starts the OS process; discovery opens the MCP session when the host pipe appears.
 
 **Host pipe:** `McpPipeServer` uses SDK `StreamServerTransport` over the named pipe (newline-delimited JSON-RPC, full MCP session including `initialize`).
 
