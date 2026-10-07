@@ -37,4 +37,17 @@ internal static class Tokenizer
 
         return builder.ToString();
     }
+
+    public static IReadOnlyList<string> Distinct(IEnumerable<string> tokens)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var distinct = new List<string>();
+        foreach (var token in tokens)
+        {
+            if (seen.Add(token))
+                distinct.Add(token);
+        }
+
+        return distinct;
+    }
 }

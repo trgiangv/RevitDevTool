@@ -7,41 +7,22 @@ In-host MCP runtime is shared across registered hosts.
 
 - Daemon owns stdio MCP, gateway, auth, host discovery, and a **fixed** external
   tool/prompt surface (`ListChanged = false`).
-- Infrastructure tools remain on the daemon (`list_host_instances`, `launch_host`,
-  `read_file_info`, `list_machines`, …).
-- Host capabilities are **not** projected into daemon `tools/list`. Clients use
-  exactly two dynamic operations:
-  - `search_dynamic(query, processId?, kinds?, limit?, detail?)` — in-memory
-    search of each connected process catalog (tools, resources, resource templates).
-    `processId` limits the search to one process. `limit` is validated as 1–32 (default 12),
-    and `detail` is `summary` (default) or `schema`. Search tokenizes on whitespace,
-    `_`, `-`, and camelCase; each token adds target 4, name 2, description 1, divided
-    by token count, and drops matches below half the tokens. Returns compact items,
-    `hasMore`, and `availableNames` when nothing matches.
-    Every item has an opaque local `id` (`dci2.{processId}.{kind}.{contentHash}.{target}`),
-    kind, target, `processId`, host routing, short description, `requiredArgs`, and
-    `argsHint`; only `detail=schema` includes a tool input schema. Item identity is
-    `(processId, kind, name)`; the hash is freshness only.
-  - `invoke_dynamic(id, arguments?)` — routes one id through
-    the current SDK `McpClient` session and returns the host-native MCP payload:
-    `CallToolResult` for tools (including `image` / `audio` content blocks) and
-    `EmbeddedResourceBlock` entries for single resource/template reads. Validation
-    and stale-locator failures still return compact JSON in a text content block.
-    Alternatively, `invoke_dynamic(reads: [{ id, arguments? }])` performs
-    read-only batch resource/template reads. Single-target fields and `reads` are
-    mutually exclusive; tools are rejected in batches. `reads` defaults to at most
-    16 items and has a hard 64-item validation limit. Batch output has a 1 MiB
-    UTF-8 serialized-result budget (4 MiB hard ceiling): complete items are
-    appended only, and one oversized item is represented by a typed per-item error.
-
-    Host disconnection, item removal, or a changed content hash makes a locator
-    stale with reason `host_disconnected`, `removed`, or `changed`.
-    Stale errors are retryable only while `executionStarted=false`; clients retry
-    once by `research_then_reinvoke` (search again, then invoke the new ID). No
-    separate resolve tool exists.
+- Infrastructure tools remain on the daemon (`list_processes`, `launch_host`,
+  `read_file_info`, `list_machines`).
+- Host capabilities are **not** projected into daemon `tools/list`. Clients
+  reach them through one program tool:
+  - `code_mode(code, readOnly?)` — `code` is a C# async method body. Inside it,
+    `SearchAsync` ranks the in-memory catalog, `DescribeAsync` returns the SDK
+    `Tool`, `InvokeAsync` returns the host `CallToolResult` (including image and
+    audio blocks), and `ReadAsync` returns `ReadResourceResult`. The model
+    receives only the program's return value. `readOnly` defaults to false;
+    when true, `InvokeAsync` throws unless the tool's `ReadOnlyHint` is true.
+    A return value over 1 MiB, including image base64, is an error and the
+    payload is not sent. `search_dynamic` and `invoke_dynamic` are not on
+    `tools/list`. Locator ids stay inside the daemon.
 - **MRTR is not a product workflow** ([0027](../decisions/0027-mcp-product-surface.md)).
-  The working loop is search → invoke → read result or execute error tags
-  (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`), then retry. Destructive
+  The working loop is one `code_mode` program: search, call, and return a projection.
+  Execute error tags (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`) are retried inside that program. Destructive
   tools use structured **warning** + `dryRun` (e.g. `revit_delete_elements`), not
   elicitation. The host hop may still serialize `InputRequiredResult` if a tool
   throws `InputRequiredException` (plumbing); do not build agent features on
@@ -52,11 +33,10 @@ In-host MCP runtime is shared across registered hosts.
   `detail=full` for complete transmission/link metadata. Success responses include
   SDK `StructuredContent` plus compact JSON in `Content` (prefer `StructuredContent`
   for machine parsing).
-- `search_dynamic` and `list_host_instances` emit `StructuredContent` on success
+- `list_processes` emits `StructuredContent` on success
   (manual path — no `OutputSchema` on `tools/list` until clients accept inferred schemas).
-- Agent-facing JSON from `search_dynamic`, `read_file_info`, `invoke_dynamic`
-  errors/stale responses, and `invoke_dynamic` batch `reads` uses compact SDK
-  `McpJsonUtilities` (not indented pretty-print).
+- Agent-facing JSON from `code_mode` results, `read_file_info`, and tool errors
+  uses compact SDK `McpJsonUtilities` (not indented pretty-print).
 - Fixed prompts (`revit_code`, `acad_code`) are daemon-owned via native
   `prompts/list` / `prompts/get` and never contact a host.
 - Two named-pipe protocols stay separate:
@@ -66,19 +46,18 @@ In-host MCP runtime is shared across registered hosts.
 - Host SDK server advertises `listChanged` so `ProcessSessions` can refresh only that
   process catalog; the external daemon collections stay unchanged.
 - Call observability is always-on at protocol boundaries. Host in-process MCP logs
-  via `McpLogFilters` and `ILogger`; daemon `search_dynamic` / `invoke_dynamic`
+  via `McpLogFilters` and `ILogger`; daemon `code_mode` and infrastructure tools
   log the same shape. Arguments and results are protocol JSON via SDK
   `McpJsonUtilities` (not hash-only summaries). Binary blocks are described by
   type / mime / length — never base64 `Data` on monitor lines.
 - MCP Tasks extension (`io.modelcontextprotocol/tasks`) is advertised on the daemon SDK
   server. `TaskSelection` returns **Synchronous** or **Optional** only. `launch_host`
-  and a single `invoke_dynamic` catalog-tool call are **Optional**. Resource reads,
-  `reads` batches, and the other infrastructure tools stay synchronous. **Required**
+  and `code_mode` are **Optional**. The other infrastructure tools stay synchronous. **Required**
   is unused until clients advertise the tasks extension; it rejects the call before
   the tool runs. Daemon-to-host `tools/call` stays synchronous; task polling is
   client ↔ daemon only.
 - `view_screenshot` captures at **1280 px** width (Revit **150 DPI** unchanged;
-  AutoCAD 1280×720). Use single `invoke_dynamic` for vision — batch `reads[]` stays JSON-only.
+  AutoCAD 1280×720). Return the `ImageContentBlock` from `code_mode` when the model must see it.
 
 ## Related
 

@@ -12,7 +12,7 @@ namespace DevTools.Daemon.Mcp.Hosting;
 
 /// <summary>
 /// Owns the external MCP tool/prompt collections for the daemon.
-/// Host capabilities are never projected here — only via search_dynamic / invoke_dynamic.
+/// Host capabilities are never projected here. The model reaches them through code_mode.
 /// </summary>
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed class McpEngine
@@ -52,7 +52,6 @@ public sealed class McpEngine
         ListProcessesTool.Create(sessions, pipeScanner),
         LaunchHostTool.Create(sessions, launchService),
         ReadFileInfoTool.Create(fileInfoCatalog),
-        SearchTool.Create(sessions),
-        InvokeTool.Create(sessions)
+        CodeModeTool.Create(sessions)
     ];
 }

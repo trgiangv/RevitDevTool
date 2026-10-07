@@ -51,6 +51,13 @@ host-space zoom) + later Tools / Element Finder ownership:
 - Remaining testhosts: [completed](../completed/2026-09-13-mstest-sdk-repo-migration.md)
   ([0035](../../decisions/0035-mstest-sdk-repo-tests.md)).
 
+## MCP `code_mode` (closed)
+
+[0040](../../decisions/0040-bm25f-search-and-hit-annotations.md) is Accepted.
+Plan: [completed](../completed/2026-10-07-run-csharp-bm25f.md). Waves 0–3
+passed on Revit 2025 process 20936, including the image block and the
+`readOnly: true` rejection.
+
 ## MCP (closed)
 
 - Product: [0027](../../decisions/0027-mcp-product-surface.md). Host pipe:

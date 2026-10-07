@@ -36,7 +36,7 @@ public sealed class ServerHostBuilderCompositionTests
         var options = McpServerFactory.CreateOptions(
             engine.ToolCollection, engine.PromptCollection, host.Services);
 
-        Assert.AreEqual(6, engine.LocalTools.Count);
+        Assert.AreEqual(5, engine.LocalTools.Count);
         Assert.AreEqual(2, engine.PromptCollection.Count);
 
         var clientToServer = new Pipe();
@@ -65,12 +65,11 @@ public sealed class ServerHostBuilderCompositionTests
 
         Assert.AreSequenceEqual(
             [
-                "invoke_dynamic",
+                "code_mode",
                 "launch_host",
-                "list_host_instances",
                 "list_machines",
+                "list_processes",
                 "read_file_info",
-                "search_dynamic",
             ],
             tools.Select(tool => tool.Name).OrderBy(name => name).ToArray());
         Assert.AreSequenceEqual(["acad_code", "revit_code"], prompts.Select(prompt => prompt.Name).OrderBy(name => name).ToArray());

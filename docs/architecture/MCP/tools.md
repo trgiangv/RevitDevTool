@@ -10,43 +10,27 @@ project host tools/resources into `tools/list` / `resources/list`.
 
 | Tool | Assembly | Description |
 |------|----------|-------------|
-| `list_host_instances` | `DevTools.Daemon` | Lists connected instances + discovered MCP pipes |
+| `list_processes` | `DevTools.Daemon` | Lists connected instances + discovered MCP pipes |
 | `launch_host` | `DevTools.Daemon` | Launches host (optional model file at startup; host inferred from extension when `filePath` is set) |
 | `read_file_info` | `DevTools.Daemon` | On-disk Revit/DWG metadata reader |
 | `list_machines` | `DevTools.Daemon` | Queries Gateway for connected devices (requires auth) |
 
-### Dynamic Operations (exactly two)
+### Host capabilities
 
 | Tool | Assembly | Backing store | Purpose |
 |------|----------|---------------|---------|
-| `search_dynamic` | `DevTools.Daemon` | `ProcessCatalogs` | In-memory search across `tool`, `resource`, `resource_template`; returns opaque `id` locators (`dci2.*`) |
-| `invoke_dynamic` | `DevTools.Daemon` | `ProcessSession` SDK client | Resolve one `id` (or batch `reads[]` of resource locators) against the current catalog/session |
+| `code_mode` | `DevTools.Daemon` | in-memory catalog, then the host pipe | C# method body. `SearchAsync` ranks the catalog. `InvokeAsync` and `ReadAsync` call the host. The model receives only the return value. |
 
-Both groups are registered together in `McpEngine.CreateLocalTools` (single external surface).
+Infrastructure tools and `code_mode` are registered together in `McpEngine.CreateLocalTools`.
 
-`search_dynamic` never opens a host pipe. It accepts `query`, optional `processId`,
-`kinds`, `limit` (1–32, default 12), and `detail` (`summary` default | `schema`).
-Search tokenizes and scores matches (see `docs/product/mcp.md`). Each hit includes
-`id`, kind, target, `processId`, host routing, short description, `requiredArgs`,
-and `argsHint`; only `detail=schema` includes a tool `inputSchema`.
-
-`invoke_dynamic` accepts either `id` + optional `arguments`, or
-`reads: [{ id, arguments? }, ...]` (mutually exclusive). Batch mode is
-read-only (resources/templates); tools in `reads` are validation errors. Stale
-locators return retryable `stale` errors with `research_then_reinvoke`.
+`SearchAsync` does not open a host pipe. Arguments on the tool are `code` and `readOnly` (default false). There is no `id` argument.
 
 **Agent payload knobs (daemon):**
 
 | Tool | Parameter | Default | Purpose |
 |------|-----------|---------|---------|
-| `search_dynamic` | `detail` | `summary` | `schema` includes per-hit `inputSchema` |
-| `search_dynamic` | `limit` | `12` (max 32) | Bound catalog hits; response may set `hasMore` |
-| `search_dynamic` | (response) | — | Opaque `id` + `argsHint` / `requiredArgs` |
-| `invoke_dynamic` | `reads` | — | Batch read-only resource/template reads by `id` |
+| `code_mode` | `readOnly` | `false` | When true, `InvokeAsync` throws unless `ReadOnlyHint` is true |
 | `read_file_info` | `detail` | `summary` | `summary` = version/title/link names; `full` = complete on-disk metadata |
-
-`invoke_dynamic` resource reads serialize with compact `McpJsonUtilities.DefaultOptions`
-(not indented). Tool descriptions warn against parallel mutating calls on the same PID.
 
 ### Fixed Prompts (daemon-owned)
 
@@ -75,8 +59,8 @@ before the first catalog list. Initialize-handshake sessions (`2025-11-25` and
 earlier) still receive the session-wide broadcast; they do not open
 `subscriptions/listen`.
 
-**Search ranking** (`ProcessCatalogs.Search` / `SearchTool`): see product contract
-in `docs/product/mcp.md`. Invalid `kinds` are validation errors (no silent broaden).
+**Search ranking** (`ProcessCatalogs.Search`): see product contract
+in `docs/product/mcp.md`. `SearchAsync` calls it from inside `code_mode`.
 
 **Python dynamic toolsets** (`samples/PythonDemo/mcp_toolset`): tool function
 parameters use snake_case wire names only (no `Field(alias=)` on params). Do not
@@ -192,19 +176,19 @@ is `McpTasksOptions.ExecutionModeSelector`:
 ### ResourceLink pass-through
 
 Host and catalog tool responses may include SDK `ResourceLinkBlock` content (URI + metadata,
-no inline payload). Passthrough through `invoke_dynamic` does not auto-fetch linked resources.
+no inline payload). `code_mode` returns that block when the program returns it.
 Clients that support resource links can resolve URIs themselves; unsupported clients skip the block.
 
 ### Structured output (SDK 2.0)
 
-Fixed server tools (`search_dynamic`, `list_host_instances`, `read_file_info`) emit
-`StructuredContent` manually via `DynamicToolResults` and **do not** set
+Fixed server tools (`list_processes`, `read_file_info`) emit
+`StructuredContent` manually via `ToolResults` and **do not** set
 `UseStructuredContent` on `tools/list` yet — auto `outputSchema` from `JsonElement`
 members breaks strict clients (Cursor drops the entire tool list). Host toolsets may
 use `UseStructuredContent` where schemas are stable. Structured host tools should
 return a domain DTO and let the SDK create `CallToolResult`; direct result construction
-is reserved for custom content blocks (images, links, or elicitation). `invoke_dynamic`
-pass-through preserves host `StructuredContent` on success paths.
+is reserved for custom content blocks (images, links, or elicitation). `code_mode`
+passes a host `CallToolResult` through when the program returns it.
 
 ### JSON policy
 

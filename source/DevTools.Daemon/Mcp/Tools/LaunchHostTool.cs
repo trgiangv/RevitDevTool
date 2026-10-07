@@ -33,7 +33,7 @@ public sealed class LaunchHostTool(IProcessSessions sessions, IHostLaunchService
                     "hostApp is required unless filePath is set — then the host is inferred from the extension " +
                     "(.rvt/.rfa → Revit, .dwg/.dxf/.dwt → AutoCAD). " +
                     "languageCode is a .NET culture name such as en-US (default en-US). " +
-                    "To open a file in an already-running host, use invoke_dynamic on open_document instead.",
+                    "To open a file in an already-running host, use code_mode to invoke open_document instead.",
                 Destructive = true,
                 OpenWorld = true
             });

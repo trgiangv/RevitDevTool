@@ -1,77 +1,78 @@
-using System.Text.Json;
 using DevTools.Daemon.Mcp.Processes;
-using DevTools.Mcp.Core.Protocol;
-using ModelContextProtocol.Protocol;
 
 namespace DevTools.Daemon.Mcp.Search;
 
 /// <summary>In-memory token index rebuilt when one process catalog changes.</summary>
 internal sealed class SearchIndex
 {
-    private readonly Dictionary<string, CatalogItem[]> _byToken = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int[]> _byToken = new(StringComparer.Ordinal);
+    private CatalogItem[] _items = [];
+    private Scoring.FieldTokens[] _fields = [];
+    private ScoringCorpus _corpus = ScoringCorpus.Empty;
 
     public void Rebuild(IEnumerable<CatalogItem> items)
     {
-        _byToken.Clear();
-        var tokenMap = new Dictionary<string, List<CatalogItem>>(StringComparer.Ordinal);
+        var itemList = items as IReadOnlyList<CatalogItem> ?? items.ToArray();
+        _items = itemList as CatalogItem[] ?? itemList.ToArray();
+        _fields = new Scoring.FieldTokens[_items.Length];
+        for (var index = 0; index < _items.Length; index++)
+            _fields[index] = Scoring.Fields(_items[index]);
 
-        foreach (var item in items)
-            AddItemTokens(item, tokenMap);
+        _corpus = Scoring.Build(_fields);
+        _byToken.Clear();
+        var tokenMap = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+        for (var index = 0; index < _fields.Length; index++)
+        {
+            foreach (var token in Tokenizer.Distinct(_fields[index].All))
+            {
+                if (!tokenMap.TryGetValue(token, out var list))
+                {
+                    list = [];
+                    tokenMap[token] = list;
+                }
+
+                list.Add(index);
+            }
+        }
 
         foreach (var pair in tokenMap)
             _byToken[pair.Key] = pair.Value.ToArray();
     }
 
-    private static void AddItemTokens(CatalogItem item, Dictionary<string, List<CatalogItem>> tokenMap)
-    {
-        foreach (var token in TokensFor(item))
-        {
-            if (!tokenMap.TryGetValue(token, out var list))
-            {
-                list = [];
-                tokenMap[token] = list;
-            }
-
-            if (!list.Contains(item))
-                list.Add(item);
-        }
-    }
-
     public IReadOnlyList<Match> Search(string query, int? processId, IReadOnlyCollection<CatalogType>? kinds, int limit)
     {
-        var tokens = Tokenizer.Tokenize(query);
+        var tokens = Tokenizer.Distinct(Tokenizer.Tokenize(query));
         if (tokens.Count == 0)
             return [];
 
         var kindFilter = kinds is { Count: > 0 } ? kinds : null;
-        var candidates = CollectCandidates(tokens, processId, kindFilter);
-
-        return candidates
-            .Select(item => new Match(item, item.ProcessId, Scoring.Score(tokens, item)))
-            .Where(match => match.Score > 0)
-            .OrderByDescending(match => match.Score)
-            .ThenBy(match => match.Item.Kind)
-            .ThenBy(match => match.Item.Target, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(match => match.Item.ProcessId)
+        return CollectCandidates(tokens, processId, kindFilter)
+            .Select(index => (index, score: Scoring.Score(tokens, _fields[index], _corpus)))
+            .Where(candidate => candidate.score > 0)
+            .OrderByDescending(candidate => candidate.score)
+            .ThenBy(candidate => _items[candidate.index].Kind)
+            .ThenBy(candidate => _items[candidate.index].Target, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(candidate => _items[candidate.index].ProcessId)
             .Take(limit)
+            .Select(candidate => new Match(_items[candidate.index], _items[candidate.index].ProcessId))
             .ToArray();
     }
 
-    private HashSet<CatalogItem> CollectCandidates(
+    private HashSet<int> CollectCandidates(
         IReadOnlyList<string> tokens,
         int? processId,
         IReadOnlyCollection<CatalogType>? kindFilter)
     {
-        var candidates = new HashSet<CatalogItem>();
+        var candidates = new HashSet<int>();
         foreach (var token in tokens)
         {
             if (!_byToken.TryGetValue(token, out var bucket))
                 continue;
 
-            foreach (var item in bucket)
+            foreach (var index in bucket)
             {
-                if (MatchesFilter(item, processId, kindFilter))
-                    candidates.Add(item);
+                if (MatchesFilter(_items[index], processId, kindFilter))
+                    candidates.Add(index);
             }
         }
 
@@ -87,36 +88,6 @@ internal sealed class SearchIndex
             return false;
         return kindFilter is null || kindFilter.Contains(item.Kind);
     }
-
-    private static IEnumerable<string> TokensFor(CatalogItem item)
-    {
-        foreach (var token in Tokenizer.Tokenize(item.Target))
-            yield return token;
-        foreach (var token in Tokenizer.Tokenize(item.Resource?.Name ?? item.ResourceTemplate?.Name))
-            yield return token;
-        foreach (var token in Tokenizer.Tokenize(item.Description))
-            yield return token;
-        foreach (var token in ToolSchemaPropertyNameTokens(item.Tool))
-            yield return token;
-    }
-
-    private static IEnumerable<string> ToolSchemaPropertyNameTokens(Tool? tool)
-    {
-        if (tool is null)
-            yield break;
-
-        var schema = tool.InputSchema;
-        if (schema.ValueKind != JsonValueKind.Object)
-            yield break;
-        if (!schema.TryGetProperty(McpSpecKeys.JsonSchema.Properties, out var properties))
-            yield break;
-        if (properties.ValueKind != JsonValueKind.Object)
-            yield break;
-
-        foreach (var property in properties.EnumerateObject())
-        foreach (var token in Tokenizer.Tokenize(property.Name))
-            yield return token;
-    }
 }
 
-public sealed record Match(CatalogItem Item, int ProcessId, double Score);
+public sealed record Match(CatalogItem Item, int ProcessId);

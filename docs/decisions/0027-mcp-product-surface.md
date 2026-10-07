@@ -1,7 +1,8 @@
 # 0027 MCP Product Surface — Daemon Envelope, Not Full Protocol
 
 Date: 2026-08-31
-Amended: 2026-09-04; **2026-10-03** (host pipe — see below)
+Amended: 2026-09-04; **2026-10-03** (host pipe — see below); **2026-10-07**
+([0040](0040-bm25f-search-and-hit-annotations.md): host capabilities go through `code_mode`)
 
 ## Status
 
@@ -26,15 +27,16 @@ Feature status: [`docs/architecture/MCP/sdk-gap-matrix.md`](../architecture/MCP/
 ## Context
 
 The product client (Cursor) talks to **Daemon**. `tools/list` is a small
-**envelope**: infrastructure (`list_host_instances`, `launch_host`,
-`read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.
-Host CAD capabilities never appear there. The agent loop is search → opaque
-`id` → invoke → text / image / `dryRun` / execute error tags, then retry.
+**envelope**: infrastructure (`list_processes`, `launch_host`,
+`read_file_info`, `list_machines`) plus `code_mode`.
+Host CAD capabilities never appear there. The agent loop is one `code_mode`
+program that searches, calls, and returns a projection. Amended by
+[0040](0040-bm25f-search-and-hit-annotations.md).
 
 That loop is why most of the MCP spec is **not** product work. Gaps are
 **use-case limits**, not unfinished adoption.
 
-The CAD process is only the **execution hop** behind `invoke_dynamic`
+The CAD process is only the **execution hop** behind `code_mode`
 (named pipe `DevToolsMcp_*`). It is not a second MCP server the client
 initializes. Isolated .NET toolsets (ALC) are one optional backend of that
 hop — not a client-visible flow.

@@ -38,11 +38,14 @@ public sealed class LocalToolsAndPromptsTests
             Options.Create(new GatewayOptions()),
             Mock.Of<IFileReaderCatalog>());
 
-        Assert.AreEqual(6, engine.LocalTools.Count);
+        Assert.AreEqual(5, engine.LocalTools.Count);
         Assert.AreEqual(2, engine.PromptCollection.Count);
+        Assert.Contains(tool => tool.ProtocolTool.Name == "code_mode", engine.LocalTools);
+        Assert.Contains(tool => tool.ProtocolTool.Name == "list_processes", engine.LocalTools);
         Assert.Contains(tool => tool.ProtocolTool.Name == "launch_host", engine.LocalTools);
         Assert.Contains(tool => tool.ProtocolTool.Name == "list_machines", engine.LocalTools);
         Assert.Contains(tool => tool.ProtocolTool.Name == "read_file_info", engine.LocalTools);
+        Assert.IsFalse(engine.LocalTools.Any(tool => tool.ProtocolTool.Name is "search_dynamic" or "invoke_dynamic"));
     }
 
     [TestMethod]

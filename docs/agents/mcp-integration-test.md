@@ -2,6 +2,8 @@
 
 Comprehensive end-to-end testing guide for AI agents operating through MCP against live host processes.
 
+The daemon tool list is `list_processes`, `list_machines`, `launch_host`, `read_file_info`, and `code_mode`. Host tools are reached from a `code_mode` body (`SearchAsync`, `InvokeAsync`, `ReadAsync`). Scenario steps below that still name `search_dynamic` or `invoke_dynamic` are the previous loop.
+
 ---
 
 ## Prerequisites Checklist
@@ -324,7 +326,7 @@ Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered b
 ```
 1. launch_host(hostApp="Revit", filePath=<sample>)
 2. launch_host(hostApp="Civil3D", versionNumber="2026")
-3. list_host_instances → confirm both connected (distinct processId / hostApp)
+3. list_processes → confirm both connected (distinct processId / hostApp)
 4. search_dynamic(query="execute") → hits include `processId` per host; pick each host's tool `id`
 5. Execute on Revit: invoke_dynamic(id=<revit_csharp_id>, arguments={...})
 6. Execute on Civil3D: invoke_dynamic(id=<civil_python_or_csharp_id>, arguments={...})
@@ -553,13 +555,13 @@ Recommended sequence for a full integration pass:
 ## Notes for Agents
 
 - **Always kill host before build** — running host locks DLLs, build will fail
-- **`list_host_instances` empty after a host rebuild** — add-in may have thrown during startup. Read newest `%APPDATA%\RevitDevTool\{Year}\Logs\crash_*` before assuming MCP/Daemon. Session logs are `log_*` (see `docs/agents/verification.md`)
+- **`list_processes` empty after a host rebuild** — add-in may have thrown during startup. Read newest `%APPDATA%\RevitDevTool\{Year}\Logs\crash_*` before assuming MCP/Daemon. Session logs are `log_*` (see `docs/agents/verification.md`)
 - **Daemon publish kills the running instance** — client must reload MCP after
 - **McpRegistryConfig changes require host restart** — not hot-reloadable
 - **Civil 3D uses `acad.exe`** — same process name as AutoCAD, differentiated by pipe name
 - **Large models (>50MB) take 30-60s to open** — `launch_host` timeout accounts for this
 - **AutoCAD undo is async** — `navigate_history` on AutoCAD queues commands, stack counts are estimates
 - **Revit undo is synchronous** — exact stack state returned immediately
-- **`processId` is the host PID** — use `list_host_instances` or `search_dynamic` (`processId` filter); invoke with each hit's opaque **`id`**
+- **`processId` is the host PID** — use `list_processes` or `search_dynamic` (`processId` filter); invoke with each hit's opaque **`id`**
 - **Cursor tool schema cache** — after daemon publish/reload, agent-side `GetMcpTools` may still show retired `kind`/`target`/`includeSchema` fields while live `tools/list` is correct. Trust runtime/`tools/list` (`id`, `detail`); force a full MCP reconnect if schemas stay stale
 - **Dynamic contract** — `docs/product/mcp.md` is authority: `search_dynamic` → `id` → `invoke_dynamic` (no `kind`/`target` invoke fields)

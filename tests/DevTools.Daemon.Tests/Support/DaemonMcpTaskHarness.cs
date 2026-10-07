@@ -241,18 +241,6 @@ internal sealed class DaemonMcpTaskHarness : IAsyncDisposable
             sessions);
     }
 
-    public async Task<string> GetToolIdAsync(string toolName)
-    {
-        var result = await Client.CallToolAsync(
-            "search_dynamic",
-            new Dictionary<string, object?> { ["query"] = toolName },
-            cancellationToken: CancellationToken.None);
-
-        var payload = JsonDocument.Parse(Text(result)).RootElement;
-        return payload.GetProperty("items")[0].GetProperty("id").GetString()
-            ?? throw new InvalidOperationException("Missing id.");
-    }
-
     public static string Text(CallToolResult result) =>
         string.Join('\n', result.Content.OfType<TextContentBlock>().Select(block => block.Text));
 

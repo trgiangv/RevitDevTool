@@ -39,6 +39,13 @@ here.
   with Microsoft.Testing.Platform 2.4.1 is a third provider on the existing
   testing kernel. NUnit stays the default. Live two-generation Revit proof
   is still an open plan item.
+  [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) is **Accepted**
+  (implemented 2026-10-03). Daemon envelope, host `McpServer` on the pipe,
+  search contract v2.
+  [0040](0040-bm25f-search-and-hit-annotations.md) is **Accepted**.
+  The model-facing tool is `code_mode` (C# body). BM25F search and id
+  dispatch stay inside that program. `search_dynamic` and `invoke_dynamic`
+  leave `tools/list`. Not current behavior. Host tools stay off `tools/list`.
 
 ## Index
 
@@ -79,3 +86,5 @@ here.
 | [0036](0036-revit-monitor-link-element-tokens.md) | Revit link tokens, Element Finder, `RevitDevTool.Tools` | Accepted |
 | [0037](0037-handycontrol-replaces-mahapps.md) | HandyControl compiles into loose `DevTools.UI`; WPF stays out of ILRepack | Accepted |
 | [0038](0038-mstest-host-provider.md) | MSTest 4.4.1 + MTP 2.4.1 in-host provider on the existing testing kernel | Accepted |
+| [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) | MCP flow audit — SDK reuse, search contract v2, vocabulary | Accepted |
+| [0040](0040-bm25f-search-and-hit-annotations.md) | `code_mode` runs C#; BM25F search stays inside it | Accepted |

@@ -67,7 +67,7 @@ Only fetch when you need detailed signatures or documentation text.
 ### Prerequisites
 
 1. Revit must be running with DevTools add-in loaded
-2. `list_host_instances` confirms connection
+2. `list_processes` confirms connection
 3. Read `revit://csharp-cheatsheet` once per session for patterns
 
 ### C# Execution
@@ -132,16 +132,15 @@ After runtime errors: `navigate_history(direction="back", steps=1)` to undo.
 | `revit://model/context` | Before each operation (live state) |
 | `revit://model/warnings` | After operations to check issues |
 | `revit://version` | To confirm API version |
-| `view_screenshot` | To verify visual results (1280 px PNG MCP image via single `invoke_dynamic`) |
+| `view_screenshot` | To verify visual results (1280 px PNG). Return the `ImageContentBlock` from `code_mode`. |
 
 ## Multi-Host
 
 When multiple Revit instances or Revit + AutoCAD are connected:
 
 ```
-list_host_instances → see all PIDs
-search_dynamic(query="execute", hostInstanceId=<PID>) → capabilityId
-invoke_dynamic(capabilityId=<id>, arguments={...})
+list_processes → see all PIDs
+code_mode → SearchAsync, then InvokeAsync on the chosen processId
 ```
 
 ## Common Workflows

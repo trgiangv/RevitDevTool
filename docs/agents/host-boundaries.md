@@ -74,7 +74,7 @@ Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`Di
 - `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (HandyControl WPF tray).
 - `ProcessSessions` discovers SDK MCP pipes (`DevToolsMcp_{Host}_{Version}_{PID}`) and owns one catalog per process.
 - Pytest/control uses `DevTools_{Host}_{Version}_{PID}` (`DevToolsPipeServer`).
-- Daemon external tools: infrastructure (`list_host_instances`, `launch_host`, `read_file_info`, `list_machines`) plus `search_dynamic` / `invoke_dynamic`.
+- Daemon external tools: infrastructure (`list_processes`, `launch_host`, `read_file_info`, `list_machines`) plus `code_mode`.
 - Fixed prompts (`revit_code`, `acad_code`) are daemon-owned.
 - In-host built-in tools (shared runtime): `execute_csharp_code`, `open_document` via `IDocumentBridge`.
 - Startup dialog catalogs are **per host spec** (`RevitStartupDialogSpec` / `AcadStartupDialogSpec`), not a merged Autodesk bag. Generic Hosting polls EnumWindows + BM_CLICK with **no** product keywords and **no** self-timeout. MCP and NUnit share `HostLaunchWaiter.UntilAsync` (one wait loop, caller ready-probe). Timeout is the safety valve (`launch_host` 2 min, adapter `LaunchTimeout`). See [0018](../decisions/0018-host-identity-and-out-of-process-infrastructure.md).

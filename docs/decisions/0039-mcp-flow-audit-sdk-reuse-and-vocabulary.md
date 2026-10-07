@@ -8,6 +8,10 @@ Date: 2026-10-02
 [`2026-10-03-mcp-flow-simplification`](../plans/completed/2026-10-03-mcp-flow-simplification.md).
 The 2026-10-02 consolidation plan was deleted. Do not restore it.
 
+Superseded in part by [0040](0040-bm25f-search-and-hit-annotations.md)
+(accepted 2026-10-07): the scoring bullet in decision 9 and alternative 5.
+Rank is BM25F inside `code_mode`. The rest of this decision stands.
+
 Still open: B2 (`DynamicToolResults` until a live `OutputSchema` check), removing
 `McpClientPassthrough` (needs a public SDK send that does not auto-retry MRTR),
 folding `Execution/External/Mcp` into Catalog, and a durable task store.

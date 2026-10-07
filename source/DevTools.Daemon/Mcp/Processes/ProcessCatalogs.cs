@@ -55,28 +55,10 @@ public sealed class ProcessCatalogs
         lock (_lock)
         {
             if (string.IsNullOrWhiteSpace(query))
-            {
-                return EnumerateItems(processId, kinds)
-                    .OrderBy(item => item.Kind)
-                    .ThenBy(item => item.Target, StringComparer.OrdinalIgnoreCase)
-                    .ThenBy(item => item.ProcessId)
-                    .Take(limit)
-                    .Select(item => new Match(item, item.ProcessId, 0))
-                    .ToArray();
-            }
+                return [];
 
             return _index.Search(query.Trim(), processId, kinds, limit);
         }
-    }
-
-    public IReadOnlyList<string> AvailableNames(int? processId = null)
-    {
-        lock (_lock)
-            return EnumerateItems(processId, AllKinds)
-                .Select(item => item.Target)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-                .ToArray();
     }
 
     public CatalogItem? Find(CatalogType kind, string target, int processId)
@@ -93,6 +75,25 @@ public sealed class ProcessCatalogs
 
         return candidates.Length == 1 ? candidates[0] : null;
     }
+
+    public IReadOnlyList<CatalogItem> FindMatches(string name, int? processId = null, CatalogType? kind = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return [];
+
+        IReadOnlyCollection<CatalogType>? kinds = kind is null ? null : [kind.Value];
+        lock (_lock)
+        {
+            return EnumerateItems(processId, kinds)
+                .Where(item => NameEquals(item, name))
+                .ToArray();
+        }
+    }
+
+    private static bool NameEquals(CatalogItem item, string name) =>
+        string.Equals(item.Target, name, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(item.Resource?.Name, name, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(item.ResourceTemplate?.Name, name, StringComparison.OrdinalIgnoreCase);
 
     private void RebuildIndex() => _index.Rebuild(EnumerateItems(null, AllKinds));
 

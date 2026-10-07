@@ -10,8 +10,7 @@ using ModelContextProtocol.Server;
 namespace DevTools.Daemon.Mcp.Tools;
 
 /// <remarks>
-/// Structured output via <see cref="ToolResults"/> — same SDK 2.0 workaround as
-/// <see cref="SearchTool"/> (open metadata shape breaks auto <c>outputSchema</c>).
+/// Structured output via <see cref="ToolResults"/>. An open metadata shape breaks auto <c>outputSchema</c>.
 /// See 0027 / 0031 — UseStructuredContent deferred.
 /// </remarks>
 public sealed class ReadFileInfoTool(IFileReaderCatalog catalog)

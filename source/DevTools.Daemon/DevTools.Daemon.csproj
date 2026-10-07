@@ -16,6 +16,7 @@
         <UseWPF>true</UseWPF>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RootNamespace>DevTools.Daemon</RootNamespace>
         <AssemblyName>DevTools.Daemon</AssemblyName>
         <StartupObject>DevTools.Daemon.Program</StartupObject>
@@ -46,6 +47,7 @@
         <PackageReference Include="Duende.IdentityModel.OidcClient"/>
         <PackageReference Include="ZLogger"/>
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp"/>
     </ItemGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="DevTools.Mcp.Client.Tests" />

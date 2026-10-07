@@ -26,7 +26,7 @@ public sealed class ProcessCatalogsTests
     }
 
     [TestMethod]
-    public void Search_WithQuery_UsesFieldScoreAndHalfTokenCutoff()
+    public void Search_WithQuery_RanksATokenHitAndDropsUnknownTokens()
     {
         var catalog = new ProcessCatalogs();
         catalog.Replace(CreateCatalog(100, "read_file_info", "sample://a", description: "metadata reader"));
@@ -34,10 +34,20 @@ public sealed class ProcessCatalogsTests
 
         var strong = catalog.Search("read_file_info");
         Assert.HasCount(1, strong);
-        Assert.IsGreaterThan(0, strong[0].Score);
+        Assert.AreEqual("read_file_info", strong[0].Item.Target);
 
         var weak = catalog.Search("zzz aaa");
         Assert.IsEmpty(weak);
+    }
+
+    [TestMethod]
+    public void Search_EmptyQuery_ReturnsNothing()
+    {
+        var catalog = new ProcessCatalogs();
+        catalog.Replace(CreateCatalog(100, "ping", "sample://a"));
+
+        Assert.IsEmpty(catalog.Search(null));
+        Assert.IsEmpty(catalog.Search("  "));
     }
 
     [TestMethod]
@@ -47,11 +57,10 @@ public sealed class ProcessCatalogsTests
         catalog.Replace(CreateCatalog(100, "ping", "sample://a"));
         catalog.Replace(CreateCatalog(200, "ping", "sample://b"));
 
-        var matches = catalog.Search(null, processId: 100);
+        var matches = catalog.Search("ping", processId: 100);
 
-        Assert.AreEqual(3, matches.Count);
-        foreach (var match in matches)
-            Assert.AreEqual(100, match.ProcessId);
+        Assert.HasCount(1, matches);
+        Assert.AreEqual(100, matches[0].ProcessId);
     }
 
     [TestMethod]

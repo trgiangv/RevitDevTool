@@ -16,17 +16,17 @@ public sealed class ListProcessesTool(IProcessSessions sessions, IMcpPipeScanner
             handler.List,
             new McpServerToolCreateOptions
             {
-                Name = "list_host_instances",
+                Name = "list_processes",
                 Description =
-                    "List connected and discovered host instances. " +
-                    "Returns hostApp, processId, and version for each instance.",
+                    "List connected and discovered host processes. " +
+                    "Returns hostApp, processId, and version for each process.",
                 ReadOnly = true,
                 Destructive = false,
                 OpenWorld = false,
             });
     }
 
-    [Description("List connected and discovered host instances.")]
+    [Description("List connected and discovered host processes.")]
     public CallToolResult List()
     {
         var connected = sessions.Catalog.List();

@@ -1,11 +1,7 @@
-using DevTools.Mcp;
 using DevTools.Daemon.Mcp.Processes;
-using DevTools.Mcp.Core;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Server.Tests.Harness;
-using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
-using ModelContextProtocol.Server;
 using Moq;
 
 namespace DevTools.Mcp.Server.Tests;
@@ -14,38 +10,7 @@ namespace DevTools.Mcp.Server.Tests;
 public sealed class StructuredOutputTests
 {
     [TestMethod]
-    public async Task SearchDynamic_EmitsStructuredContentWithoutOutputSchema()
-    {
-        var harness = McpSdkTestHarness.Create();
-        var result = await McpToolInvoke.Invoke(harness.SearchTool, "search_dynamic", new { query = "find" });
-        var protocolTool = harness.SearchTool.ProtocolTool;
-
-        Assert.IsNotNull(result.StructuredContent);
-        Assert.IsNull(harness.SearchTool.ProtocolTool.OutputSchema);
-        Assert.Contains("\"revit_find_elements\"", result.StructuredContent!.Value.GetRawText(), StringComparison.Ordinal);
-        Assert.Contains("\"revit_find_elements\"", McpToolInvoke.Text(result), StringComparison.Ordinal);
-    }
-
-    [TestMethod]
-    public async Task InvokeDynamic_PreservesHostStructuredContentWithShortText()
-    {
-        const string toolName = "revit_find_elements";
-        var harness = McpSdkTestHarness.ForTool(toolName, McpToolBehavior.StructuredFind);
-        var id = await harness.SearchFirstId(new { query = "find" });
-
-        var result = await harness.InvokeId(id, new { category = "Walls" });
-
-        Assert.IsNotNull(result.StructuredContent);
-        Assert.AreEqual(240, result.StructuredContent!.Value.GetProperty("totalCount").GetInt32());
-        Assert.IsTrue(result.StructuredContent.Value.GetProperty("hasMore").GetBoolean());
-        var text = McpToolInvoke.Text(result);
-        Assert.Contains("Found 3 elements", text, StringComparison.Ordinal);
-        Assert.IsTrue(text.Length < 120, $"Expected compact summary under 120 chars, got {text.Length}: {text}");
-        Assert.AreEqual(1, harness.Session.PassthroughCount);
-    }
-
-    [TestMethod]
-    public async Task ListHostInstances_EmitsStructuredContent()
+    public async Task ListInstances_EmitsStructuredContent()
     {
         var broker = new Mock<IProcessSessions>();
         broker.Setup(b => b.Catalog).Returns(new ProcessCatalogs());
@@ -53,11 +18,10 @@ public sealed class StructuredOutputTests
         scanner.Setup(s => s.Discover()).Returns([]);
 
         var tool = ListProcessesTool.Create(broker.Object, scanner.Object);
-        var result = await McpToolInvoke.Invoke(tool, "list_host_instances", new { });
+        var result = await McpToolInvoke.Invoke(tool, "list_processes", new { });
 
         Assert.IsNotNull(result.StructuredContent);
         Assert.IsNull(tool.ProtocolTool.OutputSchema);
         Assert.AreEqual(0, result.StructuredContent!.Value.GetProperty("totalConnected").GetInt32());
     }
-
 }

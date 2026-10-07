@@ -31,9 +31,9 @@ public static class ToolsetPrompts
 
             ### Pre-flight
             1. `revit_get_status` — confirm active document, worksharing state, and units.
-            2. Batch prefetch (one `invoke_dynamic` with `reads[]`): `revit://toolset/capabilities`, `revit://model/context`, `revit://model/selection`.
+            2. Prefetch with `code_mode` (`ReadAsync`): `revit://toolset/capabilities`, `revit://model/context`, `revit://model/selection`.
             3. Read `revit://toolset/patterns/{{resolvedDomain}}` for domain-specific FilterSpec and chaining examples.
-            4. If scope is unclear, use `search_dynamic(kinds=["resource","resource_template"])` then batch-read selection/context templates.
+            4. If scope is unclear, `SearchAsync` with `primitiveType: "resource"` or `"resource_template"`, then `ReadAsync`.
 
             ### Steps
             {{steps}}
@@ -292,7 +292,7 @@ public static class ToolsetPrompts
             "open" => """
                 ### Opening a Workshared Model
                 1. If the host is not running: `launch_host` with `filePath` (host inferred from extension).
-                2. If the host is already running: `invoke_dynamic` on `open_document` with the central path.
+                2. If the host is already running: `code_mode` invokes `open_document` with the central path.
                 3. Choose appropriate worksets — do not load all worksets unless needed.
                 4. `revit_get_status` — confirm worksharing enabled and local path.
                 5. Read `revit://model/worksets` — understand ownership before any writes.

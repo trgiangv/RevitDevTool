@@ -89,15 +89,14 @@ flowchart TD
 
 ```json
 {
-  "name": "invoke_dynamic",
+  "name": "code_mode",
   "arguments": {
-    "id": "<from search_dynamic>",
-    "arguments": { "code": "..." }
+    "code": "var matched = await SearchAsync(\"execute\"); return await InvokeAsync(matched[0].Name, new { code = \"...\" }, matched[0].ProcessId);"
   }
 }
 ```
 
-Use `list_host_instances` or `search_dynamic` to discover PIDs and capability IDs.
+Use `list_processes` to see process ids. `code_mode` searches and calls the host.
 
 ---
 

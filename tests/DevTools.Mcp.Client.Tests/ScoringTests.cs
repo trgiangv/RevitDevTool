@@ -1,6 +1,7 @@
+using System.Text.Json;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Mcp.Search;
-using DevTools.Ipc;
+using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Client.Tests;
 
@@ -8,34 +9,58 @@ namespace DevTools.Mcp.Client.Tests;
 public sealed class ScoringTests
 {
     [TestMethod]
-    public void Score_TargetMatchDominates_AndHalfTokenCutoffApplies()
+    public void Score_FillerTokenDoesNotDropAOneTokenHit()
     {
-        var hit = new CatalogItem(
-            CatalogType.Tool,
-            "read_file_info",
-            "metadata",
-            1,
-            new InstanceInfo { HostApp = "Revit", ProcessId = 1, VersionNumber = "2025" });
+        var hit = Item("read_file");
+        var corpus = Scoring.Build([hit]);
 
-        var oneToken = Scoring.Score(["read"], hit);
-        Assert.AreEqual(4, oneToken);
+        var score = Scoring.Score(["read", "zzz", "qqq"], hit, corpus);
 
-        var twoTokensStrong = Scoring.Score(["read", "file"], hit);
-        Assert.AreEqual(4, twoTokensStrong);
-
-        var twoTokensWeak = Scoring.Score(["zzz", "aaa"], hit);
-        Assert.AreEqual(0, twoTokensWeak);
-
-        var described = new CatalogItem(
-            CatalogType.Tool,
-            "read_file_info",
-            "alpha beta notes",
-            1,
-            new InstanceInfo { HostApp = "Revit", ProcessId = 1, VersionNumber = "2025" });
-        var halfDescription = Scoring.Score(["alpha", "beta", "zzz", "qqq"], described);
-        Assert.AreEqual(0.5, halfDescription);
-
-        var belowHalf = Scoring.Score(["alpha", "zzz", "qqq", "yyy"], described);
-        Assert.AreEqual(0, belowHalf);
+        Assert.IsGreaterThan(0, score);
     }
+
+    [TestMethod]
+    public void Score_HighDocumentFrequencyLosesToLowDocumentFrequency()
+    {
+        var common = new[] { Item("get_info"), Item("get_status"), Item("get_list") };
+        var rare = Item("mechanical_equipment");
+        var corpus = Scoring.Build([..common, rare]);
+
+        var commonScore = Scoring.Score(["get", "equipment"], common[0], corpus);
+        var rareScore = Scoring.Score(["get", "equipment"], rare, corpus);
+
+        Assert.IsGreaterThan(commonScore, rareScore);
+    }
+
+    [TestMethod]
+    public void Score_ParameterNameTokenScoresAboveZero()
+    {
+        var schema = JsonSerializer.SerializeToElement(new
+        {
+            type = "object",
+            properties = new { category = new { type = "string" } },
+        });
+        var hit = Item("query_elements", "lists model elements", new Tool
+        {
+            Name = "query_elements",
+            InputSchema = schema,
+        });
+        var corpus = Scoring.Build([hit]);
+
+        var score = Scoring.Score(["category"], hit, corpus);
+
+        Assert.IsGreaterThan(0, score);
+    }
+
+    [TestMethod]
+    public void Score_EmptyQueryIsZero()
+    {
+        var hit = Item("read_file");
+        var corpus = Scoring.Build([hit]);
+
+        Assert.AreEqual(0, Scoring.Score([], hit, corpus));
+    }
+
+    private static CatalogItem Item(string target, string? description = null, Tool? tool = null) =>
+        new(CatalogType.Tool, target, description, 1, null!, tool);
 }
