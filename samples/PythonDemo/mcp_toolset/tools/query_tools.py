@@ -43,10 +43,6 @@ def register_query_tools(mcp: McpRegistry) -> None:
         selected_only: Annotated[
             bool, Field(description="Limit results to the current Revit selection")
         ] = False,
-        max_results: Annotated[int, Field(ge=1, le=10000)] = 500,
-        offset: Annotated[
-            int, Field(ge=0, description="Pagination offset — skip this many matches")
-        ] = 0,
         include_types: Annotated[
             bool, Field(description="Include element types")
         ] = False,
@@ -63,8 +59,6 @@ def register_query_tools(mcp: McpRegistry) -> None:
             selected_only=selected_only,
             include_types=include_types,
             include_instances=include_instances,
-            max_results=max_results,
-            offset=offset,
             fields=fields,
         )
         return _find_elements_result(result)
@@ -130,10 +124,6 @@ def register_query_tools(mcp: McpRegistry) -> None:
 
 def _find_elements_result(result: FindElementsResult) -> CallToolResult:
     return structured_tool_result(
-        "Found {} elements (total {}, truncated={})".format(
-            len(result.elements),
-            result.count,
-            str(result.truncated).lower(),
-        ),
+        "Found {} elements".format(result.count),
         result,
     )

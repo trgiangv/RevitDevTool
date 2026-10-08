@@ -45,7 +45,7 @@ public static class ToolsetPrompts
             4. On unexpected state: invoke `revit_undo_recovery` prompt, then `undo_changes(count=1)`.
 
             ### Performance notes
-            - Paginate `revit_find_elements` with `offset` when results exceed 500.
+            - `revit_find_elements` returns every match. Project the fields you need before returning from `code_mode`.
             - After find: batch-read `revit://element/{elementId}` for top 5 IDs instead of `revit_read_parameters` when only summary fields are needed.
             - Sample with `revit_read_parameters` on a subset before batch writes.
             - Read `revit://toolset/capabilities` before attempting exotic operations.
@@ -86,8 +86,7 @@ public static class ToolsetPrompts
                ```
                {criteria}
                ```
-               - Start with `max_results: 50` to validate criteria.
-               - Paginate with `offset` until all targets are collected.
+               - The call returns every match. Project the fields you need before returning from `code_mode`.
             3. Record `total_count` and element IDs from response.
 
             ### Phase 2 — Sample and validate

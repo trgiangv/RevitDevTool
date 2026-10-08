@@ -45,22 +45,11 @@ def register_query_tools(mcp: McpRegistry) -> None:
         layer: Annotated[
             str | None, Field(description="Layer name filter (case-insensitive)")
         ] = None,
-        max_results: Annotated[int, Field(ge=1, le=5000)] = 200,
-        offset: Annotated[int, Field(ge=0, description="Skip this many matches")] = 0,
     ) -> CallToolResult:
         """Model-space entity search by type and/or layer."""
-        result = service.find_entities(
-            type_name=type_name,
-            layer=layer,
-            max_results=max_results,
-            offset=offset,
-        )
+        result = service.find_entities(type_name=type_name, layer=layer)
         return structured_tool_result(
-            "Found {} entities (total {}, truncated={})".format(
-                len(result.entities),
-                result.count,
-                str(result.truncated).lower(),
-            ),
+            "Found {} entities".format(result.count),
             result,
         )
 

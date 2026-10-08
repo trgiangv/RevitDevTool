@@ -67,17 +67,12 @@ class QueryService:
         selected_only: bool = False,
         include_types: bool = False,
         include_instances: bool = True,
-        max_results: int = 500,
-        offset: int = 0,
         fields: list[str] | None = None,
     ) -> FindElementsResult:
         if not include_types and not include_instances:
             raise ToolError(
                 "At least one of includeTypes or includeInstances must be true"
             )
-        if max_results <= 0:
-            max_results = 500
-        offset = max(offset, 0)
 
         doc = require_doc()
         requested = [f.lower() for f in (fields or _DEFAULT_FIELDS)]
@@ -87,11 +82,8 @@ class QueryService:
             include_types=include_types,
             include_instances=include_instances,
         )
-        count = len(elements)
-        page = elements[offset : offset + max_results]
-        truncated = offset + len(page) < count
-        items = [project_element_fields(doc, elem, requested) for elem in page]
-        return FindElementsResult(count=count, truncated=truncated, elements=items)
+        items = [project_element_fields(doc, elem, requested) for elem in elements]
+        return FindElementsResult(count=len(items), elements=items)
 
     @staticmethod
     def read_parameters(

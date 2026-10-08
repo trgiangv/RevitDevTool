@@ -52,7 +52,6 @@ class EntitySummary(BaseModel):
 
 class FindEntitiesResult(BaseModel):
     count: int
-    truncated: bool
     entities: list[EntitySummary]
 
 

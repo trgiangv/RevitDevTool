@@ -60,7 +60,7 @@ def register_toolset_prompts(mcp: McpRegistry) -> None:
         }.get(op, f"revit_{op}")
         return (
             "## Batch Operation Plan\n\n**Operation:** {}\n**Criteria:** {}\n**Updates:** {}\n\n"
-            "### Phase 1 — Discover\n1. `revit_find_elements` with FilterSpec (max_results: 50)\n\n"
+            "### Phase 1 — Discover\n1. `revit_find_elements` with FilterSpec. It returns every match.\n\n"
             "### Phase 2 — Sample\n1. Batch-read `revit://element/{{elementId}}` for 5 IDs, or `revit_read_parameters` when full params needed\n\n"
             "### Phase 3 — Execute\n1. Chunk IDs (50–100)\n2. Call `{}`\n\n"
             "### Phase 4 — Verify\n1. `revit_read_parameters` sample\n2. On failure: `undo_changes`"

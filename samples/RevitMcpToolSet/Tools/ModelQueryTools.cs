@@ -83,8 +83,6 @@ public static class ModelQueryTools
         [Description("Limit results to the current Revit selection")] bool selectedOnly = false,
         [Description("Include element types in results")] bool includeTypes = false,
         [Description("Include element instances in results")] bool includeInstances = true,
-        [Description("Maximum number of results to return")] int maxResults = 500,
-        [Description("Pagination offset — skip this many matches before returning")] int offset = 0,
         [Description("Fields to return: id, category, family, type, level, name, workset, bbox")] string[]? fields = null)
     {
         var doc = RevitContext.ActiveDocument ?? throw new McpException("No active document.");
@@ -92,25 +90,17 @@ public static class ModelQueryTools
         if (!includeTypes && !includeInstances)
             throw new McpException("At least one of includeTypes or includeInstances must be true.");
 
-        if (maxResults <= 0)
-            maxResults = 500;
-        if (offset < 0)
-            offset = 0;
-
         var requestedFields = (fields is { Length: > 0 } ? fields : DefaultFields)
             .Select(f => f.ToLowerInvariant())
             .Distinct()
             .ToArray();
 
         var collector = FilterSpecBuilder.BuildCollector(doc, filters, selectedOnly, includeTypes, includeInstances);
-        var allElements = collector.ToElements();
-        var count = allElements.Count;
-        var page = allElements.Skip(offset).Take(maxResults).ToList();
-        var truncated = offset + page.Count < count;
-
-        var elements = page.Select(e => ProjectElementFields(doc, e, requestedFields)).ToList();
-        var structured = new { count, truncated, elements };
-        return structured;
+        var elements = collector
+            .ToElements()
+            .Select(e => ProjectElementFields(doc, e, requestedFields))
+            .ToList();
+        return new { count = elements.Count, elements };
     }
 
     [McpServerTool(Name = "revit_read_parameters", Title = "Read Element Parameters", ReadOnly = true, UseStructuredContent = true)]

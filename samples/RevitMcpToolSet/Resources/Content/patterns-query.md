@@ -156,7 +156,6 @@ Check `revit://model/selection` first to understand intent.
 
 | Guideline | Detail |
 |-----------|--------|
-| Default limit | 500 results; set `maxResults` and `offset` for pagination |
 | Narrow early | Combine `category` + `level` before broad param filters |
 | Avoid whole-model scans | Never query without at least one narrowing filter |
 | Field selection | Request only needed `fields` to reduce payload |

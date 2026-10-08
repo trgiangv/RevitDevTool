@@ -164,7 +164,6 @@ See `revit://toolset/patterns/export` for options and path conventions.
 
 - **Units:** All geometry in feet (internal). See `revit://toolset/units`.
 - **Batch-first:** Prefer array inputs; one transaction per tool named `MCP: {tool_name}`.
-- **Pagination:** `revit_find_elements` defaults to 500 max; use `offset` for more.
 - **Partial success:** Write tools return `success_count` + `failures[]`. See `revit://toolset/errors`.
 - **Collaboration:** Respect worksets, borrowed elements, engineer selection (`revit://model/selection`).
 - **Paths:** Export paths validated by `PathGuard`; null = temp directory.

@@ -21,7 +21,6 @@ class ElementSummaryItem(BaseModel):
 
 class FindElementsResult(BaseModel):
     count: int
-    truncated: bool
     elements: list[ElementSummaryItem]
 
 

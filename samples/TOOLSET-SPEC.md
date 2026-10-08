@@ -146,8 +146,6 @@ Adopted from Python toolset's proven 12-type discriminated union:
   "selectedOnly": false,
   "includeTypes": false,
   "includeInstances": true,
-  "maxResults": 500,
-  "offset": 0,
   "fields": ["id", "category", "family", "type", "level", "name", "workset", "bbox"]
 }
 ```
@@ -156,7 +154,6 @@ Adopted from Python toolset's proven 12-type discriminated union:
 ```json
 {
   "count": 150,
-  "truncated": false,
   "elements": [
     { "id": 12345, "category": "Walls", "family": "Basic Wall", "type": "Generic - 200mm",
       "level": "Level 1", "name": "Wall 1", "workset": "Shared Levels", "bbox": { "min": [...], "max": [...] } }
@@ -601,7 +598,7 @@ Multi-element tools that span views/levels use `TransactionGroup` with per-view 
 
 ### Performance Guidelines
 
-- `find_elements`: default 500 max, support `offset` for pagination
+- `find_elements`: returns every match. The daemon keeps the start and end when that text is long
 - `read_parameters` on >100 elements: chunk internally (50/batch)
 - `color_by_parameter` on >10000 elements: warn in response
 - `export_to_excel` on large datasets: stream to file, return path only

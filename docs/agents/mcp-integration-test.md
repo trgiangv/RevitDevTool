@@ -309,7 +309,7 @@ Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered b
 ```
 1. Restart host after McpRegistryConfig.json change → host reloads catalog (`McpPipeServer` / store); Daemon `ProcessSessions` picks up `list_changed` on refresh
 2. search_dynamic(query="revit_") → expect 32+ tools (hasMore) from RevitMcpToolSet; note ids
-3. invoke_dynamic(id=<find_id>, arguments={filters:{filters:[{type:"category",names:["Walls"]}]}, maxResults:5}) → element IDs
+3. invoke_dynamic(id=<find_id>, arguments={filters:{filters:[{type:"category",names:["Walls"]}]}}) → element IDs
 4. invoke_dynamic(id=<status_or_info_id>, ...) → parameters / health as applicable
 5. invoke_dynamic(id=<create_or_place_id>, ...) → new element when testing mutating tools
 6. invoke_dynamic(id=<modify_id>, ...) → update when testing mutating tools

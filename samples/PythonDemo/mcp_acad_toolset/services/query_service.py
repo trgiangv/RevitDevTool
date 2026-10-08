@@ -80,25 +80,13 @@ class QueryService:
         *,
         type_name: str | None = None,
         layer: str | None = None,
-        max_results: int = 200,
-        offset: int = 0,
     ) -> FindEntitiesResult:
-        max_results = max(max_results, 1)
-        offset = max(offset, 0)
         matched: list[EntitySummary] = []
-        total = 0
         with acad_transaction() as (current, transaction, _):
             for entity in _iter_model_entities(transaction, current.Database):
-                if not _matches(entity, type_name, layer):
-                    continue
-                if total >= offset and len(matched) < max_results:
+                if _matches(entity, type_name, layer):
                     matched.append(_entity_summary(entity))
-                total += 1
-        return FindEntitiesResult(
-            count=total,
-            truncated=offset + len(matched) < total,
-            entities=matched,
-        )
+        return FindEntitiesResult(count=len(matched), entities=matched)
 
     def get_selection(self) -> GetSelectionResult:
         doc = require_doc()
