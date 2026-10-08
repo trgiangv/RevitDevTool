@@ -42,7 +42,7 @@ internal sealed class McpPipeScanner(ILogger<McpPipeScanner> logger) : IMcpPipeS
         return IsProcessAlive(pid);
     }
 
-    private static bool IsProcessAlive(int pid)
+    public static bool IsProcessAlive(int pid)
     {
         try
         {

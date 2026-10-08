@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DevTools.Daemon.Mcp.Code;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Ipc;
@@ -38,12 +39,13 @@ public sealed class CatalogScriptTests
 
         using var program = CodeModeCompiler.Compile(code);
         var value = await program.RunAsync(runtime);
-        var result = ProgramResult.ToCallToolResult(value);
+        var result = CodeModeResult.ToCallToolResult(value);
 
         Assert.HasCount(2, calls);
-        Assert.IsFalse(result.Content.OfType<TextContentBlock>().Any(block => block.Text == "host-payload"));
-        Assert.AreEqual("query_equipment", result.StructuredContent!.Value.GetProperty("tool").GetString());
-        Assert.AreEqual("host-payload", result.StructuredContent.Value.GetProperty("text").GetString());
+        Assert.IsNull(result.StructuredContent);
+        using var json = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        Assert.AreEqual("query_equipment", json.RootElement.GetProperty("tool").GetString());
+        Assert.AreEqual("host-payload", json.RootElement.GetProperty("text").GetString());
     }
 
     [TestMethod]

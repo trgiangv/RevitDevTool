@@ -17,10 +17,14 @@ In-host MCP runtime is shared across registered hosts.
     audio blocks), and `ReadAsync` returns `ReadResourceResult`. The model
     receives only the program's return value. `readOnly` defaults to false;
     when true, `InvokeAsync` throws unless the tool's `ReadOnlyHint` is true.
-    A return value over 1 MiB, including image base64, is an error and the
-    payload is not sent. An ordinary object or array is JSON text and does
+    Text over 40,000 characters keeps the start and end. Structured JSON on a
+    returned result counts as that text. The full text is saved under `%TEMP%`,
+    and the return includes that path.
+    Image, audio, and blob payloads over 1 MiB are an error and are not
+    sent. An ordinary object or array is JSON text and does
     not set `StructuredContent`, because `code_mode` does not advertise
-    `outputSchema`. A returned `CallToolResult` still passes through.
+    `outputSchema`. A returned `CallToolResult` passes through when that text
+    is within 40,000 characters.
     `search_dynamic` and `invoke_dynamic` are not on
     `tools/list`. Locator ids stay inside the daemon.
   - `execute_csharp_code` and `execute_python_code` descriptions include the

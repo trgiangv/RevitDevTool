@@ -46,6 +46,10 @@ here.
   The model-facing tool is `code_mode` (C# body). BM25F search and id
   dispatch stay inside that program. `search_dynamic` and `invoke_dynamic`
   leave `tools/list`. Not current behavior. Host tools stay off `tools/list`.
+  [0041](0041-code-mode-result-artifact.md) is **Accepted**. The Daemon
+  retains `code_mode` text past 40_000 characters and returns the start,
+  the end, and the path. Text is not dropped
+  at 1 MiB.
 
 ## Index
 
@@ -88,3 +92,4 @@ here.
 | [0038](0038-mstest-host-provider.md) | MSTest 4.4.1 + MTP 2.4.1 in-host provider on the existing testing kernel | Accepted |
 | [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) | MCP flow audit — SDK reuse, search contract v2, vocabulary | Accepted |
 | [0040](0040-bm25f-search-and-hit-annotations.md) | `code_mode` runs C#; BM25F search stays inside it | Accepted |
+| [0041](0041-code-mode-result-artifact.md) | Large `code_mode` text is saved and the return includes its path | Accepted |

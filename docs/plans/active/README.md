@@ -51,6 +51,12 @@ host-space zoom) + later Tools / Element Finder ownership:
 - Remaining testhosts: [completed](../completed/2026-09-13-mstest-sdk-repo-migration.md)
   ([0035](../../decisions/0035-mstest-sdk-repo-tests.md)).
 
+## MCP `code_mode` saved results (closed)
+
+Text over 40_000 characters is saved and the return includes its path:
+[completed](../completed/2026-10-08-code-mode-result-artifact.md)
+([0041](../../decisions/0041-code-mode-result-artifact.md)).
+
 ## MCP `code_mode` (closed)
 
 [0040](../../decisions/0040-bm25f-search-and-hit-annotations.md) is Accepted.

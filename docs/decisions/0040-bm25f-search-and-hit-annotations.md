@@ -368,9 +368,11 @@ object. An image stays an image only when the program returns the
 `ImageContentBlock` or the `CallToolResult` that holds it. Base64 is not
 copied into `StructuredContent`.
 
-The 1 MiB budget counts the outer result, including base64. Over the budget
-is an error and the payload is not sent. The Daemon does not write a temp
-file and does not truncate an image.
+Text over 40_000 characters is saved, and the model receives the start, the
+end, and the path ([0041](0041-code-mode-result-artifact.md)). Structured JSON
+on a returned result counts as that text. Image,
+audio, and blob payloads still use the 1 MiB budget. Over that budget the
+payload is not sent. The Daemon does not truncate an image.
 
 ```csharp
 var shot = await InvokeAsync("view_screenshot", null, processId);
@@ -394,7 +396,9 @@ Handle, in order:
 5. `await RunAsync`. `SearchAsync` and `DescribeAsync` do not open a pipe.
    `InvokeAsync` and `ReadAsync` do.
 6. Build the outer `CallToolResult` from the return value, by the table
-   above. Over 1 MiB is an error and the payload is not sent. Compile
+   above. Text over 40_000 characters is saved
+   ([0041](0041-code-mode-result-artifact.md)). Image, audio, and blob
+   payloads over 1 MiB are an error and are not sent. Compile
    failures and thrown exceptions are an error result. Earlier host calls
    stay committed.
 
@@ -422,7 +426,7 @@ Globals:
 - await InvokeAsync(name, arguments, processId) returns the SDK CallToolResult. Content holds TextContentBlock, ImageContentBlock, AudioContentBlock, EmbeddedResourceBlock, and ResourceLinkBlock. IsError is the host error flag. Pass processId when SearchAsync shows the same name on more than one process.
 - await ReadAsync(name, arguments, processId) returns the SDK ReadResourceResult. Contents are text or blob. Blob is base64 for non-text. It throws if name is a tool.
 - return a projected object for JSON text. return the ImageContentBlock, AudioContentBlock, or ReadResourceResult when the model must see that block.
-- Filter before return. A return value over 1 MiB fails. That includes image base64.
+- Text over 40,000 characters keeps the start and end. Structured JSON on a returned result counts as that text. The full text is saved, and the return includes its path. Image and audio over 1 MiB fail.
 - list_machines, list_processes, launch_host, and read_file_info are separate tools. Call them directly.
 - Calls for one processId run one at a time. A later failure does not undo an earlier InvokeAsync.
 ```
@@ -471,8 +475,9 @@ does not roll back earlier calls. Each host tool keeps its own transaction.
 The same limit is documented for Pi.
 
 The outer result is a `CallToolResult`, built from the return value by the
-table above, under the existing 1 MiB budget. Over the budget is an error
-and the payload is not sent. `InvokeAsync` gives the program the host blocks,
+table above. Text over 40_000 characters is saved
+([0041](0041-code-mode-result-artifact.md)). Image, audio, and blob
+payloads over 1 MiB are an error and are not sent. `InvokeAsync` gives the program the host blocks,
 including image and audio. The program's `return` decides which of those
 blocks the model sees.
 
