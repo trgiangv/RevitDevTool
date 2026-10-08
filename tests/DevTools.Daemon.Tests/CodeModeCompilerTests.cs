@@ -23,6 +23,20 @@ public sealed class CodeModeCompilerTests
     }
 
     [TestMethod]
+    public async Task Compile_VerbatimQuoteDoubling_KeepsTheHostQuote()
+    {
+        using var program = CodeModeCompiler.Compile(
+            """
+            var code = @"message = ""OK"";";
+            return code;
+            """);
+
+        var value = await program.RunAsync();
+
+        Assert.AreEqual("message = \"OK\";", value);
+    }
+
+    [TestMethod]
     public void Compile_HashR_IsASyntaxError()
     {
         var error = Assert.ThrowsExactly<InvalidOperationException>(() =>

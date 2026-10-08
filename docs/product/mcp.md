@@ -18,8 +18,14 @@ In-host MCP runtime is shared across registered hosts.
     receives only the program's return value. `readOnly` defaults to false;
     when true, `InvokeAsync` throws unless the tool's `ReadOnlyHint` is true.
     A return value over 1 MiB, including image base64, is an error and the
-    payload is not sent. `search_dynamic` and `invoke_dynamic` are not on
+    payload is not sent. An ordinary object or array is JSON text and does
+    not set `StructuredContent`, because `code_mode` does not advertise
+    `outputSchema`. A returned `CallToolResult` still passes through.
+    `search_dynamic` and `invoke_dynamic` are not on
     `tools/list`. Locator ids stay inside the daemon.
+  - `execute_csharp_code` and `execute_python_code` descriptions include the
+    required entry pattern. From `code_mode`, that source is one verbatim
+    string and each quote inside it is doubled.
 - **MRTR is not a product workflow** ([0027](../decisions/0027-mcp-product-surface.md)).
   The working loop is one `code_mode` program: search, call, and return a projection.
   Execute error tags (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`) are retried inside that program. Destructive
