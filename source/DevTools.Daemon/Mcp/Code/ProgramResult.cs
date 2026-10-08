@@ -14,7 +14,7 @@ public static class ProgramResult
     /// One <see cref="ContentBlock"/>, or a list of them, becomes <see cref="CallToolResult.Content"/>.
     /// <see cref="ReadResourceResult"/> becomes one <see cref="EmbeddedResourceBlock"/> per content.
     /// <see cref="string"/> becomes one <see cref="TextContentBlock"/>.
-    /// Any other object becomes <see cref="CallToolResult.StructuredContent"/> plus one JSON text block.
+    /// Any other object becomes one JSON <see cref="TextContentBlock"/>. <c>code_mode</c> does not advertise <c>outputSchema</c>, so <see cref="CallToolResult.StructuredContent"/> stays unset.
     /// Payloads over <see cref="MaxBytes"/> (base64 counted as stored) become an error with no payload.
     /// </summary>
     public static CallToolResult ToCallToolResult(object? value)
@@ -60,7 +60,6 @@ public static class ProgramResult
         var json = JsonSerializer.SerializeToElement(value);
         return new CallToolResult
         {
-            StructuredContent = json,
             Content = [new TextContentBlock { Text = json.GetRawText() }],
         };
     }

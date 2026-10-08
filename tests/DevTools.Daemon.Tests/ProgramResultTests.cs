@@ -53,8 +53,24 @@ public sealed class ProgramResultTests
         var result = ProgramResult.ToCallToolResult(new { category = "Mechanical Equipment", count = 3 });
 
         Assert.IsEmpty(result.Content.OfType<ImageContentBlock>());
-        Assert.AreEqual(JsonValueKind.Object, result.StructuredContent!.Value.ValueKind);
-        Assert.AreEqual("Mechanical Equipment", result.StructuredContent.Value.GetProperty("category").GetString());
+        Assert.IsNull(result.StructuredContent);
+        var text = Assert.IsInstanceOfType<TextContentBlock>(result.Content[0]);
+        Assert.Contains("Mechanical Equipment", text.Text);
+    }
+
+    [TestMethod]
+    public void ToCallToolResult_CollectionIsTextAndHasNoStructuredContent()
+    {
+        var result = ProgramResult.ToCallToolResult(new[]
+        {
+            new { name = "execute_csharp_code", processId = 1 },
+        });
+
+        Assert.IsNull(result.StructuredContent);
+        var text = Assert.IsInstanceOfType<TextContentBlock>(result.Content[0]);
+        using var json = JsonDocument.Parse(text.Text);
+        Assert.AreEqual(JsonValueKind.Array, json.RootElement.ValueKind);
+        Assert.AreEqual("execute_csharp_code", json.RootElement[0].GetProperty("name").GetString());
     }
 
     [TestMethod]
