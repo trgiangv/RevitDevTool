@@ -6,10 +6,8 @@ using DevTools.Ipc;
 using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Core.Sessions;
-using JetBrains.Annotations;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ZLogger;
 
@@ -33,7 +31,9 @@ public sealed class McpPipeServer(
     private CancellationTokenSource? _cts;
     private Task? _acceptLoopTask;
     private readonly ConcurrentDictionary<int, PipeEndpoint> _sessions = new();
+    private readonly ConcurrentDictionary<int, Task> _sessionRuns = new();
     private int _nextSessionId;
+    private int _nextRunId;
     private int _lastToolCount;
     private string? _pipeName;
     private bool _disposed;
@@ -87,16 +87,23 @@ public sealed class McpPipeServer(
         catalogStore.CatalogChanged -= OnCatalogChanged;
         _cts?.Cancel();
 
-        foreach (var session in _sessions.Values)
-            await session.DisposeAsync().ConfigureAwait(false);
-        _sessions.Clear();
-        connect.Reset();
-
         if (_acceptLoopTask is not null)
         {
             try { await _acceptLoopTask.ConfigureAwait(false); }
             catch (OperationCanceledException) { }
         }
+
+        var runs = _sessionRuns.Values.ToArray();
+        if (runs.Length > 0)
+        {
+            try { await Task.WhenAll(runs).ConfigureAwait(false); }
+            catch (OperationCanceledException) { }
+        }
+
+        foreach (var session in _sessions.Values)
+            await session.DisposeAsync().ConfigureAwait(false);
+        _sessions.Clear();
+        connect.Reset();
 
         _acceptLoopTask = null;
         _cts?.Dispose();
@@ -107,11 +114,12 @@ public sealed class McpPipeServer(
     {
         while (!ct.IsCancellationRequested)
         {
+            await DropClosedSessionsAsync().ConfigureAwait(false);
             try
             {
                 var pipe = NamedPipes.Open(_pipeName!);
                 await pipe.WaitForConnectionAsync(ct).ConfigureAwait(false);
-                _ = HandleConnectionAsync(pipe, ct);
+                StartSession(pipe, ct);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
@@ -119,6 +127,7 @@ public sealed class McpPipeServer(
             }
             catch (IOException ex) when (NamedPipes.IsBusy(ex))
             {
+                await DropClosedSessionsAsync().ConfigureAwait(false);
                 await Task.Delay(200, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
@@ -127,6 +136,44 @@ public sealed class McpPipeServer(
                 await Task.Delay(500, ct).ConfigureAwait(false);
             }
         }
+    }
+
+    /// <summary>
+    /// Records the session task, then returns. The first await inside the run yields,
+    /// so this loop can open the next listener while that session is still active.
+    /// </summary>
+    private void StartSession(NamedPipeServerStream pipe, CancellationToken ct)
+    {
+        var runId = Interlocked.Increment(ref _nextRunId);
+        _sessionRuns[runId] = RunSessionAsync(runId, pipe, ct);
+    }
+
+    private async Task RunSessionAsync(int runId, NamedPipeServerStream pipe, CancellationToken ct)
+    {
+        try
+        {
+            await Task.Yield();
+            await HandleConnectionAsync(pipe, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _sessionRuns.TryRemove(runId, out _);
+        }
+    }
+
+    private async Task DropClosedSessionsAsync()
+    {
+        foreach (var pair in _sessions.ToArray())
+        {
+            if (pair.Value.IsClientConnected)
+                continue;
+            if (!_sessions.TryRemove(pair.Key, out var endpoint))
+                continue;
+
+            await endpoint.DisposeAsync().ConfigureAwait(false);
+        }
+
+        connect.SetClientCount(_sessions.Count);
     }
 
     private async Task HandleConnectionAsync(NamedPipeServerStream pipe, CancellationToken ct)

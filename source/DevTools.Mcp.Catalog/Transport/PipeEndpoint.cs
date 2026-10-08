@@ -21,6 +21,21 @@ public sealed class PipeEndpoint : IAsyncDisposable
 
     public McpServer Server => _server;
 
+    public bool IsClientConnected
+    {
+        get
+        {
+            try
+            {
+                return _pipe.IsConnected;
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+        }
+    }
+
     public static PipeEndpoint Create(
         NamedPipeServerStream pipe,
         McpServerOptions options,

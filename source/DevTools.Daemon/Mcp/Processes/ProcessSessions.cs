@@ -108,6 +108,10 @@ public sealed class ProcessSessions(
             Changed?.Invoke();
             return true;
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             logger.ZLogWarning(ex, $"Failed to connect MCP to {pipeName}");

@@ -1,3 +1,4 @@
+using System.IO;
 using System.IO.Pipes;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -14,6 +15,7 @@ namespace DevTools.Daemon.Mcp.Processes;
 /// <summary>One SDK <see cref="McpClient"/> session over a DevToolsMcp named pipe.</summary>
 public sealed class ProcessSession : IProcessSession
 {
+    internal static readonly TimeSpan PipeConnectTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan CatalogListenAckTimeout = TimeSpan.FromSeconds(10);
 
     private readonly ILogger _logger;
@@ -48,11 +50,15 @@ public sealed class ProcessSession : IProcessSession
     {
         if (!HostPipeName.TryParse(pipeName, out var host, out var version, out var pid))
             throw new InvalidOperationException($"Invalid MCP pipe name: {pipeName}");
+        if (!McpPipeScanner.IsProcessAlive(pid))
+            throw new IOException($"Host process {pid} is not running.");
 
         var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        using var connectCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        connectCts.CancelAfter(PipeConnectTimeout);
         try
         {
-            await pipe.ConnectAsync(ct).ConfigureAwait(false);
+            await pipe.ConnectAsync(connectCts.Token).ConfigureAwait(false);
         }
         catch
         {

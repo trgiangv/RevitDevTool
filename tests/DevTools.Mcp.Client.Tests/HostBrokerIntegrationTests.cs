@@ -134,6 +134,29 @@ public sealed class ProcessSessionsIntegrationTests
     }
 
     [TestMethod]
+    public async Task RunAsync_DeadProcessDoesNotBlockALivePipe()
+    {
+        await using var host = await FakeMcpHostPipe.StartAsync(cancellationToken: TestContext.CancellationToken);
+        var deadPipe = HostPipeName.FormatMcp("Revit", "2025", int.MaxValue);
+        var scanner = new FakePipeScanner();
+        scanner.SetPipes(deadPipe);
+        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+
+        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        var runTask = broker.RunAsync(runCts.Token);
+        await Task.Delay(200, TestContext.CancellationToken);
+        scanner.SetPipes(deadPipe, host.PipeName);
+
+        await WaitUntilAsync(
+            () => broker.GetByProcessId(Environment.ProcessId) is { IsConnected: true },
+            TimeSpan.FromSeconds(8),
+            TestContext.CancellationToken);
+
+        await runCts.CancelAsync();
+        try { await runTask; } catch (OperationCanceledException) { /* expected */ }
+    }
+
+    [TestMethod]
     public async Task RunAsync_IgnoresUnreachablePipe()
     {
         var deadPipe = HostPipeName.FormatMcp("Revit", "2025", int.MaxValue);
