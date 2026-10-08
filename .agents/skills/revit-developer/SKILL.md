@@ -17,7 +17,7 @@ Two MCP servers work together for complete Revit API development:
 ```
 1. rvtdocs_search("wall create curve")     → discover API
 2. rvtdocs_fetch(url)                       → read method signature
-3. read revit://csharp-cheatsheet           → get code patterns (once per session)
+3. use the execute tool description          → entry pattern is already there
 4. read revit://model/context               → get live model state
 5. execute_csharp_code(code)                → run in Revit
 6. view_screenshot                          → verify visually
@@ -68,7 +68,7 @@ Only fetch when you need detailed signatures or documentation text.
 
 1. Revit must be running with DevTools add-in loaded
 2. `list_processes` confirms connection
-3. Read `revit://csharp-cheatsheet` once per session for patterns
+3. The `execute_csharp_code` / `execute_python_code` description has the entry pattern.
 
 ### C# Execution
 
@@ -127,8 +127,6 @@ After runtime errors: `navigate_history(direction="back", steps=1)` to undo.
 
 | Resource | When to read |
 |----------|-------------|
-| `revit://csharp-cheatsheet` | Before first C# execution |
-| `revit://python-cheatsheet` | Before first Python execution |
 | `revit://model/context` | Before each operation (live state) |
 | `revit://model/warnings` | After operations to check issues |
 | `revit://version` | To confirm API version |
@@ -150,9 +148,8 @@ code_mode → SearchAsync, then InvokeAsync on the chosen processId
 1. `rvtdocs_search` with vague terms
 2. `rvtdocs_scan` the discovered namespace
 3. `rvtdocs_fetch` for specific method signatures
-4. Read `revit://csharp-cheatsheet` for patterns
-5. Write and execute code
-6. Verify with screenshot
+4. Write and execute code from the tool description's entry pattern
+5. Verify with screenshot
 
 ### Check version compatibility
 

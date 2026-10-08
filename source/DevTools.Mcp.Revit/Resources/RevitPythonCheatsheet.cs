@@ -19,7 +19,7 @@ public sealed class RevitPythonCheatsheet : IBuiltInMcpResource
     {
         Uri = McpSpecKeys.Resource.RevitPythonCheatsheet,
         Name = "Revit Python Cheatsheet",
-        Description = $"Revit Python.NET patterns, builtins, transactions, queries, and PEP 723 deps. Read before writing {McpSpecKeys.Tool.ExecutePython}.",
+        Description = $"Optional Revit Python API samples: queries, transactions, and PEP 723 deps. {McpSpecKeys.Tool.ExecutePython} already includes the required entry pattern.",
         MimeType = "text/markdown"
     };
 

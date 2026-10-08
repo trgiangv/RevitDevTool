@@ -19,7 +19,7 @@ public sealed class RevitCSharpCheatsheet : IBuiltInMcpResource
     {
         Uri = McpSpecKeys.Resource.RevitCSharpCheatsheet,
         Name = "Revit C# Cheatsheet",
-        Description = $"Common Revit C# API patterns, transaction usage, units, query patterns, and version pitfalls. Read before writing {McpSpecKeys.Tool.ExecuteCSharp}.",
+        Description = $"Optional Revit C# API samples: queries, creation, units, and dialogs. {McpSpecKeys.Tool.ExecuteCSharp} already includes the required entry pattern.",
         MimeType = "text/markdown"
     };
 

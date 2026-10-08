@@ -71,10 +71,13 @@ public sealed class CSharpCodeToolTests
         var description = Advertise(HostApp.Revit);
 
         Assert.Contains("IExternalCommand", description, StringComparison.Ordinal);
-        Assert.Contains(McpSpecKeys.Resource.RevitCSharpCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain(McpSpecKeys.Resource.RevitCSharpCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain("cheatsheet", description, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("ExternalCommandData commandData", description, StringComparison.Ordinal);
-        Assert.Contains(McpSpecKeys.Tool.ExecutePython, description, StringComparison.Ordinal);
+        Assert.Contains("TransactionMode.Manual", description, StringComparison.Ordinal);
         Assert.DoesNotContain("TransactionMode.ReadOnly", description, StringComparison.Ordinal);
+        Assert.Contains(McpSpecKeys.Tool.ExecutePython, description, StringComparison.Ordinal);
+        Assert.DoesNotContain("and send that required pattern", description, StringComparison.Ordinal);
         Assert.DoesNotContain(McpSpecKeys.Resource.AcadCSharpCheatsheet, description, StringComparison.Ordinal);
     }
 
@@ -84,9 +87,12 @@ public sealed class CSharpCodeToolTests
         var description = Advertise(HostApp.AutoCad);
 
         Assert.Contains("[CommandMethod]", description, StringComparison.Ordinal);
-        Assert.Contains(McpSpecKeys.Resource.AcadCSharpCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain(McpSpecKeys.Resource.AcadCSharpCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain("cheatsheet", description, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("CommandFlags.Session", description, StringComparison.Ordinal);
+        Assert.Contains("LockDocument", description, StringComparison.Ordinal);
         Assert.Contains(McpSpecKeys.Tool.ExecutePython, description, StringComparison.Ordinal);
+        Assert.DoesNotContain("and send that required pattern", description, StringComparison.Ordinal);
         Assert.DoesNotContain(McpSpecKeys.Resource.RevitCSharpCheatsheet, description, StringComparison.Ordinal);
         Assert.DoesNotContain("IExternalCommand", description, StringComparison.Ordinal);
     }

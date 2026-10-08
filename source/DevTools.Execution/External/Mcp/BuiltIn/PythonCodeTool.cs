@@ -151,19 +151,35 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
     private static string DescribeTool(HostApp host) => host switch
     {
         HostApp.Revit =>
-            "Execute one Python.NET script in Revit. " +
-            $"Read {McpSpecKeys.Resource.RevitPythonCheatsheet} and send that pattern: explicit imports, def run(): ... run(), print() for output. " +
-            "Read the document from RevitContext inside run(). " +
-            "Packages use a # /// script header. " +
-            $"This tool does not run IExternalCommand. For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}. " +
-            $"Errors: {McpSpecKeys.Result.Runtime} check logic/imports, {McpSpecKeys.Result.Dependency} fix the script header.",
+            $"""
+            Execute one Python.NET script in Revit. Send this shape. This tool does not run IExternalCommand.
+
+            from Autodesk.Revit import DB, UI
+            from RevitDevTool.Core import RevitContext
+
+            def run():
+                doc = RevitContext.ActiveDocument
+                print(doc.Title)
+
+            run()
+
+            Read the document inside run(), not at module level. print() is the output. A write needs DB.Transaction inside run(). External packages use a # /// script header. For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}. Errors: {McpSpecKeys.Result.Runtime} check logic/imports, {McpSpecKeys.Result.Dependency} fix the script header.
+            """,
         _ when host.IsAcadFamily() =>
-            "Execute one Python.NET script in AutoCAD. " +
-            $"Read {McpSpecKeys.Resource.AcadPythonCheatsheet} and send that pattern: explicit imports, def run(): ... run(), print() for output. " +
-            "Lock the document inside run(). " +
-            "Packages use a # /// script header. " +
-            $"This tool does not run [CommandMethod]. For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}. " +
-            $"Errors: {McpSpecKeys.Result.Runtime} check logic/imports, {McpSpecKeys.Result.Dependency} fix the script header.",
+            $"""
+            Execute one Python.NET script in AutoCAD. Send this shape. This tool does not run [CommandMethod].
+
+            from Autodesk.AutoCAD.ApplicationServices.Core import Application
+
+            def run():
+                doc = Application.DocumentManager.MdiActiveDocument
+                doc.LockDocument()
+                print(doc.Name)
+
+            run()
+
+            Lock the document inside run() before a transaction. print() is the output. External packages use a # /// script header. For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}. Errors: {McpSpecKeys.Result.Runtime} check logic/imports, {McpSpecKeys.Result.Dependency} fix the script header.
+            """,
         _ =>
             "Execute one Python.NET script in the host. " +
             "Wrap logic in def run(): ... run() and use print() for output. " +

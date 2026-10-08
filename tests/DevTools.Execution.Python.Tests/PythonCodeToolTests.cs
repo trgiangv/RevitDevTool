@@ -31,8 +31,11 @@ public sealed class PythonCodeToolTests
     {
         var description = Advertise(HostApp.Revit);
 
-        Assert.Contains(McpSpecKeys.Resource.RevitPythonCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain(McpSpecKeys.Resource.RevitPythonCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain("cheatsheet", description, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("def run()", description, StringComparison.Ordinal);
+        Assert.Contains("RevitContext", description, StringComparison.Ordinal);
+        Assert.DoesNotContain("and send that pattern", description, StringComparison.Ordinal);
         Assert.Contains(McpSpecKeys.Tool.ExecuteCSharp, description, StringComparison.Ordinal);
         Assert.Contains("does not run IExternalCommand", description, StringComparison.Ordinal);
         Assert.DoesNotContain(McpSpecKeys.Resource.AcadPythonCheatsheet, description, StringComparison.Ordinal);
@@ -44,8 +47,11 @@ public sealed class PythonCodeToolTests
     {
         var description = Advertise(HostApp.AutoCad);
 
-        Assert.Contains(McpSpecKeys.Resource.AcadPythonCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain(McpSpecKeys.Resource.AcadPythonCheatsheet, description, StringComparison.Ordinal);
+        Assert.DoesNotContain("cheatsheet", description, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("def run()", description, StringComparison.Ordinal);
+        Assert.Contains("LockDocument", description, StringComparison.Ordinal);
+        Assert.DoesNotContain("and send that pattern", description, StringComparison.Ordinal);
         Assert.Contains(McpSpecKeys.Tool.ExecuteCSharp, description, StringComparison.Ordinal);
         Assert.Contains("does not run [CommandMethod]", description, StringComparison.Ordinal);
         Assert.DoesNotContain(McpSpecKeys.Resource.RevitPythonCheatsheet, description, StringComparison.Ordinal);

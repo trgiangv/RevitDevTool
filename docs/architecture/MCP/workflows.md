@@ -8,12 +8,9 @@ Practical patterns for AI agents using RevitDevTool MCP tools.
 
 ```mermaid
 flowchart LR
-    A[search_dynamic resources] --> B[invoke_dynamic read cheatsheet/context]
-    B --> C[Optional: prompts/get revit_code]
-    C --> D[invoke_dynamic tool execute_csharp_code]
-    D -->|Success| E[Verify result]
-    D -->|Compilation Error| C
-    D -->|Runtime Error / Rollback| F[Read warnings → fix → retry]
+    A[code_mode SearchAsync] --> B[InvokeAsync from the tool description]
+    B -->|Success| E[Verify result]
+    B -->|Compilation or runtime error| F[Fix code and retry]
 ```
 
 ### Key Points
@@ -59,14 +56,12 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    Start[Task received] --> Search[search_dynamic for tools/resources]
-    Search --> Read[invoke_dynamic read cheatsheet + context + version]
-    Read --> Plan[Plan implementation]
-    Plan --> Code[Generate and execute via invoke_dynamic]
+    Start[Task received] --> Search[code_mode SearchAsync]
+    Search --> Code[InvokeAsync from the tool description]
     Code --> Check{Success?}
-    Check -->|Error| Fix[Read error details → fix → retry]
+    Check -->|Error| Fix[Read error details then fix and retry]
     Fix --> Code
-    Check -->|Success| Verify[invoke_dynamic view_screenshot]
+    Check -->|Success| Verify[view_screenshot]
     Verify --> Visual{Looks right?}
     Visual -->|No| Undo[navigate_history back]
     Undo --> Code
@@ -78,7 +73,7 @@ flowchart TD
 ## Token Efficiency Tips
 
 1. **search_dynamic is local** — repeated searches do not open host pipes
-2. **Read cheatsheet once per session** — cache it, don't re-read every call
+2. **The execute tool description has the entry pattern** — start from that description.
 3. **Read model context before each operation** — live and cheap
 4. **Do not expect external tool list changes** — `ProcessCatalogs` refreshes internally only
 5. **Structured errors save retries** — read the error category before regenerating code

@@ -20,7 +20,7 @@ public sealed class AcadCSharpCheatsheet : IBuiltInMcpResource
     {
         Uri = McpSpecKeys.Resource.AcadCSharpCheatsheet,
         Name = "AutoCAD C# Cheatsheet",
-        Description = $"Common AutoCAD C# API patterns, transaction usage, entity creation, layer operations, and selection. Read before writing {McpSpecKeys.Tool.ExecuteCSharp}.",
+        Description = $"Optional AutoCAD C# API samples: entities, layers, and selection. {McpSpecKeys.Tool.ExecuteCSharp} already includes the required entry pattern.",
         MimeType = "text/markdown"
     };
 

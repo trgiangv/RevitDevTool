@@ -120,21 +120,55 @@ public sealed class CSharpCodeTool : IBuiltInMcpTool
     private static string DescribeTool(HostApp host) => host switch
     {
         HostApp.Revit =>
-            "Compile and execute one public IExternalCommand in Revit. " +
-            $"Read {McpSpecKeys.Resource.RevitCSharpCheatsheet} and send that required pattern: " +
-            "[Transaction(TransactionMode.Manual)] and Execute(ExternalCommandData commandData, ref string message, ElementSet elements). " +
-            "Return Result.Succeeded and put caller-visible text in message. " +
-            "The host does not wrap a snippet into IExternalCommand. " +
-            $"For a Python script, use {McpSpecKeys.Tool.ExecutePython}. " +
-            "Use #r for extra assemblies and #r \"nuget:\" for packages. " +
-            $"Errors: {McpSpecKeys.Result.Compilation} fix the code, {McpSpecKeys.Result.Runtime} check logic, {McpSpecKeys.Result.Rollback} constraint violation.",
+            """
+            Compile and execute one public IExternalCommand in Revit. Send this type, not a snippet. The host does not wrap a snippet.
+
+            using System;
+            using System.Collections.Generic;
+            using System.Linq;
+            using Autodesk.Revit.DB;
+            using Autodesk.Revit.UI;
+            using Autodesk.Revit.Attributes;
+
+            [Transaction(TransactionMode.Manual)]
+            public class Command : IExternalCommand
+            {
+                public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
+                {
+                    var doc = commandData.Application.ActiveUIDocument.Document;
+                    message = "result text";
+                    return Result.Succeeded;
+                }
+            }
+
+            Open your own Transaction for a write. Internal units are feet. Put caller-visible text in message. Use #r and #r "nuget:" for extra assemblies.
+            """ + $" For a Python script, use {McpSpecKeys.Tool.ExecutePython}. Errors: {McpSpecKeys.Result.Compilation} fix the code, {McpSpecKeys.Result.Runtime} check logic, {McpSpecKeys.Result.Rollback} constraint violation.",
         _ when host.IsAcadFamily() =>
-            "Compile and execute one public [CommandMethod] in AutoCAD. " +
-            $"Read {McpSpecKeys.Resource.AcadCSharpCheatsheet} and send that required pattern, including CommandFlags.Session and doc.LockDocument(). " +
-            "The host does not wrap a snippet into a command. " +
-            $"For a Python script, use {McpSpecKeys.Tool.ExecutePython}. " +
-            "Use #r for extra assemblies and #r \"nuget:\" for packages. " +
-            $"Errors: {McpSpecKeys.Result.Compilation} fix the code, {McpSpecKeys.Result.Runtime} check logic, {McpSpecKeys.Result.Rollback} constraint violation.",
+            """
+            Compile and execute one public [CommandMethod] in AutoCAD. Send this type, not a snippet. The host does not wrap a snippet.
+
+            using Autodesk.AutoCAD.ApplicationServices;
+            using Autodesk.AutoCAD.DatabaseServices;
+            using Autodesk.AutoCAD.EditorInput;
+            using Autodesk.AutoCAD.Runtime;
+
+            public class Command
+            {
+                [CommandMethod("MYCOMMAND", CommandFlags.Session)]
+                public void Execute()
+                {
+                    var doc = Application.DocumentManager.MdiActiveDocument;
+                    using (doc.LockDocument())
+                    using (var tr = doc.Database.TransactionManager.StartTransaction())
+                    {
+                        tr.Commit();
+                    }
+                    doc.Editor.WriteMessage("\nResult text");
+                }
+            }
+
+            CommandFlags.Session and doc.LockDocument() are required. Without them the call fails because a different thread owns the document. Use #r and #r "nuget:" for extra assemblies.
+            """ + $" For a Python script, use {McpSpecKeys.Tool.ExecutePython}. Errors: {McpSpecKeys.Result.Compilation} fix the code, {McpSpecKeys.Result.Runtime} check logic, {McpSpecKeys.Result.Rollback} constraint violation.",
         _ =>
             "Compile and execute C# in the host process. Send the host command entry type, not a snippet. " +
             $"For a Python script, use {McpSpecKeys.Tool.ExecutePython}. " +

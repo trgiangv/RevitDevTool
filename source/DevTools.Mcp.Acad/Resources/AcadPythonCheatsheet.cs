@@ -20,7 +20,7 @@ public sealed class AcadPythonCheatsheet : IBuiltInMcpResource
     {
         Uri = McpSpecKeys.Resource.AcadPythonCheatsheet,
         Name = "AutoCAD Python Cheatsheet",
-        Description = $"AutoCAD Python.NET patterns, builtins, transactions, and PEP 723 deps. Read before writing {McpSpecKeys.Tool.ExecutePython}.",
+        Description = $"Optional AutoCAD Python API samples: transactions and PEP 723 deps. {McpSpecKeys.Tool.ExecutePython} already includes the required entry pattern.",
         MimeType = "text/markdown"
     };
 
