@@ -211,7 +211,8 @@ public sealed class LocalToolsAndPromptsTests
             new Dictionary<string, object?> { ["task"] = "count doors", ["mode"] = "readonly" },
             cancellationToken: TestContext.CancellationToken);
         var readOnlyText = Assert.IsInstanceOfType<TextContentBlock>(readOnly.Messages[0].Content).Text;
-        Assert.Contains("TransactionMode.ReadOnly", readOnlyText, StringComparison.Ordinal);
+        Assert.Contains("TransactionMode.Manual", readOnlyText, StringComparison.Ordinal);
+        Assert.DoesNotContain("TransactionMode.ReadOnly", readOnlyText, StringComparison.Ordinal);
         Assert.Contains("Do NOT create a Transaction", readOnlyText, StringComparison.Ordinal);
     }
 

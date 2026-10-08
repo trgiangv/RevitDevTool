@@ -27,10 +27,6 @@ public class Command : IExternalCommand
 
 **Always include all 6 usings above.** `System` provides `Math`, `Func<>`, `Action<>`. `System.Collections.Generic` provides `List<T>`, `Dictionary<K,V>`.
 
-## Transaction Modes
-- `TransactionMode.Manual` — you open/commit transactions (most common)
-- `TransactionMode.ReadOnly` — no modifications, no transaction needed
-
 ## Units
 - Internal units are always **feet** (1 ft = 304.8 mm)
 - Use `UnitUtils.ConvertToInternalUnits(value, UnitTypeId.Millimeters)` to convert
@@ -157,7 +153,7 @@ using WpfGrid = System.Windows.Controls.Grid;
 using WpfComboBox = System.Windows.Controls.ComboBox;
 using WpfTextBox = System.Windows.Controls.TextBox;
 
-[Transaction(TransactionMode.ReadOnly)]
+[Transaction(TransactionMode.Manual)]
 public class Command : IExternalCommand
 {
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)

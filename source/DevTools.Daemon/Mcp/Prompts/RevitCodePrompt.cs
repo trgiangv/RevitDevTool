@@ -24,7 +24,6 @@ public static class RevitCodePrompt
     {
         mode ??= "manual";
         var isReadonly = mode.Equals("readonly", StringComparison.OrdinalIgnoreCase);
-        var transactionAttr = isReadonly ? "TransactionMode.ReadOnly" : "TransactionMode.Manual";
         var instructions = isReadonly
             ? "Do NOT create a Transaction. Query elements and set the message output."
             : "Wrap all modifications in a Transaction (Start/Commit). Set message with results.";
@@ -42,7 +41,7 @@ public static class RevitCodePrompt
                         Text = $"Write C# code for Revit's {McpSpecKeys.Tool.ExecuteCSharp} tool.\n\n" +
                                $"Task: {task}\n\n" +
                                $"Requirements:\n" +
-                               $"- Implement IExternalCommand with [Transaction({transactionAttr})]\n" +
+                               "- Implement IExternalCommand with [Transaction(TransactionMode.Manual)]\n" +
                                $"- {instructions}\n" +
                                $"- Include all required usings (System.Linq, Autodesk.Revit.DB, Autodesk.Revit.UI, Autodesk.Revit.Attributes)\n" +
                                $"- Set 'message' ref param with structured result output\n" +
