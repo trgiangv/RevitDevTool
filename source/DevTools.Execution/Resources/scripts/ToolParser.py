@@ -1,4 +1,4 @@
-"""In-process MCP primitive parser for Python.NET (mcp == 2.0.0).
+"""In-process MCP primitive parser for Python.NET (mcp >= 2.3.0, < 3).
 
 Supports the two official authoring workflows exposed by the Python SDK:
 ``MCPServer`` and the low-level ``Server`` API.

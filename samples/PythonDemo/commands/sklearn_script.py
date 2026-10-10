@@ -1,11 +1,11 @@
 # /// script
 # dependencies = [
-#     "shapely==2.1.2",
-#     "numpy==2.4.2",
+#     "shapely==2.2.0",
+#     "numpy==2.5.3",
 #     "openpyxl==3.1.5",
-#     "pydantic==2.12.5",
-#     "scikit-learn==1.8.0",
-#     "polars==1.38.1",
+#     "pydantic==2.14.0",
+#     "scikit-learn==1.9.1",
+#     "polars==2.0.0",
 # ]
 # ///
 

@@ -1,8 +1,8 @@
 # /// script
 # dependencies = [
-#     "shapely==2.1.2",
-#     "trimesh==4.11.2",
-#     "pydantic==2.12.5",
+#     "shapely==2.2.0",
+#     "trimesh==5.1.1",
+#     "pydantic==2.14.0",
 # ]
 # ///
 

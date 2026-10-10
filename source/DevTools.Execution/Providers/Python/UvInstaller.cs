@@ -11,7 +11,7 @@ namespace DevTools.Execution.Providers.Python;
 /// <summary>Locked uv.exe under AppData bin.</summary>
 public static class UvInstaller
 {
-    private const string UvVersion = "0.12.8";
+    private const string UvVersion = "0.13.0";
     private const string UvDownloadUrlTemplate =
         "https://github.com/astral-sh/uv/releases/download/{0}/uv-x86_64-pc-windows-msvc.zip";
 

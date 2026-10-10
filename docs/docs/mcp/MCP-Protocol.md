@@ -9,7 +9,7 @@ RevitDevTool pins the SDK versions used by its two toolset entry points:
 | SDK | Pinned version | Official documentation |
 | --- | --- | --- |
 | .NET SDK | `2.2.0` | [C# SDK Getting Started](https://github.com/modelcontextprotocol/csharp-sdk/blob/main/docs/concepts/getting-started.md) · [C# SDK repository](https://github.com/modelcontextprotocol/csharp-sdk) |
-| Python SDK | `2.1.1` | [Python SDK documentation](https://github.com/modelcontextprotocol/python-sdk/blob/main/docs/index.md) · [Python SDK repository](https://github.com/modelcontextprotocol/python-sdk) |
+| Python SDK | `2.3.0` | [Python SDK documentation](https://github.com/modelcontextprotocol/python-sdk/blob/main/docs/index.md) · [Python SDK repository](https://github.com/modelcontextprotocol/python-sdk) |
 
 For the protocol itself, see the [official MCP specification](https://modelcontextprotocol.io/specification/2025-11-25/basic).
 

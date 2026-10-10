@@ -15,7 +15,7 @@ public sealed class PyEnvironmentProviderStdlibTests
             File.WriteAllText(cfg, """
                 home = C:\Users\truon\AppData\Roaming\RevitDevTool\uv-env\uv-python\cpython-3.13-windows-x86_64-none
                 implementation = CPython
-                uv = 0.12.8
+                uv = 0.13.0
                 version_info = 3.13
                 include-system-site-packages = false
                 """);

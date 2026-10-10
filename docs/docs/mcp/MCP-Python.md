@@ -2,10 +2,10 @@
 
 Use the Python MCP SDK to create a toolset for Revit or an AutoCAD-family host. RevitDevTool discovers a Python toolset from a folder containing an entry file that matches `*mcp.py`. The entry file owns the toolset's package dependencies through PEP 723 metadata. Register the folder in **Settings → MCP**.
 
-RevitDevTool pins the Python SDK to **`2.1.1`**.
+RevitDevTool pins the Python SDK to **`2.3.0`**.
 
 ```powershell
-uv add "mcp==2.1.1"
+uv add "mcp==2.3.0"
 ```
 
 ## What a Python toolset provides

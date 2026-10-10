@@ -1,10 +1,10 @@
 # /// script
 # dependencies = [
-#     "python-fcl==0.7.0.10",
-#     "numpy==2.4.2",
-#     "trimesh==4.11.2",
-#     "manifold3d==3.3.2",
-#     "networkx==3.6.1",
+#     "python-fcl==0.7.0.11",
+#     "numpy==2.5.3",
+#     "trimesh==5.1.1",
+#     "manifold3d==3.5.4",
+#     "networkx==3.7",
 # ]
 # ///
 

@@ -11,7 +11,7 @@ namespace DevTools.Execution.Providers.Python;
 /// <summary>Locked pixi.exe under AppData bin.</summary>
 public static class PixiInstaller
 {
-    private const string PixiVersion = "0.78.0";
+    private const string PixiVersion = "0.81.0";
     private const string PixiDownloadUrlTemplate =
         "https://github.com/prefix-dev/pixi/releases/download/v{0}/pixi-x86_64-pc-windows-msvc.zip";
 

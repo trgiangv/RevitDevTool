@@ -1,7 +1,7 @@
 # /// script
 # dependencies = [
-#     "shapely==2.1.2",
-#     "numpy==2.4.2",
+#     "shapely==2.2.0",
+#     "numpy==2.5.3",
 # ]
 # ///
 
