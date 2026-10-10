@@ -1,6 +1,6 @@
 # MSTest
 
-Run MSTest `4.5.1` tests inside a live Revit or AutoCAD-family host through Microsoft Testing Platform (MTP) and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.2`. The host lifecycle is the same as for [NUnit](/docs/testing/NUnit); the project SDK and attributes differ.
+Run MSTest `4.5.1` tests inside a live Revit or AutoCAD-family host through Microsoft Testing Platform (MTP) and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.3`. The host lifecycle is the same as for [NUnit](/docs/testing/NUnit); the project SDK and attributes differ.
 
 ## Project setup
 
@@ -18,7 +18,7 @@ Use `Sdk="MSTest.Sdk"` so `EnableMSTestRunner` is on. `Microsoft.NET.Sdk` with `
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.2" />
+    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.3" />
     <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
       IncludeAssets="build; compile" PrivateAssets="All" />
   </ItemGroup>

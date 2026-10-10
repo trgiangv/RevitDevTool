@@ -1,6 +1,6 @@
 # TUnit
 
-Run TUnit `1.73.19` tests inside a live Autodesk host through Microsoft Testing Platform and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.2`. Pin TUnit with Microsoft.Testing.Platform `2.5.1` (the adapter already depends on that MSBuild package; do not override it). The host lifecycle is the same as for [NUnit](/docs/testing/NUnit); only the test framework and attributes differ.
+Run TUnit `1.73.19` tests inside a live Autodesk host through Microsoft Testing Platform and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.3`. Pin TUnit with Microsoft.Testing.Platform `2.5.1` (the adapter already depends on that MSBuild package; do not override it). The host lifecycle is the same as for [NUnit](/docs/testing/NUnit); only the test framework and attributes differ.
 
 ## Project setup
 
@@ -17,7 +17,7 @@ Configure MTP and replace NUnit with TUnit:
 </PropertyGroup>
 
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.2" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.3" />
   <PackageReference Include="TUnit" Version="1.73.19" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
