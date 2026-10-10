@@ -18,7 +18,7 @@ internal sealed class PixiPackageStore(ILogger<PixiPackageStore> logger) : IPyth
             return [];
 
         var result = await PixiEnvironmentProvider.RunPixiBufferedAsync(
-                PixiEnvironmentProvider.PixiArgs.ListExplicitJson(),
+                PixiEnvironmentProvider.PixiArgs.List(explicitOnly: true),
                 cancellationToken)
             .ConfigureAwait(false);
 

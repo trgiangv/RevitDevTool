@@ -1,11 +1,11 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
+using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
 using Microsoft.Extensions.Logging;
 using ZLogger;
-
-namespace DevTools.Execution.Providers.Python;
+namespace DevTools.Execution.Providers;
 
 public static class PythonEmbedded
 {
@@ -15,14 +15,14 @@ public static class PythonEmbedded
     /// </summary>
     private const string ExecutionScriptsPrefix = "DevTools.Execution.Resources.scripts";
 
-    private static HostApp host;
+    private static HostApp _host;
 
     /// <summary>
     /// Configures host-specific setup script from <see cref="DevTools.Hosting.IHostAppInfo.Host"/>. Must run before any script access.
     /// </summary>
     public static void Configure(HostApp hostApp)
     {
-        host = hostApp;
+        _host = hostApp;
         ScriptCache.Clear();
         ScriptPathCache.Clear();
     }
@@ -34,7 +34,7 @@ public static class PythonEmbedded
     private static string IpyDebuggerSourcePath => $"{ExecutionScriptsPrefix}.IpyDebugger.py";
     private static string IpyTestDriverSourcePath => $"{ExecutionScriptsPrefix}.IpyTestDriver.py";
 
-    private static string SetupSourcePath => host switch
+    private static string SetupSourcePath => _host switch
     {
         HostApp.Revit => $"{ExecutionScriptsPrefix}.SetupRevit.py",
         _ => $"{ExecutionScriptsPrefix}.SetupAcad.py",
@@ -93,7 +93,7 @@ public static class PythonEmbedded
         CopyResource(ParserSourcePath, pixiEnvDir, overwrite: true, logger);
         CopyResource(IpyTestDriverSourcePath, pixiEnvDir, overwrite: true, logger);
 
-        // Do not override to prevent re-install package already installed from previous session
+        // Keep an existing pixi.toml. RequirePackages are synced later with pixi add.
         CopyResource(PixiTomlSourcePath, pixiEnvDir, overwrite: false, logger);
 
         // https://pixi.prefix.dev/latest/reference/pixi_configuration/#tls-no-verify

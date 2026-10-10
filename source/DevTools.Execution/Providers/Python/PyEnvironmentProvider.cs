@@ -11,14 +11,14 @@ namespace DevTools.Execution.Providers.Python;
 /// <summary>Process-scoped Python home, DLL lookup, and require-package specs.</summary>
 public abstract class PyEnvironmentProvider
 {
-    /// <summary>Pinned require specs (name → PEP 508 constraint).</summary>
+    /// <summary>Pinned require specs (name → Pixi <c>requested_spec</c>).</summary>
     public static IReadOnlyDictionary<string, string> RequirePackages { get; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["mcp"] = "mcp>=2.3.0,<3",
-            ["pytest"] = "pytest>=9.1.1,<10",
-            ["debugpy"] = "debugpy>=1.8.22,<2",
-            ["packaging"] = "packaging>=26.3,<27",
+            ["mcp"] = ">=2.3.0,<3",
+            ["pytest"] = ">=9.1.1,<10",
+            ["debugpy"] = ">=1.8.22,<2",
+            ["packaging"] = ">=26.3,<27",
         };
 
     private string? _pythonHome;

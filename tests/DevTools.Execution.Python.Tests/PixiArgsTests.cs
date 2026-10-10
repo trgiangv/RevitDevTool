@@ -24,8 +24,11 @@ public sealed class PixiArgsTests
     public void Install_List_Update_AreFixedArgv()
     {
         Assert.AreSequenceEqual(["install"], PixiEnvironmentProvider.PixiArgs.Install());
-        Assert.AreSequenceEqual(["list", "--json"], PixiEnvironmentProvider.PixiArgs.ListJson());
-        Assert.AreSequenceEqual(["list", "--explicit", "--json"], PixiEnvironmentProvider.PixiArgs.ListExplicitJson());
+        Assert.AreSequenceEqual(["list", "--json"], PixiEnvironmentProvider.PixiArgs.List());
+        Assert.AreSequenceEqual(["list", "--explicit", "--json"], PixiEnvironmentProvider.PixiArgs.List(explicitOnly: true));
+        Assert.AreSequenceEqual(
+            ["list", "--explicit", "--json", "--no-install"],
+            PixiEnvironmentProvider.PixiArgs.List(explicitOnly: true, noInstall: true));
         Assert.AreSequenceEqual(["update", "packaging"], PixiEnvironmentProvider.PixiArgs.Update("packaging"));
     }
 }

@@ -151,8 +151,9 @@ public sealed class PipEnvironmentProvider(ILogger<PipEnvironmentProvider> logge
     private async Task EnsureRequirePackagesAsync()
     {
         var installed = await GetInstalledNamesAsync().ConfigureAwait(false);
-        var missing = RequirePackages.Values
-            .Where(spec => !installed.Contains(ExtractPackageName(spec)))
+        var missing = RequirePackages
+            .Where(pair => !installed.Contains(pair.Key))
+            .Select(pair => pair.Key + pair.Value)
             .ToList();
 
         if (missing.Count == 0)
