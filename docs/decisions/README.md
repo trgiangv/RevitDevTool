@@ -25,9 +25,12 @@ here.
   (in-process PyDev.Debugger 2.8.0; VS Code client is `debugpy` on 4567).
   CPython stays `debugpy` on 5678 (0025).
   [0034](0034-execution-mstest-sdk-scoped-tests.md) is **Accepted** Execution
-  unit tests: scoped MSTest.Sdk 4.4.1 projects + first-party `--coverage`.
+  unit tests: scoped MSTest.Sdk projects + first-party `--coverage`.
+  The SDK pin moved to 4.5.1 in
+  [0042](0042-mtp-2-5-removable-test-workarounds.md).
   [0035](0035-mstest-sdk-repo-tests.md) is **Accepted** remaining in-repo
   `tests/*.Tests` on the same SDK and collector (no xUnit, no Coverlet).
+  Amended by 0042: MSTest.Sdk 4.5.1, MTP 2.5.1, TUnit 1.73.19.
   [0036](0036-revit-monitor-link-element-tokens.md) is **Accepted** Revit
   link tokens (`linkInstanceId@` + three kinds), host-space zoom, Element
   Finder, and `RevitDevTool.Tools` ownership of select/search + Command
@@ -35,10 +38,11 @@ here.
   [0037](0037-handycontrol-replaces-mahapps.md) is **Accepted** and landed.
   HandyControl source compiles into loose `DevTools.UI`. Hosts do not
   ILRepack WPF. MahApps, ControlzEx, and Xaml Behaviors are gone.
-  [0038](0038-mstest-host-provider.md) is **Accepted**. In-host MSTest 4.4.1
-  with Microsoft.Testing.Platform 2.4.1 is a third provider on the existing
-  testing kernel. NUnit stays the default. Live two-generation Revit proof
-  is still an open plan item.
+  [0038](0038-mstest-host-provider.md) is **Accepted**. In-host MSTest is a
+  third provider on the existing testing kernel. NUnit stays the default.
+  Live two-generation Revit proof is still an open plan item. The pin and
+  cancel path moved in [0042](0042-mtp-2-5-removable-test-workarounds.md):
+  MSTest 4.5.1, MTP 2.5.1, public `TestApplicationOptions.CancellationToken`.
   [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) is **Accepted**
   (implemented 2026-10-03). Daemon envelope, host `McpServer` on the pipe,
   search contract v2.
@@ -50,6 +54,10 @@ here.
   retains `code_mode` text past 40_000 characters and returns the start,
   the end, and the path. Text is not dropped
   at 1 MiB.
+  [0042](0042-mtp-2-5-removable-test-workarounds.md) is **Accepted**
+  (landed 2026-10-10). Pins are MSTest 4.5.1, MTP 2.5.1, TUnit 1.73.19.
+  In-host MSTest cancel uses `TestApplicationOptions.CancellationToken`.
+  TUnit in-host ceremony stays.
 
 ## Index
 
@@ -93,3 +101,4 @@ here.
 | [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) | MCP flow audit — SDK reuse, search contract v2, vocabulary | Accepted |
 | [0040](0040-bm25f-search-and-hit-annotations.md) | `code_mode` runs C#; BM25F search stays inside it | Accepted |
 | [0041](0041-code-mode-result-artifact.md) | Large `code_mode` text is saved and the return includes its path | Accepted |
+| [0042](0042-mtp-2-5-removable-test-workarounds.md) | MTP 2.5.1 / MSTest 4.5.1 / TUnit 1.73.19; public MSTest cancel | Accepted |

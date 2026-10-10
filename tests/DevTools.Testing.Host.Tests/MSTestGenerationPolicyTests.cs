@@ -21,19 +21,19 @@ public sealed class MSTestGenerationPolicyTests
 
         var framework = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             ValidatePin("MSTest.TestFramework.dll", typeof(MSTestGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("4.4.1.0", framework.Message, StringComparison.Ordinal);
+        Assert.Contains("4.5.1.0", framework.Message, StringComparison.Ordinal);
 
         var adapter = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             ValidatePin("MSTest.TestAdapter.dll", typeof(MSTestGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("4.4.1.0", adapter.Message, StringComparison.Ordinal);
+        Assert.Contains("4.5.1.0", adapter.Message, StringComparison.Ordinal);
 
         var platformServices = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             ValidatePin("MSTestAdapter.PlatformServices.dll", typeof(MSTestGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("4.4.1.0", platformServices.Message, StringComparison.Ordinal);
+        Assert.Contains("4.5.1.0", platformServices.Message, StringComparison.Ordinal);
 
         var mtp = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             ValidatePin("Microsoft.Testing.Platform.dll", typeof(MSTestGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("2.4.1.0", mtp.Message, StringComparison.Ordinal);
+        Assert.Contains("2.5.1.0", mtp.Message, StringComparison.Ordinal);
     }
 
     private static void ValidatePin(string fileName, string path) =>

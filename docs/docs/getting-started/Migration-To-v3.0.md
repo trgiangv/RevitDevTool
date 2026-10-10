@@ -56,7 +56,7 @@ Changes after the initial v3.0 release:
 | MCP discovery | Infrastructure tools plus **`search_dynamic`** / **`invoke_dynamic`** for host-registered capabilities |
 | pytest 0.4.0 | **`--force-launch`** and **`--per-test-timeout`** options |
 | Python runtime | **Pixi-owned** CPython 3.14 by default; **uv sidecar only on Plant 3D** |
-| Host testing | **MTP TestAdapter** (`RevitDevTool.TestAdapter` `0.1.2`, MTP `2.4.1`): NUnit `5.0.0` default, TUnit `1.72.10`, MSTest `4.4.1` |
+| Host testing | **MTP TestAdapter** (`RevitDevTool.TestAdapter` `0.1.2`, MTP `2.5.1`): NUnit `5.0.0` default, TUnit `1.73.19`, MSTest `4.5.1` |
 | IronPython tests | `test_*_ipy.py` with unittest semantics; Revit prefers pyRevit engine |
 | Startup diagnostics | `crash_{app}_{ver}_{pid}.log` under `%APPDATA%\RevitDevTool\{Year}\Logs\` when startup fails |
 | Sample layout | Lowercase **`samples/`** at repo root |

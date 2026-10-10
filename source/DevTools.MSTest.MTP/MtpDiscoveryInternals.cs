@@ -12,7 +12,7 @@ namespace DevTools.MSTest.MTP;
 /// <summary>
 /// The testhost's only reach into MTP internals. <c>--list-tests json</c> does not publish
 /// nodes to a data consumer: the platform output device buffers them and prints JSON to the
-/// process stdout. Both the buffer and that stdout writer are private to MTP 2.4.1, so they
+/// process stdout. Both the buffer and that stdout writer are private to MTP 2.5.1, so they
 /// are read through <see cref="InternalMembers"/> (cached) and nowhere else.
 /// </summary>
 internal static class MtpDiscoveryInternals

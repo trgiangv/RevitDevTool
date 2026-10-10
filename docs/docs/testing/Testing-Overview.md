@@ -10,7 +10,7 @@ Automated tests run **inside a live host** so they can work with the active docu
 
 | Stack | Framework | Package | Entry doc |
 | --- | --- | --- | --- |
-| **.NET** | NUnit `5.0.0` (default), TUnit `1.72.10`, or MSTest `4.4.1` | NuGet: [RevitDevTool.TestAdapter 0.1.2](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.2) | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) |
+| **.NET** | NUnit `5.0.0` (default), TUnit `1.73.19`, or MSTest `4.5.1` | NuGet: [RevitDevTool.TestAdapter 0.1.2](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.2) | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) |
 | **CPython** | pytest | PyPI: [revitdevtool_pytest 0.4.0](https://pypi.org/project/revitdevtool_pytest/0.4.0/) | [pytest](/docs/testing/pytest) |
 | **IronPython** | unittest (`TestCase`) | Name files `test_*_ipy.py`; pytest discovers them as IronPython tests | [unittest](/docs/testing/unittest) |
 
@@ -27,7 +27,7 @@ Automated tests run **inside a live host** so they can work with the active docu
 
 The test runner starts or connects to the selected Autodesk application, runs each test with the appropriate Python or .NET runtime, and reports the result back to your terminal or IDE. Tests that modify a document should clean up after themselves and respect the host's transaction rules.
 
-For .NET tests, add the public `RevitDevTool.TestAdapter` package. It runs NUnit, TUnit, and MSTest inside the host through Microsoft Testing Platform `2.4.1`. NUnit is the default. Set `TestingFramework` to `tunit` or `mstest` to opt in. Pin the framework package yourself; the adapter does not pull it.
+For .NET tests, add the public `RevitDevTool.TestAdapter` package. It runs NUnit, TUnit, and MSTest inside the host through Microsoft Testing Platform `2.5.1`. NUnit is the default. Set `TestingFramework` to `tunit` or `mstest` to opt in. Pin the framework package yourself; the adapter does not pull it.
 
 ---
 

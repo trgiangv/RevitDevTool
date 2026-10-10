@@ -15,8 +15,8 @@ public sealed class MSTestGenerationPolicy(Func<RuntimeSource> runtimeSourceProv
     public const string RuntimeFolderName = "MSTestRuntime";
     public const string RuntimeAssemblyFileName = "DevTools.MSTest.Runtime.dll";
     internal const string RuntimeSessionTypeName = "DevTools.MSTest.Runtime.MSTestRuntimeSession";
-    internal static readonly Version ExpectedMSTestAssemblyVersion = new(4, 4, 1, 0);
-    internal static readonly Version ExpectedMtpAssemblyVersion = new(2, 4, 1, 0);
+    internal static readonly Version ExpectedMSTestAssemblyVersion = new(4, 5, 1, 0);
+    internal static readonly Version ExpectedMtpAssemblyVersion = new(2, 5, 1, 0);
 
     internal static readonly TestingGenerationSpec Spec = new(
         TestFrameworkId.MSTest,

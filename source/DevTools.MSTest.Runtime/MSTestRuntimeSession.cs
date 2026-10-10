@@ -74,22 +74,23 @@ public sealed class MSTestRuntimeSession : CancellableRuntimeSession
         await WriteConfigAsync(configPath).ConfigureAwait(false);
 
         ITestApplication? application = null;
-        CancellationTokenRegistration cancelRegistration = default;
         try
         {
             using var traceScope = new TestRunTraceScope(MSTestConsoleCapture.CurrentDisplayName);
             using var consoleCapture = new MSTestConsoleCapture();
             var builder = await TestApplication.CreateBuilderAsync(
                     BuildArguments(configPath, resultsDirectory, selection),
-                    new TestApplicationOptions { EnableTelemetry = false })
+                    new TestApplicationOptions
+                    {
+                        EnableTelemetry = false,
+                        CancellationToken = cancellationToken,
+                    })
                 .ConfigureAwait(false);
             builder.AddMSTest(() => [_testAssembly]);
             var consumer = new MSTestNodeConsumer(traceScope, consoleCapture);
             builder.TestHost.AddDataConsumer(_ => consumer);
             application = await builder.BuildAsync().ConfigureAwait(false);
 
-            // Register runs the callback at once when the token is already cancelled.
-            cancelRegistration = cancellationToken.Register(() => MSTestPlatformPolicy.Cancel(application));
             consoleCapture.Start();
             var exitCode = await application.RunAsync().ConfigureAwait(false);
             var results = MSTestNodeResults.Map(
@@ -111,7 +112,6 @@ public sealed class MSTestRuntimeSession : CancellableRuntimeSession
         }
         finally
         {
-            cancelRegistration.Dispose();
             if (application is IDisposable disposable)
                 disposable.Dispose();
             TryDelete(configPath);

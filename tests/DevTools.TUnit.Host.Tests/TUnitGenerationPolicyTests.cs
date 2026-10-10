@@ -14,11 +14,11 @@ public sealed class TUnitGenerationPolicyTests
 
         var tunit = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             ValidatePin("TUnit.Core.dll", typeof(TUnitGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("1.72.10.0", tunit.Message, StringComparison.Ordinal);
+        Assert.Contains("1.73.19.0", tunit.Message, StringComparison.Ordinal);
 
         var mtp = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             ValidatePin("Microsoft.Testing.Platform.dll", typeof(TUnitGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("2.4.1.0", mtp.Message, StringComparison.Ordinal);
+        Assert.Contains("2.5.1.0", mtp.Message, StringComparison.Ordinal);
     }
 
     private static void ValidatePin(string fileName, string path) =>

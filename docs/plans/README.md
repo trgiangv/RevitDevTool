@@ -38,6 +38,7 @@ Rename an active plan when its ADR number or workstream id changed.
 
 | Plan | Completed |
 |------|-----------|
+| [2026-10-10-mtp-2-5-pin.md](completed/2026-10-10-mtp-2-5-pin.md) | 2026-10-10 (MSTest 4.5.1, MTP 2.5.1, TUnit 1.73.19, public MSTest cancel; [0042](../decisions/0042-mtp-2-5-removable-test-workarounds.md)) |
 | [2026-10-08-code-mode-result-artifact.md](completed/2026-10-08-code-mode-result-artifact.md) | 2026-10-08 (large `code_mode` text saved with its path; [0041](../decisions/0041-code-mode-result-artifact.md)) |
 | [2026-10-07-run-csharp-bm25f.md](completed/2026-10-07-run-csharp-bm25f.md) | 2026-10-08 (`code_mode` + BM25F; [0040](../decisions/0040-bm25f-search-and-hit-annotations.md)) |
 | [2026-10-03-mcp-flow-simplification.md](completed/2026-10-03-mcp-flow-simplification.md) | 2026-10-03 (host SDK pipe, dci2, tasks; [0039](../decisions/0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)) |

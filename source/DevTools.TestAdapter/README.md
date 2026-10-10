@@ -5,16 +5,16 @@ Requires [RevitDevTool](https://github.com/trgiangv/RevitDevTool).
 
 Supports **NUnit** (default), **TUnit**, and **MSTest**. Pin the framework in
 the test project — the adapter does not pull it. It depends on
-`Microsoft.Testing.Platform.MSBuild` 2.4.1; do not add or override it.
-TUnit `1.72.10` and Microsoft.Testing.Platform `2.4.1` are a pair — pin
-both. MSTest is pinned at `4.4.1` with the same MTP version.
+`Microsoft.Testing.Platform.MSBuild` 2.5.1; do not add or override it.
+TUnit `1.73.19` and Microsoft.Testing.Platform `2.5.1` are a pair — pin
+both. MSTest is pinned at `4.5.1` with the same MTP version.
 
 | Package | Version |
 |---------|---------|
 | `NUnit` | 5.0.0 |
-| `TUnit` | 1.72.10 |
-| `MSTest` (`MSTest.Sdk` / `MSTest.TestFramework`) | 4.4.1 |
-| `Microsoft.Testing.Platform.MSBuild` | 2.4.1 |
+| `TUnit` | 1.73.19 |
+| `MSTest` (`MSTest.Sdk` / `MSTest.TestFramework`) | 4.5.1 |
+| `Microsoft.Testing.Platform.MSBuild` | 2.5.1 |
 
 All three work with every host below. Set `HostName` and `HostVersion` to
 the version you run. Include a compile-only host API package (discovery
@@ -57,7 +57,7 @@ Do not use `.runsettings`.
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.2" />
-  <PackageReference Include="TUnit" Version="1.72.10" />
+  <PackageReference Include="TUnit" Version="1.73.19" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
@@ -70,12 +70,12 @@ with `<EnableMSTestRunner>true</EnableMSTestRunner>` is the other accepted
 shape. Without that runner, MSTest turns Microsoft.Testing.Platform off and
 the testhost entry point is not generated.
 
-Pin the SDK at 4.4.1, either on the `Sdk` attribute or in `global.json`
-(`msbuild-sdks`). The in-host closure is MSTest.TestFramework 4.4.1 plus
-Microsoft.Testing.Platform 2.4.1. A different MSTest version fails generation.
+Pin the SDK at 4.5.1, either on the `Sdk` attribute or in `global.json`
+(`msbuild-sdks`). The in-host closure is MSTest.TestFramework 4.5.1 plus
+Microsoft.Testing.Platform 2.5.1. A different MSTest version fails generation.
 
 ```xml
-<Project Sdk="MSTest.Sdk/4.4.1">
+<Project Sdk="MSTest.Sdk/4.5.1">
   <PropertyGroup>
     <HostName>Revit</HostName>
     <HostVersion>2025</HostVersion>
@@ -147,7 +147,7 @@ attribute also pins the SDK here.
 {
   "sdk": { "version": "10.0.0", "rollForward": "latestMinor" },
   "test": { "runner": "Microsoft.Testing.Platform" },
-  "msbuild-sdks": { "MSTest.Sdk": "4.4.1" }
+  "msbuild-sdks": { "MSTest.Sdk": "4.5.1" }
 }
 ```
 

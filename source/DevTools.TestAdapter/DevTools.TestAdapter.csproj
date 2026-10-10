@@ -15,7 +15,7 @@
 
       Constraints:
         - Do not flatten obj/bin: the three TFMs would collide (CS2012 / MSB3713).
-        - Microsoft.Testing.Platform.MSBuild 2.4.1 is a real dependency with all
+        - Microsoft.Testing.Platform.MSBuild 2.5.1 is a real dependency with all
           assets (PrivateAssets=none): an NUnit-only consumer has no other source of
           the testhost or Microsoft.Testing.Platform.dll. RepackBinariesExcludes keeps
           those DLLs out of the merged adapter. Every other graph reference stays

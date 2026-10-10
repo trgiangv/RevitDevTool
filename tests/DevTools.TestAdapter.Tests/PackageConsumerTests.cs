@@ -209,7 +209,7 @@ public sealed class PackageConsumerTests
                     packageVersion,
                     tfm,
                     engine: "tunit",
-                    framework: """<PackageReference Include="TUnit" Version="1.72.10" />""",
+                    framework: """<PackageReference Include="TUnit" Version="1.73.19" />""",
                     test: """
                         public class DiscoveredTests
                         {
@@ -227,10 +227,10 @@ public sealed class PackageConsumerTests
                     tfm,
                     engine: "mstest",
                     framework: """
-                        <PackageReference Include="MSTest.TestFramework" Version="4.4.1">
+                        <PackageReference Include="MSTest.TestFramework" Version="4.5.1">
                           <ExcludeAssets>analyzers</ExcludeAssets>
                         </PackageReference>
-                        <PackageReference Include="MSTest.TestAdapter" Version="4.4.1">
+                        <PackageReference Include="MSTest.TestAdapter" Version="4.5.1">
                           <ExcludeAssets>analyzers</ExcludeAssets>
                         </PackageReference>
                         """,
@@ -415,7 +415,7 @@ public sealed class PackageConsumerTests
                      line.Contains("id=\"Microsoft.Testing.Platform.MSBuild\"", StringComparison.Ordinal)))
         {
             Assert.DoesNotContain("Build,Analyzers", dependency, StringComparison.Ordinal);
-            Assert.Contains("2.4.1", dependency, StringComparison.Ordinal);
+            Assert.Contains("2.5.1", dependency, StringComparison.Ordinal);
         }
 
         Assert.Contains("build/RevitDevTool.TestAdapter.props", entries, StringComparer.OrdinalIgnoreCase);

@@ -68,7 +68,7 @@ RevitDevTool is organized around four pillars. Each pillar is a first-class capa
 **Automated tests against live host processes**
 
 - **pytest** — CPython and IronPython tests inside a live host
-- **Host tests (MTP)** — NUnit `5.0.0` (default), TUnit `1.72.10`, or MSTest `4.4.1` inside the host via `RevitDevTool.TestAdapter` `0.1.2`
+- **Host tests (MTP)** — NUnit `5.0.0` (default), TUnit `1.73.19`, or MSTest `4.5.1` inside the host via `RevitDevTool.TestAdapter` `0.1.2`
 - Auto-discovery, suite leasing, IDE integration (VS Code, Cursor, PyCharm)
 - `--host revit`, `--host autocad`, and other AutoCAD-family verticals
 

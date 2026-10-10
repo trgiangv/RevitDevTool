@@ -5,7 +5,10 @@ Updated: 2026-09-29
 
 ## Status
 
-Accepted
+Accepted. Amended 2026-10-10 by
+[0042](0042-mtp-2-5-removable-test-workarounds.md): in-repo tests use
+MSTest.Sdk **4.5.1**. Central Microsoft.Testing.Platform is **2.5.1**.
+TUnit is **1.73.19**.
 
 ## Context
 

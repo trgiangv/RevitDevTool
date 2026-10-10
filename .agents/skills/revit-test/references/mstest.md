@@ -1,14 +1,14 @@
 # MSTest patterns
 
-Opt in with `TestingFramework=mstest`. The project is `Sdk="MSTest.Sdk/4.4.1"`
-(or `Microsoft.NET.Sdk` with `EnableMSTestRunner=true`). Pin **4.4.1**. The
+Opt in with `TestingFramework=mstest`. The project is `Sdk="MSTest.Sdk/4.5.1"`
+(or `Microsoft.NET.Sdk` with `EnableMSTestRunner=true`). Pin **4.5.1**. The
 in-host closure rejects a different MSTest.TestFramework or MTP version.
 
 Project setup: [project-setup.md](project-setup.md). Shared rules:
 [test-patterns.md](test-patterns.md). Filters: [mtp-filter.md](mtp-filter.md).
 
 ```xml
-<Project Sdk="MSTest.Sdk/4.4.1">
+<Project Sdk="MSTest.Sdk/4.5.1">
   <PropertyGroup>
     <TestingFramework>mstest</TestingFramework>
   </PropertyGroup>

@@ -25,8 +25,8 @@
     <GetAssemblyIdentity AssemblyFiles="$(_MSTestRuntimeMtpPath)">
       <Output TaskParameter="Assemblies" ItemName="_MSTestRuntimeMtpIdentity" />
     </GetAssemblyIdentity>
-    <Error Condition="'%(_MSTestRuntimeMtpIdentity.Version)' != '2.4.1.0'"
-           Text="MSTest runtime payload requires Microsoft.Testing.Platform 2.4.1 (assembly version 2.4.1.0). Found '%(_MSTestRuntimeMtpIdentity.Version)' at '$(_MSTestRuntimeMtpPath)'." />
+    <Error Condition="'%(_MSTestRuntimeMtpIdentity.Version)' != '2.5.1.0'"
+           Text="MSTest runtime payload requires Microsoft.Testing.Platform 2.5.1 (assembly version 2.5.1.0). Found '%(_MSTestRuntimeMtpIdentity.Version)' at '$(_MSTestRuntimeMtpPath)'." />
 
     <RemoveDir Directories="$(_MSTestRuntimePayloadDir)" Condition="Exists('$(_MSTestRuntimePayloadDir)')" />
     <MakeDir Directories="$(_MSTestRuntimePayloadDir)" />

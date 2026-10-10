@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="MSTest.TestFramework" Version="4.4.1" />
+    <PackageVersion Include="MSTest.TestFramework" Version="4.5.1" />
     <PackageReference Include="MSTest.TestFramework">
       <ExcludeAssets>analyzers;build;buildTransitive</ExcludeAssets>
     </PackageReference>

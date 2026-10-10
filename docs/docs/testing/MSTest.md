@@ -1,13 +1,13 @@
 # MSTest
 
-Run MSTest `4.4.1` tests inside a live Revit or AutoCAD-family host through Microsoft Testing Platform (MTP) and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.2`. The host lifecycle is the same as for [NUnit](/docs/testing/NUnit); the project SDK and attributes differ.
+Run MSTest `4.5.1` tests inside a live Revit or AutoCAD-family host through Microsoft Testing Platform (MTP) and the `DevTools.TestAdapter` assembly. The adapter is the public NuGet package `RevitDevTool.TestAdapter` `0.1.2`. The host lifecycle is the same as for [NUnit](/docs/testing/NUnit); the project SDK and attributes differ.
 
 ## Project setup
 
 Use `Sdk="MSTest.Sdk"` so `EnableMSTestRunner` is on. `Microsoft.NET.Sdk` with `<EnableMSTestRunner>true</EnableMSTestRunner>` is the other accepted shape. Without that runner, MSTest turns Microsoft.Testing.Platform off and no testhost entry point is generated.
 
 ```xml
-<Project Sdk="MSTest.Sdk/4.4.1">
+<Project Sdk="MSTest.Sdk/4.5.1">
   <PropertyGroup>
     <TestingFramework>mstest</TestingFramework>
     <HostName>Revit</HostName>
@@ -25,17 +25,17 @@ Use `Sdk="MSTest.Sdk"` so `EnableMSTestRunner` is on. `Microsoft.NET.Sdk` with `
 </Project>
 ```
 
-Pin `MSTest.Sdk` `4.4.1` on the `Sdk` attribute, or in `global.json`:
+Pin `MSTest.Sdk` `4.5.1` on the `Sdk` attribute, or in `global.json`:
 
 ```json
 {
   "sdk": { "version": "10.0.0", "rollForward": "latestMinor" },
   "test": { "runner": "Microsoft.Testing.Platform" },
-  "msbuild-sdks": { "MSTest.Sdk": "4.4.1" }
+  "msbuild-sdks": { "MSTest.Sdk": "4.5.1" }
 }
 ```
 
-The in-host closure is MSTest.TestFramework 4.4.1 plus Microsoft.Testing.Platform 2.4.1. A different MSTest version fails generation. Do not add `NUnit3TestAdapter`, `Microsoft.Testing.Extensions.VSTestBridge`, or a `.runsettings` file.
+The in-host closure is MSTest.TestFramework 4.5.1 plus Microsoft.Testing.Platform 2.5.1. A different MSTest version fails generation. Do not add `NUnit3TestAdapter`, `Microsoft.Testing.Extensions.VSTestBridge`, or a `.runsettings` file.
 
 Do not set `<RuntimeIdentifier>` on net8 / net10. On net48, set `win-x64` only when the SDK requires it for an x64 executable. `HostName` is `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`, `AcadElec`, `AcadMep`, or `AcadMap3D`.
 

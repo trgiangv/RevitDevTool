@@ -12,7 +12,7 @@ NUnit-specific bridge protocol are not part of the supported product on
 ## Test project contract
 
 - Reference `RevitDevTool.TestAdapter` (depends on
-  `Microsoft.Testing.Platform.MSBuild` 2.4.1). Framework package (default NUnit
+  `Microsoft.Testing.Platform.MSBuild` 2.5.1). Framework package (default NUnit
   5.0.0) is a local choice, not a package dependency. Package props set
   `OutputType=Exe`. Declare `HostName`, `HostVersion`, optional `ForceLaunch`,
   `PerTestTimeout`, `LaunchTimeout`. `ForceLaunch=true` always starts a new host
@@ -20,11 +20,11 @@ NUnit-specific bridge protocol are not part of the supported product on
   pipe wait = budget × test count. `LaunchTimeout` waits for the host pipe after
   process start. `TestingFramework` (`nunit` default, `tunit` or `mstest`
   opt-in) overrides the in-host engine without changing the NuGet. An `mstest`
-  project references MSTest.TestFramework 4.4.1. The in-host closure is that
-  version plus Microsoft.Testing.Platform 2.4.1, private to `MSTestRuntime\`.
+  project references MSTest.TestFramework 4.5.1. The in-host closure is that
+  version plus Microsoft.Testing.Platform 2.5.1, private to `MSTestRuntime\`.
   An `mstest` project uses `Sdk="MSTest.Sdk"`, or `Microsoft.NET.Sdk` with
   `<EnableMSTestRunner>true</EnableMSTestRunner>` (the build fails with that
-  hint otherwise). The adapter testhost package is the same 2.4.1.
+  hint otherwise). The adapter testhost package is the same 2.5.1.
 - `testconfig.json` is generated from csproj properties; incremental build
   refreshes `[AssemblyName].testconfig.json` (no Rebuild after `HostName`,
   `ForceLaunch`, `PerTestTimeout`, or `LaunchTimeout` changes).
@@ -143,7 +143,7 @@ NUnit-specific bridge protocol are not part of the supported product on
 | `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`), metadata `TypeName`, DisplayName suffix, host filter XML, and result fold. Build-selected testhost sibling; not ILRepacked into the adapter |
 | `DevTools.NUnit.Runtime` | Default in-host engine: NUnit execution inside an isolated generation |
 | `DevTools.MSTest.MTP` | Testhost discovery via `TestApplication` `--list-tests`. Does not run test bodies. Maps Names to MTP node-uid test ids |
-| `DevTools.MSTest.Runtime` | In-host MSTest 4.4.1 session on the assembly the generation already loaded. `mstest:output:captureTrace` stays off |
+| `DevTools.MSTest.Runtime` | In-host MSTest 4.5.1 session on the assembly the generation already loaded. `mstest:output:captureTrace` stays off |
 | `DevTools.TestRunner.Core` | Framework-neutral host locate/launch/reuse, debugger attach, and `testing/*` pipe client |
 | `DevTools.TestRunner` | Southbound executable: locate/launch the host and send `testing/run`. Framework id is a CLI option from the adapter `devtools` section |
 
@@ -161,7 +161,7 @@ use NUnit attributes because NUnit is the default engine.
 `samples/DevTools.TUnit.Civil3D.SampleTests` opt in with `TestingFramework=tunit`.
 `samples/DevTools.MSTest.SampleTests` and
 `samples/DevTools.MSTest.Civil3D.SampleTests` opt in with
-`TestingFramework=mstest` and MSTest.Sdk 4.4.1.
+`TestingFramework=mstest` and MSTest.Sdk 4.5.1.
 `samples/ricaun.NUnit.SampleTests` is a comparison sample: it links the same
 `HostSmokeTests` and runs them through `ricaun.RevitTest.TestAdapter` (VSTest).
 It is not the product contract — do not use it as the verify path, and do not

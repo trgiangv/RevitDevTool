@@ -58,7 +58,7 @@
   <ItemGroup Condition="'$(TestingFramework)' == 'tunit'">
     <TestingPlatformBuilderHook Remove="6ADF853A-6945-4A06-9A4B-D99BC1DC1094" />
   </ItemGroup>
-  <!-- MSTest.TestAdapter 4.4.1 buildTransitive props registers this outer hook. -->
+  <!-- MSTest.TestAdapter 4.5.1 buildTransitive props registers this outer hook. -->
   <ItemGroup Condition="'$(TestingFramework)' == 'mstest'">
     <TestingPlatformBuilderHook Remove="031F8871-2660-4208-8F6B-FC142B40ABFF" />
   </ItemGroup>

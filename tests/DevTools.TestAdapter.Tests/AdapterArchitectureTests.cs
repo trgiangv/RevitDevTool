@@ -437,7 +437,7 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("GetCustomAttributes", discoverer, StringComparison.Ordinal);
         // MTP version comes from central package management, not a per-project override.
         Assert.Contains("<PackageReference Include=\"Microsoft.Testing.Platform\" />", mtpProject, StringComparison.Ordinal);
-        Assert.Contains("<PackageVersion Include=\"Microsoft.Testing.Platform\" Version=\"2.4.1\" />", File.ReadAllText(
+        Assert.Contains("<PackageVersion Include=\"Microsoft.Testing.Platform\" Version=\"2.5.1\" />", File.ReadAllText(
             Path.Combine(RepositoryRoot, "Directory.Packages.props")), StringComparison.Ordinal);
         Assert.Contains("EnableMSTestRunner", targets, StringComparison.Ordinal);
         Assert.Contains("net48;net8.0-windows;net10.0-windows", mtpProject, StringComparison.Ordinal);

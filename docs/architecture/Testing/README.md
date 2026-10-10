@@ -25,7 +25,7 @@ Last updated: 2026-10-01
 | Runtime folder resolve + generation file classify | `source/DevTools.Testing.Host/Loading/` |
 | NUnit closure / filter / generation policy | `source/DevTools.Testing.Host/NUnit/` |
 | TUnit generation / ALC provider | `source/DevTools.Testing.Host/TUnit/` |
-| MSTest generation / ALC provider (4.4.1 + MTP 2.4.1) | `source/DevTools.Testing.Host/MSTest/` |
+| MSTest generation / ALC provider (4.5.1 + MTP 2.5.1) | `source/DevTools.Testing.Host/MSTest/` |
 | Published MTP adapter, sibling builder hooks | `source/DevTools.TestAdapter/` |
 | Local NUnit `ExploreTests` + `NUnitTestRunMapper` | `source/DevTools.NUnit.MTP/` |
 | In-host NUnit engine | `source/DevTools.NUnit.Runtime/` |
@@ -71,7 +71,7 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
 
 - `lib/{tfm}/DevTools.TestAdapter.dll` — MTP compile surface (Ipc + Transport merged in; net48 also merges STJ BCL).
 - `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.MSTest.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `TestingDiscovery`). Same four files on net48, net8, and net10.
-- Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.4.1 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=none` (NuGet's default `PrivateAssets` would drop build assets from the nuspec) and with **all** assets (`include="All"` in the nuspec) so pack writes a dependency that restores both testhost generation and `Microsoft.Testing.Platform.dll` — an NUnit-only consumer has no other source of the MTP runtime. `RepackBinariesExcludes` keeps those testhost DLLs out of the merged adapter. `DevTools.TestAdapter.Tests` uses `ProjectReference` `PrivateAssets=all` plus a direct Abstractions reference so that graph does not flow into xunit. Other PackageReference / ProjectReference stay `PrivateAssets=all`. Testhost BCL is not packed as files.
+- Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.5.1 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=none` (NuGet's default `PrivateAssets` would drop build assets from the nuspec) and with **all** assets (`include="All"` in the nuspec) so pack writes a dependency that restores both testhost generation and `Microsoft.Testing.Platform.dll` — an NUnit-only consumer has no other source of the MTP runtime. `RepackBinariesExcludes` keeps those testhost DLLs out of the merged adapter. `DevTools.TestAdapter.Tests` uses `ProjectReference` `PrivateAssets=all` plus a direct Abstractions reference so that graph does not flow into xunit. Other PackageReference / ProjectReference stay `PrivateAssets=all`. Testhost BCL is not packed as files.
 
 ### Pack order (`scripts/pack-test-adapter.ps1`)
 
@@ -218,9 +218,10 @@ runs `TestIds` as `--filter-uid` (the MTP node uid from `--list-tests`).
 its own. All three runtimes share `CancellableRuntimeSession`
 (`Testing.Abstractions/Runtime`): a cancel that arrives before the run starts is
 kept as `_pendingCancelRunId`. NUnit keeps asking its runner to `StopRun()` until
-the run ends (the main-thread dispatcher may refuse). MSTest's `RunAsync` has no
-token; the session cancels the generation MTP
-`ITestApplicationCancellationTokenSource`.
+the run ends (the main-thread dispatcher may refuse). MSTest passes the run
+`CancellationToken` on `TestApplicationOptions` into `CreateBuilderAsync`.
+MTP registers that token on the application cancel source. A test body
+already on the host thread is not interrupted.
 
 `RequestTimeoutSeconds` is the scaled pipe wait (`PerTestTimeout × count`);
 `PerTestTimeoutSeconds` stays per test. Runner stdout is NDJSON
@@ -395,7 +396,7 @@ a payload folder) then `*HostPackaging.targets` (add-in copies that folder to
 JSON/Ipc/Isolation/Abstractions. TUnit copies its full private closure
 (CPM STJ). On net48, isolated resolve binds TUnit.Engine's STJ 9 request
 onto that newer payload copy (`NetfxClosureBind`). Host still ILRepacks STJ 10.
-MSTest copies a private 4.4.1 closure plus Microsoft.Testing.Platform 2.4.1.
+MSTest copies a private 4.5.1 closure plus Microsoft.Testing.Platform 2.5.1.
 The generation fails closed if any
 of `MSTest.TestFramework.dll`, `MSTest.TestAdapter.dll`,
 `MSTestAdapter.PlatformServices.dll`, or `Microsoft.Testing.Platform.dll` is
@@ -433,7 +434,6 @@ the assembly version. The seams that use it:
 |------|---------|------|
 | `TUnitEngineBindings` | TUnit.Engine framework/extension ctors, MTP `ServiceProvider.AddService`, session-context ctors | resolved once per generation; a run only invokes cached ctors |
 | `MtpDiscoveryInternals` (MSTest.MTP) | `TestApplication._host`, the `--list-tests` node buffer, MTP's stdout writer | per discovery, cached lookups |
-| `MSTestPlatformPolicy.Cancel` | MTP `ITestApplicationCancellationTokenSource.Cancel()` | per cancel, cached lookups |
 | `NUnitAssemblyBuilder` | `TestContext.DefaultWorkDirectory` | per session load |
 
 Reflection over the user's test assembly (`MSTestExpansion`,
