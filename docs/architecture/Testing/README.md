@@ -53,8 +53,8 @@ Installer `build/Modules/*` does **not** pack or publish the test adapter.
 
 | Artifact | Ships | Command / workflow |
 |----------|--------|--------------------|
-| NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.NUnit.MTP.dll` + `DevTools.TUnit.MTP.dll` + `DevTools.MSTest.MTP.dll` | `scripts/pack-test-adapter.ps1` · `PublishTestAdapter.yml` |
-| Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers), NUnit, TUnit, and MSTest Runtime, `DevTools.TestRunner.exe` | `scripts/pack.ps1` · `build/Modules/*` · `PublishRelease.yml` |
+| NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.NUnit.MTP.dll` + `DevTools.TUnit.MTP.dll` + `DevTools.MSTest.MTP.dll` | `dotnet run --project build -- adapter` · `PublishTestAdapter.yml` |
+| Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers), NUnit, TUnit, and MSTest Runtime, `DevTools.TestRunner.exe` | `dotnet run --project build -- pack` · `build/Modules/*` · `PublishRelease.yml` |
 
 - Bump `<Version>` in `DevTools.TestAdapter.csproj` before `PublishTestAdapter.yml`. Independent of installer GitVersion.
 - Only TestAdapter is packable. MTP, Runtime, Host, Abstractions, and Transport are `IsPackable=false`.
@@ -73,7 +73,7 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
 - `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.MSTest.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `TestingDiscovery`). Same four files on net48, net8, and net10.
 - Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.5.1 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=none` (NuGet's default `PrivateAssets` would drop build assets from the nuspec) and with **all** assets (`include="All"` in the nuspec) so pack writes a dependency that restores both testhost generation and `Microsoft.Testing.Platform.dll` — an NUnit-only consumer has no other source of the MTP runtime. `RepackBinariesExcludes` keeps those testhost DLLs out of the merged adapter. `DevTools.TestAdapter.Tests` uses `ProjectReference` `PrivateAssets=all` plus a direct Abstractions reference so that graph does not flow into xunit. Other PackageReference / ProjectReference stay `PrivateAssets=all`. Testhost BCL is not packed as files.
 
-### Pack order (`scripts/pack-test-adapter.ps1`)
+### Pack order (`PackTestAdapterModule`)
 
 ```text
 1. restore TestAdapter (Abstractions, Transport, Ipc)
@@ -114,7 +114,7 @@ ships `build/RevitDevTool.TestAdapter.props|targets`, the net4x source shim
 
 In-repo samples are NuGet consumers, not a second MSBuild path. They
 `PackageReference` `RevitDevTool.TestAdapter`. Repo `NuGet.config` maps that id
-to `output/nuget`. `scripts/pack-test-adapter.ps1` writes the nupkg there and
+to `output/nuget`. `dotnet run --project build -- adapter` writes the nupkg there and
 deletes the extracted global-packages copy of the same version so restore
 cannot keep a previous extraction of the packed version. There is no
 `Local.targets` / sibling-`bin` HintPath
@@ -142,7 +142,7 @@ off when a `PackageReference`/`GlobalPackageReference` named `Polyfill` or anoth
 In-repo samples `PackageReference` the local nupkg. NUnit/TUnit samples do not
 add `Microsoft.Testing.Platform` themselves; they get testhost generation from
 `RevitDevTool.TestAdapter` → `Microsoft.Testing.Platform.MSBuild`. Pack then
-restore: `scripts/pack-test-adapter.ps1` then `dotnet restore` / `dotnet test`
+restore: `dotnet run --project build -- adapter` then `dotnet restore` / `dotnet test`
 on `samples/DevTools.*.SampleTests`. `scripts/test-adapter-matrix.ps1` packs
 first, then restore+build+`--list-tests` on net48 / net8 / net10.
 `PackageConsumerTests` still packs into an isolated feed. Both paths cover
@@ -167,8 +167,8 @@ forces `false` for the testhost), `AppendTargetFrameworkToOutputPath=false` unde
 - Pack runs per TestAdapter TFM in parallel. An inner MTP Restore inherits
   `TargetFramework` and rewrites `project.assets.json` for one TFM
   (`NETSDK1005`, typically missing `net48`). Inner Restore must
-  `RemoveProperties=TargetFramework`. Prefer building all MTP TFMs in the
-  pack script before `dotnet pack`.
+  `RemoveProperties=TargetFramework`. `PackTestAdapterModule` builds all MTP
+  TFMs before `dotnet pack`.
 - Keep `AppendTargetFrameworkToOutputPath=true` on packable multi-TFM testing
   projects.
 - The selected sibling is a normal `<Reference Private="true" ExternallyResolved="true">` from

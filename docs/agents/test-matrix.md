@@ -195,7 +195,7 @@ Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, pixi, live `DevToolsMcp_
 - **Packaging & reload** — ILRepack year matrix, daemon hot-reload, shared-runtime layout (some packaging asserts, not full matrix)
 - **End-to-end toolset invoke** — catalog discovery → host dispatch → Revit API (no single CI test)
 
-**Prerequisites (optional, else Skip):** build `samples/McpToolsetDemo` and/or `samples/RevitMcpToolSet`; pixi env at `%APPDATA%\RevitDevTool\pixi-env` (`scripts/test-python.ps1`).
+**Prerequisites (optional, else Skip):** build `samples/McpToolsetDemo` and/or `samples/RevitMcpToolSet`; pixi env at `%APPDATA%\RevitDevTool\pixi-env` (`scripts/test-pyserver.ps1`).
 
 ---
 
@@ -285,7 +285,7 @@ Measure Execution (and other net10 testhosts) with `--coverage`.
 |------|---------|
 | MCP tests | `dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj` (also Core, Server, Client, Adapter, `DevTools.Execution.Mcp.Tests`) |
 | .NET tests | `dotnet run --project tests/<project>/<project>.csproj` |
-| Python parser | `scripts/test-python.ps1` |
+| Python parser | `scripts/test-pyserver.ps1` |
 | Live MCP | `docs/agents/mcp-integration-test.md` |
 
 ## Reporting

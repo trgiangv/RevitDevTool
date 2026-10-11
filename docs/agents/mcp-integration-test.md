@@ -10,22 +10,24 @@ The daemon tool list is `list_processes`, `list_machines`, `launch_host`, `read_
 
 Before running any MCP test, verify each step in order:
 
-### 1. Stop Only The Target Host Year
+### 1. Stop and build the target host year
 
 ```powershell
-# Pick the same product/year used in step 2. Other versions stay running.
-scripts/kill-host.ps1 -HostApp Revit -Year 2025
-# or: scripts/kill-host.ps1 -HostApp AutoCAD -Year 2026
+# Stops only that host year, then builds and deploys it. Other versions stay running.
+scripts/build-host.ps1 -HostApp Revit -Year 2025
+# or: scripts/build-host.ps1 -HostApp AutoCAD -Year 2026
 ```
 
-### 2. Build Add-in (Latest Code)
+### 2. Compile without deploying
+
+Step 1 already builds and deploys. Use this only when that host year must stay open:
 
 ```powershell
 # Revit — pick your year (2022-2027)
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 
 # AutoCAD/Civil3D — pick your year (2022-2027)
-dotnet build source/AcadDevTool/AcadDevTool.csproj -c Debug.Autodesk.2026
+dotnet build source/AcadDevTool/ACadDevTool.csproj -c Debug.Autodesk.2026 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
 ```
 
 ### 3. Publish Daemon (If Code Changed)
@@ -488,7 +490,7 @@ host with updated Catalog + register `McpToolsetDemo` before running this scenar
 
 ### Phase 2 — `revit://model/context` latency
 
-After host deploy (`scripts/build-host.ps1 -Year 2025`), open Snowdon Towers and run
+After host deploy (`scripts/build-host.ps1 -HostApp Revit -Year 2025`), open Snowdon Towers and run
 **3 sequential** resource reads (no parallel calls):
 
 ```

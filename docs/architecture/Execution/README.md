@@ -103,7 +103,7 @@ Revit wiring lives in `RevitHostingExtensions`. AutoCAD wiring lives in `AcadHos
 
 Current tests are useful but shallow. When changing execution behavior:
 
-- Build the most relevant host/year with `scripts/build-host.ps1`.
+- Build the most relevant host/year with `scripts/build-host.ps1 -HostApp Revit -Year 2025`.
 - Add a focused test for pure shared logic when practical.
 - Document live-host verification gaps explicitly.
 

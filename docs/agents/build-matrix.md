@@ -29,10 +29,14 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 
 ## Commands
 
-- Focused host compile: `scripts/build-host.ps1 -Year 2025`.
-- Installer / bundle: `scripts/pack.ps1` (`build/Modules/*`, `PublishRelease.yml`).
-- TestAdapter NuGet: `scripts/pack-test-adapter.ps1` (`PublishTestAdapter.yml`). Not part of `build/Modules/*`. See `docs/architecture/Testing/README.md`.
+- Focused host compile and deploy: [`scripts/build-host.ps1`](#host-build-script).
+
+- Installer / bundle: `dotnet run --project build -- pack` (`build/Modules/*`, `PublishRelease.yml`).
+- TestAdapter NuGet: `dotnet run --project build -- adapter` runs `PackTestAdapterModule` (restore, build the three MTP projects, pack). That module has no dependency on compile, GitVersion, Daemon, TestRunner, or the installer. nuget.org push stays `PublishTestAdapter.yml`. See `docs/architecture/Testing/README.md`.
 - Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon and DevTools.TestRunner.
+- Years stay sequential. Shared projects are solution-mapped to `Debug`/`Release`, so later years reuse `bin/<Debug|Release>/<tfm>`.
+- NUnit, TUnit, and MSTest host packaging builds those runtime projects with `Debug` or `Release`, not `*.Autodesk.YYYY`.
+- `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. Daemon and TestRunner publish after the base module (`BuildProjectReferences=false`, so they do not rebuild shared projects) and overlap the expand module. Bundle creation still waits for every year and both publishes.
 
 ## DevTools.Daemon
 
@@ -53,7 +57,7 @@ dotnet publish source/DevTools.Daemon -c Release
 
 - Target: `net10.0-windows` / `win-x64`
 - Framework-dependent single-file (requires .NET 10 runtime)
-- HandyControl WPF tray app with embedded `appsettings.json` (CI/CD injects secrets)
+- HandyControl WPF tray app with embedded `appsettings.json`
 - Properties: `PublishSingleFile=true`, `SelfContained=false`
 
 ### Pipeline Integration
@@ -83,24 +87,33 @@ dotnet publish source/DevTools.TestRunner -c Release
 - Self-contained single-file
 - Properties: `PublishSingleFile=true`, `SelfContained=true`
 
-## Kill Host Process Before Deploy
+## Host build script
 
-Running Revit or AutoCAD locks loaded DLLs. Any build that deploys to the addin folder will fail or produce stale results if the host is still running.
+`scripts/build-host.ps1` stops the selected host years, then builds and deploys them. Years run one after another. Other running years stay up. The parameter is `-HostApp` (one dash). With no arguments this is both hosts, every year `2022`–`2027`, configuration `Release`.
 
-If the target host is running, stop only that exact year:
+| Parameter | Values | Default |
+|-----------|--------|---------|
+| `-HostApp` | `Revit`, `AutoCAD`, or both (`Revit,AutoCAD`) | both |
+| `-Year` | `all`, or one or more of `2022`–`2027` (`2024,2025`) | `all` |
+| `-Mode` | `Debug` or `Release` | `Release` |
+
+For each year the script stops only processes whose install folder is `Revit {year}` or `AutoCAD {year}`, then builds:
+
+| `-HostApp` | What is built |
+|------------|----------------|
+| `Revit` | `source/RevitDevTool/RevitDevTool.csproj` |
+| `AutoCAD` | `source/AcadDevTool/ACadDevTool.csproj` |
+| both | `RevitDevTool.slnx` once, which deploys both add-ins |
+
+Configuration is `{Mode}.Autodesk.{Year}`.
 
 ```powershell
-scripts/kill-host.ps1 -HostApp Revit -Year 2025
-scripts/kill-host.ps1 -HostApp AutoCAD -Year 2025
+scripts/build-host.ps1
+scripts/build-host.ps1 -HostApp Revit -Year 2025 -Mode Debug
+scripts/build-host.ps1 -HostApp Revit,AutoCAD -Year 2025,2026
 ```
 
-The script intentionally has no "all versions" mode. Other Revit/AutoCAD
-years must remain running.
-
-This applies to:
-- `scripts/build-host.ps1` (MSBuild `DeployRevitAddin`/`DeployAutoCadBundle` target deploys after build)
-- `scripts/pack.ps1`
-- `dotnet build` on a **`UseRevit` / `UseAutoCad`** project without compile-only `-p:Deploy*=false`
+A direct `dotnet build` on a **`UseRevit` / `UseAutoCad`** project without compile-only `-p:Deploy*=false` still deploys and will fail if that host year is running. Use `build-host.ps1`, or pass the compile-only props.
 
 NOT needed when:
 - Building shared `DevTools.*` (no deploy targets imported), or

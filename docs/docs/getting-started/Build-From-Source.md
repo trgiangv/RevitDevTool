@@ -47,16 +47,17 @@ Framework mapping:
 
 ## Focused Build
 
-For local compile checks, build the `.slnx` with the matching Autodesk configuration:
+`scripts/build-host.ps1` with no arguments stops and deploys both hosts for every year `2022`–`2027` in `Release`. One host builds that host project. Both hosts build `RevitDevTool.slnx` once per year. Parameters and project paths: [build-matrix.md](https://github.com/trgiangv/RevitDevTool/blob/develop/docs/agents/build-matrix.md#host-build-script).
+
+```powershell
+scripts/build-host.ps1
+scripts/build-host.ps1 -HostApp Revit -Year 2025 -Mode Debug
+```
+
+A solution build that does not stop a running host:
 
 ```powershell
 dotnet build RevitDevTool.slnx -c "Debug.Autodesk.2025"
-```
-
-If the repo has the agent helper scripts available, this is equivalent to:
-
-```powershell
-scripts/agent/build-host.ps1 -Year 2025
 ```
 
 ## Package Build
@@ -66,15 +67,13 @@ The build pipeline lives in `build/Program.cs`.
 Package command:
 
 ```powershell
-cd build
-dotnet run -c Release pack
+dotnet run --project build -- pack
 ```
 
 Publish command:
 
 ```powershell
-cd build
-dotnet run -c Release -- pack publish
+dotnet run --project build -- pack publish
 ```
 
 Packaging depends on compiled `bin/publish` outputs and includes bundle creation, Daemon publishing, and installer creation.

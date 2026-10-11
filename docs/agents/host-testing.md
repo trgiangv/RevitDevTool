@@ -35,7 +35,7 @@ dotnet run --project tests/DevTools.NUnit.MTP.Tests/DevTools.NUnit.MTP.Tests.csp
 dotnet run --project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj
 
 # 2. pack to output/nuget + drop stale global-packages extraction (default)
-scripts/pack-test-adapter.ps1
+dotnet run --project build -- adapter
 
 # 3. package surface (restore from that nupkg + host-free discovery), net48 / net8 / net10
 scripts/test-adapter-matrix.ps1
@@ -46,9 +46,10 @@ dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTe
 dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2024 --filter Writes_output --output Detailed -v q
 ```
 
-Host DLL changes: `scripts/build-host.ps1 -Year <year>`. Runner:
+Host DLL changes: `scripts/build-host.ps1 -HostApp Revit -Year <year>`. Several hosts or years: `docs/agents/build-matrix.md` (Host build script). Runner:
 `dotnet publish source/DevTools.TestRunner -c Release`. Adapter nupkg:
-`scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`). The pack script
+`dotnet run --project build -- adapter`. Installer pack is
+`dotnet run --project build -- pack`. The adapter pack
 deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
 so the next sample restore cannot keep a previous extraction of the packed version.
 

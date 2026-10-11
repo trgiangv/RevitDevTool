@@ -78,18 +78,19 @@ Do not force `--progress off`.
 
 | Goal | Commands |
 |------|----------|
-| Reload Revit add-in | `scripts/kill-host.ps1 -HostApp Revit -Year 2025`; `scripts/build-host.ps1 -Year 2025` |
+| Reload Revit add-in | `scripts/build-host.ps1 -HostApp Revit -Year 2025` |
+| Several hosts or years | `scripts/build-host.ps1 -HostApp Revit,AutoCAD -Year 2025,2026`. Rules: `docs/agents/build-matrix.md` (Host build script) |
 | Reload daemon (MCP stdio) | `dotnet publish source/DevTools.Daemon -c Release` (kills + deploys to the bundle) |
 
-Never stop every Revit process. `kill-host.ps1` requires an exact host and year;
-leave other running versions untouched.
+Never stop every Revit process. `scripts/build-host.ps1` stops only the `-HostApp`
+and `-Year` values it builds; leave other running versions untouched.
 
 ## 4. Pack
 
 | Artifact | Command |
 |----------|---------|
-| Installer / all years | `scripts/pack.ps1` |
-| TestAdapter NuGet | `scripts/pack-test-adapter.ps1` |
+| Installer / all years | `dotnet run --project build -- pack` |
+| TestAdapter NuGet | `dotnet run --project build -- adapter` |
 
 Pack writes `output/nuget` (repo `NuGet.config` maps `RevitDevTool.TestAdapter`
 there) and deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
@@ -113,12 +114,12 @@ not a product regression. When a live host is unavailable, name the skipped step
 |---------|--------------|---------|
 | CS errors after editing `DevTools.*` | Shared multi-TFM break | Compile the project you touched |
 | CS errors only on `net48` | Polyfill / API surface | Same csproj with `-c Debug.Autodesk.2022` |
-| MSB3027 / file locked | Target host year is running, or a second MTP testhost holds `tests/*/bin` | Host: `scripts/kill-host.ps1 -HostApp Revit -Year 2025`. Testhost: do not spawn a second coverage run (`test-matrix.md`) |
-| Deploy did not update the DLL | Built with the compile-only props | Stop only the target year, then `scripts/build-host.ps1 -Year 2025` |
+| MSB3027 / file locked | Target host year is running, or a second MTP testhost holds `tests/*/bin` | Host: `scripts/build-host.ps1 -HostApp Revit -Year 2025`. Testhost: do not spawn a second coverage run (`test-matrix.md`) |
+| Deploy did not update the DLL | Built with the compile-only props | `scripts/build-host.ps1 -HostApp Revit -Year 2025` |
 | MCP tools = 0 in Cursor | Bad daemon `outputSchema` or stale bundle | Republish the daemon, reload MCP (`mcp-integration-test.md`) |
 | Host starts but add-in missing / no pipe | Startup threw before FileLogProcessor | `%APPDATA%\RevitDevTool\{Year}\Logs\crash_*`, then `docs/agents/verification.md` |
 | Parser / MCP test fails on a missing DLL | Sample toolset not built | `dotnet build samples/McpToolsetDemo -c Debug.Autodesk.2025` |
-| Parser test cannot find the pixi env | `%APPDATA%\RevitDevTool\pixi-env` absent | `scripts/test-python.ps1` or `pixi install` at repo root |
+| Parser test cannot find the pixi env | `%APPDATA%\RevitDevTool\pixi-env` absent | `scripts/test-pyserver.ps1` or `pixi install` at repo root |
 | Unit test fails with a UI/thread hint | Dispatcher/UI assumed in host code | Headless path must run inline (`HostUiHelper.RunOnMainThread`), see `test-matrix.md` |
 
 ## Reference

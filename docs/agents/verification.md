@@ -30,14 +30,14 @@ Host API matrix (all years): `build-matrix.md`.
 
 | Situation | Command |
 |-----------|---------|
-| File lock / deploy failed | `scripts/kill-host.ps1 -HostApp Revit -Year <year>` |
-| Build + deploy one year | Stop only that year; `scripts/build-host.ps1 -Year 2025` |
+| File lock / deploy one or more host years | `scripts/build-host.ps1 -HostApp Revit -Year 2025` (stops only those years, then builds) |
+| Build + deploy several hosts and years | `scripts/build-host.ps1 -HostApp Revit,AutoCAD -Year 2025,2026` (rules in `build-matrix.md`, Host build script) |
 | .NET tests | `dotnet run --project tests/<project>/<project>.csproj` |
 | Execution tests | `dotnet run --project tests/DevTools.Execution.<Scope>.Tests/DevTools.Execution.<Scope>.Tests.csproj` (CSharp, FSharp, Python, IronPython, Pytest, Mcp, Services). Coverage: `-- --coverage --coverage-output-format cobertura --coverage-settings coverage.xml` |
 | MCP tests | `dotnet run --project tests/DevTools.Mcp.<Module>.Tests/DevTools.Mcp.<Module>.Tests.csproj` (Core, Catalog, Adapter, Client, Server) |
-| Python parser (this repo) | `scripts/test-python.ps1` |
-| Installer / bundle | `scripts/pack.ps1` |
-| TestAdapter NuGet | `scripts/pack-test-adapter.ps1` (writes `output/nuget`, deletes the extracted global-packages copy of that version) |
+| Python parser (this repo) | `scripts/test-pyserver.ps1` |
+| Installer / bundle | `dotnet run --project build -- pack` |
+| TestAdapter NuGet | `dotnet run --project build -- adapter` (writes `output/nuget`, deletes the extracted global-packages copy of that version) |
 | TestAdapter consumer surface (net48 / net8 / net10 build + host-free discovery) | `scripts/test-adapter-matrix.ps1` |
 | Daemon publish | `dotnet publish source/DevTools.Daemon -c Release` |
 
@@ -82,7 +82,7 @@ Get-ChildItem "$env:APPDATA\RevitDevTool\2025\Logs\log_*" |
 Get-ChildItem "$env:APPDATA\RevitDevTool\logs\log_*.log" |
     Sort-Object LastWriteTime -Descending | Select-Object -First 1
 
-# Both trees — list 50 newest under %APPDATA%\RevitDevTool
+# Host logs, custom LogFolder, code_mode temp files, and Revit journals
 scripts/collect-logs.ps1
 ```
 

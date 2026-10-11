@@ -288,10 +288,13 @@ print(f"Found {walls.GetElementCount()} walls")
 git clone https://github.com/trgiangv/RevitDevTool.git
 cd RevitDevTool
 
-# Build for a specific Revit/AutoCAD year
-scripts/build-host.ps1 -Year 2025
+# Stop that host year, then build and deploy
+scripts/build-host.ps1 -HostApp Revit -Year 2025
 
-# Or build directly
+# Several hosts and years (one year after another)
+scripts/build-host.ps1 -HostApp Revit,AutoCAD -Year 2025,2026 -Mode Release
+
+# Or build the solution directly
 dotnet build RevitDevTool.slnx -c "Debug.Autodesk.2025"
 ```
 

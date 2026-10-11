@@ -21,7 +21,7 @@ description: >
 - Logging: `StartupTrace` is pre-DI crash dump (`crash_{app}_{ver}_{pid}.log`); `FileLogProcessor` is rolling `log_*`. Do not mix prefixes. AutoClean must not delete `crash_*`.
 - MCP/IPC: keep wire contracts in sync (`BridgeMessage`, `PytestContracts`, MCP pipe names).
 - Pytest bridge: treat discover and run as separate flows; do not “fix” stale path gaps with unrelated edits.
-- Packaging is **two pipelines**. Installer/bundle (`scripts/pack.ps1`, `build/Modules/*`, `PublishRelease.yml`) does not publish NuGet. Adapter nupkg (`scripts/pack-test-adapter.ps1`, `PublishTestAdapter.yml`) does not go through `build/Modules/*`. ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
+- Packaging is **two pipelines**. Installer/bundle (`dotnet run --project build -- pack`, `publish`, `PublishRelease.yml`) does not pack the adapter. Adapter nupkg is `dotnet run --project build -- adapter` (`PackTestAdapterModule`, no `DependsOn`, no PowerShell). nuget.org push stays `PublishTestAdapter.yml`. ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
 - TestAdapter pack/release constraints: `docs/architecture/Testing/README.md`. Do not add a TestAdapter → MTP `ProjectReference`. Host/Runtime/Runner ship in the installer, not the nupkg.
 - net48: rely on Polyfill + hook/multi-TFM compile; do not speculative-polyfill.
   `PolyArgumentExceptions` is on globally — prefer `ArgumentNullException.ThrowIfNull`
@@ -31,8 +31,8 @@ description: >
 
 - Compile touched projects via build skill; fix reported errors before done.
 - Before deploy, stop only the exact host year being tested, for example
-  `scripts/kill-host.ps1 -HostApp Revit -Year 2025`, then run `scripts/build-host.ps1`.
+  `scripts/build-host.ps1 -HostApp Revit -Year 2025` (it stops only that host year, then builds).
   Never stop all Revit versions.
-- Adapter pack/publish: `scripts/pack-test-adapter.ps1` (not `scripts/pack.ps1`). Installer/bundle: `scripts/pack.ps1`.
+- Adapter pack/publish: `dotnet run --project build -- adapter`. Installer/bundle: `dotnet run --project build -- pack`.
 - Add a focused test when contracts/discovery/dispatch change; otherwise document host blockers.
 - Update the one matching doc layer (`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`) — not multiple layers by default. Testing pack/release structure lives in `docs/architecture/Testing/`.

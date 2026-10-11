@@ -212,7 +212,7 @@ cannot dedupe RTD nodes. A ~32-node tree (methods, `GenericRevitTypeTests`,
 Two artifacts. Installer workflow does not publish NuGet; adapter workflow does
 not pack the host bundle.
 
-- **NuGet** `RevitDevTool.TestAdapter` — `scripts/pack-test-adapter.ps1` /
+- **NuGet** `RevitDevTool.TestAdapter` — `dotnet run --project build -- adapter` /
   `PublishTestAdapter.yml`. Version is `<Version>` in
   `source/DevTools.TestAdapter/DevTools.TestAdapter.csproj`. Modern targets keep
   implementation assemblies in a private `build/runtime` closure. net48
@@ -220,7 +220,7 @@ not pack the host bundle.
   beside the test exe (with `DevTools.NUnit.MTP.dll`) so testhost discovery
   shares one `ITestDiscoverer` / `TestingDiscovery` identity. Consumers see
   only the platform adapter compile surface.
-- **Installer / bundle** — `scripts/pack.ps1` / `PublishRelease.yml`. Ships
+- **Installer / bundle** — `dotnet run --project build -- pack` / `PublishRelease.yml`. Ships
   `DevTools.TestRunner.exe` and the in-host testing stack
   (`Testing.Host` with NUnit/TUnit/MSTest providers, `NUnit.Runtime` / `TUnit.Runtime` / `MSTest.Runtime`).
   Required for live runs;
