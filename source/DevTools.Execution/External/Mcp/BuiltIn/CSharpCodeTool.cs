@@ -154,11 +154,10 @@ public sealed class CSharpCodeTool : IBuiltInMcpTool
 
             public class Command
             {
-                [CommandMethod("MYCOMMAND", CommandFlags.Session)]
+                [CommandMethod("MYCOMMAND")]
                 public void Execute()
                 {
                     var doc = Application.DocumentManager.MdiActiveDocument;
-                    using (doc.LockDocument())
                     using (var tr = doc.Database.TransactionManager.StartTransaction())
                     {
                         tr.Commit();
@@ -167,7 +166,7 @@ public sealed class CSharpCodeTool : IBuiltInMcpTool
                 }
             }
 
-            CommandFlags.Session and doc.LockDocument() are required. Without them the call fails because a different thread owns the document. Use #r and #r "nuget:" for extra assemblies.
+            The host runs Execute() in command context on the AutoCAD thread. LockDocument only when modifying a document other than the current one. Use #r and #r "nuget:" for extra assemblies.
             """ + $" For a Python script, use {McpSpecKeys.Tool.ExecutePython}. Errors: {McpSpecKeys.Result.Compilation} fix the code, {McpSpecKeys.Result.Runtime} check logic, {McpSpecKeys.Result.Rollback} constraint violation.",
         _ =>
             "Compile and execute C# in the host process. Send the host command entry type, not a snippet. " +

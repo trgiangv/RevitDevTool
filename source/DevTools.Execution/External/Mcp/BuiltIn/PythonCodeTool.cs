@@ -173,12 +173,11 @@ public sealed class PythonCodeTool : IBuiltInMcpTool
 
             def run():
                 doc = Application.DocumentManager.MdiActiveDocument
-                doc.LockDocument()
                 print(doc.Name)
 
             run()
 
-            Lock the document inside run() before a transaction. print() is the output. External packages use a # /// script header. For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}. Errors: {McpSpecKeys.Result.Runtime} check logic/imports, {McpSpecKeys.Result.Dependency} fix the script header.
+            The host runs run() in command context on the AutoCAD thread. Start a transaction before modifying the database. LockDocument only when modifying a document other than the current one. print() is the output. External packages use a # /// script header. For a compiled C# command, use {McpSpecKeys.Tool.ExecuteCSharp}. Errors: {McpSpecKeys.Result.Runtime} check logic/imports, {McpSpecKeys.Result.Dependency} fix the script header.
             """,
         _ =>
             "Execute one Python.NET script in the host. " +

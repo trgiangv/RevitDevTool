@@ -12,14 +12,13 @@ using Autodesk.AutoCAD.Runtime;
 
 public class Command
 {
-    [CommandMethod("MYCOMMAND", CommandFlags.Session)]
+    [CommandMethod("MYCOMMAND")]
     public void Execute()
     {
         var doc = Application.DocumentManager.MdiActiveDocument;
         var db = doc.Database;
         var ed = doc.Editor;
 
-        using (var docLock = doc.LockDocument())
         using (var tr = db.TransactionManager.StartTransaction())
         {
             // Your code here
@@ -31,8 +30,7 @@ public class Command
 }
 ```
 
-**Critical**: `CommandFlags.Session` and `doc.LockDocument()` are required because MCP execution runs on a background thread. Without them, you get "The calling thread cannot access this object because a different thread owns it".
-```
+**Critical**: The host runs this command in command context on the AutoCAD UI thread. `LockDocument()` is only for a document other than the current one. It does not switch threads.
 
 ## Transaction Pattern
 - Always use `db.TransactionManager.StartTransaction()`
@@ -208,7 +206,7 @@ public class Command
 
 ### Threading & Dialog Safety
 
-**ShowDialog() blocks the MCP execution thread.** If no user closes the window, the host freezes.
+**ShowDialog() runs on the AutoCAD UI thread.** If no user closes the window, the host freezes.
 
 **Never use `Show()`** — returns immediately, agent misses results, risks host crash on GC.
 

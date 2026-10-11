@@ -1,6 +1,6 @@
 # Execution System Digest
 
-Deep source: `docs/architecture/Execution/README.md` and sub-pages (`code-execution.md`, `python-runtime.md`, `execution-guard.md`, `pytest-bridge.md`, `mcp-dispatch.md`).
+Deep source: `docs/architecture/Execution/README.md` and sub-pages (`code-execution.md`, `autocad-context.md`, `python-runtime.md`, `execution-guard.md`, `pytest-bridge.md`, `mcp-dispatch.md`).
 
 ## Core Shape
 
@@ -15,7 +15,7 @@ Deep source: `docs/architecture/Execution/README.md` and sub-pages (`code-execut
 
 Shared execution does not own host APIs. It calls abstractions defined in `source/DevTools.Execution.Abstractions/`:
 
-- `IHostContextExecutor` — run code on host main thread
+- `IHostContextExecutor` — run code on the host API thread. AutoCAD context rules and the checked Plant 3D scenarios: `docs/architecture/Execution/autocad-context.md`
 - `ICommandDiscovery` — discover executable nodes
 - `ICommandRunner` — invoke a discovered command
 - `IDocumentBridge` — open/close documents (Revit/AutoCAD)

@@ -4,7 +4,7 @@ The execution system is the shared runtime in `source/DevTools.Execution/`. It d
 
 The platform is not Revit-only. Revit and AutoCAD currently provide host adapters; future .NET-capable hosts should plug in through the same abstractions.
 
-Last updated: 2026-09-15
+Last updated: 2026-10-11
 
 ---
 
@@ -71,7 +71,7 @@ Shared execution depends on interfaces:
 
 | Interface | Purpose |
 |-----------|---------|
-| `IHostContextExecutor` | Marshal work to the host-safe context/API thread. |
+| `IHostContextExecutor` | Marshal work onto the host API thread. Revit raises an ExternalEvent. AutoCAD context and `AcadHostContextExecutor`: [autocad-context.md](autocad-context.md). |
 | `ICommandDiscovery` | Parse host commands from an assembly. |
 | `ICommandRunner` | Invoke discovered or compiled commands. |
 | `ICompiledScriptBridge` | Parent-bind host APIs, find the compiled command type, rewrite host-year `#r` paths. FSI compile refs are derived from parent `Location`s in Execution, not a fourth contract member. |
@@ -91,6 +91,7 @@ Revit wiring lives in `RevitHostingExtensions`. AutoCAD wiring lives in `AcadHos
 | Topic | File |
 |-------|------|
 | Script runtimes, orchestrator flow, package service | [code-execution.md](code-execution.md) |
+| AutoCAD application vs command context, `AcadHostContextExecutor` | [autocad-context.md](autocad-context.md) |
 | CPython init, host attach, providers | [python-runtime.md](python-runtime.md) |
 | Dialog & failure suppression (ExecutionGuard) | [execution-guard.md](execution-guard.md) |
 | Pytest in-host bridge | [pytest-bridge.md](pytest-bridge.md) |

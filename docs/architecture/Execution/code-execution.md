@@ -23,7 +23,7 @@ flowchart LR
 
 **Load**: UI requests a path → orchestrator asks providers to discover nodes → builds execution tree.
 
-**Execute**: User selects a node → strategy compiles/interprets → dispatches to host thread → returns result.
+**Execute**: User selects a node → strategy compiles/interprets → dispatches through `IHostContextExecutor` → returns result. AutoCAD dispatch is [autocad-context.md](autocad-context.md).
 
 **Watch**: File watcher monitors roots → triggers reload on changes → `TreeStateManager` preserves UI state.
 

@@ -2,7 +2,6 @@ namespace DevTools.Execution.Abstractions;
 
 /// <summary>
 /// Dispatches delegates to the host application's API thread.
-/// Revit uses ExternalEvent, AutoCAD uses Document.LockDocument(), etc.
 /// </summary>
 public interface IHostContextExecutor
 {

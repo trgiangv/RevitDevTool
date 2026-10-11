@@ -89,8 +89,9 @@ public sealed class CSharpCodeToolTests
         Assert.Contains("[CommandMethod]", description, StringComparison.Ordinal);
         Assert.DoesNotContain(McpSpecKeys.Resource.AcadCSharpCheatsheet, description, StringComparison.Ordinal);
         Assert.DoesNotContain("cheatsheet", description, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("CommandFlags.Session", description, StringComparison.Ordinal);
+        Assert.Contains("command context", description, StringComparison.Ordinal);
         Assert.Contains("LockDocument", description, StringComparison.Ordinal);
+        Assert.DoesNotContain("CommandFlags.Session", description, StringComparison.Ordinal);
         Assert.Contains(McpSpecKeys.Tool.ExecutePython, description, StringComparison.Ordinal);
         Assert.DoesNotContain("and send that required pattern", description, StringComparison.Ordinal);
         Assert.DoesNotContain(McpSpecKeys.Resource.RevitCSharpCheatsheet, description, StringComparison.Ordinal);

@@ -39,7 +39,7 @@ db = doc.Database
 editor = doc.Editor
 ```
 
-For database changes, use the normal AutoCAD transaction pattern:
+For database changes, use the normal AutoCAD transaction pattern. Scripts, MCP code, and tests already run in the active drawing's command context, so the current drawing does not need `LockDocument()`. Use `LockDocument()` when changing a different drawing that is already open. Assigning the active document takes effect after the script returns.
 
 ```python
 from Autodesk.AutoCAD.DatabaseServices import OpenMode

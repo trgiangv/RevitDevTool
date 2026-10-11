@@ -50,6 +50,7 @@ public sealed class PythonCodeToolTests
         Assert.DoesNotContain(McpSpecKeys.Resource.AcadPythonCheatsheet, description, StringComparison.Ordinal);
         Assert.DoesNotContain("cheatsheet", description, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("def run()", description, StringComparison.Ordinal);
+        Assert.Contains("command context", description, StringComparison.Ordinal);
         Assert.Contains("LockDocument", description, StringComparison.Ordinal);
         Assert.DoesNotContain("and send that pattern", description, StringComparison.Ordinal);
         Assert.Contains(McpSpecKeys.Tool.ExecuteCSharp, description, StringComparison.Ordinal);
