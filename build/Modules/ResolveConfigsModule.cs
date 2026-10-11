@@ -11,7 +11,7 @@ namespace Build.Modules;
 ///     Resolve solution configurations required to compile the add-in for all supported Revit versions.
 /// </summary>
 [UsedImplicitly]
-public sealed class ResolveConfigurationsModule : Module<string[]>
+public sealed class ResolveConfigsModule : Module<string[]>
 {
     protected override async Task<string[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {

@@ -13,14 +13,14 @@ namespace Build.Modules;
 ///     Test the add-in for each supported Revit configuration.
 /// </summary>
 [SkipIf<IsCI>]
-[DependsOn<ResolveConfigurationsModule>]
-[DependsOn<CompileProjectModule>(Optional = true)]
+[DependsOn<ResolveConfigsModule>]
+[DependsOn<CompileExpandModule>(Optional = true)]
 [UsedImplicitly]
 public sealed class TestProjectModule : Module
 {
     protected override async Task ExecuteModuleAsync(IModuleContext context, CancellationToken cancellationToken)
     {
-        var configurationsResult = await context.GetModule<ResolveConfigurationsModule>();
+        var configurationsResult = await context.GetModule<ResolveConfigsModule>();
         var configurations = configurationsResult.ValueOrDefault!;
 
         foreach (var configuration in configurations)

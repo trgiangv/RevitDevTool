@@ -17,9 +17,10 @@ builder.Services.AddOptions<PublishOptions>().Bind(builder.Configuration.GetSect
 
 if (args.Length == 0)
 {
-    builder.Services.AddModule<CompileProjectModule>();
-    builder.Services.AddModule<PublishDaemonModule>();
-    builder.Services.AddModule<PublishTestRunnerModule>();
+    builder.Services.AddModule<CompileBaseModule>();
+    builder.Services.AddModule<CompileExpandModule>();
+    builder.Services.AddModule<CompileDaemonModule>();
+    builder.Services.AddModule<CompileTestRunnerModule>();
 }
 
 if (args.Contains("test"))
@@ -29,7 +30,6 @@ if (args.Contains("test"))
 
 if (args.Contains("pack"))
 {
-    builder.Services.AddModule<CleanProjectModule>();
     builder.Services.AddModule<CreateBundleModule>();
     builder.Services.AddModule<CreateInstallerModule>();
 }

@@ -12,7 +12,7 @@ namespace Build.Modules;
 ///     Resolve semantic versions for compiling and publishing the add-in.
 /// </summary>
 [UsedImplicitly]
-public sealed class ResolveVersioningModule(IOptions<BuildOptions> buildOptions) : Module<ResolveVersioningResult>
+public sealed class ResolveVersionModule(IOptions<BuildOptions> buildOptions) : Module<ResolveVersioningResult>
 {
     protected override async Task<ResolveVersioningResult?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {

@@ -15,13 +15,13 @@ namespace Build.Modules;
 /// <summary>
 ///     Generate the changelog for publishing the add-in.
 /// </summary>
-[DependsOn<ResolveVersioningModule>]
+[DependsOn<ResolveVersionModule>]
 [UsedImplicitly]
 public sealed class GenerateChangelogModule(IOptions<PublishOptions> publishOptions) : Module<string>
 {
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
-        var versioningResult = await context.GetModule<ResolveVersioningModule>();
+        var versioningResult = await context.GetModule<ResolveVersionModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
         if (string.IsNullOrEmpty(publishOptions.Value.ChangelogFile))

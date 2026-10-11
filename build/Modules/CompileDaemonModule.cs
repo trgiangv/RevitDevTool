@@ -9,28 +9,28 @@ using Sourcy.DotNet;
 namespace Build.Modules;
 
 /// <summary>
-///     Publish DevTools.TestRunner as a framework-dependent single-file exe (requires .NET 10 runtime).
-///     The csproj DeployDevToolsTestRunner target copies it beside DevTools.Daemon.exe.
+///     Publish DevTools.Daemon as a framework-dependent single-file exe (requires .NET 10 runtime).
+///     The csproj DeployDevToolsDaemon target handles kill + copy to bundle Contents.
 /// </summary>
-[DependsOn<ResolveVersioningModule>]
-[DependsOn<CompileProjectModule>]
-[DependsOn<CleanProjectModule>(Optional = true)]
+[DependsOn<ResolveVersionModule>]
+[DependsOn<CompileBaseModule>]
 [UsedImplicitly]
-public sealed class PublishTestRunnerModule : Module<string>
+public sealed class CompileDaemonModule : Module<string>
 {
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
-        var versioningResult = await context.GetModule<ResolveVersioningModule>();
+        var versioningResult = await context.GetModule<ResolveVersionModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
         await context.DotNet().Publish(new DotNetPublishOptions
         {
-            ProjectSolution = Projects.DevTools_TestRunner.FullName,
+            ProjectSolution = Projects.DevTools_Daemon.FullName,
             Configuration = "Release",
             Properties =
             [
                 ("VersionPrefix", versioning.VersionPrefix),
-                ("VersionSuffix", versioning.VersionSuffix!)
+                ("VersionSuffix", versioning.VersionSuffix!),
+                ("BuildProjectReferences", "false")
             ]
         }, cancellationToken: cancellationToken);
 

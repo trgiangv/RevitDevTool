@@ -20,7 +20,7 @@ namespace Build.Modules;
 /// <remarks>
 ///     Requires Inno Setup 6 to be installed and ISCC.exe available in PATH.
 /// </remarks>
-[DependsOn<ResolveVersioningModule>]
+[DependsOn<ResolveVersionModule>]
 [DependsOn<CreateBundleModule>]
 [UsedImplicitly]
 public sealed class CreateInstallerModule(IOptions<BuildOptions> buildOptions) : Module
@@ -36,7 +36,7 @@ public sealed class CreateInstallerModule(IOptions<BuildOptions> buildOptions) :
                 """);
         }
 
-        var versioningResult = await context.GetModule<ResolveVersioningModule>();
+        var versioningResult = await context.GetModule<ResolveVersionModule>();
         var bundleResult = await context.GetModule<CreateBundleModule>();
         var versioning = versioningResult.ValueOrDefault!;
         var bundleFolderPath = bundleResult.ValueOrDefault!;

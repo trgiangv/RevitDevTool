@@ -17,10 +17,10 @@ namespace Build.Modules;
 /// <summary>
 ///     Create the Autodesk .bundle package.
 /// </summary>
-[DependsOn<ResolveVersioningModule>]
-[DependsOn<CompileProjectModule>]
-[DependsOn<PublishDaemonModule>]
-[DependsOn<PublishTestRunnerModule>]
+[DependsOn<ResolveVersionModule>]
+[DependsOn<CompileExpandModule>]
+[DependsOn<CompileDaemonModule>]
+[DependsOn<CompileTestRunnerModule>]
 [UsedImplicitly]
 public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptions) : Module<string>
 {
@@ -31,16 +31,16 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
     private const string PublishFolder = "publish";
     private const string DaemonExecutable = "DevTools.Daemon.exe";
     private const string TestRunnerExecutable = "DevTools.TestRunner.exe";
-    
+
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
-        var versioningResult = await context.GetModule<ResolveVersioningModule>();
-        var daemonResult = await context.GetModule<PublishDaemonModule>();
-        var runnerResult = await context.GetModule<PublishTestRunnerModule>();
+        var versioningResult = await context.GetModule<ResolveVersionModule>();
+        var daemonResult = await context.GetModule<CompileDaemonModule>();
+        var runnerResult = await context.GetModule<CompileTestRunnerModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
         var revitTarget = new File(Projects.RevitDevTool.FullName);
-        var acadTarget = new File(Path.Combine(revitTarget.Folder!.Parent!.Path, "AcadDevTool", "AcadDevTool.csproj"));
+        var acadTarget = new File(Projects.ACadDevTool.FullName);
 
         var revitPublishDirs = revitTarget.Folder!.GetFolder(BinFolder).GetFolders(folder => folder.Name == PublishFolder).ToArray();
         var acadPublishDirs = acadTarget.Folder!.GetFolder(BinFolder).GetFolders(folder => folder.Name == PublishFolder).ToArray();
@@ -59,6 +59,11 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         CopyManifest(context, manifestFile, versioning);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
+        if (outputFile.Exists)
+        {
+            await outputFile.DeleteAsync(cancellationToken);
+        }
+
         context.Files.Zip.ZipFolder(bundleFolder, outputFile.Path);
 
         context.Summary.KeyValue("Artifacts", "Bundle", outputFile.Path);
@@ -101,7 +106,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
     {
         var runnerExe = new File(Path.Combine(runnerPublishDir, TestRunnerExecutable));
         runnerExe.Exists.ShouldBeTrue(
-            $"Expected {TestRunnerExecutable} at '{runnerExe.Path}' after PublishTestRunnerModule.");
+            $"Expected {TestRunnerExecutable} at '{runnerExe.Path}' after CompileTestRunnerModule.");
 
         runnerExe.CopyTo(contentFolder.GetFile(TestRunnerExecutable).Path);
     }
