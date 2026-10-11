@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage SchemaVersion="1.0" AutodeskProduct="Revit" Name="RevitDevTool" AppVersion="0.0.0"
                     ProductType="Application">
-    <CompanyDetails Name="Inspexel"/>
+    <CompanyDetails Name="trgiangv"/>
     <Components Description="Revit 2027">
         <RuntimeRequirements OS="Win64" Platform="Revit" SeriesMax="R2027" SeriesMin="R2027"/>
         <ComponentEntry AppName="RevitDevTool" ModuleName="./Contents/2027/RevitDevTool.addin"/>

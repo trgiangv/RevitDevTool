@@ -7,7 +7,7 @@
         <FullClassName>RevitDevTool.Application</FullClassName>
         <VisibilityMode>AlwaysVisible</VisibilityMode>
         <Text>RevitDevTool</Text>
-        <VendorId>Inspexel</VendorId>
+        <VendorId>trgiangv</VendorId>
         <VendorDescription>https://github.com/trgiangv/RevitDevTool</VendorDescription>
     </AddIn>
 </RevitAddIns>

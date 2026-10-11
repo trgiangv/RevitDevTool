@@ -5,7 +5,7 @@
 #define AppName        "RevitDevTool"
 #define AppVersion     "1.0.0"
 #define AppVersionBase "1.0.0"
-#define AppPublisher   "Inspexel"
+#define AppPublisher   "trgiangv"
 #define AppURL         "https://github.com/trgiangv/RevitDevTool"
 #define AppId          "B2BC2881-A08A-41D8-B1B3-424045E529DB"
 
