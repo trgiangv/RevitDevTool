@@ -30,8 +30,14 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 
 Write-Host 'Packing RevitDevTool.TestAdapter into output/nuget (end-user PackageReference surface)...'
-& (Join-Path $PSScriptRoot 'pack-test-adapter.ps1')
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Push-Location $root
+try {
+    dotnet run --project build -- adapter
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+}
+finally {
+    Pop-Location
+}
 
 $rows = @()
 $failures = 0

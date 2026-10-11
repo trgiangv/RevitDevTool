@@ -396,7 +396,7 @@ public sealed class AdapterArchitectureTests
             RepositoryRoot, "source", "DevTools.TestAdapter", "build", "RevitDevTool.TestAdapter.targets"));
         var adapter = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj"));
-        var pack = File.ReadAllText(Path.Combine(RepositoryRoot, "scripts", "pack-test-adapter.ps1"));
+        var pack = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Modules", "PackTestAdapterModule.cs"));
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.MSTest.MTP");
         var discoverer = File.ReadAllText(Path.Combine(mtpDir, "MSTestTestDiscoverer.cs"));
         var listing = File.ReadAllText(Path.Combine(mtpDir, "MSTestListing.cs"));
@@ -415,7 +415,8 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("PackMtpSiblings", adapter, StringComparison.Ordinal);
         Assert.Contains("hooks\\MSTestMtpBuilderHook.cs", adapter, StringComparison.Ordinal);
         Assert.DoesNotContain("ProjectReference Include=\"..\\DevTools.MSTest.MTP", adapter, StringComparison.Ordinal);
-        Assert.Contains("DevTools.MSTest.MTP.csproj", pack, StringComparison.Ordinal);
+        Assert.Contains("DevTools_MSTest_MTP", pack, StringComparison.Ordinal);
+        Assert.DoesNotContain("powershell", pack, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("dotnet publish", pack, StringComparison.OrdinalIgnoreCase);
 
         var session = File.ReadAllText(Path.Combine(
@@ -793,5 +794,22 @@ public sealed class AdapterArchitectureTests
             "DevTools.TestAdapter",
             "DevTools.TestAdapter.csproj"));
         Assert.DoesNotContain("Microsoft.VisualStudio.Interop", mtpCsproj, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void Adapter_pack_is_a_separate_pipeline_argument()
+    {
+        var program = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Program.cs"));
+        var module = File.ReadAllText(Path.Combine(
+            RepositoryRoot, "build", "Modules", "PackTestAdapterModule.cs"));
+
+        Assert.Contains("args.Contains(\"adapter\")", program, StringComparison.Ordinal);
+        Assert.Contains("AddModule<PackTestAdapterModule>()", program, StringComparison.Ordinal);
+        Assert.DoesNotContain("DependsOn", module, StringComparison.Ordinal);
+        Assert.DoesNotContain("powershell", module, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("DevTools_NUnit_MTP", module, StringComparison.Ordinal);
+        Assert.Contains("DevTools_TUnit_MTP", module, StringComparison.Ordinal);
+        Assert.Contains("DevTools_MSTest_MTP", module, StringComparison.Ordinal);
+        Assert.Contains("NoRestore = true", module, StringComparison.Ordinal);
     }
 }

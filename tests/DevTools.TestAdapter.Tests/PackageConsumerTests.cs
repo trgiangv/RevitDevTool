@@ -387,7 +387,7 @@ public sealed class PackageConsumerTests
     private static (string Nupkg, string Version) PackAdapter(string root, string packages)
     {
         // Pack copies MTP from bin/Release; build siblings first so the nupkg
-        // is not a stale Debug leftover. Same order as scripts/pack-test-adapter.ps1.
+        // is not a stale Debug leftover. Same order as PackTestAdapterModule.
         Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.NUnit.MTP", "DevTools.NUnit.MTP.csproj")}\" -c Release");
         Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.TUnit.MTP", "DevTools.TUnit.MTP.csproj")}\" -c Release");
         Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.MSTest.MTP", "DevTools.MSTest.MTP.csproj")}\" -c Release");

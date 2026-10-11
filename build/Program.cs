@@ -39,4 +39,10 @@ if (args.Contains("publish"))
     builder.Services.AddModule<PublishGithubModule>();
 }
 
+if (args.Contains("adapter"))
+{
+    builder.Services.AddModule<PackTestAdapterModule>();
+}
+
 await builder.Build().RunAsync();
+
