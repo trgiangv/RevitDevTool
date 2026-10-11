@@ -14,9 +14,18 @@
     <PropertyGroup>
       <_NUnitRuntimeDeployDir>$([System.IO.Path]::GetFullPath('$(TargetDir)NUnitRuntime\'))</_NUnitRuntimeDeployDir>
     </PropertyGroup>
+    <!--
+      Year configurations (Release.Autodesk.2023) would compile this multi-TFM
+      project again into bin\Release.Autodesk.YYYY. The solution already builds
+      it as Debug/Release. Reuse that output; the payload is per TFM, not per year.
+    -->
+    <PropertyGroup>
+      <_RuntimeConfiguration>Release</_RuntimeConfiguration>
+      <_RuntimeConfiguration Condition="$(Configuration.Contains('Debug'))">Debug</_RuntimeConfiguration>
+    </PropertyGroup>
     <MSBuild Projects="$(NUnitRuntimeProject)"
              Targets="GetNUnitRuntimePayload"
-             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+             Properties="Configuration=$(_RuntimeConfiguration);TargetFramework=$(TargetFramework)">
       <Output TaskParameter="TargetOutputs" ItemName="_NUnitRuntimePayload" />
     </MSBuild>
     <Error Condition="'@(_NUnitRuntimePayload)' == ''"

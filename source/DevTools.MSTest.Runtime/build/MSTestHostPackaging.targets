@@ -10,9 +10,14 @@
     <PropertyGroup>
       <_MSTestRuntimeDeployDir>$([System.IO.Path]::GetFullPath('$(TargetDir)MSTestRuntime\'))</_MSTestRuntimeDeployDir>
     </PropertyGroup>
+    <!-- Same Debug/Release bucket as NUnitHostPackaging.targets. -->
+    <PropertyGroup>
+      <_RuntimeConfiguration>Release</_RuntimeConfiguration>
+      <_RuntimeConfiguration Condition="$(Configuration.Contains('Debug'))">Debug</_RuntimeConfiguration>
+    </PropertyGroup>
     <MSBuild Projects="$(MSTestRuntimeProject)"
              Targets="GetMSTestRuntimePayload"
-             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+             Properties="Configuration=$(_RuntimeConfiguration);TargetFramework=$(TargetFramework)">
       <Output TaskParameter="TargetOutputs" ItemName="_MSTestRuntimePayload" />
     </MSBuild>
     <Error Condition="'@(_MSTestRuntimePayload)' == ''"

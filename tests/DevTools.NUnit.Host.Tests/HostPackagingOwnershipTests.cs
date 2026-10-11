@@ -65,6 +65,8 @@ public sealed class HostPackagingOwnershipTests
         Assert.Contains("CopyNUnitRuntimeBootstrap", packagingText, StringComparison.Ordinal);
         Assert.Contains("AssertNUnitRuntimeLayout", packagingText, StringComparison.Ordinal);
         Assert.Contains("GetNUnitRuntimePayload", packagingText, StringComparison.Ordinal);
+        Assert.Contains("Configuration=$(_RuntimeConfiguration)", packagingText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Configuration=$(Configuration)", packagingText, StringComparison.Ordinal);
         Assert.Contains("$(TargetDir)NUnitRuntime", packagingText, StringComparison.Ordinal);
         Assert.DoesNotContain("$(OutputPath)NUnitRuntime", packagingText, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Abstractions", packagingText, StringComparison.Ordinal);
@@ -78,6 +80,17 @@ public sealed class HostPackagingOwnershipTests
         Assert.Contains("'$(TargetDir)' != ''", payloadText, StringComparison.Ordinal);
         Assert.DoesNotContain("GetFullPath('$(TargetDir)NUnitRuntimePayload", payloadText, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.Core", payloadText, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    [DataRow("source/DevTools.TUnit.Runtime/build/TUnitHostPackaging.targets")]
+    [DataRow("source/DevTools.MSTest.Runtime/build/MSTestHostPackaging.targets")]
+    public void Runtime_payload_msbuild_uses_debug_or_release_bucket(string relativeTargetsPath)
+    {
+        var targetsPath = Path.Combine(FindRepoRoot(), relativeTargetsPath.Replace('/', Path.DirectorySeparatorChar));
+        var text = File.ReadAllText(targetsPath);
+        Assert.Contains("Configuration=$(_RuntimeConfiguration)", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("Configuration=$(Configuration)", text, StringComparison.Ordinal);
     }
 
     [TestMethod]

@@ -10,9 +10,14 @@
     <PropertyGroup>
       <_TUnitRuntimeDeployDir>$([System.IO.Path]::GetFullPath('$(TargetDir)TUnitRuntime\'))</_TUnitRuntimeDeployDir>
     </PropertyGroup>
+    <!-- Same Debug/Release bucket as NUnitHostPackaging.targets. -->
+    <PropertyGroup>
+      <_RuntimeConfiguration>Release</_RuntimeConfiguration>
+      <_RuntimeConfiguration Condition="$(Configuration.Contains('Debug'))">Debug</_RuntimeConfiguration>
+    </PropertyGroup>
     <MSBuild Projects="$(TUnitRuntimeProject)"
              Targets="GetTUnitRuntimePayload"
-             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+             Properties="Configuration=$(_RuntimeConfiguration);TargetFramework=$(TargetFramework)">
       <Output TaskParameter="TargetOutputs" ItemName="_TUnitRuntimePayload" />
     </MSBuild>
     <Error Condition="'@(_TUnitRuntimePayload)' == ''"
