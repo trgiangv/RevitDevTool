@@ -38,7 +38,6 @@
         <Exec Command="taskkill /F /IM DevTools.Daemon.exe 2>nul &amp; ping -n 2 127.0.0.1 >nul" IgnoreExitCode="true"/>
         <MakeDir Directories="$(BundleContentsFolder)"/>
         <Copy SourceFiles="$(PublishDir)DevTools.Daemon.exe" DestinationFolder="$(BundleContentsFolder)" OverwriteReadOnlyFiles="true" Retries="3" RetryDelayMilliseconds="1000"/>
-        <Copy SourceFiles="appsettings.development.json" DestinationFolder="$(BundleContentsFolder)" Condition="Exists('appsettings.development.json')" OverwriteReadOnlyFiles="true"/>
     </Target>
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.Mvvm"/>

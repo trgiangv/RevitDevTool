@@ -40,15 +40,13 @@ Duende `OidcClient` owns PKCE, ID-token validation, and refresh. Local code is D
 
 ## Configuration
 
-Production config is embedded in the single-file EXE (`appsettings.json` as EmbeddedResource).
+Config is the committed `appsettings.json`, embedded in the single-file EXE. `Auth` and `Gateway` are public client values (issuer, client id, tunnel URL), not secrets.
 
 | Layer | File | Purpose |
 |-------|------|---------|
-| Production | `appsettings.json` (embedded) | Auth, Gateway, `Logging:File` |
-| Development | `appsettings.Development.json` (git-ignored) | Local overrides |
+| App | `appsettings.json` (embedded) | Auth, Gateway, `Logging:File` |
 | User prefs | `%APPDATA%/RevitDevTool/settings.json` | `User` section — `IOptionsMonitor<UserSettings>` load, `UserSettingsStore` write |
 | File logs | `%APPDATA%/RevitDevTool/logs/` | Hourly ZLogger rolling (`Logging:File`); tray and stdio share the folder, PID separates processes |
-| CI/CD | GitHub Secrets | `AUTH_ISSUER`, `AUTH_CLIENT_ID`, `GATEWAY_URL` |
 
 Auth/Gateway bind via `Configure<T>(GetSection)`. User prefs are a separate JSON file with a `User` section so they overlay configuration without colliding with Auth/Gateway. `IConfiguration` is read-only; `UserSettingsStore.Update` writes the file and reloads the configuration root.
 

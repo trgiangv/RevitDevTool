@@ -1,4 +1,3 @@
-using System.IO;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Desktop;
@@ -19,9 +18,6 @@ namespace DevTools.Daemon.Composition;
 
 public static class ServerHostBuilder
 {
-    private const string EmbeddedSettingsResource = "appsettings.json";
-    private const string DevelopmentSettingsFile = "appsettings.development.json";
-
     public static IHost CreateDesktop()
     {
         var builder = CreateBuilder();
@@ -64,10 +60,7 @@ public static class ServerHostBuilder
         });
 
         builder.Configuration.AddJsonStream(
-            typeof(ServerHostBuilder).Assembly.GetManifestResourceStream(EmbeddedSettingsResource)!);
-        builder.Configuration.AddJsonFile(
-            Path.Combine(AppContext.BaseDirectory, DevelopmentSettingsFile),
-            optional: true, reloadOnChange: false);
+            typeof(ServerHostBuilder).Assembly.GetManifestResourceStream("appsettings.json")!);
         builder.Configuration.AddJsonFile(
             UserSettings.FilePath, optional: true, reloadOnChange: true);
 
