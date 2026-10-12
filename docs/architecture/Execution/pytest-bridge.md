@@ -33,7 +33,7 @@ flowchart LR
 
 ## Rules
 
-- `PytestRunner.py` must start with `from __future__ import annotations`. `import pytest` is inside `_run()` so a missing package becomes a JSON error; annotations must not evaluate `pytest` at exec (Python 3.13 `NameError: name 'pytest' is not defined`).
+- `PytestRunner.py` must start with `from __future__ import annotations`. `import pytest` is inside `_run()` so a missing package becomes a JSON error; annotations must not evaluate `pytest` at exec (Python 3.13 `NameError: name 'pytest' is not defined`). On Python 3.14, pluggy 1.6 evaluates hook annotations during `pytest.main`; the runner keeps those annotations as strings for that call, then restores `inspect.signature`.
 - Guard `Suppress` for the whole run.
 - PEP 723 on CPython `conftest.py` / `test_*.py` only — never on `test_*_ipy.py`.
 - Capture: CPython `--capture=sys` + restore `print` onto `sys.stdout`; IPy per-test tee. No session StringIO.

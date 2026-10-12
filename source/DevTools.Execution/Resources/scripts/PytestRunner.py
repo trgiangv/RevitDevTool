@@ -354,16 +354,49 @@ def _error_response(test_root: str, ex: Exception) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _guard_pluggy_annotations():
+    """Keep hook annotations as strings while pytest starts.
+
+    pluggy 1.6 calls ``inspect.signature``, which on Python 3.14 evaluates
+    deferred annotations. ``PytestPluginManager`` is imported only under
+    ``TYPE_CHECKING``, so that raises ``NameError``. Python 3.13 does not.
+    """
+    if sys.version_info < (3, 14):
+        return None
+    import inspect
+
+    import annotationlib
+
+    original = inspect.signature
+
+    def signature(obj, *args, **kwargs):
+        kwargs.setdefault("annotation_format", annotationlib.Format.STRING)
+        return original(obj, *args, **kwargs)
+
+    inspect.signature = signature
+    return original
+
+
+def _restore_pluggy_annotations(original) -> None:
+    if original is None:
+        return
+    import inspect
+
+    inspect.signature = original
+
+
 def _run() -> str:
     request: dict[str, Any] = {}
     test_root = ""
     saved_cwd = os.getcwd()
     inserted_paths: list[str] = []
     saved_streams: tuple[Any, Any, Any] | None = None
+    saved_signature = None
     try:
         request = _load_request()
         test_root, saved_cwd, inserted_paths = _prepare_paths(request)
         saved_streams = _enable_pytest_streams()
+        saved_signature = _guard_pluggy_annotations()
 
         import pytest
 
@@ -378,6 +411,7 @@ def _run() -> str:
             ex,
         )
     finally:
+        _restore_pluggy_annotations(saved_signature)
         if saved_streams is not None:
             _disable_pytest_streams(*saved_streams)
         _restore_paths(inserted_paths)
