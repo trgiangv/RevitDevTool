@@ -154,7 +154,8 @@ def pytest_runtestloop(session: pytest.Session) -> bool | None:
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> bool:  # noqa
     results_by_nodeid = item.session.stash.get(_remote_results_key, None)
     if results_by_nodeid is None:
-        return False
+        # firstresult: None lets pytest's own protocol run. False would swallow it.
+        return None
 
     streamed = item.session.stash.get(_streamed_nodeids_key, set())
     if item.nodeid in streamed:

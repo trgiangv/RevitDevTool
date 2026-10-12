@@ -17,16 +17,17 @@ import pytest
 
 from .bridge import HostBridge
 from .constants import (
+    DEFAULT_HOST,
     EXIT_CODE_CONFIG_ERROR,
     PLUGIN_NAME,
     get_host_config,
 )
 from .discovery import (
-    find_host_executable,
     find_host_pipes,
     start_host,
     wait_for_host_pipe,
 )
+from .hosts import find_executable
 
 if TYPE_CHECKING:
     from .dialog_resolver import StartupDialogResolver
@@ -122,7 +123,7 @@ class LaunchResult:
 
 
 def auto_launch(host_name: str, version: str, launch_timeout_s: float) -> LaunchResult:
-    if find_host_executable(host_name, version) is None:
+    if find_executable(host_name, version) is None:
         pytest.exit(
             f"{PLUGIN_NAME}: {host_name} {version} is not installed on this machine.",
             returncode=EXIT_CODE_CONFIG_ERROR,
@@ -174,7 +175,7 @@ def find_instance_by_pid(
     return None
 
 
-def is_process_alive(process_id: int, host_name: str = "revit") -> bool:
+def is_process_alive(process_id: int, host_name: str = DEFAULT_HOST) -> bool:
     """Check if process is alive AND matches the expected executable name.
 
     Plain PID-alive checks are vulnerable to Windows PID reuse.
