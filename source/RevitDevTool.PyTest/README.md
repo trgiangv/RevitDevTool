@@ -19,12 +19,14 @@ uv add revitdevtool_pytest
 | Requirement | Version |
 |---|---|
 | Python | >= 3.10 |
-| pytest | >= 9.0 |
+| pytest | >= 9.1.1, < 10 |
 | pywin32 | >= 311 |
 | OS | Windows (Named Pipes) |
 | Host | [RevitDevTool](https://github.com/trgiangv/RevitDevTool) add-in loaded |
 
 ## Supported hosts
+
+`host_name` is the lowercase name of the RevitDevTool `HostApp` enum (`Revit` → `revit`, `Civil3D` → `civil3d`). Each name is declared once in `src/revitdevtool_pytest/constants.py`. `HOST_REGISTRY` and the AutoCAD `InstalledProducts` map (`ACAD`, `C3D`, `PLNT3D`, …) both use those constants as keys. Do not add a second spelling for the same host.
 
 ### Supported today
 
