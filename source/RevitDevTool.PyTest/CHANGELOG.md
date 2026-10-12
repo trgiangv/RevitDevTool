@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-10-12
+
+### Changed
+
+- AutoCAD-family discovery reads `HKLM\SOFTWARE\Autodesk\AutoCAD\*\InstalledProducts`.
+  The default value is the install directory. The subkey is the product code
+  (`ACAD`, `C3D`, `PLNT3D`, `ACA`, `ACADM`, `MEP`, `ACADE`, `MAP`). The year is
+  the last token of the folder name (`AutoCAD 2026`, `Civil 3D 2026`), at or
+  above 2022. The filesystem fallback applies only to `autocad`.
+- Revit discovery lives in its own resolver: `Autodesk Revit {version}` in the
+  registry, then `Revit {version}` on disk.
+- `host_name` is the only key. The names are the lowercase `HostApp` values
+  (`Civil3D` → `civil3d`) and are declared once in `constants.py`.
+  `HOST_REGISTRY` and the AutoCAD product-code map both use those constants.
+- `HostConfig` keeps `pipe_prefix`, `exe_name`, and `launch_args`. Install
+  paths stay in the resolver for that host.
+- Requires `pytest>=9.1.1,<10` and `pywin32>=312`, matching the host pixi runtime.
+
+### Removed
+
+- `find_host_executable()`. Callers use `find_executable(host_name, version)`.
+- `HostConfig.acad_product_code` and `is_acad_family()`.
+- Registry product-id lookup (`ACAD-XXNN`, `UPIRELEASE`, `GlobUPILocation`,
+  `AcadLocation`).
+
+### Fixed
+
+- A local plugin test run no longer swallows pytest's own test loop when the
+  session has no remote results.
+
 ## [0.4.0] - 2026-08-31
 
 ### Added
