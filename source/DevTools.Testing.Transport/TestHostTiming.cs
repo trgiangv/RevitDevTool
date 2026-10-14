@@ -20,9 +20,6 @@ public static class TestHostTiming
     /// <summary>Named-pipe connect timeout before a request.</summary>
     public const int HostPipeConnectTimeoutSeconds = 30;
 
-    /// <summary>Poll interval while waiting for a TestRunner pipe response.</summary>
-    public const int PipeResponsePollIntervalMilliseconds = 25;
-
     /// <summary>
     /// Extra seconds on adapter <c>WaitForExit</c> after
     /// <c>LaunchTimeout + PerTestTimeout × test count</c>. The TestRunner may still be

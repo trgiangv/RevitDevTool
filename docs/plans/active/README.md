@@ -95,3 +95,9 @@ NUnit MTP-only ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)) is
 [completed](../completed/2026-08-18-nunit-mtp-only.md).
 
 Active plans: MCP test split (landed; file still under `active/`).
+
+## IPC pipes (closed)
+
+Test pipe, MCP pipe, and daemon control pipe stay separate.
+[0043](../../decisions/0043-ipc-shared-infrastructure-separate-protocols.md).
+Plan: [completed](../completed/2026-10-13-ipc-shared-pipes.md).

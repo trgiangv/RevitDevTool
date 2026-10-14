@@ -40,6 +40,71 @@ public class PytestBridgeFramingTests
         Assert.AreEqual(BridgeMessage.TypeRequest, received.Type);
     }
 
+    [TestMethod]
+    public async Task BridgePipeConnection_BadLength_IsAFrameFault()
+    {
+        await using var duplex = new DuplexMemoryStream();
+        using var reader = new BridgePipeConnection(duplex.Client);
+        var seen = new List<string>();
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        reader.FrameFault += _ => seen.Add("fault");
+        reader.Disconnected += () =>
+        {
+            seen.Add("end");
+            done.TrySetResult();
+        };
+        reader.StartReadLoop();
+
+        var header = BitConverter.GetBytes(BridgePipeConnection.MaxFrameBytes + 1);
+        await duplex.Server.WriteAsync(header, TestContext.CancellationToken);
+        await duplex.Server.FlushAsync(TestContext.CancellationToken);
+
+        await done.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
+        CollectionAssert.AreEqual(new[] { "fault", "end" }, seen);
+    }
+
+    [TestMethod]
+    public async Task BridgePipeConnection_BadJson_IsAFrameFault()
+    {
+        await using var duplex = new DuplexMemoryStream();
+        using var reader = new BridgePipeConnection(duplex.Client);
+        var seen = new List<string>();
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        reader.FrameFault += _ => seen.Add("fault");
+        reader.Disconnected += () =>
+        {
+            seen.Add("end");
+            done.TrySetResult();
+        };
+        reader.StartReadLoop();
+
+        var body = "{not-json"u8.ToArray();
+        var frame = new byte[4 + body.Length];
+        BitConverter.GetBytes(body.Length).CopyTo(frame, 0);
+        body.CopyTo(frame, 4);
+        await duplex.Server.WriteAsync(frame, TestContext.CancellationToken);
+        await duplex.Server.FlushAsync(TestContext.CancellationToken);
+
+        await done.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
+        CollectionAssert.AreEqual(new[] { "fault", "end" }, seen);
+    }
+
+    [TestMethod]
+    public async Task BridgePipeConnection_CleanClose_IsDisconnectOnly()
+    {
+        await using var duplex = new DuplexMemoryStream();
+        using var reader = new BridgePipeConnection(duplex.Client);
+        var faults = 0;
+        var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        reader.FrameFault += _ => faults++;
+        reader.Disconnected += () => done.TrySetResult();
+        reader.StartReadLoop();
+
+        duplex.CompleteServerWrite();
+        await done.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
+        Assert.AreEqual(0, faults);
+    }
+
     private sealed class DuplexMemoryStream : IAsyncDisposable
     {
         private readonly System.IO.Pipelines.Pipe _aToB = new();
@@ -47,6 +112,8 @@ public class PytestBridgeFramingTests
 
         public Stream Server => new BidirectionalStream(_bToA.Reader.AsStream(), _aToB.Writer.AsStream());
         public Stream Client => new BidirectionalStream(_aToB.Reader.AsStream(), _bToA.Writer.AsStream());
+
+        public void CompleteServerWrite() => _aToB.Writer.Complete();
 
         public ValueTask DisposeAsync()
         {

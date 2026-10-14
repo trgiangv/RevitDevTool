@@ -1,8 +1,6 @@
 using System.Text.Json;
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Gateway;
-using DevTools.Hosting;
-using DevTools.Ipc;
 
 namespace DevTools.Daemon.Tests;
 
@@ -40,27 +38,6 @@ public sealed class GatewayAndControlJsonTests
         Assert.IsNotNull(loaded);
         Assert.AreEqual("heartbeat", loaded!.Type);
         Enumerable.Single(loaded.HostApps);
-    }
-
-    [TestMethod]
-    public void ControlResponses_RoundTripExpectedFields()
-    {
-        var auth = new AuthStateResponse(true, "user-1", "a@example.com", "Agent", "https://avatar");
-        var authJson = JsonSerializer.Serialize(auth, ControlJsonContext.Default.AuthStateResponse);
-        Assert.Contains("\"isAuthenticated\":true", authJson, StringComparison.Ordinal);
-
-        var operation = new OperationResponse(false, "failed");
-        var operationJson = JsonSerializer.Serialize(operation, ControlJsonContext.Default.OperationResponse);
-        Assert.Contains("\"success\":false", operationJson, StringComparison.Ordinal);
-        Assert.Contains("\"failed\"", operationJson, StringComparison.Ordinal);
-
-        var error = new ErrorResponse("bad request");
-        Assert.Contains("\"bad request\"", JsonSerializer.Serialize(error, ControlJsonContext.Default.ErrorResponse));
-
-        var host = new HostInfoEntry(HostApp.Revit, "2025", 123, HostPipeName.FormatMcp("Revit", "2025", 123));
-        var hostJson = JsonSerializer.Serialize(host, ControlJsonContext.Default.HostInfoEntry);
-        Assert.Contains("\"hostApp\":\"Revit\"", hostJson, StringComparison.Ordinal);
-        Assert.Contains("\"pid\":123", hostJson, StringComparison.Ordinal);
     }
 
     [TestMethod]

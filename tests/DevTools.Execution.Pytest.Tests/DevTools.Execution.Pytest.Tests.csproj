@@ -25,6 +25,7 @@
 
     <ItemGroup>
         <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
+        <Using Include="DevTools.Execution.Providers"/>
     </ItemGroup>
 
     <ItemGroup>

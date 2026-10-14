@@ -8,14 +8,13 @@ namespace DevTools.Presentation.Services;
 public static class DaemonClient
 {
     private const int ConnectTimeoutMs = 2000;
-    private const int ReadBufferSize = 4096;
     private const int ReadyPollIntervalMs = 500;
     private const int ReadyPollMaxAttempts = 20;
     private const int QuickProbeTimeoutMs = 300;
 
     /// <summary>
-    /// Ensures the Daemon process is running and its control pipe is ready.
-    /// Launches it if not already running, then polls until pipe accepts connections.
+    /// Ensures the Daemon process is running and its daemon control pipe is ready.
+    /// Launches it if not already running, then polls until the pipe accepts connections.
     /// </summary>
     public static async Task EnsureRunningAsync(CancellationToken ct = default)
     {
@@ -33,7 +32,7 @@ public static class DaemonClient
         }
     }
 
-    public static async Task<string?> QueryAsync(string method, CancellationToken ct = default)
+    public static async Task SendAsync(string method, CancellationToken ct = default)
     {
         try
         {
@@ -52,16 +51,6 @@ public static class DaemonClient
             await pipe.WriteAsync(request, 0, request.Length, ct).ConfigureAwait(false);
 #endif
             await pipe.FlushAsync(ct).ConfigureAwait(false);
-
-            var buffer = new byte[ReadBufferSize];
-#if NET
-            var bytesRead = await pipe.ReadAsync(buffer, ct).ConfigureAwait(false);
-#else
-            var bytesRead = await pipe.ReadAsync(buffer, 0, buffer.Length, ct).ConfigureAwait(false);
-#endif
-            return bytesRead > 0
-                ? Encoding.UTF8.GetString(buffer, 0, bytesRead).TrimEnd('\r', '\n')
-                : null;
         }
         catch (OperationCanceledException)
         {
@@ -69,7 +58,7 @@ public static class DaemonClient
         }
         catch
         {
-            return null;
+            // The daemon control pipe is not listening.
         }
     }
 

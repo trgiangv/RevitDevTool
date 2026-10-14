@@ -11,8 +11,8 @@ using ZLogger;
 namespace DevTools.Execution.External;
 
 /// <summary>
-/// Host-side pytest/control pipe server over <c>DevTools_{Host}_{Version}_{PID}</c>
-/// (length-prefixed <see cref="BridgeMessage"/>). MCP uses a separate host pipe server.
+/// Host-side test pipe server over <c>DevTools_{Host}_{Version}_{PID}</c>
+/// (length-prefixed <see cref="BridgeMessage"/>). The MCP pipe uses a separate server.
 /// </summary>
 [UsedImplicitly]
 public sealed class DevToolsPipeServer(
@@ -71,6 +71,7 @@ public sealed class DevToolsPipeServer(
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        var reads = _connections.Values.Select(entry => entry.Connection.ReadTask).ToArray();
         _cts?.CancelAsync();
         foreach (var entry in _connections.Values)
         {
@@ -90,6 +91,15 @@ public sealed class DevToolsPipeServer(
             {
                 // ignored
             }
+        }
+
+        try
+        {
+            await Task.WhenAll(reads).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogWarning($"Test pipe read loop stopped with an error: {ex.Message}");
         }
 
         _acceptLoopTask = null;
@@ -131,9 +141,19 @@ public sealed class DevToolsPipeServer(
         logger.ZLogInformation($"Client connected. Active clients: {_connections.Count}");
 #endif
 
-        // Disconnect cancels in-flight work but must not dispose the CTS while
+        // Disconnect cancels this connection. It must not dispose the CTS while
         // testing/run is still on the host thread (breakpoint / idle marshal).
-        conn.MessageReceived += msg => OnMessageReceived(entry, msg);
+        conn.MessageReceived += msg =>
+        {
+            var handler = HandleMessageAsync(entry, msg);
+            if (handler.IsFaulted)
+                logger.ZLogWarning(handler.Exception!, $"Test pipe handler failed");
+        };
+        conn.FrameFault += reason =>
+        {
+            logger.ZLogWarning($"Test pipe frame fault: {reason}");
+            OnDisconnected(connectionId);
+        };
         conn.Disconnected += () => OnDisconnected(connectionId);
         conn.StartReadLoop();
     }
@@ -144,6 +164,8 @@ public sealed class DevToolsPipeServer(
             return;
 
         Interlocked.Exchange(ref entry.Removed, 1);
+        if (entry.Connection.ReadError is not null)
+            logger.ZLogWarning(entry.Connection.ReadError, $"Test pipe read loop failed");
         try { entry.RequestCts.Cancel(); } catch { /* best effort */ }
         entry.Connection.Dispose();
         if (Volatile.Read(ref entry.InFlight) == 0)
@@ -154,7 +176,7 @@ public sealed class DevToolsPipeServer(
 #endif
     }
 
-    private async void OnMessageReceived(ConnectionEntry entry, BridgeMessage msg)
+    private async Task HandleMessageAsync(ConnectionEntry entry, BridgeMessage msg)
     {
         Interlocked.Increment(ref entry.InFlight);
         var requestCt = entry.RequestCts.Token;
@@ -210,7 +232,14 @@ public sealed class DevToolsPipeServer(
         return BridgeMessage.Error(id, IpcErrorCodes.MethodNotFound, $"Unknown method: {request.Method}");
     }
 
-    private async void SendNotification(string method, JsonElement? data = null)
+    private void SendNotification(string method, JsonElement? data = null)
+    {
+        var sending = SendNotificationAsync(method, data);
+        if (sending.IsFaulted)
+            logger.ZLogWarning(sending.Exception!, $"Test pipe notification failed");
+    }
+
+    private async Task SendNotificationAsync(string method, JsonElement? data = null)
     {
         try
         {

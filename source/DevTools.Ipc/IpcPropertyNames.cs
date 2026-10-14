@@ -17,7 +17,7 @@ public static class IpcPropertyNames
     public const string Error = "error";
     public const string Message = "message";
 
-    // Shared wire protocol fields (used by DTOs across layers)
+    // Shared message fields (used by DTOs across layers)
     public const string Arguments = "arguments";
     public const string BridgeConnected = "bridgeConnected";
     public const string HostApp = "hostApp";
@@ -28,5 +28,4 @@ public static class IpcPropertyNames
     public const string Uri = "uri";
     public const string Version = "version";
     public const string VersionNumber = "versionNumber";
-    public const string IsRunning = "isRunning";
 }

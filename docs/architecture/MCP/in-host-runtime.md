@@ -13,7 +13,7 @@ flowchart TB
 
     subgraph hosts["Host processes"]
         McpPipe["McpPipeServer<br/>DevToolsMcp_Revit_2025_pid"]
-        PytestPipe["DevToolsPipeServer<br/>DevTools_Revit_2025_pid<br/>(pytest/control only)"]
+        PytestPipe["DevToolsPipeServer<br/>DevTools_Revit_2025_pid<br/>(test pipe)"]
     end
 
     Registry["McpCatalogStore"]
@@ -87,4 +87,4 @@ Shared MCP models and `McpSpecKeys` live under `DevTools.Mcp.Catalog/Core/`
 (namespaces `DevTools.Mcp.Core.*`). Daemon catalog indexing is
 `DevTools.Daemon/Mcp/Processes/`. Host pipe server is
 `DevTools.Mcp.Catalog/Transport/McpPipeServer.cs`.
-`source/DevTools.Ipc/` owns pytest/control framing and pipe name helpers.
+`source/DevTools.Ipc/` owns test-pipe framing and pipe name helpers.

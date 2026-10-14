@@ -50,19 +50,15 @@ Config is the committed `appsettings.json`, embedded in the single-file EXE. `Au
 
 Auth/Gateway bind via `Configure<T>(GetSection)`. User prefs are a separate JSON file with a `User` section so they overlay configuration without colliding with Auth/Gateway. `IConfiguration` is read-only; `UserSettingsStore.Update` writes the file and reloads the configuration root.
 
-## Control Pipe API
+## Daemon control pipe
 
-Host add-ins communicate via `DevToolsDaemon_Control` named pipe (tray mode only).  
-Protocol: one JSON request line → one JSON response line per connection.
+Host add-ins send commands on `DevToolsDaemon_Control` (tray mode only).
+The message format is one JSON command line. The pipe has no reply.
+Choice: [0043](../../decisions/0043-ipc-shared-infrastructure-separate-protocols.md).
 
-| Method | Response |
-|--------|----------|
-| `control/status` | `{isRunning, version}` |
-| `control/auth_state` | `{isAuthenticated, userId, email, displayName, avatarUrl}` |
-| `control/sign_in` | `{success, error}` |
-| `control/sign_out` | `{success}` |
-| `control/connected_hosts` | `[{hostApp, version, pid, pipeName}, ...]` |
-| `control/open_dashboard` | `{success}` |
+| Method | Effect |
+|--------|--------|
+| `control/sign_in` | Starts Daemon sign-in. The result stays on the Daemon window. |
 
 ## Built-in Tools
 

@@ -16,9 +16,6 @@ public sealed class ControlJsonTests
         var json = JsonSerializer.Serialize(token, ControlJsonContext.Default.TokenData);
         var loaded = JsonSerializer.Deserialize(json, ControlJsonContext.Default.TokenData);
         Assert.AreEqual("a", loaded?.AccessToken);
-
-        Assert.Contains("isRunning", JsonSerializer.Serialize(new StatusResponse(true, "1.0.0"), ControlJsonContext.Default.StatusResponse));
-        Assert.IsNotNull(ControlJsonContext.Default.HostInfoEntryArray);
     }
 
     [TestMethod]

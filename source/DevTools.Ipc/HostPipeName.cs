@@ -2,7 +2,7 @@ namespace DevTools.Ipc;
 
 /// <summary>
 /// Formatting, parsing, and display helpers for DevTools host Named Pipes.
-/// Pytest pipe: <c>DevTools_{Host}_{Version}_{PID}</c> (pytest/control <see cref="BridgeMessage"/>).
+/// Test pipe: <c>DevTools_{Host}_{Version}_{PID}</c> (<see cref="BridgeMessage"/>).
 /// MCP pipe: <c>DevToolsMcp_{Host}_{Version}_{PID}</c> (SDK JSON-RPC).
 /// </summary>
 public static class HostPipeName
@@ -10,7 +10,7 @@ public static class HostPipeName
     private const char Separator = '_';
     private const int MinSegments = 4; // prefix, host, version, pid
 
-    /// <summary>Build a pytest/control pipe name.</summary>
+    /// <summary>Build a test pipe name.</summary>
     public static string FormatTest(string host, string version, int processId)
         => Format(IpcConstants.TestPipePrefix, host, version, processId);
 
@@ -50,7 +50,7 @@ public static class HostPipeName
     public static bool IsMcpPipe(string pipeName)
         => pipeName.StartsWith(IpcConstants.McpPipePrefix + Separator, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>True when the name is a test/control pipe.</summary>
+    /// <summary>True when the name is a test pipe.</summary>
     public static bool IsTestPipe(string pipeName)
         => pipeName.StartsWith(IpcConstants.TestPipePrefix + Separator, StringComparison.OrdinalIgnoreCase)
            && !IsMcpPipe(pipeName);

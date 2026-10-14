@@ -1,3 +1,4 @@
+using System.IO;
 using System.IO.Pipes;
 using System.Text;
 using DevTools.Ipc;
@@ -7,72 +8,89 @@ using ZLogger;
 
 namespace DevTools.Daemon.Control;
 
-internal sealed class ControlPipeHostedService(ControlPipeHandler handler, ILogger<ControlPipeHostedService> logger)
-    : BackgroundService
+internal sealed class ControlPipeHostedService(
+    ControlPipeHandler handler,
+    ILogger<ControlPipeHostedService> logger) : BackgroundService
 {
-    private const int MaxServerInstances = 4;
+    private const int MaxCommandBytes = 1024;
+
+    private Task _connection = Task.CompletedTask;
+
+    internal string PipeName { get; init; } = IpcConstants.ControlPipeName;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            await using var server = new NamedPipeServerStream(
-                IpcConstants.ControlPipeName,
-                PipeDirection.InOut,
-                MaxServerInstances,
-                PipeTransmissionMode.Byte,
-                PipeOptions.Asynchronous);
-
+            NamedPipeServerStream? server = null;
             try
             {
+                server = NamedPipes.Open(PipeName);
                 await server.WaitForConnectionAsync(stoppingToken).ConfigureAwait(false);
-                await HandleConnectionAsync(server, stoppingToken).ConfigureAwait(false);
+                var connected = server;
+                server = null;
+                _connection = HandleConnectionAsync(connected, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
+                server?.Dispose();
                 break;
+            }
+            catch (IOException ex) when (NamedPipes.IsBusy(ex))
+            {
+                server?.Dispose();
+                await Task.Delay(200, stoppingToken).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                logger.ZLogWarning(ex, $"Control pipe transient error");
+                server?.Dispose();
+                logger.ZLogWarning(ex, $"Daemon control pipe accept failed");
+                await Task.Delay(500, stoppingToken).ConfigureAwait(false);
             }
         }
+
+        await _connection.ConfigureAwait(false);
     }
 
-    private async Task HandleConnectionAsync(NamedPipeServerStream pipe, CancellationToken ct)
+    private async Task HandleConnectionAsync(NamedPipeServerStream server, CancellationToken ct)
     {
-        var buffer = new byte[4096];
-        var bytesRead = await pipe.ReadAsync(buffer, ct).ConfigureAwait(false);
-        if (bytesRead == 0) return;
-
-        var line = Encoding.UTF8.GetString(buffer, 0, bytesRead).TrimEnd('\r', '\n');
-
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var handlerTask = handler.HandleRequestAsync(line, linkedCts.Token);
-        var monitorTask = WaitForDisconnectAsync(pipe, linkedCts.Token);
-
-        var completed = await Task.WhenAny(handlerTask, monitorTask).ConfigureAwait(false);
-
-        if (completed == monitorTask)
+        try
         {
-            await linkedCts.CancelAsync().ConfigureAwait(false);
-            logger.ZLogWarning($"Control pipe disconnected by client");
-            return;
+            var line = await ReadCommandAsync(server, ct).ConfigureAwait(false);
+            if (line is not null)
+                await handler.HandleRequestAsync(line, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogWarning(ex, $"Daemon control pipe command failed");
+        }
+        finally
+        {
+            await server.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<string?> ReadCommandAsync(NamedPipeServerStream pipe, CancellationToken ct)
+    {
+        var buffer = new byte[MaxCommandBytes];
+        var count = 0;
+        while (count < MaxCommandBytes)
+        {
+            var read = await pipe.ReadAsync(buffer.AsMemory(count, MaxCommandBytes - count), ct).ConfigureAwait(false);
+            if (read == 0)
+                break;
+
+            count += read;
+            var newline = Array.IndexOf(buffer, (byte)'\n', 0, count);
+            if (newline > 0)
+                return Encoding.UTF8.GetString(buffer, 0, newline).TrimEnd('\r');
+            if (newline == 0)
+                return null;
         }
 
-        var response = await handlerTask.ConfigureAwait(false);
-
-        if (!pipe.IsConnected) return;
-
-        var responseBytes = Encoding.UTF8.GetBytes(response + "\n");
-        await pipe.WriteAsync(responseBytes, ct).ConfigureAwait(false);
-        await pipe.FlushAsync(ct).ConfigureAwait(false);
-        pipe.WaitForPipeDrain();
-    }
-
-    private static async Task WaitForDisconnectAsync(NamedPipeServerStream pipe, CancellationToken ct)
-    {
-        while (pipe.IsConnected && !ct.IsCancellationRequested)
-            await Task.Delay(500, ct).ConfigureAwait(false);
+        return null;
     }
 }

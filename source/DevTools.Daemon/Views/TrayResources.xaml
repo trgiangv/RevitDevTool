@@ -9,11 +9,7 @@
                  x:Shared="False"
                  d:DataContext="{d:DesignInstance views:TrayMenu}">
         <MenuItem Margin="0,4,0,0"
-                  Command="{Binding OpenDashboardCommand}"
-                  FontWeight="SemiBold"
-                  Header="Dashboard" />
-        <Separator />
-        <MenuItem Command="{Binding SignInCommand}"
+                  Command="{Binding SignInCommand}"
                   Header="Sign In" />
         <MenuItem Command="{Binding SignOutCommand}"
                   Header="Sign Out" />

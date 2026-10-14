@@ -1,73 +1,36 @@
 using System.Text.Json;
 using DevTools.Daemon.Auth;
-using DevTools.Daemon.Views;
 using DevTools.Ipc;
-using DevTools.Daemon.Mcp.Processes;
-using DevTools.Daemon.Mcp.Utils;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Daemon.Control;
 
-public sealed class ControlPipeHandler(IAuthService authService, IProcessSessions sessions, TrayMenu trayMenu)
+public sealed class ControlPipeHandler(
+    IAuthService authService,
+    ILogger<ControlPipeHandler> logger)
 {
-    private const string DefaultVersion = "0.0.0";
-
-    public async Task<string> HandleRequestAsync(string requestLine, CancellationToken ct)
+    public async Task HandleRequestAsync(string requestLine, CancellationToken ct)
     {
+        ControlCommand? command;
         try
         {
-            using var request = JsonDocument.Parse(requestLine);
-            var method = request.RootElement.TryGetProperty(IpcPropertyNames.Method, out var methodElement)
-                ? methodElement.GetString()
-                : null;
-
-            return method switch
-            {
-                IpcConstants.Methods.Status => JsonSerializer.Serialize(new StatusResponse(
-                    true, typeof(ControlPipeHandler).Assembly.GetName().Version?.ToString() ?? DefaultVersion), ControlJsonContext.Default.StatusResponse),
-                IpcConstants.Methods.AuthState => JsonSerializer.Serialize(new AuthStateResponse(
-                    authService.IsAuthenticated, authService.UserId, authService.Email, authService.DisplayName, authService.AvatarUrl), ControlJsonContext.Default.AuthStateResponse),
-                IpcConstants.Methods.SignIn => await HandleSignInAsync(ct).ConfigureAwait(false),
-                IpcConstants.Methods.SignOut => await HandleSignOutAsync().ConfigureAwait(false),
-                IpcConstants.Methods.ConnectedHosts => HandleConnectedHosts(),
-                IpcConstants.Methods.OpenDashboard => HandleOpenMainWindow(),
-                _ => JsonSerializer.Serialize(new ErrorResponse(IpcConstants.Errors.UnknownMethod), ControlJsonContext.Default.ErrorResponse)
-            };
+            command = JsonSerializer.Deserialize(requestLine, ControlJsonContext.Default.ControlCommand);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return JsonSerializer.Serialize(new ErrorResponse(IpcConstants.Errors.InvalidRequest), ControlJsonContext.Default.ErrorResponse);
+            logger.ZLogWarning(ex, $"Daemon control pipe command was not JSON");
+            return;
         }
+
+        if (command?.Method == IpcConstants.Methods.SignIn)
+            await SignInAsync(ct).ConfigureAwait(false);
     }
 
-    private string HandleConnectedHosts()
-    {
-        var hosts = sessions.Catalog.List()
-            .Select(e => new HostInfoEntry(
-                HostAppParser.ParseHostApp(e.Instance.HostApp)
-                ?? HostAppParser.FromPipeName(e.PipeName),
-                e.Instance.VersionNumber,
-                e.Instance.ProcessId,
-                e.PipeName))
-            .ToArray();
-
-        return JsonSerializer.Serialize(hosts, ControlJsonContext.Default.HostInfoEntryArray);
-    }
-
-    private async Task<string> HandleSignInAsync(CancellationToken ct)
+    private async Task SignInAsync(CancellationToken ct)
     {
         var result = await authService.SignInAsync(ct).ConfigureAwait(false);
-        return JsonSerializer.Serialize(new OperationResponse(result.Success, result.Error), ControlJsonContext.Default.OperationResponse);
-    }
-
-    private async Task<string> HandleSignOutAsync()
-    {
-        await authService.SignOutAsync().ConfigureAwait(false);
-        return JsonSerializer.Serialize(new OperationResponse(true), ControlJsonContext.Default.OperationResponse);
-    }
-
-    private string HandleOpenMainWindow()
-    {
-        trayMenu.ShowMainWindow();
-        return JsonSerializer.Serialize(new OperationResponse(true), ControlJsonContext.Default.OperationResponse);
+        if (!result.Success)
+            logger.ZLogWarning($"Daemon control pipe sign-in failed: {result.Error}");
     }
 }

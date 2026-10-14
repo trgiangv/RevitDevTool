@@ -61,9 +61,6 @@ public partial class TrayMenu : ObservableObject
         });
     }
 
-    [RelayCommand]
-    private void OpenDashboard() => ShowMainWindow();
-
     [RelayCommand(CanExecute = nameof(CanSignIn))]
     private async Task SignIn() => await _state.SignInCommand.ExecuteAsync(null).ConfigureAwait(true);
 

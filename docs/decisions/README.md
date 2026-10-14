@@ -58,6 +58,10 @@ here.
   (landed 2026-10-10). Pins are MSTest 4.5.1, MTP 2.5.1, TUnit 1.73.19.
   In-host MSTest cancel uses `TestApplicationOptions.CancellationToken`.
   TUnit in-host ceremony stays.
+  [0043](0043-ipc-shared-infrastructure-separate-protocols.md) is **Accepted**
+  and landed (2026-10-13). The names are test pipe, MCP pipe, and
+  daemon control pipe. The daemon control pipe has no reply. `DevTools.Ipc`
+  stays the shared project. No `StreamJsonRpc` and no RPC engine.
 
 ## Index
 
@@ -102,3 +106,4 @@ here.
 | [0040](0040-bm25f-search-and-hit-annotations.md) | `code_mode` runs C#; BM25F search stays inside it | Accepted |
 | [0041](0041-code-mode-result-artifact.md) | Large `code_mode` text is saved and the return includes its path | Accepted |
 | [0042](0042-mtp-2-5-removable-test-workarounds.md) | MTP 2.5.1 / MSTest 4.5.1 / TUnit 1.73.19; public MSTest cancel | Accepted |
+| [0043](0043-ipc-shared-infrastructure-separate-protocols.md) | Shared `DevTools.Ipc`; test pipe, MCP pipe, daemon control pipe | Accepted — landed 2026-10-13 |

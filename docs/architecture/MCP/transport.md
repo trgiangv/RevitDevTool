@@ -1,7 +1,7 @@
 # Transport Modes
 
 The Daemon supports two independent transport modes for external MCP clients.
-Separately, host connectivity uses **two named-pipe protocols** that must not be mixed.
+Separately, each host listens on two pipes that must not be mixed.
 
 ```mermaid
 flowchart LR
@@ -22,7 +22,7 @@ flowchart LR
     subgraph HostPipes
         Daemon1 --> McpPipe["DevToolsMcp_* SDK NDJSON"]
         Daemon2 --> McpPipe
-        PytestClient["pytest / control"] --> PytestPipe["DevTools_* BridgeMessage"]
+        PytestClient["pytest and test runner"] --> PytestPipe["DevTools_* test pipe"]
         McpPipe --> HostWire["McpPipeServer + SDK McpServer"]
         PytestPipe --> PytestServer["DevToolsPipeServer"]
     end
@@ -33,14 +33,17 @@ flowchart LR
 | **Stdio** | `--stdio` arg | Direct `StreamServerTransport` on process stdin/stdout | Local MCP clients |
 | **Gateway** | Auto on sign-in (tray host only) | Outbound WebSocket to Cloudflare relay | Remote AI clients |
 
-## Dual Host Pipe Protocols
+## Dual host pipes
 
-| Pipe | Format | Protocol | Owner |
-|------|--------|----------|-------|
-| `DevTools_{Host}_{Version}_{PID}` | Length-prefixed `BridgeMessage` | Pytest + control IPC | `DevToolsPipeServer` |
-| `DevToolsMcp_{Host}_{Version}_{PID}` | Newline-delimited JSON-RPC | MCP `2026-07-28` (SDK session) | `McpPipeServer` + per-connection `McpServer` |
+| Pipe | Message format | Owner |
+|------|----------------|-------|
+| `DevTools_{Host}_{Version}_{PID}` | Length-prefixed `BridgeMessage` | `DevToolsPipeServer` |
+| `DevToolsMcp_{Host}_{Version}_{PID}` | Newline-delimited JSON-RPC, MCP `2026-07-28` | `McpPipeServer` + per-connection `McpServer` |
 
-Do not multiplex SDK frames onto the pytest pipe (or the reverse).
+The daemon control pipe is a third listener in the Daemon process. It has no reply.
+See [0043](../../decisions/0043-ipc-shared-infrastructure-separate-protocols.md).
+
+Do not multiplex SDK frames onto the test pipe (or the reverse).
 
 ## Stdio Mode
 

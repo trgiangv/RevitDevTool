@@ -3,24 +3,24 @@ using System.IO.Pipes;
 using System.Text.Json;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
+
 namespace DevTools.TestRunner.Services;
 
 public sealed class TestPipeClient : IAsyncDisposable
 {
-    private const int MaxPendingDiscardedResponses = 32;
     private static readonly TimeSpan CancelSendTimeout = TimeSpan.FromSeconds(2);
 
     private readonly BridgePipeConnection _connection;
     private readonly Stream? _pipe;
-    private readonly ConcurrentQueue<BridgeMessage> _inbox = new();
-    private readonly ConcurrentDictionary<string, byte> _discardedResponseIds = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<BridgeMessage>> _pending = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<Guid, IProgress<TestEvent>> _runProgress = new();
     private volatile bool _disconnected;
 
     private TestPipeClient(Stream? pipe, BridgePipeConnection connection)
     {
         _pipe = pipe;
         _connection = connection;
-        _connection.MessageReceived += Enqueue;
+        _connection.MessageReceived += OnMessage;
         _connection.Disconnected += OnDisconnected;
     }
 
@@ -47,14 +47,18 @@ public sealed class TestPipeClient : IAsyncDisposable
 
     public async Task<TestHelloResponse> HelloAsync(TestFrameworkId frameworkId, CancellationToken ct = default)
     {
-        var response = await SendRequestAsync(
-            CreateRequestId("hello"),
-            TestingProtocol.Hello,
-            JsonSerializer.SerializeToElement(
-                new TestHelloRequest(TestingProtocol.CurrentVersion, frameworkId),
-                TestingJsonContext.Default.TestHelloRequest),
+        var requestId = CreateRequestId("hello");
+        var response = await SendCoreAsync(
+            requestId,
+            BridgeMessage.Request(
+                requestId,
+                TestingProtocol.Hello,
+                JsonSerializer.SerializeToElement(
+                    new TestHelloRequest(TestingProtocol.CurrentVersion, frameworkId),
+                    TestingJsonContext.Default.TestHelloRequest)),
             progress: null,
-            activeRunId: null,
+            runId: null,
+            onWritten: null,
             ct).ConfigureAwait(false);
 
         var hello = response.Result!.Value.Deserialize(TestingJsonContext.Default.TestHelloResponse)
@@ -85,18 +89,15 @@ public sealed class TestPipeClient : IAsyncDisposable
 
         try
         {
-            await _connection.WriteAsync(
+            var response = await SendCoreAsync(
+                requestId,
                 BridgeMessage.Request(
                     requestId,
                     TestingProtocol.Run,
                     JsonSerializer.SerializeToElement(request, TestingJsonContext.Default.TestRunRequest)),
-                ct).ConfigureAwait(false);
-            runRequestSent = true;
-
-            var response = await WaitForResponseAsync(
-                requestId,
                 progress,
                 request.RunId,
+                () => runRequestSent = true,
                 ct).ConfigureAwait(false);
 
             return response.Result!.Value.Deserialize(TestingJsonContext.Default.TestRunResponse)
@@ -104,118 +105,64 @@ public sealed class TestPipeClient : IAsyncDisposable
         }
         catch (OperationCanceledException) when (runRequestSent)
         {
-            MarkResponseDiscarded(requestId);
             await TrySendCancelBestEffortAsync(request.RunId).ConfigureAwait(false);
             throw;
         }
     }
 
-    private async Task<BridgeMessage> SendRequestAsync(
+    private async Task<BridgeMessage> SendCoreAsync(
         string id,
-        string method,
-        JsonElement parameters,
+        BridgeMessage request,
         IProgress<TestEvent>? progress,
-        Guid? activeRunId,
+        Guid? runId,
+        Action? onWritten,
         CancellationToken ct)
     {
-        await _connection.WriteAsync(BridgeMessage.Request(id, method, parameters), ct).ConfigureAwait(false);
-        return await WaitForResponseAsync(id, progress, activeRunId, ct).ConfigureAwait(false);
-    }
+        var waiter = new TaskCompletionSource<BridgeMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        if (!_pending.TryAdd(id, waiter))
+            throw new InvalidOperationException($"Duplicate test pipe request id '{id}'.");
 
-    private async Task<BridgeMessage> WaitForResponseAsync(
-        string requestId,
-        IProgress<TestEvent>? progress,
-        Guid? activeRunId,
-        CancellationToken ct)
-    {
-        while (true)
+        if (runId is { } progressRun && progress is not null)
+            _runProgress[progressRun] = progress;
+
+        try
         {
-            ct.ThrowIfCancellationRequested();
             ThrowIfDisconnected();
-
-            if (!_inbox.TryDequeue(out var message))
-            {
-                await Task.Delay(TestHostTiming.PipeResponsePollIntervalMilliseconds, ct).ConfigureAwait(false);
-                continue;
-            }
-
-            if (TryConsumeDiscardedResponse(message))
-                continue;
-
-            if (TryConsumeInboxMessage(message, requestId, progress, activeRunId, out var response))
-                return response!;
-
-            _inbox.Enqueue(message);
-            await Task.Delay(TestHostTiming.PipeResponsePollIntervalMilliseconds, ct).ConfigureAwait(false);
+            await _connection.WriteAsync(request, ct).ConfigureAwait(false);
+            onWritten?.Invoke();
+            return await waiter.Task.WaitAsync(ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _pending.TryRemove(id, out _);
+            if (runId is { } activeRun)
+                _runProgress.TryRemove(activeRun, out _);
         }
     }
 
-    private bool TryConsumeDiscardedResponse(BridgeMessage message)
+    private void OnMessage(BridgeMessage message)
     {
-        if (message.Type != BridgeMessage.TypeResponse || message.Id is null)
-            return false;
-
-        return _discardedResponseIds.TryRemove(message.Id, out _);
-    }
-
-    private void MarkResponseDiscarded(string requestId)
-    {
-        _discardedResponseIds.TryAdd(requestId, 0);
-        DropDiscardedResponsesFromInbox();
-        TrimDiscardedResponseIds();
-    }
-
-    private void DropDiscardedResponsesFromInbox()
-    {
-        if (_inbox.IsEmpty)
+        if (TryReportNotification(message))
             return;
 
-        var pending = new List<BridgeMessage>();
-        while (_inbox.TryDequeue(out var message))
-            pending.Add(message);
+        if (message.Type != BridgeMessage.TypeResponse || message.Id is null)
+            return;
 
-        foreach (var message in pending.Where(message => !TryConsumeDiscardedResponse(message)))
+        if (!_pending.TryRemove(message.Id, out var waiter))
+            return;
+
+        try
         {
-            _inbox.Enqueue(message);
+            EnsureSuccess(message);
+            waiter.TrySetResult(message);
+        }
+        catch (Exception ex)
+        {
+            waiter.TrySetException(ex);
         }
     }
 
-    private void TrimDiscardedResponseIds()
-    {
-        while (_discardedResponseIds.Count > MaxPendingDiscardedResponses)
-        {
-            foreach (var id in _discardedResponseIds.Keys)
-            {
-                if (_discardedResponseIds.TryRemove(id, out _))
-                    break;
-            }
-        }
-    }
-
-    private static bool TryConsumeInboxMessage(
-        BridgeMessage message,
-        string requestId,
-        IProgress<TestEvent>? progress,
-        Guid? activeRunId,
-        out BridgeMessage? response)
-    {
-        response = null;
-
-        if (TryReportNotification(message, progress, activeRunId))
-            return false;
-
-        if (message.Type != BridgeMessage.TypeResponse || message.Id != requestId)
-            return false;
-
-        EnsureSuccess(message);
-        response = message;
-        return true;
-    }
-
-    private static bool TryReportNotification(
-        BridgeMessage message,
-        IProgress<TestEvent>? progress,
-        Guid? activeRunId)
+    private bool TryReportNotification(BridgeMessage message)
     {
         if (message.Type != BridgeMessage.TypeNotification || message.Params is null)
             return false;
@@ -227,10 +174,9 @@ public sealed class TestPipeClient : IAsyncDisposable
         if (testingEvent is null)
             return true;
 
-        if (activeRunId is null || testingEvent.RunId != activeRunId)
-            return true;
+        if (_runProgress.TryGetValue(testingEvent.RunId, out var progress))
+            progress.Report(testingEvent);
 
-        progress?.Report(testingEvent);
         return true;
     }
 
@@ -248,15 +194,12 @@ public sealed class TestPipeClient : IAsyncDisposable
 
     private async Task SendCancelAsync(Guid runId, CancellationToken ct)
     {
-        var cancelRequestId = CreateRequestId("cancel");
-        _discardedResponseIds.TryAdd(cancelRequestId, 0);
-
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeoutCts.CancelAfter(CancelSendTimeout);
 
         await _connection.WriteAsync(
             BridgeMessage.Request(
-                cancelRequestId,
+                CreateRequestId("cancel"),
                 TestingProtocol.Cancel,
                 JsonSerializer.SerializeToElement(
                     new TestCancelRequest(runId),
@@ -264,9 +207,15 @@ public sealed class TestPipeClient : IAsyncDisposable
             timeoutCts.Token).ConfigureAwait(false);
     }
 
-    private void Enqueue(BridgeMessage message) => _inbox.Enqueue(message);
-
-    private void OnDisconnected() => _disconnected = true;
+    private void OnDisconnected()
+    {
+        _disconnected = true;
+        foreach (var pending in _pending)
+        {
+            if (_pending.TryRemove(pending.Key, out var waiter))
+                waiter.TrySetException(new IOException("Host pipe disconnected."));
+        }
+    }
 
     private void ThrowIfDisconnected()
     {
@@ -290,7 +239,8 @@ public sealed class TestPipeClient : IAsyncDisposable
     public ValueTask DisposeAsync()
     {
         _connection.Disconnected -= OnDisconnected;
-        _connection.MessageReceived -= Enqueue;
+        _connection.MessageReceived -= OnMessage;
+        OnDisconnected();
         _connection.Dispose();
         _pipe?.Dispose();
         return ValueTask.CompletedTask;
