@@ -133,7 +133,6 @@ public sealed class McpCatalogStore(ICatalogLoader catalogLoader, ISettingsServi
                 settingsService.McpRegistryConfig.PythonPaths);
 
             TryApplyCatalog(catalog);
-            McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
             return RegisteredTools;
         }
         finally

@@ -133,8 +133,8 @@ IronPython 3.4 then rewrites every method for `sys.settrace` **before**
 `Unable to cast … FieldExpression to BlockExpression`. Tracing still starts
 when `settrace` is called — user files are compiled **after** that.
 
-`_enable_attach` traces **the calling thread**. Host start is
-`HostUiHelper.RunBlocking` on the Revit UI thread, so listen must run on a
+`_enable_attach` traces **the calling thread**. Host start runs its
+synchronous prefix on the CAD UI thread, so listen must run on a
 **background thread** — same idea as CPython `debugpy.listen`, which does not
 pin the debugger to the API thread. Do not `RunOnMainThread` around listen
 or `settrace`. If the UI thread is traced at attach time, a breakpoint

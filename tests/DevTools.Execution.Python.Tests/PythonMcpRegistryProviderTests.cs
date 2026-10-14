@@ -17,13 +17,10 @@ public sealed class PythonMcpRegistryProviderTests
     }
 
     [TestMethod]
-    public void LoadCatalog_WhenPythonNotReady_ReturnsEmpty()
+    public async Task LoadCatalog_WhenDirectoryHasNoTools_ReturnsEmpty()
     {
-        var provider = new PythonMcpRegistryProvider(
-            ExecutionTestHelpers.CreatePythonInitializer(),
-            new McpPythonParser(NullLogger<McpPythonParser>.Instance),
-            NullLogger<PythonMcpRegistryProvider>.Instance);
-
+        var initializer = await ExecutionTestHelpers.EnsurePixiPythonInitializedAsync();
+        var provider = CreateProvider(initializer);
         provider.ConfigurePaths([ExecutionTestHelpers.CreateTempDirectory("mcp-empty")]);
         var catalog = provider.LoadCatalog();
 

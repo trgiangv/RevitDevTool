@@ -21,4 +21,24 @@ public sealed class HostUiHelperTests
     {
         Assert.ThrowsExactly<ArgumentNullException>(() => HostUiHelper.RunOnMainThread(null!));
     }
+
+    [TestMethod]
+    public void RequireCompleted_WhenTaskCompleted_Returns()
+    {
+        HostUiHelper.RequireCompleted(Task.CompletedTask);
+    }
+
+    [TestMethod]
+    public void RequireCompleted_WhenTaskFaulted_Rethrows()
+    {
+        var failed = Task.FromException(new InvalidOperationException("start failed"));
+        Assert.ThrowsExactly<InvalidOperationException>(() => HostUiHelper.RequireCompleted(failed));
+    }
+
+    [TestMethod]
+    public void RequireCompleted_WhenTaskIncomplete_Throws()
+    {
+        var pending = new TaskCompletionSource();
+        Assert.ThrowsExactly<InvalidOperationException>(() => HostUiHelper.RequireCompleted(pending.Task));
+    }
 }

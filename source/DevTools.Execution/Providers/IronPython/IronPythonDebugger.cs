@@ -185,12 +185,12 @@ public static class IronPythonDebugger
         AddPydevdSearchPath(engine);
         endpoint.Reserve(PreferredPort);
 
-        // _enable_attach calls settrace on *this* thread. Host.Start uses
-        // RunBlocking, so listen on the caller would leave the Revit UI
-        // thread traced. IronPython SetTrace is thread-local; a dedicated
-        // thread exits after listen. Do not use Task.Run: a pool worker
-        // keeps settrace after return. CPython debugpy.listen is the same
-        // idea (listener threads, not the API thread).
+        // _enable_attach calls settrace on *this* thread. The sync prefix of
+        // host start runs on the CAD UI thread, so listen on the caller
+        // would leave that thread traced. IronPython SetTrace is
+        // thread-local; a dedicated thread exits after listen. Do not use
+        // Task.Run: a pool worker keeps settrace after return. CPython
+        // debugpy.listen is the same idea (listener threads, not the API thread).
         Exception? listenError = null;
         var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>

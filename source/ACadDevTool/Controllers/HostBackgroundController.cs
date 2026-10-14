@@ -6,9 +6,12 @@ using DevTools.Hosting;
 using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
+using DevTools.Mcp;
 using DevTools.UI;
 using DevTools.UI.Theme;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace AcadDevTool.Controllers;
 
@@ -16,8 +19,12 @@ public sealed class HostBackgroundController(
     IHostAppInfo hostAppInfo,
     IAcadSettingsService settingsService,
     PythonInitializer pythonInitializer,
-    IronPythonInitializer ironPythonInitializer) : IHostedService
+    IronPythonInitializer ironPythonInitializer,
+    McpCatalogStore catalogStore,
+    ILogger<HostBackgroundController> logger) : IHostedService
 {
+    private Task? _runtimeInit;
+
     public Task StartAsync(CancellationToken cancellationToken)
     {
         HostUiHelper.Initialize(ComponentManager.ApplicationWindow, ComponentManager.Ribbon.Dispatcher);
@@ -30,11 +37,15 @@ public sealed class HostBackgroundController(
         ThemeManager.Current.ApplySettingsTheme((AppTheme)settingsService.GeneralConfig.Theme);
         pythonInitializer.ReserveDebugPort();
         ironPythonInitializer.ReserveDebugPort();
-        return InitializeRuntimesAsync();
+        _runtimeInit = InitializeRuntimesAsync();
+        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        if (_runtimeInit is not null)
+            await _runtimeInit.ConfigureAwait(false);
+
         settingsService.SaveSettings();
         CleanLogFolder();
         await pythonInitializer.ShutdownAsync().ConfigureAwait(false);
@@ -43,10 +54,25 @@ public sealed class HostBackgroundController(
 
     private async Task InitializeRuntimesAsync()
     {
-        await Task.WhenAll(
-            pythonInitializer.InitializeAsync(),
-            ironPythonInitializer.InitializeAsync()
-        ).ConfigureAwait(false);
+        try
+        {
+            await Task.WhenAll(
+                pythonInitializer.InitializeAsync(),
+                ironPythonInitializer.InitializeAsync()
+            ).ConfigureAwait(false);
+
+            if (pythonInitializer.IsInitialized)
+            {
+#if DEBUG
+                logger.ZLogInformation($"Reloading MCP catalog after runtime init");
+#endif
+                await catalogStore.ReloadAsync().ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.ZLogError($"Runtime init failed: {ex.Message}\n{ex.StackTrace}");
+        }
     }
 
     private void CleanLogFolder()

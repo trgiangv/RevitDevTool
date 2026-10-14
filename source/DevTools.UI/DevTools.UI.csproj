@@ -143,14 +143,15 @@
     <!--Names embedded BAML themes/*.baml-->
     <Target Name="LinkHandySharedItems" BeforeTargets="MarkupCompilePass1">
         <PropertyGroup>
-            <_HandyRoot>$([System.IO.Path]::GetFullPath('$(HandySharedDir)'))</_HandyRoot>
+            <_HandyRoot>$([MSBuild]::EnsureTrailingSlash($([System.IO.Path]::GetFullPath('$(HandySharedDir)'))))</_HandyRoot>
+            <_HandyRootLength>$(_HandyRoot.Length)</_HandyRootLength>
         </PropertyGroup>
         <ItemGroup>
             <Page>
-                <Link Condition="$([System.String]::Copy('%(FullPath)').StartsWith('$(_HandyRoot)', System.StringComparison.OrdinalIgnoreCase))">$([System.IO.Path]::GetRelativePath('$(_HandyRoot)', '%(FullPath)'))</Link>
+                <Link Condition="$([System.String]::Copy('%(FullPath)').StartsWith('$(_HandyRoot)', System.StringComparison.OrdinalIgnoreCase))">$([System.String]::Copy('%(FullPath)').Substring($(_HandyRootLength)))</Link>
             </Page>
             <EmbeddedResource>
-                <Link Condition="'%(Link)' == '' and $([System.String]::Copy('%(FullPath)').StartsWith('$(_HandyRoot)', System.StringComparison.OrdinalIgnoreCase))">$([System.IO.Path]::GetRelativePath('$(_HandyRoot)', '%(FullPath)'))</Link>
+                <Link Condition="'%(Link)' == '' and $([System.String]::Copy('%(FullPath)').StartsWith('$(_HandyRoot)', System.StringComparison.OrdinalIgnoreCase))">$([System.String]::Copy('%(FullPath)').Substring($(_HandyRootLength)))</Link>
             </EmbeddedResource>
         </ItemGroup>
     </Target>

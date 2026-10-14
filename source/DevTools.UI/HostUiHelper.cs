@@ -1,4 +1,3 @@
-using System.Windows.Interop;
 using System.Windows.Threading;
 
 namespace DevTools.UI;
@@ -41,27 +40,20 @@ public static class HostUiHelper
     }
 
     /// <summary>
-    /// Block on host start without pumping the WPF dispatcher.
-    /// Clears <see cref="SynchronizationContext"/> <em>before</em> invoking
-    /// <paramref name="start"/> so awaits resume on the thread pool instead of
-    /// posting back to the blocked caller. The synchronous prefix of
-    /// <paramref name="start"/> still runs on the caller. Hosted
-    /// <c>StartAsync</c> must not await CPython/IronPython env setup, or this
-    /// freeze lasts through pixi/uv and nests inside other add-in dispatcher frames.
+    /// Observe a host <c>StartAsync</c> task that must already be complete.
+    /// The synchronous prefix ran on the caller. An incomplete task means a
+    /// hosted service awaited; blocking here deadlocks the CAD dispatcher,
+    /// and dropping the task hides the fault.
     /// </summary>
-    public static void RunBlocking(Func<Task> start)
+    public static void RequireCompleted(Task start)
     {
         ArgumentNullException.ThrowIfNull(start);
+        if (!start.IsCompleted)
+        {
+            throw new InvalidOperationException(
+                "IHostedService.StartAsync must not await. Runtime init stays on the background task.");
+        }
 
-        var captured = SynchronizationContext.Current;
-        SynchronizationContext.SetSynchronizationContext(null);
-        try
-        {
-            start().GetAwaiter().GetResult();
-        }
-        finally
-        {
-            SynchronizationContext.SetSynchronizationContext(captured);
-        }
+        start.GetAwaiter().GetResult();
     }
 }
