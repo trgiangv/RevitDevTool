@@ -20,10 +20,17 @@ public sealed class TextEditorContextMenuTests
             ThemeManager.Current.ApplySettingsTheme(AppTheme.Dark);
             try
             {
-                using var window = Show(out var textBox, out var richTextBox, out var passwordBox);
+                using var window = Show(
+                    out var textBox,
+                    out var richTextBox,
+                    out var passwordBox,
+                    out var comboTextBox,
+                    out var autoCompleteTextBox);
                 AssertThemedMenu(window, OpenEditorMenu(textBox));
                 AssertThemedMenu(window, OpenEditorMenu(richTextBox));
                 AssertThemedMenu(window, OpenEditorMenu(passwordBox));
+                AssertThemedMenu(window, OpenEditorMenu(comboTextBox));
+                AssertThemedMenu(window, OpenEditorMenu(autoCompleteTextBox));
             }
             finally
             {
@@ -161,15 +168,24 @@ public sealed class TextEditorContextMenuTests
         return ((SolidColorBrush)brush).Color;
     }
 
-    private static ThemeWindow Show(out TextBox textBox, out RichTextBox richTextBox, out PasswordBox passwordBox)
+    private static ThemeWindow Show(
+        out TextBox textBox,
+        out RichTextBox richTextBox,
+        out PasswordBox passwordBox,
+        out TextBox comboTextBox,
+        out TextBox autoCompleteTextBox)
     {
         textBox = new TextBox { Width = 200, Text = "This is the content" };
         richTextBox = new RichTextBox { Width = 200, Height = 40 };
         passwordBox = new PasswordBox { Width = 200 };
+        var comboBox = new ComboBox { IsEditable = true, Width = 200, Text = "search" };
+        var autoComplete = new global::HandyControl.Controls.AutoCompleteTextBox { Width = 200, Text = "search" };
         var panel = new StackPanel();
         panel.Children.Add(textBox);
         panel.Children.Add(richTextBox);
         panel.Children.Add(passwordBox);
+        panel.Children.Add(comboBox);
+        panel.Children.Add(autoComplete);
 
         var window = new ThemeWindow
         {
@@ -179,9 +195,20 @@ public sealed class TextEditorContextMenuTests
         {
             Source = new Uri("/DevTools.UI;component/Theme/Theme.xaml", UriKind.Relative),
         });
+        comboBox.Style = (Style)window.FindResource("ComboBoxExtend");
         window.Show();
         panel.UpdateLayout();
+        comboTextBox = RequireEditor(comboBox, "PART_EditableTextBox");
+        autoCompleteTextBox = RequireEditor(autoComplete, "PART_SearchTextBox");
         return window;
+    }
+
+    private static TextBox RequireEditor(Control control, string partName)
+    {
+        control.ApplyTemplate();
+        var editor = control.Template.FindName(partName, control) as TextBox;
+        Assert.IsNotNull(editor, control.GetType().Name + " is missing " + partName);
+        return editor;
     }
 
     private static T? FindVisualChild<T>(DependencyObject parent)
