@@ -142,6 +142,20 @@
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                 <Setter Property="Padding" Value="4,3" />
                                 <Setter Property="ToolTip" Value="{Binding ToolTipText}" />
+                                <Style.Resources>
+                                    <Style BasedOn="{StaticResource ToolTipBaseStyle}"
+                                           TargetType="ToolTip">
+                                        <Setter Property="ContentTemplate">
+                                            <Setter.Value>
+                                                <DataTemplate>
+                                                    <TextBlock MaxWidth="320"
+                                                               Text="{Binding}"
+                                                               TextWrapping="Wrap" />
+                                                </DataTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </Style.Resources>
                             </Style>
                         </ListBox.ItemContainerStyle>
                         <ListBox.ItemTemplate>
