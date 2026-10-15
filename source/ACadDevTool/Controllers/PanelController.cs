@@ -55,12 +55,6 @@ public sealed class PanelController
     public void Shutdown()
     {
         NotifyListener.TraceReceived -= OnTraceReceived;
-
-        if (_paletteSet is null) return;
-
-        _paletteSet.Visible = false;
-        _paletteSet.Dispose();
-        _paletteSet = null;
         _mainPage = null;
     }
 

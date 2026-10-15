@@ -16,12 +16,42 @@ using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AcadDevTool;
 
-public class Application : ExtensionApplication
+public class Application : IExtensionApplication
 {
     private AssemblyLoader? _assemblyLoader;
     private StartupTrace? _startup;
 
-    public override void OnStartup(RibbonControl ribbonControl)
+    public void Initialize()
+    {
+        if (ComponentManager.Ribbon is { } ribbon)
+        {
+            Start(ribbon);
+            return;
+        }
+        ComponentManager.ItemInitialized += OnRibbonInitialized;
+    }
+
+    public void Terminate()
+    {
+        ComponentManager.ItemInitialized -= OnRibbonInitialized;
+        _startup?.Dispose();
+        _startup = null;
+        Host.GetService<PanelController>().Shutdown();
+        Host.Stop();
+        _assemblyLoader?.Dispose();
+        _assemblyLoader = null;
+    }
+
+    private void OnRibbonInitialized(object? sender, RibbonItemEventArgs e)
+    {
+        if (ComponentManager.Ribbon is not { } ribbon)
+            return;
+
+        ComponentManager.ItemInitialized -= OnRibbonInitialized;
+        Start(ribbon);
+    }
+
+    private void Start(RibbonControl ribbonControl)
     {
         var versionNumber = AcadProductDetector.GetVersionNumber();
         var logsDirectory = Path.Combine(AppUtils.GetContentRootPath(versionNumber), "Logs");
@@ -53,24 +83,6 @@ public class Application : ExtensionApplication
             startup.Fail(ex);
             throw;
         }
-    }
-
-    public override void OnShutdown(RibbonControl ribbonControl)
-    {
-        _startup?.Dispose();
-        _startup = null;
-        try
-        {
-            Host.GetService<PanelController>().Shutdown();
-            Host.Stop();
-        }
-        catch
-        {
-            // Host.Start never completed.
-        }
-
-        _assemblyLoader?.Dispose();
-        _assemblyLoader = null;
     }
 
     private sealed class AddinAssemblyIsolationDiagnosticSink : IAssemblyIsolationDiagnosticSink
