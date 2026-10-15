@@ -172,6 +172,7 @@ public static class McpSpecKeys
         public const string OpenDocument = "open_document";
         public const string NavigateHistory = "navigate_history";
         public const string ViewScreenshot = "view_screenshot";
+        public const string FindElements = "find_elements";
     }
 
     /// <summary>Wire resource URIs.</summary>

@@ -87,6 +87,7 @@ Registered via DI in host projects and exposed on the host SDK server
 | `open_document` | Revit + AutoCAD | Open model file via `IDocumentBridge` |
 | `navigate_history` | Revit + AutoCAD | Undo/redo navigation |
 | `view_screenshot` | Revit + AutoCAD | Active viewport PNG (1280 px / 1280×720) as MCP image content |
+| `find_elements` | Revit | Resolve ElementId, UniqueId, and IFC GUID, including `{linkInstanceId}@{inner}` |
 
 ### Built-in Resources (`IBuiltInMcpResource`)
 

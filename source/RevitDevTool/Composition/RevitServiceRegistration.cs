@@ -153,6 +153,7 @@ internal static class RevitServiceRegistration
         services.AddSingleton<IBuiltInMcpResource, RevitVersionInfo>();
         services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.NavigateHistoryTool>();
         services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.ViewScreenshotTool>();
+        services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.FindElementsTool>();
 
         return builder;
     }
