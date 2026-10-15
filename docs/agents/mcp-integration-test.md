@@ -2,7 +2,7 @@
 
 Comprehensive end-to-end testing guide for AI agents operating through MCP against live host processes.
 
-The daemon tool list is `list_processes`, `list_machines`, `launch_host`, `read_file_info`, and `code_mode`. Host tools are reached from a `code_mode` body (`SearchAsync`, `InvokeAsync`, `ReadAsync`). Scenario steps below that still name `search_dynamic` or `invoke_dynamic` are the previous loop.
+The daemon tool list is `list_processes`, `launch_host`, `read_file_info`, and `code_mode`. `list_machines` is answered by the gateway. Host tools are reached from a `code_mode` body (`SearchAsync`, `InvokeAsync`, `ReadAsync`). Scenario steps below that still name `search_dynamic` or `invoke_dynamic` are the previous loop.
 
 ---
 

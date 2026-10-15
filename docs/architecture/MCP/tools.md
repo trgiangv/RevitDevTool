@@ -13,7 +13,6 @@ project host tools/resources into `tools/list` / `resources/list`.
 | `list_processes` | `DevTools.Daemon` | Lists connected instances + discovered MCP pipes |
 | `launch_host` | `DevTools.Daemon` | Launches host (optional model file at startup; host inferred from extension when `filePath` is set) |
 | `read_file_info` | `DevTools.Daemon` | On-disk Revit/DWG metadata reader |
-| `list_machines` | `DevTools.Daemon` | Queries Gateway for connected devices (requires auth) |
 
 ### Host capabilities
 

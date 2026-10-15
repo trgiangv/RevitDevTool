@@ -121,26 +121,4 @@ public sealed class AuthComponentTests
         Assert.IsFalse(await service.RefreshAsync());
     }
 
-    [TestMethod]
-    public async Task ListMachinesTool_ReturnsErrorWhenNotAuthenticated()
-    {
-        var auth = DaemonTestDoubles.CreateAuthService(authenticated: false);
-        var tool = new ListMachinesTool(auth.Object, Options.Create(new GatewayOptions()));
-        var result = await tool.ListAsync(TestContext.CancellationToken);
-        var text = Assert.IsInstanceOfType<ModelContextProtocol.Protocol.TextContentBlock>(result.Content[0]).Text;
-        Assert.Contains("Not authenticated", text, StringComparison.Ordinal);
-    }
-
-    [TestMethod]
-    public async Task ListMachinesTool_ReturnsErrorWhenGatewayUnreachable()
-    {
-        var auth = DaemonTestDoubles.CreateAuthService(authenticated: true, accessToken: "token");
-        var tool = new ListMachinesTool(
-            auth.Object,
-            Options.Create(new GatewayOptions { Url = "wss://127.0.0.1:9/tunnel" }));
-
-        var result = await tool.ListAsync(TestContext.CancellationToken);
-        var text = Assert.IsInstanceOfType<ModelContextProtocol.Protocol.TextContentBlock>(result.Content[0]).Text;
-        Assert.Contains("Failed to list machines", text, StringComparison.Ordinal);
-    }
 }

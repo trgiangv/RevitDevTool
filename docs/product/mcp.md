@@ -8,7 +8,7 @@ In-host MCP runtime is shared across registered hosts.
 - Daemon owns stdio MCP, gateway, auth, host discovery, and a **fixed** external
   tool/prompt surface (`ListChanged = false`).
 - Infrastructure tools remain on the daemon (`list_processes`, `launch_host`,
-  `read_file_info`, `list_machines`).
+  `read_file_info`). `list_machines` is answered by the gateway.
 - Host capabilities are **not** projected into daemon `tools/list`. Clients
   reach them through one program tool:
   - `code_mode(code, readOnly?)` — `code` is a C# async method body. Inside it,

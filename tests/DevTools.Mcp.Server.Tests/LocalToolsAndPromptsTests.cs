@@ -4,11 +4,7 @@ using System.Text.Json;
 using DevTools.FileMetadata.Core;
 using DevTools.Hosting;
 using DevTools.Daemon.Mcp.Processes;
-using DevTools.Daemon.Mcp.Processes;
-using DevTools.Daemon.Auth;
-using DevTools.Daemon.Gateway;
 using DevTools.Daemon.Mcp.Hosting;
-using Microsoft.Extensions.Options;
 using DevTools.Daemon.Mcp.Prompts;
 using DevTools.Mcp.Server.Tests.Harness;
 using DevTools.Daemon.Mcp.Tools;
@@ -34,30 +30,15 @@ public sealed class LocalToolsAndPromptsTests
             broker.Object,
             Mock.Of<IMcpPipeScanner>(),
             Mock.Of<IHostLaunchService>(),
-            Mock.Of<IAuthService>(),
-            Options.Create(new GatewayOptions()),
             Mock.Of<IFileReaderCatalog>());
 
-        Assert.AreEqual(5, engine.LocalTools.Count);
+        Assert.AreEqual(4, engine.LocalTools.Count);
         Assert.AreEqual(2, engine.PromptCollection.Count);
         Assert.Contains(tool => tool.ProtocolTool.Name == "code_mode", engine.LocalTools);
         Assert.Contains(tool => tool.ProtocolTool.Name == "list_processes", engine.LocalTools);
         Assert.Contains(tool => tool.ProtocolTool.Name == "launch_host", engine.LocalTools);
-        Assert.Contains(tool => tool.ProtocolTool.Name == "list_machines", engine.LocalTools);
         Assert.Contains(tool => tool.ProtocolTool.Name == "read_file_info", engine.LocalTools);
         Assert.IsFalse(engine.LocalTools.Any(tool => tool.ProtocolTool.Name is "search_dynamic" or "invoke_dynamic"));
-    }
-
-    [TestMethod]
-    public async Task ListMachinesTool_ReturnsErrorWhenNotAuthenticated()
-    {
-        var auth = new Mock<IAuthService>();
-        auth.Setup(a => a.IsAuthenticated).Returns(false);
-
-        var tool = ListMachinesTool.Create(auth.Object, Options.Create(new GatewayOptions()));
-        var result = await McpToolInvoke.Invoke(tool, "list_machines", new { });
-
-        StringAssert.Contains(McpToolInvoke.Text(result), "Not authenticated");
     }
 
     [TestMethod]

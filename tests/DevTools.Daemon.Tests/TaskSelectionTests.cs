@@ -14,7 +14,7 @@ public sealed class TaskSelectionTests
     [TestMethod]
     public void Select_InfrastructureTools_AreSynchronous()
     {
-        foreach (var name in new[] { "list_machines", "list_processes", "read_file_info" })
+        foreach (var name in new[] { "list_processes", "read_file_info" })
             Assert.AreEqual(McpTaskExecutionMode.Synchronous, TaskSelection.Select(CreateRequest(name)));
     }
 

@@ -73,7 +73,8 @@ Outbound WebSocket connection to the McpGateway (Cloudflare Workers + Durable Ob
 
 One user can have Daemons on multiple machines connected to the same Gateway. The Gateway's Durable Object maintains a `Map<machine_id, WebSocket>`:
 
-- **Single machine** → AI requests auto-route (no header needed)
-- **Multiple machines** → AI must include `x-target-machine: <machine_id>` header
-- **Discovery** → `GET /machines` or `list_machines` MCP tool lists connected machines
-- **Dynamic invoke** → locators embed `processId`; Gateway routing uses `machineId` when multiple machines are connected
+- **Register** → Daemon sends `machine_id` and `host_apps`. Every machine publishes the same tools, prompts, and resources
+- **Connection requests** (`initialize`, notifications, `tools/list`) → any live machine. The gateway adds `list_machines` and a `machineId` argument to the `tools/list` result. Daemon tool methods do not take `machineId`
+- **`list_machines`** → answered by the gateway from its live tunnels
+- **`tools/call`** → gateway reads `arguments.machineId`, then removes it and forwards the call. One live machine needs no id. A missing or unknown id returns a tool result with `isError: true` and the live machines
+- **Dynamic invoke** → `processId` inside `code_mode` belongs to the machine named by `machineId`

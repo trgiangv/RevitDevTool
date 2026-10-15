@@ -36,7 +36,7 @@ public sealed class ServerHostBuilderCompositionTests
         var options = McpServerFactory.CreateOptions(
             engine.ToolCollection, engine.PromptCollection, host.Services);
 
-        Assert.AreEqual(5, engine.LocalTools.Count);
+        Assert.AreEqual(4, engine.LocalTools.Count);
         Assert.AreEqual(2, engine.PromptCollection.Count);
 
         var clientToServer = new Pipe();
@@ -67,7 +67,6 @@ public sealed class ServerHostBuilderCompositionTests
             [
                 "code_mode",
                 "launch_host",
-                "list_machines",
                 "list_processes",
                 "read_file_info",
             ],
