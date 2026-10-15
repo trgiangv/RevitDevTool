@@ -22,10 +22,7 @@ public sealed class PytestDependencyService(PythonInitializer pythonInitializer)
     {
         await pythonInitializer.InitializeAsync().ConfigureAwait(false);
 
-        if (!pythonInitializer.IsInitialized)
-            throw new InvalidOperationException("Python runtime is not initialized.");
-
-        if (pythonInitializer.Provider is null)
+        if (!pythonInitializer.IsInitialized || pythonInitializer.Provider is null)
             throw new InvalidOperationException("Python runtime is not initialized.");
     }
 

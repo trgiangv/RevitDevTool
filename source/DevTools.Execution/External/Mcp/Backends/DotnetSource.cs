@@ -1,11 +1,8 @@
 using System.Reflection;
 using System.Collections.Concurrent;
 using DevTools.Mcp.Bridging;
-using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Core.Models;
-using DevTools.Mcp.Core.Utils;
-using DevTools.Execution.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -29,7 +26,7 @@ public sealed class DotnetSource(
             tool.Descriptor,
             (request, cancellationToken) => InvokeToolAsync(
                 tool,
-                request.Params ?? new CallToolRequestParams { Name = tool.Descriptor.Name },
+                request.Params,
                 hostContext,
                 cancellationToken));
 

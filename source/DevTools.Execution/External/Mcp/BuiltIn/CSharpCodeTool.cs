@@ -4,7 +4,6 @@ using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Hosting;
-using DevTools.Mcp;
 using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;

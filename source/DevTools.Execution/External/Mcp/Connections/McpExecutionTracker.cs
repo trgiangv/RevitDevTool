@@ -4,7 +4,7 @@ public interface IMcpExecutionTracker
 {
     IDisposable BeginExecution(string toolName);
     void MarkRunning(IDisposable scope);
-    void Complete(IDisposable scope, ExecutionState state, string detail);
+    void Complete(IDisposable scope, ExecutionState execState, string detail);
     void RecordCall(string toolId, string toolName);
 }
 
@@ -23,10 +23,10 @@ public sealed class McpExecutionTracker(McpConnectTracker state) : IMcpExecution
             execScope.MarkRunning();
     }
 
-    public void Complete(IDisposable scope, ExecutionState state, string detail)
+    public void Complete(IDisposable scope, ExecutionState execState, string detail)
     {
         if (scope is ExecutionScope execScope)
-            execScope.Complete(state, detail);
+            execScope.Complete(execState, detail);
     }
 
     public void RecordCall(string toolId, string toolName) => state.RecordCall(toolId, toolName);

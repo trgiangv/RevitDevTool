@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
-using DevTools.Execution.Providers.Python;
 using IronPython.Hosting;
 using IronPython.Modules;
 using Microsoft.Extensions.Logging;
@@ -23,18 +22,18 @@ public sealed class IronPythonInitializer(
     ILogger<IronPythonInitializer> logger)
 {
     private const string StdLibResourceSuffix = "IronPython.StdLib.3.4.2.zip";
-    private readonly Lock gate = new();
-    private static string? stdlibResourceName;
+    private readonly Lock _gate = new();
+    private static string? _stdlibResourceName;
 
-    private object? engine;
-    private bool ownsEngine;
+    private object? _engine;
+    private bool _ownsEngine;
 
     internal object? Engine
     {
         get
         {
-            lock (gate)
-                return engine;
+            lock (_gate)
+                return _engine;
         }
     }
 
@@ -55,9 +54,9 @@ public sealed class IronPythonInitializer(
     /// </summary>
     internal void EnsureEngine()
     {
-        lock (gate)
+        lock (_gate)
         {
-            if (engine is not null)
+            if (_engine is not null)
                 return;
 
             try
@@ -65,8 +64,8 @@ public sealed class IronPythonInitializer(
                 var hostEngine = bridge.TryGetHostEngine();
                 if (hostEngine is not null)
                 {
-                    engine = hostEngine;
-                    ownsEngine = false;
+                    _engine = hostEngine;
+                    _ownsEngine = false;
                     return;
                 }
 
@@ -82,13 +81,13 @@ public sealed class IronPythonInitializer(
 
     public Task ShutdownAsync()
     {
-        lock (gate)
+        lock (_gate)
         {
-            if (ownsEngine && engine is not null)
+            if (_ownsEngine && _engine is not null)
             {
                 try
                 {
-                    DlrScriptHost.Shutdown(engine);
+                    DlrScriptHost.Shutdown(_engine);
                 }
                 catch
                 {
@@ -96,8 +95,8 @@ public sealed class IronPythonInitializer(
                 }
             }
 
-            engine = null;
-            ownsEngine = false;
+            _engine = null;
+            _ownsEngine = false;
             endpoints.IronPython.Reset();
         }
 
@@ -111,16 +110,16 @@ public sealed class IronPythonInitializer(
     public ScriptEngine GetOrCreateEngine(IIronPythonBridge engineBridge)
     {
         ArgumentNullException.ThrowIfNull(engineBridge);
-        lock (gate)
+        lock (_gate)
             return GetOrCreateEngineNoLock(engineBridge);
     }
 
     private ScriptEngine GetOrCreateEngineNoLock(IIronPythonBridge engineBridge)
     {
-        if (engine is ScriptEngine typed)
+        if (_engine is ScriptEngine typed)
             return typed;
 
-        if (engine is not null)
+        if (_engine is not null)
         {
             throw new InvalidOperationException(
                 "IronPython session already holds a non-embedded engine.");
@@ -135,8 +134,8 @@ public sealed class IronPythonInitializer(
         AddStdLib(created);
         Setup(created);
         IronPythonDebugger.AddPydevdSearchPath(created);
-        engine = created;
-        ownsEngine = true;
+        _engine = created;
+        _ownsEngine = true;
         return created;
     }
 
@@ -163,13 +162,13 @@ public sealed class IronPythonInitializer(
     private static void AddStdLib(ScriptEngine created)
     {
         var asm = typeof(IronPythonInitializer).Assembly;
-        stdlibResourceName ??= asm.GetManifestResourceNames().SingleOrDefault(static n =>
+        _stdlibResourceName ??= asm.GetManifestResourceNames().SingleOrDefault(static n =>
             n.EndsWith(StdLibResourceSuffix, StringComparison.Ordinal));
 
-        if (stdlibResourceName is null)
+        if (_stdlibResourceName is null)
             throw new InvalidOperationException($"Manifest resource ending with '{StdLibResourceSuffix}' was not found.");
 
-        var importer = new ResourceMetaPathImporter(asm, stdlibResourceName);
+        var importer = new ResourceMetaPathImporter(asm, _stdlibResourceName);
         dynamic sys = created.GetSysModule();
         sys.meta_path.append(importer);
     }

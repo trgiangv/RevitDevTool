@@ -1,7 +1,4 @@
-using DevTools.Execution.Abstractions;
-using DevTools.Mcp;
 using DevTools.Execution.External.Mcp.Connections;
-using DevTools.Mcp.Core.Utils;
 using DevTools.Telemetry;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -24,7 +21,7 @@ internal sealed class McpCallFilter(
     {
         options.Filters.Request.CallToolFilters.Add(next => async (request, cancellationToken) =>
         {
-            var toolName = request.Params?.Name ?? string.Empty;
+            var toolName = request.Params.Name;
             catalogStore.TryGetTool(null, toolName, out var registered);
             var sourceKind = registered?.Binding.SourceKind.ToString() ?? "unknown";
             telemetry.RecordMcpInvocation(sourceKind);

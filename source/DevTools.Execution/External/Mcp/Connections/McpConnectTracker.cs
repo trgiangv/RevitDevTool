@@ -6,12 +6,8 @@ using Microsoft.Extensions.Logging;
 using ZLogger;
 namespace DevTools.Execution.External.Mcp.Connections;
 
-public sealed partial class McpConnectTracker : ObservableObject, IConnectTracker
+public sealed partial class McpConnectTracker(ILogger<McpConnectTracker> logger) : ObservableObject, IConnectTracker
 {
-    private readonly ILogger<McpConnectTracker> _logger;
-
-    public McpConnectTracker(ILogger<McpConnectTracker> logger) => _logger = logger;
-
     [ObservableProperty]
     public partial string McpEndpoint { get; set; } = string.Empty;
 
@@ -68,7 +64,7 @@ public sealed partial class McpConnectTracker : ObservableObject, IConnectTracke
             CurrentStatusMessage = $"Queued '{toolName}'...";
             ExecutionStartedAtUtc = DateTime.UtcNow;
         });
-        return new ExecutionScope(this, toolName, _logger);
+        return new ExecutionScope(this, toolName, logger);
     }
 
     internal void UpdateExecution(string toolName, string statusMessage)

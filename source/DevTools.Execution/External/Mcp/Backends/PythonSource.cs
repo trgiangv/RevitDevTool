@@ -5,8 +5,6 @@ using DevTools.Execution.Providers.Python;
 using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
-using DevTools.Mcp.Core.Results;
-using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Python.Runtime;
@@ -29,7 +27,7 @@ public sealed class PythonSource(PythonInitializer initializer) : IMcpSource
             tool.Descriptor,
             (request, cancellationToken) => InvokeToolAsync(
                 tool,
-                request.Params ?? new CallToolRequestParams { Name = tool.Descriptor.Name },
+                request.Params,
                 hostContext,
                 cancellationToken));
 
@@ -137,7 +135,7 @@ public sealed class PythonSource(PythonInitializer initializer) : IMcpSource
                 root,
                 scope =>
                 {
-                    AttachInvokeScope(scope, sourcePath, root, mtimeTicks, cache);
+                    AttachInvokeScope(scope, sourcePath, mtimeTicks, cache);
                     configureScope(scope);
                     scope.Exec(PythonEmbedded.ToolInvokeScript);
                     return scope.Get(PythonInstances.ResultJson).As<string>();
@@ -165,7 +163,6 @@ public sealed class PythonSource(PythonInitializer initializer) : IMcpSource
     private static void AttachInvokeScope(
         PyModule scope,
         string sourcePath,
-        string root,
         long mtimeTicks,
         PyObject cache)
     {

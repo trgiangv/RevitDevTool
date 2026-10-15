@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
-using DevTools.Mcp;
 using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
