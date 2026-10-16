@@ -44,6 +44,8 @@
         <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
         <GlobalPackageReference Include="Polyfill" Version="11.4.3" />
         <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
+        <PackageVersion Include="Lokad.ILPack" Version="0.3.1" />
+        <PackageVersion Include="Lib.Harmony" Version="2.4.3" />
         <!--Auth-->
         <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.0" />
         <!--Console-->

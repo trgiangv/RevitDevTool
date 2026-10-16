@@ -37,6 +37,10 @@ Point the IDE or type checker at the directory containing the generated stubs. K
 
 Open the **StubBuilder** command where it is available in the RevitDevTool UI. Select the .NET assemblies that define the API you want to author against and choose an output directory for the `.pyi` files. The input can be Autodesk assemblies or any other compatible .NET assembly.
 
+Select the assemblies to include. Shift+click and Ctrl+click select several rows. **Select All** and **Select None** apply to the full list.
+
+Assemblies loaded in memory with no file on disk show `(no disk path)`. Generate still builds stubs from the assemblies you selected, and it writes a DLL for each of them into the output folder. When one of those assemblies references another in-memory assembly, that dependency is written too, dependency first. A type whose assembly is not listed in the manifest is still recorded under that assembly's exact identity, so the DLL can be written. Each DLL is reconstructed from metadata and IL so it can be opened in a decompiler. It is not a byte-for-byte copy of an original PE image.
+
 The generated stubs are consumed by the Python tooling listed above. The host used to generate them does not change the standard `.pyi` format.
 
 ## Practical Guidance
@@ -55,3 +59,4 @@ For runtime behavior and host-specific execution, start with:
 - Some dynamic PythonNet behavior cannot be represented perfectly as static type hints.
 - Stubs describe the assembly surface available when they were generated; regenerate them when the assembly version changes.
 - If a stub disagrees with runtime behavior, trust the runtime and the documentation for the source .NET assembly.
+- A DLL written for an in-memory assembly can omit resources or metadata the reconstructor does not preserve. Use it to inspect the API, and treat the live assembly as the source of truth.

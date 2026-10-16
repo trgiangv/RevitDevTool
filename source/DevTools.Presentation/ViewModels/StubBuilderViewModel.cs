@@ -4,8 +4,10 @@ using System.IO;
 using System.Reflection;
 using System.Windows.Data;
 using DevTools.Presentation.Models;
+using DevTools.Presentation.Services;
 using PythonNetStubGenerator;
 // ReSharper disable UnusedParameterInPartialMethod
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Presentation.ViewModels;
 
@@ -17,7 +19,9 @@ public partial class StubBuilderViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsGenerating { get; set; }
 
-    [ObservableProperty] private string _statusMessage = string.Empty;
+    [ObservableProperty]
+    public partial string StatusMessage { get; set; } = string.Empty;
+
     [ObservableProperty]
     public partial double Progress { get; set; }
 
@@ -58,7 +62,7 @@ public partial class StubBuilderViewModel : ObservableObject
     private bool FilterAssembly(object obj)
     {
         if (obj is not AssemblyItem item) return false;
-        
+
         if (HideUnchecked && !item.IsSelected)
             return false;
 
@@ -139,21 +143,20 @@ public partial class StubBuilderViewModel : ObservableObject
     {
         if (IsGenerating) return;
 
-        var selectedAssemblies = AppDomainAssemblies
+        var selectedItems = AppDomainAssemblies
             .Where(a => a.IsSelected && a.Assembly != null)
-            .Select(a => a.Assembly!)
             .ToArray();
 
-        if (selectedAssemblies.Length == 0)
+        if (selectedItems.Length == 0)
         {
             StatusMessage = "Please select at least one assembly.";
             return;
         }
 
-        await RunStubGenerationAsync(selectedAssemblies).ConfigureAwait(true);
+        await RunStubGenerationAsync(selectedItems).ConfigureAwait(true);
     }
 
-    private async Task RunStubGenerationAsync(Assembly[] assemblies)
+    private async Task RunStubGenerationAsync(AssemblyItem[] items)
     {
         if (string.IsNullOrWhiteSpace(OutputPath))
         {
@@ -162,19 +165,29 @@ public partial class StubBuilderViewModel : ObservableObject
         }
 
         IsGenerating = true;
-        StatusMessage = "Generating stubs...";
+        StatusMessage = "Generating...";
         Progress = 0;
         GenerateStubsCommand.NotifyCanExecuteChanged();
 
+        var outputPath = OutputPath;
+        AssemblyDump[] dumps = [];
         try
         {
-            var destPath = new DirectoryInfo(OutputPath);
-            await Task.Run(() => StubBuilder.BuildAssemblyStubs(destPath, assemblies)).ConfigureAwait(true);
-            StatusMessage = $"Stubs generated successfully at: {OutputPath}";
+            var assemblies = items.Select(item => item.Assembly!).ToArray();
+            var destPath = new DirectoryInfo(outputPath);
+            await Task.Run(() =>
+            {
+                dumps = DumpPathlessAssemblies(items, outputPath);
+                StubBuilder.BuildAssemblyStubs(destPath, assemblies);
+            }).ConfigureAwait(true);
+
+            PublishDumps(dumps);
+            StatusMessage = $"Generated at: {outputPath}{DescribeDumpFailures(dumps)}";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error: {ex.Message}";
+            PublishDumps(dumps);
+            StatusMessage = $"Error: {ex.Message}{DescribeDumpFailures(dumps)}";
         }
         finally
         {
@@ -183,6 +196,63 @@ public partial class StubBuilderViewModel : ObservableObject
             GenerateStubsCommand.NotifyCanExecuteChanged();
         }
     }
+
+    private AssemblyDump[] DumpPathlessAssemblies(AssemblyItem[] items, string outputPath)
+    {
+        var pathless = items.Where(item => item.Assembly != null && !File.Exists(item.Location)).ToArray();
+        if (pathless.Length == 0)
+            return [];
+
+        var generated = AssemblyGenerator.Generate(
+            pathless.Select(item => item.Assembly!).ToArray(),
+            outputPath);
+
+        var dumps = new AssemblyDump[generated.Length];
+        for (var i = 0; i < generated.Length; i++)
+        {
+            var result = generated[i];
+            var item = AppDomainAssemblies.FirstOrDefault(candidate => ReferenceEquals(candidate.Assembly, result.Assembly));
+            var name = item?.Name ?? result.Assembly.GetName().Name ?? "(unknown)";
+            dumps[i] = new AssemblyDump(item, name, result.OutputFile, result.Error);
+        }
+
+        return dumps;
+    }
+
+    private void PublishDumps(IReadOnlyList<AssemblyDump> dumps)
+    {
+        var changed = false;
+        foreach (var dump in dumps)
+        {
+            if (dump.OutputFile == null || dump.Item == null)
+                continue;
+            dump.Item.Location = dump.OutputFile;
+            changed = true;
+        }
+
+        if (changed)
+            FilteredAssemblies.Refresh();
+    }
+
+    private static string DescribeDumpFailures(IReadOnlyList<AssemblyDump> dumps)
+    {
+        var failed = new List<AssemblyDump>();
+        foreach (var dump in dumps)
+        {
+            if (dump.OutputFile == null)
+                failed.Add(dump);
+        }
+
+        if (failed.Count == 0)
+            return string.Empty;
+
+        var names = string.Join(", ", failed.Take(3).Select(dump => dump.Name));
+        if (failed.Count > 3)
+            names += $" (+{failed.Count - 3} more)";
+        return $" Could not dump {names}: {failed[0].Error}";
+    }
+
+    private sealed record AssemblyDump(AssemblyItem? Item, string Name, string? OutputFile, string? Error);
 
     private bool CanGenerate() => !IsGenerating;
 }

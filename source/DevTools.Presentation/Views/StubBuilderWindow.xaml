@@ -39,21 +39,21 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!--  Toolbar: Hide unchecked + Select All / Clear  -->
+        <!--  Toolbar: Hide unselected + Select All / None  -->
         <StackPanel Margin="0,0,0,8"
                     HorizontalAlignment="Left"
                     Orientation="Horizontal">
 
             <CheckBox Margin="0,0,12,0"
-                      Content="Hide unchecked"
+                      Content="Hide unselected"
                       IsChecked="{Binding HideUnchecked}" />
 
             <Button Margin="0,0,8,0"
                     Command="{Binding SelectAllCommand}"
-                    Content="Check All" />
+                    Content="Select All" />
 
             <Button Command="{Binding ClearSelectionCommand}"
-                    Content="Check None" />
+                    Content="Select None" />
         </StackPanel>
 
         <!--  Search  -->
@@ -64,17 +64,19 @@
                     hc:InfoElement.ShowClearButton="True"
                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
-        <!--  Assembly CheckListBox  -->
+        <!--  Assembly list  -->
         <ListBox Grid.Row="2"
                  Margin="0,0,0,8"
                  ItemsSource="{Binding FilteredAssemblies}"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 SelectionMode="Extended"
                  TextSearch.TextPath="Name"
                  VirtualizingStackPanel.IsVirtualizing="True"
-                 VirtualizingStackPanel.VirtualizationMode="Recycling">
+                 VirtualizingStackPanel.VirtualizationMode="Standard">
             <ListBox.ItemContainerStyle>
                 <Style BasedOn="{StaticResource ListBoxItemBaseStyle}"
                        TargetType="ListBoxItem">
+                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                     <EventSetter Event="MouseDoubleClick"
                                  Handler="OnAssemblyItemDoubleClick" />
                 </Style>
@@ -82,9 +84,6 @@
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="models:AssemblyItem">
                     <StackPanel Orientation="Horizontal">
-                        <CheckBox Margin="0,0,6,0"
-                                  Focusable="True"
-                                  IsChecked="{Binding IsSelected}" />
                         <TextBlock VerticalAlignment="Center"
                                    FontWeight="SemiBold"
                                    Text="{Binding Name}" />
