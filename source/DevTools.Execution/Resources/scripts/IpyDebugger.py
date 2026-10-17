@@ -12,6 +12,11 @@ constants under cli, force ``IS_WINDOWS``, restore platform, then import
 pydevd. Leaving ``IS_WINDOWS`` false makes breakpoint path matching
 case-sensitive (Samples vs samples, C: vs c:) and never hits.
 
+pyRevit loads the standard library from an embedded zip, so
+``os.path.realpath.__code__.co_filename`` is ``ntpath.py``. pydevd prints
+that at critical on import unless ``PYDEVD_DISABLE_FILE_VALIDATION`` is
+set first. ``pydevd_constants`` snapshots the flag at import time.
+
 Before ``_enable_attach``, wrap ``os.path.abspath`` so it does not throw.
 ``import site`` (from pydevd FilesFiltering) calls ``abspath`` on CLR
 ``__file__`` assembly names; net48 ``Path.GetFullPath`` rejects them.
@@ -37,6 +42,7 @@ import sys
 
 class IpyDebugger:
     def prepare(self):
+        os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
         orig_platform = sys.platform
         sys.platform = "cli"
         from _pydevd_bundle import pydevd_constants

@@ -42,7 +42,11 @@ public sealed class PythonCoverageTests
         Assert.AreEqual("SetupRevit.py", PythonEmbedded.SetupScriptFileName);
         Assert.IsFalse(string.IsNullOrWhiteSpace(PythonEmbedded.ToolParserScript));
         Assert.IsFalse(string.IsNullOrWhiteSpace(PythonEmbedded.PytestRunnerScript));
-        Assert.IsFalse(string.IsNullOrWhiteSpace(PythonEmbedded.IpyDebuggerScript));
+        var debugger = PythonEmbedded.IpyDebuggerScript;
+        Assert.IsFalse(string.IsNullOrWhiteSpace(debugger));
+        var validation = debugger.IndexOf("PYDEVD_DISABLE_FILE_VALIDATION", StringComparison.Ordinal);
+        var constants = debugger.IndexOf("pydevd_constants", StringComparison.Ordinal);
+        Assert.IsTrue(validation >= 0 && constants > validation);
     }
 
     [TestMethod]
