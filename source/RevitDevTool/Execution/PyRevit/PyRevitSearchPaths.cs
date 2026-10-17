@@ -25,6 +25,10 @@ internal static class PyRevitSearchPaths
         foreach (var directory in PyRevitAssemblyLoader.SelectedAssemblyDirectories(scriptDir))
             AppendUnique(paths, directory);
 
+        // Paths the running loader stored on ScriptCommand (pyRevit 5, 6, and 7).
+        foreach (var directory in PyRevitSessionLibraryPaths.Directories())
+            AppendUnique(paths, directory);
+
         // IronPythonEngine.SetSearchPaths replaces sys.path; engine does not add core libs.
         var root = PyRevitLibraryPaths.InstallRoot;
         if (root is not null)

@@ -4,11 +4,15 @@ internal static class PyRevitNames
 {
     internal const string LoaderAssembly = "PyRevitLoader";
     internal const string RuntimePrefix = "PyRevitLabs.PyRevit.Runtime";
+    internal const string ScriptCommand = RuntimePrefix + ".ScriptCommand";
     internal const string ScriptExecutor = RuntimePrefix + ".ScriptExecutor";
     internal const string ScriptData = RuntimePrefix + ".ScriptData";
     internal const string ScriptRuntimeConfigs = RuntimePrefix + ".ScriptRuntimeConfigs";
     internal const string ScriptExecutorConfigs = RuntimePrefix + ".ScriptExecutorConfigs";
     internal const string DomainStorageKeys = RuntimePrefix + ".DomainStorageKeys";
+    internal const string EnvDictionaryKeys = RuntimePrefix + ".EnvDictionaryKeys";
+    internal const string EnvVarsDictKey = "EnvVarsDictKey";
+    internal const string SessionUuid = "SessionUUID";
     internal const string LoaderScriptExecutor = LoaderAssembly + ".ScriptExecutor";
     internal const string IronPythonEngine = "IronPythonEngine";
     internal const string DefaultEnginesDictKey = "PYREVITCachedEngines";
@@ -39,7 +43,10 @@ internal static class PyRevitNames
     internal const string UiApp = "UIApp";
     internal const string CommandData = "CommandData";
     internal const string SelectedElements = "SelectedElements";
+    internal const string ScriptRuntimeConfigsMember = "ScriptRuntimeConfigs";
     internal const string SearchPaths = "SearchPaths";
+    internal const string GetInstalledLibraryExtensions = "GetInstalledLibraryExtensions";
+    internal const string Collect = "Collect";
     internal const string Arguments = "Arguments";
     internal const string Variables = "Variables";
     internal const string EngineConfigs = "EngineConfigs";
