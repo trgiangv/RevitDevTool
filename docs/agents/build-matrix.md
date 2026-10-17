@@ -37,6 +37,7 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 - Years stay sequential. Shared projects are solution-mapped to `Debug`/`Release`, so later years reuse `bin/<Debug|Release>/<tfm>`.
 - NUnit, TUnit, and MSTest host packaging builds those runtime projects with `Debug` or `Release`, not `*.Autodesk.YYYY`.
 - `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. Daemon and TestRunner publish after the base module (`BuildProjectReferences=false`, so they do not rebuild shared projects) and overlap the expand module. Bundle creation still waits for every year and both publishes.
+- `pack` (including `pack publish`) sets `DeployAddin=false` and `PublishAddin=true`. `Revit.targets` and `AutoCad.targets` both read those two properties; each project imports only one of those files. The bundle zip is packed from `bin/**/publish`, so that command does not copy into `%AppData%\Autodesk\ApplicationPlugins\RevitDevTool.bundle`. A solution build of both hosts into that one folder races `RemoveDir` on `Contents\<year>` (`MSB3231`). A pipeline run without `pack` still deploys. Local host deploy stays `scripts/build-host.ps1`.
 
 ## DevTools.Daemon
 
@@ -113,11 +114,11 @@ scripts/build-host.ps1 -HostApp Revit -Year 2025 -Mode Debug
 scripts/build-host.ps1 -HostApp Revit,AutoCAD -Year 2025,2026
 ```
 
-A direct `dotnet build` on a **`UseRevit` / `UseAutoCad`** project without compile-only `-p:Deploy*=false` still deploys and will fail if that host year is running. Use `build-host.ps1`, or pass the compile-only props.
+A direct `dotnet build` on a **`UseRevit` / `UseAutoCad`** project without compile-only `-p:Deploy*=false` still deploys and will fail if that host year is running. Use `build-host.ps1`, or pass the compile-only props. `Clean` removes the whole AppData `RevitDevTool.bundle`.
 
 NOT needed when:
 - Building shared `DevTools.*` (no deploy targets imported), or
-- Building a host project with `-p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false` (compile-only)
+- Building a host project with `-p:DeployAddin=false -p:ILRepackable=false` (compile-only)
 
 Do not cargo-cult those `-p` flags onto every `dotnet build`. See `.agents/skills/build/SKILL.md`.
 

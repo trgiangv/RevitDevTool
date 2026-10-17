@@ -32,12 +32,12 @@ change actually reaches:
 Compile-only props (host projects only):
 
 ```text
--p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
+-p:DeployAddin=false -p:ILRepackable=false
 ```
 
 `Directory.Build.targets` imports `props/Revit.targets` / `AutoCad.targets` **only**
 when the project sets `UseRevit=true` or `UseAutoCad=true`; those targets own
-`DeployRevitAddin` / `DeployAutoCadBundle`. `ILRepackable` comes from
+`DeployAddin`. `ILRepackable` comes from
 `props/ILRepack.targets` (imported everywhere, default false). So:
 
 | Project | Needs the compile-only props? |
@@ -51,7 +51,7 @@ when the project sets `UseRevit=true` or `UseAutoCad=true`; those targets own
 dotnet build source/DevTools.Testing.Host/DevTools.Testing.Host.csproj -c Debug
 
 # Host entrypoint — compile only (do not deploy while the host may be running)
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployAddin=false -p:ILRepackable=false
 ```
 
 ## 2. Test

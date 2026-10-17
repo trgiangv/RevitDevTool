@@ -21,7 +21,7 @@
     <!-- After Build, before host publish so the bundle is the merged DLL. -->
     <Target Name="RepackAddinFiles"
             AfterTargets="Build"
-            BeforeTargets="PublishRevitAddinFiles;PublishAutoCadBundleFiles"
+            BeforeTargets="PublishAddinFiles"
             Condition="'$(ILRepackable)' == 'true'">
 
         <ItemGroup>

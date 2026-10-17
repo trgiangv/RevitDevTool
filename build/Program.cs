@@ -30,6 +30,7 @@ if (args.Contains("test"))
 
 if (args.Contains("pack"))
 {
+    SolutionCompile.DeployAddin = false;
     builder.Services.AddModule<CreateBundleModule>();
     builder.Services.AddModule<CreateInstallerModule>();
 }

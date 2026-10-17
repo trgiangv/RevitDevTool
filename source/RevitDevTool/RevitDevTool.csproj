@@ -5,7 +5,7 @@
         <UseWpf>true</UseWpf>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <UseWindowsForms>true</UseWindowsForms>
-        <DeployRevitAddin>true</DeployRevitAddin>
+        <DeployAddin>true</DeployAddin>
         <BundleDestinationFolder>$(AppData)\Autodesk\ApplicationPlugins\RevitDevTool.bundle</BundleDestinationFolder>
     </PropertyGroup>
 

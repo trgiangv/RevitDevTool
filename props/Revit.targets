@@ -23,14 +23,15 @@
     <!-- ============================================== -->
 
     <PropertyGroup>
-        <DeployRevitAddin Condition="'$(DeployRevitAddin)' == ''">false</DeployRevitAddin>
-        <PublishRevitAddin Condition="'$(DeployRevitAddin)' == 'true'">true</PublishRevitAddin>
-        <PublishRevitAddin Condition="'$(PublishRevitAddin)' == ''">false</PublishRevitAddin>
+        <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\RevitDevTool.bundle</BundleDestinationFolder>
+        <DeployAddin Condition="'$(DeployAddin)' == ''">false</DeployAddin>
+        <PublishAddin Condition="'$(DeployAddin)' == 'true'">true</PublishAddin>
+        <PublishAddin Condition="'$(PublishAddin)' == ''">false</PublishAddin>
     </PropertyGroup>
 
-    <Target Name="PublishRevitAddinFiles"
+    <Target Name="PublishAddinFiles"
             AfterTargets="Build"
-            Condition="$(PublishRevitAddin) == 'true' AND '$(RevitVersion)' != ''">
+            Condition="$(PublishAddin) == 'true' AND '$(RevitVersion)' != ''">
 
         <ItemGroup>
             <PackageContentsFile Include="$(MSBuildThisFileDirectory)PackageContents.xml"/>
@@ -66,12 +67,11 @@
         <Message Text="$(AssemblyName) -> $(BundleVersionDir)" Importance="high"/>
     </Target>
 
-    <Target Name="DeployRevitAddinFiles"
-            AfterTargets="PublishRevitAddinFiles"
-            Condition="$(DeployRevitAddin) == 'true' AND '$(RevitVersion)' != ''">
+    <Target Name="DeployAddinFiles"
+            AfterTargets="PublishAddinFiles"
+            Condition="$(DeployAddin) == 'true' AND '$(RevitVersion)' != ''">
 
         <PropertyGroup>
-            <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\$(MSBuildProjectName).bundle</BundleDestinationFolder>
             <BundleVersionDeployDir>$(BundleDestinationFolder)\Contents\$(RevitVersion)</BundleVersionDeployDir>
         </PropertyGroup>
 
@@ -90,15 +90,15 @@
         <Message Text="$(AssemblyName) -> $(BundleDestinationFolder)\" Importance="high"/>
     </Target>
 
-    <Target Name="CleanRevitAddinFolder"
+    <Target Name="CleanAddinFolder"
             AfterTargets="Clean"
-            Condition="$(DeployRevitAddin) == 'true'">
+            Condition="$(DeployAddin) == 'true'">
         <RemoveDir Directories="$(BundleDestinationFolder)" ContinueOnError="true"/>
     </Target>
 
     <Target Name="CleanPublishFolder"
             AfterTargets="Clean"
-            Condition="$(PublishRevitAddin) == 'true'">
+            Condition="$(PublishAddin) == 'true'">
         <RemoveDir Directories="$(PublishDir)"/>
     </Target>
 

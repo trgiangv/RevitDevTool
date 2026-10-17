@@ -6,7 +6,7 @@
         <ILRepackable>true</ILRepackable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <UseWindowsForms>true</UseWindowsForms>
-        <DeployRevitAddin>false</DeployRevitAddin>
+        <DeployAddin>false</DeployAddin>
         <RevitUserAddinsFolder Condition="'$(RevitUserAddinsFolder)' == ''">$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)</RevitUserAddinsFolder>
         <RevitUserAddinPayloadFolder>$(RevitUserAddinsFolder)\$(AssemblyName)</RevitUserAddinPayloadFolder>
     </PropertyGroup>

@@ -244,7 +244,7 @@ public sealed class McpMergedHostIdentityTests
     }
 
     private const string HostBuildHint =
-        "Build host: dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false";
+        "Build host: dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployAddin=false";
 
     private const string ToolsetBuildHint =
         "Build toolset: dotnet build samples/McpToolsetDemo/McpToolsetDemo.csproj -c Debug.Autodesk.2025 -m:1";

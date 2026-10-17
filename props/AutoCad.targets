@@ -30,15 +30,15 @@
     -->
 
     <PropertyGroup>
-        <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\$(MSBuildProjectName).bundle</BundleDestinationFolder>
-        <DeployAutoCadBundle Condition="'$(DeployAutoCadBundle)' == ''">false</DeployAutoCadBundle>
-        <PublishAutoCadBundle Condition="'$(DeployAutoCadBundle)' == 'true'">true</PublishAutoCadBundle>
-        <PublishAutoCadBundle Condition="'$(PublishAutoCadBundle)' == ''">false</PublishAutoCadBundle>
+        <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\RevitDevTool.bundle</BundleDestinationFolder>
+        <DeployAddin Condition="'$(DeployAddin)' == ''">false</DeployAddin>
+        <PublishAddin Condition="'$(DeployAddin)' == 'true'">true</PublishAddin>
+        <PublishAddin Condition="'$(PublishAddin)' == ''">false</PublishAddin>
     </PropertyGroup>
 
-    <Target Name="PublishAutoCadBundleFiles"
+    <Target Name="PublishAddinFiles"
             AfterTargets="Build"
-            Condition="$(PublishAutoCadBundle) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
+            Condition="$(PublishAddin) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
 
         <ItemGroup>
             <PackageContentsFile Include="$(MSBuildThisFileDirectory)PackageContents.xml"/>
@@ -60,9 +60,9 @@
         <Message Text="$(MSBuildProjectName) -> $(BundlePublishDir)" Importance="high"/>
     </Target>
 
-    <Target Name="DeployAutoCadBundleFiles"
-            AfterTargets="PublishAutoCadBundleFiles"
-            Condition="$(DeployAutoCadBundle) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
+    <Target Name="DeployAddinFiles"
+            AfterTargets="PublishAddinFiles"
+            Condition="$(DeployAddin) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
 
         <ItemGroup>
             <BundleDeployItems Include="$(PublishDir)**\*"/>
@@ -78,15 +78,15 @@
                  Importance="high"/>
     </Target>
 
-    <Target Name="CleanAutoCadBundleFolder"
+    <Target Name="CleanAddinFolder"
             AfterTargets="Clean"
-            Condition="$(DeployAutoCadBundle) == 'true'">
+            Condition="$(DeployAddin) == 'true'">
         <RemoveDir Directories="$(BundleDestinationFolder)" ContinueOnError="true"/>
     </Target>
 
     <Target Name="CleanPublishFolder"
             AfterTargets="Clean"
-            Condition="$(PublishAutoCadBundle) == 'true'">
+            Condition="$(PublishAddin) == 'true'">
         <RemoveDir Directories="$(PublishDir)"/>
     </Target>
 

@@ -15,7 +15,7 @@ with `UseRevit` / `UseAutoCad` (or their own `ILRepackable=true`). Shared
 dotnet build <path/to/DevTools.*.csproj> -c Debug
 
 # Host entrypoint (compile only)
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployAddin=false -p:ILRepackable=false
 ```
 
 | Project kind | Config |

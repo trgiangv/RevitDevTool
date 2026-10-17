@@ -110,7 +110,7 @@ public sealed class HostPackagingOwnershipTests
         if (outputDir is null)
         {
             Assert.Inconclusive(
-                "Packed (ILRepack) host output not found. Unpackaged Debug still copies NUnitRuntime; this fact needs a merged host. Build: dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false");
+                "Packed (ILRepack) host output not found. Unpackaged Debug still copies NUnitRuntime; this fact needs a merged host. Build: dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployAddin=false");
         }
 
         var hostDll = Path.Combine(outputDir!, "RevitDevTool.dll");

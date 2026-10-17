@@ -24,10 +24,10 @@ Step 1 already builds and deploys. Use this only when that host year must stay o
 
 ```powershell
 # Revit — pick your year (2022-2027)
-dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
+dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployAddin=false -p:ILRepackable=false
 
 # AutoCAD/Civil3D — pick your year (2022-2027)
-dotnet build source/AcadDevTool/ACadDevTool.csproj -c Debug.Autodesk.2026 -p:DeployRevitAddin=false -p:DeployAutoCadBundle=false -p:ILRepackable=false
+dotnet build source/AcadDevTool/ACadDevTool.csproj -c Debug.Autodesk.2026 -p:DeployAddin=false -p:ILRepackable=false
 ```
 
 ### 3. Publish Daemon (If Code Changed)
