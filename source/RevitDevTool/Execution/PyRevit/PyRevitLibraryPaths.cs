@@ -61,9 +61,6 @@ internal static class PyRevitLibraryPaths
         }
     }
 
-    internal static IReadOnlyList<string> RefreshSkipRoots =>
-        InstallRoot is { } root ? [root] : [];
-
     internal static void EnsureResolved()
     {
         if (_resolved)

@@ -53,11 +53,29 @@ Init, backends, host-attach, and native constraints: [python-runtime.md](python-
 
 ### IronPython
 
-- `IronPythonExecutionStrategy` executes `*_ipy_script.py`.
-- Two stacks: pyRevit loaded → `IIronPythonBridge.TryGetHostEngine` (ScriptExecutor) + static `IronPythonDebugger` on that loader engine (`clean: false`, `full_frame: false`, reuse). No pyRevit → embedded 3.4.2: `IronPythonInitializer` creates the session engine in its `InitializeAsync` sync prefix; `IronPythonExecutor` runs scripts on that engine. Same static debugger; do not `CreateEngine` or `Runtime.Shutdown` on the loader engine ([0033](../../decisions/0033-ironpython-pydevd-debugger.md)).
-- Host bridges configure builtins and CLR assemblies only. AutoCAD `AcadIronPythonBridge` loads AcCoreMgd / AcDbMgd / AcMgd (parity with CPython `SetupAcad.py`). Revit injects `__revit__` and RevitAPI / RevitAPIUI. ScriptExecutor search paths are the ad-hoc script directory, its hierarchy `lib`/`bin`, TFM-selected extension DLL directories, then the search paths a loaded pyRevit `ScriptCommand` already carries, then `pyrevitlib` / `site-packages`, and the pydevd extract root. pyRevit 5, 6, and the pyRevit 7 Python loader write that string from `extensionmgr` (`*.lib` root only). The pyRevit 7 C# loader writes the same `ScriptCommand` argument from `LibraryExtensionSearchPaths.Collect` (`*.lib` root plus nested `lib/` when present). When no command assembly is loaded yet, the pyRevit 7 builder methods are the fallback. `pyrevitlib` / `site-packages` come from walking `PyRevitLoader` up to `pyRevitfile`. `PyRevitAssemblyLoader` picks one managed DLL per simple name from `lib/**` and `bin/*/` by `TargetFrameworkAttribute` vs the host runtime. One load per `*.extension`. Embedded 3.4.2 uses `IronPythonSearchPaths.ForNativeHost` only. `DlrScriptHost` is the DLR façade (typed 3.4 or `ReflectionBound` on a foreign loader engine). pyRevit `ScriptExecutor` / `PyRevitLoader` bindings stay in the Revit host. `IronPythonDebugger.RefreshUserModules` takes a host drop root and skip list (Revit: `*.extension`, skip the pyRevit install root that contains `pyRevitfile`).
-- Embedded 3.4.2 uses Frames without `Tracing`. The pyRevit loader engine must not set `full_frame` (that enables `Tracing` and IronPython 3.4 cannot `import pydevd`). User-extension `sys.modules` entries are dropped before each pyRevit Run. `from pyrevit import HOST_APP` runs on the loader engine before pydevd `enable_tracing` (warmup and each Run) so `_perf.mark()` cannot import `coreutils` while `HOST_APP` is still unset. Listen sets `PYDEVD_DISABLE_FILE_VALIDATION` before importing pydevd under `cli`, then forces `IS_WINDOWS=True`. pyRevit's embedded stdlib records `co_filename` as `ntpath.py`; without the flag, pydevd prints that file-validation warning to stderr at startup.
-- In-process debugger is PyDev.Debugger **2.8.0** under `%APPDATA%\RevitDevTool\pydevd\PyDev.Debugger-pydev_debugger_2_8_0`. The host listens with `HTTP_JSON_PROTOCOL` + `pydevd._enable_attach` on **4567** (no `_wait_for_attach`). VS Code/Cursor attaches with `"type": "debugpy"` connect `localhost:4567` (same client as CPython on **5678**; two sockets). Handshake and expand-getattr quieting live in `IpyDebugger.py`. Execution UI chips read `DebugEndpoints` (`Port`, `Attached` per runtime). Policy: [0033](../../decisions/0033-ironpython-pydevd-debugger.md).
+`IronPythonExecutionStrategy` executes `*_ipy_script.py`. Policy: [0033](../../decisions/0033-ironpython-pydevd-debugger.md).
+
+**Stacks.** pyRevit loaded → `IIronPythonBridge.TryGetHostEngine` (ScriptExecutor) and static `IronPythonDebugger` on that loader engine (`clean: false`, `full_frame: false`, reuse). No pyRevit → embedded 3.4.2: `IronPythonInitializer` creates the session engine in its `InitializeAsync` sync prefix; `IronPythonExecutor` runs scripts on that engine. Same static debugger. Do not `CreateEngine` or `Runtime.Shutdown` on the loader engine.
+
+**Bridges.** Host bridges configure builtins and CLR assemblies only. AutoCAD `AcadIronPythonBridge` loads AcCoreMgd / AcDbMgd / AcMgd (parity with CPython `SetupAcad.py`). Revit injects `__revit__` and RevitAPI / RevitAPIUI. `DlrScriptHost` is the DLR façade (typed 3.4 or `ReflectionBound` on a foreign loader engine). pyRevit `ScriptExecutor` / `PyRevitLoader` bindings stay in the Revit host.
+
+**Search paths.** Embedded 3.4.2 uses `IronPythonSearchPaths.ForNativeHost` only. On the pyRevit engine, `SetSearchPaths` replaces the list for that command. Final order:
+
+1. pydevd extract root
+2. script directory
+3. hierarchy `lib` / `bin`
+4. TFM-selected extension DLL directories
+5. loaded folder
+6. search paths a loaded pyRevit `ScriptCommand` already carries
+7. `pyrevitlib`, then `site-packages`
+
+`pyrevitlib` / `site-packages` come from walking `PyRevitLoader` up to `pyRevitfile`. The `ScriptCommand` string is written by pyRevit 5, 6, and the pyRevit 7 Python loader from `extensionmgr` (`*.lib` root only). The pyRevit 7 C# loader writes it from `LibraryExtensionSearchPaths.Collect` (`*.lib` root plus nested `lib/` when present). When no command assembly is loaded yet, the pyRevit 7 builder methods are the fallback. `PyRevitAssemblyLoader` picks one managed DLL per simple name from `lib/**` and `bin/*/` by `TargetFrameworkAttribute` vs the host runtime. One load per `*.extension`.
+
+**Each run.** The same engine stays up so the pydevd listener survives. `IronPythonDebugger.DropUnknownModules` drops `sys.modules` entries whose `__file__` is a real file outside two known roots: the pyRevit install (directory that contains `pyRevitfile`, so `pyrevitlib` and `site-packages`) and the pydevd extract. Modules with no `__file__`, and embedded stdlib whose `__file__` is `<resource>`, stay.
+
+**Debugger.** Embedded 3.4.2 uses Frames without `Tracing`. The pyRevit loader engine must not set `full_frame`: that enables `Tracing`, and IronPython 3.4 then cannot `import pydevd`. `from pyrevit import HOST_APP` runs on the loader engine before pydevd `enable_tracing` (warmup and each Run) so `_perf.mark()` cannot import `coreutils` while `HOST_APP` is still unset. Listen sets `PYDEVD_DISABLE_FILE_VALIDATION` before importing pydevd under `cli`, then forces `IS_WINDOWS=True`. pyRevit's embedded stdlib records `co_filename` as `ntpath.py`; without the flag, pydevd prints that file-validation warning to stderr at startup.
+
+In-process debugger is PyDev.Debugger **2.8.0** under `%APPDATA%\RevitDevTool\pydevd\PyDev.Debugger-pydev_debugger_2_8_0`. The host listens with `HTTP_JSON_PROTOCOL` + `pydevd._enable_attach` on **4567** (no `_wait_for_attach`). VS Code/Cursor attaches with `"type": "debugpy"` connect `localhost:4567` (same client as CPython on **5678**; two sockets). Handshake and expand-getattr quieting live in `IpyDebugger.py`. Execution UI chips read `DebugEndpoints` (`Port`, `Attached` per runtime).
 
 ### FSharp
 

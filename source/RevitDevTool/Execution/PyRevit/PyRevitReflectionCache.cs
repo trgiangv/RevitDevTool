@@ -88,7 +88,7 @@ internal sealed class PyRevitReflectionCache
             throw new InvalidOperationException("pyRevit Labs runtime is not available.");
 
         var scriptData = _runtime.CreateScriptData(scriptPath);
-        var runtimeConfigs = _runtime.CreateRuntimeConfigs(scriptPath);
+        var runtimeConfigs = _runtime.CreateRuntimeConfigs(scriptPath, rootPath);
         var execConfigs = Activator.CreateInstance(_runtime.ScriptExecutorConfigsType)
             ?? throw new InvalidOperationException("Failed to create ScriptExecutorConfigs.");
 
@@ -107,7 +107,7 @@ internal sealed class PyRevitReflectionCache
             return ExecutionResult.Failed("pyRevit is not loaded in this Revit session.");
 
         var executor = _loader.CreateExecutor();
-        var revitResult = ReflectionBound.Call(_loader.ExecuteScript, executor, [scriptPath, PyRevitSearchPaths.Build(scriptPath), null, null]);
+        var revitResult = ReflectionBound.Call(_loader.ExecuteScript, executor, [scriptPath, PyRevitSearchPaths.Build(scriptPath, rootPath), null, null]);
         var message = ReflectionBound.Get<string>(executor, PyRevitNames.Message);
         if (!string.IsNullOrEmpty(message))
             Trace.Write(message);
@@ -270,9 +270,9 @@ internal sealed class PyRevitReflectionCache
             return scriptData;
         }
 
-        internal object CreateRuntimeConfigs(string scriptPath)
+        internal object CreateRuntimeConfigs(string scriptPath, string? rootPath = null)
         {
-            var searchPaths = PyRevitSearchPaths.Build(scriptPath);
+            var searchPaths = PyRevitSearchPaths.Build(scriptPath, rootPath);
             var commandData = CreateCommandData(RevitContext.UiApplication);
 
             var configs = Activator.CreateInstance(ScriptRuntimeConfigsType)

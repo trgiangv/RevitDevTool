@@ -47,11 +47,9 @@ public sealed class RevitIPyExecutionStrategy(
             var result = await hostContext
                 .ExecuteAsync(() =>
                 {
-                    IronPythonDebugger.RefreshUserModules(
+                    IronPythonDebugger.DropUnknownModules(
                         ironPythonInitializer.Engine,
-                        scriptPath,
-                        PyRevitExtensionPaths.ModuleRefreshRoot(scriptPath),
-                        PyRevitLibraryPaths.RefreshSkipRoots,
+                        KnownModuleRoots(),
                         logger);
                     PyRevitReflectionCache.Instance.EnsureHostAppImported();
                     IronPythonDebugger.EnsureCurrentThreadTraced(ironPythonInitializer.Engine, logger);
@@ -78,5 +76,19 @@ public sealed class RevitIPyExecutionStrategy(
             logger.ZLogError($"pyRevit execution pipeline failed: {ex.Message}{Environment.NewLine}{ex.StackTrace}");
             return ExecutionResult.Failed($"pyRevit execution pipeline failed: {ex.Message}", ex, stopwatch.ElapsedMilliseconds);
         }
+    }
+
+    /// <summary>
+    /// pyRevit install (directory of <c>pyRevitfile</c>, so <c>pyrevitlib</c> and
+    /// <c>site-packages</c>) and the pydevd extract. Command folders are not included.
+    /// </summary>
+    private static List<string> KnownModuleRoots()
+    {
+        var roots = new List<string>();
+        if (PyRevitLibraryPaths.InstallRoot is { } install)
+            roots.Add(install);
+        if (PydevdInstaller.IsInstalled())
+            roots.Add(PydevdInstaller.ExtractRoot);
+        return roots;
     }
 }

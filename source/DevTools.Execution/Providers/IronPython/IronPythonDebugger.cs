@@ -1,4 +1,3 @@
-using System.IO;
 using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Providers.Python;
 using Microsoft.Extensions.Logging;
@@ -41,12 +40,13 @@ public static class IronPythonDebugger
                                                              {PythonInstances.HasTrace} = {PythonInstances.TraceFunc} is not None
                                                      """;
 
-    private const string RefreshUserModulesScript = $"""
+    private const string DropUnknownModulesScript = $"""
                                                      import os
                                                      import sys
                                                      sep = os.sep
-                                                     root = os.path.normcase(os.path.abspath({PythonInstances.RefreshRoot}))
-                                                     skips = [os.path.normcase(os.path.abspath(p)) for p in {PythonInstances.RefreshSkip}]
+                                                     known = []
+                                                     for p in {PythonInstances.KnownRoots}:
+                                                         known.append(os.path.normcase(os.path.abspath(p)))
                                                      def under(base, full):
                                                          return full == base or full.startswith(base + sep)
                                                      dead = []
@@ -58,9 +58,9 @@ public static class IronPythonDebugger
                                                              full = os.path.normcase(os.path.abspath(path))
                                                          except Exception:
                                                              continue
-                                                         if not under(root, full):
+                                                         if any(under(base, full) for base in known):
                                                              continue
-                                                         if any(under(s, full) for s in skips):
+                                                         if not os.path.exists(full):
                                                              continue
                                                          dead.append(name)
                                                      for name in dead:
@@ -132,33 +132,27 @@ public static class IronPythonDebugger
     }
 
     /// <summary>
-    /// Drop modules whose <c>__file__</c> is under the refresh root so the
-    /// next Run re-reads edited files.
+    /// Drop imported modules whose <c>__file__</c> is a real file outside
+    /// <paramref name="knownRoots"/>. The engine stays; pydevd and pyRevit
+    /// install modules stay when those directories are passed.
     /// </summary>
-    public static void RefreshUserModules(
+    public static void DropUnknownModules(
         object? engine,
-        string scriptPath,
-        string? root = null,
-        IReadOnlyList<string>? skipRoots = null,
+        IReadOnlyList<string> knownRoots,
         ILogger? logger = null)
     {
         if (engine is null)
             return;
 
-        root ??= Path.GetDirectoryName(scriptPath);
-        if (string.IsNullOrEmpty(root))
-            return;
-
         try
         {
             var scope = DlrScriptHost.CreateScope(engine);
-            DlrScriptHost.SetVariable(scope, PythonInstances.RefreshRoot, root);
-            DlrScriptHost.SetVariable(scope, PythonInstances.RefreshSkip, skipRoots?.ToList() ?? []);
-            DlrScriptHost.Execute(engine, RefreshUserModulesScript, scope);
+            DlrScriptHost.SetVariable(scope, PythonInstances.KnownRoots, knownRoots.ToList());
+            DlrScriptHost.Execute(engine, DropUnknownModulesScript, scope);
         }
         catch (Exception ex)
         {
-            logger?.ZLogWarning($"IronPython user-module refresh failed: {ex.Message}");
+            logger?.ZLogWarning($"IronPython module cleanup failed: {ex.Message}");
         }
     }
 

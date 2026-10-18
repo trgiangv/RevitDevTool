@@ -59,16 +59,6 @@ internal static class PyRevitExtensionPaths
         return null;
     }
 
-    /// <summary>
-    /// Directory whose modules should be dropped before the next Run:
-    /// <c>*.extension</c> when present, otherwise the script directory.
-    /// </summary>
-    internal static string? ModuleRefreshRoot(string scriptPath)
-    {
-        var dir = Path.GetDirectoryName(scriptPath);
-        return string.IsNullOrEmpty(dir) ? null : FindExtensionRoot(dir) ?? dir;
-    }
-
     private static IEnumerable<string> EnumerateSubfolderDlls(string binRoot) =>
         Directory.EnumerateDirectories(binRoot)
             .SelectMany(subDir => Directory.EnumerateFiles(subDir, "*.dll", SearchOption.AllDirectories));

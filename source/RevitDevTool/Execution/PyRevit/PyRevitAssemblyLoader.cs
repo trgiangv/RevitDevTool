@@ -87,14 +87,14 @@ internal static class PyRevitAssemblyLoader
         var result = new List<string>();
         foreach (var group in dllPaths.GroupBy(static p => Path.GetFileNameWithoutExtension(p), StringComparer.OrdinalIgnoreCase))
         {
-            if (HighestCompatible(group, runtimeMajor) is { } path)
+            if (GetCompatibleTfm(group, runtimeMajor) is { } path)
                 result.Add(path);
         }
 
         return result;
     }
 
-    private static string? HighestCompatible(IEnumerable<string> dllPaths, int runtimeMajor)
+    private static string? GetCompatibleTfm(IEnumerable<string> dllPaths, int runtimeMajor)
     {
         string? chosen = null;
         var bestMajor = int.MinValue;
@@ -158,18 +158,9 @@ internal static class PyRevitAssemblyLoader
 
             foreach (var attrHandle in assemblyDef.GetCustomAttributes())
             {
-                var attr = reader.GetCustomAttribute(attrHandle);
-                if (attr.Constructor.Kind != HandleKind.MemberReference) continue;
-
-                var ctor = reader.GetMemberReference((MemberReferenceHandle)attr.Constructor);
-                if (ctor.Parent.Kind != HandleKind.TypeReference) continue;
-
-                var typeRef = reader.GetTypeReference((TypeReferenceHandle)ctor.Parent);
-                if (reader.GetString(typeRef.Name) != nameof(TargetFrameworkAttribute)) continue;
-
-                var blob = reader.GetBlobReader(attr.Value);
-                blob.ReadUInt16();
-                major = ParseTfmMajor(blob.ReadSerializedString());
+                var serializedBlob = SerializedBlob(reader, attrHandle);
+                if (string.IsNullOrWhiteSpace(serializedBlob)) continue;
+                major = ParseTfmMajor(serializedBlob);
                 return true;
             }
 
@@ -180,6 +171,22 @@ internal static class PyRevitAssemblyLoader
         {
             return false;
         }
+    }
+    
+    private static string? SerializedBlob(MetadataReader reader, CustomAttributeHandle attrHandle)
+    {
+        var attr = reader.GetCustomAttribute(attrHandle);
+        if (attr.Constructor.Kind != HandleKind.MemberReference) return null ;
+
+        var ctor = reader.GetMemberReference((MemberReferenceHandle)attr.Constructor);
+        if (ctor.Parent.Kind != HandleKind.TypeReference) return null ;
+
+        var typeRef = reader.GetTypeReference((TypeReferenceHandle)ctor.Parent);
+        if (reader.GetString(typeRef.Name) != nameof(TargetFrameworkAttribute)) return null ;
+
+        var blob = reader.GetBlobReader(attr.Value);
+        blob.ReadUInt16();
+        return blob.ReadSerializedString();
     }
 
     private static int ParseTfmMajor(string? tfmString)

@@ -39,6 +39,5 @@ public static class PythonInstances
     public const string HasTrace = "__has_trace__";
     public const string TraceFunc = "__trace_func__";
     public const string Debugger = "__dbg__";
-    public const string RefreshRoot = "__refresh_root__";
-    public const string RefreshSkip = "__refresh_skip__";
+    public const string KnownRoots = "__known_roots__";
 }
