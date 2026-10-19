@@ -1,6 +1,7 @@
+using DevTools.Daemon.Desktop.Models;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Desktop;
-using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Tunnel;
 using DevTools.Ipc;
 using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.Configuration;
@@ -49,14 +50,14 @@ internal static class DaemonTestDoubles
         return auth;
     }
 
-    public static Mock<IProcessSessions> CreateProcessSessions(IReadOnlyList<ProcessCatalog>? entries = null)
+    public static Mock<IHostConnections> CreateHostConnections(IReadOnlyList<ProcessCatalog>? entries = null)
     {
         entries ??= [];
         var catalog = new ProcessCatalogs();
         foreach (var entry in entries)
             catalog.Replace(entry);
 
-        var broker = new Mock<IProcessSessions>();
+        var broker = new Mock<IHostConnections>();
         broker.Setup(b => b.Catalog).Returns(catalog);
         broker.Setup(b => b.RunAsync(It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
         return broker;

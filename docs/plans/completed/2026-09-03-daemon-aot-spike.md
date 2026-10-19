@@ -86,7 +86,7 @@ Out of scope:
 
 | Area | Location | Evidence |
 |------|----------|----------|
-| Reflection JSON (no `JsonSerializerContext`) | Daemon: `TokenStore`, `UserSettingsStore`, `ControlPipeHandler`, `GatewayTunnelClient` | IL2026 + IL3050 |
+| Reflection JSON (no `JsonSerializerContext`) | Daemon: `TokenStore`, `UserSettingsStore`, `ControlHandler`, `GatewayTunnelClient` | IL2026 + IL3050 |
 | `JsonStringEnumConverter` (non-generic) | `UserSettingsStore` static ctor | IL3050 |
 | Reflection JSON | `DevTools.Mcp.Core/Utils/ToolHelpers.cs`, `DevTools.Mcp.Server` contracts/tools | IL2026 + IL3050 |
 | `XmlSerializer` | `DevTools.FileMetadata.Revit/TransmissionDataReader.cs` | IL2026 + IL3050 (dynamic XML codegen) |

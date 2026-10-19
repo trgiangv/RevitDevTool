@@ -3,7 +3,7 @@
 using System.IO.Pipelines;
 using System.Text.Json;
 using DevTools.Daemon.Auth;
-using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Tunnel;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Hosting;
 using DevTools.Daemon.Mcp.Processes;
@@ -39,7 +39,7 @@ internal static class DaemonTaskTestTools
         throw new McpProtocolException("daemon-task-protocol-fault", McpErrorCode.InvalidParams);
 }
 
-internal sealed class TaskTestProcessSessions : IProcessSessions
+internal sealed class TaskTestHostConnections : IHostConnections
 {
     public const int DefaultProcessId = 101;
     public const string DefaultToolName = "task_demo_tool";
@@ -48,7 +48,7 @@ internal sealed class TaskTestProcessSessions : IProcessSessions
 
     private readonly TaskTestProcessSession _session;
 
-    public TaskTestProcessSessions()
+    public TaskTestHostConnections()
     {
         _session = new TaskTestProcessSession(this, DefaultProcessId);
     }
@@ -121,7 +121,7 @@ internal sealed class TaskTestProcessSessions : IProcessSessions
     }
 }
 
-internal sealed class TaskTestProcessSession(TaskTestProcessSessions parent, int processId) : IProcessSession
+internal sealed class TaskTestProcessSession(TaskTestHostConnections parent, int processId) : IProcessSession
 {
     public int ProcessId => processId;
     public string PipeName { get; } = $"DevToolsMcp_Revit_2025_{processId}";
@@ -163,7 +163,7 @@ internal sealed class DaemonMcpTaskHarness : IAsyncDisposable
         CancellationTokenSource serverCts,
         Pipe clientToServer,
         Pipe serverToClient,
-        TaskTestProcessSessions sessions)
+        TaskTestHostConnections sessions)
     {
         _serviceProvider = serviceProvider;
         Client = client;
@@ -178,20 +178,20 @@ internal sealed class DaemonMcpTaskHarness : IAsyncDisposable
 
     public McpClient Client { get; }
     public IMcpTaskStore TaskStore { get; }
-    public TaskTestProcessSessions Sessions { get; }
+    public TaskTestHostConnections Sessions { get; }
 
     public static async Task<DaemonMcpTaskHarness> StartAsync(
         CancellationToken cancellationToken,
         McpClientOptions? clientOptions = null,
         bool includeProtocolFaultTool = false)
     {
-        var sessions = new TaskTestProcessSessions();
+        var sessions = new TaskTestHostConnections();
         sessions.SeedDefaultCatalog();
 
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerFactory>(NullLoggerFactory.Instance);
         RegisterTasks(services, includeProtocolFaultTool);
-        services.AddSingleton<IProcessSessions>(sessions);
+        services.AddSingleton<IHostConnections>(sessions);
         services.AddSingleton(Mock.Of<IMcpPipeScanner>());
         services.AddSingleton(Mock.Of<IHostLaunchService>());
         services.AddSingleton(Mock.Of<IAuthService>());

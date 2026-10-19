@@ -1,11 +1,15 @@
+using DevTools.Daemon.Control;
+using DevTools.Daemon.Desktop.Models;
+using DevTools.Daemon.Desktop.ViewModels;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Desktop;
-using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Desktop.Helpers;
+using DevTools.Daemon.Tunnel;
 using DevTools.Daemon.Tests.Support;
-using DevTools.Daemon.Views;
+using DevTools.Daemon.Desktop.Views;
 using DevTools.Settings.Configs;
 using Moq;
 
@@ -20,7 +24,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     {
         RunOnUi(() =>
         {
-            var state = CreateAppState();
+            var state = CreateShellViewModel();
             var window = new MainWindow(state);
             window.Show();
 
@@ -38,13 +42,13 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     }
 
     [TestMethod]
-    public void AppState_CreateAvatar_DecodesImageBytes()
+    public void ShellViewModel_CreateAvatar_DecodesImageBytes()
     {
         RunOnUi(() =>
         {
             var png = Convert.FromBase64String(
                 "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
-            var image = AppState.CreateAvatar(png);
+            var image = OverviewViewModel.CreateAvatar(png);
             Assert.IsNotNull(image);
             Assert.IsInstanceOfType<BitmapImage>(image);
             Assert.AreEqual(1, ((BitmapImage)image).PixelWidth);
@@ -65,7 +69,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
             Assert.AreNotEqual(light, dark);
             Assert.AreEqual(dark, darkBrush.Color);
 
-            var state = CreateAppState();
+            var state = CreateShellViewModel();
             var window = new MainWindow(state);
             window.Show();
             ThemeHelper.Apply(AppTheme.Dark);
@@ -81,7 +85,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     }
 
     [TestMethod]
-    public void Preferences_ThemeChange_PersistsSettings()
+    public void PreferencesViewModel_ThemeChange_PersistsSettings()
     {
         RunOnUi(() =>
         {
@@ -90,7 +94,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
             try
             {
                 var store = DaemonTestDoubles.CreateUserSettingsStore(new UserSettings { Theme = AppTheme.Light });
-                var preferences = new Preferences(store);
+                var preferences = new SettingsViewModel(store);
 
                 preferences.Theme = AppTheme.Dark;
                 Assert.AreEqual(AppTheme.Dark, preferences.Theme);
@@ -106,20 +110,20 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     }
 
     [TestMethod]
-    public void AppState_RefreshAuthAndGatewayStatus()
+    public void ShellViewModel_RefreshAuthAndTunnelStatusText()
     {
         RunOnUi(() =>
         {
             var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
             var tunnel = DaemonTestDoubles.CreateTunnelStatus(TunnelStatus.Connected);
-            var state = CreateAppState(auth.Object, tunnel: tunnel.Object);
+            var state = CreateShellViewModel(auth.Object, tunnel: tunnel.Object);
 
-            Assert.IsTrue(state.IsAuthenticated);
-            Assert.AreEqual("Connected", state.GatewayStatus);
-            Assert.AreEqual("Test User", state.DisplayName);
+            Assert.IsTrue(state.Overview.IsAuthenticated);
+            Assert.AreEqual("Connected", state.Overview.TunnelStatus);
+            Assert.AreEqual("Test User", state.Overview.DisplayName);
 
             tunnel.Raise(t => t.StatusChanged += null!, new object(), new TunnelStatusChangedArgs(TunnelStatus.Reconnecting));
-            Assert.AreEqual("Reconnecting...", state.GatewayStatus);
+            Assert.AreEqual("Reconnecting...", state.Overview.TunnelStatus);
 
             state.SelectedTabIndex = 1;
             state.SelectedTabIndex = 2;
@@ -127,31 +131,54 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     }
 
     [TestMethod]
-    public void AppState_SignInCommand_CallsAuthService()
+    public void ShellViewModel_SignInCommand_CallsAuthService()
     {
         var auth = DaemonTestDoubles.CreateAuthService();
         RunOnUiAsync(async () =>
         {
-            var state = CreateAppState(auth.Object);
-            Assert.IsTrue(state.SignInCommand.CanExecute(null));
+            var state = CreateShellViewModel(auth.Object);
+            Assert.IsTrue(state.Overview.SignInCommand.CanExecute(null));
 
-            await state.SignInCommand.ExecuteAsync(null);
+            state.Overview.SignInCommand.Execute(null);
             auth.Verify(a => a.SignInAsync(It.IsAny<CancellationToken>()), Times.Once);
 
             auth.Setup(a => a.IsAuthenticated).Returns(true);
-            state.IsAuthenticated = true;
-            Assert.IsFalse(state.SignInCommand.CanExecute(null));
+            state.Overview.IsAuthenticated = true;
+            Assert.IsFalse(state.Overview.SignInCommand.CanExecute(null));
         });
     }
 
     [TestMethod]
-    public void AppState_SignOut_RefreshesState()
+    public void ShellViewModel_SignInCommand_RemainsEnabledWhileSignInIsPending()
+    {
+        var signInResult = new TaskCompletionSource<AuthResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var auth = DaemonTestDoubles.CreateAuthService();
+        auth.Setup(a => a.SignInAsync(It.IsAny<CancellationToken>())).Returns(signInResult.Task);
+
+        try
+        {
+            RunOnUi(() =>
+            {
+                var state = CreateShellViewModel(auth.Object);
+                state.Overview.SignInCommand.Execute(null);
+
+                Assert.IsTrue(state.Overview.SignInCommand.CanExecute(null));
+            });
+        }
+        finally
+        {
+            signInResult.TrySetResult(new AuthResult(true));
+        }
+    }
+
+    [TestMethod]
+    public void ShellViewModel_SignOut_RefreshesState()
     {
         var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
         RunOnUiAsync(async () =>
         {
-            var state = CreateAppState(auth.Object);
-            await state.SignOut();
+            var state = CreateShellViewModel(auth.Object);
+            await state.Overview.SignOutAsync();
             auth.Verify(a => a.SignOutAsync(), Times.Once);
         });
     }
@@ -161,7 +188,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     {
         RunOnUi(() =>
         {
-            var state = CreateAppState();
+            var state = CreateShellViewModel();
             var window = new MainWindow(state);
             window.Show();
             window.Close();
@@ -172,14 +199,14 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     }
 
     [TestMethod]
-    public void AppState_LoadAvatar_InvalidUrl_ClearsImage()
+    public void ShellViewModel_LoadAvatar_InvalidUrl_ClearsImage()
     {
         RunOnUi(() =>
         {
             var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
             auth.Setup(a => a.AvatarUrl).Returns("http://127.0.0.1:9/avatar.png");
-            var state = CreateAppState(auth.Object);
-            Assert.IsNull(state.AvatarImage);
+            var state = CreateShellViewModel(auth.Object);
+            Assert.IsNull(state.Overview.AvatarImage);
         });
     }
 
@@ -188,7 +215,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     {
         RunOnUi(() =>
         {
-            var state = CreateAppState();
+            var state = CreateShellViewModel();
             var window = new MainWindow(state);
             var tray = new TrayMenu(state, window);
             tray.ShowMainWindow();
@@ -196,7 +223,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     }
 
     [TestMethod]
-    public void Preferences_AutoStartToggle_UpdatesRegistry()
+    public void PreferencesViewModel_AutoStartToggle_UpdatesRegistry()
     {
         RunOnUi(() =>
         {
@@ -208,12 +235,12 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
             try
             {
                 var store = DaemonTestDoubles.CreateUserSettingsStore();
-                var preferences = new Preferences(store);
+                var preferences = new SettingsViewModel(store);
                 preferences.AutoStartEnabled = true;
                 if (Environment.ProcessPath is not null)
-                    Assert.IsTrue(AutoStart.IsEnabled);
+                    Assert.IsTrue(StartupRegistration.IsEnabled);
                 preferences.AutoStartEnabled = false;
-                Assert.IsFalse(AutoStart.IsEnabled);
+                Assert.IsFalse(StartupRegistration.IsEnabled);
             }
             finally
             {
@@ -227,13 +254,13 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     }
 
     [TestMethod]
-    public void AppState_NotAuthenticated_ShowsSignedOutGatewayStatus()
+    public void ShellViewModel_NotAuthenticated_ShowsSignedOutTunnelStatusText()
     {
         RunOnUi(() =>
         {
             var auth = DaemonTestDoubles.CreateAuthService(authenticated: false);
-            var state = CreateAppState(auth.Object);
-            Assert.AreEqual("Not signed in", state.GatewayStatus);
+            var state = CreateShellViewModel(auth.Object);
+            Assert.AreEqual("Not signed in", state.Overview.TunnelStatus);
         });
     }
 
@@ -243,23 +270,23 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
         RunOnUi(() =>
         {
             var executed = false;
-            UiDispatch.Post(() => executed = true);
+            UiDispatchHelper.Post(() => executed = true);
             Assert.IsTrue(executed);
 
-            UiDispatch.Send(() => executed = false);
+            UiDispatchHelper.Send(() => executed = false);
             Assert.IsFalse(executed);
         });
     }
 
-    private static AppState CreateAppState(
+    private static ShellViewModel CreateShellViewModel(
         IAuthService? auth = null,
         ITunnelStatusProvider? tunnel = null)
     {
         auth ??= DaemonTestDoubles.CreateAuthService().Object;
         tunnel ??= DaemonTestDoubles.CreateTunnelStatus().Object;
-        var broker = DaemonTestDoubles.CreateProcessSessions().Object;
+        var broker = DaemonTestDoubles.CreateHostConnections().Object;
         var scanner = DaemonTestDoubles.CreatePipeScanner().Object;
         var store = DaemonTestDoubles.CreateUserSettingsStore();
-        return new AppState(auth, broker, scanner, store, tunnel);
+        return new ShellViewModel(auth, broker, scanner, store, tunnel);
     }
 }

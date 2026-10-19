@@ -60,7 +60,7 @@ source/DevTools.Ipc/
 Owners, outside DevTools.Ipc:
   DevTools.Mcp.Catalog/Transport/McpPipeServer.cs     MCP pipe session
   DevTools.Execution/External/DevToolsPipeServer.cs   test-pipe dispatch
-  DevTools.Daemon/Control/ControlPipeHostedService.cs daemon control pipe
+  DevTools.Daemon/Control/ControlHostedService.cs daemon control pipe
   DevTools.TestRunner/Services/TestPipeClient.cs      test-pipe client
   DevTools.Presentation/Services/DaemonClient.cs      daemon control client
 ```

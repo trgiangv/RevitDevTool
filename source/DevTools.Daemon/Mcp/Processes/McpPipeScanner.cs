@@ -7,11 +7,12 @@ using ZLogger;
 
 namespace DevTools.Daemon.Mcp.Processes;
 
-internal sealed class McpPipeScanner(ILogger<McpPipeScanner> logger) : IMcpPipeScanner
+internal sealed partial class McpPipeScanner(ILogger<McpPipeScanner> logger) : IMcpPipeScanner
 {
-    private static readonly Regex McpPipePattern = new(
-        @"^DevToolsMcp_\w+_[^_]+_\d+$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    [GeneratedRegex(@"^DevToolsMcp_\w+_[^_]+_\d+$", RegexOptions.IgnoreCase | RegexOptions.Compiled, "en-US")]
+    private static partial Regex McpPipeRegex();
+
+    private static readonly Regex McpPipePattern = McpPipeRegex();
 
     public IReadOnlyCollection<string> Discover()
     {
@@ -58,4 +59,5 @@ internal sealed class McpPipeScanner(ILogger<McpPipeScanner> logger) : IMcpPipeS
             return false;
         }
     }
+
 }

@@ -7,9 +7,9 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Daemon.Mcp.Tools;
 
-public sealed class ListProcessesTool(IProcessSessions sessions, IMcpPipeScanner pipeScanner)
+public sealed class ListProcessesTool(IHostConnections sessions, IMcpPipeScanner pipeScanner)
 {
-    public static McpServerTool Create(IProcessSessions sessions, IMcpPipeScanner pipeScanner)
+    public static McpServerTool Create(IHostConnections sessions, IMcpPipeScanner pipeScanner)
     {
         var handler = new ListProcessesTool(sessions, pipeScanner);
         return McpServerTool.Create(

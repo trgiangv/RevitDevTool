@@ -25,15 +25,15 @@ not the pipe count.
 |------|------|------|--------|
 | MCP pipe | `DevToolsMcp_{Host}_{Version}_{PID}` | SDK newline JSON-RPC | `McpPipeServer` + `McpServer` |
 | Test pipe | `DevTools_{Host}_{Version}_{PID}` | Length-prefix `BridgeMessage` | `DevToolsPipeServer` |
-| Daemon control pipe | `DevToolsDaemon_Control` | One JSON command line. No reply | `ControlPipeHostedService` |
+| Daemon control pipe | `DevToolsDaemon_Control` | One JSON command line. No reply | `ControlHostedService` |
 
 The test pipe carries `tests/run`, `ipytests/run`, `testing/hello`,
 `testing/run`, `testing/cancel`, `testing/progress`, and `instance/info`.
 These are methods on one message format. `FormatTest` and `IsTestPipe` are the code
 names of this pipe. `BridgeMessage` is the message type, not the pipe name.
 
-`NamedPipes` opens a current-user server. `McpPipeServer` and
-`DevToolsPipeServer` call it. `ControlPipeHostedService` does not.
+`NamedPipes` opens a current-user server. `McpPipeServer`,
+`DevToolsPipeServer`, and `ControlHostedService` call it.
 `BridgePipeConnection` frames a `Stream` for the test pipe only.
 The max frame is 16 MiB.
 

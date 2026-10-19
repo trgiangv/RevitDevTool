@@ -1,14 +1,15 @@
+using DevTools.Daemon.Desktop.ViewModels;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DevTools.Daemon.Auth;
-using DevTools.Daemon.Composition;
+using DevTools.Daemon;
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Desktop;
-using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Tunnel;
 using DevTools.Daemon.Tests.Support;
-using DevTools.Daemon.Views;
+using DevTools.Daemon.Desktop.Views;
 using DevTools.Utilities;
 using Duende.IdentityModel.OidcClient.Browser;
 using Microsoft.Extensions.DependencyInjection;
@@ -138,22 +139,22 @@ public sealed class ExtendedCoverageTests
     }
 
     [TestMethod]
-    public async Task GatewayTunnelClient_ConnectsAndReconnectsUntilCancelled()
+    public async Task TunnelClient_ConnectsAndReconnectsUntilCancelled()
     {
-        using var host = ServerHostBuilder.CreateStdioHostForTests();
+        using var host = AppHostBuilder.CreateStdioHostForTests();
         var engine = host.Services.GetRequiredService<DevTools.Daemon.Mcp.Hosting.McpEngine>();
         var scanner = DaemonTestDoubles.CreatePipeScanner();
         var options = DevTools.Daemon.Mcp.Hosting.McpServerFactory.CreateOptions(
             engine.ToolCollection, engine.PromptCollection, host.Services);
 
-        var client = new GatewayTunnelClient(
+        var client = new TunnelClient(
             new Uri("ws://127.0.0.1:9/tunnel"),
             () => Task.FromResult<string?>("token"),
             options,
             scanner.Object,
             NullLoggerFactory.Instance,
             host.Services,
-            NullLogger<GatewayTunnelClient>.Instance);
+            NullLogger<TunnelClient>.Instance);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await client.RunAsync(cts.Token);
@@ -171,14 +172,14 @@ public sealed class ExtendedCoverageTests
             {
                 var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
                 auth.Setup(a => a.AvatarUrl).Returns("https://example.com/avatar.png");
-                var state = CreateAppState(auth.Object);
+                var state = CreateShellViewModel(auth.Object);
                 var window = new MainWindow(state);
                 window.Show();
 
                 state.SelectedTabIndex = 0;
                 state.SelectedTabIndex = 1;
                 state.SelectedTabIndex = 2;
-                state.Preferences.ReloadAutoStart();
+                state.Settings.ReloadAutoStart();
 
                 _ = new OverviewView { DataContext = state };
                 _ = new HostsView { DataContext = state };
@@ -186,13 +187,13 @@ public sealed class ExtendedCoverageTests
             });
         }
 
-        private static AppState CreateAppState(IAuthService auth)
+        private static ShellViewModel CreateShellViewModel(IAuthService auth)
         {
-            var broker = DaemonTestDoubles.CreateProcessSessions().Object;
+            var broker = DaemonTestDoubles.CreateHostConnections().Object;
             var scanner = DaemonTestDoubles.CreatePipeScanner().Object;
             var store = DaemonTestDoubles.CreateUserSettingsStore();
             var tunnel = DaemonTestDoubles.CreateTunnelStatus(TunnelStatus.Connected).Object;
-            return new AppState(auth, broker, scanner, store, tunnel);
+            return new ShellViewModel(auth, broker, scanner, store, tunnel);
         }
     }
 

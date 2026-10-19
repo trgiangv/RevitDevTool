@@ -47,11 +47,11 @@ Do not multiplex SDK frames onto the test pipe (or the reverse).
 
 ## Stdio Mode
 
-When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server on stdin/stdout. It boots its own `McpEngine`, `ProcessSessions`, and `DiscoveryHostedService` independently.
+When an AI client spawns `DevTools.Daemon.exe --stdio`, a **new process** runs a self-contained MCP server on stdin/stdout. It boots its own `McpEngine`, `HostConnections`, and `DiscoveryHostedService` independently.
 
 Key properties:
 - Custom process entrypoint handles `--stdio` before the WPF tray starts.
-- Bypasses the `SingleInstance` mutex.
+- Bypasses the `SingleInstanceGuard` mutex.
 - Discovers `DevToolsMcp_*` pipes independently.
 - Auth tokens are read from the shared DPAPI file.
 - Process exits when the MCP client disconnects.
@@ -62,7 +62,7 @@ Key properties:
 
 Outbound WebSocket connection to the McpGateway (Cloudflare Workers + Durable Objects):
 
-1. `GatewayTunnelClient` connects to `wss://<gateway>/tunnel` with Bearer token
+1. `TunnelClient` connects to `wss://<gateway>/tunnel` with Bearer token
 2. Sends `register` frame with `machine_id`, `machine_name`, `host_apps`
 3. Wraps WebSocket frames as NDJSON streams via custom adapters
 4. Runs full MCP server over that transport

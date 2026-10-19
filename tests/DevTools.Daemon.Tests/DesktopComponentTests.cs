@@ -1,8 +1,13 @@
+using DevTools.Daemon.Control;
+using DevTools.Daemon.Desktop.Models;
+using DevTools.Daemon.Logging;
 using DevTools.Daemon.Auth;
 using System.Text.Json;
-using DevTools.Daemon.Composition;
+using DevTools.Daemon;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Desktop;
+using DevTools.Daemon.Desktop.Helpers;
+using DevTools.Daemon.Desktop.Views;
 using DevTools.Daemon.Tests.Support;
 using DevTools.Settings.Configs;
 using DevTools.Utilities;
@@ -47,18 +52,18 @@ public sealed class DesktopComponentTests
     }
 
     [TestMethod]
-    public void SingleInstance_FirstInstanceIsUnique()
+    public void SingleInstanceGuard_FirstInstanceIsUnique()
     {
-        using var first = new SingleInstance();
+        using var first = new SingleInstanceGuard();
         if (!first.IsFirstInstance)
             return;
 
-        using var second = new SingleInstance();
+        using var second = new SingleInstanceGuard();
         Assert.IsFalse(second.IsFirstInstance);
     }
 
     [TestMethod]
-    public void AutoStart_EnableDisable_RoundTripsRegistryValue()
+    public void StartupRegistration_EnableDisable_RoundTripsRegistryValue()
     {
         var runKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
         object? original = null;
@@ -67,15 +72,15 @@ public sealed class DesktopComponentTests
 
         try
         {
-            AutoStart.Disable();
-            Assert.IsFalse(AutoStart.IsEnabled);
+            StartupRegistration.Disable();
+            Assert.IsFalse(StartupRegistration.IsEnabled);
 
-            AutoStart.Enable();
+            StartupRegistration.Enable();
             if (Environment.ProcessPath is not null)
-                Assert.IsTrue(AutoStart.IsEnabled);
+                Assert.IsTrue(StartupRegistration.IsEnabled);
 
-            AutoStart.Disable();
-            Assert.IsFalse(AutoStart.IsEnabled);
+            StartupRegistration.Disable();
+            Assert.IsFalse(StartupRegistration.IsEnabled);
         }
         finally
         {
@@ -164,7 +169,7 @@ public sealed class DesktopComponentTests
     [TestMethod]
     public async Task DiscoveryHostedService_StartsAndStops()
     {
-        var discovery = new Mock<IProcessSessions>();
+        var discovery = new Mock<IHostConnections>();
         discovery.Setup(d => d.RunAsync(It.IsAny<CancellationToken>()))
             .Returns<CancellationToken>(ct => Task.Delay(Timeout.Infinite, ct));
 

@@ -23,7 +23,7 @@ public sealed class DaemonMcpTasksHeadlessTests
             new McpClientOptions { ProtocolVersion = "2025-11-25" });
 
         var augmented = await harness.Client.CallToolAsTaskAsync(
-            Code(TaskTestProcessSessions.DefaultToolName),
+            Code(TaskTestHostConnections.DefaultToolName),
             TestContext.CancellationToken);
 
         Assert.IsFalse(augmented.IsTask);
@@ -35,7 +35,7 @@ public sealed class DaemonMcpTasksHeadlessTests
     public async Task CallTool_WithTaskOptIn_ReturnsCreateTaskResultAndPolledResultMatchesHost()
     {
         await using var harness = await DaemonMcpTaskHarness.StartAsync(TestContext.CancellationToken);
-        var request = Code(TaskTestProcessSessions.DefaultToolName);
+        var request = Code(TaskTestHostConnections.DefaultToolName);
         var sync = await harness.Client.CallToolAsync(request, cancellationToken: TestContext.CancellationToken);
         var augmented = await harness.Client.CallToolAsTaskAsync(request, TestContext.CancellationToken);
 
@@ -55,7 +55,7 @@ public sealed class DaemonMcpTasksHeadlessTests
     public async Task TaskCancel_EndsCancelledAndSignalsHostToken()
     {
         await using var harness = await DaemonMcpTaskHarness.StartAsync(TestContext.CancellationToken);
-        var augmented = await harness.Client.CallToolAsTaskAsync(Code(TaskTestProcessSessions.SlowToolName), TestContext.CancellationToken);
+        var augmented = await harness.Client.CallToolAsTaskAsync(Code(TaskTestHostConnections.SlowToolName), TestContext.CancellationToken);
         Assert.IsTrue(augmented.IsTask);
 
         await harness.Sessions.Started.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
@@ -74,7 +74,7 @@ public sealed class DaemonMcpTasksHeadlessTests
     public async Task InvokeDynamic_IsErrorHostResult_EndsCompleted()
     {
         await using var harness = await DaemonMcpTaskHarness.StartAsync(TestContext.CancellationToken);
-        var augmented = await harness.Client.CallToolAsTaskAsync(Code(TaskTestProcessSessions.ErrorToolName), TestContext.CancellationToken);
+        var augmented = await harness.Client.CallToolAsTaskAsync(Code(TaskTestHostConnections.ErrorToolName), TestContext.CancellationToken);
         Assert.IsTrue(augmented.IsTask);
 
         var completed = await DaemonMcpTaskHarness.PollCallToolResultAsync(
@@ -128,7 +128,7 @@ public sealed class DaemonMcpTasksHeadlessTests
         Arguments = new Dictionary<string, JsonElement>
         {
             ["code"] = JsonSerializer.SerializeToElement(
-                $"return await InvokeAsync(\"{toolName}\", null, {TaskTestProcessSessions.DefaultProcessId});"),
+                $"return await InvokeAsync(\"{toolName}\", null, {TaskTestHostConnections.DefaultProcessId});"),
         },
     };
 }

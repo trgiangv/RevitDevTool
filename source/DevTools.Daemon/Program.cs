@@ -1,5 +1,3 @@
-using DevTools.Daemon.Composition;
-using DevTools.Daemon.Desktop;
 using Microsoft.Extensions.Hosting;
 
 namespace DevTools.Daemon;
@@ -21,7 +19,7 @@ internal static class Program
     {
         try
         {
-            using var host = ServerHostBuilder.CreateStdioHost(args);
+            using var host = AppHostBuilder.CreateStdioHost(args);
             await host.RunAsync().ConfigureAwait(false);
             return 0;
         }

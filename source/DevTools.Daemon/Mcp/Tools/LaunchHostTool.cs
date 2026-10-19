@@ -13,13 +13,13 @@ using ModelContextProtocol.Server;
 namespace DevTools.Daemon.Mcp.Tools;
 
 [SupportedOSPlatform("windows")]
-public sealed class LaunchHostTool(IProcessSessions sessions, IHostLaunchService launchService)
+public sealed class LaunchHostTool(IHostConnections sessions, IHostLaunchService launchService)
 {
     private static readonly TimeSpan BridgeTimeout = TimeSpan.FromMinutes(2);
     private static readonly string[] HostAppEnumNames =
         Enum.GetValues<HostApp>().Select(h => h.ToString()).ToArray();
 
-    public static McpServerTool Create(IProcessSessions sessions, IHostLaunchService launchService)
+    public static McpServerTool Create(IHostConnections sessions, IHostLaunchService launchService)
     {
         var handler = new LaunchHostTool(sessions, launchService);
         return McpServerTool.Create(

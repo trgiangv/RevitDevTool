@@ -11,7 +11,7 @@ public sealed class CodeModeToolTests
     [TestMethod]
     public void InputSchema_DeclaresCodeAndReadOnlyOnly()
     {
-        var tool = CodeModeTool.Create(Mock.Of<IProcessSessions>());
+        var tool = CodeModeTool.Create(Mock.Of<IHostConnections>());
         var schema = tool.ProtocolTool.InputSchema;
         var names = schema.GetProperty("properties").EnumerateObject().Select(property => property.Name).ToArray();
 

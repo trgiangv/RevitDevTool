@@ -1,3 +1,4 @@
+using DevTools.Daemon.Desktop.Models;
 using System.Text.Json;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;

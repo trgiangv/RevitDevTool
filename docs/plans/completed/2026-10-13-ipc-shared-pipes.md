@@ -90,7 +90,7 @@ Passed on 2026-10-13.
 
 - `dotnet build source/DevTools.Ipc/DevTools.Ipc.csproj -c Debug` — net48, net8.0-windows, net10.0-windows.
 - `dotnet build` of `DevTools.Presentation` (net48, net8, net10), `DevTools.Daemon`, `DevTools.Execution` (net48, net8, net10), and `DevTools.TestRunner`.
-- `dotnet run --project tests/DevTools.Daemon.Tests/DevTools.Daemon.Tests.csproj -- --filter "FullyQualifiedName~ControlPipeHandlerTests|FullyQualifiedName~ControlJsonTests|FullyQualifiedName~GatewayAndControlJsonTests"` — 10 passed.
+- `dotnet run --project tests/DevTools.Daemon.Tests/DevTools.Daemon.Tests.csproj -- --filter "FullyQualifiedName~ControlHandlerTests|FullyQualifiedName~ControlJsonTests|FullyQualifiedName~GatewayAndControlJsonTests"` — 10 passed.
 - `dotnet run --project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj -- --filter "FullyQualifiedName~TestPipeClientTests"` — 1 passed.
 - `dotnet run --project tests/DevTools.Execution.Pytest.Tests/DevTools.Execution.Pytest.Tests.csproj -- --filter "FullyQualifiedName~PytestBridgeFramingTests|FullyQualifiedName~DevToolsPipeServerDisconnectTests|FullyQualifiedName~DevToolsPipeServerTests|FullyQualifiedName~PipeServerCoverageTests"` — 10 passed.
 

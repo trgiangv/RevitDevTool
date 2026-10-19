@@ -1,16 +1,16 @@
 using System.Windows;
-using DevTools.Daemon.Composition;
-using DevTools.Daemon.Desktop;
-using DevTools.Daemon.Views;
+using DevTools.Daemon.Control;
+using DevTools.Daemon.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+// ReSharper disable AsyncVoidEventHandlerMethod
 
 namespace DevTools.Daemon;
 
 public partial class App
 {
     private IHost? _host;
-    private SingleInstance? _singleInstance;
+    private SingleInstanceGuard? _singleInstance;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -18,7 +18,7 @@ public partial class App
 
         try
         {
-            _singleInstance = new SingleInstance();
+            _singleInstance = new SingleInstanceGuard();
             if (!_singleInstance.IsFirstInstance)
             {
                 _singleInstance.Dispose();
@@ -27,7 +27,7 @@ public partial class App
                 return;
             }
 
-            _host = ServerHostBuilder.CreateDesktop();
+            _host = AppHostBuilder.CreateDesktop();
             _host.Services.GetRequiredService<TrayMenu>().Start();
 
             await _host.StartAsync();

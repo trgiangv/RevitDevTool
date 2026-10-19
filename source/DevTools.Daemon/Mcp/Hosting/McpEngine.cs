@@ -19,7 +19,7 @@ public sealed class McpEngine
     public IReadOnlyList<McpServerTool> LocalTools { get; }
 
     public McpEngine(
-        IProcessSessions sessions,
+        IHostConnections sessions,
         IMcpPipeScanner pipeScanner,
         IHostLaunchService launchService,
         IFileReaderCatalog fileInfoCatalog)
@@ -36,7 +36,7 @@ public sealed class McpEngine
     }
 
     private static McpServerTool[] CreateLocalTools(
-        IProcessSessions sessions,
+        IHostConnections sessions,
         IMcpPipeScanner pipeScanner,
         IHostLaunchService launchService,
         IFileReaderCatalog fileInfoCatalog) =>

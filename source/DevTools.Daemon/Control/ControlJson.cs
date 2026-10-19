@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 using DevTools.Daemon.Auth;
-using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Tunnel;
 using DevTools.Ipc;
 
 namespace DevTools.Daemon.Control;

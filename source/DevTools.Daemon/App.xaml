@@ -8,15 +8,17 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
+                        <!--  ReSharper disable Xaml.PathError  -->
                         <ResourceDictionary Source="/DevTools.UI;component/Themes/SkinDefault.xaml" />
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
                 <ResourceDictionary>
                     <ResourceDictionary.MergedDictionaries>
                         <ResourceDictionary Source="/DevTools.UI;component/Themes/Theme.xaml" />
+                        <!--  ReSharper restore Xaml.PathError  -->
                     </ResourceDictionary.MergedDictionaries>
                 </ResourceDictionary>
-                <ResourceDictionary Source="Views/TrayResources.xaml" />
+                <ResourceDictionary Source="Desktop/Views/TrayResources.xaml" />
                 <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

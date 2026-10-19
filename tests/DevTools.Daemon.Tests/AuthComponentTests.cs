@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
-using DevTools.Daemon.Gateway;
+using DevTools.Daemon.Tunnel;
 using DevTools.Daemon.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;

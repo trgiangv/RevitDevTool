@@ -9,13 +9,13 @@ namespace DevTools.Daemon.Mcp.Tools;
 /// <summary>
 /// Model-facing program tool. Host capabilities stay off <c>tools/list</c>.
 /// </summary>
-public sealed class CodeModeTool(IProcessSessions sessions)
+public sealed class CodeModeTool(IHostConnections sessions)
 {
     public const string Name = "code_mode";
 
     private readonly CodeModeCache _cache = new();
 
-    public static McpServerTool Create(IProcessSessions sessions) => McpServerTool.Create(
+    public static McpServerTool Create(IHostConnections sessions) => McpServerTool.Create(
         new CodeModeTool(sessions).Run,
         new McpServerToolCreateOptions
         {

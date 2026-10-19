@@ -25,18 +25,18 @@ Stdio and desktop processes are fully independent — no IPC between them. Both 
 
 | Area | Path |
 |------|------|
-| Composition (tray vs `--stdio` hosts, discovery, file logging) | `source/DevTools.Daemon/Composition/` |
-| Auth (Duende `OidcClient` + DPAPI store + loopback browser) | `source/DevTools.Daemon/Auth/` |
-| Gateway WebSocket tunnel | `source/DevTools.Daemon/Gateway/` |
-| Control pipe (`control/*`) | `source/DevTools.Daemon/Control/` |
-| Desktop (mutex, Run key, settings, `AppState`) | `source/DevTools.Daemon/Desktop/` |
-| MCP tool adapters (`list_machines`) | `source/DevTools.Daemon/Tools/` |
-| Main window + views + tray | `source/DevTools.Daemon/Views/` |
-| Icon / theme / UI dispatch | `source/DevTools.Daemon/Desktop/` |
-| App entry point | `source/DevTools.Daemon/Program.cs` |
-| External MCP surface (`McpEngine`, tools, prompts) | `source/DevTools.Daemon/Mcp/` |
+| Process entry, app constants, and host construction | `source/DevTools.Daemon/Program.cs`, `App.xaml.cs`, `AppConstants.cs`, `AppHostBuilder.cs` |
+| Logging shared by tray and stdio modes | `source/DevTools.Daemon/Logging/` |
+| Control pipe, single-instance, and Windows auto-start | `source/DevTools.Daemon/Control/` |
+| Desktop views and view models | `source/DevTools.Daemon/Desktop/Views/`, `Desktop/ViewModels/` |
+| Desktop settings model, persistence, and UI dispatch | `source/DevTools.Daemon/Desktop/Models/`, `Desktop/Helpers/` |
+| Desktop theme and icons | `source/DevTools.Daemon/Desktop/` |
+| Authentication | `source/DevTools.Daemon/Auth/` |
+| WebSocket tunnel | `source/DevTools.Daemon/Tunnel/` |
+| MCP hosting and process discovery | `source/DevTools.Daemon/Mcp/Hosting/`, `Mcp/Processes/` |
+| External MCP surface (tools and prompts) | `source/DevTools.Daemon/Mcp/` |
 
-Duende `OidcClient` owns PKCE, ID-token validation, and refresh. Local code is DPAPI `TokenStore`, `LoopbackBrowser`, and token revoke (`LogoutAsync` is a browser end-session, not revoke).
+Duende `OidcClient` owns PKCE, ID-token validation, and refresh. Local code is DPAPI `TokenStore`, `AuthBrowser`, and token revoke (`LogoutAsync` is a browser end-session, not revoke).
 
 ## Configuration
 
