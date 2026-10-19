@@ -1,20 +1,20 @@
-using DevTools.Daemon.Composition;
+using DevTools.Daemon;
 using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.Mcp.Client.Tests;
 
 [TestClass]
-public sealed class McpServiceCollectionExtensionsTests
+public sealed class McpServicesExtensionsTests
 {
     [TestMethod]
-    public void AddMcp_RegistersProcessSessionsScannerAndEngine()
+    public void AddMcp_RegistersHostConnectionsScannerAndEngine()
     {
-        using var host = ServerHostBuilder.CreateStdioHostForTests();
+        using var host = AppHostBuilder.CreateStdioHostForTests();
         var provider = host.Services;
 
         Assert.IsInstanceOfType<McpPipeScanner>(provider.GetRequiredService<IMcpPipeScanner>());
-        Assert.IsInstanceOfType<ProcessSessions>(provider.GetRequiredService<ProcessSessions>());
-        Assert.IsNotNull(provider.GetRequiredService<IProcessSessions>());
+        Assert.IsInstanceOfType<HostConnections>(provider.GetRequiredService<HostConnections>());
+        Assert.IsNotNull(provider.GetRequiredService<IHostConnections>());
     }
 }

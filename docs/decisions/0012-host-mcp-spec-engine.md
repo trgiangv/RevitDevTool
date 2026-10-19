@@ -64,7 +64,7 @@ Positive:
 
 - *Historical:* host pipe was spec-first (`McpHandler`). **As of 2026-10-03**
   the pipe uses SDK `McpServer` ([0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)).
-- **Toolset ALC** (`McpToolsetContext` + `ToolsetResultSerializer` JSON bridge)
+- **Toolset ALC** (`McpAssemblyContext` + `ToolsetResultSerializer` JSON bridge)
   retained; toolsets keep compile-only MCP refs (`ExcludeAssets=runtime`).
 - Host image carries MCP for ALC bind ([0019](0019-ilrepack-and-polyfill-isolated-alc.md)).
 - Wire behavior is testable with golden JSON (conformance-style).

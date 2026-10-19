@@ -24,7 +24,7 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
     {
         var tools = new List<RegisteredTool>();
         var resources = new List<RegisteredResource>();
-        var resolutionPaths = MetadataAssemblyPathCollector.Collect(assemblyPath);
+        var resolutionPaths = MetadataAssemblyCollector.Collect(assemblyPath);
         using var metadataSession = MetadataAssemblySession.Create(assemblyPath, resolutionPaths);
         var assembly = metadataSession.LoadEntryAssembly();
 
@@ -191,8 +191,8 @@ public sealed class McpAssemblyParser(ILogger<McpAssemblyParser> logger)
         var parameters = method.GetParameters()
             .Where(p => !_lookup.IsInfrastructureParameter(p))
             .Select(p => p.Name)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Select(name => $"{{{name}}}")
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => $"{{{value}}}")
             .ToList();
 
         return parameters.Count == 0

@@ -1,13 +1,14 @@
 using System.Reflection;
 using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using ZLogger;
 
 namespace DevTools.Mcp.Discovery;
 
-public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager, ILogger<DotnetMethodResolver> logger)
+public sealed class DotnetMethodResolver(McpAssemblyContextManager assemblyContextManager, ILogger<DotnetMethodResolver> logger)
 {
     private static readonly string McpToolAttributeFullName = typeof(McpServerToolAttribute).FullName!;
     private static readonly string McpResourceAttributeFullName = typeof(McpServerResourceAttribute).FullName!;
@@ -20,7 +21,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
             typeof(McpServerToolTypeAttribute),
             requireAttribute: true,
             method => FindAttributeByName(method, McpToolAttributeFullName) is not null,
-            method => ExtractNamedArg(FindAttributeByName(method, McpToolAttributeFullName), "Name"));
+            method => ExtractNamedArg(FindAttributeByName(method, McpToolAttributeFullName), McpSpecKeys.SdkAttributes.Name));
     }
 
     public MethodInfo? ResolveResource(RegisteredResource resource)
@@ -32,7 +33,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
             typeof(McpServerResourceTypeAttribute),
             requireAttribute: false,
             _ => true,
-            method => ExtractNamedArg(FindAttributeByName(method, McpResourceAttributeFullName), "Name"));
+            method => ExtractNamedArg(FindAttributeByName(method, McpResourceAttributeFullName), McpSpecKeys.SdkAttributes.Name));
     }
 
     private static CustomAttributeData? FindAttributeByName(MemberInfo member, string attributeFullName)
@@ -107,7 +108,7 @@ public sealed class DotnetMethodResolver(McpToolsetContextManager contextManager
 
         try
         {
-            var context = contextManager.GetOrCreate(binding.SourcePath);
+            var context = assemblyContextManager.GetOrCreate(binding.SourcePath);
             var assembly = context.LoadAssembly();
             return ResolveFromAssembly(assembly, targetName, binding, containerAttributeType,
                 requireAttribute, attributeChecker, configuredNameSelector);

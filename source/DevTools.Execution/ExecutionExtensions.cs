@@ -1,3 +1,4 @@
+using DevTools.Mcp.Providers;
 using DevTools.Execution.Diagnostics;
 using DevTools.Execution.External;
 using DevTools.Execution.External.Handlers;
@@ -98,7 +99,7 @@ public static class ExecutionExtensions
         services.AddSingleton<IBuiltInMcpTool, PythonCodeTool>();
         services.AddSingleton<IBuiltInMcpTool>(sp =>
             new OpenDocumentTool(sp.GetService<IDocumentBridge>() ?? NullDocumentBridge.Instance));
-        services.AddSingleton<McpToolsetContextManager>();
+        services.AddSingleton<McpAssemblyContextManager>();
         services.AddSingleton<DotnetMethodResolver>();
         services.AddSingleton<IMcpSource, DotnetSource>();
         services.AddSingleton<IMcpSource, PythonSource>();

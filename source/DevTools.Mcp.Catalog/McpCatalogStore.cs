@@ -153,7 +153,7 @@ public sealed class McpCatalogStore(ICatalogLoader catalogLoader, ISettingsServi
 
     private bool TryApplyCatalog(RegistryCatalog catalog)
     {
-        var hash = McpCatalogContentHash.Compute(catalog);
+        var hash = McpCatalogHash.Compute(catalog);
         if (CatalogIdsMatch(catalog) && string.Equals(_contentHash, hash, StringComparison.Ordinal))
             return false;
 

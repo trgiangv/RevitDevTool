@@ -22,7 +22,7 @@ public sealed class McpPipeServer(
     McpCatalogStore catalogStore,
     IEnumerable<IMcpSource> sources,
     IConnectTracker connect,
-    McpToolsetContextManager toolsetContextManager,
+    McpAssemblyContextManager assemblyContextManager,
     IHostContextExecutor hostContext,
     IHostAppInfo hostInfo,
     IServiceProvider services,
@@ -85,7 +85,8 @@ public sealed class McpPipeServer(
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         catalogStore.CatalogChanged -= OnCatalogChanged;
-        _cts?.Cancel();
+        if (_cts is not null) 
+            await _cts.CancelAsync();
 
         if (_acceptLoopTask is not null)
         {
@@ -232,7 +233,7 @@ public sealed class McpPipeServer(
                 catalogStore,
                 sources,
                 hostContext,
-                toolsetContextManager,
+                assemblyContextManager,
                 _tools,
                 _resources);
 

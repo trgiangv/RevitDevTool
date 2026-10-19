@@ -1,3 +1,4 @@
+using DevTools.Mcp.Providers;
 using DevTools.Mcp.Bridging;
 using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Core.Models;
@@ -16,20 +17,20 @@ public sealed class BuiltInSource(
     private readonly Dictionary<string, IBuiltInMcpResource> _resources =
         resources.ToDictionary(item => item.UriTemplate, StringComparer.OrdinalIgnoreCase);
 
-    public ExecutionMode SourceKind => ExecutionMode.CSharp;
+    public ExecutionMode ExecMode => ExecutionMode.CSharp;
 
     public McpServerTool CreateTool(RegisteredTool tool, IHostContextExecutor hostContext)
     {
         if (_tools.TryGetValue(tool.Descriptor.Name, out var builtIn))
             return builtIn.ServerTool;
 
-        return SdkCollectionTool.Create(
+        return CatalogToolAdapter.Create(
             tool.Descriptor,
             (_, _) => Task.FromResult(ToolHelpers.ErrorResult($"No built-in tool registered for '{tool.Descriptor.Name}'.")));
     }
 
     public McpServerResource CreateResource(RegisteredResource resource, IHostContextExecutor hostContext) =>
-        SdkCollectionResource.Create(resource, hostContext, (uri, cancellationToken) => ReadResourceAsync(resource, uri, cancellationToken));
+        CatalogResourceAdapter.Create(resource, hostContext, (uri, cancellationToken) => ReadResourceAsync(resource, uri, cancellationToken));
 
     public async Task<CallToolResult> InvokeToolAsync(
         RegisteredTool tool,

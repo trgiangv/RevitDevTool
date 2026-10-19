@@ -1,3 +1,4 @@
+using DevTools.Mcp.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -6,12 +7,12 @@ using Moq;
 namespace DevTools.Mcp.Catalog.Tests;
 
 [TestClass]
-public sealed class BuiltInMcpRegistryProviderTests
+public sealed class BuiltInMcpRegistryTests
 {
     [TestMethod]
     public void Name_IsBuiltIn()
     {
-        var provider = new BuiltInMcpRegistryProvider([], []);
+        var provider = new BuiltInMcpRegistry([], []);
 
         Assert.AreEqual("built-in", provider.Name);
         Assert.AreEqual(ExecutionMode.CSharp, provider.SourceKind);
@@ -20,7 +21,7 @@ public sealed class BuiltInMcpRegistryProviderTests
     [TestMethod]
     public void LoadCatalog_EmptyEnumerables_ReturnsEmptyCatalog()
     {
-        var provider = new BuiltInMcpRegistryProvider([], []);
+        var provider = new BuiltInMcpRegistry([], []);
 
         var catalog = provider.LoadCatalog();
 
@@ -31,7 +32,7 @@ public sealed class BuiltInMcpRegistryProviderTests
     [TestMethod]
     public void ConfigurePaths_IsNoOp()
     {
-        var provider = new BuiltInMcpRegistryProvider([], []);
+        var provider = new BuiltInMcpRegistry([], []);
 
         provider.ConfigurePaths(["C:\\ignored\\path.dll"]);
 
@@ -52,7 +53,7 @@ public sealed class BuiltInMcpRegistryProviderTests
         mockTool.Setup(tool => tool.Name).Returns("open_document");
         mockTool.Setup(tool => tool.ServerTool).Returns(serverTool);
 
-        var provider = new BuiltInMcpRegistryProvider([mockTool.Object], []);
+        var provider = new BuiltInMcpRegistry([mockTool.Object], []);
         var catalog = provider.LoadCatalog();
 
         Assert.HasCount(1, catalog.Tools);
@@ -85,7 +86,7 @@ public sealed class BuiltInMcpRegistryProviderTests
         var mockResource = new Mock<IBuiltInMcpResource>();
         mockResource.Setup(resource => resource.ProtocolResource).Returns(protocolResource);
 
-        var provider = new BuiltInMcpRegistryProvider([], [mockResource.Object]);
+        var provider = new BuiltInMcpRegistry([], [mockResource.Object]);
         var catalog = provider.LoadCatalog();
 
         Assert.IsEmpty(catalog.Tools);
@@ -107,7 +108,7 @@ public sealed class BuiltInMcpRegistryProviderTests
 }
 
 [TestClass]
-public sealed class DotnetMcpRegistryProviderTests
+public sealed class DotnetMcpRegistryTests
 {
     [TestMethod]
     public void Name_IsDotnetMcp()
@@ -142,7 +143,7 @@ public sealed class DotnetMcpRegistryProviderTests
         Assert.IsEmpty(catalog.Resources);
     }
 
-    private static DotnetMcpRegistryProvider CreateProvider() =>
+    private static DotnetMcpRegistry CreateProvider() =>
         new(new McpAssemblyParser(NullLogger<McpAssemblyParser>.Instance),
-            NullLogger<DotnetMcpRegistryProvider>.Instance);
+            NullLogger<DotnetMcpRegistry>.Instance);
 }

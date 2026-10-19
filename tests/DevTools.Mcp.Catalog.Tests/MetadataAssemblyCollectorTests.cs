@@ -4,10 +4,10 @@ using DevTools.Mcp.Isolation;
 namespace DevTools.Mcp.Catalog.Tests;
 
 [TestClass]
-public sealed class MetadataAssemblyPathCollectorTests
+public sealed class MetadataAssemblyCollectorTests
 {
     private static readonly Type CollectorType =
-        typeof(McpToolsetContext).Assembly.GetType("DevTools.Mcp.Isolation.MetadataAssemblyPathCollector", throwOnError: true)!;
+        typeof(McpAssemblyContext).Assembly.GetType("DevTools.Mcp.Isolation.MetadataAssemblyCollector", throwOnError: true)!;
 
     [TestMethod]
     public void Collect_IncludesEntryDirectoryAndExplicitDependencies()
@@ -35,7 +35,7 @@ public sealed class MetadataAssemblyPathCollectorTests
     [TestMethod]
     public void Collect_Throws_WhenExplicitDependencyPathMissing()
     {
-        var entry = typeof(MetadataAssemblyPathCollectorTests).Assembly.Location;
+        var entry = typeof(MetadataAssemblyCollectorTests).Assembly.Location;
 
         var ex = Assert.ThrowsExactly<TargetInvocationException>(() =>
             InvokeCollect(entry, [@"C:\missing\dependency.dll"]));
@@ -47,9 +47,9 @@ public sealed class MetadataAssemblyPathCollectorTests
     public void GetMetadataTypes_ReturnsTypesFromAssembly()
     {
         var method = CollectorType.GetMethod("GetMetadataTypes", BindingFlags.Public | BindingFlags.Static)!;
-        var types = (IReadOnlyList<Type>)method.Invoke(null, [typeof(MetadataAssemblyPathCollectorTests).Assembly])!;
+        var types = (IReadOnlyList<Type>)method.Invoke(null, [typeof(MetadataAssemblyCollectorTests).Assembly])!;
 
-        Assert.Contains(typeof(MetadataAssemblyPathCollectorTests), types);
+        Assert.Contains(typeof(MetadataAssemblyCollectorTests), types);
     }
 
     private static IReadOnlyList<string> InvokeCollect(string entryPath, IEnumerable<string>? dependencyPaths)

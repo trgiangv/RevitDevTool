@@ -309,7 +309,7 @@ Repeat with Civil 3D (resolve `navigate_history` via `search_dynamic` filtered b
 **Prerequisite**: McpRegistryConfig.json configured + host restarted.
 
 ```
-1. Restart host after McpRegistryConfig.json change → host reloads catalog (`McpPipeServer` / store); Daemon `ProcessSessions` picks up `list_changed` on refresh
+1. Restart host after McpRegistryConfig.json change → host reloads catalog (`McpPipeServer` / store); Daemon `HostConnections` picks up `list_changed` on refresh
 2. search_dynamic(query="revit_") → expect 32+ tools (hasMore) from RevitMcpToolSet; note ids
 3. invoke_dynamic(id=<find_id>, arguments={filters:{filters:[{type:"category",names:["Walls"]}]}}) → element IDs
 4. invoke_dynamic(id=<status_or_info_id>, ...) → parameters / health as applicable

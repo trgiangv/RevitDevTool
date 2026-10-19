@@ -24,7 +24,7 @@ public sealed class LocalToolsAndPromptsTests
     [TestMethod]
     public void McpEngine_RegistersDaemonToolsAndPrompts()
     {
-        var broker = new Mock<IProcessSessions>();
+        var broker = new Mock<IHostConnections>();
         broker.Setup(b => b.Catalog).Returns(new ProcessCatalogs());
         var engine = new McpEngine(
             broker.Object,
@@ -85,7 +85,7 @@ public sealed class LocalToolsAndPromptsTests
     [TestMethod]
     public async Task LaunchHostTool_ValidatesInputAndLaunchesWhenBridgeConnects()
     {
-        var broker = new Mock<IProcessSessions>();
+        var broker = new Mock<IHostConnections>();
         var session = new Mock<IProcessSession>();
         broker.Setup(b => b.GetByProcessId(Environment.ProcessId)).Returns(session.Object);
 
@@ -133,7 +133,7 @@ public sealed class LocalToolsAndPromptsTests
         Assert.IsNotNull(exited);
         exited.WaitForExit();
 
-        var broker = new Mock<IProcessSessions>();
+        var broker = new Mock<IHostConnections>();
         var launch = new Mock<IHostLaunchService>();
         launch.Setup(s => s.Start(It.IsAny<HostLaunchRequest>(), It.IsAny<CancellationToken>()))
             .Returns(new HostProcessStart(
@@ -155,7 +155,7 @@ public sealed class LocalToolsAndPromptsTests
     [TestMethod]
     public async Task LaunchHostTool_CancelledToken_PropagatesCancellation()
     {
-        var broker = new Mock<IProcessSessions>();
+        var broker = new Mock<IHostConnections>();
         var launch = new Mock<IHostLaunchService>();
         launch.Setup(s => s.Start(It.IsAny<HostLaunchRequest>(), It.IsAny<CancellationToken>()))
             .Returns(new HostProcessStart(

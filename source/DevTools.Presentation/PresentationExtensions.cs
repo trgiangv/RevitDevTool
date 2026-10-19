@@ -19,7 +19,7 @@ public static class PresentationExtensions
         services.AddSingleton<MemoryView>();
         services.AddSingleton<ExecutionView>();
         services.AddSingleton<McpRegistryView>();
-        services.TryAddSingleton<McpToolsetContextManager>();
+        services.TryAddSingleton<McpAssemblyContextManager>();
         services.TryAddSingleton<DotnetMethodResolver>();
 
         services.AddTransient<SettingsViewModel>();

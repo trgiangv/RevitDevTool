@@ -20,10 +20,10 @@ public sealed class PythonSource(PythonInitializer initializer) : IMcpSource
     private readonly Lock _cacheLock = new();
     private PyObject? _clientCacheState;
 
-    public ExecutionMode SourceKind => ExecutionMode.Python;
+    public ExecutionMode ExecMode => ExecutionMode.Python;
 
     public McpServerTool CreateTool(RegisteredTool tool, IHostContextExecutor hostContext) =>
-        SdkCollectionTool.Create(
+        CatalogToolAdapter.Create(
             tool.Descriptor,
             (request, cancellationToken) => InvokeToolAsync(
                 tool,
@@ -32,7 +32,7 @@ public sealed class PythonSource(PythonInitializer initializer) : IMcpSource
                 cancellationToken));
 
     public McpServerResource CreateResource(RegisteredResource resource, IHostContextExecutor hostContext) =>
-        SdkCollectionResource.Create(resource, hostContext, (uri, cancellationToken) => ReadResourceAsync(resource, uri, cancellationToken));
+        CatalogResourceAdapter.Create(resource, hostContext, (uri, cancellationToken) => ReadResourceAsync(resource, uri, cancellationToken));
 
     public async Task<CallToolResult> InvokeToolAsync(
         RegisteredTool tool,

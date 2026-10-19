@@ -156,7 +156,7 @@ Include filter is `DevTools.*` (see `coverage.xml`). If MSBuild `MSB3027` on `te
 ## MCP
 
 Production assemblies: **`DevTools.Mcp.Catalog`** (host pipe + store + `DevTools.Mcp.Core.*`
-namespaces under `Core/`) and **`DevTools.Daemon/Mcp/`** (fixed tools, `ProcessSessions`,
+namespaces under `Core/`) and **`DevTools.Daemon/Mcp/`** (fixed tools, `HostConnections`,
 `search_dynamic` / `invoke_dynamic`). Test project names predate the merge.
 
 Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, pixi, live `DevToolsMcp_Revit_*`) **Skip** — they must not fail a headless run.
@@ -169,7 +169,7 @@ Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, pixi, live `DevToolsMcp_
 | `tests/DevTools.Mcp.Client.Tests` | `McpClientPassthrough`, pipe scanner, SDK stream transport |
 | `tests/DevTools.Mcp.Server.Tests` | Daemon `SearchTool` / `InvokeTool`, MRTR harness, task selection |
 | `tests/DevTools.Execution.Mcp.Tests` | `IMcpSource` backends (`BuiltInSource`, `DotnetSource`, …), built-in tools |
-| `tests/DevTools.Daemon.Tests` | `ServerHostBuilder` composition, control JSON, loopback auth callback. Headless: tests pass a no-op URL opener |
+| `tests/DevTools.Daemon.Tests` | `AppHostBuilder` composition, control JSON, loopback auth callback. Headless: tests pass a no-op URL opener |
 
 `AuthBrowser` opens the sign-in URL with `Process.Start` and `UseShellExecute = true`. Production login still does that. Tests pass `openUrl: _ => { }` and never start a process. `about:blank` has no registered application, so the real opener shows a modal "Pick an app" dialog and does not return until it is closed.
 
@@ -178,7 +178,7 @@ Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, pixi, live `DevToolsMcp_
 - **Protocol & models** — SDK session framing, host `McpServer` routing, conformance subset
 - **Daemon composition** — server builder, fixed tools, `search_dynamic` / `invoke_dynamic` harness; WPF desktop session (STA) for tray/control surfaces
 - **Catalog & encoding** — host catalog merge, list/response encoders, dynamic tool contracts
-- **Built-in registry** — `BuiltInMcpRegistryProvider` name/bindings; `DotnetMcpRegistryProvider` empty/missing paths (sample DLL Skip)
+- **Built-in registry** — `BuiltInMcpRegistry` name/bindings; `DotnetMcpRegistry` empty/missing paths (sample DLL Skip)
 - **Toolset discovery** — .NET + Python parsers, argument binding, result/MRTR mapping, ALC bridges
 - **SDK integration** — stream transport contracts, in-process named-pipe round-trip (mock host)
 - **Connection tracking** — `McpConnectTracker` headless via `HostUiHelper.RunOnMainThread` inline when no dispatcher (`DevTools.Execution.Mcp.Tests` / `Services.Tests`)

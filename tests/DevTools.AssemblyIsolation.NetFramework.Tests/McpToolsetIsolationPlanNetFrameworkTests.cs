@@ -5,15 +5,15 @@ using DevTools.Mcp.Isolation;
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 
 [TestClass]
-public sealed class McpToolsetIsolationPlanNetFrameworkTests
+public sealed class McpAssemblyIsolationPlanNetFrameworkTests
 {
     [TestMethod]
     public void Scoped_mcp_context_loads_a_private_sibling_dependency_on_net_framework()
     {
         using var workload = McpFixtureWorkload.Create();
 
-        var plan = McpToolsetIsolationPlan.Create(workload.EntryPath);
-        using var context = new McpToolsetContext(workload.EntryPath);
+        var plan = McpAssemblyIsolationPlan.Create(workload.EntryPath);
+        using var context = new McpAssemblyContext(workload.EntryPath);
         var entry = context.LoadAssembly();
         var method = entry.GetType("IsolationEntry.Entry", throwOnError: true)!
             .GetMethod("GetPrivateDependencyName", BindingFlags.Public | BindingFlags.Static)!;

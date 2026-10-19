@@ -57,7 +57,7 @@ public sealed class DotnetSourceAsyncTests
         return new DotnetSource(
             provider,
             new DotnetMethodResolver(
-                new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance),
+                new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance),
                 NullLogger<DotnetMethodResolver>.Instance));
     }
 }

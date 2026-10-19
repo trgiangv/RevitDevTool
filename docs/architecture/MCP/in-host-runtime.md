@@ -8,7 +8,7 @@ behind an SDK **`McpServer`** on `DevToolsMcp_*` (protocol `2026-07-28`).
 ```mermaid
 flowchart TB
     Daemon["DevTools.Daemon"]
-    Sessions["ProcessSessions<br/>scan DevToolsMcp_*"]
+    Sessions["HostConnections<br/>scan DevToolsMcp_*"]
     Catalog["ProcessCatalogs"]
 
     subgraph hosts["Host processes"]
@@ -17,7 +17,7 @@ flowchart TB
     end
 
     Registry["McpCatalogStore"]
-    Providers["DotnetMcpRegistryProvider<br/>PythonMcpRegistryProvider"]
+    Providers["DotnetMcpRegistry<br/>PythonMcpRegistryProvider"]
     Sources["IMcpSource<br/>BuiltIn / Dotnet / Python"]
     Host["IHostContextExecutor + Python executor"]
 
@@ -31,7 +31,7 @@ flowchart TB
     Pytest["pytest client"] --> PytestPipe
 ```
 
-The Daemon owns external MCP routing and process selection. `ProcessSessions`
+The Daemon owns external MCP routing and process selection. `HostConnections`
 scans for `DevToolsMcp_{Host}_{Version}_{PID}` whose PID is still live, connects
 with `StreamClientTransport`, and hydrates `ProcessCatalogs`. The host process
 owns execution, registry loading, and host-thread invocation. Pytest/control
@@ -44,7 +44,7 @@ sequenceDiagram
     participant UI as Registry UI
     participant Store as McpCatalogStore
     participant Loader as McpCatalogLoader
-    participant Dotnet as DotnetMcpRegistryProvider
+    participant Dotnet as DotnetMcpRegistry
     participant Python as PythonMcpRegistryProvider
     participant Settings as ISettingsService
     participant HostServer as McpPipeServer

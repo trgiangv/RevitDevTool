@@ -58,7 +58,7 @@ divergences from decision text **below** (which is kept as audit history).
 | Topic | Implemented | Notes |
 |-------|-------------|--------|
 | Assemblies | `DevTools.Daemon`, `DevTools.Mcp.Catalog`, `DevTools.Mcp.Revit`/`Acad`, `Execution/External/Mcp` | `DevTools.Mcp.Core` / `.Client` / `.Server` / `.Adapter` projects removed; `DevTools.Mcp.Core.*` namespaces live under Catalog `Core/` |
-| Daemon discovery | `ProcessSessions` + `ProcessCatalogs` | Replaces `HostBroker` / `ConnectedHostCatalog` |
+| Daemon discovery | `HostConnections` + `ProcessCatalogs` | Replaces `HostBroker` / `ConnectedHostCatalog` / `ProcessSessions` |
 | Locator type | `CatalogId`; wire **`id`** | Decision 10 said `CapabilityId` / `capabilityId` — product uses `id` |
 | Search filter | **`processId`** | Not `hostInstanceId` |
 | Kind enum | `CatalogType` + `CatalogTypeCodec` | Was `CatalogKind` / `CatalogKindFormat` in plans |
@@ -284,7 +284,7 @@ Python SDK (`.opensrc/.../python-sdk/main/src/mcp`):
 - `Mcp.Server/Hosting/McpEngine`, `McpServerFactory.CreateOptions`,
   `McpServerConfigurator.Apply` iterate `IConfigureOptions<McpServerOptions>` by
   hand to pick up `WithTasks`, then attach `McpLogFilters`. The host-side
-  `Catalog/McpCatalogExtensions.AddMcp()` registers the Tasks store and
+  `Hosting/McpCatalogExtensions.AddMcp()` registers the Tasks store and
   selector, and is consumed by the Daemon.
 
 #### A8. Python scripts use private SDK internals - Med - V
@@ -939,7 +939,7 @@ names change only together with decision 9.
 
 | Term | Use for | Replaces |
 |------|---------|----------|
-| **process** | one running Revit/AutoCAD process on this Daemon. Wire field `processId`. Types `ProcessSessions` (the directory) and `ProcessSession` (one connection) | host instance, host process, `hostInstanceId`, and the `Host` prefix on Daemon types (`HostBroker`, `HostSession`, `HostKey`) |
+| **process** | one running Revit/AutoCAD process on this Daemon. Wire field `processId`. Types `HostConnections` (the directory) and `ProcessSession` (one connection) | host instance, host process, `hostInstanceId`, `ProcessSessions`, and the `Host` prefix on older Daemon types (`HostBroker`, `HostSession`, `HostKey`) |
 | **machine** | a computer running a Daemon; `machineId` on `list_machines` and the Gateway only | device. Not a field of `capabilityId` or of `ProcessSession` |
 | **catalog** | every item of one process. Daemon type `ProcessCatalogs` (one catalog per `processId`). Host type `Catalog` | registry, store, loader, `ConnectedHostCatalog`, `McpCatalogStore` as target names |
 | **item** | one tool, resource, or resource template. The word "entry" is not used | entry, primitive, descriptor |

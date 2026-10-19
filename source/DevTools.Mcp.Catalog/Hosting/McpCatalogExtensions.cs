@@ -1,4 +1,5 @@
 using DevTools.Mcp.Discovery;
+using DevTools.Mcp.Providers;
 using DevTools.Mcp.Transport;
 using DevTools.Mcp.Core.Catalog;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Extensions.Tasks;
 
-namespace DevTools.Mcp;
+namespace DevTools.Mcp.Hosting;
 
 public static class McpCatalogExtensions
 {
@@ -30,12 +31,12 @@ public static class McpCatalogExtensions
             services.TryAddSingleton<MethodLookup>();
             services.TryAddSingleton<McpAssemblyParser>();
             services.TryAddSingleton<McpPythonParser>();
-            services.TryAddSingleton<DotnetMcpRegistryProvider>();
-            services.TryAddSingleton<BuiltInMcpRegistryProvider>();
+            services.TryAddSingleton<DotnetMcpRegistry>();
+            services.TryAddSingleton<BuiltInMcpRegistry>();
             services.AddSingleton<IRegistryProvider>(
-                sp => sp.GetRequiredService<DotnetMcpRegistryProvider>());
+                sp => sp.GetRequiredService<DotnetMcpRegistry>());
             services.AddSingleton<IRegistryProvider>(
-                sp => sp.GetRequiredService<BuiltInMcpRegistryProvider>());
+                sp => sp.GetRequiredService<BuiltInMcpRegistry>());
             services.TryAddSingleton<McpCatalogLoader>();
             services.TryAddSingleton<ICatalogLoader>(sp => sp.GetRequiredService<McpCatalogLoader>());
             services.TryAddSingleton<McpCatalogStore>();

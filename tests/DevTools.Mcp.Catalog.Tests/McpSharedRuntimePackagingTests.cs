@@ -34,7 +34,7 @@ public sealed class McpSharedRuntimePackagingTests
             var toolsetDir = Path.GetDirectoryName(toolsetDllPath)!;
             Assert.IsEmpty(Directory.GetFiles(toolsetDir, "ModelContextProtocol*.dll"));
 
-            using var context = new McpToolsetContext(toolsetDllPath);
+            using var context = new McpAssemblyContext(toolsetDllPath);
             var toolsetAsm = context.LoadAssembly();
             Assert.IsTrue(toolsetAsm.GetReferencedAssemblies()
                 .Select(static a => a.Name)

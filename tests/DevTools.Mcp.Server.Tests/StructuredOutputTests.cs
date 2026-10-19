@@ -12,7 +12,7 @@ public sealed class StructuredOutputTests
     [TestMethod]
     public async Task ListInstances_EmitsStructuredContent()
     {
-        var broker = new Mock<IProcessSessions>();
+        var broker = new Mock<IHostConnections>();
         broker.Setup(b => b.Catalog).Returns(new ProcessCatalogs());
         var scanner = new Mock<IMcpPipeScanner>();
         scanner.Setup(s => s.Discover()).Returns([]);

@@ -107,7 +107,7 @@ filename.
    host merges into the host DLL (no siblings). That ILRepack step removes
    standalone `ModelContextProtocol*` assembly identities from the output
    directory. Toolsets use `ExcludeAssets=runtime` — they do not ship MCP.
-   `McpToolsetIsolationPlan` `Pin`s host-loaded MCP contract assemblies
+   `McpAssemblyIsolationPlan` `Pin`s host-loaded MCP contract assemblies
    (kernel share table keyed by simple name). Automatic toolset ALC bind from
    the host load context for repacked MCP is **not implemented** in the
    isolation kernel; toolsets on that path cannot resolve MCP by name without a

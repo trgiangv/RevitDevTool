@@ -74,7 +74,7 @@ public sealed class DotnetMethodResolverTests
     }
 
     private static DotnetMethodResolver CreateResolver() =>
-        new(new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance), NullLogger<DotnetMethodResolver>.Instance);
+        new(new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance), NullLogger<DotnetMethodResolver>.Instance);
 
     private static RegisteredTool CreateToolRegistration(string name, string sourcePath, string containerType, string methodName) => new()
     {

@@ -44,7 +44,7 @@ These are registered via SDK `PromptCollection` and answered entirely in-process
 
 ## ProcessCatalogs
 
-`ProcessSessions` connects to each `DevToolsMcp_*` pipe with an SDK `McpClient`
+`HostConnections` connects to each `DevToolsMcp_*` pipe with an SDK `McpClient`
 (`ProcessSession`), then lists tools/resources/templates into `ProcessCatalogs`
 keyed by `processId`.
 
@@ -155,7 +155,7 @@ tools/call ok target=search_dynamic durationMs=3 args={"query":"wall",...} resul
 
 `search_dynamic` monitor lines log `count` and compact hit summaries — not the full catalog JSON returned to the client.
 
-`ProcessSessions` catalog refresh uses structured ZLogger scopes (counts + duration) — no custom
+`HostConnections` catalog refresh uses structured ZLogger scopes (counts + duration) — no custom
 `ActivitySource`. Protocol MCP spans stay with the SDK.
 Host SDK protocol chatter (`ModelContextProtocol.*`) is filtered to `Warning` so call logs stay visible.
 

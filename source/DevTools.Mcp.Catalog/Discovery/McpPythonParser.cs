@@ -7,13 +7,14 @@ using DevTools.Mcp.Core.Utils;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using ZLogger;
+// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Discovery;
 
 /// <summary>Parses a Python catalog emitted by the in-host driver script.</summary>
 public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
 {
-    private readonly JsonSerializerOptions catalogJsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly JsonSerializerOptions _catalogJsonOptions = new(JsonSerializerDefaults.Web);
 
     public RegistryCatalog ParseCatalogFromDirectory(
         string directory,
@@ -37,8 +38,7 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
     {
         if (string.IsNullOrWhiteSpace(parserOutput))
             return RegistryCatalog.Empty;
-
-        // ReSharper disable once RedundantSuppressNullableWarningExpression
+        
         var catalog = DeserializeCatalog(parserOutput!, directory);
         if (catalog is null)
             return RegistryCatalog.Empty;
@@ -54,7 +54,7 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
     {
         try
         {
-            var catalog = JsonSerializer.Deserialize<PythonParsedCatalog>(json, catalogJsonOptions);
+            var catalog = JsonSerializer.Deserialize<PythonParsedCatalog>(json, _catalogJsonOptions);
             if (catalog is not null) return catalog;
             logger.ZLogWarning($"Parser returned null catalog for '{directory}'.");
             return null;
@@ -66,12 +66,12 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
         }
     }
 
-    private T? DeserializeSdkType<T>(JsonElement element)
+    private static T? DeserializeSdkType<T>(JsonElement element)
     {
         return JsonSerializer.Deserialize<T>(element.GetRawText(), ToolHelpers.ProtocolOptions);
     }
 
-    private IReadOnlyList<T> BuildEntries<TEntry, T>(
+    private List<T> BuildEntries<TEntry, T>(
         IReadOnlyList<TEntry> entries,
         string directory,
         Func<TEntry, JsonElement> getProtocol,
@@ -90,7 +90,7 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
         return result;
     }
 
-    private IReadOnlyList<RegisteredTool> BuildTools(IReadOnlyList<PythonParsedToolEntry> entries, string directory)
+    private List<RegisteredTool> BuildTools(IReadOnlyList<PythonParsedToolEntry> entries, string directory)
     {
         return BuildEntries(entries, directory,
             e => e.Protocol,
@@ -112,7 +112,7 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
             });
     }
 
-    private IReadOnlyList<RegisteredResource> BuildResources(IReadOnlyList<PythonParsedResourceEntry> entries, string directory)
+    private List<RegisteredResource> BuildResources(IReadOnlyList<PythonParsedResourceEntry> entries, string directory)
     {
         return BuildEntries(entries, directory,
             e => e.Protocol,
@@ -182,7 +182,6 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
     private PrimitiveBinding BuildBinding(string directory, PythonBindingInfo info)
     {
         var sourcePath = string.IsNullOrWhiteSpace(info.SourcePath) ? directory : info.SourcePath;
-        var methodName = info.MethodName ?? string.Empty;
         var containerType = string.IsNullOrWhiteSpace(info.ContainerType) ? "Python" : info.ContainerType;
         var relativeModulePath = TrimPythonExtension(GetRelativeModulePath(directory, sourcePath));
         var directoryName = Path.GetFileName(Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
@@ -194,7 +193,7 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
             ExecutionMode.Python,
             sourcePath,
             containerType,
-            methodName,
+            info.MethodName,
             $"{containerType}:{relativeModulePath}",
             groupName);
     }
@@ -207,11 +206,11 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
         var fullSourcePath = Path.GetFullPath(sourcePath);
 
         return fullSourcePath.StartsWith(root, StringComparison.OrdinalIgnoreCase)
-            ? fullSourcePath.Substring(root.Length)
+            ? fullSourcePath[root.Length..]
             : Path.GetFileName(fullSourcePath);
     }
 
-    private string TrimPythonExtension(string path)
+    private static string TrimPythonExtension(string path)
     {
         return path.EndsWith(".py", StringComparison.OrdinalIgnoreCase)
             ? path[..^3]

@@ -2,10 +2,10 @@ using DevTools.Execution.Abstractions;
 using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
 
-namespace DevTools.Mcp;
+namespace DevTools.Mcp.Providers;
 
 /// <summary>Registers built-in MCP tools and resources into the host catalog. Prompts are daemon-owned.</summary>
-public sealed class BuiltInMcpRegistryProvider(
+public sealed class BuiltInMcpRegistry(
     IEnumerable<IBuiltInMcpTool> builtInTools,
     IEnumerable<IBuiltInMcpResource> builtInResources) : IRegistryProvider
 {

@@ -26,7 +26,7 @@ External AI client
   │  tools/call: search_dynamic | invoke_dynamic | infrastructure
   ▼
 DevTools.Daemon (MCP server, SDK; McpEngine in Daemon/Mcp)
-  │  ProcessSessions (MCP client, SDK)
+  │  HostConnections (MCP client, SDK)
   │  Named pipe: DevToolsMcp_{Host}_{Version}_{PID}
   ▼
 Host process (Revit / AutoCAD)
@@ -52,7 +52,7 @@ invoke_dynamic (daemon)
 
 | Layer | Owns | Does **not** own |
 |-------|------|------------------|
-| `DevTools.Daemon` (`Mcp/`) | External MCP surface; `ProcessSessions`; `search_dynamic` / `invoke_dynamic`; `McpClientPassthrough` | Host tool execution |
+| `DevTools.Daemon` (`Mcp/`) | External MCP surface; `HostConnections`; `search_dynamic` / `invoke_dynamic`; `McpClientPassthrough` | Host tool execution |
 | `DevTools.Mcp.Catalog` | Host pipe server, `McpCatalogStore`, discovery, ALC lifecycle, `McpSpecKeys`, host `McpLogFilters` | Daemon auth/gateway |
 | `DevTools.Execution` (`External/Mcp/`) | `IMcpSource` backends, built-in execute tools, `McpConnectTracker`, `McpCallFilter` | Daemon catalog search |
 | `DevTools.Mcp.Revit` / `.Acad` | Host built-in tools/resources | Transport |
@@ -85,7 +85,7 @@ host as `CallToolResult`. Daemon passthrough reads that JSON back into
 
 | Port | Implementation | Role |
 |------|----------------|------|
-| Daemon catalog index | `ProcessCatalogs` (`ProcessSessions`) | Search hits from connected host sessions |
+| Daemon catalog index | `ProcessCatalogs` (`HostConnections`) | Search hits from connected host sessions |
 
 Host in-process catalog is `McpCatalogStore` (Catalog). UI injects the store directly (`CatalogChanged`, `ReloadAsync`, SDK descriptors).
 
@@ -108,8 +108,8 @@ Resources (.NET toolset): dispatcher resource path with template URI from catalo
 
 ## Toolset load boundary
 
-Isolated .NET toolsets load via `McpToolsetContext`, whose feature-owned
-`McpToolsetIsolationPlan` uses the shared `DevTools.AssemblyIsolation` session.
+Isolated .NET toolsets load via `McpAssemblyContext`, whose feature-owned
+`McpAssemblyIsolationPlan` uses the shared `DevTools.AssemblyIsolation` session.
 The plan `Pin`s MCP contract assemblies from the host default load context
 (simple-name keyed). It resolves private toolset dependencies from the toolset
 resolver and sibling directory on modern .NET (sibling directory only in the
@@ -311,6 +311,6 @@ dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.c
 | Host passthrough | `source/DevTools.Daemon/Mcp/Processes/ProcessSession.cs`, `McpClientPassthrough.cs` |
 | IMcpSource backends | `source/DevTools.Execution/External/Mcp/Backends/` |
 | ALC result bridge | `source/DevTools.Mcp.Catalog/Discovery/ResultBridge.cs` |
-| Toolset load | `source/DevTools.Mcp.Catalog/Isolation/McpToolsetContext.cs`, `McpToolsetIsolationPlan.cs` |
+| Toolset load | `source/DevTools.Mcp.Catalog/Isolation/McpAssemblyContext.cs`, `McpAssemblyIsolationPlan.cs` |
 | Host pipe server | `source/DevTools.Mcp.Catalog/Transport/McpPipeServer.cs` |
 | Mock MRTR harness | `tests/DevTools.Mcp.Server.Tests/Harness/McpSdkTestHarness.cs` |

@@ -11,7 +11,7 @@ internal static class TestMcpAppServices
     {
         var services = new ServiceCollection();
         services.AddSingleton(loggerFactory ?? NullLoggerFactory.Instance);
-        McpServiceCollectionExtensions.AddMcp(services);
+        McpServicesExtensions.AddMcp(services);
         return services.BuildServiceProvider();
     }
 }

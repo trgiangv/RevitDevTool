@@ -1,3 +1,4 @@
+using DevTools.Mcp.Providers;
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Mcp.Revit.Resources;
 using DevTools.AssemblyIsolation;
@@ -7,7 +8,7 @@ using DevTools.Execution.Providers;
 using DevTools.Hosting;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
-using DevTools.Mcp;
+using DevTools.Mcp.Hosting;
 using DevTools.Testing.Host;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;

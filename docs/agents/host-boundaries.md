@@ -12,7 +12,7 @@ Keep these host-neutral — this is the default for all new functionality:
 - `source/DevTools.Execution.Abstractions/` — host-neutral contracts (`IHostContextExecutor`, `ICommandDiscovery`, `ICommandRunner`, `IDocumentBridge`, enums)
 - `source/DevTools.Ipc/` — IPC transport (BridgeMessage, pipe connection, wire protocol)
 - `source/DevTools.Mcp.Catalog/` — host MCP catalog, pipe server, and SDK `McpServer` transport. No reference to `DevTools.Execution`.
-- `source/DevTools.Daemon/Mcp/` — Daemon MCP surface: six fixed tools, `ProcessSessions`, `CatalogId`.
+- `source/DevTools.Daemon/Mcp/` — Daemon MCP surface: six fixed tools, `HostConnections`, `CatalogId`.
 - `source/DevTools.Logging/`
 - `source/DevTools.Presentation/`
 - `source/DevTools.Settings/`
@@ -45,7 +45,7 @@ section only maps those rules to repository owners.
 
 `DevTools.AssemblyIsolation` owns the shared assembly-load kernel. Do not add a
 fourth path. Feature adapters compose its plans: `CommandIsolationPlan`,
-`ScriptIsolationPlan`, `McpToolsetIsolationPlan`, `NUnitIsolationPlan`, and the
+`ScriptIsolationPlan`, `McpAssemblyIsolationPlan`, `NUnitIsolationPlan`, and the
 host command-discovery metadata sessions. `Share(assembly)` reuses that loaded
 instance and forgives version for it only. `Pin(assembly)` requires full
 identity. Neither is an ambient name list. PyRevit uses
@@ -72,7 +72,7 @@ Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`Di
 ## Standalone Daemon
 
 - `source/DevTools.Daemon/` runs outside hosts as `DevTools.Daemon.exe` (HandyControl WPF tray).
-- `ProcessSessions` discovers SDK MCP pipes (`DevToolsMcp_{Host}_{Version}_{PID}`) and owns one catalog per process.
+- `HostConnections` discovers SDK MCP pipes (`DevToolsMcp_{Host}_{Version}_{PID}`) and owns one catalog per process.
 - Pytest/control uses `DevTools_{Host}_{Version}_{PID}` (`DevToolsPipeServer`).
 - Daemon external tools: infrastructure (`list_processes`, `launch_host`, `read_file_info`) plus `code_mode`. `list_machines` is a gateway tool.
 - Fixed prompts (`revit_code`, `acad_code`) are daemon-owned.

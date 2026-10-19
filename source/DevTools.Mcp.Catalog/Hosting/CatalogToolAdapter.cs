@@ -9,11 +9,11 @@ namespace DevTools.Mcp.Hosting;
 /// .NET and Python sources use this type so the advertised schema stays the parsed descriptor
 /// while invoke runs the source body.
 /// </summary>
-public sealed class SdkCollectionTool : McpServerTool
+public sealed class CatalogToolAdapter : McpServerTool
 {
     private readonly Func<RequestContext<CallToolRequestParams>, CancellationToken, Task<CallToolResult>> _invoke;
 
-    private SdkCollectionTool(
+    private CatalogToolAdapter(
         Tool protocolTool,
         Func<RequestContext<CallToolRequestParams>, CancellationToken, Task<CallToolResult>> invoke)
     {
@@ -27,7 +27,7 @@ public sealed class SdkCollectionTool : McpServerTool
     public static McpServerTool Create(
         Tool protocolTool,
         Func<RequestContext<CallToolRequestParams>, CancellationToken, Task<CallToolResult>> invoke) =>
-        new SdkCollectionTool(protocolTool, invoke);
+        new CatalogToolAdapter(protocolTool, invoke);
 
     public override async ValueTask<CallToolResult> InvokeAsync(
         RequestContext<CallToolRequestParams> request,

@@ -20,8 +20,8 @@ Implementation is a multi-PR sequence. This document is the review contract.
 `DevTools.Mcp.Server`, `DevTools.Mcp.Client`, `DevTools.Mcp.Adapter`, and shared
 `DevTools.Mcp.Core` contracts into **`DevTools.Daemon/Mcp/`** and
 **`DevTools.Mcp.Catalog/`** ([0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md)
-**As implemented**). Daemon pipe discovery is **`IProcessSessions`** /
-`ProcessSessions`, not **`IHostBroker`**. Context tables below that name
+**As implemented**). Daemon pipe discovery is **`IHostConnections`** /
+`HostConnections`, not **`IHostBroker`**. Context tables below that name
 `Mcp.Server` / `Mcp.Adapter` describe the **pre-merge** layout unless a step
 explicitly says otherwise.
 
@@ -317,7 +317,7 @@ Shared-assembly types wait for **D2**. C+D does not touch add-in ALC hooks.
 `Hosting.Revit` does **not** reference `FileMetadata.Revit`.
 The file-aware decorator reads a year through
 `Func<string, string?>` (or `IRevitDocumentYearReader` declared in
-Hosting.Revit). **Daemon `ServerHostBuilder` wires**
+Hosting.Revit). **Daemon `AppHostBuilder` wires**
 `RevitFileMetadataReader.TryReadRevitVersion` — composition, not a type
 named `RevitVersionResolvingHostLaunchService` under `DevTools.Daemon`.
 
@@ -357,7 +357,7 @@ fixed 90s clock from `Process.Start`. Timeout is caller-owned
 `DEFAULT_LAUNCH_TIMEOUT_S`; NUnit `HostLaunchTimeout` may be longer).
 
 `tryGetReady: int pid → T?` is the expansion joint. Hosting never names
-`DevToolsMcp_*` or `DevTools_*`. MCP passes `IProcessSessions.GetByProcessId`.
+`DevToolsMcp_*` or `DevTools_*`. MCP passes `IHostConnections.GetByProcessId`.
 NUnit passes `HostLocator.Discover` filtered to the spawned PID. A later
 host adds a probe, not a wait type.
 
@@ -533,7 +533,7 @@ Composition roots (no `new HostLaunchService()`):
 
 | Root | C+D | D2 |
 |------|-----|-----|
-| Daemon `ServerHostBuilder` | Core + `AddRevitLaunch(OLE)` + `AddAutocadFamilyLaunch` | — |
+| Daemon `AppHostBuilder` | Core + `AddRevitLaunch(OLE)` + `AddAutocadFamilyLaunch` | — |
 | NUnit Runner | Core + `AddRevitLaunch(null)` + `AddAutocadFamilyLaunch` via `ConsoleApp.ServiceProvider` in `Program.Main`; `NUnitRunnerCommands(HostSession)` | — |
 | `RevitDevTool` / `AcadDevTool` | **do not** reference launch extensions | `AddRevitInProcess` / `AddAutocadInProcess` |
 | NUnit.Host | unchanged | reads ambient policy |

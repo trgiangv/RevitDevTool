@@ -53,7 +53,7 @@ In-host MCP runtime is shared across registered hosts.
   - Pytest/control: `DevTools_{Host}_{Version}_{PID}` (`BridgeMessage`
     length-prefixed frames)
   - MCP: `DevToolsMcp_{Host}_{Version}_{PID}` (newline-delimited JSON-RPC)
-- Host SDK server advertises `listChanged` so `ProcessSessions` can refresh only that
+- Host SDK server advertises `listChanged` so `HostConnections` can refresh only that
   process catalog; the external daemon collections stay unchanged.
 - Call observability is always-on at protocol boundaries. Host in-process MCP logs
   via `McpLogFilters` and `ILogger`; daemon `code_mode` and infrastructure tools

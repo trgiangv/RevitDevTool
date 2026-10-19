@@ -1,3 +1,4 @@
+using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Hosting;
 using DevTools.Daemon.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;

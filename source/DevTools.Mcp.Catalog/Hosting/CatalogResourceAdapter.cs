@@ -10,7 +10,7 @@ namespace DevTools.Mcp.Hosting;
 /// SDK resource placed directly in <see cref="McpServerResourceCollection"/>.
 /// URI matching is <see cref="IsMatch"/>; the catalog store does not keep a second matcher.
 /// </summary>
-public sealed class SdkCollectionResource : McpServerResource
+public sealed class CatalogResourceAdapter : McpServerResource
 {
     private static readonly Regex UriVariableRegex = new(@"\{[^}]+\}", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
@@ -18,7 +18,7 @@ public sealed class SdkCollectionResource : McpServerResource
     private readonly Func<string, CancellationToken, Task<ReadResourceResult>> _read;
     private readonly Regex? _uriParser;
 
-    private SdkCollectionResource(
+    private CatalogResourceAdapter(
         RegisteredResource registered,
         IHostContextExecutor hostContext,
         Func<string, CancellationToken, Task<ReadResourceResult>> read)
@@ -64,7 +64,7 @@ public sealed class SdkCollectionResource : McpServerResource
         RegisteredResource registered,
         IHostContextExecutor hostContext,
         Func<string, CancellationToken, Task<ReadResourceResult>> read) =>
-        new SdkCollectionResource(registered, hostContext, read);
+        new CatalogResourceAdapter(registered, hostContext, read);
 
     public override bool IsMatch(string uri) =>
         _uriParser?.IsMatch(uri) ?? string.Equals(uri, ProtocolResourceTemplate.UriTemplate, StringComparison.OrdinalIgnoreCase);
@@ -73,7 +73,7 @@ public sealed class SdkCollectionResource : McpServerResource
         RequestContext<ReadResourceRequestParams> request,
         CancellationToken cancellationToken = default)
     {
-        var uri = request.Params?.Uri ?? string.Empty;
+        var uri = request.Params.Uri;
         ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
         return await _hostContext
             .ExecuteAsync(

@@ -14,7 +14,7 @@ public sealed class DotnetSourceTests
     public void SourceKind_IsDotnet()
     {
         var backend = CreateBackend();
-        Assert.AreEqual(ExecutionMode.Dotnet, backend.SourceKind);
+        Assert.AreEqual(ExecutionMode.Dotnet, backend.ExecMode);
     }
 
     [TestMethod]
@@ -33,7 +33,7 @@ public sealed class DotnetSourceTests
         return new DotnetSource(
             provider,
             new DotnetMethodResolver(
-                new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance),
+                new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance),
                 NullLogger<DotnetMethodResolver>.Instance));
     }
 }

@@ -19,7 +19,7 @@ public sealed class McpToolsetIsolationTests
     {
         using var workload = McpToolsetWorkload.Create("contract", "private");
 
-        var plan = McpToolsetIsolationPlan.Create(workload.EntryPath);
+        var plan = McpAssemblyIsolationPlan.Create(workload.EntryPath);
 
         Assert.IsTrue(plan.TryShare(typeof(McpServer).Assembly.GetName(), out var server));
         Assert.IsTrue(plan.TryShare(typeof(CallToolResult).Assembly.GetName(), out var protocol));
@@ -35,7 +35,7 @@ public sealed class McpToolsetIsolationTests
         using var workload = McpToolsetWorkload.Create("version", "private-v1", "parent-v2");
         _ = Assembly.Load(File.ReadAllBytes(workload.ParentDependencyPath));
 
-        using var context = new McpToolsetContext(workload.EntryPath, NullLogger.Instance);
+        using var context = new McpAssemblyContext(workload.EntryPath, NullLogger.Instance);
         var value = InvokeValue(context.LoadAssembly());
 
         Assert.AreEqual("private-v1", value);
@@ -46,7 +46,7 @@ public sealed class McpToolsetIsolationTests
     {
         using var workload = McpToolsetWorkload.Create("lazy", "private");
 
-        using var context = new McpToolsetContext(workload.EntryPath, NullLogger.Instance);
+        using var context = new McpAssemblyContext(workload.EntryPath, NullLogger.Instance);
         _ = context.LoadAssembly();
 
         Assert.IsFalse(File.Exists(workload.SiblingInitializerMarkerPath));
@@ -58,7 +58,7 @@ public sealed class McpToolsetIsolationTests
         using var workload = McpToolsetWorkload.Create("diagnostics", "private");
         File.Delete(Path.Combine(workload.Directory, "Microsoft.Extensions.IsolationFixture.dll"));
 
-        using var context = new McpToolsetContext(workload.EntryPath, NullLogger.Instance);
+        using var context = new McpAssemblyContext(workload.EntryPath, NullLogger.Instance);
         var assembly = context.LoadAssembly();
 
         var failure = Assert.ThrowsExactly<TargetInvocationException>(() => InvokeValue(assembly));
@@ -69,7 +69,7 @@ public sealed class McpToolsetIsolationTests
     public void Toolset_context_manager_releases_collectible_context_after_cached_dispatch_references_are_cleared()
     {
         using var workload = McpToolsetWorkload.Create("unload", "private");
-        var manager = new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance);
+        var manager = new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance);
         var dispatcherCache = new List<MethodInfo>();
 
         var contextReference = LoadCacheAndClear(manager, workload.EntryPath, dispatcherCache);
@@ -86,7 +86,7 @@ public sealed class McpToolsetIsolationTests
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference LoadCacheAndClear(
-        McpToolsetContextManager manager,
+        McpAssemblyContextManager manager,
         string entryPath,
         List<MethodInfo> dispatcherCache)
     {

@@ -47,11 +47,11 @@ public sealed class McpCatalogStoreCoverageTests
     [TestMethod]
     public void SdkResource_MatchesDirectAndTemplateUris()
     {
-        var direct = SdkCollectionResource.Create(
+        var direct = CatalogResourceAdapter.Create(
             CreateResource("demo_status", uri: "sample://demo/status"),
             Mock.Of<IHostContextExecutor>(),
             (_, _) => Task.FromResult(new ReadResourceResult()));
-        var template = SdkCollectionResource.Create(
+        var template = CatalogResourceAdapter.Create(
             CreateTemplateResource("demo_view", "sample://demo/views/{viewId}"),
             Mock.Of<IHostContextExecutor>(),
             (_, _) => Task.FromResult(new ReadResourceResult()));

@@ -1,6 +1,6 @@
 using ModelContextProtocol.Protocol;
 
-namespace DevTools.Mcp;
+namespace DevTools.Mcp.Providers;
 
 /// <summary>Self-describing built-in MCP resource, registered via DI.</summary>
 public interface IBuiltInMcpResource

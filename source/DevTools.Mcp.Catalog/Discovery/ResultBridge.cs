@@ -12,25 +12,24 @@ public static class ResultBridge
 {
     public static CallToolResult ToHostCallToolResult(object? raw, JsonElement? outputSchema)
     {
-        if (raw is null)
-            return new CallToolResult { Content = [] };
-
-        if (raw is CallToolResult hostResult && ReferenceEquals(raw.GetType(), typeof(CallToolResult)))
-            return hostResult;
-
-        if (raw is ContentBlock hostBlock)
+        switch (raw)
         {
-            return new CallToolResult
-            {
-                Content = [hostBlock],
-            };
+            case null:
+                return new CallToolResult { Content = [] };
+            case CallToolResult hostResult when ReferenceEquals(raw.GetType(), typeof(CallToolResult)):
+                return hostResult;
+            case ContentBlock hostBlock:
+                return new CallToolResult
+                {
+                    Content = [hostBlock],
+                };
         }
 
         var element = JsonSerializer.SerializeToElement(raw, raw.GetType(), ToolHelpers.RuntimeJsonOptions);
-        if (TryReadCallToolResult(element, out var bridged))
+        if (TryReadCallToolResult(element, out var bridged) && bridged is not null)
             return bridged;
 
-        if (TryReadContentBlock(element, out var contentBlock))
+        if (TryReadContentBlock(element, out var contentBlock) && contentBlock is not null)
         {
             return new CallToolResult
             {
@@ -44,15 +43,15 @@ public static class ResultBridge
     private static bool HasProperty(JsonElement element, string name, string alternate) =>
         element.TryGetProperty(name, out _) || element.TryGetProperty(alternate, out _);
 
-    private static bool TryReadCallToolResult(JsonElement element, out CallToolResult result)
+    private static bool TryReadCallToolResult(JsonElement element, out CallToolResult? result)
     {
-        result = null!;
+        result = null;
         if (element.ValueKind != JsonValueKind.Object || !HasProperty(element, McpSpecKeys.ToolResult.Content, McpSpecKeys.ToolResult.ContentPascal))
             return false;
 
         try
         {
-            result = element.Deserialize<CallToolResult>(ToolHelpers.ProtocolOptions)!;
+            result = element.Deserialize<CallToolResult>(ToolHelpers.ProtocolOptions);
             return result is not null;
         }
         catch (JsonException ex)
@@ -61,7 +60,7 @@ public static class ResultBridge
         }
     }
 
-    private static bool TryReadContentBlock(JsonElement element, out ContentBlock block)
+    private static bool TryReadContentBlock(JsonElement element, out ContentBlock? block)
     {
         block = null!;
         if (element.ValueKind != JsonValueKind.Object || !HasProperty(element, McpSpecKeys.Content.Type, McpSpecKeys.Content.TypePascal))
@@ -69,7 +68,7 @@ public static class ResultBridge
 
         try
         {
-            block = element.Deserialize<ContentBlock>(ToolHelpers.ProtocolOptions)!;
+            block = element.Deserialize<ContentBlock>(ToolHelpers.ProtocolOptions);
             return block is not null;
         }
         catch (JsonException)
@@ -81,27 +80,24 @@ public static class ResultBridge
     private static CallToolResult MapPlainResult(object raw, JsonElement element, JsonElement? outputSchema)
     {
         JsonElement? structured = outputSchema is null ? null : element.Clone();
-        switch (raw)
+        return raw switch
         {
-            case string text:
-                return new CallToolResult
-                {
-                    Content = [new TextContentBlock { Text = text }],
-                    StructuredContent = structured,
-                };
-            case bool isError:
-                return new CallToolResult
-                {
-                    IsError = isError,
-                    Content = [new TextContentBlock { Text = element.GetRawText() }],
-                    StructuredContent = structured,
-                };
-            default:
-                return new CallToolResult
-                {
-                    Content = [new TextContentBlock { Text = element.GetRawText() }],
-                    StructuredContent = structured,
-                };
-        }
+            string text => new CallToolResult
+            {
+                Content = [new TextContentBlock { Text = text }],
+                StructuredContent = structured,
+            },
+            bool isError => new CallToolResult
+            {
+                IsError = isError,
+                Content = [new TextContentBlock { Text = element.GetRawText() }],
+                StructuredContent = structured,
+            },
+            _ => new CallToolResult
+            {
+                Content = [new TextContentBlock { Text = element.GetRawText() }],
+                StructuredContent = structured,
+            }
+        };
     }
 }

@@ -23,7 +23,7 @@ public sealed class McpMergedHostIdentityTests
         var contractName = contractAssembly.GetName().Name
             ?? throw new InvalidOperationException("CallToolResult assembly must have a simple name.");
 
-        var plan = McpToolsetIsolationPlan.Create(ResolvePlanEntryPath());
+        var plan = McpAssemblyIsolationPlan.Create(ResolvePlanEntryPath());
         Assert.IsTrue(plan.TryShare(contractAssembly.GetName(), out var pinned));
         Assert.AreSame(contractAssembly, pinned);
 
@@ -73,7 +73,7 @@ public sealed class McpMergedHostIdentityTests
         {
             AssertRepackedHostLayout(hostDir);
 
-            using var context = new McpToolsetContext(toolsetDllPath!);
+            using var context = new McpAssemblyContext(toolsetDllPath!);
             var assembly = context.LoadAssembly();
             var requestedProtocol = assembly.GetReferencedAssemblies()
                 .SingleOrDefault(static a => string.Equals(a.Name, "ModelContextProtocol.Core", StringComparison.Ordinal));
@@ -128,7 +128,7 @@ public sealed class McpMergedHostIdentityTests
                 + "Repacked host layout verified; live invoke belongs in docs/agents/mcp-integration-test.md.");
         }
 
-        using var context = new McpToolsetContext(toolsetDll);
+        using var context = new McpAssemblyContext(toolsetDll);
         var assembly = context.LoadAssembly();
         var spikeType = assembly.GetType("McpToolsetDemo.McpForwarderSpikeTool", throwOnError: true)!;
         var method = spikeType.GetMethod("TestForwarderCallToolResult", BindingFlags.Public | BindingFlags.Static)!;

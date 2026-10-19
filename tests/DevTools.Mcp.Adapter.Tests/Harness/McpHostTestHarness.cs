@@ -68,10 +68,10 @@ internal static class McpHostTestHarness
 
     private sealed class FixedTextToolSource(string responseText) : IMcpSource
     {
-        public ExecutionMode SourceKind => ExecutionMode.Dotnet;
+        public ExecutionMode ExecMode => ExecutionMode.Dotnet;
 
         public McpServerTool CreateTool(RegisteredTool tool, IHostContextExecutor hostContext) =>
-            SdkCollectionTool.Create(
+            CatalogToolAdapter.Create(
                 tool.Descriptor,
                 (_, _) => Task.FromResult(new CallToolResult
                 {
@@ -79,7 +79,7 @@ internal static class McpHostTestHarness
                 }));
 
         public McpServerResource CreateResource(RegisteredResource resource, IHostContextExecutor hostContext) =>
-            SdkCollectionResource.Create(resource, hostContext, (_, _) => Task.FromResult(new ReadResourceResult()));
+            CatalogResourceAdapter.Create(resource, hostContext, (_, _) => Task.FromResult(new ReadResourceResult()));
 
         public void ClearCaches()
         {

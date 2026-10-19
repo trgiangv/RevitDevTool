@@ -1,6 +1,6 @@
 using ModelContextProtocol.Server;
 
-namespace DevTools.Mcp;
+namespace DevTools.Mcp.Providers;
 
 /// <summary>
 /// Host built-in MCP tool registered via DI.

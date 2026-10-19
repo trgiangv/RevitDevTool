@@ -1,3 +1,4 @@
+using DevTools.Mcp.Providers;
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.Backends;
 using DevTools.Execution.External.Mcp.BuiltIn;
@@ -17,7 +18,7 @@ public sealed class BuiltInSourceTests
     public void SourceKind_IsCSharp()
     {
         var backend = CreateBackend();
-        Assert.AreEqual(ExecutionMode.CSharp, backend.SourceKind);
+        Assert.AreEqual(ExecutionMode.CSharp, backend.ExecMode);
     }
 
     [TestMethod]

@@ -57,7 +57,7 @@ public sealed class McpToolsetForwarderSpikeTests
             return;
         }
 
-        using var context = new McpToolsetContext(ToolsetDllPath);
+        using var context = new McpAssemblyContext(ToolsetDllPath);
         var assembly = context.LoadAssembly();
 
         var spikeType = assembly.GetType("McpToolsetDemo.McpForwarderSpikeTool", throwOnError: true)!;

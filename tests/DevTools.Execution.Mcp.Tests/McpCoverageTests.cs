@@ -1,3 +1,4 @@
+using DevTools.Mcp.Providers;
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.Backends;
 using DevTools.Execution.External.Mcp.BuiltIn;
@@ -150,7 +151,7 @@ public sealed class McpCoverageTests
         return new DotnetSource(
             provider,
             new DotnetMethodResolver(
-                new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance),
+                new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance),
                 NullLogger<DotnetMethodResolver>.Instance));
     }
 

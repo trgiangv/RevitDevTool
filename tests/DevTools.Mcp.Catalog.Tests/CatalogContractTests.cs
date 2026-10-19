@@ -1,4 +1,6 @@
+using DevTools.Mcp.Providers;
 using DevTools.Mcp;
+using DevTools.Mcp.Hosting;
 using DevTools.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,8 +31,8 @@ public sealed class CatalogContractTests
 
         Assert.IsNotNull(provider.GetRequiredService<McpCatalogStore>());
         Assert.IsNotNull(provider.GetRequiredService<ICatalogLoader>());
-        Assert.IsTrue(provider.GetServices<IRegistryProvider>().Any(registry => registry is DotnetMcpRegistryProvider));
-        Assert.IsTrue(provider.GetServices<IRegistryProvider>().Any(registry => registry is BuiltInMcpRegistryProvider));
+        Assert.IsTrue(provider.GetServices<IRegistryProvider>().Any(registry => registry is DotnetMcpRegistry));
+        Assert.IsTrue(provider.GetServices<IRegistryProvider>().Any(registry => registry is BuiltInMcpRegistry));
     }
 
     [TestMethod]

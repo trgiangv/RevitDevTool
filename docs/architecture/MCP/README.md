@@ -2,7 +2,7 @@
 
 Model Context Protocol integration lets external AI clients (Claude Desktop, Cursor, ChatGPT, Perplexity, etc.) talk to running host applications through the standalone **DevTools.Daemon** and an in-host **SDK `McpServer`** on the MCP named pipe (`DevToolsMcp_*`, protocol `2026-07-28`).
 
-The stack is host-agnostic. The Daemon discovers pipes via `ProcessSessions`, hydrates a per-process **`ProcessCatalogs`** index, and exposes only infrastructure tools plus `search_dynamic` / `invoke_dynamic`.
+The stack is host-agnostic. The Daemon discovers pipes via `HostConnections`, hydrates a per-process **`ProcessCatalogs`** index, and exposes only infrastructure tools plus `search_dynamic` / `invoke_dynamic`.
 
 Last updated: 2026-10-03
 
@@ -12,7 +12,7 @@ Last updated: 2026-10-03
 |------|---------|----------------|
 | **Daemon MCP Server** | `DevTools.Daemon` process; AI client talks here (stdio / gateway) | host server |
 | **Host MCP Server** | SDK `McpServer` per pipe connection inside Revit/AutoCAD | daemon |
-| **ProcessSessions** | Daemon-side pipe poll + `McpClient` sessions + `ProcessCatalogs` | `HostBroker`, `ConnectedHostCatalog` |
+| **HostConnections** | Daemon-side pipe poll + `McpClient` sessions + `ProcessCatalogs` | `HostBroker`, `ConnectedHostCatalog`, `ProcessSessions` |
 | **ProcessCatalogs** | In-memory index of tools/resources per connected `processId` (daemon) | `McpCatalogStore` |
 | **McpCatalogStore** | In-host registry (`RegisteredTool` / `RegisteredResource` / `RegistryCatalog`) | `ProcessCatalogs` |
 | **CatalogId** | Opaque locator `dci2.{processId}.{kind}.{contentHash}.{target}`; wire field **`id`** | `capabilityId`, `hostInstanceId` |
@@ -31,7 +31,7 @@ flowchart LR
 
   subgraph daemonProc [DevTools.Daemon]
     DaemonSrv[Daemon McpServer]
-    Sessions[ProcessSessions]
+    Sessions[HostConnections]
     Catalog[ProcessCatalogs]
   end
 
@@ -55,22 +55,22 @@ flowchart LR
 
 ## DI and lifecycle
 
-Each process has one **app container** (Daemon `ServerHostBuilder` or host `AddExecutionServices`). MCP feature registration happens once there.
+Each process has one **app container** (Daemon `AppHostBuilder` or host `AddExecutionServices`). MCP feature registration happens once there.
 
 | Service | Lifetime | Job |
 |---------|----------|-----|
 | `IMcpTaskStore` / `InMemoryMcpTaskStore` | Singleton | SDK Tasks extension (daemon) |
-| `IProcessSessions` → `ProcessSessions` | Singleton | Session registry + `ProcessCatalogs` |
-| `DiscoveryHostedService` | HostedService | 2s poll → connect/disconnect `ProcessSession` |
+| `IHostConnections` → `HostConnections` | Singleton | Session registry + `ProcessCatalogs` |
+| `DiscoveryHostedService` | BackgroundService | 2s poll → connect/disconnect `ProcessSession` |
 | `IMcpPipeScanner` | Singleton | OS scan for `DevToolsMcp_*` (no connect) |
 | `IHostLaunchService` | Singleton | Start host OS process (not MCP session) |
 | `McpEngine` | Singleton | Daemon `ToolCollection` / `PromptCollection` |
 | `McpCatalogStore`, `IMcpSource` backends | Singleton | In-host catalog + invoke |
 | `McpPipeServer` | HostedService | Host MCP pipe accept loop |
 | `McpServer` (host) | Per pipe connection | `PipeEndpoint` — not in root DI |
-| `StdioHostedService` / `GatewayHostedService` | HostedService | Daemon transport sessions |
+| `StdioHostedService` / `TunnelHostedService` | HostedService | Daemon transport sessions |
 
-**Session lifecycle (daemon):** `DiscoveryHostedService` drives `ProcessSessions.RunAsync` (2s). New pipe → `ProcessSession.ConnectAsync` → catalog list into `ProcessCatalogs`. Pipe gone or client completion → remove session and catalog slice; a pipe that is still discovered is connected again on the next poll. `launch_host` only starts the OS process; discovery opens the MCP session when the host pipe appears.
+**Session lifecycle (daemon):** `DiscoveryHostedService` drives `HostConnections.RunAsync` (2s). New pipe → `ProcessSession.ConnectAsync` → catalog list into `ProcessCatalogs`. Pipe gone or client completion → remove session and catalog slice; a pipe that is still discovered is connected again on the next poll. `launch_host` only starts the OS process; discovery opens the MCP session when the host pipe appears.
 
 **Host pipe:** `McpPipeServer` uses SDK `StreamServerTransport` over the named pipe (newline-delimited JSON-RPC, full MCP session including `initialize`).
 

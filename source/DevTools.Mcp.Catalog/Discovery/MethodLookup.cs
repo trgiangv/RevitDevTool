@@ -1,9 +1,7 @@
 using System.Reflection;
-using DevTools.AssemblyIsolation.Metadata;
 using DevTools.Execution.Abstractions;
 using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Core.Models;
-using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
 
@@ -82,7 +80,7 @@ public sealed class MethodLookup
 
     public IEnumerable<(Type ContainerType, MethodInfo Method)> EnumerateToolMethods(Assembly assembly)
     {
-        foreach (var type in MetadataAssemblyPathCollector.GetMetadataTypes(assembly)
+        foreach (var type in MetadataAssemblyCollector.GetMetadataTypes(assembly)
                      .OrderBy(item => item.FullName, StringComparer.OrdinalIgnoreCase))
         {
             if (!HasAttribute(type.CustomAttributes, _mcpToolTypeAttributeName))
@@ -100,7 +98,7 @@ public sealed class MethodLookup
 
     public IEnumerable<(Type ContainerType, MethodInfo Method)> EnumerateResourceMethods(Assembly assembly)
     {
-        foreach (var type in MetadataAssemblyPathCollector.GetMetadataTypes(assembly)
+        foreach (var type in MetadataAssemblyCollector.GetMetadataTypes(assembly)
                      .OrderBy(item => item.FullName, StringComparer.OrdinalIgnoreCase))
         {
             if (!HasAttribute(type.CustomAttributes, _mcpResourceTypeAttributeName))

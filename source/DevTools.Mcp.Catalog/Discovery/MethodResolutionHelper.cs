@@ -34,6 +34,7 @@ internal static class MethodResolutionHelper
         catch (ReflectionTypeLoadException ex)
         {
             // ReSharper disable once RedundantEnumerableCastCall
+            // ReSharper disable once UseCollectionExpression
             types = ex.Types.Where(t => t is not null).Cast<Type>().ToArray();
         }
 

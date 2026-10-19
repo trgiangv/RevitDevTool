@@ -15,7 +15,7 @@ Pin: **ModelContextProtocol 2.2.0** (`2026-07-28`).
 
 [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) decision 3 landed: the host
 named pipe runs SDK **`McpServer`** per connection (`McpPipeServer` in Catalog).
-External clients still never initialize that pipe — only `ProcessSessions` does.
+External clients still never initialize that pipe — only `HostConnections` does.
 Product locator wire field is **`id`** (`CatalogId`, `dci2.*`), not `capabilityId`.
 Search filter field is **`processId`**. Architecture:
 [`docs/architecture/MCP/README.md`](../architecture/MCP/README.md).

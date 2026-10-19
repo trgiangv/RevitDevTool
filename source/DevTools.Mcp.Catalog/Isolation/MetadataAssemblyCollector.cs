@@ -4,41 +4,50 @@ using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Isolation;
 
-internal static class MetadataAssemblyPathCollector
+internal static class MetadataAssemblyCollector
 {
-    public static IReadOnlyList<string> Collect(string assemblyPath, IEnumerable<string>? dependencyPaths = null)
+    public static HashSet<string> Collect(string assemblyPath, IEnumerable<string>? dependencyPaths = null)
     {
         var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         AddDllsFromDirectory(paths, Path.GetDirectoryName(assemblyPath));
         AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(object).Assembly.Location));
-        AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(McpToolsetIsolationPlan).Assembly.Location));
+        AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(McpAssemblyIsolationPlan).Assembly.Location));
         AddHostMcpAssemblyPaths(paths);
         AddLoadedAssemblyPaths(paths);
         AddExplicitPaths(paths, dependencyPaths);
 
-        return paths.ToList();
+        return paths;
     }
 
     private static void AddExplicitPaths(HashSet<string> paths, IEnumerable<string>? dependencyPaths)
     {
-        if (dependencyPaths is null)
-            return;
+        if (dependencyPaths == null) return;
 
         foreach (var path in dependencyPaths)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-                continue;
-
-            var fullPath = Path.GetFullPath(path);
-            if (File.Exists(fullPath) && string.Equals(Path.GetExtension(fullPath), ".dll", StringComparison.OrdinalIgnoreCase))
-                paths.Add(fullPath);
-            else if (Directory.Exists(fullPath))
-                AddDllsFromDirectory(paths, fullPath);
-            else
-                throw new FileNotFoundException($"Metadata dependency path does not exist: '{path}'.", fullPath);
-        }
+            AddExplicitPath(paths, path);
     }
+
+    private static void AddExplicitPath(HashSet<string> paths, string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        var fullPath = Path.GetFullPath(path);
+        if (IsDllFile(fullPath))
+        {
+            paths.Add(fullPath);
+            return;
+        }
+
+        if (!Directory.Exists(fullPath))
+            throw new FileNotFoundException($"Metadata dependency path does not exist: '{path}'.", fullPath);
+
+        AddDllsFromDirectory(paths, fullPath);
+    }
+
+    private static bool IsDllFile(string path) =>
+        File.Exists(path) && string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// ILRepacked hosts embed MCP types; expose host-loaded MCP assembly paths for the metadata session.
@@ -86,7 +95,8 @@ internal static class MetadataAssemblyPathCollector
         catch (ReflectionTypeLoadException ex)
         {
             // ReSharper disable once RedundantEnumerableCastCall
-            return ex.Types.Where(type => type is not null).Cast<Type>().ToList();
+            // ReSharper disable once UseCollectionExpression
+            return ex.Types.Where(type => type is not null).Cast<Type>().ToArray();
         }
     }
 }

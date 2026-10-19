@@ -7,10 +7,9 @@ Discovery and invoke code delegate here; they do not duplicate reflected MCP sha
 
 | Type | Role |
 |------|------|
-| `McpToolsetIsolationPlan` | MCP contract `Pin` list + sibling/resolver sources for `AssemblyIsolationPlan` |
-| `McpToolsetContext` / `McpToolsetContextManager` | Per-DLL isolation sessions |
-| `MetadataAssemblyPathCollector` | Metadata-only assembly resolution paths (incl. host MCP locations) |
-| `McpToolsetContext` | Per-DLL isolation session and identity boundary |
+| `McpAssemblyIsolationPlan` | MCP contract `Pin` list + sibling/resolver sources for `AssemblyIsolationPlan` |
+| `McpAssemblyContext` / `McpAssemblyContextManager` | Per-DLL isolation sessions |
+| `MetadataAssemblyCollector` | Metadata-only assembly resolution paths (incl. host MCP locations) |
 
 ## ADR ownership
 

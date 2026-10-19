@@ -5,11 +5,11 @@ using DevTools.Mcp.Core.Models;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
-namespace DevTools.Mcp;
+namespace DevTools.Mcp.Providers;
 
-public sealed class DotnetMcpRegistryProvider(
+public sealed class DotnetMcpRegistry(
     McpAssemblyParser parser,
-    ILogger<DotnetMcpRegistryProvider> logger) : IRegistryProvider
+    ILogger<DotnetMcpRegistry> logger) : IRegistryProvider
 {
     public string Name => "dotnet-mcp";
     public ExecutionMode SourceKind => ExecutionMode.Dotnet;

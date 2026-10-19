@@ -17,59 +17,88 @@ public sealed class McpCatalogLoader(IEnumerable<IRegistryProvider> providers, I
         IReadOnlyCollection<string> pythonPaths)
     {
         ConfigureProviderPaths(dotnetPaths, pythonPaths);
-
         var toolMap = new Dictionary<string, RegisteredTool>(StringComparer.OrdinalIgnoreCase);
         var resourceMap = new Dictionary<string, RegisteredResource>(StringComparer.OrdinalIgnoreCase);
         var toolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var resourceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+        LoadProviders(toolMap, resourceMap, toolNames, resourceNames);
+
+        var loaded = CreateCatalog(toolMap, resourceMap);
+        UpdateKnownIds(loaded);
+        return loaded;
+    }
+
+    private void LoadProviders(
+        Dictionary<string, RegisteredTool> toolMap,
+        Dictionary<string, RegisteredResource> resourceMap,
+        HashSet<string> toolNames,
+        HashSet<string> resourceNames)
+    {
         foreach (var provider in _providers.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
-        {
-            try
-            {
-                var catalog = provider.LoadCatalog();
-                var addedTools = CountUnknown(catalog.Tools, tool => tool.Id, _knownToolIds);
-                var addedResources = CountUnknown(catalog.Resources, resource => resource.Id, _knownResourceIds);
-                if (addedTools > 0 || addedResources > 0)
-                {
-                    logger.ZLogDebug(
-                        $"Provider '{provider.Name}' added {addedTools} tool(s), {addedResources} resource(s).");
-                }
+            LoadProvider(provider, toolMap, resourceMap, toolNames, resourceNames);
+    }
 
-                Collect(provider.Name, catalog.Tools, toolMap, toolNames, tool => tool.Id, tool => tool.Descriptor.Name, "tool");
-                Collect(provider.Name, catalog.Resources, resourceMap, resourceNames,
-                    resource => resource.Id, resource => resource.DisplayName, "resource");
-            }
-            catch (Exception ex)
-            {
-                logger.ZLogWarning($"Provider '{provider.Name}' failed: {ex.Message}");
-            }
+    private void LoadProvider(
+        IRegistryProvider provider,
+        Dictionary<string, RegisteredTool> toolMap,
+        Dictionary<string, RegisteredResource> resourceMap,
+        HashSet<string> toolNames,
+        HashSet<string> resourceNames)
+    {
+        try
+        {
+            var catalog = provider.LoadCatalog();
+            LogProviderAdditions(provider.Name, catalog);
+            Collect(provider.Name, catalog.Tools, toolMap, toolNames, tool => tool.Id, tool => tool.Descriptor.Name, "tool");
+            Collect(provider.Name, catalog.Resources, resourceMap, resourceNames,
+                resource => resource.Id, resource => resource.DisplayName, "resource");
         }
-
-        var loaded = new RegistryCatalog
+        catch (Exception ex)
         {
-            Tools = toolMap.Values
-                .OrderBy(tool => tool.Binding.GroupName, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(tool => tool.Descriptor.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList(),
-            Resources = resourceMap.Values
-                .OrderBy(resource => resource.Binding.GroupName, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(resource => resource.DisplayName, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(resource => resource.TemplateDescriptor?.UriTemplate ?? resource.Descriptor?.Uri ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-                .ToList(),
-        };
-
-        var newToolCount = CountUnknown(loaded.Tools, tool => tool.Id, _knownToolIds);
-        var newResourceCount = CountUnknown(loaded.Resources, resource => resource.Id, _knownResourceIds);
-        if (newToolCount > 0 || newResourceCount > 0)
-        {
-            logger.ZLogDebug(
-                $"Tool store added {newToolCount} tool(s), {newResourceCount} resource(s) (total {loaded.Tools.Count} tools, {loaded.Resources.Count} resources).");
+            logger.ZLogWarning($"Provider '{provider.Name}' failed: {ex.Message}");
         }
+    }
 
+    private void LogProviderAdditions(string providerName, RegistryCatalog catalog)
+    {
+        var addedTools = CountUnknown(catalog.Tools, tool => tool.Id, _knownToolIds);
+        var addedResources = CountUnknown(catalog.Resources, resource => resource.Id, _knownResourceIds);
+        if (addedTools == 0 && addedResources == 0) return;
+
+        logger.ZLogDebug($"Provider '{providerName}' added {addedTools} tool(s), {addedResources} resource(s).");
+    }
+
+    private static RegistryCatalog CreateCatalog(
+        Dictionary<string, RegisteredTool> toolMap,
+        Dictionary<string, RegisteredResource> resourceMap) => new()
+    {
+        Tools = toolMap.Values
+            .OrderBy(tool => tool.Binding.GroupName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(tool => tool.Descriptor.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+        Resources = resourceMap.Values
+            .OrderBy(resource => resource.Binding.GroupName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(resource => resource.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(resource => resource.TemplateDescriptor?.UriTemplate ?? resource.Descriptor?.Uri ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+    };
+
+    private void UpdateKnownIds(RegistryCatalog loaded)
+    {
+        LogStoreAdditions(loaded);
         ReplaceKnownIds(_knownToolIds, loaded.Tools.Select(tool => tool.Id));
         ReplaceKnownIds(_knownResourceIds, loaded.Resources.Select(resource => resource.Id));
-        return loaded;
+    }
+
+    private void LogStoreAdditions(RegistryCatalog loaded)
+    {
+        var newToolCount = CountUnknown(loaded.Tools, tool => tool.Id, _knownToolIds);
+        var newResourceCount = CountUnknown(loaded.Resources, resource => resource.Id, _knownResourceIds);
+        if (newToolCount == 0 && newResourceCount == 0) return;
+
+        logger.ZLogDebug(
+            $"Tool store added {newToolCount} tool(s), {newResourceCount} resource(s) (total {loaded.Tools.Count} tools, {loaded.Resources.Count} resources).");
     }
 
     private void ConfigureProviderPaths(IEnumerable<string> dotnetPaths, IEnumerable<string> pythonPaths)

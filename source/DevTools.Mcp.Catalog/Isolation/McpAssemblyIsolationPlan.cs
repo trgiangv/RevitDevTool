@@ -10,7 +10,7 @@ namespace DevTools.Mcp.Isolation;
 /// <summary>
 /// Defines MCP's contract bindings and private dependency sources for an external toolset.
 /// </summary>
-public static class McpToolsetIsolationPlan
+public static class McpAssemblyIsolationPlan
 {
     public static AssemblyIsolationPlan Create(
         string entryPath,
@@ -30,9 +30,7 @@ public static class McpToolsetIsolationPlan
             .AddNativeSource(new ResolverNativeAssemblySource(normalizedEntryPath));
 #endif
 
-        foreach (var contractAssembly in ContractAssemblies)
-            plan = plan.Pin(contractAssembly);
-
+        plan = ContractAssemblies.Aggregate(plan, (current, contractAssembly) => current.Pin(contractAssembly));
         return diagnosticSink is null ? plan : plan.WithDiagnosticSink(diagnosticSink);
     }
 

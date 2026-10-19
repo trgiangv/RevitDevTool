@@ -7,7 +7,7 @@ namespace DevTools.Mcp.Hosting;
 /// <summary>One execution mode. It builds the SDK tool and resource the pipe server invokes.</summary>
 public interface IMcpSource
 {
-    ExecutionMode SourceKind { get; }
+    ExecutionMode ExecMode { get; }
 
     McpServerTool CreateTool(RegisteredTool tool, IHostContextExecutor hostContext);
 

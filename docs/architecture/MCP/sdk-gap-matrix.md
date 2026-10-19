@@ -106,7 +106,7 @@ Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/complete
 | Resource templates | ✅ | `revit://element/{elementId}`, schedule preview |
 | Template read via `invoke_dynamic` | ✅ | `arguments` + batch `reads[]` |
 | `UriTemplate` from catalog metadata | ✅ | `DotnetMcpCatalogCreateOptions` |
-| Resource `listChanged` | ✅ | `ProcessSessions` catalog refresh on host `list_changed` |
+| Resource `listChanged` | ✅ | `HostConnections` catalog refresh on host `list_changed` |
 
 ---
 
@@ -118,7 +118,7 @@ Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/complete
 | `CallToolPassthroughAsync` | Avoid client auto-MRTR on daemon→host hop (`McpClientPassthrough`) |
 | `ResultBridge` | ALC toolset object → host `CallToolResult` |
 | `InvokeState` | Embed locator `id` in daemon `requestState` on MRTR plumbing hops |
-| Toolset MCP `ExcludeAssets=runtime` | Toolset-only | Compile against MCP; no MCP DLLs in toolset output; `McpToolsetContext` + `AssemblyResolve` maps to host MCP. |
+| Toolset MCP `ExcludeAssets=runtime` | Toolset-only | Compile against MCP; no MCP DLLs in toolset output; `McpAssemblyContext` + `AssemblyResolve` maps to host MCP. |
 
 ---
 

@@ -19,10 +19,10 @@ public sealed class DotnetSource(
     private readonly ConcurrentDictionary<string, McpServerResource> _resources =
         new(StringComparer.OrdinalIgnoreCase);
 
-    public ExecutionMode SourceKind => ExecutionMode.Dotnet;
+    public ExecutionMode ExecMode => ExecutionMode.Dotnet;
 
     public McpServerTool CreateTool(RegisteredTool tool, IHostContextExecutor hostContext) =>
-        SdkCollectionTool.Create(
+        CatalogToolAdapter.Create(
             tool.Descriptor,
             (request, cancellationToken) => InvokeToolAsync(
                 tool,
@@ -31,7 +31,7 @@ public sealed class DotnetSource(
                 cancellationToken));
 
     public McpServerResource CreateResource(RegisteredResource resource, IHostContextExecutor hostContext) =>
-        SdkCollectionResource.Create(resource, hostContext, (uri, cancellationToken) => ReadResourceAsync(resource, uri, cancellationToken));
+        CatalogResourceAdapter.Create(resource, hostContext, (uri, cancellationToken) => ReadResourceAsync(resource, uri, cancellationToken));
 
     public async Task<CallToolResult> InvokeToolAsync(
         RegisteredTool tool,

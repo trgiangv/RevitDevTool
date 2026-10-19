@@ -7,8 +7,8 @@ namespace DevTools.AssemblyIsolation;
 
 public sealed class AssemblyIsolationPlan
 {
-    private readonly IReadOnlyList<SharedAssembly> sharedAssemblies;
-    private readonly Dictionary<string, SharedAssembly> shares;
+    private readonly IReadOnlyList<SharedAssembly> _sharedAssemblies;
+    private readonly Dictionary<string, SharedAssembly> _shares;
 
     private AssemblyIsolationPlan(
         string entryAssemblyPath,
@@ -21,8 +21,8 @@ public sealed class AssemblyIsolationPlan
     {
         EntryAssemblyPath = entryAssemblyPath;
         Kind = kind;
-        this.sharedAssemblies = sharedAssemblies;
-        shares = Index(sharedAssemblies);
+        this._sharedAssemblies = sharedAssemblies;
+        _shares = Index(sharedAssemblies);
         ManagedSources = managedSources;
         NativeSources = nativeSources;
         DiagnosticSink = diagnosticSink;
@@ -101,7 +101,7 @@ public sealed class AssemblyIsolationPlan
     {
         ArgumentNullException.ThrowIfNull(requested);
 
-        if (requested.Name is null || !shares.TryGetValue(requested.Name, out var shared))
+        if (requested.Name is null || !_shares.TryGetValue(requested.Name, out var shared))
         {
             assembly = null!;
             return false;
@@ -119,7 +119,7 @@ public sealed class AssemblyIsolationPlan
         ArgumentNullException.ThrowIfNull(assembly);
 
         return Clone(shareAssemblies: ReadOnly(AppendShare(
-            sharedAssemblies,
+            _sharedAssemblies,
             new SharedAssembly(assembly, allowVersionDrift))));
     }
 
@@ -133,7 +133,7 @@ public sealed class AssemblyIsolationPlan
         new(
             EntryAssemblyPath,
             kind ?? Kind,
-            shareAssemblies ?? sharedAssemblies,
+            shareAssemblies ?? _sharedAssemblies,
             managedSources ?? ManagedSources,
             nativeSources ?? NativeSources,
             diagnosticSink ?? DiagnosticSink,

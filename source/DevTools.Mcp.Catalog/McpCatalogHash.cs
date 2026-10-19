@@ -3,12 +3,11 @@ using System.Text;
 using System.Text.Json;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Utils;
-using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp;
 
 /// <summary>Stable SHA-256 fingerprint of catalog item metadata (ids alone are insufficient for list_changed).</summary>
-public static class McpCatalogContentHash
+public static class McpCatalogHash
 {
     public static string Compute(RegistryCatalog catalog)
     {

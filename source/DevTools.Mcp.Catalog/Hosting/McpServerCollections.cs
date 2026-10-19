@@ -44,13 +44,13 @@ public static class McpServerCollections
         McpCatalogStore catalogStore,
         IEnumerable<IMcpSource> sources,
         IHostContextExecutor hostContext,
-        McpToolsetContextManager toolsetContextManager,
+        McpAssemblyContextManager assemblyContextManager,
         McpServerPrimitiveCollection<McpServerTool> tools,
         McpServerResourceCollection resources)
     {
         foreach (var source in sources)
             source.ClearCaches();
-        toolsetContextManager.Clear();
+        assemblyContextManager.Clear();
 
         using (tools.DeferChangedEvents())
         using (resources.DeferChangedEvents())
@@ -69,24 +69,41 @@ public static class McpServerCollections
         McpServerResourceCollection resources)
     {
         catalogStore.EnsureLoaded();
-        var byMode = sources.ToDictionary(source => source.SourceKind);
+        var byMode = sources.ToDictionary(source => source.ExecMode);
 
-        foreach (var tool in catalogStore.RegisteredTools)
+        PopulateTools(catalogStore.RegisteredTools, byMode, hostContext, tools);
+        PopulateResources(catalogStore.ResourceCatalog, byMode, hostContext, resources);
+    }
+
+    private static void PopulateTools(
+        IEnumerable<RegisteredTool> registeredTools,
+        IReadOnlyDictionary<ExecutionMode, IMcpSource> sourcesByMode,
+        IHostContextExecutor hostContext,
+        McpServerPrimitiveCollection<McpServerTool> tools)
+    {
+        foreach (var tool in registeredTools)
         {
-            if (byMode.TryGetValue(tool.Binding.SourceKind, out var source))
+            if (sourcesByMode.TryGetValue(tool.Binding.SourceKind, out var source))
                 tools.TryAdd(source.CreateTool(tool, hostContext));
             else
-                tools.TryAdd(SdkCollectionTool.Create(
+                tools.TryAdd(CatalogToolAdapter.Create(
                     tool.Descriptor,
                     (_, _) => Task.FromResult(UnsupportedTool(tool.Binding.SourceKind))));
         }
+    }
 
-        foreach (var resource in catalogStore.ResourceCatalog)
+    private static void PopulateResources(
+        IEnumerable<RegisteredResource> registeredResources,
+        IReadOnlyDictionary<ExecutionMode, IMcpSource> sourcesByMode,
+        IHostContextExecutor hostContext,
+        McpServerResourceCollection resources)
+    {
+        foreach (var resource in registeredResources)
         {
-            if (byMode.TryGetValue(resource.Binding.SourceKind, out var source))
+            if (sourcesByMode.TryGetValue(resource.Binding.SourceKind, out var source))
                 resources.TryAdd(source.CreateResource(resource, hostContext));
             else
-                resources.TryAdd(SdkCollectionResource.Create(
+                resources.TryAdd(CatalogResourceAdapter.Create(
                     resource,
                     hostContext,
                     (_, _) => Task.FromException<ReadResourceResult>(UnsupportedResource(resource.Binding.SourceKind))));

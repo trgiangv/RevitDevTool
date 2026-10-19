@@ -9,9 +9,9 @@ namespace DevTools.Mcp.Isolation;
 /// <summary>
 /// Wraps a per-toolset kernel isolation session.
 /// </summary>
-public sealed class McpToolsetContext(string toolsetDllPath, ILogger? logger = null) : IDisposable
+public sealed class McpAssemblyContext(string assemblyPath, ILogger? logger = null) : IDisposable
 {
-    private readonly string _toolsetPath = Path.GetFullPath(toolsetDllPath);
+    private readonly string _toolsetPath = Path.GetFullPath(assemblyPath);
     private Assembly? _loadedAssembly;
     private bool _disposed;
 
@@ -25,7 +25,7 @@ public sealed class McpToolsetContext(string toolsetDllPath, ILogger? logger = n
             return _loadedAssembly;
 
         _session = AssemblyIsolationSession.Create(
-            McpToolsetIsolationPlan.Create(_toolsetPath, new LoggerDiagnosticSink(logger)));
+            McpAssemblyIsolationPlan.Create(_toolsetPath, new LoggerDiagnosticSink(logger)));
         _loadedAssembly = _session.LoadEntryAssembly();
         return _loadedAssembly;
     }
@@ -44,7 +44,7 @@ public sealed class McpToolsetContext(string toolsetDllPath, ILogger? logger = n
     {
         public void Publish(AssemblyIsolationDiagnostic diagnostic)
         {
-            logger?.ZLogDebug($"[McpToolsetContext] [{diagnostic.Code}] {diagnostic.Message}");
+            logger?.ZLogDebug($"[McpAssemblyContext] [{diagnostic.Code}] {diagnostic.Message}");
         }
     }
 }

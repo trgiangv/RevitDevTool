@@ -28,7 +28,7 @@ backends on the host thread.
 
 ```mermaid
 sequenceDiagram
-    participant Daemon as ProcessSessions
+    participant Daemon as HostConnections
     participant Pipe as DevToolsMcp_* pipe
     participant Server as McpPipeServer / McpServer
     participant Source as IMcpSource
@@ -36,7 +36,7 @@ sequenceDiagram
 
     Daemon->>Pipe: tools/call {name, arguments, _meta}
     Pipe->>Server: SDK session handler
-    Server->>Source: SdkCollectionTool.InvokeAsync
+    Server->>Source: CatalogToolAdapter.InvokeAsync
     Source->>Host: ExecuteAsync (main thread)
     Host-->>Source: CallToolResult
     Source-->>Daemon: CallToolResult (wire JSON)

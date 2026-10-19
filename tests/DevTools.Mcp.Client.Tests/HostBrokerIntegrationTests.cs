@@ -8,7 +8,7 @@ using ModelContextProtocol.Protocol;
 namespace DevTools.Mcp.Client.Tests;
 
 [TestClass]
-public sealed class ProcessSessionsIntegrationTests
+public sealed class HostConnectionsIntegrationTests
 {
     public TestContext TestContext { get; set; } = null!;
 
@@ -19,7 +19,7 @@ public sealed class ProcessSessionsIntegrationTests
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -64,7 +64,7 @@ public sealed class ProcessSessionsIntegrationTests
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -107,7 +107,7 @@ public sealed class ProcessSessionsIntegrationTests
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -140,7 +140,7 @@ public sealed class ProcessSessionsIntegrationTests
         var deadPipe = HostPipeName.FormatMcp("Revit", "2025", int.MaxValue);
         var scanner = new FakePipeScanner();
         scanner.SetPipes(deadPipe);
-        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -162,7 +162,7 @@ public sealed class ProcessSessionsIntegrationTests
         var deadPipe = HostPipeName.FormatMcp("Revit", "2025", int.MaxValue);
         var scanner = new FakePipeScanner();
         scanner.SetPipes(deadPipe);
-        await using var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -183,7 +183,7 @@ public sealed class ProcessSessionsIntegrationTests
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        var broker = new ProcessSessions(scanner, NullLogger<ProcessSessions>.Instance, NullLoggerFactory.Instance);
+        var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);

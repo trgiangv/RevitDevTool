@@ -73,7 +73,7 @@ public sealed class NamedPipeIntegrationTests
         var (options, source, _, appServices) = McpHostTestHarness.CreateServerOptionsWithTool("ping", "pong", "Ping");
         options.ProtocolVersion = "2025-11-25";
         var hostContext = appServices.GetRequiredService<IHostContextExecutor>();
-        var toolsetContexts = new McpToolsetContextManager(NullLogger<McpToolsetContextManager>.Instance);
+        var toolsetContexts = new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance);
 
         using var serverPipe = NamedPipes.Open(pipeName);
         var acceptTask = serverPipe.WaitForConnectionAsync(cts.Token);

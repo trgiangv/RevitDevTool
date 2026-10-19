@@ -9,15 +9,15 @@ namespace DevTools.Mcp.Isolation;
 /// Thread-safe: GetOrCreate and Clear can be called concurrently.
 /// </summary>
 [UsedImplicitly]
-public sealed class McpToolsetContextManager(ILogger<McpToolsetContextManager> logger) : IDisposable
+public sealed class McpAssemblyContextManager(ILogger<McpAssemblyContextManager> logger) : IDisposable
 {
-    private volatile ConcurrentDictionary<string, Lazy<McpToolsetContext>> _contexts = new(StringComparer.OrdinalIgnoreCase);
+    private volatile ConcurrentDictionary<string, Lazy<McpAssemblyContext>> _contexts = new(StringComparer.OrdinalIgnoreCase);
 
-    public McpToolsetContext GetOrCreate(string toolsetDllPath)
+    public McpAssemblyContext GetOrCreate(string toolsetDllPath)
     {
         var normalizedPath = Path.GetFullPath(toolsetDllPath);
         var lazy = _contexts.GetOrAdd(normalizedPath,
-            path => new Lazy<McpToolsetContext>(() => new McpToolsetContext(path, logger)));
+            path => new Lazy<McpAssemblyContext>(() => new McpAssemblyContext(path, logger)));
         return lazy.Value;
     }
 
@@ -30,7 +30,7 @@ public sealed class McpToolsetContextManager(ILogger<McpToolsetContextManager> l
     {
         var snapshot = Interlocked.Exchange(
             ref _contexts,
-            new ConcurrentDictionary<string, Lazy<McpToolsetContext>>(StringComparer.OrdinalIgnoreCase));
+            new ConcurrentDictionary<string, Lazy<McpAssemblyContext>>(StringComparer.OrdinalIgnoreCase));
 
         foreach (var entry in snapshot.Values)
         {
@@ -41,7 +41,7 @@ public sealed class McpToolsetContextManager(ILogger<McpToolsetContextManager> l
             }
             catch (Exception ex)
             {
-                logger.ZLogWarning($"[McpToolsetContextManager] Failed to dispose context: {ex.Message}");
+                logger.ZLogWarning($"[McpContextManager] Failed to dispose context: {ex.Message}");
             }
         }
     }
