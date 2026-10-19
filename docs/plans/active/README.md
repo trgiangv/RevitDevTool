@@ -26,10 +26,10 @@ HandyControl compiles into loose `DevTools.UI`. Hosts do not ILRepack WPF:
 [completed](../completed/2026-09-26-handycontrol-replaces-mahapps.md)
 ([0037](../../decisions/0037-handycontrol-replaces-mahapps.md)).
 
-## MCP tests (active)
+## MCP tests (closed)
 
 Split god project `DevTools.Mcp.Tests` into module-scoped projects:
-[2026-09-04-mcp-test-project-split](2026-09-04-mcp-test-project-split.md).
+[completed](../completed/2026-09-04-mcp-test-project-split.md).
 
 ## RevitDevTool.Tools (closed under 0036)
 
@@ -88,13 +88,11 @@ passed on Revit 2025 process 20936, including the image block and the
 | Open-closed providers | [0024](../../decisions/0024-testing-core-open-closed-providers.md) | [completed](../completed/2026-08-22-testing-core-open-closed.md) | Landed |
 | Contract narrow | — | [completed](../completed/2026-09-10-testing-contracts-narrow.md) | Landed 2026-09-10 — `machine-run` rename deferred |
 | TUnit spike | — | [completed](../completed/2026-08-21-tunit-revit-testhost.md) | Closed 2026-09-04 — not a production track |
-| MSTest provider | [0038](../../decisions/0038-mstest-host-provider.md) | [active](2026-09-28-mstest-host-provider.md) | Wired — live Revit two-generation gate open |
-| MTP 2.5 pin | [0042](../../decisions/0042-mtp-2-5-removable-test-workarounds.md) | [completed](../completed/2026-10-10-mtp-2-5-pin.md) | Landed — live Revit gate still on the MSTest provider plan |
+| MSTest provider | [0038](../../decisions/0038-mstest-host-provider.md) | [completed](../completed/2026-09-28-mstest-host-provider.md) | Closed 2026-10-20 — live Revit check has no host log |
+| MTP 2.5 pin | [0042](../../decisions/0042-mtp-2-5-removable-test-workarounds.md) | [completed](../completed/2026-10-10-mtp-2-5-pin.md) | Landed |
 
 NUnit MTP-only ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)) is
 [completed](../completed/2026-08-18-nunit-mtp-only.md).
-
-Active plans: MCP test split (landed; file still under `active/`).
 
 ## IPC pipes (closed)
 

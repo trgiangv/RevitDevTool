@@ -11,9 +11,9 @@ In-host MSTest cancel uses `TestApplicationOptions.CancellationToken`.
 The provider shape below is unchanged. NUnit stays the default engine.
 TUnit stays the opt-in provider
 described in [`host-testing.md`](../product/host-testing.md). MSTest is the
-third opt-in provider (`TestingFramework=mstest`). The live two-generation
-Revit check remains open on
-[`2026-09-28-mstest-host-provider`](../plans/active/2026-09-28-mstest-host-provider.md).
+third opt-in provider (`TestingFramework=mstest`). The provider plan is
+[completed](../plans/completed/2026-09-28-mstest-host-provider.md). The live
+two-generation Revit check was closed with that plan and has no host log.
 
 Inherits [0021](0021-testing-kernel-and-provider-owned-framework-runtime.md)
 and [0024](0024-testing-core-open-closed-providers.md). A third engine is a

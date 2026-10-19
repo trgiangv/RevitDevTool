@@ -21,7 +21,7 @@ not `--coverlet`. Optional pixi / pydevd / dispatcher fixtures Skip
 - Gaps: `docs/agents/test-matrix.md` (Execution Coverlet lock)
 - In-repo MSTest style: `tests/DevTools.TestRunner.Tests`
 - SDK pin: `global.json` → `MSTest.Sdk` 4.4.0
-- Prior split pattern: `docs/plans/active/2026-09-04-mcp-test-project-split.md`
+- Prior split pattern: `docs/plans/completed/2026-09-04-mcp-test-project-split.md`
 
 ## Scope
 

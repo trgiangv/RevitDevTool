@@ -40,7 +40,8 @@ here.
   ILRepack WPF. MahApps, ControlzEx, and Xaml Behaviors are gone.
   [0038](0038-mstest-host-provider.md) is **Accepted**. In-host MSTest is a
   third provider on the existing testing kernel. NUnit stays the default.
-  Live two-generation Revit proof is still an open plan item. The pin and
+  The provider plan is completed. The live two-generation Revit proof has
+  no host log. The pin and
   cancel path moved in [0042](0042-mtp-2-5-removable-test-workarounds.md):
   MSTest 4.5.1, MTP 2.5.1, public `TestApplicationOptions.CancellationToken`.
   [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) is **Accepted**

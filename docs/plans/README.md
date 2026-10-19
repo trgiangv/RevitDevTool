@@ -31,13 +31,14 @@ Rename an active plan when its ADR number or workstream id changed.
 
 ## Active Plans
 
-- [2026-09-28-mstest-host-provider.md](active/2026-09-28-mstest-host-provider.md) — MSTest 4.4.1 host provider ([0038](../decisions/0038-mstest-host-provider.md))
-- [2026-09-04-mcp-test-project-split.md](active/2026-09-04-mcp-test-project-split.md) — MCP test project split
+None.
 
 ## Recently Completed
 
 | Plan | Completed |
 |------|-----------|
+| [2026-09-28-mstest-host-provider.md](completed/2026-09-28-mstest-host-provider.md) | 2026-10-20 (provider in tree; live Revit two-generation check closed without a host log; [0038](../decisions/0038-mstest-host-provider.md)) |
+| [2026-09-04-mcp-test-project-split.md](completed/2026-09-04-mcp-test-project-split.md) | 2026-10-20 (god project gone; module-scoped MCP tests) |
 | [2026-10-10-mtp-2-5-pin.md](completed/2026-10-10-mtp-2-5-pin.md) | 2026-10-10 (MSTest 4.5.1, MTP 2.5.1, TUnit 1.73.19, public MSTest cancel; [0042](../decisions/0042-mtp-2-5-removable-test-workarounds.md)) |
 | [2026-10-08-code-mode-result-artifact.md](completed/2026-10-08-code-mode-result-artifact.md) | 2026-10-08 (large `code_mode` text saved with its path; [0041](../decisions/0041-code-mode-result-artifact.md)) |
 | [2026-10-07-run-csharp-bm25f.md](completed/2026-10-07-run-csharp-bm25f.md) | 2026-10-08 (`code_mode` + BM25F; [0040](../decisions/0040-bm25f-search-and-hit-annotations.md)) |

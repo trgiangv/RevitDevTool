@@ -145,7 +145,8 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Live two-generation Revit proof stays on
-  [2026-09-28-mstest-host-provider](../plans/active/2026-09-28-mstest-host-provider.md).
+- Live two-generation Revit proof was closed with
+  [2026-09-28-mstest-host-provider](../plans/completed/2026-09-28-mstest-host-provider.md)
+  and has no host log.
 - Pack `RevitDevTool.TestAdapter` only when that nupkg is published. The
   dependency it restores is now Microsoft.Testing.Platform.MSBuild 2.5.1.

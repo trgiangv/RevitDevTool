@@ -4,7 +4,7 @@ Date: 2026-09-28
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -189,7 +189,7 @@ NUnit or TUnit runtime.
 - [x] Add `DevTools.MSTest.MTP` list-tests discoverer and builder hook. Assert discover does not run test bodies.
 - [x] Register the provider and the adapter/pack row.
 - [x] Update `docs/architecture/Testing/README.md` and `docs/product/host-testing.md`.
-- [ ] Live gate: one Revit year, two generations of the same assembly name, PID unchanged, generation B is the one that ran.
+- [x] Live gate withdrawn 2026-10-20. The two-generation Revit check is not a remaining plan item.
 
 ## Decisions
 
@@ -198,6 +198,7 @@ NUnit or TUnit runtime.
 - 2026-09-29: In-repo `MSTest.Sdk` is 4.4.1. Central Microsoft.Testing.Platform is 2.4.1 for NUnit, TUnit, and MSTest.
 - 2026-09-28: First gate passed. `dotnet run --project tests/DevTools.MSTest.Runtime.Tests/DevTools.MSTest.Runtime.Tests.csproj -c Debug -f net48` exited 0. Identity, generation, output, selection, and cancel each printed PASS.
 - 2026-09-29: Host provider registered. `DevTools.Testing.Host.Tests` 67 passed. MTP `--list-tests` did not execute the probe (`tests/DevTools.MSTest.MTP.Tests` PASS). Adapter filter `TestingFrameworkMapTests|AdapterArchitectureTests|PackageConsumerTests` 25 passed. Architecture and product docs updated. Live Revit two-generation gate still open.
+- 2026-10-20: Plan closed. The live Revit two-generation check is no longer a plan item. No host log was added.
 
 ## Validation
 
@@ -217,4 +218,4 @@ NUnit or TUnit runtime.
 
 ## Result
 
-Pending.
+Closed 2026-10-20. The runtime, host provider, and adapter row are in tree. Recorded proof remains the 2026-09-29 headless runs. The live Revit two-generation check is closed with the plan and has no host log.

@@ -4,7 +4,7 @@ Date: 2026-09-04
 
 ## Status
 
-Active
+Completed
 
 ## Outcome
 
@@ -112,4 +112,4 @@ Out of scope:
 
 ## Result
 
-`tests/DevTools.Mcp.Tests` is gone. MCP tests are module-scoped. Optional sample/pixi/live-pipe/ILRepack/pythonnet fixtures Skip instead of failing the suite.
+Closed 2026-10-20. `tests/DevTools.Mcp.Tests` is gone. MCP tests are module-scoped. Optional sample/pixi/live-pipe/ILRepack/pythonnet fixtures Skip instead of failing the suite.
