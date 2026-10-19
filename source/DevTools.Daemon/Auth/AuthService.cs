@@ -18,8 +18,11 @@ public sealed class AuthService : IAuthService, IDisposable
     private readonly ILogger _logger;
     private readonly HttpClient _http = new();
     private readonly TokenStore _tokens;
+    private readonly Lock _signInLock = new();
 
     private TokenData? _tokenData;
+    private Task<AuthResult>? _signInTask;
+    private AuthBrowser? _authBrowser;
 
     public AuthService(IOptions<AuthOptions> optionsAccessor, ILogger<AuthService> logger)
     {
@@ -39,7 +42,7 @@ public sealed class AuthService : IAuthService, IDisposable
         ClientId = _options.ClientId,
         Scope = _options.Scope,
         RedirectUri = _options.RedirectUri,
-        Browser = new AuthBrowser(_options),
+        Browser = _authBrowser = new AuthBrowser(_options),
     });
 
     public bool IsAuthenticated => _tokenData is not null && !string.IsNullOrEmpty(_tokenData.AccessToken);
@@ -55,7 +58,21 @@ public sealed class AuthService : IAuthService, IDisposable
     {
         if (!IsConfigured)
             return Task.FromResult(new AuthResult(false, "Auth not configured — set Issuer and ClientId in appsettings."));
-        return PerformOAuthFlowAsync(ct);
+
+        lock (_signInLock)
+        {
+            if (IsAuthenticated)
+                return Task.FromResult(new AuthResult(true));
+
+            if (_signInTask is { IsCompleted: false } pending)
+            {
+                _authBrowser?.ReopenActiveAuthPage();
+                return pending;
+            }
+
+            _signInTask = PerformOAuthFlowAsync(ct);
+            return _signInTask;
+        }
     }
 
     public async Task SignOutAsync()

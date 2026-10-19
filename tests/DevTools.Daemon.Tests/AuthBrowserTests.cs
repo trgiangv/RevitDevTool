@@ -27,6 +27,38 @@ public sealed class AuthBrowserTests
     }
 
     [TestMethod]
+    public async Task ReopenActiveAuthorizationPage_ReusesThePendingListener()
+    {
+        var port = GetFreePort();
+        var callback = $"http://127.0.0.1:{port}/callback";
+        var firstOpen = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var openCount = 0;
+        var browser = new AuthBrowser(
+            new AuthOptions { LoopbackPort = port },
+            _ =>
+            {
+                if (Interlocked.Increment(ref openCount) == 1)
+                    firstOpen.TrySetResult();
+            });
+
+        var invoke = browser.InvokeAsync(
+            new BrowserOptions("https://identity.example/authorize", callback),
+            TestContext.CancellationToken);
+
+        await firstOpen.Task.WaitAsync(TimeSpan.FromSeconds(3), TestContext.CancellationToken);
+        Assert.IsTrue(browser.ReopenActiveAuthPage());
+        Assert.AreEqual(2, openCount);
+
+        using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        using var response = await client.GetAsync($"{callback}?code=abc", TestContext.CancellationToken);
+        var result = await invoke.WaitAsync(TimeSpan.FromSeconds(5), TestContext.CancellationToken);
+
+        Assert.AreEqual(System.Net.HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual(BrowserResultType.Success, result.ResultType);
+        Assert.IsFalse(browser.ReopenActiveAuthPage());
+    }
+
+    [TestMethod]
     public async Task InvokeAsync_InvalidPrefix_ReturnsUnknownError()
     {
         var browser = new AuthBrowser(new AuthOptions { LoopbackPort = 1 }, static _ => { });

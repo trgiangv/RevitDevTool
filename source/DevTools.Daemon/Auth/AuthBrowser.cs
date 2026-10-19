@@ -8,6 +8,8 @@ public sealed class AuthBrowser : IBrowser
 {
     private readonly AuthOptions _authOptions;
     private readonly Action<string> _openUrl;
+    private readonly Lock _activeUrlLock = new();
+    private string? _activeStartUrl;
 
     public AuthBrowser(AuthOptions authOptions)
         : this(authOptions, OpenInShell)
@@ -29,6 +31,7 @@ public sealed class AuthBrowser : IBrowser
             listener.Prefixes.Add(_authOptions.UriPrefix);
             listener.Start();
 
+            SetActiveStartUrl(options.StartUrl);
             _openUrl(options.StartUrl);
 
             var callbackUrl = await WaitForCallbackAsync(listener, ct).ConfigureAwait(false);
@@ -44,8 +47,35 @@ public sealed class AuthBrowser : IBrowser
         }
         finally
         {
+            SetActiveStartUrl(null);
             listener?.Close();
         }
+    }
+
+    public bool ReopenActiveAuthPage()
+    {
+        string? startUrl;
+        lock (_activeUrlLock)
+            startUrl = _activeStartUrl;
+
+        if (startUrl is null)
+            return false;
+
+        try
+        {
+            _openUrl(startUrl);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void SetActiveStartUrl(string? startUrl)
+    {
+        lock (_activeUrlLock)
+            _activeStartUrl = startUrl;
     }
 
     private static async Task<string> WaitForCallbackAsync(HttpListener listener, CancellationToken ct)
