@@ -23,8 +23,10 @@ public class CatalogScript
     }
 
     /// <summary>
-    /// BM25F over the in-memory catalog. Default <paramref name="limit"/> is 8.
-    /// Default <paramref name="primitiveType"/> is <c>tool</c>. An empty query returns nothing.
+    /// BM25F over specialized catalog capabilities. If no sufficiently relevant tool matches,
+    /// the host's C# and Python execution tools are returned as a fallback. Default
+    /// <paramref name="limit"/> is 8. Default <paramref name="primitiveType"/> is <c>tool</c>.
+    /// An empty query returns nothing.
     /// </summary>
     public virtual Task<IReadOnlyList<MatchedPrimitive>> SearchAsync(
         string query,

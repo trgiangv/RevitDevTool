@@ -1,4 +1,5 @@
 using System.Text;
+// ReSharper disable UseCollectionExpression
 
 namespace DevTools.Daemon.Mcp.Search;
 
@@ -9,19 +10,25 @@ internal static class Tokenizer
         if (string.IsNullOrWhiteSpace(text))
             return [];
 
-        var normalized = Normalize(text);
-        return normalized.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var separated = SeparateCamelCase(text.Replace('_', ' ').Replace('-', ' '));
+        var tokens = new List<string>();
+        var token = new StringBuilder();
+        foreach (var character in separated)
+        {
+            if (char.IsLetterOrDigit(character))
+            {
+                token.Append(char.ToLowerInvariant(character));
+                continue;
+            }
+
+            AddToken(tokens, token);
+        }
+
+        AddToken(tokens, token);
+        return tokens;
     }
 
-    internal static string Normalize(string value)
-    {
-        var withSpaces = SplitCamelCase(value.Replace('_', ' ').Replace('-', ' '));
-        return string.Join(' ',
-            withSpaces.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
-                .Select(token => token.ToLowerInvariant()));
-    }
-
-    private static string SplitCamelCase(string value)
+    private static string SeparateCamelCase(string value)
     {
         if (string.IsNullOrEmpty(value))
             return value;
@@ -30,7 +37,7 @@ internal static class Tokenizer
         for (var i = 0; i < value.Length; i++)
         {
             var c = value[i];
-            if (i > 0 && char.IsUpper(c) && (char.IsLower(value[i - 1]) || (i + 1 < value.Length && char.IsLower(value[i + 1]))))
+            if (IsCamelCaseBoundary(value, i))
                 builder.Append(' ');
             builder.Append(c);
         }
@@ -38,16 +45,22 @@ internal static class Tokenizer
         return builder.ToString();
     }
 
+    private static bool IsCamelCaseBoundary(string value, int index) =>
+        index > 0
+        && char.IsUpper(value[index])
+        && (char.IsLower(value[index - 1]) || index + 1 < value.Length && char.IsLower(value[index + 1]));
+
+    private static void AddToken(List<string> tokens, StringBuilder token)
+    {
+        if (token.Length == 0)
+            return;
+
+        tokens.Add(token.ToString());
+        token.Clear();
+    }
+
     public static IReadOnlyList<string> Distinct(IEnumerable<string> tokens)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var distinct = new List<string>();
-        foreach (var token in tokens)
-        {
-            if (seen.Add(token))
-                distinct.Add(token);
-        }
-
-        return distinct;
+        return tokens.Distinct(StringComparer.Ordinal).ToList();
     }
 }

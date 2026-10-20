@@ -2,9 +2,12 @@
 
 Model Context Protocol integration lets external AI clients (Claude Desktop, Cursor, ChatGPT, Perplexity, etc.) talk to running host applications through the standalone **DevTools.Daemon** and an in-host **SDK `McpServer`** on the MCP named pipe (`DevToolsMcp_*`, protocol `2026-07-28`).
 
-The stack is host-agnostic. The Daemon discovers pipes via `HostConnections`, hydrates a per-process **`ProcessCatalogs`** index, and exposes only infrastructure tools plus `search_dynamic` / `invoke_dynamic`.
+The stack is host-agnostic. The Daemon discovers pipes through `HostConnections`
+and builds a per-process **`ProcessCatalogs`** index. Its fixed external surface
+contains infrastructure tools and `code_mode`; host capabilities remain in the
+catalog and are searched and invoked from inside that program.
 
-Last updated: 2026-10-03
+Last updated: 2026-10-22
 
 ## Vocabulary
 
@@ -15,7 +18,7 @@ Last updated: 2026-10-03
 | **HostConnections** | Daemon-side pipe poll + `McpClient` sessions + `ProcessCatalogs` | `HostBroker`, `ConnectedHostCatalog`, `ProcessSessions` |
 | **ProcessCatalogs** | In-memory index of tools/resources per connected `processId` (daemon) | `McpCatalogStore` |
 | **McpCatalogStore** | In-host registry (`RegisteredTool` / `RegisteredResource` / `RegistryCatalog`) | `ProcessCatalogs` |
-| **CatalogId** | Opaque locator `dci2.{processId}.{kind}.{contentHash}.{target}`; wire field **`id`** | `capabilityId`, `hostInstanceId` |
+| **CatalogId** | Daemon-internal locator used to resolve a catalog item; not returned by `SearchAsync` | `capabilityId`, `hostInstanceId` |
 | **App container** | Real `IServiceCollection` / `IHost` for Daemon or host add-in | temp `ServiceProvider` in options builders |
 | **Shared server features** | Tasks + call-log filters on daemon `McpServerOptions` | host-only logging |
 | **Protocol JSON** | `McpJsonUtilities.DefaultOptions` | parallel custom options |
@@ -31,6 +34,7 @@ flowchart LR
 
   subgraph daemonProc [DevTools.Daemon]
     DaemonSrv[Daemon McpServer]
+    Program[code_mode / CatalogScript]
     Sessions[HostConnections]
     Catalog[ProcessCatalogs]
   end
@@ -42,8 +46,10 @@ flowchart LR
   end
 
   Client -->|"stdio or gateway"| DaemonSrv
-  DaemonSrv -->|"search_dynamic / invoke_dynamic"| Sessions
-  Sessions --> Catalog
+  DaemonSrv -->|"code_mode"| Program
+  Program -->|"SearchAsync"| Catalog
+  Program -->|"InvokeAsync / ReadAsync"| Sessions
+  Sessions -->|"catalog refresh"| Catalog
   Sessions -->|"DevToolsMcp pipe"| HostSrv
   HostSrv --> Store
   HostSrv --> Sources
@@ -51,7 +57,7 @@ flowchart LR
 
 - **Daemon MCP Server:** fixed tools/prompts in `McpEngine`, `ListChanged = false`; host capabilities are not projected into `tools/list`.
 - **Host MCP Server:** `McpPipeServer` accepts connections; each connection gets `McpServer.Create(StreamServerTransport, …)` with tools/resources from `McpServerCollections`.
-- **`invoke_dynamic`:** daemon `InvokeTool` → `ProcessSession.CallToolPassthroughAsync` (via `McpClientPassthrough` for no auto-MRTR) → host `tools/call`.
+- **`InvokeAsync` / `ReadAsync`:** code in `code_mode` resolves a catalog item, then uses `ProcessSession` to call the host pipe. `SearchAsync` reads the in-memory index and does not open a pipe.
 
 ## DI and lifecycle
 
@@ -83,7 +89,7 @@ Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JS
 | Layer | Serializer |
 |-------|------------|
 | MCP SDK protocol types | `ToolHelpers.ProtocolOptions` (`McpJsonUtilities.DefaultOptions`) |
-| Daemon tool DTOs (`search_dynamic`, `invoke_dynamic`, …) | `McpToolJson.Options` / `McpServerJsonContext` |
+| Daemon infrastructure tool DTOs | `McpToolJson.Options` / `McpServerJsonContext` |
 | Control pipe, settings.json, pytest framing, MTP `testing/*` | Dedicated context per wire — see 0031 |
 
 ## Documentation
@@ -96,9 +102,11 @@ Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JS
 | [Daemon](daemon.md) | Architecture, lifecycle, auth, control pipe API |
 | [Transport](transport.md) | Stdio mode, Gateway WebSocket, dual pipe protocols |
 | [Tools](tools.md) | Fixed daemon surface, ProcessCatalogs, in-host primitives |
+| [Search policy (0040)](../../decisions/0040-bm25f-search-and-hit-annotations.md) | Accepted search and fallback behavior |
+| [Hybrid retrieval evaluation (0044)](../../decisions/0044-hybrid-tool-retrieval.md) | Proposed semantic-retrieval evaluation; no production change |
 | [In-Host Runtime](in-host-runtime.md) | Host SDK server, registry flow, `IMcpSource` |
 | [Workflows](workflows.md) | Practical AI agent patterns |
-| [Flow audit (historical)](flow-and-simplification.md) | Pre-merge analysis; see [0039](../../decisions/0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) **As implemented** |
+| [Flow audit (historical)](../../decisions/0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) | Historical protocol and vocabulary rationale |
 
 ## Source Map
 
@@ -112,7 +120,7 @@ Policy: [0031](../../decisions/0031-daemon-json-source-gen.md) — source-gen JS
 | Pytest/control pipe | `source/DevTools.Ipc/`, `source/DevTools.Execution/External/DevToolsPipeServer.cs` |
 | Gateway relay | Separate repo: `McpGateway` |
 
-`McpSpecKeys` (`Tool`, `Resource`, `Result` — flat, no `Host`/`Daemon` nesting) lives in `DevTools.Mcp.Catalog/Core/Protocol/`. Wire tool names: `search_dynamic`, `invoke_dynamic` (`McpSpecKeys.Tool.Invoke`).
+`McpSpecKeys` (`Tool`, `Resource`, `Result` — flat, no `Host`/`Daemon` nesting) lives in `DevTools.Mcp.Catalog/Core/Protocol/`. The daemon exposes `code_mode` and infrastructure tools; host catalog names are not daemon wire tools.
 
 ## Verification
 

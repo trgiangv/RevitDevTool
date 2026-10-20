@@ -58,8 +58,10 @@ before the first catalog list. Initialize-handshake sessions (`2025-11-25` and
 earlier) still receive the session-wide broadcast; they do not open
 `subscriptions/listen`.
 
-**Search ranking** (`ProcessCatalogs.Search`): see product contract
-in `docs/product/mcp.md`. `SearchAsync` calls it from inside `code_mode`.
+**Search ranking** (`ProcessCatalogs.Search`): the product behavior is in
+[`docs/product/mcp.md`](../../product/mcp.md); the accepted ranker and fallback
+policy are in [decision 0040](../../decisions/0040-bm25f-search-and-hit-annotations.md).
+`SearchAsync` calls the index from inside `code_mode`.
 
 **Python dynamic toolsets** (`samples/PythonDemo/mcp_toolset`): tool function
 parameters use snake_case wire names only (no `Field(alias=)` on params). Do not
@@ -68,8 +70,8 @@ register Python and C# toolsets that expose the same tool names simultaneously.
 **C# sample templates** (`samples/RevitMcpToolSet`): `ElementResources` registers
 `resource_template` entries `revit://element/{elementId}` (`application/json`) and
 `revit://schedule/{scheduleId}/preview` (`text/csv`). Agents discover them via
-`search_dynamic` with `kinds=["resource_template"]` and read via `invoke_dynamic`
-(single `arguments` or batch `reads[]`).
+`SearchAsync(primitiveType: "resource_template")` and read them with
+`ReadAsync` inside `code_mode`.
 
 ---
 
@@ -132,18 +134,18 @@ Serialization uses **`McpJsonUtilities.DefaultOptions`** across daemon and host 
 | Daemon `tools/call` | SDK `CallToolFilters` via `McpServerConfigurator` | `DevTools.Mcp.ToolCall` |
 | Host `tools/call` / `resources/read` | `McpLogFilters` on host `McpServerOptions` | `DevTools.Mcp.ToolCall` / `DevTools.Mcp.ResourceRead` |
 
-Each call emits a single compact ZLogger line. Dynamic daemon handlers use method string
-`tools/call` (the protocol operation they represent), not a separate `dynamic.*` prefix:
+Each call emits a single compact ZLogger line. Daemon tools use the MCP
+method string `tools/call`:
 
 ```text
 tools/call ok target=execute_csharp_code durationMs=718 args={"code":"..."} result={...}
 resources/read ok target=revit://model/context durationMs=42 result={...}
-tools/call ok target=search_dynamic durationMs=3 args={"query":"wall",...} result={...}
+tools/call ok target=code_mode durationMs=3 args={"code":"..."} result={...}
 ```
 
 | Token | Meaning |
 |-------|---------|
-| `tools/call` / `resources/read` | MCP method (daemon dynamic tools log as `tools/call`) |
+| `tools/call` / `resources/read` | MCP method |
 | `ok` / `error` / `timeout` | Outcome |
 | `target` | Tool name or resource URI |
 | `args` | Protocol JSON arguments (`JsonElement` dictionary via `McpJsonUtilities`) |
@@ -153,7 +155,7 @@ tools/call ok target=search_dynamic durationMs=3 args={"query":"wall",...} resul
 **Binary content:** when a result includes image/audio blocks, monitor lines omit base64
 `Data` and log `type`, `mimeType`, and `length` only (SDK DebuggerDisplay spirit).
 
-`search_dynamic` monitor lines log `count` and compact hit summaries — not the full catalog JSON returned to the client.
+Search runs inside `code_mode`; it is not a separate daemon MCP call or monitor target.
 
 `HostConnections` catalog refresh uses structured ZLogger scopes (counts + duration) — no custom
 `ActivitySource`. Protocol MCP spans stay with the SDK.
@@ -168,10 +170,12 @@ is `McpTasksOptions.ExecutionModeSelector`:
 | Call | Mode |
 |------|------|
 | `launch_host` | **Optional** |
-| `invoke_dynamic` of a catalog tool | **Optional** |
-| Resource read, `reads` batch, other infrastructure tools | **Synchronous** |
+| `code_mode` | **Optional** |
+| Resource reads and other infrastructure tools | **Synchronous** |
 
-**Required** is unused until clients advertise `io.modelcontextprotocol/tasks`. Daemon-to-host routing stays synchronous `ProcessSession.CallToolPassthroughAsync` (task polling is client ↔ daemon only).
+**Required** is unused until clients advertise `io.modelcontextprotocol/tasks`.
+Daemon-to-host routing stays synchronous `ProcessSession.CallToolPassthroughAsync`;
+task polling is client ↔ daemon only.
 
 ### ResourceLink pass-through
 

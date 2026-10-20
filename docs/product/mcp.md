@@ -10,26 +10,32 @@ In-host MCP runtime is shared across registered hosts.
 - Infrastructure tools remain on the daemon (`list_processes`, `launch_host`,
   `read_file_info`). `list_machines` is answered by the gateway.
 - Host capabilities are **not** projected into daemon `tools/list`. Clients
-  reach them through one program tool:
-  - `code_mode(code, readOnly?)` — `code` is a C# async method body. Inside it,
-    `SearchAsync` ranks the in-memory catalog, `DescribeAsync` returns the SDK
-    `Tool`, `InvokeAsync` returns the host `CallToolResult` (including image and
-    audio blocks), and `ReadAsync` returns `ReadResourceResult`. The model
-    receives only the program's return value. `readOnly` defaults to false;
-    when true, `InvokeAsync` throws unless the tool's `ReadOnlyHint` is true.
-    Text over 40,000 characters keeps the start and end. Structured JSON on a
-    returned result counts as that text. The full text is saved under `%TEMP%`,
-    and the return includes that path.
-    Image, audio, and blob payloads over 1 MiB are an error and are not
-    sent. An ordinary object or array is JSON text and does
-    not set `StructuredContent`, because `code_mode` does not advertise
-    `outputSchema`. A returned `CallToolResult` passes through when that text
-    is within 40,000 characters.
-    `search_dynamic` and `invoke_dynamic` are not on
-    `tools/list`. Locator ids stay inside the daemon.
-  - `execute_csharp_code` and `execute_python_code` descriptions include the
-    required entry pattern. From `code_mode`, that source is one verbatim
-    string and each quote inside it is doubled.
+  use `code_mode(code, readOnly?)`, whose `code` is a C# async method body.
+  Search and dispatch run inside that program:
+  - `SearchAsync` returns ranked candidates from the in-memory catalog. Treat
+    them as options, not an instruction to invoke the first result. Inspect the
+    description and call `DescribeAsync` for the schema when intent or arguments
+    are ambiguous. Search is schema-aware lexical retrieval, not a guarantee of
+    semantic equivalence. The detailed policy is in
+    [decision 0040](../decisions/0040-bm25f-search-and-hit-annotations.md).
+  - Specialized capabilities are preferred by default. C# and Python execution
+    tools are the fallback when no specialized candidate is sufficiently
+    relevant; explicit code-execution queries may surface them directly.
+  - `DescribeAsync` returns the SDK `Tool`; `InvokeAsync` returns the host
+    `CallToolResult` (including image and audio blocks); `ReadAsync` returns
+    `ReadResourceResult`. The model receives only the program's return value.
+    `readOnly` defaults to false; when true, `InvokeAsync` throws unless the
+    tool's `ReadOnlyHint` is true.
+  - Text over 40,000 characters keeps its start and end. The full text is saved
+    under `%TEMP%`, and the return includes that path. Image, audio, and blob
+    payloads over 1 MiB are rejected. Ordinary objects and arrays are returned
+    as JSON text; `code_mode` does not advertise an `outputSchema`. A returned
+    `CallToolResult` passes through when its text is within the limit.
+- `execute_csharp_code` and `execute_python_code` descriptions include the
+  required entry pattern. From `code_mode`, source is passed as one string and
+  quotes inside that string must be doubled. Search and invocation locators
+  remain inside the Daemon; neither `search_dynamic` nor `invoke_dynamic` is
+  an external MCP tool.
 - **MRTR is not a product workflow** ([0027](../decisions/0027-mcp-product-surface.md)).
   The working loop is one `code_mode` program: search, call, and return a projection.
   Execute error tags (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`) are retried inside that program. Destructive
@@ -71,6 +77,8 @@ In-host MCP runtime is shared across registered hosts.
 
 ## Related
 
+- Search behavior: [decision 0040](../decisions/0040-bm25f-search-and-hit-annotations.md)
+- Proposed semantic-retrieval evaluation: [decision 0044](../decisions/0044-hybrid-tool-retrieval.md)
 - Architecture: [`docs/architecture/MCP/README.md`](../architecture/MCP/README.md)
 - SDK gaps: [`docs/architecture/MCP/sdk-gap-matrix.md`](../architecture/MCP/sdk-gap-matrix.md)
 - Product surface: [`docs/decisions/0027-mcp-product-surface.md`](../decisions/0027-mcp-product-surface.md)

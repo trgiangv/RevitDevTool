@@ -4,14 +4,16 @@ Date: 2026-10-07
 
 ## Status
 
-**Accepted 2026-10-07.** Supersedes the scoring bullet in
+**Accepted 2026-10-07; amended 2026-10-20 and 2026-10-22.** The amendments
+index nested MCP input/output schemas, add query-coverage ranking, and recognize
+attribute constraints supported by generic parameter filters. They keep the
+SDK `Tool` contract unchanged. This decision supersedes the scoring bullet in
 [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) decision 9 and
-alternative 5 ("no BM25"). Amends
-[0027](0027-mcp-product-surface.md): the model-facing dynamic tool is
-`code_mode` with a C# body. `search_dynamic` and `invoke_dynamic` leave
-`tools/list` when the surface lane of the active plan lands.
-Host capabilities still never appear on `tools/list`. Clients still never
-call host tool names or open the host pipe.
+alternative 5 ("no BM25").
+
+`code_mode` is the model-facing C# program surface. Search and dispatch run
+inside it; host capabilities are not listed as daemon tools. The current
+product contract is in [`docs/product/mcp.md`](../product/mcp.md).
 
 ## Context
 
@@ -34,49 +36,48 @@ The fixed tool list is still required: listing every host capability would
 put hundreds of schemas in context. The pair is not. One tool,
 `code_mode`, takes a C# program. Search stays in that program.
 
-Pi's relevant surface, from the Code Mode docs
-([pi.dev/docs/latest/codemode](https://pi.dev/docs/latest/codemode)):
+The original comparison with Pi's Code Mode surface
+([pi.dev/docs/latest/codemode](https://pi.dev/docs/latest/codemode)) motivated
+this decision. The RevitDevTool column records the state at the time this ADR
+was drafted, not the current external tool list:
 
-| Pi | What it does | RevitDevTool today |
+| Pi | What it does | RevitDevTool at draft time |
 |----|----------------|--------------------|
-| `searchTools(query)` | BM25 over tools the session can call. Default limit 8. Returns `{ name, description }` only. | `search_dynamic` is the catalog the model does not hold. Rank is a weighted token sum with a half-match cutoff. Default limit 12. |
+| `searchTools(query)` | BM25 over tools the session can call. Default limit 8. Returns `{ name, description }` only. | The earlier `search_dynamic` endpoint searched the catalog with a weighted token sum and a half-match cutoff. |
 | `describeTool(name)` | Description plus a TypeScript declaration, fetched when the script needs the shape. | `detail=schema` returns `inputSchema`. Summary omits it. |
 | Tool annotations | Sit on the tool the session registered. The script calls that tool by name. | Host tools are not registered on the external server. The only callable write/read tool is `code_mode`, declared `Destructive=true`, `OpenWorld=true`. |
 | Script body | Many calls, `Promise.all`, filter, then one result to the model. JavaScript, because Pi's runner is QuickJS. | No Daemon program tool. Host `execute_csharp` is a different tool: Roslyn inside the CAD process, Revit/AutoCAD API, not catalog orchestration. |
 
 Two consequences follow from that table.
 
-Search quality is a model-turn problem. `SearchIndex` already runs in memory
-and does not open a pipe (`SearchTool` → `ProcessCatalogs` → `SearchIndex`).
-The current rank drops a hit when fewer than half the query tokens appear
-(`matched * 2 < queryTokens.Count` in `Scoring`). A query such as
-"equipment information" against a tool whose text only contains "equipment"
-scores 0 and disappears. The model searches again. 0039 alternative 5 rejected
-BM25 because the catalog is small and the weighted sum was considered enough
-recall without a dependency. The catalog is still small. The cost that matters
-is the extra inference, not the scorer's CPU.
+Search quality is a model-turn problem. The original ranker ran in memory and
+used a weighted token sum with a half-match cutoff. A query such as
+"equipment information" could lose a useful one-token hit and force another
+model turn. This ADR replaced that ranker with BM25F; the accepted query
+coverage and generic-parameter rules are recorded in the current policy below.
 
-Risk metadata has nowhere to ride. `CatalogItem.Tool` is an SDK `Tool` and
-already carries `Tool.Annotations` (`readOnlyHint`, `destructiveHint`,
-`idempotentHint`, `openWorldHint`, `title`) from the .NET and Python parsers.
-`SearchItem` does not copy them. A client that can inspect a Pi-style program
-cannot tell a read from a write until it either calls `code_mode` or
-treats every invoke as destructive. MCP annotations are properties of a tool
-definition, not of one call's arguments, so changing them per `id` on
-`code_mode` is not available.
+At decision time, tool annotations (`readOnlyHint`, `destructiveHint`,
+`idempotentHint`, `openWorldHint`, `title`) were already present on the SDK
+`Tool`, but were not returned with a search candidate. MCP annotations belong
+to a tool definition, not one invocation. In the accepted `code_mode` flow,
+a program can call `DescribeAsync` for the selected candidate and inspect the
+original SDK declaration before `InvokeAsync`.
 
 ## Decision
 
 ### 1. Rank with in-process BM25F
 
 Replace `Scoring`'s weighted sum and half-match cutoff with Okapi BM25F.
-No search library. No stemmer. No synonym or alias table. Tokenizer stays
-`Tokenizer`: `_`, `-`, camelCase splits, then lowercase.
+No search library. No stemmer. No synonym or alias table. Tokenizer splits
+punctuation, `_`, `-`, and camelCase boundaries, then lowercases.
 
-One document per `CatalogItem`. Four fields, weights chosen to keep the
-0039 priority (target above name above description). Parameter names are
-already posted in `SearchIndex.ToolSchemaPropertyNameTokens` and today do not
-affect `Scoring`; they become a real field.
+One document per `CatalogItem`. Five fields, weights chosen to keep the
+0039 priority (target above name above description). Schema descriptions,
+types, and string enum values provide lower-weight evidence than names and
+descriptions. Input and output schema traversal follows nested schema nodes
+and local JSON Pointer `$ref`s, including `$defs`, `definitions`, `items`, and
+`oneOf` / `anyOf` / `allOf`. Input property names remain parameter-field terms;
+required names and descriptive schema metadata remain lower-weight schema terms.
 
 | Field | Weight | Source |
 |-------|--------|--------|
@@ -84,6 +85,7 @@ affect `Scoring`; they become a real field.
 | name | 2 | resource or template name; empty for a tool whose name is the target |
 | description | 1 | `CatalogItem.Description` |
 | parameters | 1 | input-schema property names; empty for resources and templates |
+| schema details | 0.5 | required names; nested input/output descriptions, types, enums/constants, and output property names, following local `$ref`s |
 
 Constants: `k1 = 1.2`, `b = 0.75`.
 
@@ -109,12 +111,24 @@ Query rules:
   does not multiply the score.
 - A token absent from the index adds nothing.
 - An item whose `weighted_tf` is 0 for every query token is omitted.
-- There is no half-match cutoff. A hit that matches one content token and
-  misses filler tokens stays in the ranking.
+- BM25F has no half-match cutoff; query relevance is applied by the separate
+  coverage policy below.
 - Empty or whitespace query returns no hits, as today.
-- Order: score descending, then kind, target, processId. `limit` (default 12,
-  max 32) and `hasMore` stay.
-- `Match.Score` stays internal. The wire `SearchItem` does not gain a score.
+- Relevance gate and ordering: retain candidates with at least 0.6 IDF-weighted
+  query coverage. Grammar words (`with`, `where`, `having`, `whose`) and request
+  fillers (`show`, `display`, `please`) do not count toward coverage. Rank by
+  coverage descending, then BM25F score descending, kind, target, and processId.
+  `SearchAsync` defaults to a result limit of 8; its C# result is a candidate
+  list and has no `hasMore` field.
+- Generic attribute constraints: if an input schema defines sibling `parameter`
+  and `value` properties in the same object, mark it as supporting arbitrary
+  parameter filtering. For a query with a matched subject followed by `with`,
+  `where`, `having`, or `whose`, treat the remaining terms as values accepted by
+  that generic filter for coverage purposes. Terms are not injected into BM25F;
+  the candidate must still match a subject token from the index. This lets
+  requests such as “doors with fire rating” find a general parameter-filter
+  capability without a Revit-specific synonym table.
+- BM25F score and query coverage stay internal; `SearchAsync` returns no score field.
 
 Worked contrast, so the cutoff change is reviewable. Tool target
 `GetMechanicalEquipment`, description "mechanical equipment". Query tokens
@@ -134,53 +148,21 @@ Second contrast. Many tools contain `get`; one tool's target contains
 - BM25F: `get` has a high `df` and a small IDF. `equipment` outranks it.
 
 Known remainder: BM25F does not map `AHU` to "air handling unit", and it does
-not stem `equipments` to `equipment`. Those misses can still cost a model
-turn. They are out of scope here.
+not stem `walls` to `wall`. Punctuation is normalized, but linguistic
+inflection and synonyms are not. Those misses can still cost a model turn.
 
-### 2. Copy tool annotations onto every search hit
+### 2. Keep annotations on the SDK tool declaration
 
-Add an optional `annotations` object on `SearchItem`, for `kind=tool` only.
-Copy it from `CatalogItem.Tool.Annotations`. Serialize with the Daemon source
-generator (`McpServerJsonContext`, camelCase), same names the SDK already
-emits for `tools/list`:
+`SearchAsync` returns ranked candidates (`Name`, `Description`, `ProcessId`,
+and `PrimitiveType`); it does not duplicate tool annotations into each hit.
+When a program needs safety metadata or argument details, `DescribeAsync`
+returns the cached SDK `Tool`, including annotations supplied by the host.
+Resources and resource templates have no tool annotations.
 
-```json
-"annotations": {
-  "title": "Mechanical equipment",
-  "readOnlyHint": true,
-  "destructiveHint": false,
-  "idempotentHint": true,
-  "openWorldHint": false
-}
-```
-
-Rules:
-
-- Include a property only when the host set it. Do not invent `false`.
-- Omit `annotations` when the tool has no annotation object, or when every
-  hint is unset and `title` is empty.
-- Put hints on `DescribeAsync`, not on `SearchAsync`. Pi's `searchTools` returns
-  name and description. `describeTool` returns the declaration. A program
-  that needs read versus write calls `DescribeAsync` in the same run.
-- Resources and resource templates have no tool annotations. `ReadAsync`
-  does not grow hints.
-
-`code_mode` is `Destructive=true` and `OpenWorld=true` on `tools/list`.
-Both hints describe the tool, not one call. A client approves the tool
-before it can read `code` or `readOnly`.
-
-`Destructive=true` because `InvokeAsync` can run a host tool that changes the
-model. The worst call is a write, so the hint is a write. `readOnly: true`
-is a runtime gate inside the Daemon. It does not flip this hint.
-
-`OpenWorld=true` because the answer depends on a live host process. The
-same `code` can return different elements after someone edits the model.
-The hint does not mean network access or a third-party package. The
-compile has neither.
-
-The model does not see these fields on an MCP search result. `DescribeAsync`
-returns them. The program branches on `ReadOnlyHint` before `InvokeAsync`.
-The outer tool stays one destructive `code_mode`.
+When `readOnly: true`, the Daemon rejects `InvokeAsync` unless the selected
+host tool has `ReadOnlyHint=true`. The top-level `code_mode` remains marked
+`Destructive=true` and `OpenWorld=true`: those annotations describe the
+program tool, not the individual host capability it may call.
 
 ### Vocabulary
 
@@ -290,7 +272,7 @@ syntax error.
 
 - The submitted source is the body of `RunAsync` on a `CatalogScript`
   subclass. `SearchAsync`, `DescribeAsync`, `InvokeAsync`, `ReadAsync`, and
-  `CancellationToken` are protected members. The model does not write the
+  `CancellationToken` are inherited `CatalogScript` members. The model does not write the
   class or the signature.
 - Emit into a collectible load context. Unload after the call.
 - No file, network, or process API. No NuGet. No resolver that could add
@@ -301,7 +283,7 @@ Infrastructure tools stay on `tools/list` and are not methods:
 
 | Method | Calls | Returns |
 |--------|--------|---------|
-| `SearchAsync` | BM25F over the in-memory index. Default limit 8. Default `primitiveType` is `tool`. | `Name`, `Description`, `ProcessId`, `PrimitiveType` |
+| `SearchAsync` | Coverage-aware BM25F over the in-memory index. Default limit 8. Default `primitiveType` is `tool`. Returns candidates, not an invocation decision. | `Name`, `Description`, `ProcessId`, `PrimitiveType` |
 | `DescribeAsync` | no pipe. Reads the cached tool. | SDK `Tool` |
 | `InvokeAsync` | resolves `(processId, tool, name)` then `CallToolPassthroughAsync` | that method's SDK `CallToolResult`, unchanged |
 | `ReadAsync` | resolves a resource or template, then the existing read path | SDK `ReadResourceResult`, unchanged |
@@ -521,12 +503,12 @@ stop in the Daemon instead of crossing into QuickJS.
    enough" reason does not.
 4. **Set `code_mode` to `Destructive=false`.** Rejected. Clients that
    only read `tools/list` would treat a write capability as a read.
-5. **Split `invoke_read` / `invoke_write`.** Rejected. It doubles the
-   envelope and still requires the client to pick the right tool from search
-   hints. The hints on `SearchItem` are the smaller contract.
-6. **Annotations only when `detail=schema`.** Rejected. That forces a second
-   search before a read/write decision, which is another model turn in the
-   loop this ADR is aimed at.
+5. **Split read and write into separate external tools.** Rejected. It doubles
+   the fixed envelope. `readOnly` is enforced inside `code_mode`, and the
+   program can inspect annotations through `DescribeAsync`.
+6. **Copy annotations onto every search result.** Rejected. It duplicates the
+   SDK declaration; `DescribeAsync` already returns the authoritative `Tool`
+   when a program needs annotations or the full schema.
 7. **Leave the program in the client (Pi only).** Rejected. It keeps Cursor
    on one MCP round trip per catalog call.
 8. **Keep `search_dynamic` and id-invoke beside `code_mode`.** Rejected.
@@ -575,13 +557,15 @@ Positive:
 - A paraphrased query that shares one real token with a capability remains
   ranked instead of vanishing.
 - Common tokens stop tying rare tokens.
-- Schema property names participate in rank, matching the postings that
-  already exist.
+- Input parameter names and the standard MCP schema metadata above participate
+  in rank. Output schema terms also help when a request describes the result
+  a capability returns.
 - A program can branch on `ReadOnlyHint` from `DescribeAsync` before
   `InvokeAsync`, in the same run.
 - Host parsers stay the source of hints. Search does not re-derive them.
-- Every MCP client, including Pi, spends two model turns on a multi-call
-  catalog workflow. Large host payloads stay in the Daemon.
+- A `code_mode` program can search, inspect declarations, invoke multiple host
+  tools, and return one projection. Intermediate host payloads can stay in the
+  Daemon; the number of model turns depends on the client and task.
 - The envelope drops `search_dynamic` and `invoke_dynamic`. The dynamic
   tool is `code_mode` with a single `code` field.
 
@@ -595,12 +579,14 @@ Tradeoffs:
   are corpus statistics. Two Daemons with different connected hosts can rank
   the same query differently. That is intended.
 - Very short catalogs make IDF coarse. With a handful of tools, BM25F is
-  close to a weighted tf. The cutoff removal still applies.
-- Hints are part of `DescribeAsync`, not `SearchAsync`. Prompts and
-  `docs/product/mcp.md` must stop teaching search-then-invoke in the
-  same change. The model no longer passes a `dci2.*` id.
-- `McpServerJsonContext` already lists `SearchItem`. The new nested record
-  must be part of that source-generated graph ([0031](0031-daemon-json-source-gen.md)).
+  close to weighted term frequency, and the coverage gate has fewer useful
+  corpus statistics.
+- Hints are part of `DescribeAsync`, not `SearchAsync`. The model inspects the
+  returned `Tool` before invocation; the product contract is maintained in
+  `docs/product/mcp.md`.
+- The wire contract and source-generated JSON remain covered by
+  [0031](0031-daemon-json-source-gen.md). Search-ranking details stay in this
+  decision rather than being duplicated in architecture docs.
 - `code_mode` remains a single destructive tool to MCP permission UI.
   `readOnly: true` is the enforced narrow path. There is no per-id approval.
 - The tool compiles on the request path. A cold Roslyn compile is slower
@@ -616,30 +602,12 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Implementation plan: [2026-10-07-run-csharp-bm25f](../plans/completed/2026-10-07-run-csharp-bm25f.md).
-  Do not start it until this ADR is accepted.
-- On acceptance, update `docs/product/mcp.md` and the revit/acad prompts
-  that teach search-then-invoke, in the same change as the code. Do not
-  copy this formula into `docs/architecture/`. Amend 0027's loop sentence:
-  the model calls `code_mode` with C#; search is inside that program.
-  Do not weaken the rule that host tools stay off `tools/list`.
-- 0039's status already points here as a proposed revision. On acceptance,
-  change that pointer from "not yet the rule" to a supersession of decision 9's
-  scoring bullet and alternative 5.
-- Proof for the implementation change: replace the half-cutoff scoring test;
-  add a case where filler tokens do not drop a one-token hit; add a case
-  where a high-df token loses to a low-df token; add a case where a
-  parameter-name token scores above 0; add a search-response test that
-  copies `ReadOnlyHint` onto `DescribeAsync` and omits hints when the host
-  tool has none. `SearchAsync` returns `Name`, `Description`, `ProcessId`,
-  and `PrimitiveType` only. `code_mode` stays `Destructive=true`. `McpEngine`
-  registers `code_mode` and does not register `search_dynamic` or
-  `invoke_dynamic`.
-- Proof for the program, separate from the ranker tests: a headless
-  `code_mode` whose `code` calls `SearchAsync`, `DescribeAsync`, and
-  `InvokeAsync` twice, and returns a projection while the host payloads stay
-  out of the tool result; a request that still passes `id` fails
-  validation; `readOnly: true` rejects a tool with no `ReadOnlyHint`;
-  source that contains `#r` fails as a syntax error, because no directive
-  resolver runs; a thrown body does not invent a rollback of the first
-  `InvokeAsync`.
+The C# `code_mode`, BM25F index, schema traversal, and relevance policy are
+implemented. Tool annotations remain on the SDK declaration returned by
+`DescribeAsync`; `readOnly` invocation enforcement is covered by Daemon tests.
+The live MCP workflow is documented in
+[`docs/agents/mcp-integration-test.md`](../agents/mcp-integration-test.md).
+
+For future semantic-retrieval work, see the **proposed evaluation only** in
+[0044](0044-hybrid-tool-retrieval.md). It does not supersede this accepted
+contract unless its evaluation gate is met and the ADR is accepted.
