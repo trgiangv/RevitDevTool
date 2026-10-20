@@ -3,14 +3,21 @@
  */
 
 import { useEffect } from "react"
-import { useDashboard } from "@/providers/dashboard-provider"
+import { toast } from "@/lib/toast"
 import { useBridge } from "@/providers/bridge-provider"
+import { useDashboard } from "@/providers/dashboard-provider"
+import { exportDashboardWorkbook } from "@/lib/export-workbook"
 
-export function useKeyboardShortcuts(
-  onRefresh: () => void,
-) {
-  const { filters, selectedIds, setSelectedIds, chartFilter, setChartFilter, filteredRows } =
-    useDashboard()
+export function useKeyboardShortcuts(onRefresh: () => void) {
+  const {
+    filters,
+    selectedIds,
+    setSelectedIds,
+    chartFilter,
+    setChartFilter,
+    filteredRows,
+    payload,
+  } = useDashboard()
   const bridge = useBridge()
 
   useEffect(() => {
@@ -29,7 +36,22 @@ export function useKeyboardShortcuts(
       }
       if (e.ctrlKey && e.key === "e") {
         e.preventDefault()
-        bridge.requestExport(filters)
+        void exportDashboardWorkbook(
+          {
+            rows: filteredRows,
+            filters,
+            warnings: payload?.warnings,
+          },
+          (filename, contentBase64) => bridge.saveWorkbook(filename, contentBase64),
+        )
+          .then((filename) => {
+            if (filename) toast.success("Exported", { description: filename })
+          })
+          .catch((err: unknown) => {
+            toast.error("Export failed", {
+              description: err instanceof Error ? err.message : "Unknown error",
+            })
+          })
         return
       }
       if (e.key === "Escape") {
@@ -42,5 +64,15 @@ export function useKeyboardShortcuts(
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)
-  }, [onRefresh, filters, selectedIds, setSelectedIds, chartFilter, setChartFilter, filteredRows, bridge])
+  }, [
+    onRefresh,
+    filters,
+    selectedIds,
+    setSelectedIds,
+    chartFilter,
+    setChartFilter,
+    bridge,
+    filteredRows,
+    payload,
+  ])
 }

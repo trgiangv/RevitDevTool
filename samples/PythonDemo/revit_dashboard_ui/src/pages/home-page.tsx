@@ -4,28 +4,22 @@
  */
 
 import { useMemo, useCallback } from "react"
-import { Banner, Card, Progress, Space, Tag, Typography } from "@douyinfe/semi-ui"
-import {
-  IconGridRectangle,
-  IconAlertTriangle,
-  IconInherit,
-  IconLayers,
-  IconFile,
-  IconTemplate,
-} from "@douyinfe/semi-icons"
+import { displayText } from "@/lib/text"
+import { Banner, Button, Card, Col, Progress, Row, Space, Tag, Typography } from "@douyinfe/semi-ui"
+import { AppWindow, Component, Cuboid, Layers, Shapes, TriangleAlert } from "lucide-react"
 import { useDashboard } from "@/providers/dashboard-provider"
 import { MetricCard } from "@/features/home/metric-card"
 import { DonutChart } from "@/components/charts/donut-chart"
 import { getSparklineData } from "@/lib/session-history"
 import type { PageId } from "@/components/layout/app-sidebar"
 
-const { Text } = Typography
+const { Text, Title } = Typography
 
 interface HomePageProps {
   onNavigate?: (page: PageId) => void
 }
 
-export function HomePage({ onNavigate }: HomePageProps) {
+export function HomePage({ onNavigate }: Readonly<HomePageProps>) {
   const { payload, filteredRows, chartFilter, setChartFilter } = useDashboard()
 
   const stats = useMemo(
@@ -93,8 +87,8 @@ export function HomePage({ onNavigate }: HomePageProps) {
     for (const row of filteredRows) {
       for (const field of checkFields) {
         total++
-        const val = row[field as keyof typeof row]
-        if (val && String(val).trim() !== "" && !String(val).startsWith("Unassigned")) {
+        const val = displayText(row[field as keyof typeof row])
+        if (val.trim() !== "" && !val.startsWith("Unassigned")) {
           filled++
         }
       }
@@ -107,236 +101,208 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const handleNavigateHealth = useCallback(() => onNavigate?.("health"), [onNavigate])
 
   return (
-    <div style={{ padding: 20 }}>
-      {/* Chart filter banner */}
+    <Space
+      vertical
+      spacing="medium"
+      style={{ padding: 20, width: "100%", boxSizing: "border-box", alignItems: "stretch" }}
+    >
       {chartFilter && (
         <Banner
           type="warning"
           fullMode={false}
           closeIcon={null}
-          style={{ marginBottom: 16, borderRadius: 8 }}
           description={
             <Space>
               <Text>
-                Chart filter: <Text strong>{chartFilter.field} = {chartFilter.key}</Text>
+                Chart filter:{" "}
+                <Text strong>
+                  {chartFilter.field} = {chartFilter.key}
+                </Text>
               </Text>
-              <button
-                onClick={() => setChartFilter(null)}
-                style={{
-                  background: "none",
-                  border: "1px solid var(--semi-color-border)",
-                  borderRadius: 4,
-                  padding: "2px 8px",
-                  cursor: "pointer",
-                  color: "var(--semi-color-text-1)",
-                  fontSize: 12,
-                }}
-              >
+              <Button size="small" theme="borderless" onClick={() => setChartFilter(null)}>
                 Clear
-              </button>
+              </Button>
             </Space>
           }
         />
       )}
 
-      {/* KPI Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: 12,
-          marginBottom: 20,
-        }}
-      >
-        <MetricCard
-          label="Total Elements"
-          value={stats.elements}
-          color="blue"
-          icon={<IconGridRectangle />}
-          sparklineData={getSparklineData("total_elements")}
-        />
-        <MetricCard
-          label="Warnings"
-          value={stats.warnings}
-          color="red"
-          icon={<IconAlertTriangle />}
-          sparklineData={getSparklineData("total_warnings")}
-        />
-        <MetricCard
-          label="Families"
-          value={stats.families}
-          color="violet"
-          icon={<IconInherit />}
-          sparklineData={getSparklineData("unique_families")}
-        />
-        <MetricCard
-          label="Views / Sheets"
-          value={stats.views + stats.sheets}
-          color="cyan"
-          icon={<IconFile />}
-          sparklineData={getSparklineData("total_views")}
-        />
-        <MetricCard
-          label="Categories"
-          value={stats.categories}
-          color="green"
-          icon={<IconTemplate />}
-          sparklineData={getSparklineData("unique_categories")}
-        />
-        <MetricCard
-          label="Levels"
-          value={stats.levels}
-          color="orange"
-          icon={<IconLayers />}
-          sparklineData={getSparklineData("unique_levels")}
-        />
-      </div>
+      <Row gutter={[12, 12]} style={{ width: "100%" }}>
+        <Col xs={24} sm={12} xl={4}>
+          <MetricCard
+            label="Total Elements"
+            value={stats.elements}
+            icon={<Cuboid size={16} />}
+            sparklineData={getSparklineData("total_elements")}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={4}>
+          <MetricCard
+            label="Warnings"
+            value={stats.warnings}
+            icon={<TriangleAlert size={16} />}
+            sparklineData={getSparklineData("total_warnings")}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={4}>
+          <MetricCard
+            label="Families"
+            value={stats.families}
+            icon={<Component size={16} />}
+            sparklineData={getSparklineData("unique_families")}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={4}>
+          <MetricCard
+            label="Views / Sheets"
+            value={stats.views + stats.sheets}
+            icon={<AppWindow size={16} />}
+            sparklineData={getSparklineData("total_views")}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={4}>
+          <MetricCard
+            label="Categories"
+            value={stats.categories}
+            icon={<Shapes size={16} />}
+            sparklineData={getSparklineData("unique_categories")}
+          />
+        </Col>
+        <Col xs={24} sm={12} xl={4}>
+          <MetricCard
+            label="Levels"
+            value={stats.levels}
+            icon={<Layers size={16} />}
+            sparklineData={getSparklineData("unique_levels")}
+          />
+        </Col>
+      </Row>
 
-      {/* Distribution Charts */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        <DonutChart
-          title="Category Distribution"
-          data={categoryData}
-          activeKey={chartFilter?.field === "category" ? chartFilter.key : null}
-          onSelect={(key) => {
-            if (chartFilter?.field === "category" && chartFilter.key === key) {
-              setChartFilter(null)
-            } else {
-              setChartFilter({ field: "category", key })
-            }
-          }}
-        />
-        <DonutChart
-          title="Level Distribution"
-          data={levelData}
-          activeKey={chartFilter?.field === "level" ? chartFilter.key : null}
-          onSelect={(key) => {
-            if (chartFilter?.field === "level" && chartFilter.key === key) {
-              setChartFilter(null)
-            } else {
-              setChartFilter({ field: "level", key })
-            }
-          }}
-        />
-      </div>
+      <Row gutter={[12, 12]} style={{ width: "100%" }}>
+        <Col span={12}>
+          <DonutChart
+            title="Category Distribution"
+            data={categoryData}
+            activeKey={chartFilter?.field === "category" ? chartFilter.key : null}
+            onSelect={(key) => {
+              if (chartFilter?.field === "category" && chartFilter.key === key) {
+                setChartFilter(null)
+              } else {
+                setChartFilter({ field: "category", key })
+              }
+            }}
+          />
+        </Col>
+        <Col span={12}>
+          <DonutChart
+            title="Level Distribution"
+            data={levelData}
+            activeKey={chartFilter?.field === "level" ? chartFilter.key : null}
+            onSelect={(key) => {
+              if (chartFilter?.field === "level" && chartFilter.key === key) {
+                setChartFilter(null)
+              } else {
+                setChartFilter({ field: "level", key })
+              }
+            }}
+          />
+        </Col>
+      </Row>
 
-      {/* Quick Overview Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-        {/* Warnings Summary */}
-        <Card
-          title={
-            <Space>
-              <IconAlertTriangle style={{ color: "var(--semi-color-warning)" }} />
-              <Text strong>Warnings</Text>
+      <Row gutter={[12, 12]} style={{ width: "100%" }}>
+        <Col span={8}>
+          <Card
+            title={
+              <Space>
+                <TriangleAlert size={16} style={{ color: "var(--semi-color-warning)" }} />
+                <Text strong>Warnings</Text>
+              </Space>
+            }
+          >
+            <Space style={{ width: "100%", justifyContent: "space-around" }}>
+              <Space vertical align="center">
+                <Title heading={3} type="danger">
+                  {warningSummary.critical}
+                </Title>
+                <Tag size="small" color="red">
+                  Critical
+                </Tag>
+              </Space>
+              <Space vertical align="center">
+                <Title heading={3} type="warning">
+                  {warningSummary.moderate}
+                </Title>
+                <Tag size="small" color="orange">
+                  Moderate
+                </Tag>
+              </Space>
+              <Space vertical align="center">
+                <Title heading={3} type="success">
+                  {warningSummary.info}
+                </Title>
+                <Tag size="small" color="green">
+                  Info
+                </Tag>
+              </Space>
             </Space>
-          }
-          headerStyle={{ padding: "10px 16px" }}
-          bodyStyle={{ padding: "12px 16px" }}
-        >
-          <div style={{ display: "flex", gap: 12, marginBottom: 10 }}>
-            <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: "rgba(255,77,79,0.08)", borderRadius: 6 }}>
-              <Text strong style={{ fontSize: 20, color: "var(--semi-color-danger)" }}>{warningSummary.critical}</Text>
-              <div><Tag size="small" color="red">Critical</Tag></div>
-            </div>
-            <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: "rgba(250,173,20,0.08)", borderRadius: 6 }}>
-              <Text strong style={{ fontSize: 20, color: "var(--semi-color-warning)" }}>{warningSummary.moderate}</Text>
-              <div><Tag size="small" color="orange">Moderate</Tag></div>
-            </div>
-            <div style={{ flex: 1, textAlign: "center", padding: "8px 4px", background: "rgba(82,196,26,0.08)", borderRadius: 6 }}>
-              <Text strong style={{ fontSize: 20, color: "var(--semi-color-success)" }}>{warningSummary.info}</Text>
-              <div><Tag size="small" color="green">Info</Tag></div>
-            </div>
-          </div>
-          {onNavigate && (
-            <button
-              onClick={handleNavigateHealth}
-              style={{
-                width: "100%",
-                background: "none",
-                border: "1px solid var(--semi-color-border)",
-                borderRadius: 6,
-                padding: "6px 12px",
-                cursor: "pointer",
-                color: "var(--semi-color-primary)",
-                fontSize: 12,
-              }}
-            >
-              View Details
-            </button>
-          )}
-        </Card>
-
-        {/* Top Families */}
-        <Card
-          title={<Text strong>Top Families</Text>}
-          headerStyle={{ padding: "10px 16px" }}
-          bodyStyle={{ padding: "8px 16px 12px" }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {topFamilies.map((f, i) => (
-              <div
-                key={f.name}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "16px 1fr 40px",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <Text type="tertiary" size="small" style={{ textAlign: "right" }}>
-                  {i + 1}.
-                </Text>
-                <div>
-                  <Text size="small" ellipsis={{ showTooltip: true }} style={{ maxWidth: 140, display: "block" }}>
-                    {f.name}
+            {onNavigate ? (
+              <Button block theme="light" onClick={handleNavigateHealth} style={{ marginTop: 12 }}>
+                View Details
+              </Button>
+            ) : null}
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card title={<Text strong>Top Families</Text>}>
+            <Space vertical spacing="tight" style={{ width: "100%" }}>
+              {topFamilies.map((f, i) => (
+                <Space key={f.name} style={{ width: "100%" }}>
+                  <Text type="tertiary" size="small">
+                    {i + 1}.
                   </Text>
-                  <Progress
-                    percent={Math.round((f.count / topFamilyMax) * 100)}
-                    showInfo={false}
-                    size="small"
-                    style={{ marginTop: 2 }}
-                  />
-                </div>
-                <Text strong size="small" style={{ textAlign: "right" }}>
-                  {f.count}
-                </Text>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Data Quality */}
-        <Card
-          title={<Text strong>Data Quality</Text>}
-          headerStyle={{ padding: "10px 16px" }}
-          bodyStyle={{ padding: "12px 16px" }}
-        >
-          <div style={{ textAlign: "center", marginBottom: 12 }}>
-            <div style={{ position: "relative", display: "inline-block" }}>
+                  <Space vertical spacing={2} style={{ flex: 1 }}>
+                    <Text size="small" ellipsis={{ showTooltip: true }}>
+                      {f.name}
+                    </Text>
+                    <Progress
+                      percent={Math.round((f.count / topFamilyMax) * 100)}
+                      showInfo={false}
+                      size="small"
+                    />
+                  </Space>
+                  <Text strong size="small">
+                    {f.count}
+                  </Text>
+                </Space>
+              ))}
+            </Space>
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card title={<Text strong>Data Quality</Text>}>
+            <Space vertical align="center" style={{ width: "100%" }}>
               <Progress
                 percent={dataQuality.score}
                 type="circle"
                 width={90}
-                strokeWidth={6}
                 stroke={(() => {
                   if (dataQuality.score >= 90) return "var(--semi-color-success)"
                   if (dataQuality.score >= 70) return "var(--semi-color-warning)"
                   return "var(--semi-color-danger)"
                 })()}
-                format={() => (
-                  <Text strong style={{ fontSize: 20 }}>{dataQuality.score}%</Text>
-                )}
+                format={() => <Text strong>{dataQuality.score}%</Text>}
               />
-            </div>
-          </div>
-          <Text type="tertiary" size="small" style={{ display: "block", textAlign: "center" }}>
-            {dataQuality.filled.toLocaleString()} / {dataQuality.total.toLocaleString()} fields filled
-          </Text>
-          <Text type="tertiary" size="small" style={{ display: "block", textAlign: "center", marginTop: 4 }}>
-            Checks: Category, Family, Type, Level
-          </Text>
-        </Card>
-      </div>
-    </div>
+              <Text type="tertiary" size="small">
+                {dataQuality.filled.toLocaleString()} / {dataQuality.total.toLocaleString()} fields
+                filled
+              </Text>
+              <Text type="tertiary" size="small">
+                Checks: Category, Family, Type, Level
+              </Text>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+    </Space>
   )
 }

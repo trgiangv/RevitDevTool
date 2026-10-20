@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useRef } from "react"
+import { displayText } from "@/lib/text"
 import { useBridge } from "@/providers/bridge-provider"
 import { assignGroupColors } from "@/lib/color-palette"
 import type { ElementRow } from "@/types"
@@ -29,7 +30,7 @@ export function useScheduleSync(
   useEffect(() => {
     if (!active) return
     return () => {
-      bridge.resetScheduleMode()
+      void bridge.resetScheduleMode()
     }
   }, [active, bridge])
 
@@ -42,9 +43,9 @@ export function useScheduleSync(
       const field = groupBy ?? "category"
 
       // Build group map: label -> element ids
-      const groupMap = new Map<string, number[]>()
+      const groupMap = new Map<string, string[]>()
       for (const row of filteredRows) {
-        const key = String((row as Record<string, unknown>)[field] ?? "Unknown")
+        const key = displayText((row as Record<string, unknown>)[field], "Unknown")
         const arr = groupMap.get(key) ?? []
         arr.push(row.element_id)
         groupMap.set(key, arr)
@@ -52,7 +53,7 @@ export function useScheduleSync(
 
       const groups = assignGroupColors(groupMap)
 
-      bridge.applyGroupOverrides(
+      void bridge.applyGroupOverrides(
         groups.map((g) => ({ element_ids: g.ids, color: g.color })),
         filteredRows.map((r) => r.element_id),
       )

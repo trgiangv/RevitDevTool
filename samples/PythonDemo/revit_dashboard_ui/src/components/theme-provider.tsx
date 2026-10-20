@@ -34,12 +34,18 @@ export function ThemeProvider({
   defaultTheme = "system",
   storageKey = "bim-dashboard-theme",
   ...props
-}: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(
+}: Readonly<ThemeProviderProps>) {
+  const [theme, setTheme] = useState<Theme>(
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
   )
 
   const resolvedTheme = useMemo(() => getResolvedTheme(theme), [theme])
+
+  if (typeof document !== "undefined") {
+    document.body.classList.add("semi-light-scrollbar")
+    if (resolvedTheme === "dark") document.body.setAttribute("theme-mode", "dark")
+    else document.body.removeAttribute("theme-mode")
+  }
 
   // Sync both Tailwind dark class AND Semi Design theme-mode attribute
   useEffect(() => {
@@ -49,6 +55,9 @@ export function ThemeProvider({
     // Tailwind dark class on <html>
     root.classList.remove("light", "dark")
     root.classList.add(resolvedTheme)
+
+    // Semi scrollbar tokens. The class styles this node and every scrolling descendant.
+    body.classList.add("semi-light-scrollbar")
 
     // Semi Design dark mode on <body>
     if (resolvedTheme === "dark") {
@@ -64,7 +73,7 @@ export function ThemeProvider({
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
     const handleChange = () => {
-      setThemeState((prev) => prev)
+      setTheme((prev) => prev)
     }
 
     mediaQuery.addEventListener("change", handleChange)
@@ -76,7 +85,7 @@ export function ThemeProvider({
       theme,
       setTheme: (newTheme: Theme) => {
         localStorage.setItem(storageKey, newTheme)
-        setThemeState(newTheme)
+        setTheme(newTheme)
       },
       resolvedTheme,
     }),

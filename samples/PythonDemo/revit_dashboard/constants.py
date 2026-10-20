@@ -1,23 +1,16 @@
-"""Single source of truth for schema, sentinel values, and configuration.
+# -*- coding: utf-8 -*-
+"""Sentinels and column names for collected element rows."""
 
-Every module references these constants — zero hardcoded strings in business logic.
-"""
-
-from dataclasses import dataclass
-
-import polars as pl
+from __future__ import division, print_function
 
 
-# ---------------------------------------------------------------------------
-# Sentinel values for missing data
-# ---------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class Sentinel:
+class Sentinel(object):
     """Missing-value placeholder for a data column."""
 
-    label: str
-    column: str
+    def __init__(self, label, column):
+        # type: (str, str) -> None
+        self.label = label  # type: str
+        self.column = column  # type: str
 
 
 MISSING_CATEGORY = Sentinel("Unassigned", "category")
@@ -27,7 +20,7 @@ MISSING_LEVEL = Sentinel("Unassigned", "level")
 MISSING_PHASE = Sentinel("Unassigned", "phase")
 MISSING_WORKSET = Sentinel("Unassigned", "workset")
 
-ALL_SENTINELS: tuple[Sentinel, ...] = (
+ALL_SENTINELS = (
     MISSING_CATEGORY,
     MISSING_FAMILY,
     MISSING_TYPE,
@@ -36,39 +29,34 @@ ALL_SENTINELS: tuple[Sentinel, ...] = (
     MISSING_WORKSET,
 )
 
-_SENTINEL_MAP: dict[str, Sentinel] = {s.column: s for s in ALL_SENTINELS}
+_SENTINEL_MAP = {}  # type: dict[str, Sentinel]
+for _sentinel in ALL_SENTINELS:
+    _SENTINEL_MAP[_sentinel.column] = _sentinel
 
 
-def sentinel_for(column: str) -> Sentinel:
+def sentinel_for(column):
+    # type: (str) -> Sentinel
     """Return the sentinel for *column*, or raise ``KeyError``."""
     return _SENTINEL_MAP[column]
 
 
-# ---------------------------------------------------------------------------
-# Column schema (drives DataFrame creation, frontend types, table columns)
-# ---------------------------------------------------------------------------
-
-COLUMN_SCHEMA: dict[str, pl.DataType] = {
-    "element_id": pl.Int64,
-    "unique_id": pl.String,
-    "name": pl.String,
-    "class_name": pl.String,
-    "category": pl.String,
-    "family": pl.String,
-    "type": pl.String,
-    "level": pl.String,
-    "phase": pl.String,
-    "workset": pl.String,
-    "is_view_specific": pl.Boolean,
-    "is_pinned": pl.Boolean,
-    "has_material_quantities": pl.Boolean,
+COLUMN_SCHEMA = {
+    "element_id": "str",
+    "unique_id": "str",
+    "name": "str",
+    "class_name": "str",
+    "category": "str",
+    "family": "str",
+    "type": "str",
+    "level": "str",
+    "phase": "str",
+    "workset": "str",
+    "is_view_specific": "bool",
+    "is_pinned": "bool",
+    "has_material_quantities": "bool",
 }
 
-# ---------------------------------------------------------------------------
-# Filterable columns — drives Python filter logic AND frontend FilterSidebar
-# ---------------------------------------------------------------------------
-
-FILTERABLE_COLUMNS: tuple[str, ...] = (
+FILTERABLE_COLUMNS = (
     "category",
     "family",
     "type",
@@ -77,20 +65,7 @@ FILTERABLE_COLUMNS: tuple[str, ...] = (
     "workset",
 )
 
-# ---------------------------------------------------------------------------
-# Extra parameters — user-configurable list of Revit parameter names to collect
-# ---------------------------------------------------------------------------
-
-EXTRA_PARAMETERS: list[str] = [
-    # Add parameter names here to include them as extra columns, e.g.:
-    # "Mark",
-    # "Comments",
-    # "Area",
-    # "Volume",
-]
-
-# ---------------------------------------------------------------------------
-# Payload schema version
-# ---------------------------------------------------------------------------
+# Extra Revit parameter names collected onto each row. Empty means none.
+EXTRA_PARAMETERS = []
 
 SCHEMA_VERSION = "2.0.0"

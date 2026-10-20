@@ -90,4 +90,4 @@ Reproduce the failure before collecting; cite log path + relevant lines in the r
 
 ## Frontend sample
 
-`samples/PythonDemo/revit_dashboard_ui/`: `npm run quality`
+`samples/PythonDemo/revit_dashboard_ui/`: `pnpm check`

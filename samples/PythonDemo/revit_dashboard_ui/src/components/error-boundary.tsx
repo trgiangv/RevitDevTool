@@ -1,8 +1,6 @@
 import { Component } from "react"
-import { Button, Card, Typography } from "@douyinfe/semi-ui"
-import { IconAlertTriangle } from "@douyinfe/semi-icons"
-
-const { Title, Text } = Typography
+import { Button, Empty } from "@douyinfe/semi-ui"
+import { TriangleAlert } from "lucide-react"
 
 interface Props {
   children: React.ReactNode
@@ -13,8 +11,8 @@ interface State {
   error: Error | null
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  constructor(props: Props) {
+export class ErrorBoundary extends Component<Readonly<Props>, State> {
+  constructor(props: Readonly<Props>) {
     super(props)
     this.state = { hasError: false, error: null }
   }
@@ -26,18 +24,14 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ display: "grid", placeItems: "center", minHeight: "100vh", padding: 32 }}>
-          <Card style={{ maxWidth: 480 }}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
-              <IconAlertTriangle size="extra-large" style={{ color: "var(--semi-color-danger)" }} />
-              <Title heading={4}>Something went wrong</Title>
-              <Text type="tertiary">{this.state.error?.message}</Text>
-              <Button onClick={() => this.setState({ hasError: false, error: null })}>
-                Try Again
-              </Button>
-            </div>
-          </Card>
-        </div>
+        <Empty
+          style={{ padding: 48 }}
+          image={<TriangleAlert size={48} />}
+          title="Something went wrong"
+          description={this.state.error?.message}
+        >
+          <Button onClick={() => this.setState({ hasError: false, error: null })}>Try Again</Button>
+        </Empty>
       )
     }
     return this.props.children

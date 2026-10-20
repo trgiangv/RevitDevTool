@@ -3,11 +3,11 @@ import { BridgeClient } from "@/lib/bridge-client"
 
 const BridgeContext = createContext<BridgeClient | null>(null)
 
-export function BridgeProvider({ children }: { children: React.ReactNode }) {
+export function BridgeProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const client = useMemo(() => new BridgeClient(), [])
 
   useEffect(() => {
-    return () => client.dispose()
+    client.start()
   }, [client])
 
   return <BridgeContext value={client}>{children}</BridgeContext>

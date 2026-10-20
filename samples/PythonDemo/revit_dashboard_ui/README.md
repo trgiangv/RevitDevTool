@@ -1,109 +1,34 @@
 # BIM Dashboard UI
 
-React + TypeScript dashboard for visualizing Revit BIM data.
+React page for the open Revit document. Revit hosts it in WebView2. A browser session uses mock data.
 
-## Development Modes
+## Browser
 
-### 1. Browser Mode (Mock Data)
-Run the dashboard in browser with mock data for UI development:
-
-```bash
-cd revit_dashboard_ui
-npm install
-npm run dev
+```powershell
+pnpm install
+pnpm dev
 ```
 
-Open http://localhost:5173 - the dashboard will use generated mock data.
+Open http://localhost:5173.
 
-### 2. Revit Dev Mode (Hot Reload)
-For developing with real Revit data and hot reload:
+## Revit
 
-1. Start the dev server:
-```bash
-npm run dev
+`DEV_MODE` in `revit_dashboard/presentation/host.py` selects the page:
+
+| Value | Page |
+|-------|------|
+| `True` | This dev server (`http://localhost:5173`) |
+| `False` | `dist/` from `pnpm build` |
+
+Run `commands/dashboard_ipy_script.py` from RevitDevTool. Close an already-open dashboard window before expecting a new host build.
+
+## Check
+
+```powershell
+pnpm check
+pnpm build
 ```
 
-2. In Python `webview_host.py`, set:
-```python
-DEV_MODE = True
-```
+## Stack
 
-3. Run the dashboard from Revit - it will connect to localhost:5173 and inject real Revit data.
-
-### 3. Production Mode (Built Files)
-For production deployment:
-
-1. Build the frontend:
-```bash
-npm run build
-```
-
-2. In Python `webview_host.py`, set:
-```python
-DEV_MODE = False
-```
-
-3. Run from Revit - it will use the built files from `dist/` folder.
-
-## Architecture
-
-```
-src/
-├── App.tsx                    # Main layout
-├── features/
-│   ├── charts/               # Bar charts
-│   ├── filters/              # Filter panel
-│   ├── header/               # Header with actions
-│   ├── selection/            # Selection toolbar
-│   ├── stats/                # Stats bar
-│   └── table/                # Data table
-├── lib/
-│   ├── bridge-client.ts      # WebView2 bridge (auto-detects mock/real mode)
-│   └── mock-data.ts          # Mock data generator
-├── providers/
-│   ├── bridge-provider.tsx   # Bridge context
-│   └── dashboard-provider.tsx # Dashboard state
-└── types/                    # TypeScript types
-```
-
-## Data Flow
-
-```
-┌─────────────────┐     ┌──────────────────┐
-│  Browser Mode   │     │   Revit Mode     │
-│  (Mock Data)    │     │  (Real Data)     │
-└────────┬────────┘     └────────┬─────────┘
-         │                       │
-         ▼                       ▼
-    ┌────────────────────────────────┐
-    │         BridgeClient           │
-    │  (auto-detects mode)           │
-    └────────────────┬───────────────┘
-                     │
-                     ▼
-    ┌────────────────────────────────┐
-    │       DashboardProvider        │
-    │  (payload, filters, selection) │
-    └────────────────┬───────────────┘
-                     │
-                     ▼
-    ┌────────────────────────────────┐
-    │         UI Components          │
-    └────────────────────────────────┘
-```
-
-## Scripts
-
-- `npm run dev` - Start dev server with hot reload
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-
-## Tech Stack
-
-- React 19 + TypeScript
-- Vite
-- TailwindCSS v4
-- shadcn/ui components
-- TanStack Table (virtualized)
-- Sonner (toasts)
+React 19, TypeScript, Vite+, Semi Design, Apache ECharts, and `lucide-react`. Product layout is in `design.md`.

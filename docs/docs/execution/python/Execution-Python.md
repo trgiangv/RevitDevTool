@@ -92,7 +92,7 @@ samples/PythonDemo/commands/
 Notable examples:
 
 - `data_analysis_script.py`
-- `dashboard_script.py`
+- `dashboard_ipy_script.py`
 - `debugpy_script.py`
 - `selectionfilter_script.py`
 - `visualization_curve_script.py`

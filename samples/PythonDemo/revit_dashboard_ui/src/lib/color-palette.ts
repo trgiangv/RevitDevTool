@@ -4,23 +4,23 @@
  */
 
 const PALETTE: [number, number, number][] = [
-  [66, 133, 244],   // blue
-  [234, 67, 53],    // red
-  [52, 168, 83],    // green
-  [251, 188, 4],    // yellow
-  [171, 71, 188],   // purple
-  [255, 112, 67],   // orange
-  [0, 172, 193],    // cyan
-  [124, 179, 66],   // lime
-  [233, 30, 99],    // pink
-  [63, 81, 181],    // indigo
-  [255, 167, 38],   // amber
-  [0, 150, 136],    // teal
+  [66, 133, 244], // blue
+  [234, 67, 53], // red
+  [52, 168, 83], // green
+  [251, 188, 4], // yellow
+  [171, 71, 188], // purple
+  [255, 112, 67], // orange
+  [0, 172, 193], // cyan
+  [124, 179, 66], // lime
+  [233, 30, 99], // pink
+  [63, 81, 181], // indigo
+  [255, 167, 38], // amber
+  [0, 150, 136], // teal
 ]
 
 export interface ColorGroup {
   label: string
-  ids: number[]
+  ids: string[]
   color: [number, number, number]
 }
 
@@ -28,9 +28,7 @@ export interface ColorGroup {
  * Assign deterministic colors to a map of group-label -> element-ids.
  * Colors cycle through PALETTE when there are more groups than colors.
  */
-export function assignGroupColors(
-  groups: Map<string, number[]>,
-): ColorGroup[] {
+export function assignGroupColors(groups: Map<string, string[]>): ColorGroup[] {
   return Array.from(groups.entries()).map(([label, ids], i) => ({
     label,
     ids,

@@ -1,32 +1,42 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import path from "node:path"
+import react from "@vitejs/plugin-react"
+import { defineConfig } from "vite-plus"
 
-// https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  // Production: relative paths for WebView2 local file loading
-  // Development: absolute paths for dev server
-  base: mode === 'production' ? "./" : "/",
-  
+  base: mode === "production" ? "./" : "/",
   plugins: [react()],
-  
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
+    alias: [
+      {
+        find: "@douyinfe/semi-ui/dist/css/semi.min.css",
+        replacement: path.resolve(
+          __dirname,
+          "node_modules/@douyinfe/semi-ui/dist/css/semi.min.css",
+        ),
+      },
+      { find: "@", replacement: path.resolve(__dirname, "./src") },
+    ],
   },
-
   server: {
     port: 5173,
-    host: true, // Allow external connections
+    host: true,
     cors: true,
   },
-
   build: {
     outDir: "dist",
-    sourcemap: mode !== 'production',
-    // Optimize for WebView2
-    target: "es2020",
-    minify: mode === 'production',
+    sourcemap: mode !== "production",
+    target: "es2022",
+    minify: mode === "production",
+  },
+  fmt: {
+    semi: false,
+    singleQuote: false,
+  },
+  lint: {
+    ignorePatterns: ["dist/**"],
+    options: {
+      typeAware: true,
+      typeCheck: true,
+    },
   },
 }))

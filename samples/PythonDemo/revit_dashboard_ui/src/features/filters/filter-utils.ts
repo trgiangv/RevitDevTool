@@ -8,9 +8,7 @@ export function applyFilters(rows: ElementRow[], filters: DashboardFilterState):
   const search = (filters.search ?? "").trim().toLowerCase()
   return rows.filter(
     (row) =>
-      passesIncludes(row, filters) &&
-      passesExcludes(row, filters) &&
-      matchesSearch(row, search),
+      passesIncludes(row, filters) && passesExcludes(row, filters) && matchesSearch(row, search),
   )
 }
 
@@ -38,7 +36,5 @@ function matchesSearch(row: ElementRow, search: string): boolean {
 
 /** Format column key to display label: "element_id" → "Element Id" */
 export function formatColumnHeader(key: string): string {
-  return key
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+  return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 }

@@ -5,21 +5,26 @@
  */
 
 import { useMemo, useState } from "react"
-import { Button, Card, Collapse, Progress, Space, Tag, Tooltip, Typography } from "@douyinfe/semi-ui"
 import {
-  IconAlertTriangle,
-  IconEyeOpened,
-  IconTickCircle,
-} from "@douyinfe/semi-icons"
+  Button,
+  Card,
+  Collapse,
+  Progress,
+  Space,
+  Tag,
+  Tooltip,
+  Typography,
+} from "@douyinfe/semi-ui"
+import { CircleCheck, Eye, TriangleAlert } from "lucide-react"
 import type { WarningItem } from "@/types"
 
 const { Text } = Typography
 
 interface WarningSeverityMatrixProps {
   warnings: WarningItem[]
-  onIsolateWarningElements: (elementIds: number[]) => void
-  onSelectElements?: (elementIds: number[]) => void
-  onColorOverride?: (elementIds: number[], color: [number, number, number]) => void
+  onIsolateWarningElements: (elementIds: string[]) => void
+  onSelectElements?: (elementIds: string[]) => void
+  onColorOverride?: (elementIds: string[], color: [number, number, number]) => void
 }
 
 const SEVERITY_CONFIG = {
@@ -48,7 +53,7 @@ export function WarningSeverityMatrix({
   onIsolateWarningElements,
   onSelectElements,
   onColorOverride,
-}: WarningSeverityMatrixProps) {
+}: Readonly<WarningSeverityMatrixProps>) {
   const [expandedSeverity, setExpandedSeverity] = useState<string[]>(["critical"])
 
   const grouped = useMemo(() => {
@@ -67,7 +72,7 @@ export function WarningSeverityMatrix({
 
   // Get all element IDs for a severity group
   const getElementIds = (severity: WarningItem["severity"]) => {
-    const ids = new Set<number>()
+    const ids = new Set<string>()
     for (const w of grouped[severity]) {
       for (const id of w.element_ids) ids.add(id)
     }
@@ -78,7 +83,7 @@ export function WarningSeverityMatrix({
     <Card
       title={
         <Space>
-          <IconAlertTriangle style={{ color: "var(--semi-color-warning)" }} />
+          <TriangleAlert size={16} style={{ color: "var(--semi-color-warning)" }} />
           <Text strong>Warning Severity Matrix</Text>
           <Tag size="small">{total} total</Tag>
         </Space>
@@ -103,9 +108,13 @@ export function WarningSeverityMatrix({
                 textAlign: "center",
               }}
             >
-              <Text strong style={{ fontSize: 20 }}>{count}</Text>
+              <Text strong style={{ fontSize: 20 }}>
+                {count}
+              </Text>
               <div>
-                <Tag size="small" color={config.color}>{config.label}</Tag>
+                <Tag size="small" color={config.color}>
+                  {config.label}
+                </Tag>
               </div>
               <Progress
                 percent={pct}
@@ -124,7 +133,10 @@ export function WarningSeverityMatrix({
       </div>
 
       {/* Detail list */}
-      <Collapse activeKey={expandedSeverity} onChange={(keys) => setExpandedSeverity(keys as string[])}>
+      <Collapse
+        activeKey={expandedSeverity}
+        onChange={(keys) => setExpandedSeverity(keys as string[])}
+      >
         {(["critical", "moderate", "info"] as const).map((sev) => {
           const config = SEVERITY_CONFIG[sev]
           const items = grouped[sev]
@@ -138,7 +150,9 @@ export function WarningSeverityMatrix({
               itemKey={sev}
               header={
                 <Space>
-                  <Tag color={config.color} size="small">{config.label}</Tag>
+                  <Tag color={config.color} size="small">
+                    {config.label}
+                  </Tag>
                   <Text size="small">{items.length} warnings</Text>
                 </Space>
               }
@@ -150,7 +164,7 @@ export function WarningSeverityMatrix({
                       <Button
                         size="small"
                         theme="borderless"
-                        icon={<IconTickCircle size="small" />}
+                        icon={<CircleCheck size={14} />}
                         onClick={(e) => {
                           e.stopPropagation()
                           onSelectElements(sevElementIds)
@@ -187,7 +201,7 @@ export function WarningSeverityMatrix({
                     <Button
                       size="small"
                       theme="borderless"
-                      icon={<IconEyeOpened size="small" />}
+                      icon={<Eye size={14} />}
                       onClick={(e) => {
                         e.stopPropagation()
                         onIsolateWarningElements(sevElementIds)
@@ -199,35 +213,37 @@ export function WarningSeverityMatrix({
             >
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {items.slice(0, 20).map((w) => (
-                  <div
+                  <button
                     key={w.id}
-                    role="button"
-                    tabIndex={0}
+                    type="button"
                     onClick={() => onIsolateWarningElements(w.element_ids)}
-                    onKeyDown={(e) => { if (e.key === "Enter") onIsolateWarningElements(w.element_ids) }}
                     style={{
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
+                      width: "100%",
                       padding: "4px 8px",
+                      border: "none",
                       borderRadius: 4,
                       background: "var(--semi-color-fill-0)",
+                      color: "inherit",
+                      font: "inherit",
+                      textAlign: "left",
                       cursor: "pointer",
-                      transition: "background 0.15s",
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "var(--semi-color-fill-1)"
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = "var(--semi-color-fill-0)"
                     }}
                     title={`Click to isolate ${w.element_ids.length} elements in Revit`}
                   >
-                    <IconEyeOpened size="extra-small" style={{ color: "var(--semi-color-text-3)", flexShrink: 0 }} />
-                    <Tag size="small" color="grey">{w.category}</Tag>
-                    <Text size="small" style={{ flex: 1 }}>{w.description}</Text>
-                    <Text type="tertiary" size="small">{w.element_ids.length} elem</Text>
-                  </div>
+                    <Eye size={12} style={{ color: "var(--semi-color-text-3)", flexShrink: 0 }} />
+                    <Tag size="small" color="grey">
+                      {w.category}
+                    </Tag>
+                    <Text size="small" style={{ flex: 1 }}>
+                      {w.description}
+                    </Text>
+                    <Text type="tertiary" size="small">
+                      {w.element_ids.length} elem
+                    </Text>
+                  </button>
                 ))}
                 {items.length > 20 && (
                   <Text type="tertiary" size="small" style={{ textAlign: "center", padding: 4 }}>

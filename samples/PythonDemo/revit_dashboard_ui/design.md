@@ -1,150 +1,144 @@
-Dưới đây là bản thiết kế chi tiết (Specification) dành cho AI Agent. Tài liệu này coi Dashboard là một  **lớp áo giao diện (UI Layer) cao cấp hơn cho dữ liệu gốc của Revit** , tập trung hoàn toàn vào việc khai thác và tương tác với dữ liệu có sẵn trong file `.rvt` mà không cần xử lý phức tạp bên ngoài.
+This specification treats the dashboard as a UI layer over the open Revit model. It reads elements, parameters, warnings, and views that already exist in the `.rvt` file. It does not invent a second model or run analysis outside Revit.
 
----
+# Product specification: Revit Model Insight Dashboard
 
-# PRODUCT SPECIFICATION: REVIT MODEL INSIGHT DASHBOARD
+**Concept:** Revit UI 2.0. Turn the raw contents of the open file into something a manager can scan and act on.
 
-**Concept:** "Revit UI 2.0" - Biến dữ liệu thô khan hiếm thành thông tin điều hành.
+**Tech stack:** React, TypeScript, Semi Design, Vite+, Apache ECharts. Icons come from `lucide-react`.
 
-**Tech Stack:** React + Semi Design + Recharts/G2Plot (Vyssuals Style).
+**Scope:** The open Revit document: elements, parameters, warnings, views, and sheets.
 
-**Scope:** Pure Revit Data (Elements, Parameters, Warnings, Views).
+## 1. Project Pulse
 
----
+The home screen. A manager should see the size and condition of the current file without opening a schedule.
 
-## I. MODULE 1: PROJECT PULSE (TỔNG QUAN DỰ ÁN)
+### 1.1 Big-number cards
 
-*Màn hình Home - Nơi Manager nhìn thấy ngay quy mô và trạng thái của file hiện hành.*
+Show the few counts that describe the file:
 
-### 1. The "Big Numbers" Cards (Thẻ chỉ số lõi)
+- Total elements
+- Total warnings
+- Loaded families
+- Views and sheets
+- Categories
+- Levels
 
-* **Tính năng:** Hiển thị 4-6 chỉ số quan trọng nhất của file.
-  * Total Elements (Tổng số cấu kiện).
-  * Total Warnings (Tổng cảnh báo).
-  * Total Families loaded.
-  * Total Views/Sheets.
-* **Mục đích:** Nắm bắt nhanh quy mô dự án và độ "nặng" của file.
-* **UI/UX (Semi Design):**
-  * Sử dụng component `Statistic` hoặc `Card`.
-  * Font số (Typography) cực lớn (48px+), đậm, màu trắng trên nền tối.
-  * Có Sparkline (biểu đồ đường nhỏ) bên dưới thể hiện sự thay đổi so với lần mở file trước (nếu có lưu cache session).
+The number is the content. Use a Semi `Card` with large `Typography` (48px or larger). A sparkline under the number shows how that count moved across earlier sessions of this dashboard, when session history exists.
 
-### 2. Category Distribution Donut (Phân bổ danh mục)
+| Card           | Lucide icon     | Why this icon                              |
+| -------------- | --------------- | ------------------------------------------ |
+| Total elements | `Cuboid`        | A placed 3D element, not a layout grid.    |
+| Warnings       | `TriangleAlert` | The same mark Revit uses for a warning.    |
+| Families       | `Component`     | A family is a reusable component.          |
+| Views / sheets | `AppWindow`     | A view is a window onto the model.         |
+| Categories     | `Shapes`        | Distinct kinds sitting next to each other. |
+| Levels         | `Layers`        | Levels stack through the building.         |
 
-* **Tính năng:** Biểu đồ vành khuyên (Donut Chart) thể hiện tỉ trọng các Category chính (Ví dụ: 40% Wall, 20% Floor, 10% Window...).
-* **Mục đích:** Biết được mô hình đang tập trung vào hạng mục nào (Kết cấu, Kiến trúc hay Nội thất).
-* **Tương tác:**
-  * **Hover:** Hiển thị số lượng tuyệt đối và % chiếm dụng.
-  * **Click:** Tự động Filter toàn bộ Dashboard để chỉ hiển thị dữ liệu của Category đó.
+### 1.2 Category distribution
 
----
+A donut of the main categories (for example walls, floors, windows). It answers whether the model is mostly structure, architecture, or furniture.
 
-## II. MODULE 2: VISUAL INVENTORY (KIỂM KÊ TRỰC QUAN)
+- Hover shows the absolute count and the share.
+- Click filters the rest of the dashboard to that category.
+- Click the same slice again to clear the filter.
 
-*Thay thế Project Browser dạng cây thư mục nhàm chán bằng hình ảnh dữ liệu.*
+## 2. Visual inventory
 
-### 3. Spatial Treemap (Bản đồ nhiệt không gian)
+Replace the tree-shaped Project Browser with a picture of what is actually placed.
 
-* **Tính năng:** Biểu đồ Treemap (các hình chữ nhật lồng nhau).
-  * Cấp 1 (Hình lớn): Level (Tầng).
-  * Cấp 2 (Hình nhỏ bên trong): Category (Loại đối tượng).
-  * Kích thước hình chữ nhật: Dựa trên `Volume` (Thể tích) hoặc `Count` (Số lượng).
-* **Mục đích:** Nhìn thấy ngay tầng nào đang có nhiều bê tông nhất, hoặc tầng nào đang quá tải đối tượng.
-* **Tương tác Bi-directional:** Click vào ô "Level 1 - Walls" trên biểu đồ -> Revit lập tức thực hiện lệnh `Isolate Category` cho Tường tại Tầng 1 trong 3D View.
+### 2.1 Spatial treemap
 
-### 4. Family & Type Explorer (Trình khám phá thư viện)
+Nested rectangles:
 
-* **Tính năng:** Danh sách dạng lưới (Grid) hiển thị tên các Family đang dùng.
-* **Mục đích:** Kiểm soát việc sử dụng Family (tránh việc dùng sai Family hoặc Family rác).
-* **UI/UX:**
-  * Hiển thị tên Family + Số lượng Instance đang đặt.
-  * Sắp xếp theo: Nhiều nhất -> Ít nhất.
+- Outer cell: level
+- Inner cell: category
+- Area: instance count
 
----
+Click a "Level 1 / Walls" cell and Revit isolates that category on that level in the active view.
 
-## III. MODULE 3: MODEL HEALTH & HYGIENE (SỨC KHỎE MÔ HÌNH)
+### 2.2 Family and type explorer
 
-*Nâng cấp hộp thoại "Warnings" của Revit thành công cụ quản lý chất lượng.*
+A list of families in use, with the instance count beside each name, sorted from most used to least used. The point is to spot the wrong family or a family that should not be loaded.
 
-### 5. Warning Severity Matrix (Ma trận cảnh báo)
+## 3. Model health
 
-* **Tính năng:** Phân loại cảnh báo Revit thành 3 nhóm màu:
-  * 🔴 **Critical:** (Trùng lặp, Room not enclosed, Axis off slightly).
-  * 🟡 **Moderate:** (Tag không gắn vào đối tượng, Join lỗi).
-  * 🟢 **Info:** (Thông báo thông thường).
-* **Mục đích:** Giúp Manager biết đâu là lỗi cần sửa gấp, đâu là lỗi có thể bỏ qua.
-* **Tương tác:** Toggle nút "Show Isolated" -> Revit tự động tạo 1 3D View mới chỉ chứa các đối tượng bị lỗi đỏ.
+The Revit Warnings dialog, sorted so the urgent items are obvious.
 
-### 6. "Heavy" Elements Tracker (Theo dõi đối tượng nặng)
+### 3.1 Warning severity
 
-* **Tính năng:** Liệt kê Top 10 Family có nhiều đa giác nhất (Polygon count - nếu trích xuất được) hoặc có kích thước file lớn nhất.
-* **Mục đích:** Tối ưu hóa hiệu năng file Revit.
-* **UI/UX:** Bảng xếp hạng (Leaderboard) đơn giản.
+Group each warning into one of three bands:
 
----
+- Critical: duplicates, rooms that are not enclosed, elements slightly off axis.
+- Moderate: tags that miss their target, failed joins.
+- Info: everything else.
 
-## IV. MODULE 4: SMART SCHEDULE (BẢNG THỐNG KÊ 2.0)
+"Show isolated" creates a view that contains only the elements in the chosen band.
 
-*Phiên bản nâng cấp của Revit Schedule với trải nghiệm Excel.*
+### 3.2 Heavy elements
 
-### 7. Interactive Data Grid (Lưới dữ liệu tương tác)
+A short ranked list of the families with the most instances. The point is to see which families dominate the file.
 
-* **Tính năng:** Bảng dữ liệu (Table) load toàn bộ tham số (Parameter) của Category đang chọn.
-* **Mục đích:** Xem chi tiết thông tin "I" (Information) của BIM.
-* **UI/UX (Semi Design Table):**
-  * **Sticky Header:** Luôn hiện tên cột khi cuộn.
-  * **Group by:** Kéo thả tên cột để nhóm (VD: Nhóm theo `Base Constraint`).
-  * **Search:** Tìm kiếm text bất kỳ trong bảng (nhanh hơn Revit Find rất nhiều).
+## 4. Smart schedule
 
-### 8. Quick Parameter Auditor (Kiểm tra nhanh tham số)
+A Revit schedule with an Excel-like grid.
 
-* **Tính năng:** Cột trạng thái kiểm tra dữ liệu trống (Null/Empty Check).
-* **Mục đích:** Đảm bảo các trường thông tin bắt buộc (như `Mark`, `Type Mark`, `Comments`) đã được điền.
-* **Trực quan hóa:** Các ô trống sẽ được tô nền đỏ nhạt (Light Red Background) để dễ nhận diện.
+### 4.1 Interactive data grid
 
----
+A Semi `Table` of the parameters for the current rows.
 
-## V. UX & INTERACTION BEHAVIORS (HÀNH VI TƯƠNG TÁC)
+- The header stays visible while the body scrolls.
+- Grouping follows the active group field, such as level or category.
+- Search matches any text cell. It is the fast path compared with Revit's Find.
 
-*Quy định cách Dashboard giao tiếp với người dùng và Revit.*
+### 4.2 Parameter auditor
 
-### 9. Contextual "Ghost" Mode (Chế độ bóng ma)
+Empty required values (`Mark`, `Type Mark`, `Comments`, and any other empty text cell) use a light danger background so a missing value is visible without reading every cell.
 
-* **Hành vi:** Khi người dùng chọn một đối tượng **trong Revit** (Canvas):
-  * Dashboard tự động chuyển sang trạng thái "Details".
-  * Hiển thị Card thông tin riêng của đối tượng đó (ID, Level, Offset, Top/Bottom Constraint).
-* **Mục đích:** Không cần tìm kiếm, thông tin tự động "bay" vào Dashboard theo thao tác chuột của người dùng.
+## 5. Interaction with Revit
 
-### 10. Bulk Selection Sync (Đồng bộ chọn hàng loạt)
+### 5.1 Ghost selection
 
-* **Hành vi:**
-  1. User dùng bộ lọc trên Dashboard: "Chọn tất cả Cửa đi có chiều rộng < 900mm".
-  2. Dashboard hiển thị: "Đã tìm thấy 45 đối tượng".
-  3. User nhấn nút:  **"Select in Revit"** .
-  4. Revit: Highlight xanh 45 cái cửa đó để user có thể thực hiện lệnh xóa/thay type hàng loạt.
+When the user selects an element in the Revit canvas, the dashboard opens that element's detail: id, level, and the parameters on the element. The user does not search for the element they already picked.
 
-### 11. Snapshot & Export (Lưu vết)
+### 5.2 Bulk selection
 
-* **Tính năng:** Nút "Export Data".
-* **Hành vi:** Xuất dữ liệu đang hiển thị trên Table ra file Excel (.xlsx) hoặc CSV ngay lập tức mà không cần qua hộp thoại Export Schedule rườm rà của Revit.
+1. Filter on the dashboard, for example every door whose width is under 900 mm.
+2. The page states how many elements matched.
+3. "Select in Revit" sends those ids to the Revit selection so the user can delete or change type in one step.
 
----
+### 5.3 Export
 
-## VI. BỐ CỤC LAYOUT (WIREFRAME GUIDE)
+"Export" opens the dashboard window's Save dialog and writes the rows currently on screen to `.xlsx`. It does not download through the browser and it does not open Revit's schedule-export dialog.
 
-1. **Sidebar (Trái - 50px):**
-   * Icon Menu: [Home] | [Inventory] | [Health] | [Schedule] | [Settings].
-   * Collapsible (Có thể thu gọn).
-2. **Top Bar (Trên - 40px):**
-   * Breadcrumb: `Model Name > Current View`.
-   * Global Filter: `Level Select`, `Phase Select`.
-   * Action Buttons: `Refresh Data`, `Sync Selection`.
-3. **Main Content (Giữa):**
-   * Sử dụng Grid Layout (Lưới).
-   * Các Widget có thể thay đổi kích thước (Resizable).
-4. **Properties Panel (Phải - Tùy chọn):**
-   * Slide-over panel (Trượt từ phải sang) khi click vào chi tiết 1 đối tượng.
+## 6. Layout
 
----
+1. **Sidebar, left.** Semi `Layout.Sider` and `Nav`, collapsed to an icon rail. The collapse control is Nav's `collapseButton`.
+2. **Top bar.** Semi `Layout.Header` with `Breadcrumb`: model name, page, current view. Actions: refresh the snapshot, export, and switch light or dark.
+3. **Main area.** Semi `Layout.Content`. Cards use `Row` and `Col`. Charts and the schedule table sit in that area.
+4. **Properties, right.** Semi `SideSheet` with `mask={false}`, so the page stays usable. It opens when an element is selected. Parameter groups use `Collapse` and `Descriptions`.
 
-Đây là bản thiết kế chức năng thuần túy (Functional Spec), tập trung hoàn toàn vào việc hiển thị và tương tác lại với dữ liệu Revit gốc. Bạn có thể đưa nội dung này cho AI Agent để bắt đầu code.
+### Icons
+
+Use one Lucide icon per action. Pick the symbol for the Revit noun, not a generic grid, shield, or list.
+
+| Place              | Action              | Lucide icon            |
+| ------------------ | ------------------- | ---------------------- |
+| Sidebar            | Project Pulse       | `Gauge`                |
+| Sidebar            | Inventory           | `Boxes`                |
+| Sidebar            | Model Health        | `HeartPulse`           |
+| Sidebar            | Schedule            | `Table2`               |
+| Sidebar            | Settings            | `Settings`             |
+| Sidebar            | Collapse / expand   | Nav `collapseButton`   |
+| Top bar            | Refresh snapshot    | `RefreshCw`            |
+| Top bar            | Export workbook     | `FileDown`             |
+| Top bar            | Light theme         | `Sun`                  |
+| Top bar            | Dark theme          | `Moon`                 |
+| Search fields      | Find text           | `Search`               |
+| Schedule           | Column filter       | `Filter`               |
+| Schedule           | Clear filters       | `X`                    |
+| Schedule or health | Isolate in Revit    | `Eye`                  |
+| Schedule           | Hide from the grid  | `EyeOff`               |
+| Properties         | Close               | SideSheet close button |
+| Properties         | Copy a value        | `Copy`                 |
+| Properties         | Read-only parameter | `Lock`                 |
+| Failure            | Uncaught UI error   | `TriangleAlert`        |

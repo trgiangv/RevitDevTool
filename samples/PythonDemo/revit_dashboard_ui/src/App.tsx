@@ -13,11 +13,12 @@
  */
 
 import { useEffect, useState, useCallback } from "react"
-import { toast } from "sonner"
-import { Spin } from "@douyinfe/semi-ui"
-import { useDashboard } from "@/providers/dashboard-provider"
+import { toast } from "@/lib/toast"
+import { Banner, Layout, Spin } from "@douyinfe/semi-ui"
 import { useBridge } from "@/providers/bridge-provider"
+import { useDashboard } from "@/providers/dashboard-provider"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
+import { exportDashboardWorkbook } from "@/lib/export-workbook"
 import { AppSidebar, type PageId } from "@/components/layout/app-sidebar"
 import { TopBar } from "@/components/layout/top-bar"
 import { PropertiesPanel } from "@/components/layout/properties-panel"
@@ -30,6 +31,7 @@ import { SettingsPage } from "@/pages/settings-page"
 function DashboardContent() {
   const {
     payload,
+    loadError,
     refreshData,
     filteredRows,
     allRows,
@@ -43,17 +45,6 @@ function DashboardContent() {
   const [activePage, setActivePage] = useState<PageId>("home")
   const [propertiesVisible, setPropertiesVisible] = useState(false)
 
-  // Listen for export results
-  useEffect(() => {
-    const onExport = (event: Event) => {
-      const d = (event as CustomEvent<{ ok: boolean; path?: string; error?: string }>).detail
-      if (d?.ok) toast.success("Exported", { description: d.path })
-      else toast.error("Export failed", { description: d?.error ?? "Unknown error" })
-    }
-    window.addEventListener("bim-export-result", onExport)
-    return () => window.removeEventListener("bim-export-result", onExport)
-  }, [])
-
   // Open properties panel when element is selected (Ghost Mode)
   useEffect(() => {
     if (propertiesElement) {
@@ -66,20 +57,53 @@ function DashboardContent() {
   useKeyboardShortcuts(refreshData)
 
   const handleExport = useCallback(() => {
-    bridge.requestExport(filters)
-  }, [bridge, filters])
+    void exportDashboardWorkbook(
+      {
+        rows: filteredRows,
+        filters,
+        warnings: payload?.warnings,
+      },
+      (filename, contentBase64) => bridge.saveWorkbook(filename, contentBase64),
+    )
+      .then((filename) => {
+        if (filename) toast.success("Exported", { description: filename })
+      })
+      .catch((err: unknown) => {
+        toast.error("Export failed", {
+          description: err instanceof Error ? err.message : "Unknown error",
+        })
+      })
+  }, [bridge, filteredRows, filters, payload])
 
   const handleCloseProperties = useCallback(() => {
     setPropertiesVisible(false)
     setPropertiesElement(null)
   }, [setPropertiesElement])
 
-  // Loading state
+  const { Header, Sider, Content } = Layout
+
   if (!payload) {
     return (
-      <div style={{ height: "100vh", display: "grid", placeItems: "center" }}>
-        <Spin size="large" tip="Loading BIM data..." />
-      </div>
+      <Layout style={{ height: "100vh" }}>
+        <Content>
+          {loadError ? (
+            <div
+              style={{
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Banner type="danger" fullMode={false} closeIcon={null} description={loadError} />
+            </div>
+          ) : (
+            <Spin size="large" tip="Loading BIM data..." style={{ width: "100%", height: "100%" }}>
+              <div style={{ height: "100vh" }} />
+            </Spin>
+          )}
+        </Content>
+      </Layout>
     )
   }
 
@@ -101,42 +125,30 @@ function DashboardContent() {
   }
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Top Bar */}
-      <TopBar
-        activePage={activePage}
-        modelInfo={payload.model_info}
-        elementCount={filteredRows.length}
-        totalCount={allRows.length}
-        isRefreshing={isRefreshing}
-        onRefresh={refreshData}
-        onExport={handleExport}
-      />
-
-      {/* Body: Sidebar + Content */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-        {/* Navigation Sidebar */}
+    <Layout style={{ height: "100vh" }}>
+      <Sider>
         <AppSidebar activePage={activePage} onPageChange={setActivePage} />
-
-        {/* Main Content */}
-        <div
-          style={{
-            flex: 1,
-            overflow: "auto",
-            backgroundColor: "var(--semi-color-bg-0)",
-          }}
-        >
-          {renderPage()}
-        </div>
-      </div>
-
-      {/* Properties Panel (Ghost Mode) */}
+      </Sider>
+      <Layout>
+        <Header>
+          <TopBar
+            activePage={activePage}
+            modelInfo={payload.model_info}
+            elementCount={filteredRows.length}
+            totalCount={allRows.length}
+            isRefreshing={isRefreshing}
+            onRefresh={refreshData}
+            onExport={handleExport}
+          />
+        </Header>
+        <Content style={{ overflow: "auto" }}>{renderPage()}</Content>
+      </Layout>
       <PropertiesPanel
         element={propertiesElement}
         visible={propertiesVisible}
         onClose={handleCloseProperties}
       />
-    </div>
+    </Layout>
   )
 }
 

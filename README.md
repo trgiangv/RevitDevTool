@@ -245,7 +245,7 @@ print(f"Found {walls.GetElementCount()} walls")
 ## Python
 **[samples/PythonDemo/](samples/PythonDemo)**
 
-- `dashboard_script.py` — Production BIM dashboard (WebView2 + React)
+- `dashboard_ipy_script.py` — BIM dashboard (WebView2 + React)
 - `data_analysis_script.py` — Polars data analysis
 - `visualization_curve_script.py` — 3D geometry rendering
 - `logging_format_script.py` — Log formatting examples

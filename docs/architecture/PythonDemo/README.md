@@ -2,7 +2,7 @@
 
 `samples/PythonDemo/` demonstrates the Python runtime, PEP 723 dependency resolution, logging, visualization, WebView2 dashboard patterns, and Python MCP toolsets.
 
-Last updated: 2026-09-17
+Last updated: 2026-10-20
 
 ---
 
@@ -25,8 +25,8 @@ Last updated: 2026-09-17
 flowchart TB
     Commands["commands/*_script.py"]
     Runtime["DevTools.Execution Python runtime\nhost-attach uv / owned pixi / pip"]
-    Dashboard["revit_dashboard/\ncollector, analytics, export, WebView bridge"]
-    UI["revit_dashboard_ui/\nReact + TypeScript + Vite"]
+    Dashboard["revit_dashboard/\ncollector, commands, WebView host"]
+    UI["revit_dashboard_ui/\nReact + TypeScript + Vite+"]
     MCP["mcp_toolset / mcp_acad_toolset\nPython MCP tools"]
     TestModule["test_module/\nimport/dependency samples"]
     Logging["Logging monitor"]
@@ -49,7 +49,7 @@ flowchart TB
 
 | Script | Purpose |
 |--------|---------|
-| `dashboard_script.py` | Launches the WebView2 dashboard sample. |
+| `dashboard_ipy_script.py` | Launches the WebView2 dashboard on IronPython. |
 | `data_analysis_script.py` | Polars/data-analysis demo. |
 | `debugpy_script.py` | CPython `debugpy` demo (port 5678). |
 | `debug_ipy_script.py` | IronPython debug demo (Revit, port 4567). |
@@ -74,19 +74,15 @@ flowchart TB
 
 ## Dashboard Backend
 
-`revit_dashboard/` is the Python backend used by `dashboard_script.py`.
+`revit_dashboard/` is the IronPython package used by `dashboard_ipy_script.py`. It collects the open document and runs Revit commands. Charts, grouping, and the workbook are built in the page. The package does not import `RevitDevTool.Core` or a third-party Python package.
 
-| Folder | Role |
-|--------|------|
-| `analytics/engine.py` | Builds analytics payloads. |
-| `contracts/payload.py` | Payload contracts exchanged with the frontend. |
-| `core/event_queue.py` | Queue/event support. |
-| `data/` | Category, collector, heavy-family, and warning data helpers. |
-| `export/excel_exporter.py` | Excel export path. |
-| `presentation/bridge.py` | Python to WebView bridge. |
-| `presentation/webview_host.py` | WebView host integration. |
-| `revit_api/handler.py` | Revit API interaction layer. |
-| `runner.py` | Dashboard runner orchestration. |
+| Path | Role |
+|------|------|
+| `data/` | Collector, category registry, and raw warnings. |
+| `revit_api/handler.py` | Revit API command bodies. One transaction per call. |
+| `presentation/host.py` | Modeless WPF window and the Revit command queue. The page envelope is `pyrevit_webview.parse_request`, `response_message`, and `event_message`. |
+
+`WebMessageReceived` only enqueues. `REVIT_CONTEXT.post` drains that queue on the Revit thread, one command per external event. `ColorOverride`, `Isolate`, and `ApplyGroupOverrides` keep the newest pending request. A replaced request is answered immediately so its promise settles. Replies go out through `ExecuteScriptAsync` as a `bim-bridge` event. `SaveWorkbook` shows the window Save dialog and writes the posted workbook bytes. `DEV_MODE` chooses the Vite server or `revit_dashboard_ui/dist/`.
 
 ---
 
@@ -97,17 +93,20 @@ flowchart TB
 | Technology | Current role |
 |------------|--------------|
 | React 19 | UI runtime |
-| TypeScript 5.9 | Type checking |
-| Vite 7 | Build/dev tooling |
-| Recharts 3 | Charts |
-| Semi UI, Radix UI, lucide-react | UI controls/icons |
-| Tailwind CSS 4 | Styling pipeline |
+| TypeScript | Type checking |
+| Vite+ | Dev server and build (`vp`) |
+| Semi UI | Controls, including the schedule table |
+| ECharts | Charts |
+| lucide-react | Icons |
+| ExcelJS | Workbook built in the page |
 
-Quality gates:
+The page filters, aggregates, and charts the snapshot. Product layout is `revit_dashboard_ui/design.md`.
+
+From `revit_dashboard_ui/`:
 
 ```powershell
-npm run quality
-npm run build
+pnpm check
+pnpm build
 ```
 
 ---

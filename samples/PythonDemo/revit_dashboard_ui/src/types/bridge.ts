@@ -1,26 +1,27 @@
-/** Types for the WebView2 ↔ Python bridge protocol. */
+import type { EnvelopeKindName } from "@/lib/envelope"
+
+/** WebView2 ↔ host envelope. Both directions use this object. */
 
 export interface BridgeMessage {
+  type: EnvelopeKindName
+  command: string
   id?: string
-  type: string
-  method?: string
-  params?: Record<string, unknown>
-  payload?: Record<string, unknown>
+  payload?: unknown
+  error?: string | null
 }
 
-export interface RevitApiResponse {
-  id: string
-  ok: boolean
-  data?: unknown
-  error?: string
-}
-
-export interface RefreshResult {
-  payload: import("./payload").DashboardPayload
-}
-
-export interface PendingRequest {
-  resolve: (value: RevitApiResponse) => void
+export interface PendingRequest<T = unknown> {
+  resolve: (value: T) => void
   reject: (reason: Error) => void
   timeout: ReturnType<typeof setTimeout>
+}
+
+export interface WebViewMessageEvent {
+  data: unknown
+}
+
+export interface ChromeWebView {
+  postMessage: (message: unknown) => void
+  addEventListener: (type: "message", listener: (event: WebViewMessageEvent) => void) => void
+  removeEventListener: (type: "message", listener: (event: WebViewMessageEvent) => void) => void
 }

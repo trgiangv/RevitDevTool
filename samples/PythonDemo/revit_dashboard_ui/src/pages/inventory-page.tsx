@@ -4,13 +4,14 @@
  */
 
 import { useCallback, useEffect } from "react"
-import { toast } from "sonner"
+import { Space } from "@douyinfe/semi-ui"
+import { toast } from "@/lib/toast"
 import { useDashboard } from "@/providers/dashboard-provider"
 import { useBridge } from "@/providers/bridge-provider"
 import { TreemapChart } from "@/components/charts/treemap-chart"
 import { FamilyExplorer } from "@/features/inventory/family-explorer"
 
-export function InventoryPage({ active = true }: { active?: boolean } = {}) {
+export function InventoryPage({ active = true }: Readonly<{ active?: boolean }> = {}) {
   const { filteredRows, setFilters } = useDashboard()
   const bridge = useBridge()
 
@@ -18,7 +19,7 @@ export function InventoryPage({ active = true }: { active?: boolean } = {}) {
   useEffect(() => {
     if (!active) return
     return () => {
-      bridge.resetIsolation()
+      void bridge.resetIsolation()
     }
   }, [active, bridge])
 
@@ -47,9 +48,13 @@ export function InventoryPage({ active = true }: { active?: boolean } = {}) {
   )
 
   return (
-    <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+    <Space
+      vertical
+      spacing="medium"
+      style={{ padding: 20, width: "100%", boxSizing: "border-box", alignItems: "stretch" }}
+    >
       <TreemapChart rows={filteredRows} onNodeClick={handleTreemapClick} />
       <FamilyExplorer rows={filteredRows} onSelectFamily={handleSelectFamily} />
-    </div>
+    </Space>
   )
 }

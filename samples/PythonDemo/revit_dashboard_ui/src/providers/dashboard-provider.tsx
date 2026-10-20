@@ -5,25 +5,15 @@
  * - Browser mode: Uses mock data
  * - Revit mode: Uses real data from WebView2 bridge
  *
- * In dev mode, listens for 'revit-data-ready' event when Revit injects data.
+ * Host mode loads a GetSnapshot envelope and builds the payload in the page.
  */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react"
-import type {
-  DashboardFilterState,
-  DashboardPayload,
-  ElementRow,
-} from "@/types"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import type { DashboardFilterState, DashboardPayload, ElementRow } from "@/types"
 import { useBridge } from "./bridge-provider"
-import { applyFilters } from "@/features/filters/filter-utils"
+import { applyFilters } from "@/lib/analytics"
 import { pushSessionSnapshot } from "@/lib/session-history"
+import { displayText } from "@/lib/text"
 
 interface ChartFilter {
   key: string
@@ -32,14 +22,15 @@ interface ChartFilter {
 
 interface DashboardState {
   payload: DashboardPayload | null
+  loadError: string | null
   isRefreshing: boolean
   // filters
   filters: DashboardFilterState
   setFilters: React.Dispatch<React.SetStateAction<DashboardFilterState>>
   resetFilters: () => void
   // selection
-  selectedIds: Set<number>
-  setSelectedIds: React.Dispatch<React.SetStateAction<Set<number>>>
+  selectedIds: Set<string>
+  setSelectedIds: React.Dispatch<React.SetStateAction<Set<string>>>
   // chart interaction
   chartFilter: ChartFilter | null
   setChartFilter: React.Dispatch<React.SetStateAction<ChartFilter | null>>
@@ -67,14 +58,30 @@ const EMPTY_FILTERS: DashboardFilterState = {
   hide_levels: [],
 }
 
-export function DashboardProvider({ children }: { children: React.ReactNode }) {
+export function DashboardProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const bridge = useBridge()
   const [payload, setPayload] = useState<DashboardPayload | null>(bridge.getInitialPayload())
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [filters, setFilters] = useState<DashboardFilterState>({ ...EMPTY_FILTERS })
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [chartFilter, setChartFilter] = useState<ChartFilter | null>(null)
   const [propertiesElement, setPropertiesElement] = useState<ElementRow | null>(null)
+
+  const refreshData = useCallback(async () => {
+    setIsRefreshing(true)
+    setLoadError(null)
+    try {
+      const newPayload = await bridge.refreshData()
+      setPayload(newPayload)
+      setSelectedIds(new Set())
+      setChartFilter(null)
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : "Snapshot failed")
+    } finally {
+      setIsRefreshing(false)
+    }
+  }, [bridge])
 
   // Save session snapshot when payload changes
   useEffect(() => {
@@ -83,49 +90,30 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }
   }, [payload])
 
-  // Listen for Revit data injection in dev mode
   useEffect(() => {
-    const onRevitDataReady = () => {
-      const newPayload = window.__BIM_DASHBOARD_INITIAL_DATA
-      if (newPayload) {
-        console.log("[Dashboard] Received Revit data via injection")
-        setPayload(newPayload)
-      }
-    }
+    if (bridge.getInitialPayload()) return
+    void refreshData()
+  }, [bridge, refreshData])
 
-    window.addEventListener("revit-data-ready", onRevitDataReady)
-    return () => window.removeEventListener("revit-data-ready", onRevitDataReady)
-  }, [])
-
-  // Ghost Mode: Listen for Revit selection changes
+  // Ghost Mode: host selection-changed is translated by the bridge client.
   useEffect(() => {
-    const onRevitSelection = (event: Event) => {
-      const detail = (event as CustomEvent<{ element_ids: number[] }>).detail
-      if (!detail?.element_ids?.length || !payload) return
+    const unsubscribe = bridge.subscribeSelection((elementIds) => {
+      if (!elementIds.length || !payload) return
+      const element = payload.rows.find((row) => row.element_id === elementIds[0])
+      if (element) setPropertiesElement(element)
+    })
 
-      // Find the first matching element in our rows
-      const firstId = detail.element_ids[0]
-      const element = payload.rows.find((r) => r.element_id === firstId)
-      if (element) {
-        setPropertiesElement(element)
-      }
-    }
-
-    // Listen for dashboard internal element selection (table row click)
     const onDashboardSelect = (event: Event) => {
       const element = (event as CustomEvent<ElementRow>).detail
-      if (element) {
-        setPropertiesElement(element)
-      }
+      if (element) setPropertiesElement(element)
     }
 
-    window.addEventListener("revit-selection-changed", onRevitSelection)
     window.addEventListener("dashboard-element-selected", onDashboardSelect)
     return () => {
-      window.removeEventListener("revit-selection-changed", onRevitSelection)
+      unsubscribe()
       window.removeEventListener("dashboard-element-selected", onDashboardSelect)
     }
-  }, [payload])
+  }, [bridge, payload])
 
   const resetFilters = useCallback(() => {
     setFilters({ ...EMPTY_FILTERS })
@@ -138,27 +126,16 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     let rows = applyFilters(allRows, filters)
     if (chartFilter) {
       rows = rows.filter(
-        (row) => String(row[chartFilter.field as keyof ElementRow] ?? "") === chartFilter.key,
+        (row) => displayText(row[chartFilter.field as keyof ElementRow]) === chartFilter.key,
       )
     }
     return rows
   }, [allRows, filters, chartFilter])
 
-  const refreshData = useCallback(async () => {
-    setIsRefreshing(true)
-    try {
-      const newPayload = await bridge.refreshData()
-      setPayload(newPayload)
-      setSelectedIds(new Set())
-      setChartFilter(null)
-    } finally {
-      setIsRefreshing(false)
-    }
-  }, [bridge])
-
   const value = useMemo<DashboardState>(
     () => ({
       payload,
+      loadError,
       isRefreshing,
       filters,
       setFilters,
@@ -175,6 +152,7 @@ export function DashboardProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       payload,
+      loadError,
       isRefreshing,
       filters,
       resetFilters,
@@ -194,11 +172,4 @@ export function useDashboard(): DashboardState {
   const ctx = useContext(DashboardContext)
   if (!ctx) throw new Error("useDashboard must be used within <DashboardProvider>")
   return ctx
-}
-
-// Type declaration for window
-declare global {
-  interface Window {
-    __BIM_DASHBOARD_INITIAL_DATA?: DashboardPayload
-  }
 }

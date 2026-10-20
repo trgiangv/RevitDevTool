@@ -1,7 +1,7 @@
 /** Types mirroring the Python DashboardPayload contract. */
 
 export interface ElementRow {
-  element_id: number
+  element_id: string
   unique_id: string
   name: string
   class_name: string
@@ -35,12 +35,27 @@ export interface ModelInfo {
   total_sheets: number
 }
 
+/** Raw warning from the host. `severity` is a Revit FailureSeverity name. */
+export interface RawWarning {
+  id: number
+  description: string
+  severity: string
+  element_ids: string[]
+}
+
 export interface WarningItem {
   id: number
   description: string
   severity: "critical" | "moderate" | "info"
-  element_ids: number[]
+  element_ids: string[]
   category: string
+}
+
+/** GetSnapshot / injected host payload before client analytics. */
+export interface HostSnapshot {
+  model_info: ModelInfo
+  rows: Array<Partial<ElementRow> & Record<string, unknown>>
+  warnings: RawWarning[]
 }
 
 export interface HeavyFamily {

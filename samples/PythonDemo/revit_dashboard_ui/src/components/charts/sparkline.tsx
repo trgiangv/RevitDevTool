@@ -1,60 +1,65 @@
 /**
- * Tiny sparkline chart for KPI cards.
- * Renders as a simple SVG path showing trend over recent sessions.
+ * Session trend. ECharts draws the line, area, and axis tooltip.
  */
+
+import { useMemo } from "react"
+import type { EChartsCoreOption } from "echarts/core"
+import { EChart, tooltipBase, useChartColors } from "./echart"
 
 interface SparklineProps {
   data: number[]
-  width?: number
   height?: number
-  color?: string
 }
 
-export function Sparkline({ data, width = 80, height = 24, color = "var(--semi-color-primary)" }: SparklineProps) {
-  if (data.length < 2) return null
-
-  const min = Math.min(...data)
-  const max = Math.max(...data)
-  const range = max - min || 1
-
-  const points = data.map((value, index) => {
-    const x = (index / (data.length - 1)) * width
-    const y = height - ((value - min) / range) * (height - 4) - 2
-    return `${x},${y}`
-  })
-
-  const pathD = `M ${points.join(" L ")}`
-
-  // Area fill
-  const areaD = `${pathD} L ${width},${height} L 0,${height} Z`
-
-  return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ display: "block" }}>
-      <defs>
-        <linearGradient id={`spark-grad-${color.replace(/[^a-z0-9]/gi, "")}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-          <stop offset="100%" stopColor={color} stopOpacity={0.05} />
-        </linearGradient>
-      </defs>
-      <path
-        d={areaD}
-        fill={`url(#spark-grad-${color.replace(/[^a-z0-9]/gi, "")})`}
-      />
-      <path
-        d={pathD}
-        fill="none"
-        stroke={color}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Current value dot */}
-      <circle
-        cx={width}
-        cy={height - ((data[data.length - 1] - min) / range) * (height - 4) - 2}
-        r={2}
-        fill={color}
-      />
-    </svg>
+export function Sparkline({ data, height = 36 }: Readonly<SparklineProps>) {
+  const colors = useChartColors()
+  const option = useMemo<EChartsCoreOption>(
+    () => ({
+      animation: false,
+      grid: { left: 0, right: 4, top: 4, bottom: 4 },
+      tooltip: {
+        ...tooltipBase(colors),
+        trigger: "axis",
+        formatter: (raw: unknown) => {
+          const items = Array.isArray(raw) ? raw : [raw]
+          const value = (items[0] as { value?: number } | undefined)?.value
+          return value == null ? "" : value.toLocaleString()
+        },
+      },
+      xAxis: {
+        type: "category",
+        show: false,
+        boundaryGap: false,
+        data: data.map((_, index) => String(index + 1)),
+      },
+      yAxis: { type: "value", show: false, scale: true },
+      series: [
+        {
+          type: "line",
+          data,
+          smooth: true,
+          showSymbol: false,
+          lineStyle: { width: 1.5, color: colors.primary },
+          areaStyle: {
+            opacity: 0.25,
+            color: {
+              type: "linear",
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: colors.primary },
+                { offset: 1, color: "transparent" },
+              ],
+            },
+          },
+        },
+      ],
+    }),
+    [colors, data],
   )
+
+  if (data.length < 2) return null
+  return <EChart option={option} height={height} />
 }

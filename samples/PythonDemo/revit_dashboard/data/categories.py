@@ -1,40 +1,42 @@
-"""Data-driven Revit category registry.
+# -*- coding: utf-8 -*-
+"""BuiltInCategory registry.
 
-All category filtering is driven by ``BuiltInCategory`` enum values — zero
-hardcoded category name strings.  Groups can be combined or filtered by the
-caller (e.g. the frontend requests only STRUCTURAL + MEP).
+Groups are plain string keys. Callers can pass a subset
+(for example STRUCTURAL and MEP) to ``get_model_categories``.
 """
 
-from enum import Enum, auto
+from __future__ import division, print_function
 
-import Autodesk.Revit.DB as DB
+from collections import OrderedDict
 
-
-class CategoryGroup(Enum):
-    """Logical discipline grouping of Revit built-in categories."""
-
-    STRUCTURAL = auto()
-    ARCHITECTURAL = auto()
-    MEP_MECHANICAL = auto()
-    MEP_ELECTRICAL = auto()
-    MEP_PLUMBING = auto()
-    MEP_PIPING = auto()
-    SITE = auto()
-    ROOMS_SPACES = auto()
-    GENERIC = auto()
+from Autodesk.Revit import DB
 
 
-# Registry — maps group → list of BuiltInCategory enum values.
-CATEGORY_REGISTRY: dict[CategoryGroup, list[DB.BuiltInCategory]] = {
-    CategoryGroup.STRUCTURAL: [
+class CategoryGroup(object):
+    """Logical discipline grouping keys."""
+
+    STRUCTURAL = "STRUCTURAL"
+    ARCHITECTURAL = "ARCHITECTURAL"
+    MEP_MECHANICAL = "MEP_MECHANICAL"
+    MEP_ELECTRICAL = "MEP_ELECTRICAL"
+    MEP_PLUMBING = "MEP_PLUMBING"
+    MEP_PIPING = "MEP_PIPING"
+    SITE = "SITE"
+    ROOMS_SPACES = "ROOMS_SPACES"
+    GENERIC = "GENERIC"
+
+
+# Insertion order is the collection order when no groups are requested.
+CATEGORY_REGISTRY = OrderedDict((  # type: OrderedDict[str, list[DB.BuiltInCategory]]
+    (CategoryGroup.STRUCTURAL, [
         DB.BuiltInCategory.OST_StructuralColumns,
         DB.BuiltInCategory.OST_StructuralFraming,
         DB.BuiltInCategory.OST_StructuralFoundation,
         DB.BuiltInCategory.OST_StructuralTruss,
         DB.BuiltInCategory.OST_StructuralStiffener,
         DB.BuiltInCategory.OST_Rebar,
-    ],
-    CategoryGroup.ARCHITECTURAL: [
+    ]),
+    (CategoryGroup.ARCHITECTURAL, [
         DB.BuiltInCategory.OST_Walls,
         DB.BuiltInCategory.OST_Doors,
         DB.BuiltInCategory.OST_Windows,
@@ -53,8 +55,8 @@ CATEGORY_REGISTRY: dict[CategoryGroup, list[DB.BuiltInCategory]] = {
         DB.BuiltInCategory.OST_SpecialityEquipment,
         DB.BuiltInCategory.OST_Entourage,
         DB.BuiltInCategory.OST_GenericModel,
-    ],
-    CategoryGroup.MEP_MECHANICAL: [
+    ]),
+    (CategoryGroup.MEP_MECHANICAL, [
         DB.BuiltInCategory.OST_DuctCurves,
         DB.BuiltInCategory.OST_DuctFitting,
         DB.BuiltInCategory.OST_DuctAccessory,
@@ -63,8 +65,8 @@ CATEGORY_REGISTRY: dict[CategoryGroup, list[DB.BuiltInCategory]] = {
         DB.BuiltInCategory.OST_DuctLinings,
         DB.BuiltInCategory.OST_FlexDuctCurves,
         DB.BuiltInCategory.OST_MechanicalEquipment,
-    ],
-    CategoryGroup.MEP_ELECTRICAL: [
+    ]),
+    (CategoryGroup.MEP_ELECTRICAL, [
         DB.BuiltInCategory.OST_ElectricalEquipment,
         DB.BuiltInCategory.OST_ElectricalFixtures,
         DB.BuiltInCategory.OST_CableTray,
@@ -79,50 +81,50 @@ CATEGORY_REGISTRY: dict[CategoryGroup, list[DB.BuiltInCategory]] = {
         DB.BuiltInCategory.OST_SecurityDevices,
         DB.BuiltInCategory.OST_NurseCallDevices,
         DB.BuiltInCategory.OST_TelephoneDevices,
-    ],
-    CategoryGroup.MEP_PLUMBING: [
+    ]),
+    (CategoryGroup.MEP_PLUMBING, [
         DB.BuiltInCategory.OST_PlumbingFixtures,
         DB.BuiltInCategory.OST_Sprinklers,
-    ],
-    CategoryGroup.MEP_PIPING: [
+    ]),
+    (CategoryGroup.MEP_PIPING, [
         DB.BuiltInCategory.OST_PipeCurves,
         DB.BuiltInCategory.OST_PipeFitting,
         DB.BuiltInCategory.OST_PipeAccessory,
         DB.BuiltInCategory.OST_PipeInsulations,
         DB.BuiltInCategory.OST_FlexPipeCurves,
-    ],
-    CategoryGroup.SITE: [
+    ]),
+    (CategoryGroup.SITE, [
         DB.BuiltInCategory.OST_Topography,
         DB.BuiltInCategory.OST_Parking,
         DB.BuiltInCategory.OST_Planting,
         DB.BuiltInCategory.OST_Site,
-    ],
-    CategoryGroup.ROOMS_SPACES: [
+    ]),
+    (CategoryGroup.ROOMS_SPACES, [
         DB.BuiltInCategory.OST_Rooms,
         DB.BuiltInCategory.OST_MEPSpaces,
         DB.BuiltInCategory.OST_Areas,
-    ],
-    CategoryGroup.GENERIC: [
+    ]),
+    (CategoryGroup.GENERIC, [
         DB.BuiltInCategory.OST_MassFloor,
         DB.BuiltInCategory.OST_Parts,
-    ],
-}
+    ]),
+))
 
 
-def get_model_categories(
-    groups: list[CategoryGroup] | None = None,
-) -> list[DB.BuiltInCategory]:
+def get_model_categories(groups=None):
+    # type: (list[str] | None) -> list[DB.BuiltInCategory]
     """Return a flat list of ``BuiltInCategory`` for the requested groups.
 
-    If *groups* is ``None`` every registered group is included.
+    ``None`` or an empty list includes every registered group.
     """
-    targets = groups or list(CategoryGroup)
-    result: list[DB.BuiltInCategory] = []
+    targets = groups or list(CATEGORY_REGISTRY.keys())
+    result = []  # type: list[DB.BuiltInCategory]
     for group in targets:
-        result.extend(CATEGORY_REGISTRY.get(group, []))
+        result.extend(CATEGORY_REGISTRY[group])
     return result
 
 
-def get_group_names() -> list[str]:
-    """Return all available group names (for frontend display)."""
-    return [g.name for g in CategoryGroup]
+def get_group_names():
+    # type: () -> list[str]
+    """Return all available group names."""
+    return list(CATEGORY_REGISTRY.keys())
