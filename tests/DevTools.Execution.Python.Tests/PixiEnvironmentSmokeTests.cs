@@ -1,9 +1,9 @@
-using System.Text;
 using CliWrap;
 using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Python.Runtime;
+using System.Text;
 
 namespace DevTools.Execution.Tests;
 

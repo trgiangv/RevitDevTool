@@ -16,7 +16,7 @@ internal class ContextLossCommand : IExternalCommand
         };
         dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1, "Safe: Re-enter API context before transaction");
         dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink2, "Unsafe: Stay in same async delegate with API context loss");
-        
+
         var result = dialog.Show();
         if (result == TaskDialogResult.CommandLink1)
         {
@@ -26,7 +26,7 @@ internal class ContextLossCommand : IExternalCommand
         {
             _ = ContextLostRepro.Unsafe_AsyncDelegateOverload_ContextLoss();
         }
-        
+
         return Result.Succeeded;
     }
 }

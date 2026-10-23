@@ -1,10 +1,6 @@
-using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
-using Moq;
 
 namespace DevTools.Mcp.Catalog.Tests;
 

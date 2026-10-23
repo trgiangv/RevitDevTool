@@ -1,4 +1,3 @@
-﻿using System.Text;
 using Build.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -8,6 +7,7 @@ using ModularPipelines.Git.Extensions;
 using ModularPipelines.GitHub.Extensions;
 using ModularPipelines.Modules;
 using Octokit;
+using System.Text;
 using File = ModularPipelines.FileSystem.File;
 
 namespace Build.Modules;

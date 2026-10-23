@@ -1,7 +1,7 @@
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Sources;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
@@ -47,11 +47,11 @@ public sealed class NativeResolutionTests
 
     sealed class FixedNativeSource : INativeAssemblySource
     {
-        readonly AssemblyCandidate candidate;
+        readonly AssemblyCandidate _candidate;
 
-        public FixedNativeSource(AssemblyCandidate candidate) => this.candidate = candidate;
+        public FixedNativeSource(AssemblyCandidate candidate) => _candidate = candidate;
 
-        public AssemblyCandidate? Resolve(string name) => candidate;
+        public AssemblyCandidate? Resolve(string name) => _candidate;
     }
 
     sealed class RecordingDiagnosticSink : IAssemblyIsolationDiagnosticSink

@@ -1,4 +1,3 @@
-using DevTools.NUnit.MTP;
 using DevTools.NUnit.Runtime;
 using DevTools.NUnit.Runtime.Fixtures;
 using DevTools.Testing.Abstractions.Contracts;

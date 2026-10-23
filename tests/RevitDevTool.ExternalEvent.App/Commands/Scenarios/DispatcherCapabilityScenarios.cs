@@ -261,9 +261,9 @@ internal static class DispatcherCapabilityScenarios
             switch (await ClassifyErrorTask(task))
             {
                 case ErrorOutcome.Propagated: propagated++; break;
-                case ErrorOutcome.Swallowed:  swallowed++;  break;
-                case ErrorOutcome.TimedOut:   timedOut++;    break;
-                case ErrorOutcome.WrongType:  wrongType++;   break;
+                case ErrorOutcome.Swallowed: swallowed++; break;
+                case ErrorOutcome.TimedOut: timedOut++; break;
+                case ErrorOutcome.WrongType: wrongType++; break;
             }
         }
         return (propagated, swallowed, wrongType, timedOut);

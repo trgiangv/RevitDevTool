@@ -67,15 +67,15 @@ internal static class TUnitTestIdentity
     private static string FormatMethodGenerics(TestMetadata metadata)
     {
         var args = metadata.GenericMethodTypeArguments;
-        return args is not { Length: > 0 } 
-            ? string.Empty 
+        return args is not { Length: > 0 }
+            ? string.Empty
             : $"<{string.Join(",", args.Select(argument => argument.FullName ?? argument.Name))}>";
     }
 
     private static string FormatParameters(ParameterMetadata[] parameters)
     {
-        return parameters.Length == 0 
-            ? string.Empty 
+        return parameters.Length == 0
+            ? string.Empty
             : $"({string.Join(", ", parameters.Select(parameter => parameter.Type.ToString()))})";
     }
 }

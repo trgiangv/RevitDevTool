@@ -1,6 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Tools.Selection;
 
@@ -18,15 +17,15 @@ public static class TokenParser
     /// </summary>
     public static ParsedToken? TryParse(string? token, string? defaultLinkInstanceId = null)
     {
-        if (string.IsNullOrWhiteSpace(token))
+        if (token is null || string.IsNullOrWhiteSpace(token))
             return null;
 
-        var value = token!;
+        var value = token;
         var linkInstanceId = defaultLinkInstanceId;
         if (TrySplit(token, out var splitLink, out var splitInner))
         {
             linkInstanceId = splitLink;
-            value = splitInner!;
+            value = splitInner;
         }
 
         if (!TryClassifyInner(value.AsSpan(), out var kind))

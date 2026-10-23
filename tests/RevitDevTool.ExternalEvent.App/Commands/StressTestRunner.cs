@@ -61,7 +61,7 @@ internal sealed class StressTestRunner(Action<string> log)
 
         await RunInContextEventSuite(inContextAdapters, requestCount, producerCount);
 
-        summary:
+    summary:
         log("---");
         log(_report.ToMarkdown());
     }

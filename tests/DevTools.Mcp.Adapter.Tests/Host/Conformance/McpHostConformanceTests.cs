@@ -1,6 +1,6 @@
-using System.Text.Json;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Adapter.Tests.Host.Conformance;
 

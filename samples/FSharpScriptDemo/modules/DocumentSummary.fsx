@@ -1,4 +1,4 @@
-﻿#load "../core/RevitContext.fsx"
+#load "../core/RevitContext.fsx"
 
 namespace Demo
 

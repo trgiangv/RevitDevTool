@@ -15,8 +15,8 @@ namespace RevitDevTool.Adapters;
 
 public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger, HostAssemblies hostAssemblies) : ICommandRunner
 {
-    private static ExternalCommandData? externalCommandData;
-    private static ElementSet? elementSet;
+    private static ExternalCommandData? _externalCommandData;
+    private static ElementSet? _elementSet;
 
     public ExecutionResult RunCommand(CommandItem commandItem)
     {
@@ -148,10 +148,10 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger, HostA
 
     private static ExternalCommandData GetExternalCommandData()
     {
-        if (externalCommandData != null)
+        if (_externalCommandData != null)
         {
-            externalCommandData.View = RevitContext.UiApplication.ActiveUIDocument?.ActiveView;
-            return externalCommandData;
+            _externalCommandData.View = RevitContext.UiApplication.ActiveUIDocument?.ActiveView;
+            return _externalCommandData;
         }
 
         var type = typeof(ExternalCommandData);
@@ -160,21 +160,21 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger, HostA
         instance.Application = RevitContext.UiApplication;
         instance.JournalData ??= new Dictionary<string, string>();
         instance.View = RevitContext.UiApplication.ActiveUIDocument?.ActiveView;
-        externalCommandData = instance;
+        _externalCommandData = instance;
         return instance;
     }
 
     private static ElementSet GetElementSet()
     {
-        elementSet ??= new ElementSet();
+        _elementSet ??= new ElementSet();
         if (RevitContext.UiApplication.ActiveUIDocument == null)
         {
-            elementSet.Clear();
-            return elementSet;
+            _elementSet.Clear();
+            return _elementSet;
         }
-        elementSet.Clear();
+        _elementSet.Clear();
         foreach (var elementId in RevitContext.UiApplication.ActiveUIDocument.Selection.GetElementIds())
-            elementSet.Insert(RevitContext.UiApplication.ActiveUIDocument.Document.GetElement(elementId));
-        return elementSet;
+            _elementSet.Insert(RevitContext.UiApplication.ActiveUIDocument.Document.GetElement(elementId));
+        return _elementSet;
     }
 }

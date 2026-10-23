@@ -1,4 +1,3 @@
-using DevTools.Mcp.Discovery;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;

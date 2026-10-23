@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "& \"${CLAUDE_PROJECT_DIR}/scripts/format-lint-hook.ps1\"",
+            "timeout": 600,
+            "statusMessage": "Formatting and linting changed C#/XAML files"
+          }
+        ]
+      }
+    ]
+  }
+}

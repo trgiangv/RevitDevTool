@@ -72,17 +72,17 @@ public sealed class McpCatalogLoader(IEnumerable<IRegistryProvider> providers, I
     private static RegistryCatalog CreateCatalog(
         Dictionary<string, RegisteredTool> toolMap,
         Dictionary<string, RegisteredResource> resourceMap) => new()
-    {
-        Tools = toolMap.Values
+        {
+            Tools = toolMap.Values
             .OrderBy(tool => tool.Binding.GroupName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(tool => tool.Descriptor.Name, StringComparer.OrdinalIgnoreCase)
             .ToList(),
-        Resources = resourceMap.Values
+            Resources = resourceMap.Values
             .OrderBy(resource => resource.Binding.GroupName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(resource => resource.DisplayName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(resource => resource.TemplateDescriptor?.UriTemplate ?? resource.Descriptor?.Uri ?? string.Empty, StringComparer.OrdinalIgnoreCase)
             .ToList(),
-    };
+        };
 
     private void UpdateKnownIds(RegistryCatalog loaded)
     {

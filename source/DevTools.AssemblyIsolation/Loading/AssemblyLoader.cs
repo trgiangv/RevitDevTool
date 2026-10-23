@@ -1,7 +1,7 @@
-using System.Reflection;
-using System.Security.Cryptography;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Sources;
+using System.Reflection;
+using System.Security.Cryptography;
 #if NET
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
@@ -16,12 +16,12 @@ namespace DevTools.AssemblyIsolation.Loading;
 /// </summary>
 public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics = null) : IDisposable
 {
-    private readonly Lock gate = new();
-    private readonly Dictionary<string, LoadedPath> assembliesByPath = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, SelectedAssembly> assembliesByIdentity = new(StringComparer.OrdinalIgnoreCase);
-    private DirectoryAssemblySource? managedSource;
-    private bool registered;
-    private bool disposed;
+    private readonly Lock _gate = new();
+    private readonly Dictionary<string, LoadedPath> _assembliesByPath = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, SelectedAssembly> _assembliesByIdentity = new(StringComparer.OrdinalIgnoreCase);
+    private DirectoryAssemblySource? _managedSource;
+    private bool _registered;
+    private bool _disposed;
 
 #if NET
     private AssemblyLoadContext LoadContext { get; } = new("DevTools.AssemblyLoader", isCollectible: false);
@@ -38,9 +38,9 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
             ?? throw new InvalidOperationException($"Assembly '{normalizedPath}' has no full identity.");
         var fingerprint = ComputeFingerprint(normalizedPath);
 
-        lock (gate)
+        lock (_gate)
         {
-            if (assembliesByPath.TryGetValue(normalizedPath, out var pathMatch))
+            if (_assembliesByPath.TryGetValue(normalizedPath, out var pathMatch))
             {
                 if (!string.Equals(pathMatch.Identity, identity, StringComparison.OrdinalIgnoreCase)
                     || !string.Equals(pathMatch.Fingerprint, fingerprint, StringComparison.Ordinal))
@@ -52,9 +52,9 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
                 return pathMatch.Assembly;
             }
 
-            if (assembliesByIdentity.TryGetValue(identity, out var identityMatch))
+            if (_assembliesByIdentity.TryGetValue(identity, out var identityMatch))
             {
-                assembliesByPath.Add(normalizedPath, new LoadedPath(identity, fingerprint, identityMatch.Assembly));
+                _assembliesByPath.Add(normalizedPath, new LoadedPath(identity, fingerprint, identityMatch.Assembly));
                 Publish("identity-already-loaded", requestedIdentity,
                     $"Identity '{identity}' was already loaded from '{identityMatch.Path}'. Returning the initial assembly instead of loading '{normalizedPath}'.");
                 return identityMatch.Assembly;
@@ -65,8 +65,8 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
 #else
             var assembly = LoadContext.LoadFromAssemblyPath(normalizedPath);
 #endif
-            assembliesByPath.Add(normalizedPath, new LoadedPath(identity, fingerprint, assembly));
-            assembliesByIdentity.Add(identity, new SelectedAssembly(normalizedPath, assembly));
+            _assembliesByPath.Add(normalizedPath, new LoadedPath(identity, fingerprint, assembly));
+            _assembliesByIdentity.Add(identity, new SelectedAssembly(normalizedPath, assembly));
             return assembly;
         }
     }
@@ -76,10 +76,10 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
         ThrowIfDisposed();
         if (string.IsNullOrWhiteSpace(probeDirectory))
             throw new ArgumentException("A directory is required.", nameof(probeDirectory));
-        if (registered)
+        if (_registered)
             return;
 
-        managedSource = new DirectoryAssemblySource(probeDirectory);
+        _managedSource = new DirectoryAssemblySource(probeDirectory);
 #if NETFRAMEWORK
         AppDomain.CurrentDomain.AssemblyResolve += ResolveManaged;
 #else
@@ -88,15 +88,15 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
         LoadContext.Resolving += ResolveManaged;
         LoadContext.ResolvingUnmanagedDll += ResolveUnmanaged;
 #endif
-        registered = true;
+        _registered = true;
     }
 
     public void Dispose()
     {
-        if (disposed)
+        if (_disposed)
             return;
 
-        if (registered)
+        if (_registered)
         {
 #if NETFRAMEWORK
             AppDomain.CurrentDomain.AssemblyResolve -= ResolveManaged;
@@ -106,10 +106,10 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
             LoadContext.Resolving -= ResolveManaged;
             LoadContext.ResolvingUnmanagedDll -= ResolveUnmanaged;
 #endif
-            registered = false;
+            _registered = false;
         }
 
-        disposed = true;
+        _disposed = true;
     }
 
 #if NETFRAMEWORK
@@ -120,10 +120,10 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
 
     private Assembly? ResolveManaged(AssemblyName requested)
     {
-        if (disposed || managedSource is null)
+        if (_disposed || _managedSource is null)
             return null;
 
-        var candidate = managedSource.Resolve(requested);
+        var candidate = _managedSource.Resolve(requested);
         if (candidate is null)
             return null;
         if (!AssemblyCandidate.IsExistingPathUnderRoot(candidate.Path, candidate.Root))
@@ -134,27 +134,19 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
 #if NET
     private IntPtr ResolveUnmanaged(Assembly assembly, string unmanagedDllName) => ResolveUnmanaged(unmanagedDllName);
 
-    internal string? FindUnmanagedPathForTesting(string name) => FindUnmanagedPath(name);
-
     private IntPtr ResolveUnmanaged(string name)
     {
-        var candidate = FindUnmanagedPath(name);
-        return candidate is null ? IntPtr.Zero : NativeLibrary.Load(candidate);
-    }
-
-    private string? FindUnmanagedPath(string name)
-    {
-        if (disposed || managedSource is null || string.IsNullOrWhiteSpace(name))
-            return null;
+        if (_disposed || _managedSource is null || string.IsNullOrWhiteSpace(name))
+            return IntPtr.Zero;
         var fileName = Path.GetFileName(name);
         if (!string.Equals(fileName, name, StringComparison.Ordinal))
-            return null;
+            return IntPtr.Zero;
 
-        var directory = managedSource.Root;
+        var directory = _managedSource.Root;
         var candidate = Path.Combine(directory, AssemblyCandidate.WithExtension(fileName));
         return AssemblyCandidate.IsExistingPathUnderRoot(candidate, directory)
-            ? candidate
-            : null;
+            ? NativeLibrary.Load(candidate)
+            : IntPtr.Zero;
     }
 #endif
 
@@ -168,7 +160,7 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
         return Convert.ToBase64String(sha256.ComputeHash(stream));
     }
 
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(disposed, this);
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
 
     private sealed record LoadedPath(string Identity, string Fingerprint, Assembly Assembly);
 

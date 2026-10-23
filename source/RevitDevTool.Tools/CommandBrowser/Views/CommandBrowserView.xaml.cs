@@ -1,9 +1,9 @@
+using RevitDevTool.Tools.CommandBrowser.Models;
+using RevitDevTool.Tools.CommandBrowser.ViewModels;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
-using RevitDevTool.Tools.CommandBrowser.Models;
-using RevitDevTool.Tools.CommandBrowser.ViewModels;
 
 namespace RevitDevTool.Tools.CommandBrowser.Views;
 

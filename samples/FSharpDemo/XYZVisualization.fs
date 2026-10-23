@@ -1,4 +1,4 @@
-﻿namespace FSharpDemo
+namespace FSharpDemo
 open System.Diagnostics
 open System.Linq
 open Autodesk.Revit.Attributes

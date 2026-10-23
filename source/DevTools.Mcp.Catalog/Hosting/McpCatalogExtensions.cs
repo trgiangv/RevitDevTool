@@ -1,7 +1,7 @@
+using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Providers;
 using DevTools.Mcp.Transport;
-using DevTools.Mcp.Core.Catalog;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;

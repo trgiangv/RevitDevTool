@@ -1,15 +1,15 @@
-using System.Windows;
 using AcadDevTool.Settings;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Logging.Listeners;
 using DevTools.Logging.Options;
+using DevTools.Presentation;
+using DevTools.Presentation.Interfaces;
 using DevTools.Settings.Configs;
 using DevTools.Telemetry;
 using DevTools.UI.Theme;
-using DevTools.Presentation;
-using DevTools.Presentation.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Windows;
 
 namespace AcadDevTool.Logging;
 

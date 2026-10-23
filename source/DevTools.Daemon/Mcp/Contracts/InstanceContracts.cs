@@ -1,6 +1,6 @@
-using System.Text.Json.Serialization;
-using DevTools.Ipc;
 using DevTools.Hosting;
+using DevTools.Ipc;
+using System.Text.Json.Serialization;
 
 namespace DevTools.Daemon.Mcp.Contracts;
 

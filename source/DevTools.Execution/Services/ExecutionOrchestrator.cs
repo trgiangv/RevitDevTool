@@ -1,11 +1,11 @@
-using System.Collections.ObjectModel;
-using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Telemetry;
 using DevTools.UI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
+using System.IO;
 using ZLogger;
 namespace DevTools.Execution.Services;
 
@@ -220,7 +220,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
         var providerKind = GetProviderKind(node);
         _telemetry.RecordExecutionInvocation(providerKind, result.Success);
-        
+
         var isCritical = result is { Success: false, Exception: { } ex }
                          && TelemetryReporting.ShouldReportCriticalException(ex);
         if (isCritical)

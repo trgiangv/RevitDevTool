@@ -1,9 +1,7 @@
-using System.Text.Json;
-using DevTools.Mcp;
 using DevTools.Execution.External.Mcp.Backends;
-using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Catalog.Tests;
 

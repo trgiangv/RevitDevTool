@@ -1,13 +1,12 @@
+using DevTools.Presentation.Models;
+using DevTools.Presentation.Services;
+using PythonNetStubGenerator;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Reflection;
 using System.Windows.Data;
-using DevTools.Presentation.Models;
-using DevTools.Presentation.Services;
-using PythonNetStubGenerator;
 // ReSharper disable UnusedParameterInPartialMethod
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Presentation.ViewModels;
 
@@ -83,7 +82,7 @@ public partial class StubBuilderViewModel : ObservableObject
             {
                 Name = a.GetName().Name ?? "(unknown)",
                 FullName = a.FullName!,
-                Location = ResolveAssemblyLocationHint(a),
+                Location = ResolveAssemblyLocation(a),
                 Assembly = a
             });
 
@@ -94,7 +93,7 @@ public partial class StubBuilderViewModel : ObservableObject
     /// <summary>
     /// Prefer <see cref="Assembly.Location"/>; when empty (common in some hosts), show module path so stubs can still be chosen.
     /// </summary>
-    private static string ResolveAssemblyLocationHint(Assembly assembly)
+    private static string ResolveAssemblyLocation(Assembly assembly)
     {
         if (!string.IsNullOrEmpty(assembly.Location))
             return assembly.Location;
@@ -256,4 +255,3 @@ public partial class StubBuilderViewModel : ObservableObject
 
     private bool CanGenerate() => !IsGenerating;
 }
-

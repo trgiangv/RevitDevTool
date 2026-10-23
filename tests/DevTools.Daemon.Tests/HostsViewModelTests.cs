@@ -1,5 +1,4 @@
 using DevTools.Daemon.Desktop.ViewModels;
-using DevTools.Daemon.Desktop;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Tests.Support;
 using DevTools.Ipc;

@@ -1,9 +1,7 @@
-using System.Text.Json;
 using DevTools.Execution.Providers.Python;
 using DevTools.Mcp.Catalog.Tests.Harness;
-using DevTools.Mcp.Core.Models;
-using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json;
 namespace DevTools.Mcp.Catalog.Tests;
 
 [TestClass]

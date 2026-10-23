@@ -1,7 +1,7 @@
+using DevTools.Utilities;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Text;
-using DevTools.Utilities;
 
 namespace DevTools.Presentation.Services;
 

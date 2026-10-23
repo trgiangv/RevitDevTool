@@ -36,7 +36,6 @@
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource PrimaryTextBrush}"
                    Text="About" />
-        <TextBlock Foreground="{DynamicResource PrimaryTextBrush}"
-                   Text="{Binding Version, StringFormat=Version {0}}" />
+        <TextBlock Foreground="{DynamicResource PrimaryTextBrush}" Text="{Binding Version, StringFormat=Version {0}}" />
     </StackPanel>
 </UserControl>

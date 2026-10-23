@@ -1,11 +1,11 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Windows.Data;
-using System.Windows.Media;
 using DevTools.UI.Theme;
 using RevitDevTool.Tools.CommandBrowser.Models;
 using RevitDevTool.Tools.CommandBrowser.Services;
 using RevitDevTool.Tools.ElementFinder;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows.Data;
+using System.Windows.Media;
 // ReSharper disable UnusedParameterInPartialMethod
 
 namespace RevitDevTool.Tools.CommandBrowser.ViewModels;

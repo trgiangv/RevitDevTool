@@ -1,9 +1,10 @@
-using System.Text.Json;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Client.Tests;
 
 [TestClass]
+[OSCondition(OperatingSystems.Windows)]
 public sealed class ScoringTests
 {
     [TestMethod]

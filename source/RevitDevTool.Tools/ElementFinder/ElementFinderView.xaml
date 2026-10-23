@@ -117,14 +117,10 @@
                         Click="OnCopyMenuClick"
                         ToolTip="Copy selected (ElementId / UniqueId / IfcGuid)">
                     <Button.ContextMenu>
-                        <ContextMenu d:DataContext="{d:DesignInstance local:ElementFinderViewModel}"
-                                     DataContext="{Binding PlacementTarget.(FrameworkElement.DataContext), RelativeSource={RelativeSource Self}}">
-                            <MenuItem Command="{Binding CopyElementIdsCommand}"
-                                      Header="ElementId" />
-                            <MenuItem Command="{Binding CopyUniqueIdsCommand}"
-                                      Header="UniqueId" />
-                            <MenuItem Command="{Binding CopyIfcGuidsCommand}"
-                                      Header="IfcGuid" />
+                        <ContextMenu d:DataContext="{d:DesignInstance local:ElementFinderViewModel}" DataContext="{Binding PlacementTarget.(FrameworkElement.DataContext), RelativeSource={RelativeSource Self}}">
+                            <MenuItem Command="{Binding CopyElementIdsCommand}" Header="ElementId" />
+                            <MenuItem Command="{Binding CopyUniqueIdsCommand}" Header="UniqueId" />
+                            <MenuItem Command="{Binding CopyIfcGuidsCommand}" Header="IfcGuid" />
                         </ContextMenu>
                     </Button.ContextMenu>
                 </Button>

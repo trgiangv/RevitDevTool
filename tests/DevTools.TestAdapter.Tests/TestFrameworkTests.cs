@@ -1,5 +1,3 @@
-using System.Text.Json;
-using DevTools.TestAdapter;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Config;
 using DevTools.Testing.Abstractions.Contracts;

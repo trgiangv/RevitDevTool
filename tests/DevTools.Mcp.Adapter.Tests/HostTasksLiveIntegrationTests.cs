@@ -1,9 +1,9 @@
-using System.IO.Pipes;
-using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
+using System.IO.Pipes;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Adapter.Tests;
 

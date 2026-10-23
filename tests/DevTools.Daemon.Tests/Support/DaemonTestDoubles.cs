@@ -1,13 +1,12 @@
-using DevTools.Daemon.Desktop.Models;
 using DevTools.Daemon.Auth;
-using DevTools.Daemon.Desktop;
+using DevTools.Daemon.Desktop.Models;
+using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Tunnel;
 using DevTools.Ipc;
-using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
-using Moq;
 using ModelContextProtocol.Protocol;
+using Moq;
 
 namespace DevTools.Daemon.Tests.Support;
 

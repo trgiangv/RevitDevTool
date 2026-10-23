@@ -1,6 +1,6 @@
+using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
-using Microsoft.Extensions.Logging;
 
 namespace DevTools.Logging.Options;
 

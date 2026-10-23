@@ -1,7 +1,5 @@
-using System.IO.Pipes;
-using DevTools.Daemon.Mcp.Processes;
-using DevTools.Ipc;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.IO.Pipes;
 
 namespace DevTools.Mcp.Client.Tests;
 

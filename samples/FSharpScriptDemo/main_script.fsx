@@ -1,4 +1,4 @@
-﻿#r "C:/Program Files/Autodesk/Revit 2025/RevitAPI.dll"
+#r "C:/Program Files/Autodesk/Revit 2025/RevitAPI.dll"
 #r "C:/Program Files/Autodesk/Revit 2025/RevitAPIUI.dll"
 #r "nuget: Newtonsoft.Json"
 #r "nuget: geometry3Sharp"

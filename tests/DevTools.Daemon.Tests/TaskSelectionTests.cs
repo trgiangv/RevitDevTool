@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Tools;
 using ModelContextProtocol.Extensions.Tasks;

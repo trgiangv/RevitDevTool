@@ -28,7 +28,7 @@ public class Application : ExternalApplication
         panel.AddPushButton<ExternalEventCommand>("Benchmark\nExternalEvent")
             .SetImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon16.png")
             .SetLargeImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon32.png");
-        
+
         panel.AddPushButton<ContextLossCommand>("Context Loss")
             .SetImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon16.png")
             .SetLargeImage("/RevitDevTool.ExternalEvent.App;component/Resources/Icons/RibbonIcon32.png");

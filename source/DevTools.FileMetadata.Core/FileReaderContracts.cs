@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using DevTools.Hosting;
+using System.Text.Json.Serialization;
 
 namespace DevTools.FileMetadata.Core;
 

@@ -1,11 +1,11 @@
-using System.Reflection;
-using System.Security.Claims;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Moq;
+using System.Reflection;
+using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace DevTools.Mcp.Catalog.Tests.Harness;
 

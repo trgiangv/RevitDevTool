@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using DevTools.Logging.Listeners;
+using System.Diagnostics;
 
 namespace DevTools.Logging.Tests;
 

@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace DevTools.Testing.Host.Loading;
+namespace DevTools.Testing.Host.Loading.Generation;
 
-internal static class TestingGenerationPublish
+internal static class TestingGenerationPublisher
 {
     private const byte FormatVersion = 1;
     internal const string CompleteMarkerFileName = ".generation-complete";
@@ -84,6 +84,11 @@ internal static class TestingGenerationPublish
         if (Directory.Exists(shadowDirectory))
             return;
 
+        MoveWithRetries(stagingDirectory, shadowDirectory);
+    }
+
+    private static void MoveWithRetries(string stagingDirectory, string shadowDirectory)
+    {
         for (var attempt = 0; attempt < 4; attempt++)
         {
             try
@@ -102,20 +107,24 @@ internal static class TestingGenerationPublish
                     continue;
                 }
 
-                try
-                {
-                    CopyDirectory(stagingDirectory, shadowDirectory);
-                    TryDeleteDirectory(stagingDirectory);
-                    return;
-                }
-                catch (Exception)
-                {
-                    if (Directory.Exists(shadowDirectory))
-                        TryDeleteDirectory(shadowDirectory);
-
-                    throw;
-                }
+                CopyAfterMoveFailures(stagingDirectory, shadowDirectory);
             }
+        }
+    }
+
+    private static void CopyAfterMoveFailures(string stagingDirectory, string shadowDirectory)
+    {
+        try
+        {
+            CopyDirectory(stagingDirectory, shadowDirectory);
+            TryDeleteDirectory(stagingDirectory);
+        }
+        catch (Exception)
+        {
+            if (Directory.Exists(shadowDirectory))
+                TryDeleteDirectory(shadowDirectory);
+
+            throw;
         }
     }
 

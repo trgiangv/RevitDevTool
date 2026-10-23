@@ -1,8 +1,7 @@
-using System.Text.Json;
 using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Contracts;
-using DevTools.Testing.Host;
 using DevTools.Testing.Transport;
+using System.Text.Json;
 
 namespace DevTools.Testing.Host.Tests;
 
@@ -33,7 +32,7 @@ public sealed class RequestHandlerTests
     {
         var handler = CreateHandler(out _);
         using var document = JsonDocument.Parse("""{"protocol_version":2}""");
-        var response = await Handle(handler,"1", "nunit/hello", document.RootElement);
+        var response = await Handle(handler, "1", "nunit/hello", document.RootElement);
 
         Assert.IsTrue(response.IsError);
         Assert.AreEqual(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);

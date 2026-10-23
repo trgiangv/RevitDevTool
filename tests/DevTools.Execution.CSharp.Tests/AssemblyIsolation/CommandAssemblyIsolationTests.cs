@@ -1,9 +1,9 @@
-using System.Reflection;
-using System.Runtime.Loader;
 using DevTools.AssemblyIsolation;
 using DevTools.Execution.Providers.Dotnet;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using System.Reflection;
+using System.Runtime.Loader;
 
 namespace DevTools.Execution.Tests.AssemblyIsolation;
 

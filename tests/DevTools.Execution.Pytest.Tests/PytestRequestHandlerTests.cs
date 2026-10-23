@@ -1,9 +1,9 @@
-using System.Reflection;
-using System.Text.Json;
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Testing;
 using DevTools.Ipc;
+using System.Reflection;
+using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
 

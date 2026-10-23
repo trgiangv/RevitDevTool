@@ -1,6 +1,6 @@
+using Autodesk.Revit.UI.Events;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Autodesk.Revit.UI.Events;
 
 namespace RevitDevTool.Core;
 
@@ -20,7 +20,7 @@ public static class RevitContext
     private static readonly Func<bool> GetIsInApiContext;
     private static readonly IntPtr IncrementConstructorPointer;
     private static readonly IntPtr IncrementDestructorPointer;
-    
+
     [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
     private delegate IntPtr IncrementCtor(IntPtr self);
 
@@ -31,7 +31,6 @@ public static class RevitContext
     ///  Internal API via reflection inspired by RevitToolkit
     ///  https://github.com/Nice3point/RevitToolkit
     /// </summary>
-    /// <exception cref="NotSupportedException"></exception>
     static RevitContext()
     {
         var assemblies = FindAssemblies("APIUIAPI", "RevitAPIUI");
@@ -42,12 +41,12 @@ public static class RevitContext
         var isInApiMode = apiMethods.FirstOrDefault(m => m.Name == "APICallDepthManager.isRevitInAPIMode")
                           ?? throw new NotSupportedException("Cannot resolve APICallDepthManager.isRevitInAPIMode");
 
-        var uiAssemblyMethods =  assemblies[1].ManifestModule.GetMethods(BindingFlags.NonPublic | BindingFlags.Static);
-        var incrementConstructor = uiAssemblyMethods.FirstOrDefault(method => method.Name == "IncrementAPICallDepth.{ctor}") 
+        var uiAssemblyMethods = assemblies[1].ManifestModule.GetMethods(BindingFlags.NonPublic | BindingFlags.Static);
+        var incrementConstructor = uiAssemblyMethods.FirstOrDefault(method => method.Name == "IncrementAPICallDepth.{ctor}")
                                    ?? throw new NotSupportedException("Cannot resolve IncrementAPICallDepth constructor");
         var incrementDestructor = uiAssemblyMethods.FirstOrDefault(method => method.Name == "IncrementAPICallDepth.{dtor}")
                                    ?? throw new NotSupportedException("Cannot resolve IncrementAPICallDepth destructor");
-        
+
         IncrementConstructorPointer = incrementConstructor.MethodHandle.GetFunctionPointer();
         IncrementDestructorPointer = incrementDestructor.MethodHandle.GetFunctionPointer();
         GetIsInApiContext = () =>
@@ -123,10 +122,7 @@ public static class RevitContext
             [UiApplication],
             null)!;
     }
-    
-    /// <summary>
-    ///     Finds assemblies loaded in the current application domain that match the specified names.
-    /// </summary>
+
     private static Assembly[] FindAssemblies(params string[] names)
     {
         var remaining = new HashSet<string>(names);
@@ -140,17 +136,17 @@ public static class RevitContext
             if (remaining.Count == 0) break;
         }
 
-        if (remaining.Count <= 0) 
+        if (remaining.Count <= 0)
             return names.Select(name => result[name]).ToArray();
         var missing = string.Join(", ", remaining);
         throw new NotSupportedException($"Cannot find assemblies: {missing}");
     }
-    
+
     internal static IDisposable BeginApiContextScope()
     {
         return new ApiContextScope(IncrementConstructorPointer, IncrementDestructorPointer);
     }
-    
+
     private sealed class ApiContextScope : IDisposable
     {
         private readonly IntPtr _memory;

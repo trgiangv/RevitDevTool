@@ -1,5 +1,4 @@
 using DevTools.FileMetadata.Acad;
-using DevTools.FileMetadata.Core;
 using DevTools.FileMetadata.Revit;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -21,8 +21,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="5">
 
             <!--  Streamable Http (Remote AI Clients)  -->
@@ -37,8 +36,7 @@
                                Text="Remote clients over Streamable HTTP."
                                TextWrapping="Wrap" />
 
-                    <StackPanel Margin="0,10,0,0"
-                                Orientation="Horizontal">
+                    <StackPanel Margin="0,10,0,0" Orientation="Horizontal">
                         <Button MinWidth="120"
                                 Command="{Binding TriggerDaemonSignInCommand}"
                                 Content="Sign In" />
@@ -82,16 +80,14 @@
                          VirtualizingPanel.IsVirtualizing="True"
                          VirtualizingPanel.VirtualizationMode="Recycling">
                     <ListBox.ItemContainerStyle>
-                        <Style BasedOn="{StaticResource {x:Type ListBoxItem}}"
-                               TargetType="ListBoxItem">
+                        <Style BasedOn="{StaticResource {x:Type ListBoxItem}}" TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                             <Setter Property="Padding" Value="4,2" />
                             <Setter Property="hc:BorderElement.CornerRadius" Value="4" />
                         </Style>
                     </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
-                        <DataTemplate xmlns:sys="clr-namespace:System;assembly=mscorlib"
-                                      DataType="sys:String">
+                        <DataTemplate xmlns:sys="clr-namespace:System;assembly=mscorlib" DataType="sys:String">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />

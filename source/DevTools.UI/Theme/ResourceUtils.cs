@@ -10,9 +10,9 @@ namespace DevTools.UI.Theme;
 /// </summary>
 public static class ResourceUtils
 {
-    private static ResourceDictionary? handyControls;
-    private static ResourceDictionary? handyLightTheme;
-    private static ResourceDictionary? handyDarkTheme;
+    private static ResourceDictionary? _handyControls;
+    private static ResourceDictionary? _handyLightTheme;
+    private static ResourceDictionary? _handyDarkTheme;
 
     private static ResourceDictionary GetResource(string resourcePath)
     {
@@ -25,17 +25,17 @@ public static class ResourceUtils
 
     public static ResourceDictionary GetHandyControls()
     {
-        return handyControls ??= GetResource("Themes/Theme.xaml");
+        return _handyControls ??= GetResource("Themes/Theme.xaml");
     }
 
     public static ResourceDictionary GetHandyLightTheme()
     {
-        return handyLightTheme ??= GetResource("Themes/SkinDefault.xaml");
+        return _handyLightTheme ??= GetResource("Themes/SkinDefault.xaml");
     }
 
     public static ResourceDictionary GetHandyDarkTheme()
     {
-        return handyDarkTheme ??= GetResource("Themes/SkinDark.xaml");
+        return _handyDarkTheme ??= GetResource("Themes/SkinDark.xaml");
     }
 
     public static void RemoveIfNotNull(this Collection<ResourceDictionary> mergedDictionaries, ResourceDictionary? item)

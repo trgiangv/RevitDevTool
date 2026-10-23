@@ -78,21 +78,18 @@
                            Margin="8,0,0,0"
                            HorizontalAlignment="Right"
                            FontSize="11">
-                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
-                         Text="H/T: " />
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}" Text="H/T: " />
                     <Run FontWeight="SemiBold"
                          Foreground="{DynamicResource PrimaryTextBrush}"
                          Text="{Binding HandleCount, Mode=OneWay}" />
-                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
-                         Text=" / " />
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}" Text=" / " />
                     <Run FontWeight="SemiBold"
                          Foreground="{DynamicResource PrimaryTextBrush}"
                          Text="{Binding ThreadCount, Mode=OneWay}" />
                 </TextBlock>
             </Grid>
 
-            <Grid Grid.Row="1"
-                  Margin="0,7,0,0">
+            <Grid Grid.Row="1" Margin="0,7,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
@@ -134,25 +131,20 @@
                            FontSize="10"
                            Foreground="{DynamicResource SecondaryTextBrush}"
                            Text="{Binding LastOperationDurationMs, Mode=OneWay, StringFormat='{}{0} ms'}" />
-                <TextBlock VerticalAlignment="Center"
-                           FontSize="10">
-                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
-                         Text="ΔPrivate: " />
+                <TextBlock VerticalAlignment="Center" FontSize="10">
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}" Text="ΔPrivate: " />
                     <Run FontWeight="SemiBold"
                          Foreground="{Binding LastDeltaPrivateBrush, Mode=OneWay}"
                          Text="{Binding LastDeltaPrivateMb, Mode=OneWay, StringFormat='{}{0:+0.0;-0.0;0.0} MB'}" />
-                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
-                         Text="   ΔManaged: " />
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}" Text="   ΔManaged: " />
                     <Run FontWeight="SemiBold"
                          Foreground="{Binding LastDeltaManagedBrush, Mode=OneWay}"
                          Text="{Binding LastDeltaManagedMb, Mode=OneWay, StringFormat='{}{0:+0.0;-0.0;0.0} MB'}" />
-                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
-                         Text="   ΔHandles: " />
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}" Text="   ΔHandles: " />
                     <Run FontWeight="SemiBold"
                          Foreground="{Binding LastDeltaHandlesBrush, Mode=OneWay}"
                          Text="{Binding LastDeltaHandles, Mode=OneWay, StringFormat='{}{0:+#;-#;0}'}" />
-                    <Run Foreground="{DynamicResource SecondaryTextBrush}"
-                         Text="   Peak: " />
+                    <Run Foreground="{DynamicResource SecondaryTextBrush}" Text="   Peak: " />
                     <Run FontWeight="SemiBold"
                          Foreground="{DynamicResource ThirdlyTextBrush}"
                          Text="{Binding LastPeakPrivateDeltaMb, Mode=OneWay, StringFormat='{}{0:+0.0;-0.0;0.0} MB'}" />

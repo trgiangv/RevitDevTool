@@ -1,6 +1,6 @@
-using System.Text.Json;
-using DevTools.Hosting;
 using DevTools.Daemon.Mcp.Contracts;
+using DevTools.Hosting;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Tests;
 

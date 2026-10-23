@@ -1,5 +1,4 @@
 using System.IO;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.PyRevit;
 
@@ -116,9 +115,9 @@ internal static class PyRevitExtensionPaths
     private static bool TryGetParentDirectory(string dir, out string? parent)
     {
         parent = Path.GetDirectoryName(dir);
-        if (!string.IsNullOrEmpty(parent) && !string.Equals(parent, dir, StringComparison.OrdinalIgnoreCase)) 
+        if (!string.IsNullOrEmpty(parent) && !string.Equals(parent, dir, StringComparison.OrdinalIgnoreCase))
             return true;
-        
+
         parent = null;
         return false;
     }

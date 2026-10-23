@@ -35,8 +35,6 @@
 
         <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
 
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
-
         <ProjectReference Include="..\..\source\DevTools.Settings\DevTools.Settings.csproj"/>
 
         <ProjectReference Include="..\..\source\DevTools.AssemblyIsolation\DevTools.AssemblyIsolation.csproj"/>

@@ -1,8 +1,5 @@
-using System.Text.Json;
-using DevTools.Daemon.Mcp.Hosting;
-using DevTools.Mcp.Core.Utils;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Server.Tests;
 

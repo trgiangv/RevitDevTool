@@ -1,5 +1,3 @@
-using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Catalog.Tests.Harness;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;

@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using DevTools.Hosting;
 using DevTools.TestRunner.Services;
+using System.Diagnostics;
 
 namespace DevTools.TestRunner.Tests;
 

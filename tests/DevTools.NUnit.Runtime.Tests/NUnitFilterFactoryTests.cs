@@ -1,4 +1,3 @@
-using DevTools.NUnit.Runtime;
 using NUnit.Framework.Internal;
 
 namespace DevTools.NUnit.Runtime.Tests;

@@ -1,4 +1,4 @@
-﻿namespace FSharpDemo
+namespace FSharpDemo
 
 open System
 open System.Diagnostics

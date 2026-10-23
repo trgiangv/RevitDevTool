@@ -1,8 +1,8 @@
-using System.Reflection;
-using System.Reflection.Emit;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Identity;
 using DevTools.AssemblyIsolation.Sources;
+using System.Reflection;
+using System.Reflection.Emit;
 
 namespace DevTools.AssemblyIsolation.Tests;
 

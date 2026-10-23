@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace DevTools.Mcp.Adapter.Tests;
 
 [TestClass]

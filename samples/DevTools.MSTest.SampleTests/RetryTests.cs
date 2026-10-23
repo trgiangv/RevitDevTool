@@ -5,13 +5,13 @@ namespace DevTools.MSTest.SampleTests;
 [TestClass]
 public sealed class RetryTests
 {
-    private static int Attempts;
+    private static int _attempts;
 
     [TestMethod]
     [Retry(1)]
     public void Succeeds_after_retry()
     {
-        var attempt = Interlocked.Increment(ref Attempts);
+        var attempt = Interlocked.Increment(ref _attempts);
         if (attempt == 1)
             throw new InvalidOperationException("First attempt is expected to fail.");
 

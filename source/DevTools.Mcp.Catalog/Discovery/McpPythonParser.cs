@@ -1,13 +1,12 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using DevTools.Execution.Abstractions;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Utils;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using ZLogger;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Discovery;
 
@@ -36,10 +35,10 @@ public sealed class McpPythonParser(ILogger<McpPythonParser> logger)
 
     private RegistryCatalog BuildCatalogFromOutput(string? parserOutput, string directory)
     {
-        if (string.IsNullOrWhiteSpace(parserOutput))
+        if (parserOutput is null || string.IsNullOrWhiteSpace(parserOutput))
             return RegistryCatalog.Empty;
-        
-        var catalog = DeserializeCatalog(parserOutput!, directory);
+
+        var catalog = DeserializeCatalog(parserOutput, directory);
         if (catalog is null)
             return RegistryCatalog.Empty;
 

@@ -1,10 +1,7 @@
-using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Discovery;
-using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Catalog.Tests.Harness;
+using DevTools.Mcp.Hosting;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
-using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using Moq;
 

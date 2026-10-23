@@ -1,10 +1,10 @@
+using DevTools.Presentation;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Enums;
 using RevitDevTool.Settings.Config;
 using System.IO;
-using DevTools.Presentation;
-using Microsoft.Extensions.Logging;
 using ZLogger;
 using AppUtils = DevTools.Utilities.AppUtils;
 

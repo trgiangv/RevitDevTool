@@ -1,6 +1,6 @@
+using DevTools.Testing.Abstractions.Runtime;
 using System.Collections.Concurrent;
 using System.Reflection;
-using DevTools.Testing.Abstractions.Runtime;
 using TUnit.Core.Hooks;
 
 namespace DevTools.TUnit.Runtime;
@@ -145,9 +145,9 @@ internal static class TUnitSourceCatalog
         Assembly assembly)
         where TKey : notnull
     {
-        if (parked.TryGetValue(assembly, out var stash)) 
+        if (parked.TryGetValue(assembly, out var stash))
             return stash;
-        
+
         stash = new Dictionary<TKey, TValue>();
         parked[assembly] = stash;
         return stash;

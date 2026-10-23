@@ -3,7 +3,6 @@ using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
 using DevTools.Mcp.Discovery;
 using Microsoft.Extensions.Logging.Abstractions;
-using Python.Runtime;
 
 namespace DevTools.Execution.Tests;
 

@@ -25,8 +25,7 @@
             <converters:ExecutionModeImageConverter x:Key="ExecutionModeIconConverter" />
             <converters:ExecutionModeVisibilityConverter x:Key="ExecutionModeVisibilityConverter" />
 
-            <HierarchicalDataTemplate DataType="{x:Type executionModels:ExecutionNodeRoot}"
-                                      ItemsSource="{Binding Children}">
+            <HierarchicalDataTemplate DataType="{x:Type executionModels:ExecutionNodeRoot}" ItemsSource="{Binding Children}">
                 <TextBlock Margin="2"
                            VerticalAlignment="Center"
                            behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
@@ -35,8 +34,7 @@
                            ToolTip="{Binding RootPath}" />
             </HierarchicalDataTemplate>
 
-            <HierarchicalDataTemplate DataType="{x:Type executionModels:ExecutionNodeIntermediate}"
-                                      ItemsSource="{Binding Children}">
+            <HierarchicalDataTemplate DataType="{x:Type executionModels:ExecutionNodeIntermediate}" ItemsSource="{Binding Children}">
                 <TextBlock Margin="2"
                            VerticalAlignment="Center"
                            behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
@@ -45,8 +43,7 @@
             </HierarchicalDataTemplate>
 
             <DataTemplate DataType="{x:Type executionModels:ExecutionNode}">
-                <StackPanel Margin="2"
-                            Orientation="Horizontal">
+                <StackPanel Margin="2" Orientation="Horizontal">
                     <Image Width="15"
                            Height="15"
                            Margin="0,0,5,0"
@@ -94,20 +91,15 @@
                                       ItemsSource="{Binding FilteredItems}"
                                       SelectedTreeItem="{Binding SelectedNode, Mode=TwoWay}">
                 <control:ExtendedTreeView.InputBindings>
-                    <KeyBinding Key="Delete"
-                                Command="{Binding RemoveCommand}" />
+                    <KeyBinding Key="Delete" Command="{Binding RemoveCommand}" />
                 </control:ExtendedTreeView.InputBindings>
                 <control:ExtendedTreeView.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Command="{Binding ExecuteCommand}"
-                                  Header="Execute" />
-                        <MenuItem Command="{Binding OpenLocationCommand}"
-                                  Header="Open Location" />
+                        <MenuItem Command="{Binding ExecuteCommand}" Header="Execute" />
+                        <MenuItem Command="{Binding OpenLocationCommand}" Header="Open Location" />
                         <Separator />
-                        <MenuItem Command="{Binding RemoveCommand}"
-                                  Header="Remove Selected" />
-                        <MenuItem Command="{Binding ClearCommand}"
-                                  Header="Clear All" />
+                        <MenuItem Command="{Binding RemoveCommand}" Header="Remove Selected" />
+                        <MenuItem Command="{Binding ClearCommand}" Header="Clear All" />
                     </ContextMenu>
                 </control:ExtendedTreeView.ContextMenu>
             </control:ExtendedTreeView>
@@ -116,8 +108,7 @@
                     Background="#AA1E1E1E"
                     IsHitTestVisible="False"
                     Visibility="{Binding IsDropMaskVisible, Converter={StaticResource Boolean2VisibilityConverter}}">
-                <StackPanel HorizontalAlignment="Center"
-                            VerticalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock x:Name="DropMaskTitle"
                                HorizontalAlignment="Center"
                                FontSize="14"
@@ -159,8 +150,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="2"
-              Margin="0,5,0,0">
+        <Grid Grid.Row="2" Margin="0,5,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="*" />
@@ -175,8 +165,7 @@
                            Height="16"
                            Margin="0,0,5,0"
                            Source="{StaticResource DotnetIcon}" />
-                    <TextBlock VerticalAlignment="Center"
-                               Text="Load .NET Assembly" />
+                    <TextBlock VerticalAlignment="Center" Text="Load .NET Assembly" />
                 </StackPanel>
             </Button>
             <Button Grid.Column="1"
@@ -208,8 +197,7 @@
                            Height="16"
                            Margin="0,0,5,0"
                            Source="{StaticResource IronPythonIcon}" />
-                    <TextBlock VerticalAlignment="Center"
-                               Text="Load Scripts" />
+                    <TextBlock VerticalAlignment="Center" Text="Load Scripts" />
                 </StackPanel>
             </Button>
         </Grid>

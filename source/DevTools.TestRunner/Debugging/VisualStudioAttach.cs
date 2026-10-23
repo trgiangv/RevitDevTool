@@ -1,6 +1,6 @@
+using EnvDTE;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
-using EnvDTE;
 
 namespace DevTools.TestRunner.Debugging;
 

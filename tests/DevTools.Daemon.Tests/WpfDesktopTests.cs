@@ -1,17 +1,16 @@
+using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
+using DevTools.Daemon.Desktop.Helpers;
 using DevTools.Daemon.Desktop.Models;
 using DevTools.Daemon.Desktop.ViewModels;
+using DevTools.Daemon.Desktop.Views;
+using DevTools.Daemon.Tests.Support;
+using DevTools.Daemon.Tunnel;
+using DevTools.Settings.Configs;
+using Moq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using DevTools.Daemon.Auth;
-using DevTools.Daemon.Desktop;
-using DevTools.Daemon.Desktop.Helpers;
-using DevTools.Daemon.Tunnel;
-using DevTools.Daemon.Tests.Support;
-using DevTools.Daemon.Desktop.Views;
-using DevTools.Settings.Configs;
-using Moq;
 
 namespace DevTools.Daemon.Tests;
 

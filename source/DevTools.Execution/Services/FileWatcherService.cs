@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.IO;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Execution.Services;
 
 /// <summary>
@@ -35,7 +34,7 @@ public sealed class FileWatcherService : IFileWatcherService
         if (string.IsNullOrEmpty(directoryPath) || !Directory.Exists(directoryPath))
             return;
 
-        Unwatch(rootPath!);
+        Unwatch(rootPath);
 
         foreach (var pattern in patterns)
         {
@@ -55,8 +54,8 @@ public sealed class FileWatcherService : IFileWatcherService
             _watchers[key] = watcher;
         }
 
-        WatchRootLifecycle(rootPath!);
-        WatchDirectoryStructure(rootPath!);
+        WatchRootLifecycle(rootPath);
+        WatchDirectoryStructure(rootPath);
     }
 
     public void Unwatch(string path)
@@ -81,7 +80,7 @@ public sealed class FileWatcherService : IFileWatcherService
         }
 
         var debounceKeysToRemove = _debounceTimers.Keys
-            .Where(k => IsDebounceKeyUnderRoot(k, rootPath!))
+            .Where(k => IsDebounceKeyUnderRoot(k, rootPath))
             .ToList();
 
         foreach (var debounceKey in debounceKeysToRemove)

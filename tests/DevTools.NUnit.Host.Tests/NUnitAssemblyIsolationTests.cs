@@ -1,7 +1,4 @@
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using DevTools.AssemblyIsolation;
-using DevTools.AssemblyIsolation.Sources;
 using DevTools.NUnit.Host.Tests.Loading;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
@@ -9,6 +6,8 @@ using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Host.Runtime;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace DevTools.NUnit.Host.Tests;
 

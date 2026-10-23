@@ -1,6 +1,6 @@
+using DevTools.AssemblyIsolation.Identity;
 using System.Diagnostics;
 using System.Text.Json;
-using DevTools.AssemblyIsolation.Identity;
 
 namespace DevTools.AssemblyIsolation.Tests;
 

@@ -1,7 +1,7 @@
-using System.Text.Json.Serialization;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Tunnel;
 using DevTools.Ipc;
+using System.Text.Json.Serialization;
 
 namespace DevTools.Daemon.Control;
 

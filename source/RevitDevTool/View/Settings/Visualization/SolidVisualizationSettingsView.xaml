@@ -21,8 +21,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel>
             <!--  Faces  -->
             <GroupBox Margin="0,0,0,8"
@@ -45,8 +44,7 @@
                     <StackPanel Margin="0,12,0,0">
                         <DockPanel>
                             <TextBlock Text="Transparency" />
-                            <TextBlock HorizontalAlignment="Right"
-                                       Text="{Binding Transparency, StringFormat={}{0} %}" />
+                            <TextBlock HorizontalAlignment="Right" Text="{Binding Transparency, StringFormat={}{0} %}" />
                         </DockPanel>
                         <Slider Margin="0,4,0,0"
                                 IsSnapToTickEnabled="True"
@@ -59,8 +57,7 @@
                     <StackPanel Margin="0,12,0,0">
                         <DockPanel>
                             <TextBlock Text="Scale" />
-                            <TextBlock HorizontalAlignment="Right"
-                                       Text="{Binding Scale, StringFormat={}{0} %}" />
+                            <TextBlock HorizontalAlignment="Right" Text="{Binding Scale, StringFormat={}{0} %}" />
                         </DockPanel>
                         <Slider Margin="0,4,0,0"
                                 IsSnapToTickEnabled="True"

@@ -1,7 +1,6 @@
+using DevTools.Mcp.Core.Protocol;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using DevTools.Mcp.Core.Protocol;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp;
 
@@ -29,10 +28,10 @@ public sealed class JsonSchemaObject
     /// <summary>Try to deserialize a raw JSON Schema string into a typed model.</summary>
     public static JsonSchemaObject? TryParse(string? json)
     {
-        if (string.IsNullOrWhiteSpace(json)) return null;
+        if (json is null || string.IsNullOrWhiteSpace(json)) return null;
         try
         {
-            return JsonSerializer.Deserialize<JsonSchemaObject>(json!);
+            return JsonSerializer.Deserialize<JsonSchemaObject>(json);
         }
         catch (JsonException)
         {

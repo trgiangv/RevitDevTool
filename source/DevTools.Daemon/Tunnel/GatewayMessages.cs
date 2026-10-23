@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using DevTools.Ipc;
+using System.Text.Json.Serialization;
 
 namespace DevTools.Daemon.Tunnel;
 

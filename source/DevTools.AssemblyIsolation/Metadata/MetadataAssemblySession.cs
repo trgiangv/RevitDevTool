@@ -1,17 +1,17 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation;
+using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Metadata;
 
 public sealed class MetadataAssemblySession : IDisposable
 {
-    private readonly string entryAssemblyPath;
-    private MetadataLoadContext? context;
+    private readonly string _entryAssemblyPath;
+    private MetadataLoadContext? _context;
 
     private MetadataAssemblySession(string entryAssemblyPath, IReadOnlyList<string> resolutionPaths)
     {
-        this.entryAssemblyPath = entryAssemblyPath;
-        context = new MetadataLoadContext(new PathAssemblyResolver(resolutionPaths));
+        _entryAssemblyPath = entryAssemblyPath;
+        _context = new MetadataLoadContext(new PathAssemblyResolver(resolutionPaths));
     }
 
     public static MetadataAssemblySession Create(string entryPath, IEnumerable<string> resolutionPaths)
@@ -27,14 +27,14 @@ public sealed class MetadataAssemblySession : IDisposable
 
     public Assembly LoadEntryAssembly()
     {
-        ObjectDisposedException.ThrowIf(context is null, this);
-        return context!.LoadFromAssemblyPath(entryAssemblyPath);
+        var loadContext = _context ?? throw new ObjectDisposedException(nameof(MetadataAssemblySession));
+        return loadContext.LoadFromAssemblyPath(_entryAssemblyPath);
     }
 
     public void Dispose()
     {
-        context?.Dispose();
-        context = null;
+        _context?.Dispose();
+        _context = null;
     }
 
     private static IReadOnlyList<string> CollectResolutionPaths(string entryPath, IEnumerable<string> resolutionPaths)

@@ -1,5 +1,4 @@
 using DevTools.Daemon;
-using DevTools.Daemon.Mcp.Processes;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DevTools.Mcp.Client.Tests;

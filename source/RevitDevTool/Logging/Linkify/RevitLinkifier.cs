@@ -1,7 +1,7 @@
-using System.Text;
 using DevTools.UI;
-using RevitDevTool.Tools.Selection;
 using RevitDevTool.Core;
+using RevitDevTool.Tools.Selection;
+using System.Text;
 using ZLogger.Scintilla.Models;
 using ZLogger.Scintilla.Public;
 // ReSharper disable ForCanBeConvertedToForeach
@@ -20,7 +20,7 @@ internal sealed class RevitLinkifier : ILinkifier
         var tokenText = Encoding.UTF8.GetString(utf8Token.ToArray());
         if (TokenParser.TryParse(tokenText) is not { } parsed)
             return false;
-        
+
         if (parsed is { LinkInstanceId: null, Kind: TokenKind.ElementId }
             && !ParameterSpan.HasParameter(context, typeof(ElementId).FullName!, tokenText))
             return false;

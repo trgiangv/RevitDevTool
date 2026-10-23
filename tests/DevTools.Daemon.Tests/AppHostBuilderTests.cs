@@ -1,14 +1,13 @@
-using System.IO.Pipelines;
-using System.Text.Json;
-using DevTools.Daemon;
 using DevTools.Daemon.Mcp.Hosting;
-using DevTools.FileMetadata.Core;
 using DevTools.Daemon.Mcp.Processes;
+using DevTools.FileMetadata.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.IO.Pipelines;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Tests;
 

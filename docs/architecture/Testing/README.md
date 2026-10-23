@@ -360,7 +360,7 @@ older request onto the newer copy.
 `IsManagedIdentity` is that check minus satellite resource assemblies. The plan
 still copies every other file into the shadow directory.
 `TestingGenerationPlan.ToManifest` resolves that plan into a published
-`TestingGenerationManifest`. `TestingGenerationPublish` copies the plan,
+`TestingGenerationManifest`. `TestingGenerationPublisher` copies the plan,
 hashes it into the generation id, and publishes the shadow directory.
 Assembly and file version checks live on internal `TestingGenerationPins`
 (`GetNamedAssembly` is the shared framework-dll lookup). Each policy still

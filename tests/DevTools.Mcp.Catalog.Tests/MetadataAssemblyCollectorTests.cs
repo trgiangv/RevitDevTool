@@ -1,5 +1,4 @@
 using System.Reflection;
-using DevTools.Mcp.Isolation;
 
 namespace DevTools.Mcp.Catalog.Tests;
 

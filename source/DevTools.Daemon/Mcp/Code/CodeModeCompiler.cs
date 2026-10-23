@@ -1,12 +1,12 @@
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Text;
+using ModelContextProtocol.Protocol;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.Loader;
 using System.Text;
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Text;
-using ModelContextProtocol.Protocol;
 
 namespace DevTools.Daemon.Mcp.Code;
 

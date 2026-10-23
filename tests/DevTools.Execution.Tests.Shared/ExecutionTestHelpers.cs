@@ -1,5 +1,3 @@
-using System.Reflection;
-using DevTools.Execution;
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
@@ -11,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Python.Runtime;
+using System.Reflection;
 
 namespace DevTools.Execution.Tests;
 

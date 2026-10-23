@@ -20,8 +20,7 @@
                 <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
                 <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <HierarchicalDataTemplate DataType="{x:Type models:MarketplaceNode}"
-                                      ItemsSource="{Binding Children}">
+            <HierarchicalDataTemplate DataType="{x:Type models:MarketplaceNode}" ItemsSource="{Binding Children}">
                 <StackPanel Orientation="Horizontal">
                     <Image Width="14"
                            Height="14"
@@ -30,16 +29,13 @@
                             <Style TargetType="Image">
                                 <Setter Property="Source" Value="{StaticResource NuGetIcon}" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Marketplace}"
-                                                 Value="{x:Static models:Marketplace.NuGet}">
+                                    <DataTrigger Binding="{Binding Marketplace}" Value="{x:Static models:Marketplace.NuGet}">
                                         <Setter Property="Source" Value="{StaticResource NuGetIcon}" />
                                     </DataTrigger>
-                                    <DataTrigger Binding="{Binding Marketplace}"
-                                                 Value="{x:Static models:Marketplace.CondaForge}">
+                                    <DataTrigger Binding="{Binding Marketplace}" Value="{x:Static models:Marketplace.CondaForge}">
                                         <Setter Property="Source" Value="{StaticResource CondaForgeIcon}" />
                                     </DataTrigger>
-                                    <DataTrigger Binding="{Binding Marketplace}"
-                                                 Value="{x:Static models:Marketplace.PyPi}">
+                                    <DataTrigger Binding="{Binding Marketplace}" Value="{x:Static models:Marketplace.PyPi}">
                                         <Setter Property="Source" Value="{StaticResource PypiIcon}" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -49,8 +45,7 @@
                     <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding HighlightRange}"
                                FontWeight="SemiBold"
                                Text="{Binding Name}" />
-                    <TextBlock Margin="6,0,0,0"
-                               Text="{Binding Children.Count, StringFormat='({0})'}" />
+                    <TextBlock Margin="6,0,0,0" Text="{Binding Children.Count, StringFormat='({0})'}" />
                 </StackPanel>
             </HierarchicalDataTemplate>
 
@@ -109,15 +104,11 @@
                                   SelectedTreeItem="{Binding SelectedNode, Mode=TwoWay}">
             <control:ExtendedTreeView.ContextMenu>
                 <ContextMenu Width="{StaticResource Length200}">
-                    <MenuItem Command="{Binding RemoveCommand}"
-                              Header="Remove" />
-                    <MenuItem Command="{Binding RemoveAllCommand}"
-                              Header="Remove All" />
+                    <MenuItem Command="{Binding RemoveCommand}" Header="Remove" />
+                    <MenuItem Command="{Binding RemoveAllCommand}" Header="Remove All" />
                     <Separator />
-                    <MenuItem Command="{Binding UpdateCommand}"
-                              Header="Update" />
-                    <MenuItem Command="{Binding RepairCommand}"
-                              Header="Repair" />
+                    <MenuItem Command="{Binding UpdateCommand}" Header="Update" />
+                    <MenuItem Command="{Binding RepairCommand}" Header="Repair" />
                 </ContextMenu>
             </control:ExtendedTreeView.ContextMenu>
         </control:ExtendedTreeView>
@@ -132,8 +123,7 @@
                 <TextBlock FontSize="11"
                            Foreground="{DynamicResource PrimaryTextBrush}"
                            Text="{Binding BusyMessage}" />
-                <hc:LoadingLine Margin="0,6,0,0"
-                                IsRunning="{Binding IsBusy}" />
+                <hc:LoadingLine Margin="0,6,0,0" IsRunning="{Binding IsBusy}" />
             </StackPanel>
         </Border>
     </Grid>

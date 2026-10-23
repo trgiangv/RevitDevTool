@@ -12,23 +12,25 @@ internal sealed class FailureSuppressionScope : IDisposable
     private static int _refCount;
     private static EventHandler<FailuresProcessingEventArgs>? _handler;
 
-    private readonly ExecutionGuardFeedback _feedback;
     private int _disposed;
 
     internal FailureSuppressionScope(ExecutionGuardFeedback feedback)
     {
-        _feedback = feedback;
+        Acquire(feedback);
+    }
 
+    private static void Acquire(ExecutionGuardFeedback feedback)
+    {
         lock (SyncRoot)
         {
             _refCount++;
             if (_refCount != 1) return;
-            _handler = OnFailuresProcessing;
+            _handler = (_, args) => OnFailuresProcessing(feedback, args);
             RevitContext.Application.FailuresProcessing += _handler;
         }
     }
 
-    private void OnFailuresProcessing(object? sender, FailuresProcessingEventArgs args)
+    private static void OnFailuresProcessing(ExecutionGuardFeedback feedback, FailuresProcessingEventArgs args)
     {
         var failuresAccessor = args.GetFailuresAccessor();
         var failureMessages = failuresAccessor.GetFailureMessages();
@@ -47,20 +49,20 @@ internal sealed class FailureSuppressionScope : IDisposable
             if (severity == FailureSeverity.Warning)
             {
                 failuresAccessor.DeleteWarning(message);
-                _feedback.RecordWarningDismissed();
+                feedback.RecordWarningDismissed();
             }
             else
             {
                 if (message.HasResolutions())
                 {
                     failuresAccessor.ResolveFailure(message);
-                    _feedback.RecordErrorResolved();
+                    feedback.RecordErrorResolved();
                 }
                 else
                 {
                     hasUnresolvable = true;
                     var failureId = message.GetFailureDefinitionId().Guid.ToString();
-                    _feedback.RecordRollback(failureId);
+                    feedback.RecordRollback(failureId);
                 }
             }
         }
@@ -81,6 +83,11 @@ internal sealed class FailureSuppressionScope : IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
+        Release();
+    }
+
+    private static void Release()
+    {
         lock (SyncRoot)
         {
             _refCount--;

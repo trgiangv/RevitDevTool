@@ -1,6 +1,7 @@
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.Loading.Generation;
 using DevTools.Testing.Host.Runtime;
 
 namespace DevTools.Testing.Host.Tests.Loading;
@@ -100,7 +101,7 @@ public sealed class TestingGenerationStoreTests
         using var workspace = new GenerationWorkspace();
         var assembly = workspace.CopyManaged("sample.dll");
         var plan = workspace.Plan(assembly, [(assembly, "sample.dll")]);
-        var generationId = TestingGenerationPublish.ComputeGenerationId([
+        var generationId = TestingGenerationPublisher.ComputeGenerationId([
             ("sample.dll", assembly),
         ]);
         Directory.CreateDirectory(Path.Combine(workspace.GenerationsRoot, generationId));
@@ -141,13 +142,13 @@ public sealed class TestingGenerationStoreTests
         Directory.CreateDirectory(Path.Combine(staging, "nested"));
         Directory.CreateDirectory(Path.Combine(staging, "empty"));
         File.WriteAllText(Path.Combine(staging, "nested", "payload.txt"), "ok");
-        File.WriteAllText(Path.Combine(staging, TestingGenerationPublish.CompleteMarkerFileName), string.Empty);
+        File.WriteAllText(Path.Combine(staging, TestingGenerationPublisher.CompleteMarkerFileName), string.Empty);
 
-        TestingGenerationPublish.CopyDirectory(staging, shadow);
+        TestingGenerationPublisher.CopyDirectory(staging, shadow);
 
         Assert.AreEqual("ok", File.ReadAllText(Path.Combine(shadow, "nested", "payload.txt")));
         Assert.IsTrue(Directory.Exists(Path.Combine(shadow, "empty")));
-        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPublish.CompleteMarkerFileName)));
+        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPublisher.CompleteMarkerFileName)));
     }
 
     [TestMethod]
@@ -159,19 +160,19 @@ public sealed class TestingGenerationStoreTests
         Directory.CreateDirectory(staging);
         var payload = Path.Combine(staging, "payload.txt");
         File.WriteAllText(payload, "ok");
-        var generationId = TestingGenerationPublish.ComputeGenerationId(
+        var generationId = TestingGenerationPublisher.ComputeGenerationId(
             staging,
-            TestingGenerationPublish.ReadContentRelativePaths(staging));
+            TestingGenerationPublisher.ReadContentRelativePaths(staging));
 
         using (var stream = new FileStream(payload, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
         {
-            TestingGenerationPublish.Publish(staging, shadow, generationId);
+            TestingGenerationPublisher.Publish(staging, shadow, generationId);
             GC.KeepAlive(stream);
         }
 
         Assert.IsTrue(Directory.Exists(shadow));
         Assert.AreEqual("ok", File.ReadAllText(Path.Combine(shadow, "payload.txt")));
-        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPublish.CompleteMarkerFileName)));
+        Assert.IsTrue(File.Exists(Path.Combine(shadow, TestingGenerationPublisher.CompleteMarkerFileName)));
     }
 
     [TestMethod]

@@ -1,14 +1,14 @@
-using System.Collections.ObjectModel;
-using System.ComponentModel;
-using System.Diagnostics;
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Logging;
 using DevTools.Logging.Options;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
-using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;
+using DevTools.Settings;
 using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Diagnostics;
 using ZLogger.Providers;
 // ReSharper disable UnusedParameterInPartialMethod
 

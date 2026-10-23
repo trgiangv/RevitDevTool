@@ -1,5 +1,3 @@
-using DevTools.Telemetry;
-
 namespace DevTools.Telemetry.Tests;
 
 [TestClass]

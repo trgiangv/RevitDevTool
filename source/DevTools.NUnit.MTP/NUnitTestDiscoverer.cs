@@ -92,18 +92,17 @@ public sealed class NUnitTestDiscoverer : ITestDiscoverer
         TestSourceLocation? location = null;
         if (source is not null
             && source.TryGetSourceLocation(test, out var filePath, out var lineNumber)
+            && filePath is not null
             && !string.IsNullOrWhiteSpace(filePath))
         {
-            // ReSharper disable once RedundantSuppressNullableWarningExpression
-            location = new TestSourceLocation(filePath!, lineNumber);
+            location = new TestSourceLocation(filePath, lineNumber);
         }
 
         var methodInfo = test.Method?.MethodInfo;
         ReadMethodSignature(methodInfo, out var parameterTypes, out var returnType);
         return new TestDiscoveredTest(
             testId,
-            StripNumericTypeSuffixes(
-                NUnitTestNameParser.AppendDisplayArguments(test.Name, typeName)),
+            StripNumericTypeSuffixes(NUnitTestNameParser.AppendDisplayArguments(test.Name, typeName)),
             fullName,
             className,
             methodName,
@@ -178,13 +177,11 @@ internal sealed class NUnitLocalExploration : IDisposable
         {
             var runner = new NUnitTestAssemblyRunner(new NUnitAssemblyBuilder());
             var workDirectory = Path.GetDirectoryName(assemblyPath) ?? AppContext.BaseDirectory;
-            runner.Load(
-                load.Assembly,
-                new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
-                {
-                    [FrameworkPackageSettings.WorkDirectory] = workDirectory,
-                    [FrameworkPackageSettings.NumberOfTestWorkers] = 0,
-                });
+            runner.Load(load.Assembly, new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                [FrameworkPackageSettings.WorkDirectory] = workDirectory,
+                [FrameworkPackageSettings.NumberOfTestWorkers] = 0,
+            });
 
             var root = runner.ExploreTests(TestFilter.Empty);
             if (root.RunState == RunState.NotRunnable)

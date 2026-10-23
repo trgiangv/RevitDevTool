@@ -1,4 +1,4 @@
-﻿namespace CSharpDemo.Extensions;
+namespace CSharpDemo.Extensions;
 
 [PublicAPI]
 public static class GeometryExtensions

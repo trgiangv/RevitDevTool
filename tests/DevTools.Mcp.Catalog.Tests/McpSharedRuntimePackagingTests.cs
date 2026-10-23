@@ -1,6 +1,3 @@
-using DevTools.Mcp.Discovery;
-using DevTools.Mcp.Catalog.Tests.Harness;
-
 namespace DevTools.Mcp.Catalog.Tests;
 
 /// <summary>

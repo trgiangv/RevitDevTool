@@ -1,13 +1,10 @@
-using DevTools.Daemon.Control;
-using DevTools.Daemon.Desktop.Models;
-using DevTools.Daemon.Logging;
 using DevTools.Daemon.Auth;
-using System.Text.Json;
-using DevTools.Daemon;
-using DevTools.Daemon.Mcp.Processes;
-using DevTools.Daemon.Desktop;
+using DevTools.Daemon.Control;
 using DevTools.Daemon.Desktop.Helpers;
+using DevTools.Daemon.Desktop.Models;
 using DevTools.Daemon.Desktop.Views;
+using DevTools.Daemon.Logging;
+using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Tests.Support;
 using DevTools.Settings.Configs;
 using DevTools.Utilities;
@@ -16,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 using Moq;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Tests;
 

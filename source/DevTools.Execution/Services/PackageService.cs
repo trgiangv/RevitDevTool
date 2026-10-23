@@ -10,8 +10,8 @@ public sealed class PackageService(
     IEnumerable<IPythonPackageStore> pythonStores,
     PackageVersionChecker packageVersionChecker) : IPackageService
 {
-    private IPythonPackageStore? PythonStore => 
-        pythonInitializer.Provider?.Backend is null 
+    private IPythonPackageStore? PythonStore =>
+        pythonInitializer.Provider?.Backend is null
             ? null : pythonStores.FirstOrDefault(store => store.Backend == pythonInitializer.Provider?.Backend);
 
     public async Task<IReadOnlyList<Package>> ListInstalledPackagesAsync(CancellationToken cancellationToken = default)

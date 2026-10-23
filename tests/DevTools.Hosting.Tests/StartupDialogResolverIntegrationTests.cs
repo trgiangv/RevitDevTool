@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using DevTools.Hosting;
 
 namespace DevTools.Hosting.Tests;
 

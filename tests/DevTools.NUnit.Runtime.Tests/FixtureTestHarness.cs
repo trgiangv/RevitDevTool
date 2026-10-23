@@ -1,5 +1,5 @@
-using System.Reflection;
 using DevTools.NUnit.Runtime.Fixtures;
+using System.Reflection;
 
 namespace DevTools.NUnit.Runtime.Tests;
 

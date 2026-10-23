@@ -1,5 +1,4 @@
 using DevTools.Hosting;
-using DevTools.Testing.Abstractions.Contracts;
 using DevTools.TestRunner.Debugging;
 using DevTools.TestRunner.Parsing;
 using DevTools.TestRunner.Services;

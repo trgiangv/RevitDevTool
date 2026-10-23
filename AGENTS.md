@@ -31,6 +31,7 @@ Read the **minimum** layer for the task. Do not duplicate docs into chat.
 | MTP host tests | `.agents/skills/revit-test/SKILL.md` → `docs/agents/host-testing.md` |
 | pytest host tests | `.agents/skills/revit-pytest/SKILL.md` |
 | Platform / IPC / packaging edit | `.agents/skills/platform-change/SKILL.md` |
+| Formatting and lint hooks | `docs/agents/formatting-linting.md` |
 
 ## Verify before done
 

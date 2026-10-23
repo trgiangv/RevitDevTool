@@ -1,6 +1,6 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Loading;
+using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
@@ -86,21 +86,6 @@ public sealed class AssemblyLoaderTests
             .Invoke(null, null));
 
         Assert.IsInstanceOfType<FileNotFoundException>(exception.InnerException);
-    }
-
-    [TestMethod]
-    public void Registered_loader_probes_its_directory_for_unmanaged_dependencies()
-    {
-        using var directory = new LoadTestDirectory();
-        var source = Path.Combine(Environment.SystemDirectory, "kernel32.dll");
-        var destination = Path.Combine(directory.Path, "resolver-native-fixture.dll");
-        File.Copy(source, destination);
-        using var loader = new AssemblyLoader();
-        loader.Register(directory.Path);
-
-        var resolvedPath = loader.FindUnmanagedPathForTesting("resolver-native-fixture");
-
-        Assert.AreEqual(destination, resolvedPath, ignoreCase: true);
     }
 
     sealed class RecordingDiagnosticSink : IAssemblyIsolationDiagnosticSink

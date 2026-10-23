@@ -1,5 +1,5 @@
-using System.Reflection;
 using DevTools.Testing.Abstractions.Contracts;
+using System.Reflection;
 
 namespace DevTools.MSTest.MTP;
 
@@ -11,14 +11,9 @@ namespace DevTools.MSTest.MTP;
 /// </summary>
 internal static class MSTestExpansion
 {
-    private const BindingFlags Members =
-        BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic
-        | BindingFlags.DeclaredOnly;
+    private const BindingFlags Members = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
 
-    public static IReadOnlyList<string> Expand(
-        Assembly assembly,
-        IReadOnlyList<TestDiscoveredTest> all,
-        IEnumerable<string> selectedIds)
+    public static IReadOnlyList<string> Expand(Assembly assembly, IReadOnlyList<TestDiscoveredTest> all, IEnumerable<string> selectedIds)
     {
         ArgumentNullException.ThrowIfNull(assembly);
         ArgumentNullException.ThrowIfNull(all);
@@ -47,11 +42,7 @@ internal static class MSTestExpansion
         return byId;
     }
 
-    private static void Enqueue(
-        string id,
-        List<string> ordered,
-        HashSet<string> seen,
-        Queue<string> pending)
+    private static void Enqueue(string id, List<string> ordered, HashSet<string> seen, Queue<string> pending)
     {
         if (!seen.Add(id))
             return;
@@ -60,14 +51,7 @@ internal static class MSTestExpansion
         pending.Enqueue(id);
     }
 
-    private static void AppendPrerequisites(
-        string id,
-        Dictionary<string, TestDiscoveredTest> byId,
-        IReadOnlyList<TestDiscoveredTest> all,
-        Dictionary<string, Type> types,
-        List<string> ordered,
-        HashSet<string> seen,
-        Queue<string> pending)
+    private static void AppendPrerequisites(string id, Dictionary<string, TestDiscoveredTest> byId, IReadOnlyList<TestDiscoveredTest> all, Dictionary<string, Type> types, List<string> ordered, HashSet<string> seen, Queue<string> pending)
     {
         if (!byId.TryGetValue(id, out var test))
             return;
@@ -76,10 +60,7 @@ internal static class MSTestExpansion
             Enqueue(prerequisite.TestId, ordered, seen, pending);
     }
 
-    private static IEnumerable<TestDiscoveredTest> Prerequisites(
-        TestDiscoveredTest test,
-        IReadOnlyList<TestDiscoveredTest> all,
-        Dictionary<string, Type> types)
+    private static IEnumerable<TestDiscoveredTest> Prerequisites(TestDiscoveredTest test, IReadOnlyList<TestDiscoveredTest> all, Dictionary<string, Type> types)
     {
         if (!TryResolve(test, types, out var type))
             yield break;
@@ -91,14 +72,9 @@ internal static class MSTestExpansion
         }
     }
 
-    private static bool TryResolve(
-        TestDiscoveredTest test,
-        Dictionary<string, Type> types,
-        out Type type)
+    private static bool TryResolve(TestDiscoveredTest test, Dictionary<string, Type> types, out Type type)
     {
-        if (test.ClassName is not null
-            && test.MethodName is not null
-            && types.TryGetValue(Normalize(test.ClassName), out type!))
+        if (test.ClassName is not null && test.MethodName is not null && types.TryGetValue(Normalize(test.ClassName), out type!))
             return true;
 
         type = null!;
@@ -120,14 +96,9 @@ internal static class MSTestExpansion
         }
     }
 
-    private static IEnumerable<DependsOnAttribute> Attributes(MemberInfo member) =>
-        member.GetCustomAttributes(typeof(DependsOnAttribute), inherit: false).OfType<DependsOnAttribute>();
+    private static IEnumerable<DependsOnAttribute> Attributes(MemberInfo member) => member.GetCustomAttributes(typeof(DependsOnAttribute), inherit: false).OfType<DependsOnAttribute>();
 
-    private static IEnumerable<TestDiscoveredTest> Matches(
-        IReadOnlyList<TestDiscoveredTest> all,
-        TestDiscoveredTest test,
-        Type type,
-        DependsOnAttribute edge)
+    private static IEnumerable<TestDiscoveredTest> Matches(IReadOnlyList<TestDiscoveredTest> all, TestDiscoveredTest test, Type type, DependsOnAttribute edge)
     {
         var targetClass = Normalize((edge.TestClass ?? type).FullName ?? string.Empty);
         foreach (var candidate in all)
@@ -137,11 +108,7 @@ internal static class MSTestExpansion
         }
     }
 
-    private static bool IsPrerequisite(
-        TestDiscoveredTest candidate,
-        TestDiscoveredTest test,
-        string targetClass,
-        DependsOnAttribute edge)
+    private static bool IsPrerequisite(TestDiscoveredTest candidate, TestDiscoveredTest test, string targetClass, DependsOnAttribute edge)
     {
         if (candidate.ClassName is null)
             return false;
@@ -149,8 +116,7 @@ internal static class MSTestExpansion
         if (!string.Equals(Normalize(candidate.ClassName), targetClass, StringComparison.Ordinal))
             return false;
 
-        if (edge.TestMethodName is not null
-            && !string.Equals(candidate.MethodName, edge.TestMethodName, StringComparison.Ordinal))
+        if (edge.TestMethodName is not null && !string.Equals(candidate.MethodName, edge.TestMethodName, StringComparison.Ordinal))
             return false;
 
         return !string.Equals(candidate.TestId, test.TestId, StringComparison.Ordinal);
@@ -165,8 +131,7 @@ internal static class MSTestExpansion
         }
         catch (ReflectionTypeLoadException ex)
         {
-            // ReSharper disable once RedundantSuppressNullableWarningExpression
-            loadable = ex.Types.Where(type => type is not null).ToArray()!;
+            loadable = ex.Types.OfType<Type>().ToArray();
         }
 
         var index = new Dictionary<string, Type>(StringComparer.Ordinal);

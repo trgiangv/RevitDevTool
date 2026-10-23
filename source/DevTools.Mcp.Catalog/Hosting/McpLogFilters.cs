@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Diagnostics;
 using ZLogger;
 
 namespace DevTools.Mcp.Hosting;

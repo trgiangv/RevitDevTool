@@ -1,10 +1,10 @@
-using System.IO.Pipes;
-using System.Security.AccessControl;
-using System.Security.Principal;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.IO.Pipes;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 namespace DevTools.Mcp.Client.Tests;
 

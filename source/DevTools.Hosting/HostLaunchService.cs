@@ -1,7 +1,7 @@
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace DevTools.Hosting;
 
@@ -46,23 +46,27 @@ public sealed class HostLaunchService : IHostLaunchService
         if (string.IsNullOrWhiteSpace(version))
             throw new InvalidOperationException($"No compatible {request.HostApp} version found.");
 
-        var exePath = pathResolver.FindExecutable(request.HostApp, version!);
+        var exePath = pathResolver.FindExecutable(
+            request.HostApp,
+            version ?? throw new InvalidOperationException($"No compatible {request.HostApp} version found."));
         if (string.IsNullOrWhiteSpace(exePath))
             throw new InvalidOperationException($"{request.HostApp} {version} installation not found.");
 
-        var resolved = request with { Version = version! };
-        var arguments = argumentBuilder.Build(resolved, exePath!);
+        var resolved = request with { Version = version };
+        var arguments = argumentBuilder.Build(
+            resolved,
+            exePath ?? throw new InvalidOperationException($"{request.HostApp} {version} installation not found."));
         if (arguments.Count == 0)
             throw new InvalidOperationException($"Launch not yet supported for {request.HostApp}.");
 
-        var process = StartProcess(request.HostApp, exePath!, arguments);
+        var process = StartProcess(request.HostApp, exePath, arguments);
         var dialogSpec = SingleFor(_dialogSpecs, request.HostApp, s => s.Supports(request.HostApp));
         var dialogSession = StartupDialogResolver.Start(dialogSpec, process.Id, cancellationToken);
 
         return new HostProcessStart(
             process,
-            version!,
-            exePath!,
+            version,
+            exePath,
             resolved.LanguageCulture,
             arguments,
             dialogSession);

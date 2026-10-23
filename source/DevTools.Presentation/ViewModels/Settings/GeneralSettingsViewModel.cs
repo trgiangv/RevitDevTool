@@ -1,8 +1,8 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Hosting;
 using DevTools.Presentation.Interfaces;
-using DevTools.Settings;
 using DevTools.Presentation.ViewModels.Messages;
+using DevTools.Settings;
 using DevTools.UI.Theme;
 namespace DevTools.Presentation.ViewModels.Settings;
 

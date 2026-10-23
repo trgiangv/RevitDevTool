@@ -1,10 +1,10 @@
-using System.Xml.Linq;
 using ModularPipelines.Context;
 using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.DotNet.Options;
 using ModularPipelines.Git.Extensions;
 using ModularPipelines.Modules;
 using Sourcy.DotNet;
+using System.Xml.Linq;
 
 namespace Build.Modules;
 

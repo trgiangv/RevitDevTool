@@ -1,5 +1,5 @@
-using System.Xml.Linq;
 using DevTools.Testing.Abstractions.Contracts;
+using System.Xml.Linq;
 
 namespace DevTools.NUnit.MTP;
 

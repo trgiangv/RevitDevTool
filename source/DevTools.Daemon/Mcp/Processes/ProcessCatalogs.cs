@@ -106,8 +106,8 @@ public sealed class ProcessCatalogs
                 continue;
 
             foreach (var kind in kindFilter)
-            foreach (var item in ItemsOfKind(catalog, kind))
-                yield return item;
+                foreach (var item in ItemsOfKind(catalog, kind))
+                    yield return item;
         }
     }
 

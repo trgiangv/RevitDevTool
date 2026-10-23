@@ -1,5 +1,3 @@
-using DevTools.TestAdapter;
-
 namespace DevTools.TestAdapter.Tests;
 
 [TestClass]

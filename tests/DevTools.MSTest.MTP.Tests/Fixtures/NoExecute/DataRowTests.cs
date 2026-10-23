@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 namespace DevTools.TestAdapter.Tests.Fixtures;
 
 // Bodies stay empty. Discovery must list one node per row and must not run them.

@@ -1,8 +1,8 @@
-using System.Reflection;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.Testing.Platform.Builder;
 using Microsoft.Testing.Platform.Extensions.Messages;
+using System.Reflection;
 
 namespace DevTools.MSTest.MTP;
 
@@ -29,7 +29,7 @@ internal static class MSTestListing
                     new TestApplicationOptions { EnableTelemetry = false })
                 .GetAwaiter()
                 .GetResult();
-            builder.AddMSTest(() => new[] { testAssembly });
+            builder.AddMSTest(() => [testAssembly]);
             application = builder.BuildAsync().GetAwaiter().GetResult();
             var exitCode = application.RunAsync().GetAwaiter().GetResult();
             var discovered = MapDiscovered(MtpDiscoveryInternals.ReadDiscoveredNodes(application));

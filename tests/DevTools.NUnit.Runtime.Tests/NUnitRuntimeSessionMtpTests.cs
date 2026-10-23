@@ -19,8 +19,8 @@ public sealed class NUnitRuntimeSessionMtpTests
         Assert.AreEqual(TestFrameworkId.NUnit, response.FrameworkId);
         Assert.AreEqual(FixtureTestHarness.GenerationId, response.GenerationId);
         Assert.AreEqual(38, response.Results.Count);
-        Assert.IsTrue(response.Results.Any(result  => result.DisplayName == "PlainTest_Passes" && result.Outcome == TestOutcomes.Passed));
-        Assert.IsTrue(sink.Events.Any(testingEvent  => testingEvent.Kind == TestEventKinds.Case && testingEvent.Case is not null));
+        Assert.IsTrue(response.Results.Any(result => result.DisplayName == "PlainTest_Passes" && result.Outcome == TestOutcomes.Passed));
+        Assert.IsTrue(sink.Events.Any(testingEvent => testingEvent.Kind == TestEventKinds.Case && testingEvent.Case is not null));
     }
 
     [TestMethod]

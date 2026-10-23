@@ -1,8 +1,6 @@
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using DevTools.Mcp.Core.Protocol;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Core.Tests;
 

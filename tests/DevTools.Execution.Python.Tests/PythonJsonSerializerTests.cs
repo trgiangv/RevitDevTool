@@ -1,7 +1,6 @@
-using System.Text.Json;
 using DevTools.Execution.Providers.Python;
 using Python.Runtime;
-using ZLogger.Scintilla.Public;
+using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
 

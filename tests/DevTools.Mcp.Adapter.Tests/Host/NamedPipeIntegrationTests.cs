@@ -1,13 +1,12 @@
-using System.IO.Pipes;
+using DevTools.Execution.Abstractions;
+using DevTools.Hosting;
 using DevTools.Mcp.Adapter.Tests.Harness;
+using DevTools.Mcp.Core.Catalog;
+using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Transport;
-using DevTools.Mcp.Core.Catalog;
-using DevTools.Mcp.Core.Models;
-using DevTools.Execution.Abstractions;
-using DevTools.Hosting;
-using DevTools.Mcp.Core.Sessions;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +16,7 @@ using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Moq;
 using System.Diagnostics;
+using System.IO.Pipes;
 
 namespace DevTools.Mcp.Adapter.Tests.Host;
 

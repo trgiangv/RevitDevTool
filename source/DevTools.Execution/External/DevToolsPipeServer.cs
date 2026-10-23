@@ -1,12 +1,11 @@
+using DevTools.Hosting;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Pipes;
 using System.Text.Json;
-using DevTools.Hosting;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using ZLogger;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Execution.External;
 
@@ -146,8 +145,8 @@ public sealed class DevToolsPipeServer(
         conn.MessageReceived += msg =>
         {
             var handler = HandleMessageAsync(entry, msg);
-            if (handler.IsFaulted)
-                logger.ZLogWarning(handler.Exception!, $"Test pipe handler failed");
+            if (handler.Exception is { } handlerException)
+                logger.ZLogWarning(handlerException, $"Test pipe handler failed");
         };
         conn.FrameFault += reason =>
         {
@@ -193,13 +192,13 @@ public sealed class DevToolsPipeServer(
             catch (OperationCanceledException) when (requestCt.IsCancellationRequested)
             {
                 response = BridgeMessage.Error(
-                    msg.Id!,
+                    msg.Id,
                     IpcErrorCodes.InternalError,
                     "Request cancelled because the client disconnected.");
             }
             catch (Exception ex)
             {
-                response = BridgeMessage.Error(msg.Id!, IpcErrorCodes.InternalError, ex.Message);
+                response = BridgeMessage.Error(msg.Id, IpcErrorCodes.InternalError, ex.Message);
             }
 
             try
@@ -235,8 +234,8 @@ public sealed class DevToolsPipeServer(
     private void SendNotification(string method, JsonElement? data = null)
     {
         var sending = SendNotificationAsync(method, data);
-        if (sending.IsFaulted)
-            logger.ZLogWarning(sending.Exception!, $"Test pipe notification failed");
+        if (sending.Exception is { } sendingException)
+            logger.ZLogWarning(sendingException, $"Test pipe notification failed");
     }
 
     private async Task SendNotificationAsync(string method, JsonElement? data = null)

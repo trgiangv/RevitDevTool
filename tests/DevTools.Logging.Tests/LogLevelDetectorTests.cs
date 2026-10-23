@@ -1,4 +1,3 @@
-using DevTools.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace DevTools.Logging.Tests;

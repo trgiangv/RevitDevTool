@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using DevTools.Logging;
 
 namespace DevTools.Logging.Tests;
 

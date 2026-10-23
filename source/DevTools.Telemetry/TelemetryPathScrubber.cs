@@ -14,7 +14,7 @@ public static partial class TelemetryPathScrubber
     private static partial Regex MyRegex();
     private static readonly Regex WindowsPathRegex = MyRegex();
 #else
-    private static readonly Regex WindowsPathRegex = new(WindowsPathPattern,RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex WindowsPathRegex = new(WindowsPathPattern, RegexOptions.Compiled | RegexOptions.CultureInvariant);
 #endif
 
     public static string Scrub(string? text)

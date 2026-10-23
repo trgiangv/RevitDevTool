@@ -1,17 +1,17 @@
-using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Desktop.Models;
-using DevTools.Daemon.Tunnel;
 using DevTools.Daemon.Mcp.Processes;
+using DevTools.Daemon.Tunnel;
+using System.Reflection;
 
 namespace DevTools.Daemon.Desktop.ViewModels;
 
 public partial class ShellViewModel(
-    IAuthService authService, 
-    IHostConnections sessions, 
-    IMcpPipeScanner pipeScanner, 
-    UserSettingsStore settings, 
+    IAuthService authService,
+    IHostConnections sessions,
+    IMcpPipeScanner pipeScanner,
+    UserSettingsStore settings,
     ITunnelStatusProvider tunnelStatus) : ObservableObject
 {
     private const string DefaultVersion = "1.0.0";

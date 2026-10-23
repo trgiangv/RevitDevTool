@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
 using IronPython.Hosting;
@@ -6,6 +5,7 @@ using IronPython.Modules;
 using Microsoft.Extensions.Logging;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
+using System.Diagnostics;
 using ZLogger;
 using Ipy = IronPython.Hosting.Python;
 

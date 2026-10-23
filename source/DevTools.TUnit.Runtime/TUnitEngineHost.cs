@@ -1,9 +1,9 @@
-using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
+using System.Runtime.CompilerServices;
 using ReflectionAssembly = System.Reflection.Assembly;
 using SessionUid = Microsoft.Testing.Platform.TestHost.SessionUid;
 

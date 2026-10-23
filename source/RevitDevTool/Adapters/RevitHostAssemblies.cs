@@ -1,5 +1,5 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation;
+using System.Reflection;
 
 namespace RevitDevTool.Adapters;
 

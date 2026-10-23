@@ -1,7 +1,7 @@
-using System.Text.Json;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 using DevTools.TestRunner.Services;
+using System.Text.Json;
 
 namespace DevTools.TestRunner.Tests;
 

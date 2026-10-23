@@ -1,5 +1,5 @@
-using Python.Runtime;
 using DevTools.Execution.Models;
+using Python.Runtime;
 namespace RevitDevTool.Utils;
 
 [PublicAPI]
@@ -18,7 +18,7 @@ public static class ExecutionExtensions
                 durationMs: durationMs)
         };
     }
-    
+
     public static List<object> AsObjectCollection(this PyObject pyObject)
     {
         if (!pyObject.IsIterable()) return [];

@@ -1,5 +1,4 @@
 using GenerationPrivateDependency;
-using NUnit.Framework;
 
 namespace DependencyConsumer;
 

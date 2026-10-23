@@ -2,7 +2,6 @@ using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.Extensions.Logging;
 using ZLogger;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Execution.Services;
 
@@ -111,9 +110,10 @@ public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<Pac
 
     private static bool IsSameVersion(string? current, string? latest)
     {
-        if (string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(latest))
+        if (current is null || latest is null
+            || string.IsNullOrWhiteSpace(current) || string.IsNullOrWhiteSpace(latest))
             return false;
-        return current!.Trim().Equals(latest!.Trim(), StringComparison.OrdinalIgnoreCase);
+        return current.Trim().Equals(latest.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static string NormalizeId(string packageId)

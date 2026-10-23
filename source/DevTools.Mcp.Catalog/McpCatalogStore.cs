@@ -3,7 +3,6 @@ using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
 using DevTools.Settings;
 using ModelContextProtocol.Protocol;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp;
 
@@ -106,12 +105,12 @@ public sealed class McpCatalogStore(ICatalogLoader catalogLoader, ISettingsServi
         Dictionary<string, List<T>> byName,
         out T? result)
     {
-        if (!string.IsNullOrWhiteSpace(id) && byId.TryGetValue(id!, out var byIdResult))
+        if (id is not null && !string.IsNullOrWhiteSpace(id) && byId.TryGetValue(id, out var byIdResult))
         {
             result = byIdResult;
             return true;
         }
-        if (!string.IsNullOrWhiteSpace(name) && byName.TryGetValue(name!, out var byNameList) && byNameList.Count > 0)
+        if (name is not null && !string.IsNullOrWhiteSpace(name) && byName.TryGetValue(name, out var byNameList) && byNameList.Count > 0)
         {
             result = byNameList[0];
             return true;

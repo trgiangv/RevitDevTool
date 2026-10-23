@@ -1,4 +1,3 @@
-using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.Testing.Abstractions.Tests;

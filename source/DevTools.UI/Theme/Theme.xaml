@@ -13,14 +13,10 @@
 
     <!--  Handy keys these on the parent control. An implicit style still applies when that assignment is absent  -->
     <!--  ReSharper disable Xaml.StaticResourceNotResolved  -->
-    <Style BasedOn="{StaticResource ListBoxItemBaseStyle}"
-           TargetType="ListBoxItem" />
-    <Style BasedOn="{StaticResource ListViewItemBaseStyle}"
-           TargetType="ListViewItem" />
-    <Style BasedOn="{StaticResource ComboBoxItemBaseStyle}"
-           TargetType="ComboBoxItem" />
-    <Style BasedOn="{StaticResource TreeViewBaseStyle}"
-           TargetType="{x:Type controls:ExtendedTreeView}" />
+    <Style BasedOn="{StaticResource ListBoxItemBaseStyle}" TargetType="ListBoxItem" />
+    <Style BasedOn="{StaticResource ListViewItemBaseStyle}" TargetType="ListViewItem" />
+    <Style BasedOn="{StaticResource ComboBoxItemBaseStyle}" TargetType="ComboBoxItem" />
+    <Style BasedOn="{StaticResource TreeViewBaseStyle}" TargetType="{x:Type controls:ExtendedTreeView}" />
     <!--  ReSharper restore Xaml.StaticResourceNotResolved  -->
 
 </ResourceDictionary>

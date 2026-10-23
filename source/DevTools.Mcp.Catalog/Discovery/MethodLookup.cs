@@ -1,9 +1,9 @@
-using System.Reflection;
 using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Isolation;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
+using System.Reflection;
 
 namespace DevTools.Mcp.Discovery;
 

@@ -1,13 +1,13 @@
 using AcadDevTool.Adapters;
+using AcadDevTool.Composition;
 using AcadDevTool.Settings;
-using Microsoft.Extensions.DependencyInjection;
 using DevTools.Execution.Providers.Python;
 using DevTools.Telemetry;
 using DevTools.UI;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using AcadDevTool.Composition;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AcadDevTool;
@@ -54,11 +54,6 @@ public static class Host
         if (_host is null)
         {
             return;
-        }
-
-        if (_host.Services.GetService<ITelemetry>() is { } telemetry)
-        {
-            telemetry.Flush();
         }
 
         _host.StopAsync().GetAwaiter().GetResult();

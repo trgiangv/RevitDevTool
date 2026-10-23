@@ -1,9 +1,9 @@
-using System.Reflection;
-using System.Text;
 using DevTools.MSTest.MTP;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Builder;
+using System.Reflection;
+using System.Text;
 
 namespace DevTools.MSTest.Runtime;
 
@@ -36,10 +36,10 @@ public sealed class MSTestRuntimeSession : CancellableRuntimeSession
             case TestSelectionKind.TestIds when request.Selection.TestIds.Count == 0:
                 return CreateEmptyResponse(request);
             default:
-            {
-                var selection = WithDependencies(request.Selection);
-                return RunApplication(request, selection, eventSink, cancellationToken).GetAwaiter().GetResult();
-            }
+                {
+                    var selection = WithDependencies(request.Selection);
+                    return RunApplication(request, selection, eventSink, cancellationToken).GetAwaiter().GetResult();
+                }
         }
 
     }

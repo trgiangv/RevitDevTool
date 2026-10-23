@@ -1,7 +1,7 @@
-using System.Reflection;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.VisualStudio.TestPlatform.MSTestAdapter.PlatformServices.SourceGeneration;
+using System.Reflection;
 
 namespace DevTools.MSTest.MTP;
 
@@ -17,9 +17,7 @@ public sealed class MSTestTestDiscoverer : ITestDiscoverer
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
         ArgumentNullException.ThrowIfNull(selection);
-        if (selection.Kind == TestSelectionKind.FrameworkFilter)
-            return [];
-        if (selection.Kind == TestSelectionKind.TestIds && selection.TestIds.Count == 0)
+        if (selection.Kind == TestSelectionKind.FrameworkFilter || selection is { Kind: TestSelectionKind.TestIds, TestIds.Count: 0 })
             return [];
 
         var fullPath = Path.GetFullPath(assemblyPath);

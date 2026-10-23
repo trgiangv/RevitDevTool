@@ -1,6 +1,5 @@
-using DevTools.Mcp.Providers;
-using DevTools.Mcp;
 using DevTools.Mcp.Hosting;
+using DevTools.Mcp.Providers;
 using DevTools.Settings;
 using Microsoft.Extensions.DependencyInjection;
 

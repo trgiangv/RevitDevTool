@@ -1,20 +1,18 @@
-using DevTools.Daemon.Desktop.ViewModels;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using DevTools.Daemon.Auth;
-using DevTools.Daemon;
 using DevTools.Daemon.Control;
-using DevTools.Daemon.Desktop;
-using DevTools.Daemon.Tunnel;
-using DevTools.Daemon.Tests.Support;
+using DevTools.Daemon.Desktop.ViewModels;
 using DevTools.Daemon.Desktop.Views;
+using DevTools.Daemon.Tests.Support;
+using DevTools.Daemon.Tunnel;
 using DevTools.Utilities;
 using Duende.IdentityModel.OidcClient.Browser;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Tests;
 

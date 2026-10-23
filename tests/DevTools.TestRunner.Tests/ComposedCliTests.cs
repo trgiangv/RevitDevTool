@@ -1,8 +1,8 @@
-using System.Diagnostics;
-using System.Text.Json;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 using DevTools.TestRunner.Parsing;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace DevTools.TestRunner.Tests;
 

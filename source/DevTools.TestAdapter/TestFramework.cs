@@ -1,13 +1,12 @@
-using System.Diagnostics;
+using DevTools.Testing.Abstractions;
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Transport;
 using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Configurations;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
-using DevTools.Testing.Abstractions;
-using DevTools.Testing.Abstractions.Contracts;
-using DevTools.Testing.Transport;
-// ReSharper disable RedundantSuppressNullableWarningExpression
+using System.Diagnostics;
 #pragma warning disable TPEXP
 
 namespace DevTools.TestAdapter;

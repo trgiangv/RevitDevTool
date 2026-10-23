@@ -1,8 +1,8 @@
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Transport;
 using System.Collections.Concurrent;
 using System.IO.Pipes;
 using System.Text.Json;
-using DevTools.Testing.Abstractions.Contracts;
-using DevTools.Testing.Transport;
 
 namespace DevTools.TestRunner.Services;
 

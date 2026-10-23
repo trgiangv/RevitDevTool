@@ -1,9 +1,8 @@
-using DevTools.Daemon.Desktop.Models;
-using System.Text.Json;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
-using DevTools.Daemon.Desktop;
+using DevTools.Daemon.Desktop.Models;
 using DevTools.Settings.Configs;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Tests;
 

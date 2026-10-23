@@ -1,11 +1,8 @@
 using DevTools.Daemon.Mcp;
-using DevTools.Daemon.Mcp.Hosting;
-using DevTools.Daemon.Mcp.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Moq;

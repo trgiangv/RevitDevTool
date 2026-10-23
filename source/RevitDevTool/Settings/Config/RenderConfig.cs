@@ -1,6 +1,6 @@
+using RevitDevTool.Core;
 using System.Text.Json.Serialization;
 using System.Windows.Media;
-using RevitDevTool.Core;
 using Color = System.Windows.Media.Color;
 
 namespace RevitDevTool.Settings.Config;

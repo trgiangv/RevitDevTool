@@ -1,6 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
-using System.Text.RegularExpressions;
-using System.Xml;
 using Build.Options;
 using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
@@ -10,6 +7,9 @@ using ModularPipelines.Git.Extensions;
 using ModularPipelines.Modules;
 using Shouldly;
 using Sourcy.DotNet;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
+using System.Xml;
 using File = ModularPipelines.FileSystem.File;
 
 namespace Build.Modules;

@@ -20,8 +20,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="5">
             <!--  Theme  -->
             <GroupBox Margin="0,0,0,8"
@@ -34,8 +33,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Application Theme" />
+                        <TextBlock FontWeight="SemiBold" Text="Application Theme" />
                         <TextBlock FontSize="11"
                                    Foreground="{DynamicResource SecondaryTextBrush}"
                                    Text="Customise the application theme" />
@@ -60,8 +58,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Memory monitor" />
+                            <TextBlock FontWeight="SemiBold" Text="Memory monitor" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Shows realtime process memory and operation tracking" />
@@ -84,8 +81,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel VerticalAlignment="Center">
-                        <TextBlock FontWeight="SemiBold"
-                                   Text="Anonymous diagnostics" />
+                        <TextBlock FontWeight="SemiBold" Text="Anonymous diagnostics" />
                         <TextBlock FontSize="11"
                                    Foreground="{DynamicResource SecondaryTextBrush}"
                                    Text="Optional. Helps maintainers spot crashes and usage patterns. No model content or script source."

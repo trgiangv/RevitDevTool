@@ -56,8 +56,7 @@
                                             <Style TargetType="Ellipse">
                                                 <Setter Property="Fill" Value="{StaticResource BorderBrush}" />
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding McpIsConnected}"
-                                                                 Value="True">
+                                                    <DataTrigger Binding="{Binding McpIsConnected}" Value="True">
                                                         <Setter Property="Fill" Value="{StaticResource SuccessBrush}" />
                                                     </DataTrigger>
                                                     <MultiDataTrigger>
@@ -137,14 +136,12 @@
                              VirtualizingPanel.IsVirtualizing="True"
                              VirtualizingPanel.VirtualizationMode="Recycling">
                         <ListBox.ItemContainerStyle>
-                            <Style BasedOn="{StaticResource ListBoxItemBaseStyle}"
-                                   TargetType="ListBoxItem">
+                            <Style BasedOn="{StaticResource ListBoxItemBaseStyle}" TargetType="ListBoxItem">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                 <Setter Property="Padding" Value="4,3" />
                                 <Setter Property="ToolTip" Value="{Binding ToolTipText}" />
                                 <Style.Resources>
-                                    <Style BasedOn="{StaticResource ToolTipBaseStyle}"
-                                           TargetType="ToolTip">
+                                    <Style BasedOn="{StaticResource ToolTipBaseStyle}" TargetType="ToolTip">
                                         <Setter Property="ContentTemplate">
                                             <Setter.Value>
                                                 <DataTemplate>
@@ -174,8 +171,7 @@
                                            VerticalAlignment="Center"
                                            Source="{Binding SourceKind, Converter={StaticResource ExecutionModeToIcon}}" />
 
-                                    <StackPanel Grid.Column="1"
-                                                Orientation="Horizontal">
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
                                         <TextBlock behav:HighlightTextBlockBehavior.Range="{Binding NameHighlight}"
                                                    FontWeight="SemiBold"
                                                    Text="{Binding Name}"
@@ -221,13 +217,11 @@
                                        Text="{Binding StatusPanelText}"
                                        TextAlignment="Center"
                                        TextTrimming="CharacterEllipsis" />
-                            <hc:LoadingLine Margin="0,6,0,0"
-                                            IsRunning="{Binding ShowStatusPanel}" />
+                            <hc:LoadingLine Margin="0,6,0,0" IsRunning="{Binding ShowStatusPanel}" />
                         </StackPanel>
                     </Border>
 
-                    <Grid Grid.Row="3"
-                          Margin="0,6,0,0">
+                    <Grid Grid.Row="3" Margin="0,6,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="*" />
@@ -243,8 +237,7 @@
                                        Height="16"
                                        Margin="0,0,5,0"
                                        Source="{StaticResource DotnetIcon}" />
-                                <TextBlock VerticalAlignment="Center"
-                                           Text="Load .NET Toolset" />
+                                <TextBlock VerticalAlignment="Center" Text="Load .NET Toolset" />
                             </StackPanel>
                         </Button>
 
@@ -258,8 +251,7 @@
                                        Height="16"
                                        Margin="0,0,5,0"
                                        Source="{StaticResource PythonIcon}" />
-                                <TextBlock VerticalAlignment="Center"
-                                           Text="Load Python Toolset" />
+                                <TextBlock VerticalAlignment="Center" Text="Load Python Toolset" />
                             </StackPanel>
                         </Button>
                     </Grid>
@@ -275,8 +267,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0"
-              Margin="0,0,0,6">
+        <Grid Grid.Row="0" Margin="0,0,0,6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -306,8 +297,7 @@
                 Background="#AA1E1E1E"
                 IsHitTestVisible="False"
                 Visibility="Collapsed">
-            <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock x:Name="DropMaskTitle"
                            HorizontalAlignment="Center"
                            FontSize="14"

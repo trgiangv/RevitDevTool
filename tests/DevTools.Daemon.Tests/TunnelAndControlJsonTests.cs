@@ -1,6 +1,6 @@
-using System.Text.Json;
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Tunnel;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Tests;
 

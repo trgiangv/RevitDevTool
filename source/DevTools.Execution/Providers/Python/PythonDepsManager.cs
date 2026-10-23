@@ -1,17 +1,17 @@
+using CliWrap;
+using DevTools.Execution.Models;
+using Python.Runtime;
 using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using CliWrap;
-using DevTools.Execution.Models;
-using Python.Runtime;
 
 namespace DevTools.Execution.Providers.Python;
 
 public static class PythonDepsManager
 {
     private sealed record ParseResult(
-        [property: JsonPropertyName("requires_python")] string RequiresPython, 
+        [property: JsonPropertyName("requires_python")] string RequiresPython,
         [property: JsonPropertyName("to_install")] List<string> ToInstall)
     {
         public static readonly ParseResult Empty = new(string.Empty, []);

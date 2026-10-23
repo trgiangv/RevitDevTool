@@ -1,5 +1,4 @@
 using DevTools.Testing.Abstractions.Contracts;
-using DevTools.NUnit.Runtime;
 using NUnit.Framework.Interfaces;
 
 namespace DevTools.NUnit.Runtime.Tests;

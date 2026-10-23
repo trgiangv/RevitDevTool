@@ -1,6 +1,6 @@
-using System.Reflection;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.MSTest;
+using System.Reflection;
 
 namespace DevTools.Testing.Host.Tests;
 

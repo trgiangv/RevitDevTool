@@ -1,9 +1,9 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Sources;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Reflection;
 
 namespace DevTools.Mcp.Isolation;
 

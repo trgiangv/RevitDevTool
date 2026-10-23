@@ -1,3 +1,4 @@
+using DevTools.Testing.Host.Loading.Generation;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 
@@ -45,7 +46,7 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
             var metadata = plan.Files.Select(file => (File: file, Metadata: SourceMetadata.Capture(file.SourcePath))).ToList();
             foreach (var item in metadata)
             {
-                TestingGenerationPublish.CopyFile(item.File.SourcePath, Path.Combine(staging, item.File.RelativePath));
+                TestingGenerationPublisher.CopyFile(item.File.SourcePath, Path.Combine(staging, item.File.RelativePath));
                 AfterFileCopied?.Invoke(item.File.SourcePath);
             }
 
@@ -56,8 +57,8 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
             }
 
             var contentPaths = plan.Files.Select(file => file.RelativePath).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList();
-            var generationId = TestingGenerationPublish.ComputeGenerationId(staging, contentPaths);
-            if (!string.Equals(generationId, TestingGenerationPublish.ComputeGenerationId(staging, contentPaths), StringComparison.Ordinal))
+            var generationId = TestingGenerationPublisher.ComputeGenerationId(staging, contentPaths);
+            if (!string.Equals(generationId, TestingGenerationPublisher.ComputeGenerationId(staging, contentPaths), StringComparison.Ordinal))
             {
                 failure = "staged generation changed before publication";
                 return false;
@@ -71,12 +72,12 @@ public sealed class TestingGenerationStore(string? generationsRootDirectory = nu
                 {
                     if (Directory.Exists(shadowDirectory))
                     {
-                        TestingGenerationPublish.EnsurePublishedIsValid(shadowDirectory, generationId);
+                        TestingGenerationPublisher.EnsurePublishedIsValid(shadowDirectory, generationId);
                     }
                     else
                     {
-                        TestingGenerationPublish.Publish(staging, shadowDirectory, generationId);
-                        TestingGenerationPublish.EnsurePublishedIsValid(shadowDirectory, generationId);
+                        TestingGenerationPublisher.Publish(staging, shadowDirectory, generationId);
+                        TestingGenerationPublisher.EnsurePublishedIsValid(shadowDirectory, generationId);
                     }
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

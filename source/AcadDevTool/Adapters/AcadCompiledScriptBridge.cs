@@ -1,8 +1,8 @@
-using System.Reflection;
-using System.Text.RegularExpressions;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.AssemblyIsolation;
 using DevTools.Hosting;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace AcadDevTool.Adapters;
 

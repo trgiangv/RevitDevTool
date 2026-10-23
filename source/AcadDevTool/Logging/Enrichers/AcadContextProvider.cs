@@ -1,7 +1,7 @@
-using System.IO;
 using AcadDevTool.Logging.Enums;
-using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 using DevTools.Logging.Abstractions;
+using System.IO;
+using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AcadDevTool.Logging.Enrichers;
 

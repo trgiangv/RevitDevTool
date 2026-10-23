@@ -1,8 +1,8 @@
+using HarmonyLib;
 using System.Collections;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
-using HarmonyLib;
 // ReSharper disable InconsistentNaming
 
 namespace DevTools.Presentation.Services;

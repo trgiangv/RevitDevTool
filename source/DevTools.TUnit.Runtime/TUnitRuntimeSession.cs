@@ -1,6 +1,6 @@
-using System.Reflection;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
+using System.Reflection;
 
 namespace DevTools.TUnit.Runtime;
 

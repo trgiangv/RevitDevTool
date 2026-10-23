@@ -6,13 +6,12 @@
                     mc:Ignorable="d">
 
     <ContextMenu x:Key="TrayMenu"
-                 x:Shared="False"
-                 d:DataContext="{d:DesignInstance views:TrayMenu}">
+                 d:DataContext="{d:DesignInstance views:TrayMenu}"
+                 x:Shared="False">
         <MenuItem Margin="0,4,0,0"
                   Command="{Binding SignInCommand}"
                   Header="Sign In" />
-        <MenuItem Command="{Binding SignOutCommand}"
-                  Header="Sign Out" />
+        <MenuItem Command="{Binding SignOutCommand}" Header="Sign Out" />
         <Separator />
         <MenuItem Margin="0,0,0,4"
                   Command="{Binding ExitApplicationCommand}"

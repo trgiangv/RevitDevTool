@@ -13,7 +13,7 @@ public interface ITelemetry : IDisposable
     void RecordMcpInvocation(string category);
 
     void RecordLoggerGeometry(string category);
-    
+
     void RecordLoggerTrace(LogLevel level);
 
     void RecordCriticalException(

@@ -1,10 +1,10 @@
-using System.Diagnostics;
-using System.IO;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.IronPython;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Execution.PyRevit;
+using System.Diagnostics;
+using System.IO;
 using ZLogger;
 
 namespace RevitDevTool.Execution;
@@ -30,8 +30,8 @@ public sealed class RevitIPyExecutionStrategy(
         IProgress<string>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        return !PyRevitLibraryPaths.IsLoaded 
-            ? _native.ExecuteAsync(progress, cancellationToken) 
+        return !PyRevitLibraryPaths.IsLoaded
+            ? _native.ExecuteAsync(progress, cancellationToken)
             : ExecutePyrevitAsync(progress, cancellationToken);
     }
 

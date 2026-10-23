@@ -12,7 +12,7 @@ namespace DevTools.Logging.Diagnostics;
 public sealed class StartupTrace : IDisposable
 {
     private static readonly AsyncLocal<StartupTrace?> Ambient = new();
-    private static StartupTrace? instance;
+    private static StartupTrace? _instance;
 
     private readonly string _app;
     private readonly string _ver;
@@ -39,13 +39,13 @@ public sealed class StartupTrace : IDisposable
         Append("OnStartup");
     }
 
-    public static StartupTrace? Current => Ambient.Value ?? instance;
+    public static StartupTrace? Current => Ambient.Value ?? _instance;
 
     public static StartupTrace Begin(string app, string ver, int pid, string logsDirectory)
     {
-        instance?.Dispose();
+        _instance?.Dispose();
         var trace = new StartupTrace(app, ver, pid, logsDirectory);
-        instance = trace;
+        _instance = trace;
         Ambient.Value = trace;
         return trace;
     }
@@ -93,8 +93,8 @@ public sealed class StartupTrace : IDisposable
 
     private static void Detach(StartupTrace trace)
     {
-        if (ReferenceEquals(instance, trace))
-            instance = null;
+        if (ReferenceEquals(_instance, trace))
+            _instance = null;
         if (ReferenceEquals(Ambient.Value, trace))
             Ambient.Value = null;
     }

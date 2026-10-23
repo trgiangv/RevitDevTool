@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 
 from System import Console
 from System.Diagnostics import Debug, Trace

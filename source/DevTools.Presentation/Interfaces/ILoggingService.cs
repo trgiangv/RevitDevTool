@@ -1,6 +1,6 @@
-using System.Windows;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
+using System.Windows;
 
 namespace DevTools.Presentation.Interfaces;
 

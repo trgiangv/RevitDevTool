@@ -2,6 +2,7 @@ using Autodesk.Revit.UI.Events;
 
 namespace RevitDevTool.Core.Execution;
 
+// ReSharper disable once InvalidXmlDocComment
 /// <summary>
 /// Subscribes to <see cref="UIApplication.DialogBoxShowing"/> and auto-dismisses
 /// all dialogs while the scope is active. Reference-counted for safe nesting.
@@ -12,27 +13,29 @@ internal sealed class DialogSuppressionScope : IDisposable
     private static int _refCount;
     private static EventHandler<DialogBoxShowingEventArgs>? _handler;
 
-    private readonly ExecutionGuardFeedback _feedback;
     private int _disposed;
 
     internal DialogSuppressionScope(ExecutionGuardFeedback feedback)
     {
-        _feedback = feedback;
+        Acquire(feedback);
+    }
 
+    private static void Acquire(ExecutionGuardFeedback feedback)
+    {
         lock (SyncRoot)
         {
             _refCount++;
             if (_refCount != 1) return;
-            _handler = OnDialogBoxShowing;
+            _handler = (_, args) => OnDialogBoxShowing(feedback, args);
             RevitContext.UiApplication.DialogBoxShowing += _handler;
         }
     }
 
-    private void OnDialogBoxShowing(object? sender, DialogBoxShowingEventArgs args)
+    private static void OnDialogBoxShowing(ExecutionGuardFeedback feedback, DialogBoxShowingEventArgs args)
     {
         var overrideCode = ResolveOverrideResult(args.DialogId);
         args.OverrideResult(overrideCode);
-        _feedback.RecordDialogSuppressed();
+        feedback.RecordDialogSuppressed();
     }
 
     private static int ResolveOverrideResult(string dialogId)
@@ -51,6 +54,11 @@ internal sealed class DialogSuppressionScope : IDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
 
+        Release();
+    }
+
+    private static void Release()
+    {
         lock (SyncRoot)
         {
             _refCount--;

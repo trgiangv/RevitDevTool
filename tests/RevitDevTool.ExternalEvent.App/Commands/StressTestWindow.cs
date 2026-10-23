@@ -1,8 +1,8 @@
 #if DEBUG
+using MdXaml;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using MdXaml;
 using Button = System.Windows.Controls.Button;
 using Orientation = System.Windows.Controls.Orientation;
 using TextBox = System.Windows.Controls.TextBox;

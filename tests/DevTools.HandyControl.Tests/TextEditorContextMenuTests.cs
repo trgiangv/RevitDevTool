@@ -1,10 +1,10 @@
+using DevTools.UI.Theme;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using DevTools.UI.Theme;
 
 namespace DevTools.HandyControl.Tests;
 

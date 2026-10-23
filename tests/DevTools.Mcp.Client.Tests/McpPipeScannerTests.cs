@@ -1,6 +1,3 @@
-using System.Diagnostics;
-using DevTools.Daemon.Mcp.Processes;
-
 namespace DevTools.Mcp.Client.Tests;
 
 [TestClass]

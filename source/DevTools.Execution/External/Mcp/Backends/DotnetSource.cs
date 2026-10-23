@@ -1,11 +1,11 @@
-using System.Reflection;
-using System.Collections.Concurrent;
 using DevTools.Mcp.Bridging;
-using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace DevTools.Execution.External.Mcp.Backends;
 

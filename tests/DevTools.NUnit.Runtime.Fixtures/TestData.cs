@@ -1,5 +1,5 @@
-using System.Collections;
 using NUnit.Framework;
+using System.Collections;
 
 namespace DevTools.NUnit.Runtime.Fixtures;
 

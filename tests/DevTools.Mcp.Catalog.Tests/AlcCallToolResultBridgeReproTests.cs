@@ -1,8 +1,7 @@
-using System.Text.Json;
-using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Catalog.Tests;
 

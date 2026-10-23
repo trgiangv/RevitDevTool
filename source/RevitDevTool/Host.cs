@@ -1,11 +1,11 @@
-using Microsoft.Extensions.DependencyInjection;
 using DevTools.Execution.Providers.Python;
 using DevTools.Telemetry;
 using DevTools.UI;
 using DevTools.Utilities;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using RevitDevTool.Core;
 using RevitDevTool.Composition;
+using RevitDevTool.Core;
 using RevitDevTool.Logging.Linkify;
 using RevitDevTool.Settings;
 
@@ -54,11 +54,6 @@ public static class Host
         if (_host is null)
         {
             return;
-        }
-
-        if (_host.Services.GetService<ITelemetry>() is { } telemetry)
-        {
-            telemetry.Flush();
         }
 
         _host.StopAsync().GetAwaiter().GetResult();

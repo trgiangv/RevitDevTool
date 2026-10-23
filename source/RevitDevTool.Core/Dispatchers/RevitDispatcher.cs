@@ -18,15 +18,15 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
     public RevitDispatcher()
     {
         using (RevitContext.BeginApiContextScope())
-        {
-            _event ??= ExternalEvent.Create(this);
-        }
+            _event = ExternalEvent.Create(this);
     }
 
     public void Execute(UIApplication app)
     {
         lock (_gate)
+        {
             _insideExecute = true;
+        }
 
         try
         {
@@ -203,7 +203,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
     }
 
     /// <summary>
-    /// The caller is on the Revit thread in API mode. Nested work runs inline while
+    /// The caller must be in Revit API mode. Nested work runs inline while
     /// <see cref="Execute"/> is on the stack. Otherwise only an empty queue runs inline.
     /// </summary>
     private bool AllowDirectInvocation()

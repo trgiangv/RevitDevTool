@@ -1,12 +1,12 @@
 #pragma warning disable MCPEXP001
 
-using System.Text.Json;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Tests;
 

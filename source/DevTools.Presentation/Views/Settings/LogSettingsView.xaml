@@ -21,8 +21,7 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
-                  VerticalScrollBarVisibility="Auto">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
         <hc:SimpleStackPanel Margin="5">
             <!--  Log Filter  -->
             <GroupBox Margin="0,0,0,8"
@@ -46,8 +45,7 @@
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
                                     VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Minimum Level" />
+                            <TextBlock FontWeight="SemiBold" Text="Minimum Level" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Minimum level for displaying logs" />
@@ -125,8 +123,7 @@
                             </DockPanel>
 
                             <!--  Critical  -->
-                            <DockPanel LastChildFill="True"
-                                       ToolTip="Critical">
+                            <DockPanel LastChildFill="True" ToolTip="Critical">
 
                                 <Path Width="{StaticResource Length14}"
                                       Height="{StaticResource Length14}"
@@ -170,14 +167,12 @@
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
                                     VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Include Stack Trace" />
+                            <TextBlock FontWeight="SemiBold" Text="Include Stack Trace" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Include stack trace frame information" />
                         </StackPanel>
-                        <StackPanel Grid.Column="2"
-                                    Orientation="Vertical">
+                        <StackPanel Grid.Column="2" Orientation="Vertical">
                             <ToggleButton HorizontalAlignment="Right"
                                           VerticalAlignment="Bottom"
                                           IsChecked="{Binding IncludeStackTrace}"
@@ -207,14 +202,12 @@
                         <StackPanel Grid.Column="1"
                                     Margin="12,0"
                                     VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Include WPF Trace" />
+                            <TextBlock FontWeight="SemiBold" Text="Include WPF Trace" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Include presentation trace information" />
                         </StackPanel>
-                        <StackPanel Grid.Column="2"
-                                    Orientation="Vertical">
+                        <StackPanel Grid.Column="2" Orientation="Vertical">
                             <ToggleButton HorizontalAlignment="Right"
                                           VerticalAlignment="Bottom"
                                           IsChecked="{Binding IncludeWpfTrace}"
@@ -254,8 +247,7 @@
                         <hc:SimpleStackPanel Grid.Column="1"
                                              Margin="12,0"
                                              VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Active Sinks" />
+                            <TextBlock FontWeight="SemiBold" Text="Active Sinks" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Select logging output destinations" />
@@ -283,8 +275,7 @@
                         <hc:SimpleStackPanel Grid.Column="1"
                                              Margin="12,0"
                                              VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="JSON" />
+                            <TextBlock FontWeight="SemiBold" Text="JSON" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Use JSON format for all logging outputs" />
@@ -311,8 +302,7 @@
                         <hc:SimpleStackPanel Grid.Column="1"
                                              Margin="12,0"
                                              VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Log enrichers" />
+                            <TextBlock FontWeight="SemiBold" Text="Log enrichers" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Add optional context fields to JSON logs" />
@@ -351,8 +341,7 @@
                         <hc:SimpleStackPanel Grid.Column="1"
                                              Margin="12,0"
                                              VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Rolling Interval" />
+                            <TextBlock FontWeight="SemiBold" Text="Rolling Interval" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Create new file every" />
@@ -380,8 +369,7 @@
                         <hc:SimpleStackPanel Grid.Column="1"
                                              Margin="12,0"
                                              VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Auto Clean" />
+                            <TextBlock FontWeight="SemiBold" Text="Auto Clean" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Delete old log files when Revit startup or shutdown" />
@@ -405,10 +393,8 @@
                               Data="{StaticResource Folder}"
                               Fill="{DynamicResource PrimaryTextBrush}"
                               Stretch="Uniform" />
-                        <hc:SimpleStackPanel Grid.Column="1"
-                                             Margin="12,0">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Log Folder" />
+                        <hc:SimpleStackPanel Grid.Column="1" Margin="12,0">
+                            <TextBlock FontWeight="SemiBold" Text="Log Folder" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="{Binding LogFolder}"
@@ -448,8 +434,7 @@
                         <hc:SimpleStackPanel Grid.Column="1"
                                              Margin="12,0"
                                              VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Endpoint" />
+                            <TextBlock FontWeight="SemiBold" Text="Endpoint" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="HTTP endpoint URL to send logs" />
@@ -477,8 +462,7 @@
                         <hc:SimpleStackPanel Grid.Column="1"
                                              Margin="12,0"
                                              VerticalAlignment="Center">
-                            <TextBlock FontWeight="SemiBold"
-                                       Text="Batch Size" />
+                            <TextBlock FontWeight="SemiBold" Text="Batch Size" />
                             <TextBlock FontSize="11"
                                        Foreground="{DynamicResource SecondaryTextBrush}"
                                        Text="Number of log entries per HTTP request" />

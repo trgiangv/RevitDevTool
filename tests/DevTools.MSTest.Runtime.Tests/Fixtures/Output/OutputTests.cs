@@ -1,6 +1,4 @@
-using System;
 using System.Diagnostics;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace DevTools.MSTest.Runtime.Tests.Fixtures;
 

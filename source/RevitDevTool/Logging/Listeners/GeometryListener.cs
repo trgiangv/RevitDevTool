@@ -1,7 +1,7 @@
-using System.Diagnostics;
 using Python.Runtime;
 using RevitDevTool.Controllers;
 using RevitDevTool.Utils;
+using System.Diagnostics;
 namespace RevitDevTool.Logging.Listeners;
 
 public sealed class GeometryListener : TraceListener

@@ -1,6 +1,5 @@
-using System.Text.Json;
-using DevTools.Settings;
 using DevTools.Settings.Configs;
+using System.Text.Json;
 
 namespace DevTools.Settings.Tests;
 

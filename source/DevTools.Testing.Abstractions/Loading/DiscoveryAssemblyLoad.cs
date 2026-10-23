@@ -97,12 +97,14 @@ public sealed class DiscoveryAssemblyLoad : IDisposable
             }
             catch (NotSupportedException)
             {
+                continue;
             }
         }
 
         return Assembly.LoadFrom(assemblyPath);
     }
 
+#if !NETCOREAPP
     private static Assembly? ResolveFromRefs(IReadOnlyDictionary<string, string> refs, string rawName)
     {
         AssemblyName requested;
@@ -122,6 +124,7 @@ public sealed class DiscoveryAssemblyLoad : IDisposable
             ? Assembly.LoadFrom(path)
             : null;
     }
+#endif
 
 #if NETCOREAPP
     private sealed class DiscoveryLoadContext : AssemblyLoadContext

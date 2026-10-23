@@ -28,7 +28,7 @@ public static class UiAppExtension
         var activeFrameHost = activeFrameControl?.Content as MFCMDIFrameHost;
         return activeFrameHost?.document != null;
     }
-    
+
     /// <summary>
     /// Closes all open UI documents in the Revit application.
     /// </summary>

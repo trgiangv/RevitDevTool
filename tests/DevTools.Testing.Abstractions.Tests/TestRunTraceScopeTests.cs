@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using DevTools.Testing.Abstractions.Runtime;
+using System.Diagnostics;
 
 namespace DevTools.Testing.Abstractions.Tests;
 

@@ -1,5 +1,5 @@
-using System.Text.Json;
 using DevTools.Hosting;
+using System.Text.Json;
 namespace DevTools.Execution.External.Handlers;
 
 public sealed class InstanceRequestHandler(IHostAppInfo hostInfo) : IBridgeRequestHandler
@@ -13,8 +13,8 @@ public sealed class InstanceRequestHandler(IHostAppInfo hostInfo) : IBridgeReque
         JsonElement? @params,
         CancellationToken ct = default)
     {
-        return Task.FromResult(!string.Equals(method, IpcBridgeMethods.InstanceInfo, StringComparison.OrdinalIgnoreCase) 
-            ? BridgeMessage.Error(requestId, IpcErrorCodes.MethodNotFound, $"Unknown method: {method}") 
+        return Task.FromResult(!string.Equals(method, IpcBridgeMethods.InstanceInfo, StringComparison.OrdinalIgnoreCase)
+            ? BridgeMessage.Error(requestId, IpcErrorCodes.MethodNotFound, $"Unknown method: {method}")
             : HandleInstanceInfo(requestId));
     }
 

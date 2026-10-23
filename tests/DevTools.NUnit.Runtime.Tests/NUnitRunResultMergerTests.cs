@@ -1,4 +1,3 @@
-using DevTools.NUnit.Runtime;
 using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.Runtime.Tests;

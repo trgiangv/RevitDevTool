@@ -21,8 +21,8 @@ public static class TaskSelection
     public static McpTaskExecutionMode Select(RequestContext<CallToolRequestParams> request)
     {
         var name = request.Params.Name;
-        return name is McpSpecKeys.Tool.LaunchHost or CodeModeTool.Name 
-            ? McpTaskExecutionMode.Optional 
+        return name is McpSpecKeys.Tool.LaunchHost or CodeModeTool.Name
+            ? McpTaskExecutionMode.Optional
             : McpTaskExecutionMode.Synchronous;
     }
 }

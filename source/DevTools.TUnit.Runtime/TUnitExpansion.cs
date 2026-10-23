@@ -67,12 +67,12 @@ internal static class TUnitExpansion
             classRows.Count * methodRows.Count * propertyRows.Count * repeats);
 
         foreach (var classRow in classRows)
-        foreach (var methodRow in methodRows)
-        foreach (var properties in propertyRows)
-        {
-            for (var repeat = 0; repeat < repeats; repeat++)
-                combinations.Add(CreateCombination(classRow, methodRow, properties, repeat));
-        }
+            foreach (var methodRow in methodRows)
+                foreach (var properties in propertyRows)
+                {
+                    for (var repeat = 0; repeat < repeats; repeat++)
+                        combinations.Add(CreateCombination(classRow, methodRow, properties, repeat));
+                }
 
         return combinations;
     }

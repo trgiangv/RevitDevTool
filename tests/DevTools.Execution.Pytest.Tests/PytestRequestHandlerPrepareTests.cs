@@ -1,9 +1,8 @@
-using System.Text.Json;
 using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Testing;
 using DevTools.Execution.Providers.Python;
-using DevTools.Ipc;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
 

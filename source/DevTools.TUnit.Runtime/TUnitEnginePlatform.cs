@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.CommandLine;
 using Microsoft.Testing.Platform.Configurations;
@@ -9,6 +8,7 @@ using Microsoft.Testing.Platform.Messages;
 using Microsoft.Testing.Platform.OutputDevice;
 using Microsoft.Testing.Platform.Requests;
 using Microsoft.Testing.Platform.Services;
+using System.Diagnostics.CodeAnalysis;
 
 namespace DevTools.TUnit.Runtime;
 

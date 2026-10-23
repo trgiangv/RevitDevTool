@@ -1,5 +1,3 @@
-using DevTools.Testing.Abstractions;
-
 namespace DevTools.Testing.Abstractions.Tests;
 
 [TestClass]

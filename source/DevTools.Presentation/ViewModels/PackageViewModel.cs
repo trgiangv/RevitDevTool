@@ -1,8 +1,8 @@
-using System.Collections.ObjectModel;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Python;
 using DevTools.UI.Theme;
+using System.Collections.ObjectModel;
 // ReSharper disable UnusedParameterInPartialMethod
 
 namespace DevTools.Presentation.ViewModels;

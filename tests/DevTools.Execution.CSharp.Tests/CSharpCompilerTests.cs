@@ -1,10 +1,10 @@
-using System.Reflection;
-using System.Runtime.Loader;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Tests.AssemblyIsolation;
 using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Reflection;
+using System.Runtime.Loader;
 
 namespace DevTools.Execution.Tests;
 

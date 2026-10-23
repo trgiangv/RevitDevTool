@@ -1,7 +1,6 @@
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Extensions.Messages;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.TestAdapter;
 
@@ -41,10 +40,10 @@ internal static class TestNodeProperties
             ? TestRunTraceScope.Merge(result.Output, result.Message)
             : result.Output;
 
-        if (string.IsNullOrWhiteSpace(output))
+        if (output is null || string.IsNullOrWhiteSpace(output))
             return;
 
-        properties.Add(new StandardOutputProperty(output!));
+        properties.Add(new StandardOutputProperty(output));
     }
 
     private static void AddAttachments(List<IProperty> properties, IReadOnlyList<TestAttachment>? attachments)
@@ -54,11 +53,11 @@ internal static class TestNodeProperties
 
         foreach (var attachment in attachments)
         {
-            if (string.IsNullOrWhiteSpace(attachment.Path))
+            if (attachment.Path is null || string.IsNullOrWhiteSpace(attachment.Path))
                 continue;
 
             properties.Add(new FileArtifactProperty(
-                new FileInfo(attachment.Path!),
+                new FileInfo(attachment.Path),
                 displayName: attachment.Description ?? Path.GetFileName(attachment.Path),
                 description: attachment.Description));
         }
@@ -149,8 +148,8 @@ internal static class TestNodeProperties
     {
         if (!string.IsNullOrWhiteSpace(id))
             return id;
-        if (!string.IsNullOrWhiteSpace(fullName))
-            return fullName!;
+        if (fullName is not null && !string.IsNullOrWhiteSpace(fullName))
+            return fullName;
         return name;
     }
 
@@ -161,17 +160,20 @@ internal static class TestNodeProperties
     {
         if (test is null)
             return;
-        if (string.IsNullOrWhiteSpace(test.TypeName) || string.IsNullOrWhiteSpace(test.MethodName))
+        if (test.TypeName is null || string.IsNullOrWhiteSpace(test.TypeName)
+            || test.MethodName is null || string.IsNullOrWhiteSpace(test.MethodName))
             return;
 
         properties.Add(new TestMethodIdentifierProperty(
             ResolveAssemblyFullName(assemblyPath),
             test.Namespace ?? string.Empty,
-            test.TypeName!,
-            test.MethodName!,
+            test.TypeName,
+            test.MethodName,
             test.MethodArity,
             ToParameterTypes(test.ParameterTypeFullNames),
-            string.IsNullOrWhiteSpace(test.ReturnTypeFullName) ? "System.Void" : test.ReturnTypeFullName!));
+            test.ReturnTypeFullName is null || string.IsNullOrWhiteSpace(test.ReturnTypeFullName)
+                ? "System.Void"
+                : test.ReturnTypeFullName));
     }
 
     private static string[] ToParameterTypes(IReadOnlyList<string>? types)
@@ -185,11 +187,11 @@ internal static class TestNodeProperties
 
     private static string ResolveAssemblyFullName(string? assemblyPath)
     {
-        if (!string.IsNullOrWhiteSpace(assemblyPath) && File.Exists(assemblyPath))
+        if (assemblyPath is not null && !string.IsNullOrWhiteSpace(assemblyPath) && File.Exists(assemblyPath))
         {
             try
             {
-                return System.Reflection.AssemblyName.GetAssemblyName(assemblyPath!).FullName;
+                return System.Reflection.AssemblyName.GetAssemblyName(assemblyPath).FullName;
             }
             catch
             {

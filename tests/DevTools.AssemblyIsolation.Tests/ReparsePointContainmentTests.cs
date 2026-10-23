@@ -1,6 +1,6 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Sources;
+using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
@@ -63,20 +63,20 @@ public sealed class ReparsePointContainmentTests
 
     sealed class FixedManagedSource : IManagedAssemblySource
     {
-        readonly AssemblyCandidate candidate;
+        readonly AssemblyCandidate _candidate;
 
-        public FixedManagedSource(AssemblyCandidate candidate) => this.candidate = candidate;
+        public FixedManagedSource(AssemblyCandidate candidate) => _candidate = candidate;
 
-        public AssemblyCandidate? Resolve(AssemblyName requested) => candidate;
+        public AssemblyCandidate? Resolve(AssemblyName requested) => _candidate;
     }
 
     sealed class FixedNativeSource : INativeAssemblySource
     {
-        readonly AssemblyCandidate candidate;
+        readonly AssemblyCandidate _candidate;
 
-        public FixedNativeSource(AssemblyCandidate candidate) => this.candidate = candidate;
+        public FixedNativeSource(AssemblyCandidate candidate) => _candidate = candidate;
 
-        public AssemblyCandidate? Resolve(string name) => candidate;
+        public AssemblyCandidate? Resolve(string name) => _candidate;
     }
 
     sealed class RecordingDiagnosticSink : IAssemblyIsolationDiagnosticSink
@@ -92,13 +92,13 @@ sealed class ReparsePointWorkload : IDisposable
     ReparsePointWorkload(string allowedRoot, string externalDirectory, string linkPath, string linkedCandidatePath)
     {
         AllowedRoot = allowedRoot;
-        this.externalDirectory = externalDirectory;
-        this.linkPath = linkPath;
+        _externalDirectory = externalDirectory;
+        _linkPath = linkPath;
         LinkedCandidatePath = linkedCandidatePath;
     }
 
-    readonly string externalDirectory;
-    readonly string linkPath;
+    readonly string _externalDirectory;
+    readonly string _linkPath;
 
     public string AllowedRoot { get; }
 
@@ -126,12 +126,12 @@ sealed class ReparsePointWorkload : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(linkPath))
-            Directory.Delete(linkPath);
+        if (Directory.Exists(_linkPath))
+            Directory.Delete(_linkPath);
         if (Directory.Exists(AllowedRoot))
             Directory.Delete(AllowedRoot);
-        if (Directory.Exists(externalDirectory))
-            Directory.Delete(externalDirectory, recursive: true);
+        if (Directory.Exists(_externalDirectory))
+            Directory.Delete(_externalDirectory, recursive: true);
         var parent = Directory.GetParent(AllowedRoot)?.FullName;
         if (parent is not null && Directory.Exists(parent))
             Directory.Delete(parent);

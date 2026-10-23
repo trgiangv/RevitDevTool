@@ -1,7 +1,7 @@
-using System.Text.RegularExpressions;
-using System.Windows.Media;
 using Autodesk.Windows;
 using RevitDevTool.Core;
+using System.Text.RegularExpressions;
+using System.Windows.Media;
 using RibbonPanel = Autodesk.Windows.RibbonPanel;
 
 namespace RevitDevTool.Tools.CommandBrowser.Models;
@@ -94,11 +94,11 @@ public sealed partial class RibbonCommandInfo : ObservableObject
 #if NET7_0_OR_GREATER
     [GeneratedRegex(@"\r\n|\t|\n|\r")]
     private static partial Regex WhitespacePattern();
+    private static readonly Regex WhitespaceRegex = WhitespacePattern();
 #else
-    private static readonly Regex _whitespacePattern = new(@"\r\n|\t|\n|\r", RegexOptions.Compiled);
-    private static Regex WhitespacePattern() => _whitespacePattern;
+    private static readonly Regex WhitespaceRegex = new(@"\r\n|\t|\n|\r", RegexOptions.Compiled);
 #endif
 
     private static string Sanitize(string? value) =>
-        string.IsNullOrEmpty(value) ? string.Empty : WhitespacePattern().Replace(value, " ");
+        string.IsNullOrEmpty(value) ? string.Empty : WhitespaceRegex.Replace(value, " ");
 }

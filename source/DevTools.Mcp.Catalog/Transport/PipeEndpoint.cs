@@ -1,7 +1,7 @@
-using System.IO.Pipes;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using System.IO.Pipes;
 
 namespace DevTools.Mcp.Transport;
 

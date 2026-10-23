@@ -1,8 +1,8 @@
+using Bogus;
+using ModelContextProtocol.Protocol;
+using Moq;
 using System.Diagnostics;
 using System.Text.Json;
-using Bogus;
-using Moq;
-using ModelContextProtocol.Protocol;
 using SearchTokenizer = DevTools.Daemon.Mcp.Search.Tokenizer;
 
 namespace DevTools.Mcp.Client.Tests;

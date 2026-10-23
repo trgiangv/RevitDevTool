@@ -1,7 +1,7 @@
-using System.Text.Json;
-using System.Text.Json.Serialization.Metadata;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace DevTools.Mcp.Core.Utils;
 

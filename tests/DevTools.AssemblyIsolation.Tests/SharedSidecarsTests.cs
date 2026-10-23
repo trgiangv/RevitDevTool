@@ -1,5 +1,3 @@
-using DevTools.AssemblyIsolation;
-
 namespace DevTools.AssemblyIsolation.Tests;
 
 [TestClass]

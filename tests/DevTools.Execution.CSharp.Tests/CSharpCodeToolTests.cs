@@ -1,4 +1,3 @@
-using System.Text.Json;
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Execution.Interfaces;
@@ -7,10 +6,10 @@ using DevTools.Execution.Providers.FSharp;
 using DevTools.Hosting;
 using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Moq;
+using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
 

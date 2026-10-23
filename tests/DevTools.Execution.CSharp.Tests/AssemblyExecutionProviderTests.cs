@@ -1,8 +1,8 @@
 using DevTools.Execution.Abstractions;
-using DevTools.Execution.Tests.AssemblyIsolation;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
+using DevTools.Execution.Tests.AssemblyIsolation;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 

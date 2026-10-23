@@ -1,6 +1,6 @@
+using DevTools.Mcp.Core.Protocol;
 using System.Globalization;
 using System.Text.Json;
-using DevTools.Mcp.Core.Protocol;
 // ReSharper disable ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
 
 namespace DevTools.Daemon.Mcp.Search;

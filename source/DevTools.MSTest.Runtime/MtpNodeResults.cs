@@ -54,11 +54,7 @@ internal static class MtpNodeResults
         if (!terminal && !abandoned)
             return null;
 
-        var outcome = cancelled is not null || abandoned ? TestOutcomes.Cancelled
-            : skipped is not null ? TestOutcomes.Skipped
-            : error is not null ? TestOutcomes.Error
-            : failed is not null || timeout is not null ? TestOutcomes.Failed
-            : TestOutcomes.Passed;
+        var outcome = GetOutcome(skipped, failed, error, timeout, cancelled, abandoned);
         var exception = failed?.Exception ?? error?.Exception ?? timeout?.Exception ?? cancelled?.Exception;
         var message = skipped?.Explanation
             ?? failed?.Explanation
@@ -85,5 +81,24 @@ internal static class MtpNodeResults
             [],
             FullName: testId,
             SkipReason: skipped?.Explanation);
+    }
+
+    private static string GetOutcome(
+        SkippedTestNodeStateProperty? skipped,
+        FailedTestNodeStateProperty? failed,
+        ErrorTestNodeStateProperty? error,
+        TimeoutTestNodeStateProperty? timeout,
+        CancelledTestNodeStateProperty? cancelled,
+        bool abandoned)
+    {
+        if (cancelled is not null || abandoned)
+            return TestOutcomes.Cancelled;
+        if (skipped is not null)
+            return TestOutcomes.Skipped;
+        if (error is not null)
+            return TestOutcomes.Error;
+        if (failed is not null || timeout is not null)
+            return TestOutcomes.Failed;
+        return TestOutcomes.Passed;
     }
 }

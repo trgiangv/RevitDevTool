@@ -1,6 +1,6 @@
-using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.NUnit;
 
 namespace DevTools.NUnit.Host.Tests;
 
@@ -18,7 +18,7 @@ public sealed class NUnitGenerationPolicyTests
 
         Assert.AreEqual(TestFrameworkId.NUnit, plan.FrameworkId);
         Assert.AreEqual(NUnitGenerationPolicy.RuntimeAssemblyFileName, plan.RuntimeAssemblyRelativePath);
-        Assert.IsTrue(plan.Files.Any(file  => string.Equals(
+        Assert.IsTrue(plan.Files.Any(file => string.Equals(
             file.RelativePath, NUnitGenerationPolicy.FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase)));
     }
 
@@ -75,8 +75,8 @@ public sealed class NUnitGenerationPolicyTests
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
-        Assert.IsTrue(manifest.ManagedAssemblies.Any(path  => path.EndsWith("Microsoft.Extensions.Logging.Abstractions.dll", StringComparison.OrdinalIgnoreCase)));
-        Assert.IsTrue(manifest.ManagedAssemblies.Any(path  => path.EndsWith("System.Custom.dll", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(manifest.ManagedAssemblies.Any(path => path.EndsWith("Microsoft.Extensions.Logging.Abstractions.dll", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsTrue(manifest.ManagedAssemblies.Any(path => path.EndsWith("System.Custom.dll", StringComparison.OrdinalIgnoreCase)));
     }
 
     [TestMethod]
@@ -90,7 +90,7 @@ public sealed class NUnitGenerationPolicyTests
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
-        Assert.IsFalse(manifest.ManagedAssemblies.Any(path  => path.EndsWith("PrivateTestingContract.dll", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(manifest.ManagedAssemblies.Any(path => path.EndsWith("PrivateTestingContract.dll", StringComparison.OrdinalIgnoreCase)));
     }
 
     [TestMethod]
@@ -111,7 +111,7 @@ public sealed class NUnitGenerationPolicyTests
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
             NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
 
-        Assert.IsFalse(manifest.ManagedAssemblies.Any(path  => path.EndsWith(resourceFile, StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(manifest.ManagedAssemblies.Any(path => path.EndsWith(resourceFile, StringComparison.OrdinalIgnoreCase)));
         Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, culture, resourceFile)));
     }
 

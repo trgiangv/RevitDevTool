@@ -104,7 +104,7 @@ public static class ElementSelector
             }
         }
 
-        linkedGroups = byInstance is null ? [] : [..byInstance.Values];
+        linkedGroups = byInstance is null ? [] : [.. byInstance.Values];
     }
 
     private static void AddLinked(
@@ -147,7 +147,7 @@ public static class ElementSelector
             TryExpandTag(document, id, ref byInstance);
 
         if (byInstance is not null)
-            linkedGroups = [..byInstance.Values];
+            linkedGroups = [.. byInstance.Values];
     }
 
     private static Dictionary<ElementId, LinkedGroup>? IndexByInstance(List<LinkedGroup> linkedGroups)
@@ -383,7 +383,7 @@ public static class ElementSelector
             if (document.GetElement(id) is not IndependentTag tag)
                 continue;
 
-            expanded ??= [..elementIds];
+            expanded ??= [.. elementIds];
             foreach (var hostId in tag.GetTaggedLocalElementIds())
             {
                 if (hostId != ElementId.InvalidElementId)

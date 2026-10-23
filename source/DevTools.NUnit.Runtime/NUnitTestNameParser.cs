@@ -218,12 +218,12 @@ internal static class NUnitTestNameParser
         switch (c)
         {
             case GenericOpen:
-            {
-                depth++;
-                if (depth == 1)
-                    arity++;
-                return;
-            }
+                {
+                    depth++;
+                    if (depth == 1)
+                        arity++;
+                    return;
+                }
             case TypeArgComma when depth == 1:
                 arity++;
                 return;

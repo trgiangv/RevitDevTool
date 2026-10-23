@@ -26,14 +26,14 @@ public static class TestingHostingExtensions
             services.AddMsTestHostServices();
             return services.AddGenericTestingHostServices();
         }
-        
+
         public IServiceCollection AddGenericTestingHostServices()
         {
             services.TryAddSingleton<TestingProviderRegistry>();
             services.AddSingleton<IBridgeRequestHandler, MarshaledTestRequestHandler>();
             return services;
         }
-        
+
         public IServiceCollection AddNUnitHostServices()
         {
             services.TryAddSingleton<NUnitGenerationPolicy>(_ =>
@@ -50,7 +50,7 @@ public static class TestingHostingExtensions
                     new NUnitRuntimeSessionFactory()));
             return services;
         }
-        
+
         public IServiceCollection AddTUnitHostServices()
         {
             services.TryAddSingleton<TUnitGenerationPolicy>(_ =>
@@ -66,7 +66,7 @@ public static class TestingHostingExtensions
                     new ManifestRuntimeSessionFactory(TUnitGenerationPolicy.RuntimeSessionTypeName)));
             return services;
         }
-        
+
         public IServiceCollection AddMsTestHostServices()
         {
             services.TryAddSingleton<MSTestGenerationPolicy>(_ =>

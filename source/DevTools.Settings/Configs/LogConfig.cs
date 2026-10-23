@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using DevTools.Logging.Options;
+using System.Text.Json.Serialization;
 
 namespace DevTools.Settings.Configs;
 

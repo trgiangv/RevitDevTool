@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using DevTools.FileMetadata.Core;
+using System.Text.Json.Serialization;
 
 namespace DevTools.FileMetadata.Revit;
 

@@ -1,11 +1,11 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation.Identity;
+using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class ManifestAssemblySource : IManagedAssemblySource
 {
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<Entry>> entriesBySimpleName;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<Entry>> _entriesBySimpleName;
 
     public ManifestAssemblySource(IEnumerable<AssemblyCandidate> candidates)
         : this((candidates ?? throw new ArgumentNullException(nameof(candidates))).Select(candidate =>
@@ -17,7 +17,7 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
     {
         ArgumentNullException.ThrowIfNull(entries);
 
-        entriesBySimpleName = BuildEntries(entries).ToDictionary(
+        _entriesBySimpleName = BuildEntries(entries).ToDictionary(
             static pair => pair.Key,
             static IReadOnlyList<Entry> (pair) => Array.AsReadOnly(pair.Value.ToArray()),
             StringComparer.OrdinalIgnoreCase);
@@ -27,7 +27,7 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
     {
         ArgumentNullException.ThrowIfNull(requested);
 
-        return requested.Name is null || !entriesBySimpleName.TryGetValue(requested.Name, out var entries)
+        return requested.Name is null || !_entriesBySimpleName.TryGetValue(requested.Name, out var entries)
             ? null
             : Resolve(requested, entries);
     }

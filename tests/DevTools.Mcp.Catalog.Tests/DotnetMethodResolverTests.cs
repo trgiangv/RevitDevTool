@@ -1,5 +1,3 @@
-using DevTools.Mcp.Discovery;
-using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;

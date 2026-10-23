@@ -15,7 +15,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
-        <ProjectReference Include="..\..\source\DevTools.Mcp.Catalog\DevTools.Mcp.Catalog.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\..\source\DevTools.Execution\DevTools.Execution.csproj"/>
     </ItemGroup>

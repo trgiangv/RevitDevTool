@@ -1,4 +1,4 @@
-using System.IO;
+using Autodesk.Revit.DB.Events;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Loading;
 using DevTools.Hosting;
@@ -6,10 +6,10 @@ using DevTools.Logging.Diagnostics;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
 using Nice3point.Revit.Extensions.UI;
-using Autodesk.Revit.DB.Events;
 using RevitDevTool.Commands;
-using RevitDevTool.Tools.CommandBrowser;
 using RevitDevTool.Controllers;
+using RevitDevTool.Tools.CommandBrowser;
+using System.IO;
 using ZLogger;
 
 namespace RevitDevTool;

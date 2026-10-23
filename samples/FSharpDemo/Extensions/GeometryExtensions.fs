@@ -1,4 +1,4 @@
-﻿module RevitDevTool.FSharpDemo.Extensions.GeometryExtensions
+module RevitDevTool.FSharpDemo.Extensions.GeometryExtensions
 
 open System.Linq
 open Autodesk.Revit.DB

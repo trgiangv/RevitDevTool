@@ -1,5 +1,4 @@
 using System.IO;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Execution.Providers.IronPython;
 
@@ -9,7 +8,7 @@ namespace DevTools.Execution.Providers.IronPython;
 internal static class IronPythonSearchPaths
 {
     private const string LibDir = "lib";
-    
+
     internal static IReadOnlyList<string> ForNativeHost(string scriptPath, string? rootPath)
     {
         var paths = new List<string>();
@@ -29,7 +28,7 @@ internal static class IronPythonSearchPaths
 
     private static void AppendToolsetRoot(ICollection<string> paths, string? rootPath)
     {
-        if (string.IsNullOrWhiteSpace(rootPath))
+        if (rootPath is null || string.IsNullOrWhiteSpace(rootPath))
             return;
 
         var full = Path.GetFullPath(rootPath);
@@ -40,7 +39,7 @@ internal static class IronPythonSearchPaths
         else
         {
             var libDir = FindLibDirectory(full);
-            AppendUnique(paths, libDir ?? rootPath!);
+            AppendUnique(paths, libDir ?? rootPath);
         }
     }
 

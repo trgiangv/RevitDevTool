@@ -1,4 +1,4 @@
-﻿from Autodesk.Revit import DB, UI
+from Autodesk.Revit import DB, UI
 from RevitDevTool.Core import RevitContextExecutor
 from System import Action, Guid
 from System.Windows import Controls, Window, WindowStartupLocation

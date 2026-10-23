@@ -1,9 +1,9 @@
 using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Extensions.Logging;
-using ZLogger;
 using DevTools.Presentation.Interfaces;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.Settings;
+using Microsoft.Extensions.Logging;
+using ZLogger;
 namespace DevTools.Presentation.ViewModels.Settings;
 
 public partial class SettingsViewModel(

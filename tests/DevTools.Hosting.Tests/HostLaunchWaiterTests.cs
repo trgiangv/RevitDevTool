@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using DevTools.Hosting;
 
 namespace DevTools.Hosting.Tests;
 

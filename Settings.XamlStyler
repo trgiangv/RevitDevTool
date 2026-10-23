@@ -1,0 +1,16 @@
+{
+  "IndentSize": 4,
+  "IndentWithTabs": false,
+  "MaxAttributesPerLine": 1,
+  "KeepFirstAttributeOnSameLine": true,
+  "EnableAttributeReordering": true,
+  "OrderAttributesByName": true,
+  "RemoveEndingTagOfEmptyElement": true,
+  "SpaceBeforeClosingSlash": true,
+  "FormatMarkupExtension": true,
+  "NoNewLineMarkupExtensions": "x:Bind, Binding",
+  "ReorderGridChildren": false,
+  "ReorderCanvasChildren": false,
+  "RemoveDesignTimeReferences": false,
+  "IgnoreDesignTimeReferencePrefix": false
+}

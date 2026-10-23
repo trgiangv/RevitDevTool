@@ -36,7 +36,6 @@ pytest_cache/
 # Ai related files
 openspec/
 .gitnexus/
-.claude/
 .serena/
 artifacts/
 superpowers/

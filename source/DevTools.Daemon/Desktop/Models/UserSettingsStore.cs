@@ -1,7 +1,7 @@
-using System.IO;
-using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using System.IO;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Desktop.Models;
 

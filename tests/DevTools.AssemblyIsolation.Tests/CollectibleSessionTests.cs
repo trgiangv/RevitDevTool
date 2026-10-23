@@ -1,9 +1,8 @@
+using DevTools.AssemblyIsolation.Identity;
+using DevTools.AssemblyIsolation.Sources;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.Loader;
-using DevTools.AssemblyIsolation.Diagnostics;
-using DevTools.AssemblyIsolation.Identity;
-using DevTools.AssemblyIsolation.Sources;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
@@ -101,12 +100,12 @@ public sealed class CollectibleSessionTests
 
 sealed class FixtureWorkload : IDisposable
 {
-    readonly string markerPath;
+    readonly string _markerPath;
 
     FixtureWorkload(string directory, string markerPath)
     {
         Directory = directory;
-        this.markerPath = markerPath;
+        _markerPath = markerPath;
     }
 
     public string Directory { get; }
@@ -115,7 +114,7 @@ sealed class FixtureWorkload : IDisposable
 
     public string DependencyPath => Path.Combine(Directory, "System.Private.IsolationFixture.dll");
 
-    public string SiblingInitializerMarkerPath => markerPath;
+    public string SiblingInitializerMarkerPath => _markerPath;
 
     public static FixtureWorkload Create(bool includeSibling = false)
     {

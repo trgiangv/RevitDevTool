@@ -1,11 +1,8 @@
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Text.Json;
-using DevTools.Mcp;
-using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
+using System.Reflection;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Catalog.Tests;
 

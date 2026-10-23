@@ -36,8 +36,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <TabControl Grid.Row="0"
-                    BorderThickness="0">
+        <TabControl Grid.Row="0" BorderThickness="0">
             <TabItem Header="General">
                 <ContentControl Content="{Binding GeneralSettings}" />
             </TabItem>

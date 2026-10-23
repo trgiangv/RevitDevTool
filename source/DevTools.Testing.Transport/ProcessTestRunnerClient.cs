@@ -1,7 +1,7 @@
+using DevTools.Testing.Abstractions.Contracts;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
-using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.Testing.Transport;
 

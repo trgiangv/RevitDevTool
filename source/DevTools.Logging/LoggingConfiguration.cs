@@ -10,7 +10,7 @@ public sealed class LoggingConfiguration
     private const string LoggingSectionKey = "Logging";
     private readonly MemoryConfigurationProvider _provider;
     private readonly IConfigurationRoot _configuration;
-    
+
     public IConfigurationSection LoggingSection { get; }
 
     public LoggingConfiguration(LogLevel initialLevel = LogLevel.Debug)

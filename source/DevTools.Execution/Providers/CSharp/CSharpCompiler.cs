@@ -1,7 +1,3 @@
-using System.Diagnostics;
-using System.IO;
-using System.Reflection;
-using System.Text;
 using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Execution.Models;
@@ -12,6 +8,10 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.IO;
+using System.Reflection;
+using System.Text;
 using ZLogger;
 
 namespace DevTools.Execution.Providers.CSharp;

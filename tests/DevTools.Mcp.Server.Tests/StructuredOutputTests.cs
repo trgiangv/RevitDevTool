@@ -1,7 +1,5 @@
-using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Mcp.Tools;
 using DevTools.Mcp.Server.Tests.Harness;
-using ModelContextProtocol.Protocol;
 using Moq;
 
 namespace DevTools.Mcp.Server.Tests;

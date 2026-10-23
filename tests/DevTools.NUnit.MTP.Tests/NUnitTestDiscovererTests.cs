@@ -1,4 +1,3 @@
-using DevTools.NUnit.MTP;
 using DevTools.NUnit.Runtime.Fixtures;
 using DevTools.Testing.Abstractions.Contracts;
 
@@ -140,7 +139,7 @@ public sealed class NUnitTestDiscovererTests
 
         Assert.AreEqual(2, cases.Count);
         Assert.IsFalse(
-            cases.Any(test  => test.TestId.Equals(
+            cases.Any(test => test.TestId.Equals(
                 "DevTools.NUnit.Runtime.Fixtures.ParameterizedFixture.FixtureSource_ValueIsPreserved",
                 StringComparison.Ordinal)));
     }

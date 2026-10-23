@@ -1,5 +1,3 @@
-using DevTools.FileMetadata.Core;
-
 namespace DevTools.FileMetadata.Core.Tests;
 
 [TestClass]

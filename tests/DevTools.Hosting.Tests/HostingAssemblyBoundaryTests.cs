@@ -1,5 +1,3 @@
-using DevTools.Hosting;
-
 namespace DevTools.Hosting.Tests;
 
 [TestClass]

@@ -1,5 +1,3 @@
-using DevTools.Hosting.Revit;
-
 namespace DevTools.Hosting.Revit.Tests;
 
 [TestClass]

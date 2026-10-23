@@ -1,12 +1,11 @@
-using System.IO;
-using System.Reflection;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.AssemblyIsolation.Metadata;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.Dotnet;
 using Microsoft.Extensions.Logging;
+using System.IO;
+using System.Reflection;
 using ZLogger;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace AcadDevTool.Adapters;
 
@@ -101,6 +100,6 @@ public sealed class AcadCommandDiscovery(ILogger<AcadCommandDiscovery> logger) :
     private static IEnumerable<Type> GetMetadataTypes(Assembly assembly)
     {
         try { return assembly.GetTypes(); }
-        catch (ReflectionTypeLoadException ex) { return ex.Types.Where(t => t != null)!; }
+        catch (ReflectionTypeLoadException ex) { return ex.Types.OfType<Type>(); }
     }
 }

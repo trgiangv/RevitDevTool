@@ -1,4 +1,3 @@
-using DevTools.NUnit.MTP;
 using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.MTP.Tests;
@@ -289,7 +288,7 @@ public sealed class NUnitHostIdentityTests
             [new TestDiscoveredTest(namedOne, "Named_one", namedOne)],
             host);
 
-        Assert.IsFalse(folded.Any(result  => result.TestId == methodId));
+        Assert.IsFalse(folded.Any(result => result.TestId == methodId));
         Assert.IsTrue(folded.Any(result => result.TestId == namedOne));
     }
 

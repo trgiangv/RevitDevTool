@@ -1,7 +1,6 @@
-using System.Reflection;
-using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using ModelContextProtocol.Protocol;
+using System.Reflection;
 
 namespace DevTools.Mcp.Catalog.Tests.Isolation;
 

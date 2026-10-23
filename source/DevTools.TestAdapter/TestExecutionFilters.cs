@@ -1,7 +1,6 @@
+using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Requests;
-using DevTools.Testing.Abstractions.Contracts;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 #pragma warning disable TPEXP
 
 namespace DevTools.TestAdapter;
@@ -21,9 +20,9 @@ internal static class TestExecutionFilters
         if (HasUidListFilter(filter))
             return TestSelection.FromTestIds(uids);
 
-        return string.IsNullOrWhiteSpace(nameFilter) 
-            ? TestSelection.All 
-            : TestSelection.FromNames([nameFilter!.Trim()]);
+        return nameFilter is null || string.IsNullOrWhiteSpace(nameFilter)
+            ? TestSelection.All
+            : TestSelection.FromNames([nameFilter.Trim()]);
     }
 
     /// <summary>
@@ -35,8 +34,8 @@ internal static class TestExecutionFilters
         string? nameFilter = null)
     {
         var selection = ToRunnerFilter(filter, nameFilter);
-        return selection is { Kind: TestSelectionKind.TestIds, TestIds.Count: 0 } 
-            ? TestSelection.All 
+        return selection is { Kind: TestSelectionKind.TestIds, TestIds.Count: 0 }
+            ? TestSelection.All
             : selection;
     }
 
@@ -121,20 +120,21 @@ internal static class TestExecutionFilters
         yield return "/" + Uri.EscapeDataString(test.TestId);
         if (!string.IsNullOrWhiteSpace(test.DisplayName))
             yield return "/" + Uri.EscapeDataString(test.DisplayName);
-        if (string.IsNullOrWhiteSpace(test.Namespace)
+        if (test.Namespace is null || test.TypeName is null || test.MethodName is null
+            || string.IsNullOrWhiteSpace(test.Namespace)
             || string.IsNullOrWhiteSpace(test.TypeName)
             || string.IsNullOrWhiteSpace(test.MethodName))
             yield break;
 
         yield return string.Concat(
-            "/", Uri.EscapeDataString(test.Namespace!),
-            "/", Uri.EscapeDataString(test.TypeName!),
-            "/", Uri.EscapeDataString(test.MethodName!));
+            "/", Uri.EscapeDataString(test.Namespace),
+            "/", Uri.EscapeDataString(test.TypeName),
+            "/", Uri.EscapeDataString(test.MethodName));
         if (!string.IsNullOrWhiteSpace(test.DisplayName))
         {
             yield return string.Concat(
-                "/", Uri.EscapeDataString(test.Namespace!),
-                "/", Uri.EscapeDataString(test.TypeName!),
+                "/", Uri.EscapeDataString(test.Namespace),
+                "/", Uri.EscapeDataString(test.TypeName),
                 "/", Uri.EscapeDataString(test.DisplayName));
         }
     }

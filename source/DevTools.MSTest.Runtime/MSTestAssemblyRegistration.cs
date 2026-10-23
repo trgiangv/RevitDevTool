@@ -1,5 +1,5 @@
-using System.Reflection;
 using Microsoft.VisualStudio.TestPlatform.MSTestAdapter.PlatformServices.SourceGeneration;
+using System.Reflection;
 
 namespace DevTools.MSTest.Runtime;
 

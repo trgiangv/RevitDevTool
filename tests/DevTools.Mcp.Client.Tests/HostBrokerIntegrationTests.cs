@@ -1,9 +1,6 @@
-using System.Diagnostics;
-using DevTools.Ipc;
-using DevTools.Daemon.Mcp.Processes;
 using DevTools.Mcp.Client.Tests.Harness;
 using Microsoft.Extensions.Logging.Abstractions;
-using ModelContextProtocol.Protocol;
+using System.Diagnostics;
 
 namespace DevTools.Mcp.Client.Tests;
 

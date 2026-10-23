@@ -1,6 +1,3 @@
-using DevTools.Mcp.Core.Protocol;
-using ModelContextProtocol.Protocol;
-
 namespace DevTools.Mcp.Core.Tests;
 
 [TestClass]

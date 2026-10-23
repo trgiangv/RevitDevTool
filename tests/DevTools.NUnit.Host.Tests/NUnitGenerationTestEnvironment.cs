@@ -1,7 +1,7 @@
-using System.Diagnostics;
-using System.Text;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
+using System.Diagnostics;
+using System.Text;
 
 namespace DevTools.NUnit.Host.Tests;
 

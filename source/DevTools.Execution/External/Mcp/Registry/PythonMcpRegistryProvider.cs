@@ -1,10 +1,10 @@
-using System.IO;
 using DevTools.Execution.Providers;
 using DevTools.Execution.Providers.Python;
 using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
 using Microsoft.Extensions.Logging;
 using Python.Runtime;
+using System.IO;
 using ZLogger;
 namespace DevTools.Execution.External.Mcp.Registry;
 
@@ -100,9 +100,9 @@ public sealed class PythonMcpRegistryProvider(
             directory,
             scope =>
             {
-            scope.Set(PythonInstances.ToolsetDirectory, new PyString(directory));
-            scope.Exec(PythonEmbedded.ToolParserScript);
-            return scope.Get(PythonInstances.ParserResult).As<string>();
+                scope.Set(PythonInstances.ToolsetDirectory, new PyString(directory));
+                scope.Exec(PythonEmbedded.ToolParserScript);
+                return scope.Get(PythonInstances.ParserResult).As<string>();
             });
     }
 

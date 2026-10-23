@@ -1,5 +1,5 @@
-using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.NUnit;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 

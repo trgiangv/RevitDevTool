@@ -1,7 +1,6 @@
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.Hosting;
 using DevTools.Mcp.Hosting;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Execution.Tests;

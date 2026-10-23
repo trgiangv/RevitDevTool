@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Logging;
 // ReSharper disable ForCanBeConvertedToForeach
 // ReSharper disable LoopCanBeConvertedToQuery
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Logging;
 
@@ -22,10 +21,10 @@ public static class LogLevelDetector
 
     public static string? ValidateKeywords(string? input)
     {
-        if (string.IsNullOrWhiteSpace(input))
+        if (input is null || string.IsNullOrWhiteSpace(input))
             return null;
 
-        var keywords = input!
+        var keywords = input
             .Split(KeywordSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(k => k.Trim())
             .Where(k => !string.IsNullOrWhiteSpace(k))
@@ -38,24 +37,24 @@ public static class LogLevelDetector
 
     public static LogLevel Detect(string? message, string[] criticalKeywords, string[] errorKeywords, string[] warningKeywords, string[] informationKeywords)
     {
-        if (string.IsNullOrWhiteSpace(message))
+        if (message is null || string.IsNullOrWhiteSpace(message))
             return LogLevel.Debug;
 
-        var prefixLevel = DetectFromPrefix(message!);
+        var prefixLevel = DetectFromPrefix(message);
         if (prefixLevel != LogLevel.Debug)
             return prefixLevel;
 
-        if (ContainsAny(message!, criticalKeywords)) return LogLevel.Critical;
-        if (ContainsAny(message!, errorKeywords)) return LogLevel.Error;
-        if (ContainsAny(message!, warningKeywords)) return LogLevel.Warning;
-        if (ContainsAny(message!, informationKeywords)) return LogLevel.Information;
+        if (ContainsAny(message, criticalKeywords)) return LogLevel.Critical;
+        if (ContainsAny(message, errorKeywords)) return LogLevel.Error;
+        if (ContainsAny(message, warningKeywords)) return LogLevel.Warning;
+        if (ContainsAny(message, informationKeywords)) return LogLevel.Information;
         return LogLevel.Debug;
     }
 
     public static string[] ParseKeywords(string? input)
     {
-        if (string.IsNullOrWhiteSpace(input)) return [];
-        return input!.Split(KeywordSeparator, StringSplitOptions.RemoveEmptyEntries)
+        if (input is null || string.IsNullOrWhiteSpace(input)) return [];
+        return input.Split(KeywordSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(k => k.Trim())
             .Where(k => !string.IsNullOrWhiteSpace(k))
             .Select(k => k.ToLowerInvariant())

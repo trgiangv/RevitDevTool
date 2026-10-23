@@ -1,8 +1,8 @@
-using System.ComponentModel;
-using System.Windows;
 using DevTools.Daemon.Desktop.Helpers;
 using DevTools.Daemon.Desktop.ViewModels;
 using DevTools.UI;
+using System.ComponentModel;
+using System.Windows;
 
 namespace DevTools.Daemon.Desktop.Views;
 

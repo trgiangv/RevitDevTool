@@ -1,4 +1,3 @@
-using DevTools.Settings;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

@@ -1,7 +1,7 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Identity;
 using DevTools.AssemblyIsolation.Sources;
+using System.Reflection;
 
 namespace DevTools.AssemblyIsolation;
 

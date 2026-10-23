@@ -1,12 +1,11 @@
-using System.Collections.Concurrent;
-using System.IO;
 using CliWrap;
 using CliWrap.Buffered;
 using DevTools.Execution.Services;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
+using System.IO;
 using ZLogger;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Execution.Providers.FSharp;
 
 public sealed class NugetManager(ILogger<NugetManager> logger)
@@ -27,10 +26,10 @@ public sealed class NugetManager(ILogger<NugetManager> logger)
         await EnsureNugetAsync().ConfigureAwait(false);
 
         var resolvedVersion = version ?? await FetchLatestVersionAsync(packageId, ct).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(resolvedVersion))
+        if (resolvedVersion is null || string.IsNullOrWhiteSpace(resolvedVersion))
             throw new InvalidOperationException($"Could not resolve version for package '{packageId}'.");
 
-        var cacheKey = $"{packageId.ToLowerInvariant()}/{resolvedVersion!.ToLowerInvariant()}";
+        var cacheKey = $"{packageId.ToLowerInvariant()}/{resolvedVersion.ToLowerInvariant()}";
         if (_sessionCache.TryGetValue(cacheKey, out var cached))
             return cached;
 

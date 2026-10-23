@@ -1,4 +1,4 @@
-﻿# NUnit Native Runtime And MTP-First Integration Plan
+# NUnit Native Runtime And MTP-First Integration Plan
 
 **Goal:** Run full NUnit 4.6.1 semantics inside Autodesk hosts through a native
 framework runtime, with MTP as the sole IDE/Test Explorer compatibility layer.

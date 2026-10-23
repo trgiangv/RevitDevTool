@@ -1,6 +1,6 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Runtime;
+using System.Reflection;
 #if NET
 using System.Runtime.CompilerServices;
 using DevTools.AssemblyIsolation.Loading;
@@ -11,12 +11,12 @@ namespace DevTools.AssemblyIsolation;
 public sealed class AssemblyIsolationSession : IDisposable
 {
 #if NET
-    private AssemblyIsolationContext? context;
-    private readonly WeakReference? contextReference;
+    private AssemblyIsolationContext? _context;
+    private readonly WeakReference? _contextReference;
 #else
-    private NetfxAssemblyIsolationContext? netfxContext;
+    private NetfxAssemblyIsolationContext? _netfxContext;
 #endif
-    private bool disposed;
+    private bool _disposed;
 
     private AssemblyIsolationSession(AssemblyIsolationPlan plan)
     {
@@ -25,20 +25,16 @@ public sealed class AssemblyIsolationSession : IDisposable
         switch (plan.Kind)
         {
             case AssemblyIsolationKind.Isolated:
-#if NET
-                context = new AssemblyIsolationContext(plan);
-                contextReference = new WeakReference(context);
-#else
-                netfxContext = new NetfxAssemblyIsolationContext(plan);
-#endif
-                break;
             case AssemblyIsolationKind.Collectible:
 #if NET
-                context = new AssemblyIsolationContext(plan);
-                contextReference = new WeakReference(context);
+                _context = new AssemblyIsolationContext(plan);
+                _contextReference = new WeakReference(_context);
                 break;
 #else
-                throw new PlatformNotSupportedException("Collectible assembly isolation requires .NET Core or later.");
+                if (plan.Kind == AssemblyIsolationKind.Collectible)
+                    throw new PlatformNotSupportedException("Collectible assembly isolation requires .NET Core or later.");
+                _netfxContext = new NetfxAssemblyIsolationContext(plan);
+                break;
 #endif
             case AssemblyIsolationKind.Permanent:
                 throw new NotSupportedException("Permanent assembly isolation is provided by AssemblyLoader, not AssemblyIsolationSession.");
@@ -53,9 +49,9 @@ public sealed class AssemblyIsolationSession : IDisposable
     {
         ThrowIfDisposed();
 #if NET
-        return context!.LoadEntryAssembly();
+        return _context!.LoadEntryAssembly();
 #else
-        return netfxContext!.LoadEntryAssembly();
+        return _netfxContext!.LoadEntryAssembly();
 #endif
     }
 
@@ -64,9 +60,9 @@ public sealed class AssemblyIsolationSession : IDisposable
         ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(assemblyBytes);
 #if NET
-        return context!.LoadAssembly(assemblyBytes, symbolBytes);
+        return _context!.LoadAssembly(assemblyBytes, symbolBytes);
 #else
-        return netfxContext!.LoadAssembly(assemblyBytes, symbolBytes);
+        return _netfxContext!.LoadAssembly(assemblyBytes, symbolBytes);
 #endif
     }
 
@@ -75,9 +71,9 @@ public sealed class AssemblyIsolationSession : IDisposable
         ThrowIfDisposed();
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 #if NET
-        return AssemblyStreamLoader.Load(context!, path);
+        return AssemblyStreamLoader.Load(_context!, path);
 #else
-        return netfxContext!.LoadFromPath(path);
+        return _netfxContext!.LoadFromPath(path);
 #endif
     }
 
@@ -85,13 +81,13 @@ public sealed class AssemblyIsolationSession : IDisposable
     internal nint ResolveNativeForTesting(string name)
     {
         ThrowIfDisposed();
-        return context!.ResolveNativeForTesting(name);
+        return _context!.ResolveNativeForTesting(name);
     }
 
     internal Assembly? ResolveManagedForTesting(AssemblyName assemblyName)
     {
         ThrowIfDisposed();
-        return context!.ResolveManagedForTesting(assemblyName);
+        return _context!.ResolveManagedForTesting(assemblyName);
     }
 #endif
 
@@ -99,8 +95,9 @@ public sealed class AssemblyIsolationSession : IDisposable
     {
 #if NET
         Dispose();
-        return AwaitUnload(contextReference!);
+        return AwaitUnload(_contextReference!);
 #else
+        Dispose();
         return new AssemblyUnloadResult(false, false, "Collectible assembly isolation is not available on .NET Framework.");
 #endif
     }
@@ -124,21 +121,21 @@ public sealed class AssemblyIsolationSession : IDisposable
 
     public void Dispose()
     {
-        if (disposed)
+        if (_disposed)
             return;
 
-        disposed = true;
+        _disposed = true;
 #if NET
-        if (context is not null)
+        if (_context is not null)
         {
-            context.Unload();
-            context = null;
+            _context.Unload();
+            _context = null;
         }
 #else
-        netfxContext?.Dispose();
-        netfxContext = null;
+        _netfxContext?.Dispose();
+        _netfxContext = null;
 #endif
     }
 
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(disposed, this);
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
 }

@@ -1,25 +1,25 @@
 #pragma warning disable MCPEXP001
 
-using System.IO.Pipelines;
-using System.Text.Json;
 using DevTools.Daemon.Auth;
-using DevTools.Daemon.Tunnel;
 using DevTools.Daemon.Mcp;
 using DevTools.Daemon.Mcp.Hosting;
 using DevTools.Daemon.Mcp.Processes;
+using DevTools.Daemon.Tunnel;
 using DevTools.FileMetadata.Core;
 using DevTools.Hosting;
 using DevTools.Ipc;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Moq;
+using System.IO.Pipelines;
+using System.Text.Json;
 
 namespace DevTools.Daemon.Tests.Support;
 

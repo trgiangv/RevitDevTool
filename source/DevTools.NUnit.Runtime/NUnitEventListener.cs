@@ -1,16 +1,16 @@
-using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using NUnit.Framework.Interfaces;
+using System.Runtime.CompilerServices;
 using TestAttachment = DevTools.Testing.Abstractions.Contracts.TestAttachment;
 using TestCaseResult = DevTools.Testing.Abstractions.Contracts.TestCaseResult;
 
 namespace DevTools.NUnit.Runtime;
 
 internal sealed class NUnitEventListener(
-    Guid runId, 
-    ITestEventSink eventSink, 
-    NUnitLocationProvider? locationProvider, 
+    Guid runId,
+    ITestEventSink eventSink,
+    NUnitLocationProvider? locationProvider,
     TestRunTraceScope traceScope) : ITestListener
 {
     private readonly HashSet<ITest> _terminalCases = new(ReferenceEqualityComparer.Instance);

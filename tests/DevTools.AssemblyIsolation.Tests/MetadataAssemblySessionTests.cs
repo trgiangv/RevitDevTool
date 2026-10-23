@@ -34,7 +34,7 @@ public sealed class MetadataAssemblySessionTests
         var first = CopyFixture("IsolationSibling", "first.dll", directory.Path);
         var second = CopyFixture("IsolationSibling", "second.dll", directory.Path);
 
-        using var session = MetadataAssemblySession.Create(first, [second, ..RuntimeAssemblyPaths()]);
+        using var session = MetadataAssemblySession.Create(first, [second, .. RuntimeAssemblyPaths()]);
         var assembly = session.LoadEntryAssembly();
 
         Assert.AreEqual("IsolationSibling", assembly.GetName().Name);

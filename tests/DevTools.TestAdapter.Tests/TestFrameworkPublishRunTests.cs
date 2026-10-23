@@ -1,6 +1,4 @@
-using System.Reflection;
 using DevTools.NUnit.MTP;
-using DevTools.TestAdapter;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Config;
 using DevTools.Testing.Abstractions.Contracts;
@@ -12,6 +10,7 @@ using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Messages;
 using Microsoft.Testing.Platform.Requests;
 using Microsoft.Testing.Platform.TestHost;
+using System.Reflection;
 using SessionUid = Microsoft.Testing.Platform.TestHost.SessionUid;
 
 namespace DevTools.TestAdapter.Tests;

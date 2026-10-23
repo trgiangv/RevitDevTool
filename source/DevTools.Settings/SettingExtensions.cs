@@ -1,5 +1,5 @@
-using System.IO;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO;
 
 namespace DevTools.Settings;
 

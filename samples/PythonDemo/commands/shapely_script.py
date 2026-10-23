@@ -1,4 +1,4 @@
-﻿# /// script
+# /// script
 # dependencies = [
 #     "shapely==2.2.0",
 #     "numpy==2.5.3",

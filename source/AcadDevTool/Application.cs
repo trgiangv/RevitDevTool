@@ -1,17 +1,17 @@
-using System.IO;
 using AcadDevTool.Adapters;
 using AcadDevTool.Controllers;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Windows;
 using DevTools.AssemblyIsolation.Diagnostics;
+using DevTools.AssemblyIsolation.Loading;
 using DevTools.Logging.Diagnostics;
 using DevTools.Utilities;
-using DevTools.AssemblyIsolation.Loading;
 using Microsoft.Extensions.Logging;
 using ricaun.AutoCAD.UI;
+using System.IO;
 using ZLogger;
-using Application = AcadDevTool.Application;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
+using Application = AcadDevTool.Application;
 [assembly: ExtensionApplication(typeof(Application))]
 
 namespace AcadDevTool;

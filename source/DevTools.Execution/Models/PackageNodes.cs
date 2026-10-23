@@ -30,7 +30,7 @@ public sealed class PackageItemNode : PackageTreeNode
     private string? Version { get; }
     private string? DeclaredVersion { get; }
     private string? LatestVersion { get; }
-    
+
     public bool IsProtected { get; }
     public bool IsLatest { get; }
     public string PackageId { get; }

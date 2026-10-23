@@ -1,6 +1,3 @@
-using System.IO;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 namespace DevTools.TestAdapter.Tests.Fixtures;
 
 public static class Probe

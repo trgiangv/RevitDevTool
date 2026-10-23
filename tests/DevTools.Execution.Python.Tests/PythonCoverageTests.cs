@@ -1,18 +1,13 @@
-using System.Text.Json;
-using DevTools.Execution;
-using DevTools.Execution.Abstractions;
 using DevTools.Execution.External.Mcp.BuiltIn;
-using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Python;
 using DevTools.Execution.Services;
 using DevTools.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Moq;
+using System.Text.Json;
 using Package = DevTools.Execution.Models.Package;
 
 namespace DevTools.Execution.Tests;

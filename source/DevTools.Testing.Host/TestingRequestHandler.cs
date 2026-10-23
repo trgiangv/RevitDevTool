@@ -1,10 +1,9 @@
-using System.Text.Json;
 using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Transport;
-// ReSharper disable RedundantSuppressNullableWarningExpression
+using System.Text.Json;
 
 namespace DevTools.Testing.Host;
 
@@ -110,7 +109,7 @@ public sealed class TestingRequestHandler(TestingProviderRegistry registry, stri
         Interlocked.Exchange(ref _isBusy, 1);
         try
         {
-            return RunProvider(request!, provider, requestId, cancellationToken);
+            return RunProvider(request, provider, requestId, cancellationToken);
         }
         finally
         {

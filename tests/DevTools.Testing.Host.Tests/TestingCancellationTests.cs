@@ -1,5 +1,4 @@
 using DevTools.Testing.Abstractions.Contracts;
-using DevTools.Testing.Host;
 
 namespace DevTools.Testing.Host.Tests;
 

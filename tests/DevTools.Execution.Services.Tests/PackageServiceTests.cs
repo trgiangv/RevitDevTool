@@ -1,11 +1,7 @@
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
-using DevTools.Execution.Providers.Python;
-using DevTools.Execution.Services;
-using DevTools.Hosting;
 using DevTools.Utilities;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Execution.Tests;
 

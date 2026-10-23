@@ -1,10 +1,10 @@
-using System.Windows;
-using System.Windows.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DevTools.Daemon.Desktop.Helpers;
 using DevTools.Daemon.Desktop.ViewModels;
 using HandyControl.Controls;
+using System.Windows;
+using System.Windows.Controls;
 
 namespace DevTools.Daemon.Desktop.Views;
 

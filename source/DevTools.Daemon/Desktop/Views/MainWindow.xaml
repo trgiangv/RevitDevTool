@@ -15,8 +15,7 @@
         ShowInTaskbar="True"
         WindowStartupLocation="CenterScreen"
         mc:Ignorable="d">
-    <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
-                Style="{StaticResource TabControlBaseStyle}">
+    <TabControl SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}" Style="{StaticResource TabControlBaseStyle}">
         <TabItem Header="Overview">
             <views:OverviewView />
         </TabItem>

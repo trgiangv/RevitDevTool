@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using DevTools.Logging.Listeners;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 
 namespace DevTools.Logging.Tests;
 

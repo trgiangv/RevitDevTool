@@ -1,5 +1,3 @@
-using DevTools.Utilities;
-
 namespace DevTools.Utilities.Tests;
 
 [TestClass]

@@ -1,6 +1,6 @@
 #if NETFRAMEWORK
-using System.Runtime.InteropServices;
 using DevTools.AssemblyIsolation.Sources;
+using System.Runtime.InteropServices;
 
 namespace DevTools.AssemblyIsolation.Loading;
 

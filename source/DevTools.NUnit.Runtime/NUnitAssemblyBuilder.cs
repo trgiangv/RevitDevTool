@@ -1,12 +1,12 @@
 using DevTools.Testing.Abstractions.Runtime;
-using System.Diagnostics;
-using System.Reflection;
 using NUnit;
 using NUnit.Framework;
 using NUnit.Framework.Api;
 using NUnit.Framework.Interfaces;
 using NUnit.Framework.Internal;
 using NUnit.Framework.Internal.Builders;
+using System.Diagnostics;
+using System.Reflection;
 
 namespace DevTools.NUnit.Runtime;
 

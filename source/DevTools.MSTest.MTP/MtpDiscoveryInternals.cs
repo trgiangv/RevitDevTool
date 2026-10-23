@@ -1,11 +1,11 @@
-using System.Collections;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Builder;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.OutputDevice;
+using System.Collections;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace DevTools.MSTest.MTP;
 

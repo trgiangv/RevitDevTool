@@ -1,5 +1,5 @@
-using DevTools.Testing.Host.TUnit;
 using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Host.TUnit;
 using Microsoft.Testing.Platform.CommandLine;
 
 namespace DevTools.TUnit.Host.Tests;

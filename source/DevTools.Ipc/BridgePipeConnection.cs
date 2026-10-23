@@ -58,6 +58,7 @@ public sealed class BridgePipeConnection(Stream stream) : IDisposable
         }
         catch (Exception ex) when (IsStreamClosed(ex))
         {
+            // A closed stream is the normal end of the read loop; Disconnected is raised below.
         }
         catch (Exception ex)
         {

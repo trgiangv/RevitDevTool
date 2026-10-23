@@ -1,7 +1,7 @@
-using System.Runtime.CompilerServices;
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Loading;
+using System.Runtime.CompilerServices;
 using ReflectionAssembly = System.Reflection.Assembly;
 
 namespace DevTools.TUnit.Runtime;
@@ -20,14 +20,19 @@ internal static class TUnitCatalog
     {
         EnsureLoaded(assemblyPath);
         var tests = EnumerateMatches(sessionId, TestSelectionMatcher.For(selection)).ToList();
-        if (tests.Count == 0 && ShouldReportEmptyRegistrar(selection))
+        ThrowIfNoRegistrarEntries(tests.Count, selection);
+
+        return tests;
+    }
+
+    private static void ThrowIfNoRegistrarEntries(int discoveredCount, TestSelection selection)
+    {
+        if (discoveredCount == 0 && ShouldReportEmptyRegistrar(selection))
         {
             throw new TestingDiscoveryFailedException(
                 "TUnit discovery found no SourceRegistrar entries. " +
                 "The test assembly module constructor did not register TestEntry sources.");
         }
-
-        return tests;
     }
 
     private static IEnumerable<TestDiscoveredTest> EnumerateMatches(
@@ -38,18 +43,28 @@ internal static class TUnitCatalog
         {
             for (var index = 0; index < source.Count; index++)
             {
-                var filter = source.GetFilterData(index);
-                var expansion = TUnitExpansion.Expand(source, index, sessionId);
-                foreach (var combination in expansion.Combinations)
-                {
-                    var discovered = Map(source, filter, expansion.Metadata, combination);
-                    if (matcher.Matches(
-                            discovered,
-                            filter.MethodName,
-                            () => expansion.Metadata is null ? null : TUnitTestIdentity.Deferred(expansion.Metadata)))
-                        yield return discovered;
-                }
+                foreach (var discovered in EnumerateSource(source, index, sessionId, matcher))
+                    yield return discovered;
             }
+        }
+    }
+
+    private static IEnumerable<TestDiscoveredTest> EnumerateSource(
+        ITestEntrySource source,
+        int index,
+        string sessionId,
+        TestSelectionMatcher matcher)
+    {
+        var filter = source.GetFilterData(index);
+        var expansion = TUnitExpansion.Expand(source, index, sessionId);
+        foreach (var combination in expansion.Combinations)
+        {
+            var discovered = Map(source, filter, expansion.Metadata, combination);
+            if (matcher.Matches(
+                    discovered,
+                    filter.MethodName,
+                    () => expansion.Metadata is null ? null : TUnitTestIdentity.Deferred(expansion.Metadata)))
+                yield return discovered;
         }
     }
 

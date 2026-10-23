@@ -55,7 +55,7 @@ public sealed class CommandBrowserCache(IFileConfig<PathOptions> fileConfig)
     {
         var config = new CommandBrowserConfig
         {
-            FavoriteCommandIds = [.._favoriteIds],
+            FavoriteCommandIds = [.. _favoriteIds],
             IsBarVisible = _isBarVisible
         };
         fileConfig.Save(config);

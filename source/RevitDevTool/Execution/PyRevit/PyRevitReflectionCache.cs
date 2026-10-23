@@ -13,7 +13,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RevitDevTool.Core;
 using ZLogger;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace RevitDevTool.Execution.PyRevit;
 

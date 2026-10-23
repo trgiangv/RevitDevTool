@@ -1,16 +1,15 @@
-using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.IO;
-using System.Windows.Threading;
-using Microsoft.Extensions.Logging;
-using ZLogger;
 using DevTools.AssemblyIsolation;
 using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Settings;
 using DevTools.UI.Theme;
-// ReSharper disable RedundantSuppressNullableWarningExpression
+using Microsoft.Extensions.Logging;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
+using System.Windows.Threading;
+using ZLogger;
 // ReSharper disable UnusedParameterInPartialMethod
 
 namespace DevTools.Presentation.ViewModels;
@@ -146,8 +145,8 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
 
     private async Task LoadFromPathAsync(string? path)
     {
-        if (string.IsNullOrEmpty(path)) return;
-        if (File.Exists(path) && path!.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
+        if (path is null || path.Length == 0) return;
+        if (File.Exists(path) && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
         {
             await this.WhileBusy("Loading assembly...", async () =>
             {
@@ -159,8 +158,8 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
         {
             await this.WhileBusy("Loading scripts...", async () =>
             {
-                await _orchestrator.LoadFromPathAsync(path!);
-                SavePathToSettings(path!, ContainerMode.Script);
+                await _orchestrator.LoadFromPathAsync(path);
+                SavePathToSettings(path, ContainerMode.Script);
             });
         }
         UpdateTreeRoot();

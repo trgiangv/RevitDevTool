@@ -1,7 +1,3 @@
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Interop;
-using System.Windows.Threading;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Windows;
 using DevTools.UI;
@@ -9,6 +5,10 @@ using RevitDevTool.Tools.CommandBrowser.Services;
 using RevitDevTool.Tools.CommandBrowser.ViewModels;
 using RevitDevTool.Tools.CommandBrowser.Views;
 using RevitDevTool.Tools.Helpers;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Interop;
+using System.Windows.Threading;
 using Grid = System.Windows.Controls.Grid;
 
 namespace RevitDevTool.Tools.CommandBrowser;
@@ -47,6 +47,8 @@ public sealed class CommandBrowserController(
 
     public void Shutdown()
     {
+        if (!_initialized) return;
+
         cache.IsBarVisible = _desiredVisible;
         cache.Save();
 

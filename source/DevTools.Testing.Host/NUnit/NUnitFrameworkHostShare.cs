@@ -1,6 +1,6 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation.Identity;
 using DevTools.AssemblyIsolation.Loading;
+using System.Reflection;
 #if NET
 using System.Runtime.Loader;
 #endif

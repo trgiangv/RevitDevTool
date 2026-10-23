@@ -1,7 +1,6 @@
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
-using DevTools.Execution.Providers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 

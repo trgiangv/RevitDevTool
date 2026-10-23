@@ -1,9 +1,9 @@
-using System.Reflection;
-using System.Text.Json;
 using DevTools.Execution.External.Testing;
 using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
 using Python.Runtime;
+using System.Reflection;
+using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
 
@@ -70,9 +70,9 @@ public sealed class PytestExecutionServiceTests
         }
     }
 
-        [TestClass]
+    [TestClass]
 
-        public sealed class RunTests
+    public sealed class RunTests
     {
         [TestMethod]
         public async Task Run_ExecutesRunnerAndReturnsCollectionError_ForMissingNode()

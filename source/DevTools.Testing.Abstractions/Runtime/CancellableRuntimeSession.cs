@@ -83,6 +83,15 @@ public abstract class CancellableRuntimeSession : ITestingRuntimeSession
 
     public void Dispose()
     {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+            return;
+
         lock (_runControl)
         {
             if (_disposed)

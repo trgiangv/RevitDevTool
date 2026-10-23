@@ -148,7 +148,7 @@ internal static class NUnitNameSyntax
     {
         if (left is not { Length: > 0 } || right is not { Length: > 0 })
             return false;
-        return string.Equals(left, right, StringComparison.Ordinal) 
+        return string.Equals(left, right, StringComparison.Ordinal)
                || string.Equals(Canonicalize(left), Canonicalize(right), StringComparison.Ordinal);
     }
 

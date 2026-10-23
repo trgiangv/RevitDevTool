@@ -1,7 +1,7 @@
+using CliWrap;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using CliWrap;
 
 namespace DevTools.Execution.Tests;
 

@@ -1,5 +1,4 @@
 using System.Text;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.MSTest.Runtime;
 
@@ -79,10 +78,10 @@ internal sealed class MSTestConsoleCapture : IDisposable
 
         public override void Write(string? value)
         {
-            if (string.IsNullOrEmpty(value))
+            if (value is null || value.Length == 0)
                 return;
 
-            Append(value!);
+            Append(value);
         }
 
         public override void Write(char[] buffer, int index, int count) =>
@@ -90,7 +89,7 @@ internal sealed class MSTestConsoleCapture : IDisposable
 
         public string? Take(string? displayName)
         {
-            var key = string.IsNullOrEmpty(displayName) ? string.Empty : displayName!;
+            var key = displayName is null || displayName.Length == 0 ? string.Empty : displayName;
             lock (_gate)
                 return Remove(key);
         }

@@ -1,8 +1,8 @@
-using System.Windows;
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Windows;
 // ReSharper disable AsyncVoidEventHandlerMethod
 
 namespace DevTools.Daemon;

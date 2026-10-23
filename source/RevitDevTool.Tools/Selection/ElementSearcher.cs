@@ -189,7 +189,7 @@ public static class ElementSearcher
     /// </summary>
     private static ICollection<ElementId> FindByIfcGuids(Document document, HashSet<string> guids)
     {
-        if (guids.Count == 0)return [];
+        if (guids.Count == 0) return [];
 
         var guidProvider = new ParameterValueProvider(new ElementId(BuiltInParameter.IFC_GUID));
         var typeGuidProvider = new ParameterValueProvider(new ElementId(BuiltInParameter.IFC_TYPE_GUID));

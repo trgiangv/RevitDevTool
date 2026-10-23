@@ -1,3 +1,4 @@
+using DevTools.UI.Controls;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -6,7 +7,6 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using DevTools.UI.Controls;
 using HandyComboBox = HandyControl.Controls.ComboBox;
 
 namespace DevTools.HandyControl.Tests;

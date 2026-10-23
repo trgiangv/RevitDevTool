@@ -1,6 +1,6 @@
-using System.Reflection;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
+using System.Reflection;
 
 namespace DevTools.Mcp.Client.Tests;
 

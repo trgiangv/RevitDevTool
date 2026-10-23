@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Security.Claims;
 
 namespace DevTools.Mcp.Catalog.Tests.Harness;
 

@@ -1,6 +1,5 @@
-using System.Text.Json;
-using DevTools.FileMetadata.Core;
 using DevTools.Hosting;
+using System.Text.Json;
 
 namespace DevTools.FileMetadata.Core.Tests;
 

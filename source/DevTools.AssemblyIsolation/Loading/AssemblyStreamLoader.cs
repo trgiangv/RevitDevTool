@@ -22,9 +22,6 @@ public static class AssemblyStreamLoader
             : Assembly.Load(assemblyBytes);
     }
 
-    public static Assembly LoadFile(string path) =>
-        Assembly.LoadFile(Path.GetFullPath(path));
-
 #if NET
     public static Assembly Load(AssemblyLoadContext context, string path)
     {
@@ -39,4 +36,7 @@ public static class AssemblyStreamLoader
         return context.LoadFromStream(assemblyStream, symbolStream);
     }
 #endif
+
+    public static Assembly LoadFile(string path) =>
+        Assembly.LoadFile(Path.GetFullPath(path));
 }

@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$(git rev-parse --show-toplevel)/scripts/format-lint-hook.ps1\"",
+            "commandWindows": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"$(git rev-parse --show-toplevel)/scripts/format-lint-hook.ps1\"",
+            "timeout": 600,
+            "statusMessage": "Formatting and linting changed C#/XAML files"
+          }
+        ]
+      }
+    ]
+  }
+}

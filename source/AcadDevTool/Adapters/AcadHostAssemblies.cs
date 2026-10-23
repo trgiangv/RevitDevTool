@@ -1,7 +1,7 @@
-using System.Reflection;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
 using DevTools.AssemblyIsolation;
+using System.Reflection;
 
 namespace AcadDevTool.Adapters;
 

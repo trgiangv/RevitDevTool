@@ -1,7 +1,7 @@
 using DevTools.Execution.Providers.IronPython;
 using IronPython.Hosting;
-using Ipy = IronPython.Hosting.Python;
 using Microsoft.Scripting.Hosting;
+using Ipy = IronPython.Hosting.Python;
 
 namespace DevTools.Execution.Tests;
 

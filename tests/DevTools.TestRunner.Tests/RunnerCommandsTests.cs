@@ -1,10 +1,10 @@
-using System.Text.Json;
 using DevTools.Hosting;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 using DevTools.TestRunner.Debugging;
 using DevTools.TestRunner.Parsing;
 using DevTools.TestRunner.Services;
+using System.Text.Json;
 
 namespace DevTools.TestRunner.Tests;
 

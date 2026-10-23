@@ -1,6 +1,6 @@
+using Duende.IdentityModel.OidcClient.Browser;
 using System.Diagnostics;
 using System.Net;
-using Duende.IdentityModel.OidcClient.Browser;
 
 namespace DevTools.Daemon.Auth;
 

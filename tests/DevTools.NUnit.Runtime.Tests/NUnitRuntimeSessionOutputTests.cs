@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
+using System.Diagnostics;
 
 namespace DevTools.NUnit.Runtime.Tests;
 

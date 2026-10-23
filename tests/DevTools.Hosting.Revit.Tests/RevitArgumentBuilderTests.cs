@@ -1,6 +1,3 @@
-using DevTools.Hosting;
-using DevTools.Hosting.Revit;
-
 namespace DevTools.Hosting.Revit.Tests;
 
 [TestClass]
@@ -18,7 +15,7 @@ public sealed class RevitArgumentBuilderTests
     }
 
     [TestMethod]
-    public void en_US_maps_to_ENU()
+    public void En_US_maps_to_ENU()
     {
         var args = _builder.Build(
             new HostLaunchRequest(HostApp.Revit, "2025", null, Language("en-US")),

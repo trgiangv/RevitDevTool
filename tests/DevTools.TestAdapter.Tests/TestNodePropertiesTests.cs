@@ -1,4 +1,3 @@
-using DevTools.TestAdapter;
 using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.Testing.Platform.Extensions.Messages;
 

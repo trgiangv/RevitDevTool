@@ -36,8 +36,7 @@ internal static partial class FSharpScriptGraph
     private static partial Regex VersionPrefixRegex();
 #endif
 
-    private static readonly string TempCacheRoot =
-        Path.Combine(Path.GetTempPath(), "DevTools", "fsx_cache");
+    private static readonly string TempCacheRoot = Path.Combine(Path.GetTempPath(), "DevTools", "fsx_cache");
 
     public static async Task<LoadGraph> BuildLoadGraphAsync(string entryScript, CancellationToken ct)
     {
@@ -80,11 +79,7 @@ internal static partial class FSharpScriptGraph
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 
-    public static async Task<RewriteResult> RewriteGraphAsync(
-        string entryScript,
-        IReadOnlyDictionary<string, ScriptNode> nodes,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>? resolvedReferenceLines,
-        CancellationToken ct)
+    public static async Task<RewriteResult> RewriteGraphAsync(string entryScript, IReadOnlyDictionary<string, ScriptNode> nodes, IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>? resolvedReferenceLines, CancellationToken ct)
     {
         var pathMap = BuildTempPathMap(entryScript, nodes.Keys);
 
@@ -101,8 +96,7 @@ internal static partial class FSharpScriptGraph
             await File.WriteAllLinesAsync(pathMap[node.Path], rewritten, ct).ConfigureAwait(false);
         }
 
-        return new RewriteResult(pathMap[entryScript],
-            new TempFileCollection(pathMap.Values.Distinct(StringComparer.OrdinalIgnoreCase)));
+        return new RewriteResult(pathMap[entryScript], new TempFileCollection(pathMap.Values.Distinct(StringComparer.OrdinalIgnoreCase)));
     }
 
     private static async Task<ScriptNode> ParseScriptNodeAsync(string filePath, CancellationToken ct)
@@ -180,23 +174,16 @@ internal static partial class FSharpScriptGraph
         return BitConverter.ToString(bytes, 0, 8).Replace("-", "").ToLowerInvariant();
     }
 
-    private static string TransformLine(
-        ScriptNode node,
-        int index,
-        IReadOnlyDictionary<string, string> pathMap,
-        IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>? resolvedReferenceLines)
+    private static string TransformLine(ScriptNode node, int index, IReadOnlyDictionary<string, string> pathMap, IReadOnlyDictionary<string, IReadOnlyDictionary<int, string>>? resolvedReferenceLines)
     {
         var line = node.Lines[index];
-        if (resolvedReferenceLines != null &&
-            resolvedReferenceLines.TryGetValue(node.Path, out var lineMap) &&
-            lineMap.TryGetValue(index + 1, out var resolvedPath))
+        if (resolvedReferenceLines != null && resolvedReferenceLines.TryGetValue(node.Path, out var lineMap) && lineMap.TryGetValue(index + 1, out var resolvedPath))
             return $"// #r \"{resolvedPath.Replace('\\', '/')}\"";
 
         if (NugetDirectiveRegex().IsMatch(line))
             return $"// {line.Trim()} // resolved by FSharpDependencyResolver";
 
-        if (node.LoadTargets.TryGetValue(index, out var originalTarget) &&
-            pathMap.TryGetValue(originalTarget, out var mappedTarget))
+        if (node.LoadTargets.TryGetValue(index, out var originalTarget) && pathMap.TryGetValue(originalTarget, out var mappedTarget))
             return $"#load @\"{mappedTarget}\"";
 
         return line;
@@ -204,9 +191,8 @@ internal static partial class FSharpScriptGraph
 
     private static string? NormalizeVersion(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        // ReSharper disable once RedundantSuppressNullableWarningExpression
-        var cleaned = VersionPrefixRegex().Replace(raw!.Trim(), "").Trim();
+        if (raw is null || string.IsNullOrWhiteSpace(raw)) return null;
+        var cleaned = VersionPrefixRegex().Replace(raw.Trim(), "").Trim();
         return cleaned.Length == 0 ? null : cleaned;
     }
 }
@@ -220,7 +206,10 @@ internal sealed class TempFileCollection(IEnumerable<string> files) : IDisposabl
         foreach (var file in _files)
         {
             try { File.Delete(file); }
-            catch { /* ignore */ }
+            catch
+            {
+                /* ignore */
+            }
         }
     }
 }
@@ -228,8 +217,5 @@ internal sealed class TempFileCollection(IEnumerable<string> files) : IDisposabl
 internal readonly record struct PackageDirective(string FilePath, int LineNumber, string OriginalLine, string PackageId, string? Version);
 internal readonly record struct ReferenceDirective(string FilePath, int LineNumber, string Reference);
 internal readonly record struct ScriptNode(string Path, string[] Lines, IReadOnlyDictionary<int, string> LoadTargets);
-internal readonly record struct LoadGraph(
-    IReadOnlyDictionary<string, ScriptNode> Nodes,
-    IReadOnlyList<PackageDirective> Packages,
-    IReadOnlyList<ReferenceDirective> FileReferences);
+internal readonly record struct LoadGraph(IReadOnlyDictionary<string, ScriptNode> Nodes, IReadOnlyList<PackageDirective> Packages, IReadOnlyList<ReferenceDirective> FileReferences);
 internal readonly record struct RewriteResult(string EntryScriptPath, IDisposable Cleanup);

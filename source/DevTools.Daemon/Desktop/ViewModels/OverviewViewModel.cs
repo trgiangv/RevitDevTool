@@ -1,13 +1,13 @@
-using System.IO;
-using System.Net.Http;
-using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Desktop.Helpers;
 using DevTools.Daemon.Tunnel;
+using System.IO;
+using System.Net.Http;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace DevTools.Daemon.Desktop.ViewModels;
 

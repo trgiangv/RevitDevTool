@@ -1,6 +1,6 @@
+using ModelContextProtocol;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ModelContextProtocol;
 
 namespace DevTools.Daemon.Mcp.Contracts;
 

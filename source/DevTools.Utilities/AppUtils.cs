@@ -17,7 +17,7 @@ public static class AppUtils
         Directory.CreateDirectory(rootPath);
         return rootPath;
     }
-    
+
     public static string GetBundleContentsPath() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "Autodesk", "ApplicationPlugins", "RevitDevTool.bundle", "Contents");
@@ -25,7 +25,7 @@ public static class AppUtils
     public static string GetDaemonExePath() => Path.Combine(GetBundleContentsPath(), "DevTools.Daemon.exe");
 
     public static string GetTestRunnerExePath() => Path.Combine(GetBundleContentsPath(), "DevTools.TestRunner.exe");
-    
+
     public static bool IsValidPath(string? path)
     {
         try

@@ -34,8 +34,7 @@
         <DockPanel Grid.Row="0"
                    Margin="5,0"
                    LastChildFill="False">
-            <ToggleButton IsChecked="{Binding IsSettingsVisible, UpdateSourceTrigger=PropertyChanged}"
-                          Style="{StaticResource ToggleButtonFlip}">
+            <ToggleButton IsChecked="{Binding IsSettingsVisible, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource ToggleButtonFlip}">
                 <hc:StatusSwitchElement.CheckedElement>
                     <Border Background="{StaticResource PrimaryBrush}">
                         <Path Width="{StaticResource Length16}"
@@ -125,10 +124,8 @@
             </StackPanel>
         </DockPanel>
 
-        <Grid Grid.Row="1"
-              Background="{DynamicResource RegionBrush}">
-            <Grid Margin="5,0,5,5"
-                  Visibility="{Binding IsSettingsVisible, Converter={StaticResource InverseBoolToVisibility}}">
+        <Grid Grid.Row="1" Background="{DynamicResource RegionBrush}">
+            <Grid Margin="5,0,5,5" Visibility="{Binding IsSettingsVisible, Converter={StaticResource InverseBoolToVisibility}}">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
@@ -138,8 +135,7 @@
                                 <Setter Property="Height" Value="Auto" />
                                 <Setter Property="MaxHeight" Value="999" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}"
-                                                 Value="True">
+                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}" Value="True">
                                         <Setter Property="MaxHeight" Value="0" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -152,8 +148,7 @@
                                 <Setter Property="Height" Value="300" />
                                 <Setter Property="MaxHeight" Value="999" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}"
-                                                 Value="True">
+                                    <DataTrigger Binding="{Binding ShowLogMonitorOnly}" Value="True">
                                         <Setter Property="MaxHeight" Value="0" />
                                     </DataTrigger>
                                 </Style.Triggers>

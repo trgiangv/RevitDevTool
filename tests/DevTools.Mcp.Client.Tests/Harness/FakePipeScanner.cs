@@ -1,5 +1,3 @@
-using DevTools.Daemon.Mcp.Processes;
-
 namespace DevTools.Mcp.Client.Tests.Harness;
 
 internal sealed class FakePipeScanner : IMcpPipeScanner

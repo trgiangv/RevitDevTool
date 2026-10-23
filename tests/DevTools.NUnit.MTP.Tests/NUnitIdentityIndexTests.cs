@@ -1,4 +1,3 @@
-using DevTools.NUnit.MTP;
 using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.NUnit.MTP.Tests;

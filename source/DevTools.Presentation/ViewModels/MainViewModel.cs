@@ -1,12 +1,12 @@
-using System.Diagnostics;
-using System.Windows;
-using Microsoft.Extensions.Logging;
-using ZLogger;
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.Presentation.ViewModels.Settings;
 using DevTools.Presentation.Views;
 using DevTools.Settings;
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+using System.Windows;
+using ZLogger;
 namespace DevTools.Presentation.ViewModels;
 
 public partial class MainViewModel : ObservableRecipient,

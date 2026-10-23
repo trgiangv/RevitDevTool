@@ -1,7 +1,6 @@
+using ModelContextProtocol.Protocol;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using DevTools.Mcp.Core.Utils;
-using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;
 

@@ -319,9 +319,10 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="4"
                             SnapsToDevicePixels="True">
-                        <Viewbox Width="16" Height="16" Stretch="Uniform">
-                            <Path Data="M19.35,11.72L17.22,13.85L15.81,12.43L8.1,20.14L3.5,22L2,20.5L3.86,15.9L11.57,8.19L10.15,6.78L12.28,4.65L19.35,11.72M16.76,3C17.93,1.83 19.83,1.83 21,3C22.17,4.17 22.17,6.07 21,7.24L19.08,9.16L14.84,4.92L16.76,3M5.56,17.03L4.5,19.5L6.97,18.44L14.4,11L13,9.6L5.56,17.03Z"
-                                  Fill="{TemplateBinding Foreground}" />
+                        <Viewbox Width="16"
+                                 Height="16"
+                                 Stretch="Uniform">
+                            <Path Data="M19.35,11.72L17.22,13.85L15.81,12.43L8.1,20.14L3.5,22L2,20.5L3.86,15.9L11.57,8.19L10.15,6.78L12.28,4.65L19.35,11.72M16.76,3C17.93,1.83 19.83,1.83 21,3C22.17,4.17 22.17,6.07 21,7.24L19.08,9.16L14.84,4.92L16.76,3M5.56,17.03L4.5,19.5L6.97,18.44L14.4,11L13,9.6L5.56,17.03Z" Fill="{TemplateBinding Foreground}" />
                         </Viewbox>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -349,7 +350,9 @@
                 <ControlTemplate TargetType="controls:ColorCanvas">
                     <Grid Margin="8" UseLayoutRounding="True">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" MinWidth="120" MaxWidth="280" />
+                            <ColumnDefinition Width="*"
+                                              MinWidth="120"
+                                              MaxWidth="280" />
                             <ColumnDefinition Width="*" MinWidth="180" />
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
@@ -409,7 +412,9 @@
                             </Grid>
                         </Border>
 
-                        <DockPanel Grid.Row="1" Margin="0,0,8,0" LastChildFill="True">
+                        <DockPanel Grid.Row="1"
+                                   Margin="0,0,8,0"
+                                   LastChildFill="True">
                             <ContentPresenter VerticalAlignment="Center"
                                               Content="{TemplateBinding LabelColorPreview}"
                                               TextElement.Foreground="{DynamicResource PrimaryTextBrush}" />
@@ -452,7 +457,9 @@
                                                       Style="{DynamicResource NumericUpDownBaseStyle}"
                                                       Value="{Binding R, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:NumericValueConverter.Instance}}" />
 
-                                    <ContentPresenter Grid.Row="1" VerticalAlignment="Center" Content="{TemplateBinding LabelGreenChannel}" />
+                                    <ContentPresenter Grid.Row="1"
+                                                      VerticalAlignment="Center"
+                                                      Content="{TemplateBinding LabelGreenChannel}" />
                                     <Slider Grid.Row="1"
                                             Grid.Column="1"
                                             AutomationProperties.Name="{Binding LabelGreenChannel, RelativeSource={RelativeSource TemplatedParent}}"
@@ -467,7 +474,9 @@
                                                       Style="{DynamicResource NumericUpDownBaseStyle}"
                                                       Value="{Binding G, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:NumericValueConverter.Instance}}" />
 
-                                    <ContentPresenter Grid.Row="2" VerticalAlignment="Center" Content="{TemplateBinding LabelBlueChannel}" />
+                                    <ContentPresenter Grid.Row="2"
+                                                      VerticalAlignment="Center"
+                                                      Content="{TemplateBinding LabelBlueChannel}" />
                                     <Slider Grid.Row="2"
                                             Grid.Column="1"
                                             AutomationProperties.Name="{Binding LabelBlueChannel, RelativeSource={RelativeSource TemplatedParent}}"
@@ -502,10 +511,12 @@
                                                       Maximum="360"
                                                       Minimum="0"
                                                       Style="{DynamicResource NumericUpDownBaseStyle}"
-                                                      Value="{Binding Hue, RelativeSource={RelativeSource TemplatedParent}}"
-                                                      ValueFormat="0" />
+                                                      ValueFormat="0"
+                                                      Value="{Binding Hue, RelativeSource={RelativeSource TemplatedParent}}" />
 
-                                    <ContentPresenter Grid.Row="1" VerticalAlignment="Center" Content="{TemplateBinding LabelSaturationChannel}" />
+                                    <ContentPresenter Grid.Row="1"
+                                                      VerticalAlignment="Center"
+                                                      Content="{TemplateBinding LabelSaturationChannel}" />
                                     <Slider Grid.Row="1"
                                             Grid.Column="1"
                                             Background="{Binding SelectedHsvColor, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:HsvChannelGradientBrushConverter.Instance}, ConverterParameter={x:Static controls:HsvChannel.S}}"
@@ -517,10 +528,12 @@
                                                       Maximum="1"
                                                       Minimum="0"
                                                       Style="{DynamicResource NumericUpDownBaseStyle}"
-                                                      Value="{Binding Saturation, RelativeSource={RelativeSource TemplatedParent}}"
-                                                      ValueFormat="P0" />
+                                                      ValueFormat="P0"
+                                                      Value="{Binding Saturation, RelativeSource={RelativeSource TemplatedParent}}" />
 
-                                    <ContentPresenter Grid.Row="2" VerticalAlignment="Center" Content="{TemplateBinding LabelValueChannel}" />
+                                    <ContentPresenter Grid.Row="2"
+                                                      VerticalAlignment="Center"
+                                                      Content="{TemplateBinding LabelValueChannel}" />
                                     <Slider Grid.Row="2"
                                             Grid.Column="1"
                                             Background="{Binding SelectedHsvColor, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:HsvChannelGradientBrushConverter.Instance}, ConverterParameter={x:Static controls:HsvChannel.V}}"
@@ -532,8 +545,8 @@
                                                       Maximum="1"
                                                       Minimum="0"
                                                       Style="{DynamicResource NumericUpDownBaseStyle}"
-                                                      Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}}"
-                                                      ValueFormat="P0" />
+                                                      ValueFormat="P0"
+                                                      Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}}" />
                                 </Grid>
 
                                 <Grid Margin="0,8,0,0" Visibility="{TemplateBinding IsAlphaChannelVisible, Converter={StaticResource ColorPicker.BooleanToVisibility}}">
@@ -573,11 +586,13 @@
                                      Margin="8,0"
                                      Style="{DynamicResource TextBoxBaseStyle}"
                                      Text="{Binding ColorName, RelativeSource={RelativeSource TemplatedParent}, UpdateSourceTrigger=LostFocus, ValidatesOnExceptions=True}"
-                                     Visibility="{TemplateBinding IsColorNameVisible, Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
+                                     Visibility="{TemplateBinding IsColorNameVisible,
+                                                                  Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
                             <controls:ColorEyeDropper x:Name="PART_ColorEyeDropper"
                                                       Grid.Column="2"
                                                       SelectedColor="{Binding SelectedColor, RelativeSource={RelativeSource TemplatedParent}}"
-                                                      Visibility="{TemplateBinding IsEyeDropperVisible, Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
+                                                      Visibility="{TemplateBinding IsEyeDropperVisible,
+                                                                                   Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
                         </Grid>
                     </Grid>
                     <ControlTemplate.Triggers>
@@ -673,8 +688,8 @@
                                               Background="Transparent"
                                               BorderThickness="0"
                                               Focusable="False"
-                                              Style="{x:Null}"
-                                              IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                                              IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                              Style="{x:Null}">
                                     <ToggleButton.Template>
                                         <ControlTemplate TargetType="ToggleButton">
                                             <Border Background="Transparent" />
@@ -707,7 +722,8 @@
                                     <TabItem x:Name="PART_ColorPalettesTab"
                                              Header="{TemplateBinding ColorPalettesTabHeader}"
                                              HeaderTemplate="{TemplateBinding ColorPalettesTabHeaderTemplate}"
-                                             Visibility="{TemplateBinding IsColorPalettesTabVisible, Converter={StaticResource ColorPicker.BooleanToVisibility}}">
+                                             Visibility="{TemplateBinding IsColorPalettesTabVisible,
+                                                                          Converter={StaticResource ColorPicker.BooleanToVisibility}}">
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                             <StackPanel Margin="4">
                                                 <controls:ColorPalette x:Name="PART_ColorPaletteStandard"
@@ -718,7 +734,8 @@
                                                                        IsAlphaChannelVisible="{TemplateBinding IsAlphaChannelVisible}"
                                                                        ItemsSource="{TemplateBinding StandardColorPaletteItemsSource}"
                                                                        Style="{TemplateBinding StandardColorPaletteStyle}"
-                                                                       Visibility="{TemplateBinding IsStandardColorPaletteVisible, Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
+                                                                       Visibility="{TemplateBinding IsStandardColorPaletteVisible,
+                                                                                                    Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
                                                 <controls:ColorPalette x:Name="PART_ColorPaletteAvailable"
                                                                        ColorHelper="{TemplateBinding ColorHelper}"
                                                                        ColorNamesDictionary="{TemplateBinding ColorNamesDictionary}"
@@ -727,7 +744,8 @@
                                                                        IsAlphaChannelVisible="{TemplateBinding IsAlphaChannelVisible}"
                                                                        ItemsSource="{TemplateBinding AvailableColorPaletteItemsSource}"
                                                                        Style="{TemplateBinding AvailableColorPaletteStyle}"
-                                                                       Visibility="{TemplateBinding IsAvailableColorPaletteVisible, Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
+                                                                       Visibility="{TemplateBinding IsAvailableColorPaletteVisible,
+                                                                                                    Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
                                                 <controls:ColorPalette x:Name="PART_ColorPaletteCustom01"
                                                                        ColorHelper="{TemplateBinding ColorHelper}"
                                                                        ColorNamesDictionary="{TemplateBinding ColorNamesDictionary}"
@@ -736,7 +754,8 @@
                                                                        IsAlphaChannelVisible="{TemplateBinding IsAlphaChannelVisible}"
                                                                        ItemsSource="{TemplateBinding CustomColorPalette01ItemsSource}"
                                                                        Style="{TemplateBinding CustomColorPalette01Style}"
-                                                                       Visibility="{TemplateBinding IsCustomColorPalette01Visible, Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
+                                                                       Visibility="{TemplateBinding IsCustomColorPalette01Visible,
+                                                                                                    Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
                                                 <controls:ColorPalette x:Name="PART_ColorPaletteCustom02"
                                                                        ColorHelper="{TemplateBinding ColorHelper}"
                                                                        ColorNamesDictionary="{TemplateBinding ColorNamesDictionary}"
@@ -745,7 +764,8 @@
                                                                        IsAlphaChannelVisible="{TemplateBinding IsAlphaChannelVisible}"
                                                                        ItemsSource="{TemplateBinding CustomColorPalette02ItemsSource}"
                                                                        Style="{TemplateBinding CustomColorPalette02Style}"
-                                                                       Visibility="{TemplateBinding IsCustomColorPalette02Visible, Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
+                                                                       Visibility="{TemplateBinding IsCustomColorPalette02Visible,
+                                                                                                    Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
                                                 <controls:ColorPalette x:Name="PART_ColorPaletteRecent"
                                                                        ColorHelper="{TemplateBinding ColorHelper}"
                                                                        ColorNamesDictionary="{TemplateBinding ColorNamesDictionary}"
@@ -754,14 +774,16 @@
                                                                        IsAlphaChannelVisible="{TemplateBinding IsAlphaChannelVisible}"
                                                                        ItemsSource="{TemplateBinding RecentColorPaletteItemsSource}"
                                                                        Style="{TemplateBinding RecentColorPaletteStyle}"
-                                                                       Visibility="{TemplateBinding IsRecentColorPaletteVisible, Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
+                                                                       Visibility="{TemplateBinding IsRecentColorPaletteVisible,
+                                                                                                    Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
                                             </StackPanel>
                                         </ScrollViewer>
                                     </TabItem>
                                     <TabItem x:Name="PART_AdvancedTab"
                                              Header="{TemplateBinding AdvancedTabHeader}"
                                              HeaderTemplate="{TemplateBinding AdvancedTabHeaderTemplate}"
-                                             Visibility="{TemplateBinding IsAdvancedTabVisible, Converter={StaticResource ColorPicker.BooleanToVisibility}}">
+                                             Visibility="{TemplateBinding IsAdvancedTabVisible,
+                                                                          Converter={StaticResource ColorPicker.BooleanToVisibility}}">
                                         <controls:ColorCanvas AreHsvChannelsVisible="{TemplateBinding AreHsvChannelsVisible}"
                                                               AreRgbChannelsVisible="{TemplateBinding AreRgbChannelsVisible}"
                                                               ColorHelper="{TemplateBinding ColorHelper}"

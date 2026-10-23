@@ -1,6 +1,6 @@
-using System.Reflection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Reflection;
 
 namespace DevTools.Mcp.Isolation;
 

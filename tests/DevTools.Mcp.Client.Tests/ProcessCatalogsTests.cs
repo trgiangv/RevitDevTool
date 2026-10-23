@@ -1,5 +1,5 @@
-using System.Text.Json;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Client.Tests;
 
@@ -290,11 +290,11 @@ public sealed class ProcessCatalogsTests
         string toolName,
         string resourceUri,
         string? description = null) => new()
-    {
-        ProcessId = processId,
-        Instance = new InstanceInfo { HostApp = "Revit", ProcessId = processId, VersionNumber = "2025" },
-        PipeName = HostPipeName.FormatMcp("Revit", "2025", processId),
-        Tools =
+        {
+            ProcessId = processId,
+            Instance = new InstanceInfo { HostApp = "Revit", ProcessId = processId, VersionNumber = "2025" },
+            PipeName = HostPipeName.FormatMcp("Revit", "2025", processId),
+            Tools =
         [
             new Tool
             {
@@ -303,7 +303,7 @@ public sealed class ProcessCatalogsTests
                 InputSchema = JsonSerializer.SerializeToElement(new { type = "object" }),
             },
         ],
-        Resources =
+            Resources =
         [
             new Resource
             {
@@ -312,7 +312,7 @@ public sealed class ProcessCatalogsTests
                 Description = "Demo resource",
             },
         ],
-        ResourceTemplates =
+            ResourceTemplates =
         [
             new ResourceTemplate
             {
@@ -321,7 +321,7 @@ public sealed class ProcessCatalogsTests
                 Description = "Demo template",
             },
         ],
-    };
+        };
 
     private static Tool CreateTool(string name, string description, JsonElement? inputSchema = null) => new()
     {

@@ -88,9 +88,11 @@ public static class HostLaunchWaiter
         }
         catch (InvalidOperationException)
         {
+            // The process can exit between HasExited and Kill.
         }
         catch (System.ComponentModel.Win32Exception)
         {
+            // Termination is best effort; the caller receives the original timeout/cancel status.
         }
     }
 }

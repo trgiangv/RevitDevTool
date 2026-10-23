@@ -41,8 +41,7 @@
                           Stretch="Uniform" />
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem Tag="Face"
-                             ToolTip="Face">
+            <hc:SideMenuItem Tag="Face" ToolTip="Face">
                 <hc:SideMenuItem.Icon>
                     <Path Width="20"
                           Height="20"
@@ -51,8 +50,7 @@
                           Stretch="Uniform" />
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem Tag="Mesh"
-                             ToolTip="Mesh">
+            <hc:SideMenuItem Tag="Mesh" ToolTip="Mesh">
                 <hc:SideMenuItem.Icon>
                     <Path Width="20"
                           Height="20"
@@ -61,8 +59,7 @@
                           Stretch="Uniform" />
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem Tag="Curve"
-                             ToolTip="Curve">
+            <hc:SideMenuItem Tag="Curve" ToolTip="Curve">
                 <hc:SideMenuItem.Icon>
                     <Path Width="20"
                           Height="20"
@@ -71,8 +68,7 @@
                           Stretch="Uniform" />
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem Tag="Solid"
-                             ToolTip="Solid">
+            <hc:SideMenuItem Tag="Solid" ToolTip="Solid">
                 <hc:SideMenuItem.Icon>
                     <Path Width="20"
                           Height="20"
@@ -81,8 +77,7 @@
                           Stretch="Uniform" />
                 </hc:SideMenuItem.Icon>
             </hc:SideMenuItem>
-            <hc:SideMenuItem Tag="Point"
-                             ToolTip="Point">
+            <hc:SideMenuItem Tag="Point" ToolTip="Point">
                 <hc:SideMenuItem.Icon>
                     <Path Width="20"
                           Height="20"

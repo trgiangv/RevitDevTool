@@ -1,4 +1,4 @@
-﻿namespace Demo
+namespace Demo
 
 module Utils =
     let joinLines (lines: string list) =

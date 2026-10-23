@@ -1,5 +1,4 @@
 using System.Reflection;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp.Discovery;
 
@@ -7,14 +6,14 @@ internal static class MethodResolutionHelper
 {
     public static bool IsAssemblyMatch(Assembly assembly, string? sourcePath)
     {
-        if (string.IsNullOrWhiteSpace(sourcePath))
+        if (sourcePath is null || string.IsNullOrWhiteSpace(sourcePath))
             return true;
 
         var assemblyPath = GetAssemblyPath(assembly);
         return string.IsNullOrWhiteSpace(assemblyPath) ||
                string.Equals(
                    Path.GetFullPath(assemblyPath),
-                   Path.GetFullPath(sourcePath!),
+                    Path.GetFullPath(sourcePath),
                    StringComparison.OrdinalIgnoreCase);
     }
 

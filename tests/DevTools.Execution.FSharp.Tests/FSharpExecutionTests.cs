@@ -1,5 +1,4 @@
 using DevTools.Execution.Interfaces;
-using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;

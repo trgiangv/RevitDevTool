@@ -1,9 +1,8 @@
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Runtime;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
-using DevTools.MSTest.Runtime;
-using DevTools.Testing.Abstractions.Contracts;
-using DevTools.Testing.Abstractions.Runtime;
 
 namespace DevTools.MSTest.Runtime.Tests;
 

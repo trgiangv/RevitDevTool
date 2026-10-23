@@ -1,6 +1,3 @@
-using DevTools.Hosting;
-using DevTools.Hosting.Acad;
-
 namespace DevTools.Hosting.Acad.Tests;
 
 [TestClass]

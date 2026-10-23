@@ -1,3 +1,9 @@
+using DevTools.Execution.External.Mcp.Connections;
+using DevTools.Mcp.Core.Models;
+using DevTools.Presentation.Models;
+using DevTools.UI.Behaviors;
+using DevTools.UI.Theme;
+using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -5,15 +11,8 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Windows.Threading;
-using DevTools.Execution.External.Mcp.Connections;
-using DevTools.Mcp.Core.Models;
-using DevTools.Presentation.Models;
-using DevTools.UI.Behaviors;
-using DevTools.UI.Theme;
-using Microsoft.Extensions.Logging;
 using ZLogger;
 // ReSharper disable UnusedParameterInPartialMethod
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Presentation.ViewModels;
 
@@ -359,7 +358,10 @@ public sealed partial class McpRegistryViewModel : ObservableObject, IBusyViewMo
         if (!string.IsNullOrWhiteSpace(binding.SourceAddress))
             builder.AppendLine(binding.SourceAddress);
         builder.AppendLine();
-        builder.AppendLine(string.IsNullOrWhiteSpace(protocolTool.Description) ? "No description." : protocolTool.Description!.Trim());
+        var description = protocolTool.Description;
+        builder.AppendLine(description is null || string.IsNullOrWhiteSpace(description)
+            ? "No description."
+            : description.Trim());
 
         var arguments = protocolTool.InputSchema.ValueKind == JsonValueKind.Object
             ? BuildArgumentSummary(protocolTool.InputSchema.GetRawText())

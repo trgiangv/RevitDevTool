@@ -1,7 +1,6 @@
 using DevTools.Testing.Abstractions.Config;
 using DevTools.Testing.Abstractions.Contracts;
 using Microsoft.Testing.Platform.Configurations;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.TestAdapter;
 
@@ -19,7 +18,8 @@ internal static class TestRunSettingsLoader
             ?? ReadKey(configuration, TestConfig.Keys.HostName);
         var hostVersion = TestingRunnerPaths.ReadEnvironment(TestingRunnerPaths.HostVersionEnvironmentVariable)
             ?? ReadKey(configuration, TestConfig.Keys.HostVersion);
-        if (string.IsNullOrWhiteSpace(hostName) || string.IsNullOrWhiteSpace(hostVersion))
+        if (hostName is null || hostVersion is null
+            || string.IsNullOrWhiteSpace(hostName) || string.IsNullOrWhiteSpace(hostVersion))
             throw new InvalidOperationException(MissingConfigMessage);
 
         if (!int.TryParse(ReadKey(configuration, TestConfig.Keys.PerTestTimeoutSeconds), out var perTestTimeout)
@@ -45,8 +45,8 @@ internal static class TestRunSettingsLoader
 
         return new TestRunSettings(
             new TestHostOptions(
-                hostName!.Trim(),
-                hostVersion!.Trim(),
+                hostName.Trim(),
+                hostVersion.Trim(),
                 forceLaunch,
                 perTestTimeout,
                 launchTimeout),
@@ -60,6 +60,6 @@ internal static class TestRunSettingsLoader
     private static string? ReadConfigurationValue(IConfiguration configuration, string key)
     {
         var value = configuration[key];
-        return string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
+        return value is null || string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 }

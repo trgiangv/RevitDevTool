@@ -1,9 +1,8 @@
 using DevTools.Daemon.Auth;
-using DevTools.Daemon;
 using DevTools.Daemon.Control;
-using DevTools.Daemon.Tunnel;
 using DevTools.Daemon.Desktop.Views;
 using DevTools.Daemon.Tests.Support;
+using DevTools.Daemon.Tunnel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;

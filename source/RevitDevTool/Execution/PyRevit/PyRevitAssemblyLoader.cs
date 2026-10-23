@@ -1,9 +1,9 @@
+using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Runtime.Versioning;
-using Microsoft.Extensions.Logging;
 using ZLogger;
 
 namespace RevitDevTool.Execution.PyRevit;
@@ -172,17 +172,17 @@ internal static class PyRevitAssemblyLoader
             return false;
         }
     }
-    
+
     private static string? SerializedBlob(MetadataReader reader, CustomAttributeHandle attrHandle)
     {
         var attr = reader.GetCustomAttribute(attrHandle);
-        if (attr.Constructor.Kind != HandleKind.MemberReference) return null ;
+        if (attr.Constructor.Kind != HandleKind.MemberReference) return null;
 
         var ctor = reader.GetMemberReference((MemberReferenceHandle)attr.Constructor);
-        if (ctor.Parent.Kind != HandleKind.TypeReference) return null ;
+        if (ctor.Parent.Kind != HandleKind.TypeReference) return null;
 
         var typeRef = reader.GetTypeReference((TypeReferenceHandle)ctor.Parent);
-        if (reader.GetString(typeRef.Name) != nameof(TargetFrameworkAttribute)) return null ;
+        if (reader.GetString(typeRef.Name) != nameof(TargetFrameworkAttribute)) return null;
 
         var blob = reader.GetBlobReader(attr.Value);
         blob.ReadUInt16();

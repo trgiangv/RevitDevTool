@@ -10,7 +10,7 @@ public sealed class GeneralConfig
 
     [JsonPropertyName("isTraceEnabled")]
     public bool IsTraceEnabled { get; set; } = true;
-    
+
     [JsonPropertyName("isMemoryEnabled")]
     public bool IsMemoryEnabled { get; set; } = true;
 

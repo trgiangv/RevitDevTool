@@ -1,8 +1,8 @@
-using System.Text.Json;
-using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Core.Utils;
+using DevTools.Mcp.Discovery;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Bridging;
 

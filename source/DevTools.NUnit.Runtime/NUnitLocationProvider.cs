@@ -1,8 +1,8 @@
+using NUnit.Framework.Interfaces;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Reflection.PortableExecutable;
-using NUnit.Framework.Interfaces;
 using static DevTools.NUnit.Runtime.NUnitNameSyntax;
 
 namespace DevTools.NUnit.Runtime;

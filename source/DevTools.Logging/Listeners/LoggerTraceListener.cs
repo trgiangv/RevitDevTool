@@ -1,6 +1,6 @@
-using System.Diagnostics;
 using DevTools.Logging.Options;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using ZLogger;
 
 namespace DevTools.Logging.Listeners;

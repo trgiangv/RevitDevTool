@@ -1,10 +1,8 @@
-using System.Text.Json;
-using DevTools.Daemon.Mcp.Processes;
 using DevTools.Mcp.Client.Tests.Harness;
-using DevTools.Mcp.Core.Protocol;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Client.Tests;
 

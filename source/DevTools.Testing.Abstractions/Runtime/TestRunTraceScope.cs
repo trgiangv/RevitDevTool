@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Testing.Abstractions.Runtime;
 
@@ -35,10 +34,10 @@ public sealed class TestRunTraceScope : IDisposable
     /// </summary>
     public void WriteThrough(string? text)
     {
-        if (string.IsNullOrEmpty(text))
+        if (text is null || text.Length == 0)
             return;
 
-        var trimmed = text!.TrimEnd('\r', '\n');
+        var trimmed = text.TrimEnd('\r', '\n');
         if (trimmed.Length == 0)
             return;
 
@@ -104,11 +103,7 @@ public sealed class TestRunTraceScope : IDisposable
         Trace.Listeners.Remove(_listener);
 
         var desired = new List<TraceListener>(_snapshot.Length);
-        foreach (var listener in _snapshot)
-        {
-            if (listener != _listener && !desired.Contains(listener))
-                desired.Add(listener);
-        }
+        desired.AddRange(_snapshot.Where(listener => listener != _listener).Distinct());
 
         Trace.Listeners.Clear();
         foreach (var listener in desired)
@@ -126,7 +121,7 @@ public sealed class TestRunTraceScope : IDisposable
         private string CurrentKey()
         {
             var key = caseKey?.Invoke();
-            return string.IsNullOrEmpty(key) ? string.Empty : key!;
+            return key ?? string.Empty;
         }
 
         public void SuspendCapture()

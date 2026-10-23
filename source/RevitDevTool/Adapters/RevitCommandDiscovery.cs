@@ -1,9 +1,9 @@
-using System.IO;
-using System.Reflection;
 using DevTools.AssemblyIsolation.Metadata;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Providers.Dotnet;
 using Microsoft.Extensions.Logging;
+using System.IO;
+using System.Reflection;
 using ZLogger;
 namespace RevitDevTool.Adapters;
 
@@ -73,7 +73,7 @@ public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger)
     {
         try
         {
-            return [..assembly.GetTypes()];
+            return [.. assembly.GetTypes()];
         }
         catch (ReflectionTypeLoadException ex)
         {

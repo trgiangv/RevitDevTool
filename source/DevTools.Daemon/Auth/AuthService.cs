@@ -1,9 +1,9 @@
-using System.IO;
-using System.Net.Http;
 using DevTools.Utilities;
 using Duende.IdentityModel.OidcClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.IO;
+using System.Net.Http;
 using ZLogger;
 
 namespace DevTools.Daemon.Auth;
@@ -13,7 +13,7 @@ public sealed class AuthService : IAuthService, IDisposable
     private const string TokenFileName = "auth.dat";
     private const int RefreshBufferSeconds = 300;
     private const string RevokeEndpoint = "/oauth/token/revoke";
-    
+
     private readonly AuthOptions _options;
     private readonly ILogger _logger;
     private readonly HttpClient _http = new();

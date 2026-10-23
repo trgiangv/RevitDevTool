@@ -6,13 +6,13 @@ namespace DevTools.MSTest.SampleTests;
 [TestClass]
 public sealed class ResourceLockTests
 {
-    private static int Held;
+    private static int _held;
 
     [TestMethod]
     [ResourceLock("mstest-sample-gate")]
     public void Locked_section_observes_its_own_increment()
     {
-        var seen = Interlocked.Increment(ref Held);
+        var seen = Interlocked.Increment(ref _held);
         Assert.IsGreaterThan(0, seen);
     }
 }

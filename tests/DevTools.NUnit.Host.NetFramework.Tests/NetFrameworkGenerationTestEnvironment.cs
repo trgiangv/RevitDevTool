@@ -1,7 +1,7 @@
-using System.Reflection;
-using System.Text;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
+using System.Reflection;
+using System.Text;
 
 namespace DevTools.NUnit.Host.NetFramework.Tests;
 

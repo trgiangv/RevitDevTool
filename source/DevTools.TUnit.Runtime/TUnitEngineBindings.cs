@@ -1,8 +1,8 @@
-using System.Reflection;
 using DevTools.Testing.Abstractions.Runtime;
 using Microsoft.Testing.Platform.Capabilities.TestFramework;
 using Microsoft.Testing.Platform.Extensions;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
+using System.Reflection;
 using MtpTestSessionContext = Microsoft.Testing.Platform.TestHost.TestSessionContext;
 using SessionUid = Microsoft.Testing.Platform.TestHost.SessionUid;
 

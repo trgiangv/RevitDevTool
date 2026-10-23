@@ -27,7 +27,6 @@
     </Window.Resources>
 
     <Grid>
-        <ContentControl x:Name="ContentHost"
-                        Margin="0" />
+        <ContentControl x:Name="ContentHost" Margin="0" />
     </Grid>
 </Window>

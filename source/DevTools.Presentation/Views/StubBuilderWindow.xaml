@@ -52,8 +52,7 @@
                     Command="{Binding SelectAllCommand}"
                     Content="Select All" />
 
-            <Button Command="{Binding ClearSelectionCommand}"
-                    Content="Select None" />
+            <Button Command="{Binding ClearSelectionCommand}" Content="Select None" />
         </StackPanel>
 
         <!--  Search  -->
@@ -74,11 +73,9 @@
                  VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Standard">
             <ListBox.ItemContainerStyle>
-                <Style BasedOn="{StaticResource ListBoxItemBaseStyle}"
-                       TargetType="ListBoxItem">
+                <Style BasedOn="{StaticResource ListBoxItemBaseStyle}" TargetType="ListBoxItem">
                     <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                    <EventSetter Event="MouseDoubleClick"
-                                 Handler="OnAssemblyItemDoubleClick" />
+                    <EventSetter Event="MouseDoubleClick" Handler="OnAssemblyItemDoubleClick" />
                 </Style>
             </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
@@ -99,8 +96,7 @@
         </ListBox>
 
         <!--  Output Path  -->
-        <Grid Grid.Row="3"
-              Margin="0,0,0,8">
+        <Grid Grid.Row="3" Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />

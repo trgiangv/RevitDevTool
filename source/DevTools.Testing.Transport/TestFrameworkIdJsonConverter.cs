@@ -1,6 +1,6 @@
+using DevTools.Testing.Abstractions.Contracts;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using DevTools.Testing.Abstractions.Contracts;
 
 namespace DevTools.Testing.Transport;
 

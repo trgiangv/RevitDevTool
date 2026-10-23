@@ -1,11 +1,11 @@
-using System.IO.Pipes;
-using System.Text;
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
-using DevTools.Ipc;
 using DevTools.Daemon.Tests.Support;
+using DevTools.Ipc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using System.IO.Pipes;
+using System.Text;
 
 namespace DevTools.Daemon.Tests;
 

@@ -1,7 +1,7 @@
-using System.Collections.Specialized;
 using Autodesk.Internal.Windows;
 using Autodesk.Windows;
 using RevitDevTool.Tools.CommandBrowser.Models;
+using System.Collections.Specialized;
 using RibbonItem = Autodesk.Windows.RibbonItem;
 using RibbonPanel = Autodesk.Windows.RibbonPanel;
 

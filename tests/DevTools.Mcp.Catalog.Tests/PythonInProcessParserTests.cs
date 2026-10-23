@@ -1,6 +1,6 @@
-using System.Text.Json;
 using DevTools.Mcp.Catalog.Tests.Harness;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Catalog.Tests;
 

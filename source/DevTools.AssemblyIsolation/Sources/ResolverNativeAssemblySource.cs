@@ -5,8 +5,8 @@ namespace DevTools.AssemblyIsolation.Sources;
 
 public sealed class ResolverNativeAssemblySource : INativeAssemblySource
 {
-    private readonly AssemblyDependencyResolver resolver;
-    private readonly string root;
+    private readonly AssemblyDependencyResolver _resolver;
+    private readonly string _root;
 
     public ResolverNativeAssemblySource(string entryAssemblyPath)
     {
@@ -14,9 +14,9 @@ public sealed class ResolverNativeAssemblySource : INativeAssemblySource
             throw new ArgumentException("An entry assembly path is required.", nameof(entryAssemblyPath));
 
         var entry = Path.GetFullPath(entryAssemblyPath);
-        root = Path.GetDirectoryName(entry)
+        _root = Path.GetDirectoryName(entry)
             ?? throw new ArgumentException("The entry assembly path must have a directory.", nameof(entryAssemblyPath));
-        resolver = new AssemblyDependencyResolver(entry);
+        _resolver = new AssemblyDependencyResolver(entry);
     }
 
     public AssemblyCandidate? Resolve(string name)
@@ -24,8 +24,8 @@ public sealed class ResolverNativeAssemblySource : INativeAssemblySource
         if (string.IsNullOrWhiteSpace(name))
             return null;
 
-        var path = resolver.ResolveUnmanagedDllToPath(name);
-        return path is null ? null : AssemblyCandidate.TryCreate(path, root);
+        var path = _resolver.ResolveUnmanagedDllToPath(name);
+        return path is null ? null : AssemblyCandidate.TryCreate(path, _root);
     }
 }
 #endif

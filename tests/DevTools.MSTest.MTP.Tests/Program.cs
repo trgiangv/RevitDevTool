@@ -1,6 +1,5 @@
-using System.Reflection;
-using DevTools.MSTest.MTP;
 using DevTools.Testing.Abstractions.Contracts;
+using System.Reflection;
 
 namespace DevTools.MSTest.MTP.Tests;
 

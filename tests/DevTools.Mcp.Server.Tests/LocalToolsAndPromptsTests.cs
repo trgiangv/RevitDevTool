@@ -1,18 +1,16 @@
-using System.Diagnostics;
-using System.IO.Pipelines;
-using System.Text.Json;
+using DevTools.Daemon.Mcp.Prompts;
+using DevTools.Daemon.Mcp.Tools;
 using DevTools.FileMetadata.Core;
 using DevTools.Hosting;
-using DevTools.Daemon.Mcp.Processes;
-using DevTools.Daemon.Mcp.Hosting;
-using DevTools.Daemon.Mcp.Prompts;
 using DevTools.Mcp.Server.Tests.Harness;
-using DevTools.Daemon.Mcp.Tools;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Moq;
+using System.Diagnostics;
+using System.IO.Pipelines;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Server.Tests;
 

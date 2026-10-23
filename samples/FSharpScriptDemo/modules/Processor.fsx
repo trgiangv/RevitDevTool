@@ -1,4 +1,4 @@
-﻿#load "../core/Utils.fsx"
+#load "../core/Utils.fsx"
 #load "./DocumentSummary.fsx"
 
 namespace Demo

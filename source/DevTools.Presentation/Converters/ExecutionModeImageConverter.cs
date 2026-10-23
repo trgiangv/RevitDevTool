@@ -31,12 +31,12 @@ public sealed class ExecutionModeImageConverter : IValueConverter
 
         var key = mode switch
         {
-            ExecutionMode.Python     => "PythonIcon",
+            ExecutionMode.Python => "PythonIcon",
             ExecutionMode.IronPython => "IronPythonIcon",
-            ExecutionMode.FSharp     => "FsharpIcon",
-            ExecutionMode.CSharp     => "CsharpIcon",
-            ExecutionMode.Dotnet     => "DotnetIcon",
-            _                        => "DotnetIcon",
+            ExecutionMode.FSharp => "FsharpIcon",
+            ExecutionMode.CSharp => "CsharpIcon",
+            ExecutionMode.Dotnet => "DotnetIcon",
+            _ => "DotnetIcon",
         };
         return Icons[key];
     }

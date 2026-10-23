@@ -1,5 +1,3 @@
-using DevTools.Mcp.Core.Results;
-
 namespace DevTools.Mcp.Core.Tests;
 
 [TestClass]

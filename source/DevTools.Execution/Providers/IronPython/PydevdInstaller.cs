@@ -1,11 +1,10 @@
-using System.IO;
-using System.IO.Compression;
 using DevTools.Execution.Services;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
+using System.IO;
+using System.IO.Compression;
 using ZLogger;
 
-// ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.Execution.Providers.IronPython;
 
 /// <summary>Version-pinned PyDev.Debugger 2.8.0 under AppData (uv-style zip + marker).</summary>

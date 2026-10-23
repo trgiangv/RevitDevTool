@@ -1,5 +1,4 @@
 using DevTools.Utilities;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 namespace DevTools.TestAdapter;
 
 /// <summary>
@@ -25,7 +24,9 @@ public static class TestingRunnerPaths
 
     public static string? ExpandPath(string? value)
     {
-        return string.IsNullOrWhiteSpace(value) ? null : Environment.ExpandEnvironmentVariables(value!.Trim());
+        return value is null || string.IsNullOrWhiteSpace(value)
+            ? null
+            : Environment.ExpandEnvironmentVariables(value.Trim());
     }
 
     public static string? ReadEnvironment(string variable)

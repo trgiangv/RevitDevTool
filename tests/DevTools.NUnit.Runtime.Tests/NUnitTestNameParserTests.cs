@@ -1,5 +1,3 @@
-using DevTools.NUnit.Runtime;
-
 namespace DevTools.NUnit.Runtime.Tests;
 
 [TestClass]

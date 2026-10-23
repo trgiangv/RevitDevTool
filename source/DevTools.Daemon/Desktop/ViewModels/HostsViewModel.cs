@@ -1,9 +1,9 @@
-using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DevTools.Daemon.Desktop.Helpers;
 using DevTools.Daemon.Desktop.Models;
-using DevTools.Ipc;
 using DevTools.Daemon.Mcp.Processes;
+using DevTools.Ipc;
+using System.Collections.ObjectModel;
 
 namespace DevTools.Daemon.Desktop.ViewModels;
 

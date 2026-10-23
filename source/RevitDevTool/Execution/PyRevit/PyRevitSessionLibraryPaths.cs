@@ -1,5 +1,5 @@
-using System.Reflection;
 using RevitDevTool.Core;
+using System.Reflection;
 
 namespace RevitDevTool.Execution.PyRevit;
 
@@ -37,7 +37,7 @@ internal static class PyRevitSessionLibraryPaths
                 paths = FromSessionBuilder();
 
             if (paths.Count <= 0) return paths;
-            
+
             _cachedSessionId = sessionId;
             _cachedPaths = paths;
             return paths;
@@ -139,7 +139,7 @@ internal static class PyRevitSessionLibraryPaths
 
     private static Assembly? BuilderAssembly()
     {
-        return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly 
+        return AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly
             => string.Equals(assembly.GetName().Name, BuilderAssemblyName, StringComparison.OrdinalIgnoreCase));
     }
 
@@ -152,7 +152,7 @@ internal static class PyRevitSessionLibraryPaths
     private static bool References(Assembly assembly, Assembly runtime)
     {
         var name = runtime.GetName().Name;
-        return assembly.GetReferencedAssemblies().Any(reference 
+        return assembly.GetReferencedAssemblies().Any(reference
             => string.Equals(reference.Name, name, StringComparison.Ordinal));
     }
 

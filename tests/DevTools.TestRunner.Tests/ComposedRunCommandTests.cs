@@ -1,11 +1,11 @@
-using System.IO.Pipes;
-using System.Text.Json;
 using DevTools.Hosting;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 using DevTools.TestRunner.Debugging;
 using DevTools.TestRunner.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO.Pipes;
+using System.Text.Json;
 
 namespace DevTools.TestRunner.Tests;
 
@@ -93,15 +93,15 @@ public sealed class ComposedRunCommandTests : RunnerTests
 
     private sealed class FakeHostPipe : IAsyncDisposable
     {
-        private readonly NamedPipeServerStream pipe;
-        private readonly CancellationTokenSource cancellation = new();
-        private readonly Task serving;
+        private readonly NamedPipeServerStream _pipe;
+        private readonly CancellationTokenSource _cancellation = new();
+        private readonly Task _serving;
 
         public FakeHostPipe()
         {
             PipeName = $"devtools-task5-{Guid.NewGuid():N}";
-            pipe = new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
-            serving = ServeAsync();
+            _pipe = new NamedPipeServerStream(PipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+            _serving = ServeAsync();
         }
 
         public string PipeName { get; }
@@ -111,13 +111,13 @@ public sealed class ComposedRunCommandTests : RunnerTests
         {
             try
             {
-                await pipe.WaitForConnectionAsync(cancellation.Token);
-                using var connection = new BridgePipeConnection(pipe);
+                await _pipe.WaitForConnectionAsync(_cancellation.Token);
+                using var connection = new BridgePipeConnection(_pipe);
                 connection.MessageReceived += message => _ = RespondAsync(connection, message);
                 connection.StartReadLoop();
-                await Task.Delay(Timeout.InfiniteTimeSpan, cancellation.Token);
+                await Task.Delay(Timeout.InfiniteTimeSpan, _cancellation.Token);
             }
-            catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+            catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
             {
             }
         }
@@ -133,7 +133,7 @@ public sealed class ComposedRunCommandTests : RunnerTests
                     request.Id,
                     JsonSerializer.SerializeToElement(
                         new TestHelloResponse(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit, "Revit", "2026", 1234, false),
-                        TestingJsonContext.Default.TestHelloResponse)), cancellation.Token);
+                        TestingJsonContext.Default.TestHelloResponse)), _cancellation.Token);
                 return;
             }
             if (request.Method == TestingProtocol.Run)
@@ -143,7 +143,7 @@ public sealed class ComposedRunCommandTests : RunnerTests
                     request.Id,
                     JsonSerializer.SerializeToElement(
                         new TestRunResponse(run.RunId, TestFrameworkId.NUnit, "generation", [], TestCancellationState.None, null, null),
-                        TestingJsonContext.Default.TestRunResponse)), cancellation.Token);
+                        TestingJsonContext.Default.TestRunResponse)), _cancellation.Token);
                 RunRequest.TrySetResult(new WireRequest(
                     request.Method,
                     string.Join(",", run.Selection.TestIds.Concat(
@@ -157,10 +157,10 @@ public sealed class ComposedRunCommandTests : RunnerTests
 
         public async ValueTask DisposeAsync()
         {
-            cancellation.Cancel();
-            pipe.Dispose();
-            try { await serving; } catch (ObjectDisposedException) { }
-            cancellation.Dispose();
+            _cancellation.Cancel();
+            _pipe.Dispose();
+            try { await _serving; } catch (ObjectDisposedException) { }
+            _cancellation.Dispose();
         }
     }
 }

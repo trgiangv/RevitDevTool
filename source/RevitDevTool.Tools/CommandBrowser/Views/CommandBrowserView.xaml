@@ -35,8 +35,7 @@
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border Padding="{TemplateBinding Padding}"
-                                    Background="Transparent">
+                            <Border Padding="{TemplateBinding Padding}" Background="Transparent">
                                 <Path x:Name="Icon"
                                       Width="12"
                                       Height="12"
@@ -48,15 +47,13 @@
                                       Stretch="Uniform" />
                             </Border>
                             <ControlTemplate.Triggers>
-                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Grid}}"
-                                             Value="True">
+                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Grid}}" Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="0.4" />
                                 </DataTrigger>
                                 <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="1" />
                                 </Trigger>
-                                <DataTrigger Binding="{Binding Command.IsFavorite}"
-                                             Value="True">
+                                <DataTrigger Binding="{Binding Command.IsFavorite}" Value="True">
                                     <Setter TargetName="Icon" Property="Opacity" Value="1" />
                                     <Setter TargetName="Icon" Property="Fill" Value="{DynamicResource DarkPrimaryBrush}" />
                                 </DataTrigger>
@@ -66,10 +63,8 @@
                 </Setter>
             </Style>
 
-            <DataTemplate x:Key="CommandItemTemplate"
-                          DataType="{x:Type models:GroupedCommandEntry}">
-                <Grid ToolTip="{Binding Command.RibbonInfo.ToolTip}"
-                      ToolTipService.InitialShowDelay="200">
+            <DataTemplate x:Key="CommandItemTemplate" DataType="{x:Type models:GroupedCommandEntry}">
+                <Grid ToolTip="{Binding Command.RibbonInfo.ToolTip}" ToolTipService.InitialShowDelay="200">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -80,8 +75,7 @@
                         <Style TargetType="Grid">
                             <Setter Property="Opacity" Value="1" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Command.RibbonInfo.IsEnabled}"
-                                             Value="False">
+                                <DataTrigger Binding="{Binding Command.RibbonInfo.IsEnabled}" Value="False">
                                     <Setter Property="Opacity" Value="0.35" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -106,11 +100,7 @@
                                Margin="4,0,0,0"
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis">
-                        <Run Foreground="{DynamicResource PrimaryTextBrush}"
-                             Text="{Binding Command.RibbonInfo.Name, Mode=OneWay}" /><Run Foreground="{DynamicResource ThirdlyTextBrush}"
-                             Text=" (" /><Run Foreground="{DynamicResource ThirdlyTextBrush}"
-                             Text="{Binding Command.RibbonInfo.TabName, Mode=OneWay}" /><Run Foreground="{DynamicResource ThirdlyTextBrush}"
-                             Text=")" />
+                        <Run Foreground="{DynamicResource PrimaryTextBrush}" Text="{Binding Command.RibbonInfo.Name, Mode=OneWay}" /><Run Foreground="{DynamicResource ThirdlyTextBrush}" Text=" (" /><Run Foreground="{DynamicResource ThirdlyTextBrush}" Text="{Binding Command.RibbonInfo.TabName, Mode=OneWay}" /><Run Foreground="{DynamicResource ThirdlyTextBrush}" Text=")" />
                     </TextBlock>
 
                     <Button Grid.Column="2"
@@ -120,8 +110,7 @@
                 </Grid>
             </DataTemplate>
 
-            <DataTemplate x:Key="GroupHeaderTemplate"
-                          DataType="{x:Type CollectionViewGroup}">
+            <DataTemplate x:Key="GroupHeaderTemplate" DataType="{x:Type CollectionViewGroup}">
                 <TextBlock Margin="4,6,4,2"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource ThirdlyTextBrush}"
@@ -155,8 +144,7 @@
                     <Style TargetType="Path">
                         <Setter Property="Data" Value="{StaticResource BookmarkOff}" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding ShowOnlyFavorites}"
-                                         Value="True">
+                            <DataTrigger Binding="{Binding ShowOnlyFavorites}" Value="True">
                                 <Setter Property="Data" Value="{StaticResource BookmarkOn}" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -176,8 +164,7 @@
                                   Style="{DynamicResource ComboBoxExtend}"
                                   TextSearch.TextPath="Command.RibbonInfo.Name">
             <ComboBox.ItemContainerStyle>
-                <Style BasedOn="{StaticResource ComboBoxItemBaseStyle}"
-                       TargetType="ComboBoxItem">
+                <Style BasedOn="{StaticResource ComboBoxItemBaseStyle}" TargetType="ComboBoxItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 </Style>
             </ComboBox.ItemContainerStyle>

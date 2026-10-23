@@ -1,16 +1,16 @@
-using System.Windows;
 using DevTools.Logging;
 using DevTools.Logging.Abstractions;
 using DevTools.Logging.Listeners;
 using DevTools.Logging.Options;
+using DevTools.Presentation;
+using DevTools.Presentation.Interfaces;
 using DevTools.Settings.Configs;
 using DevTools.Telemetry;
+using DevTools.UI.Theme;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Listeners;
 using RevitDevTool.Settings;
-using DevTools.UI.Theme;
-using DevTools.Presentation;
-using DevTools.Presentation.Interfaces;
+using System.Windows;
 
 namespace RevitDevTool.Logging;
 

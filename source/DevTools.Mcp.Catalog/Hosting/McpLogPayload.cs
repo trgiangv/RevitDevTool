@@ -1,6 +1,6 @@
-using System.Text.Json;
 using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
+using System.Text.Json;
 
 namespace DevTools.Mcp.Hosting;
 
@@ -65,12 +65,12 @@ internal static class McpLogPayload
     private static bool TryParseResourceContents(string? text, out LogReadResourceResult resource)
     {
         resource = new LogReadResourceResult([]);
-        if (string.IsNullOrWhiteSpace(text))
+        if (text is null || string.IsNullOrWhiteSpace(text))
             return false;
 
         try
         {
-            var parsed = JsonSerializer.Deserialize(text!, ToolHelpers.ProtocolOptions.GetTypeInfo(typeof(ReadResourceResult))!);
+            var parsed = JsonSerializer.Deserialize(text, ToolHelpers.ProtocolOptions.GetTypeInfo(typeof(ReadResourceResult)));
             if (parsed is not ReadResourceResult readResult || readResult.Contents.Count == 0)
                 return false;
             resource = new LogReadResourceResult(readResult.Contents.Select(RedactResourceContent).ToArray());

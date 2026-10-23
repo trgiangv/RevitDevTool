@@ -1,11 +1,10 @@
-using System.Text.Json;
 using DevTools.Execution.External.Mcp.BuiltIn;
 using DevTools.Hosting;
 using DevTools.Mcp.Core.Protocol;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using Moq;
+using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
 

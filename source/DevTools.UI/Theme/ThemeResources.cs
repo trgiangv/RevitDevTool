@@ -1,7 +1,7 @@
+using DevTools.UI.Theme.Design;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
-using DevTools.UI.Theme.Design;
 // ReSharper disable ReplaceWithFieldKeyword
 
 namespace DevTools.UI.Theme;
@@ -16,8 +16,8 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
     #region Fields
 
     private bool _canBeAccessedAcrossThreads;
-    private static ResourceDictionary? lightResources;
-    private static ResourceDictionary? darkResources;
+    private static ResourceDictionary? _lightResources;
+    private static ResourceDictionary? _darkResources;
 
     #endregion
 
@@ -92,24 +92,24 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
         {
             case AppTheme.Light:
                 EnsureLightResources();
-                UpdateTo(lightResources!);
+                UpdateTo(_lightResources!);
                 break;
             case AppTheme.Dark:
                 EnsureDarkResources();
-                UpdateTo(darkResources!);
+                UpdateTo(_darkResources!);
                 break;
             case AppTheme.Auto:
             default:
                 EnsureLightResources();
-                UpdateTo(lightResources!);
+                UpdateTo(_lightResources!);
                 break;
         }
         return;
 
         void UpdateTo(ResourceDictionary themeDictionary)
         {
-            MergedDictionaries.RemoveIfNotNull(lightResources);
-            MergedDictionaries.RemoveIfNotNull(darkResources);
+            MergedDictionaries.RemoveIfNotNull(_lightResources);
+            MergedDictionaries.RemoveIfNotNull(_darkResources);
             MergedDictionaries.Insert(0, themeDictionary);
         }
     }
@@ -149,8 +149,8 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
                 // Preload and seal both theme dictionaries for thread-safe access
                 EnsureLightResources();
                 EnsureDarkResources();
-                lightResources?.SealValues();
-                darkResources?.SealValues();
+                _lightResources?.SealValues();
+                _darkResources?.SealValues();
             }
         }
         base.EndInit();
@@ -177,18 +177,18 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
         {
             case AppTheme.Light:
                 EnsureLightResources();
-                MergedDictionaries.InsertOrReplace(targetIndex, lightResources!);
-                MergedDictionaries.RemoveIfNotNull(darkResources);
+                MergedDictionaries.InsertOrReplace(targetIndex, _lightResources!);
+                MergedDictionaries.RemoveIfNotNull(_darkResources);
                 break;
             case AppTheme.Dark:
                 EnsureDarkResources();
-                MergedDictionaries.InsertOrReplace(targetIndex, darkResources!);
-                MergedDictionaries.RemoveIfNotNull(lightResources);
+                MergedDictionaries.InsertOrReplace(targetIndex, _darkResources!);
+                MergedDictionaries.RemoveIfNotNull(_lightResources);
                 break;
             default:
                 EnsureLightResources();
-                MergedDictionaries.InsertOrReplace(targetIndex, lightResources!);
-                MergedDictionaries.RemoveIfNotNull(darkResources);
+                MergedDictionaries.InsertOrReplace(targetIndex, _lightResources!);
+                MergedDictionaries.RemoveIfNotNull(_darkResources);
                 break;
         }
     }
@@ -199,12 +199,12 @@ public class ThemeResources : ResourceDictionary, ISupportInitialize
 
     private static void EnsureLightResources()
     {
-        lightResources ??= ResourceUtils.GetHandyLightTheme();
+        _lightResources ??= ResourceUtils.GetHandyLightTheme();
     }
 
     private static void EnsureDarkResources()
     {
-        darkResources ??= ResourceUtils.GetHandyDarkTheme();
+        _darkResources ??= ResourceUtils.GetHandyDarkTheme();
     }
 
     #endregion

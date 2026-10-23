@@ -221,9 +221,9 @@ public static class RevitImageExporter
         using var ms = new MemoryStream(bytes);
         using var src = Image.FromStream(ms);
 
-        var scale = (double) pixelSize / src.Width;
-        var scaledH = (int) (src.Height * scale);
-        var finalH = (int) Math.Min(scaledH, pixelSize * maxRatio);
+        var scale = (double)pixelSize / src.Width;
+        var scaledH = (int)(src.Height * scale);
+        var finalH = (int)Math.Min(scaledH, pixelSize * maxRatio);
 
         if (src.Width == pixelSize && src.Height <= finalH) return;
 
@@ -273,11 +273,11 @@ public static class RevitImageExporter
     {
         if (view.IsTitleblockRevisionSchedule)
             throw new NotSupportedException("Revision schedules are not supported for export due to API limitations.");
-        
+
         var doc = view.Document;
         var exportBasePath = GetExportBasePath(outputDir, view);
 
-        RevitContextExecutor.Raise(() => 
+        RevitContextExecutor.Raise(() =>
         {
             using var tg = new TransactionGroup(doc, "Schedule Export");
             tg.Start();

@@ -1,5 +1,3 @@
-using System.IO;
-using System.Text;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using IronPython.Compiler;
@@ -8,6 +6,8 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
+using System.IO;
+using System.Text;
 
 namespace DevTools.Execution.Providers.IronPython;
 

@@ -37,15 +37,17 @@ public static class AssemblyHelper
     public static IEnumerable<Assembly> FindMany(IEnumerable<string> simpleNames)
     {
         ArgumentNullException.ThrowIfNull(simpleNames);
-
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var name in simpleNames)
         {
             var loaded = Find(name);
-            var simple = loaded?.GetName().Name;
+            if (loaded is null)
+                continue;
+
+            var simple = loaded.GetName().Name;
             if (simple is null || !seen.Add(simple))
                 continue;
-            yield return loaded!;
+            yield return loaded;
         }
     }
 

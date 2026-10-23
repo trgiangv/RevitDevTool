@@ -1,5 +1,5 @@
-using System.Text.Json.Serialization;
 using DevTools.Testing.Abstractions.Contracts;
+using System.Text.Json.Serialization;
 
 namespace DevTools.Testing.Transport;
 

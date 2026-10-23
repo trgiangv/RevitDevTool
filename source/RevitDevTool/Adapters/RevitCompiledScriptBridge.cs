@@ -1,7 +1,7 @@
-using System.Reflection;
-using System.Text.RegularExpressions;
 using DevTools.AssemblyIsolation;
 using DevTools.Hosting;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace RevitDevTool.Adapters;
 

@@ -1,5 +1,5 @@
-using System.Reflection;
 using DevTools.AssemblyIsolation.Identity;
+using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Tests;
 

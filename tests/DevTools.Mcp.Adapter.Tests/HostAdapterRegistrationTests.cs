@@ -1,10 +1,10 @@
 using DevTools.Hosting;
 using DevTools.Mcp;
+using DevTools.Mcp.Adapter.Tests.Harness;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Isolation;
 using DevTools.Mcp.Transport;
-using DevTools.Mcp.Adapter.Tests.Harness;
-using DevTools.Mcp.Core.Sessions;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.DependencyInjection;

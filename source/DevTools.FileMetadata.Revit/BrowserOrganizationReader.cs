@@ -1,5 +1,5 @@
 using System.IO.Compression;
-using System.Text;                                          
+using System.Text;
 
 namespace DevTools.FileMetadata.Revit;
 

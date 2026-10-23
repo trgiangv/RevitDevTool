@@ -1,5 +1,5 @@
-using System.Text.Json;
 using DevTools.Ipc;
+using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
 

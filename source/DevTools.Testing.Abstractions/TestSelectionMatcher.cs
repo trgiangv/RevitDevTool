@@ -47,19 +47,29 @@ public sealed class TestSelectionMatcher
         if (SelectsNothing)
             return false;
 
-        if (_ids.Contains(test.TestId)
-            || (!string.IsNullOrWhiteSpace(test.FullName) && _ids.Contains(test.FullName!))
-            || (_ids.Count > 0 && alternateId?.Invoke() is { } alternate && _ids.Contains(alternate)))
+        var testId = test.TestId;
+        var fullName = test.FullName;
+        if (_ids.Count > 0)
         {
-            return true;
+            if (testId is not null && _ids.Contains(testId))
+                return true;
+
+            if (fullName is not null
+                && !string.IsNullOrWhiteSpace(fullName)
+                && _ids.Contains(fullName))
+                return true;
+
+            var alternate = alternateId?.Invoke();
+            if (alternate is not null && _ids.Contains(alternate))
+                return true;
         }
 
         var method = methodName ?? test.MethodName;
         return _names.Any(name =>
-            string.Equals(test.FullName, name, StringComparison.Ordinal)
+            string.Equals(fullName, name, StringComparison.Ordinal)
             || string.Equals(test.DisplayName, name, StringComparison.Ordinal)
-            || (test.FullName?.Contains(name, StringComparison.OrdinalIgnoreCase) ?? false)
-            || test.TestId.Contains(name, StringComparison.OrdinalIgnoreCase)
+            || (fullName?.Contains(name, StringComparison.OrdinalIgnoreCase) ?? false)
+            || (testId?.Contains(name, StringComparison.OrdinalIgnoreCase) ?? false)
             || string.Equals(method, name, StringComparison.OrdinalIgnoreCase));
     }
 

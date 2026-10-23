@@ -1,7 +1,7 @@
+using ModelContextProtocol.Protocol;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
-using ModelContextProtocol.Protocol;
 
 namespace DevTools.Daemon.Mcp.Contracts;
 

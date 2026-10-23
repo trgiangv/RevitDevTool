@@ -1,6 +1,6 @@
-using System.Windows;
 using DevTools.Presentation.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Windows;
 using ZLogger.Scintilla.Public;
 
 namespace DevTools.Presentation.Logging;

@@ -1,12 +1,10 @@
 using DevTools.Execution.Abstractions;
 using DevTools.Execution.Interfaces;
-using DevTools.Execution.Models;
 using DevTools.Execution.Providers.CSharp;
 using DevTools.Execution.Providers.FSharp;
 using DevTools.Execution.Providers.IronPython;
 using DevTools.Execution.Providers.Python;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Execution.Tests;
 

@@ -1,8 +1,8 @@
-using System.Windows;
 using DevTools.Settings.Configs;
 using HandyControl.Data;
 using HandyControl.Tools;
 using Microsoft.Win32;
+using System.Windows;
 namespace DevTools.Daemon.Desktop.Helpers;
 
 internal static class ThemeHelper

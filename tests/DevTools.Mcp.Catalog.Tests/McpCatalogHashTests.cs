@@ -1,5 +1,3 @@
-using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Core.Models;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Catalog.Tests;

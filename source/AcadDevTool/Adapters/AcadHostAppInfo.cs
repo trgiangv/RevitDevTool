@@ -1,6 +1,6 @@
-using System.Text.RegularExpressions;
 using Autodesk.AutoCAD.DatabaseServices;
 using DevTools.Hosting;
+using System.Text.RegularExpressions;
 using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace AcadDevTool.Adapters;
@@ -51,9 +51,9 @@ public static partial class AcadProductDetector
         var productId = match.Groups["productId"].Value;
         return ProductMap.GetValueOrDefault(productId, HostApp.AutoCad);
     }
-    
+
     public static string GetVersionNumber()
     {
-       return HostApplicationServices.Current?.releaseMarketVersion ?? "Unknown";
+        return HostApplicationServices.Current?.releaseMarketVersion ?? "Unknown";
     }
 }

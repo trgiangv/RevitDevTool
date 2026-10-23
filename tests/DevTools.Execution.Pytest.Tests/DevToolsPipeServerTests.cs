@@ -1,10 +1,10 @@
-using System.IO.Pipes;
-using System.Text.Json;
 using DevTools.Execution.External;
 using DevTools.Execution.External.Handlers;
 using DevTools.Hosting;
 using DevTools.Ipc;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.IO.Pipes;
+using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
 

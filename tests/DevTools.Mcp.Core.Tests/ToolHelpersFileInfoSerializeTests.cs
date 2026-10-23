@@ -1,9 +1,7 @@
-using System.Text.Json;
 using DevTools.FileMetadata.Acad;
 using DevTools.FileMetadata.Core;
 using DevTools.FileMetadata.Revit;
 using DevTools.Hosting;
-using DevTools.Mcp.Core.Utils;
 using ModelContextProtocol.Protocol;
 
 namespace DevTools.Mcp.Core.Tests;

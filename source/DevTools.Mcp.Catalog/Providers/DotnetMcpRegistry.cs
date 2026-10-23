@@ -1,7 +1,7 @@
 using DevTools.Execution.Abstractions;
-using DevTools.Mcp.Discovery;
 using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Discovery;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 

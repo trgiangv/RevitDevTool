@@ -1,6 +1,6 @@
+using Microsoft.Scripting.Hosting;
 using System.Collections;
 using System.Reflection;
-using Microsoft.Scripting.Hosting;
 
 namespace DevTools.Execution.Providers.IronPython;
 

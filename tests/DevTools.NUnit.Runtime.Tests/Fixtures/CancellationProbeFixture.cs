@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using System.Threading;
 
 namespace DevTools.NUnit.Runtime.Tests.Fixtures;
 

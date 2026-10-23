@@ -22,21 +22,18 @@
                      Height="48"
                      Margin="0,0,12,0">
                 <Ellipse.Fill>
-                    <ImageBrush ImageSource="{Binding Overview.AvatarImage}"
-                                Stretch="UniformToFill" />
+                    <ImageBrush ImageSource="{Binding Overview.AvatarImage}" Stretch="UniformToFill" />
                 </Ellipse.Fill>
             </Ellipse>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock FontWeight="SemiBold"
                            Foreground="{DynamicResource PrimaryTextBrush}"
                            Text="{Binding Overview.DisplayName}" />
-                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}"
-                           Text="{Binding Overview.Email}" />
+                <TextBlock Foreground="{DynamicResource SecondaryTextBrush}" Text="{Binding Overview.Email}" />
             </StackPanel>
         </StackPanel>
 
-        <StackPanel Margin="0,0,0,8"
-                    Visibility="{Binding Overview.IsAuthenticated, Converter={StaticResource Boolean2VisibilityReConverter}}">
+        <StackPanel Margin="0,0,0,8" Visibility="{Binding Overview.IsAuthenticated, Converter={StaticResource Boolean2VisibilityReConverter}}">
             <TextBlock Margin="0,0,0,8"
                        Foreground="{DynamicResource SecondaryTextBrush}"
                        Text="Not signed in" />
@@ -51,8 +48,7 @@
                    FontWeight="SemiBold"
                    Foreground="{DynamicResource PrimaryTextBrush}"
                    Text="Tunnel" />
-        <TextBlock Foreground="{DynamicResource PrimaryTextBrush}"
-                   Text="{Binding Overview.TunnelStatus}" />
+        <TextBlock Foreground="{DynamicResource PrimaryTextBrush}" Text="{Binding Overview.TunnelStatus}" />
 
         <TextBlock Margin="0,24,0,8"
                    FontSize="16"

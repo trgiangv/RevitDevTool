@@ -1,4 +1,4 @@
-﻿namespace DevTools.Execution.Models;
+namespace DevTools.Execution.Models;
 
 public enum Marketplace
 {

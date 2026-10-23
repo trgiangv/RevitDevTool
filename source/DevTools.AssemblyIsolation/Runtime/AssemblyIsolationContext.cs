@@ -1,31 +1,31 @@
 #if NET
-using System.Reflection;
-using System.Runtime.Loader;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Identity;
 using DevTools.AssemblyIsolation.Loading;
 using DevTools.AssemblyIsolation.Sources;
+using System.Reflection;
+using System.Runtime.Loader;
 
 namespace DevTools.AssemblyIsolation.Runtime;
 
-internal sealed class AssemblyIsolationContext(AssemblyIsolationPlan plan) : 
+internal sealed class AssemblyIsolationContext(AssemblyIsolationPlan plan) :
     AssemblyLoadContext($"DevTools.AssemblyIsolation:{Path.GetFileNameWithoutExtension(plan.EntryAssemblyPath)}", isCollectible: true)
 {
-    private readonly AssemblyIsolationPlan plan = plan ?? throw new ArgumentNullException(nameof(plan));
+    private readonly AssemblyIsolationPlan _plan = plan ?? throw new ArgumentNullException(nameof(plan));
 
     public Assembly LoadEntryAssembly()
     {
-        var requested = AssemblyName.GetAssemblyName(plan.EntryAssemblyPath);
-        return plan.TryShare(requested, out var parent) 
-            ? parent 
-            : AssemblyStreamLoader.Load(this, plan.EntryAssemblyPath);
+        var requested = AssemblyName.GetAssemblyName(_plan.EntryAssemblyPath);
+        return _plan.TryShare(requested, out var parent)
+            ? parent
+            : AssemblyStreamLoader.Load(this, _plan.EntryAssemblyPath);
     }
 
     public Assembly LoadAssembly(byte[] assemblyBytes, byte[]? symbolBytes = null)
     {
         ArgumentNullException.ThrowIfNull(assemblyBytes);
         using var assemblyStream = new MemoryStream(assemblyBytes, writable: false);
-        if (symbolBytes is not { Length: > 0 }) 
+        if (symbolBytes is not { Length: > 0 })
             return LoadFromStream(assemblyStream);
         using var symbolStream = new MemoryStream(symbolBytes, writable: false);
         return LoadFromStream(assemblyStream, symbolStream);
@@ -37,10 +37,10 @@ internal sealed class AssemblyIsolationContext(AssemblyIsolationPlan plan) :
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        if (plan.TryShare(assemblyName, out var parent))
+        if (_plan.TryShare(assemblyName, out var parent))
             return parent;
 
-        foreach (var source in plan.ManagedSources)
+        foreach (var source in _plan.ManagedSources)
         {
             var candidate = source.Resolve(assemblyName);
             if (candidate is null)
@@ -61,7 +61,7 @@ internal sealed class AssemblyIsolationContext(AssemblyIsolationPlan plan) :
 
     protected override nint LoadUnmanagedDll(string unmanagedDllName)
     {
-        foreach (var source in plan.NativeSources)
+        foreach (var source in _plan.NativeSources)
         {
             var candidate = source.Resolve(unmanagedDllName);
             if (candidate is null)
@@ -127,7 +127,7 @@ internal sealed class AssemblyIsolationContext(AssemblyIsolationPlan plan) :
     {
         var detail = candidate is null ? "" : $", candidate '{candidate.Path}'";
         var identity = requested?.FullName ?? "native library";
-        plan.DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(code, $"Requested '{identity}'{detail}: {reason}", requested));
+        _plan.DiagnosticSink?.Publish(new AssemblyIsolationDiagnostic(code, $"Requested '{identity}'{detail}: {reason}", requested));
     }
 }
 #endif

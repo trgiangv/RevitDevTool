@@ -1,8 +1,8 @@
-using System.Collections.ObjectModel;
-using System.Windows.Threading;
 using DevTools.Mcp;
 using DevTools.Presentation.Services;
 using DevTools.Settings;
+using System.Collections.ObjectModel;
+using System.Windows.Threading;
 
 namespace DevTools.Presentation.ViewModels.Settings;
 

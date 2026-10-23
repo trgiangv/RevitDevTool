@@ -1,6 +1,3 @@
-using System.Text.Json.Nodes;
-using DevTools.Mcp.Discovery;
-
 namespace DevTools.Mcp.Catalog.Tests;
 
 [TestClass]

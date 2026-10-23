@@ -9,18 +9,18 @@ namespace DevTools.AssemblyIsolation;
 /// </summary>
 public abstract class HostAssemblies
 {
-    private readonly Lazy<Assembly[]> cached;
+    private readonly Lazy<Assembly[]> _cached;
 
     protected HostAssemblies()
     {
-        cached = new Lazy<Assembly[]>(Capture, LazyThreadSafetyMode.ExecutionAndPublication);
+        _cached = new Lazy<Assembly[]>(Capture, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     protected abstract IEnumerable<Assembly> LoadedByType { get; }
 
     protected abstract IReadOnlyList<string> LoadedByName { get; }
 
-    public IReadOnlyList<Assembly> All() => cached.Value;
+    public IReadOnlyList<Assembly> All() => _cached.Value;
 
     private Assembly[] Capture() => AssemblyHelper.CaptureHostAssemblies(LoadedByType, LoadedByName);
 }

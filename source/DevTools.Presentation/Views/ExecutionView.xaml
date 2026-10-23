@@ -25,8 +25,7 @@
             <DataTemplate x:Key="ExecutionPackageTemplate">
                 <views:PackageView DataContext="{Binding PackageViewModel}" />
             </DataTemplate>
-            <Style x:Key="DebuggerPortChip"
-                   TargetType="Border">
+            <Style x:Key="DebuggerPortChip" TargetType="Border">
                 <Setter Property="Padding" Value="5,2" />
                 <Setter Property="CornerRadius" Value="4" />
                 <Setter Property="Background" Value="{DynamicResource SecondaryRegionBrush}" />
@@ -44,8 +43,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0"
-              Margin="0,0,0,5">
+        <Grid Grid.Row="0" Margin="0,0,0,5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -112,8 +110,7 @@
                         <Setter Property="Fill" Value="{DynamicResource PrimaryTextBrush}" />
                         <Setter Property="ToolTip" Value="Debugger not connected" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding CommandViewModel.IsDebuggerConnected}"
-                                         Value="True">
+                            <DataTrigger Binding="{Binding CommandViewModel.IsDebuggerConnected}" Value="True">
                                 <Setter Property="Fill" Value="{DynamicResource DangerBrush}" />
                                 <Setter Property="ToolTip" Value="Debugger connected" />
                             </DataTrigger>
@@ -123,11 +120,9 @@
             </Path>
             <Border ToolTip="CPython debugpy port">
                 <Border.Style>
-                    <Style BasedOn="{StaticResource DebuggerPortChip}"
-                           TargetType="Border">
+                    <Style BasedOn="{StaticResource DebuggerPortChip}" TargetType="Border">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding CommandViewModel.IsPythonDebuggerConnected}"
-                                         Value="True">
+                            <DataTrigger Binding="{Binding CommandViewModel.IsPythonDebuggerConnected}" Value="True">
                                 <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -148,11 +143,9 @@
             </Border>
             <Border ToolTip="IronPython debugpy port">
                 <Border.Style>
-                    <Style BasedOn="{StaticResource DebuggerPortChip}"
-                           TargetType="Border">
+                    <Style BasedOn="{StaticResource DebuggerPortChip}" TargetType="Border">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding CommandViewModel.IsIronPythonDebuggerConnected}"
-                                         Value="True">
+                            <DataTrigger Binding="{Binding CommandViewModel.IsIronPythonDebuggerConnected}" Value="True">
                                 <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -180,8 +173,7 @@
                 <Style TargetType="ContentControl">
                     <Setter Property="ContentTemplate" Value="{StaticResource ExecutionCommandTemplate}" />
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsPackageMode}"
-                                     Value="True">
+                        <DataTrigger Binding="{Binding IsPackageMode}" Value="True">
                             <Setter Property="ContentTemplate" Value="{StaticResource ExecutionPackageTemplate}" />
                         </DataTrigger>
                     </Style.Triggers>

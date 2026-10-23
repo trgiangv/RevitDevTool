@@ -1,6 +1,6 @@
-using System.IO;
 using DevTools.Settings.Configs;
 using DevTools.Utilities;
+using System.IO;
 
 namespace DevTools.Daemon.Desktop.Models;
 

@@ -1,11 +1,10 @@
-using System.IO.Pipelines;
-using DevTools.Daemon.Mcp.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using System.IO.Pipelines;
 
 namespace DevTools.Mcp.Server.Tests;
 

@@ -1,10 +1,10 @@
-using System.Text.Json;
 using ConsoleAppFramework;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 using DevTools.TestRunner.Debugging;
 using DevTools.TestRunner.Parsing;
 using DevTools.TestRunner.Services;
+using System.Text.Json;
 
 namespace DevTools.TestRunner;
 
@@ -58,18 +58,18 @@ public sealed class RunnerCommands(
         }
 
         if (RunnerCommandContext.TryCreate(
-                execute.Host.HostName, 
-                execute.Host.HostVersion, 
-                execute.Host.ForceLaunch, 
-                execute.Host.PerTestTimeoutSeconds, 
-                execute.Host.LaunchTimeoutSeconds, 
-                execute.Host.DebugParentPid is > 0, 
-                execute.Host.DebugParentPid, 
-                execute.Host.EffectiveRequestTimeoutSeconds, 
-                out var context, 
-                out var error)) 
+                execute.Host.HostName,
+                execute.Host.HostVersion,
+                execute.Host.ForceLaunch,
+                execute.Host.PerTestTimeoutSeconds,
+                execute.Host.LaunchTimeoutSeconds,
+                execute.Host.DebugParentPid is > 0,
+                execute.Host.DebugParentPid,
+                execute.Host.EffectiveRequestTimeoutSeconds,
+                out var context,
+                out var error))
             return await Execute(execute, context!, cancellationToken).ConfigureAwait(false);
-        
+
         await Console.Error.WriteLineAsync(error ?? "Invalid run JSON.").ConfigureAwait(false);
         return RunnerExitCode.CliError;
     }

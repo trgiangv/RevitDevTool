@@ -1,4 +1,3 @@
-﻿using System.Text;
 using Build.Options;
 using EnumerableAsyncProcessor.Extensions;
 using Microsoft.Extensions.Logging;
@@ -12,6 +11,7 @@ using ModularPipelines.GitHub.Extensions;
 using ModularPipelines.Modules;
 using Octokit;
 using Shouldly;
+using System.Text;
 
 namespace Build.Modules;
 

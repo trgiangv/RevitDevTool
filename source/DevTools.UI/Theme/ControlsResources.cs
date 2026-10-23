@@ -6,7 +6,7 @@ namespace DevTools.UI.Theme;
 /// </summary>
 public class ControlsResources : ResourceDictionary
 {
-    private static ResourceDictionary? controls;
+    private static ResourceDictionary? _controls;
 
     public ControlsResources()
     {
@@ -16,5 +16,5 @@ public class ControlsResources : ResourceDictionary
     /// <summary>
     /// Gets the static HandyControl resource dictionary (Themes/Theme.xaml).
     /// </summary>
-    private static ResourceDictionary Controls => controls ??= ResourceUtils.GetHandyControls();
+    private static ResourceDictionary Controls => _controls ??= ResourceUtils.GetHandyControls();
 }

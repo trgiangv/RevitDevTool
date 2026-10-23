@@ -1,8 +1,8 @@
-using System.Net.Sockets;
-using System.Net;
-using System.Text;
 using DevTools.Execution.Services;
 using DevTools.Hosting;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 namespace DevTools.Execution.Tests;
 

@@ -1,5 +1,5 @@
-using Duende.IdentityModel.OidcClient.Browser;
 using DevTools.Daemon.Auth;
+using Duende.IdentityModel.OidcClient.Browser;
 
 namespace DevTools.Daemon.Tests;
 

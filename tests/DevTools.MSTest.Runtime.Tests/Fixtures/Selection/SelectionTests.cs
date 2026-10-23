@@ -1,6 +1,3 @@
-using System.Threading;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
 namespace DevTools.MSTest.Runtime.Tests.Fixtures;
 
 public static class Probe

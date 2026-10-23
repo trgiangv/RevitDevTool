@@ -1,5 +1,4 @@
 using System.Text.Json;
-using DevTools.Daemon.Mcp.Contracts;
 
 namespace DevTools.Mcp.Server.Tests;
 

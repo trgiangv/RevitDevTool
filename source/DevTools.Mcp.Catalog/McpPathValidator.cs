@@ -3,7 +3,6 @@ using DevTools.Mcp.Core.Models;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.Logging;
 using ZLogger;
-// ReSharper disable RedundantSuppressNullableWarningExpression
 
 namespace DevTools.Mcp;
 
@@ -22,15 +21,20 @@ public static class McpPathValidator
         return ExecutionMode.Unsupported;
     }
 
-    public static bool IsValidAssemblyPath(string? path) =>
-        !string.IsNullOrWhiteSpace(path)
-        && File.Exists(path)
-        && string.Equals(Path.GetExtension(path), DotnetToolPattern, StringComparison.OrdinalIgnoreCase);
+    public static bool IsValidAssemblyPath(string? path)
+    {
+        if (path is null || string.IsNullOrWhiteSpace(path))
+            return false;
+        return File.Exists(path)
+            && string.Equals(Path.GetExtension(path), DotnetToolPattern, StringComparison.OrdinalIgnoreCase);
+    }
 
-    public static bool IsValidPythonPath(string? path) =>
-        !string.IsNullOrWhiteSpace(path)
-        && Directory.Exists(path)
-        && Directory.EnumerateFiles(path!, PythonToolPattern, SearchOption.AllDirectories).Any();
+    public static bool IsValidPythonPath(string? path)
+    {
+        if (path is null || string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            return false;
+        return Directory.EnumerateFiles(path, PythonToolPattern, SearchOption.AllDirectories).Any();
+    }
 
     public static bool PathProducesCatalogItems(string path, ExecutionMode mode, RegistryCatalog catalog)
     {
@@ -44,10 +48,10 @@ public static class McpPathValidator
 
     private static bool IsItemFromPath(string configuredPath, string? itemSourcePath)
     {
-        if (string.IsNullOrWhiteSpace(itemSourcePath))
+        if (itemSourcePath is null || string.IsNullOrWhiteSpace(itemSourcePath))
             return false;
 
-        var normalizedItem = NormalizePath(itemSourcePath!);
+        var normalizedItem = NormalizePath(itemSourcePath);
         if (string.Equals(configuredPath, normalizedItem, StringComparison.OrdinalIgnoreCase))
             return true;
 
