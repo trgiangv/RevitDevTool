@@ -85,8 +85,8 @@ public sealed class McpPipeServer(
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         catalogStore.CatalogChanged -= OnCatalogChanged;
-        if (_cts is not null) 
-            await _cts.CancelAsync();
+        if (_cts is not null)
+            await _cts.CancelAsync().ConfigureAwait(false);
 
         if (_acceptLoopTask is not null)
         {

@@ -6,6 +6,8 @@ using DevTools.Mcp.Transport;
 using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
 using DevTools.Execution.Abstractions;
+using DevTools.Hosting;
+using DevTools.Mcp.Core.Sessions;
 using DevTools.Settings;
 using DevTools.Settings.Configs;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +16,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Moq;
+using System.Diagnostics;
 
 namespace DevTools.Mcp.Adapter.Tests.Host;
 
@@ -136,5 +139,73 @@ public sealed class NamedPipeIntegrationTests
         await cts.CancelAsync();
         try { await serverTask; } catch { /* ignored */ }
         appServices.Dispose();
+    }
+
+    [TestMethod]
+    public async Task McpPipeServer_StopAsync_completes_with_an_idle_connected_client()
+    {
+        var version = Guid.NewGuid().ToString("N");
+        var processId = Process.GetCurrentProcess().Id;
+        var hostInfo = Mock.Of<IHostAppInfo>(info =>
+            info.Host == HostApp.Revit
+            && info.VersionNumber == version
+            && info.ProcessId == processId);
+        var (_, source, catalogStore, appServices) =
+            McpHostTestHarness.CreateServerOptionsWithTool("ping");
+        var connectTracker = new Mock<IConnectTracker>();
+        var server = new McpPipeServer(
+            catalogStore,
+            [source],
+            connectTracker.Object,
+            new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance),
+            appServices.GetRequiredService<IHostContextExecutor>(),
+            hostInfo,
+            appServices,
+            NullLogger<McpPipeServer>.Instance);
+        var pipeName = HostPipeName.FormatMcp(hostInfo.Host.ToString(), version, processId);
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+        await server.StartAsync(timeout.Token);
+
+        using var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await clientPipe.ConnectAsync(timeout.Token);
+        await using var client = await McpClient.CreateAsync(
+            new StreamClientTransport(clientPipe, clientPipe, NullLoggerFactory.Instance),
+            loggerFactory: NullLoggerFactory.Instance,
+            cancellationToken: timeout.Token);
+
+        var stopTask = Task.Factory.StartNew(
+            () =>
+            {
+                SynchronizationContext.SetSynchronizationContext(new NonPumpingSynchronizationContext());
+                try
+                {
+                    server.StopAsync(timeout.Token).GetAwaiter().GetResult();
+                }
+                finally
+                {
+                    SynchronizationContext.SetSynchronizationContext(null);
+                }
+            },
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default);
+        var completed = await Task.WhenAny(stopTask, Task.Delay(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
+        Assert.AreSame(stopTask, completed, "Host MCP shutdown captured the blocked host UI synchronization context.");
+        await stopTask;
+        connectTracker.Verify(tracker => tracker.Reset(), Times.Once);
+
+        await client.DisposeAsync();
+        appServices.Dispose();
+        server.Dispose();
+    }
+
+    private sealed class NonPumpingSynchronizationContext : SynchronizationContext
+    {
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            // A CAD shutdown callback blocks its UI thread instead of pumping posted work.
+        }
     }
 }
