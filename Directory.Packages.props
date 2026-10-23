@@ -2,7 +2,7 @@
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-        <MsVersion>10.0.12</MsVersion>
+        <MsVersion>10.0.13</MsVersion>
     </PropertyGroup>
     <ItemGroup>
         <!--Mirosoft-->
@@ -35,19 +35,19 @@
         <!--CSharp-->
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
         <!--Telemetry-->
-        <PackageVersion Include="Sentry" Version="6.12.0" />
+        <PackageVersion Include="Sentry" Version="6.12.1" />
         <!--Logging-->
         <PackageVersion Include="ZLogger" Version="2.5.10" />
         <PackageVersion Include="ZLogger.Scintilla" Version="0.0.9" />
         <PackageVersion Include="Scintilla5.NET" Version="7.0.0" />
         <!--Utilities-->
         <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
-        <GlobalPackageReference Include="Polyfill" Version="11.4.3" />
+        <GlobalPackageReference Include="Polyfill" Version="11.4.5" />
         <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
         <PackageVersion Include="Lokad.ILPack" Version="0.3.1" />
         <PackageVersion Include="Lib.Harmony" Version="2.4.3" />
         <!--Auth-->
-        <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.0" />
+        <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.1" />
         <!--Console-->
         <PackageVersion Include="CliWrap" Version="3.10.5" />
         <PackageVersion Include="ConsoleAppFramework" Version="5.7.13" />
