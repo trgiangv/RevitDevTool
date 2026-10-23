@@ -73,9 +73,10 @@
 
         <Message Text="Repacking $(TargetPath) flags=$(_ILRepackFlags)" Importance="high"/>
 
-        <!-- ILRepack writes "warning :" on stdout; TreatWarningsAsErrors would fail a successful pack. -->
+        <!-- ILRepack warning keep at low importance (shown again with -v detailed). -->
         <Exec Command="$(_ILRepackCmd)"
               IgnoreStandardErrorWarningFormat="true"
+              StandardOutputImportance="Low"
               Condition="$(Configuration.Contains('Debug'))"/>
         <!-- Release omits PDB and Win32 resources from the merge. -->
         <Exec Command="$(_ILRepackCmd) /noRepackRes /ndebug"

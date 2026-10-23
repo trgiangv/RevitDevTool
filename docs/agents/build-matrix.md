@@ -138,6 +138,14 @@ Scintilla5.NET 7 natives stay under `runtimes/win-x64/native/` (not output root)
 `build/scintilla5.net.targets` copies them (needed on net48). `Common.props`
 then drops `win-x86` / `win-arm64` on every TFM after `CopyFilesToOutputDirectory`.
 
+### Merge log
+
+`/union` makes `ILRepack.exe` print `WARNING:` lines on stdout for duplicate
+resources and for members it did not carry over. They are tool chatter, not build
+warnings (MSBuild reports `0 Warning(s)`); `RepackAddinFiles` logs them at low
+importance, so the default build shows only `Repacking <dll>`. Re-read them with
+`dotnet build -v detailed`.
+
 ## Compatibility Rule
 
 Any shared `DevTools.*` change can affect all target frameworks. Polyfill covers
