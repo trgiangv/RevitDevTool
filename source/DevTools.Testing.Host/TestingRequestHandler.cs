@@ -1,4 +1,5 @@
 using DevTools.Ipc;
+using DevTools.Telemetry;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
@@ -10,8 +11,13 @@ namespace DevTools.Testing.Host;
 /// <summary>
 /// Host-side handler for the framework-neutral <c>testing/*</c> protocol.
 /// </summary>
-public sealed class TestingRequestHandler(TestingProviderRegistry registry, string host, string hostVersion) : IBridgeRequestHandler, IBridgeNotificationPublisher
+public sealed class TestingRequestHandler(
+    TestingProviderRegistry registry,
+    string host,
+    string hostVersion,
+    ITelemetry? telemetry = null) : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
+    private readonly ITelemetry _telemetry = telemetry ?? new NoOpTelemetry();
     private readonly TestingProviderRegistry _registry = registry ?? throw new ArgumentNullException(nameof(registry));
     private readonly string _host = host ?? throw new ArgumentNullException(nameof(host));
     private readonly string _hostVersion = hostVersion ?? throw new ArgumentNullException(nameof(hostVersion));
@@ -158,11 +164,24 @@ public sealed class TestingRequestHandler(TestingProviderRegistry registry, stri
         string requestId,
         CancellationToken cancellationToken)
     {
+        using var operation = _telemetry.StartOperation(TelemetryKeys.Operation.Test, request.FrameworkId.ToString());
         try
         {
             var sink = new HandlerEventSink(this);
             var response = provider.Run(request, sink, cancellationToken);
             ApplyCancellationState(response.CancellationState);
+            switch (response.CancellationState)
+            {
+                case TestCancellationState.None:
+                    operation.Complete();
+                    break;
+                case TestCancellationState.Poisoned:
+                    operation.Fail();
+                    break;
+                default:
+                    operation.Cancel();
+                    break;
+            }
 
             return BridgeMessage.Response(
                 requestId,
@@ -170,6 +189,7 @@ public sealed class TestingRequestHandler(TestingProviderRegistry registry, stri
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            operation.Cancel();
             return BridgeMessage.Error(
                 requestId,
                 IpcErrorCodes.InternalError,
@@ -177,10 +197,12 @@ public sealed class TestingRequestHandler(TestingProviderRegistry registry, stri
         }
         catch (ArgumentException ex)
         {
+            operation.Fail();
             return Invalid(requestId, ex.Message);
         }
         catch (Exception ex)
         {
+            operation.Fail(ex);
             PoisonSessionAfterProviderFailure();
             return BridgeMessage.Error(requestId, TestingErrorCodes.ProviderFailed, ex.ToString());
         }

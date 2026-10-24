@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace DevTools.Telemetry.Tests;
 
 [TestClass]
@@ -9,12 +7,14 @@ public sealed class NoOpTelemetryTests
     public void NoOp_methods_do_not_throw()
     {
         var t = new NoOpTelemetry();
-        t.RecordExecutionInvocation("Assembly", true);
-        t.RecordMcpInvocation("Assembly");
-        t.RecordLoggerGeometry("mesh");
-        t.RecordLoggerTrace(LogLevel.Information);
-        t.RecordCriticalException(new Exception("x"), "test", null);
-        t.Flush();
+        using (var operation = t.StartOperation(TelemetryKeys.Operation.Execution, "Python"))
+        {
+            operation.Complete();
+            operation.Cancel();
+            operation.Fail(new Exception("x"));
+        }
+
+        t.ReportError(new Exception("x"), TelemetryKeys.Operation.Visualization, "Mesh");
         t.Dispose();
     }
 }

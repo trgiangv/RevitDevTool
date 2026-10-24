@@ -1,3 +1,4 @@
+using DevTools.Telemetry;
 using System.Text.Json;
 
 namespace DevTools.Execution.External.Handlers;
@@ -7,8 +8,11 @@ namespace DevTools.Execution.External.Handlers;
 /// that path is CPython <see cref="PytestRequestHandler"/> only.
 /// </summary>
 public sealed class IpyTestRequestHandler(
-    IpyTestExecutionService executionService) : IBridgeRequestHandler
+    IpyTestExecutionService executionService,
+    ITelemetry? telemetry = null) : IBridgeRequestHandler
 {
+    private readonly ITelemetry _telemetry = telemetry ?? new NoOpTelemetry();
+
     public IReadOnlyCollection<string> SupportedMethods { get; } = [PytestBridgeMethods.IpyTestsRun];
 
     public Task<BridgeMessage> HandleAsync(
@@ -24,8 +28,10 @@ public sealed class IpyTestRequestHandler(
 
     private async Task<BridgeMessage> HandleRunAsync(string id, JsonElement? @params, CancellationToken ct)
     {
+        using var operation = _telemetry.StartOperation(TelemetryKeys.Operation.Test, "ipytest");
         if (!IpyTestExecutionService.TryParseRunRequest(@params, out var request, out var error))
         {
+            operation.Fail();
             var invalid = IpyTestExecutionService.Error("prepare", error ?? "Invalid ipytests/run request.");
             return BridgeMessage.Response(id, JsonSerializer.SerializeToElement(invalid));
         }
@@ -35,9 +41,11 @@ public sealed class IpyTestRequestHandler(
         {
             ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
             result = await executionService.RunAsync(request!, ct).ConfigureAwait(false);
+            operation.Complete();
         }
         catch (Exception ex)
         {
+            operation.Fail(ex);
             result = IpyTestExecutionService.Error("run", "Failed to execute IronPython unittest session.", ex.ToString());
         }
 

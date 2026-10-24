@@ -205,6 +205,9 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             ExecutionProgressChanged?.Invoke(this, new ExecutionProgressEventArgs(message));
         });
 
+        var providerKind = GetProviderKind(node);
+        using var operation = _telemetry.StartOperation(TelemetryKeys.Operation.Execution, providerKind);
+
         var result = await node.ExecuteAsync(progress, cancellationToken);
         if (result.Success)
         {
@@ -216,20 +219,12 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             ExecutionProgressChanged?.Invoke(this, new ExecutionProgressEventArgs(result.Message));
         }
 
-        if (result.IsCancelled) return result;
-
-        var providerKind = GetProviderKind(node);
-        _telemetry.RecordExecutionInvocation(providerKind, result.Success);
-
-        var isCritical = result is { Success: false, Exception: { } ex }
-                         && TelemetryReporting.ShouldReportCriticalException(ex);
-        if (isCritical)
-        {
-            _telemetry.RecordCriticalException(
-                result.Exception!,
-                TelemetryKeys.Feature.Execution,
-                new Dictionary<string, string> { [TelemetryKeys.Tag.Provider] = providerKind });
-        }
+        if (result.Success)
+            operation.Complete();
+        else if (result.IsCancelled)
+            operation.Cancel();
+        else
+            operation.Fail(result.Exception);
 
         return result;
     }

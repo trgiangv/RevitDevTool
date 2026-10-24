@@ -2,7 +2,6 @@ using AcadDevTool.Adapters;
 using AcadDevTool.Composition;
 using AcadDevTool.Settings;
 using DevTools.Execution.Providers.Python;
-using DevTools.Telemetry;
 using DevTools.UI;
 using DevTools.UI.Theme;
 using DevTools.Utilities;
@@ -13,13 +12,11 @@ using AcadApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 namespace AcadDevTool;
 
 /// <summary>
-/// Application host bootstrap. Composition: SettingServices → LoggingServices → ApplicationServices → DevTools telemetry → ExecutionServices.
-/// Registers <see cref="AppDomain.UnhandledException"/> for critical telemetry (same pattern as Revit).
+/// Application host bootstrap. Composition: SettingServices → LoggingServices → ApplicationServices (incl. telemetry) → ExecutionServices.
 /// </summary>
 public static class Host
 {
     private static IHost? _host;
-    private static bool _processTelemetryHandlersRegistered;
 
     public static void Start()
     {
@@ -39,13 +36,9 @@ public static class Host
         builder.AddSettingServices(contentRoot)
                .AddLoggingServices(v => v.WithCustomSerializer(new PythonJsonSerializer()))
                .AddApplicationServices()
-               .AddDevToolsTelemetry(
-                   sp => sp.GetRequiredService<IAcadSettingsService>().GeneralConfig.EnableTelemetry,
-                   _ => BuiltInSentryDsn.Value)
                .AddExecutionServices();
 
         _host = builder.Build();
-        RegisterProcessTelemetryHandlers();
         HostUiHelper.RequireCompleted(_host.StartAsync());
     }
 
@@ -69,39 +62,6 @@ public static class Host
     public static object? GetService(Type serviceType)
     {
         return _host!.Services.GetService(serviceType);
-    }
-
-    private static void RegisterProcessTelemetryHandlers()
-    {
-        if (_processTelemetryHandlersRegistered)
-        {
-            return;
-        }
-
-        _processTelemetryHandlersRegistered = true;
-
-        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
-        {
-            try
-            {
-                if (args.ExceptionObject is not Exception ex || !TelemetryReporting.ShouldReportCriticalException(ex))
-                {
-                    return;
-                }
-
-                if (_host?.Services.GetService<ITelemetry>() is not { } telemetry)
-                {
-                    return;
-                }
-
-                telemetry.RecordCriticalException(ex, TelemetryKeys.Feature.AppDomain);
-                telemetry.Flush();
-            }
-            catch
-            {
-                // Never throw from the unhandled handler.
-            }
-        };
     }
 
     private static void SetupTheme()

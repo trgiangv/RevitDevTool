@@ -1,5 +1,4 @@
 using DevTools.Execution.Providers.Python;
-using DevTools.Telemetry;
 using DevTools.UI;
 using DevTools.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,12 +11,11 @@ using RevitDevTool.Settings;
 namespace RevitDevTool;
 
 /// <summary>
-/// Application host bootstrap. Composition: SettingServices → LoggingServices → Telemetry → ApplicationServices → ExecutionServices.
+/// Application host bootstrap. Composition: SettingServices → LoggingServices → ApplicationServices (incl. telemetry) → ExecutionServices.
 /// </summary>
 public static class Host
 {
     private static IHost? _host;
-    private static bool _processTelemetryHandlersRegistered;
 
     public static void Start()
     {
@@ -38,14 +36,10 @@ public static class Host
                .AddLoggingServices(v => v
                    .WithLinkify(new RevitLinkifier())
                    .WithCustomSerializer(new PythonJsonSerializer()))
-               .AddDevToolsTelemetry(
-                   sp => sp.GetRequiredService<IRevitSettingsService>().GeneralConfig.EnableTelemetry,
-                   _ => BuiltInSentryDsn.Value)
                .AddApplicationServices()
                .AddExecutionServices();
 
         _host = builder.Build();
-        RegisterProcessTelemetryHandlers();
         HostUiHelper.RequireCompleted(_host.StartAsync());
     }
 
@@ -69,39 +63,6 @@ public static class Host
     public static object? GetService(Type serviceType)
     {
         return _host!.Services.GetService(serviceType);
-    }
-
-    private static void RegisterProcessTelemetryHandlers()
-    {
-        if (_processTelemetryHandlersRegistered)
-        {
-            return;
-        }
-
-        _processTelemetryHandlersRegistered = true;
-
-        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
-        {
-            try
-            {
-                if (args.ExceptionObject is not Exception ex || !TelemetryReporting.ShouldReportCriticalException(ex))
-                {
-                    return;
-                }
-
-                if (_host?.Services.GetService<ITelemetry>() is not { } telemetry)
-                {
-                    return;
-                }
-
-                telemetry.RecordCriticalException(ex, TelemetryKeys.Feature.AppDomain);
-                telemetry.Flush();
-            }
-            catch
-            {
-                // Never throw from the unhandled handler.
-            }
-        };
     }
 
     private static void SetupTheme()

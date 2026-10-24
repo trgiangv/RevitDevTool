@@ -4,6 +4,7 @@ using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
+using DevTools.Telemetry;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
 using ZLogger;
@@ -58,7 +59,7 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger, HostAss
         }
         catch (TargetInvocationException ex) when (ex.InnerException is not null)
         {
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex.InnerException).Throw();
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(TelemetryReporter.MarkExternal(ex.InnerException)).Throw();
         }
     }
 

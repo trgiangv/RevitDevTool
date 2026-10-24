@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace DevTools.Telemetry;
 
 /// <summary>
@@ -7,34 +5,34 @@ namespace DevTools.Telemetry;
 /// </summary>
 public sealed class NoOpTelemetry : ITelemetry
 {
-    public void RecordExecutionInvocation(string providerKind, bool succeeded)
-    {
-    }
+    public ITelemetryOperation StartOperation(string operation, string kind) => NoOpOperation.Instance;
 
-    public void RecordMcpInvocation(string category)
-    {
-    }
-
-    public void RecordLoggerGeometry(string category)
-    {
-    }
-
-    public void RecordLoggerTrace(LogLevel level)
-    {
-    }
-
-    public void RecordCriticalException(
-        Exception exception,
-        string feature,
-        IReadOnlyDictionary<string, string>? tags = null)
-    {
-    }
-
-    public void Flush()
+    public void ReportError(Exception exception, string operation, string kind)
     {
     }
 
     public void Dispose()
     {
+    }
+
+    private sealed class NoOpOperation : ITelemetryOperation
+    {
+        public static readonly NoOpOperation Instance = new();
+
+        public void Complete()
+        {
+        }
+
+        public void Cancel()
+        {
+        }
+
+        public void Fail(Exception? exception = null)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
     }
 }

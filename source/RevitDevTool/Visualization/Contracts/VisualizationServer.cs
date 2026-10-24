@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB.DirectContext3D;
 using Autodesk.Revit.DB.ExternalService;
+using DevTools.Telemetry;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Controllers;
 using RevitDevTool.Core;
@@ -10,6 +11,7 @@ namespace RevitDevTool.Visualization.Contracts;
 public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisualizationServerLifeCycle
 {
     protected ILogger? Logger { get; init; }
+    protected ITelemetry? Telemetry { get; init; }
     protected readonly List<Tg> VisualizeGeometries = [];
     protected bool HasGeometryUpdates = true;
     protected bool HasEffectsUpdates = true;
@@ -48,7 +50,7 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             }
             catch (Exception e)
             {
-                Logger?.ZLogError($"Error in {GetName()} RenderScene: {e}");
+                ReportError("RenderScene", e);
                 ClearGeometry();
             }
         }
@@ -69,7 +71,7 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             }
             catch (Exception ex)
             {
-                Logger?.ZLogError($"Error in {GetName()} ClearGeometry: {ex}");
+                ReportError("ClearGeometry", ex);
             }
         }
     }
@@ -89,7 +91,7 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             }
             catch (Exception ex)
             {
-                Logger?.ZLogError($"Error in {GetName()} AddGeometries: {ex}");
+                ReportError("AddGeometries", ex);
             }
         }
     }
@@ -110,9 +112,15 @@ public abstract class VisualizationServer<Tg> : IDirectContext3DServer, IVisuali
             }
             catch (Exception ex)
             {
-                Logger?.ZLogError($"Error in {GetName()} AddGeometry: {ex}");
+                ReportError("AddGeometry", ex);
             }
         }
+    }
+
+    protected void ReportError(string stage, Exception exception)
+    {
+        Logger?.ZLogError($"Error in {GetName()} {stage}: {exception}");
+        Telemetry?.ReportError(exception, TelemetryKeys.Operation.Visualization, GetType().Name);
     }
 
     public void Register()

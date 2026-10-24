@@ -1,28 +1,21 @@
-using Microsoft.Extensions.Logging;
-
 namespace DevTools.Telemetry;
 
 /// <summary>
-/// Anonymous usage (aggregated per session, sent on <see cref="Flush"/>), breadcrumbs on errors, and critical error reporting (Sentry).
+/// Sentry facade: one operation per execution / MCP call / test run and error reports for DevTools code.
 /// Implementations must be safe to call from any thread.
 /// </summary>
 public interface ITelemetry : IDisposable
 {
-    void RecordExecutionInvocation(string providerKind, bool succeeded);
+    ITelemetryOperation StartOperation(string operation, string kind);
 
-    void RecordMcpInvocation(string category);
+    void ReportError(Exception exception, string operation, string kind);
+}
 
-    void RecordLoggerGeometry(string category);
+public interface ITelemetryOperation : IDisposable
+{
+    void Complete();
 
-    void RecordLoggerTrace(LogLevel level);
+    void Cancel();
 
-    void RecordCriticalException(
-        Exception exception,
-        string feature,
-        IReadOnlyDictionary<string, string>? tags = null);
-
-    /// <summary>
-    /// Sends a session usage summary (when Sentry is enabled), then flushes the transport (call on host shutdown, e.g. Revit close).
-    /// </summary>
-    void Flush();
+    void Fail(Exception? exception = null);
 }

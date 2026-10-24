@@ -12,6 +12,7 @@ using DevTools.Mcp.Revit.Resources;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
+using DevTools.Telemetry;
 using DevTools.Testing.Host;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -75,6 +76,8 @@ internal static class RevitServiceRegistration
 
             services.AddHostedService<HostBackgroundController>();
             services.AddSingleton<IHostAppInfo, RevitHostAppInfo>();
+            services.AddTelemetryService(
+                sp => sp.GetRequiredService<IRevitSettingsService>().GeneralConfig.EnableTelemetry);
             services.AddSingleton<IContextEnricher>(sp =>
             {
                 var settings = sp.GetRequiredService<IRevitSettingsService>();

@@ -2,14 +2,15 @@
 using System.IO;
 using DevTools.AssemblyIsolation.Loading;
 #endif
-using System.Reflection;
 using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.Dotnet;
+using DevTools.Telemetry;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
+using System.Reflection;
 using ZLogger;
 namespace RevitDevTool.Adapters;
 
@@ -54,7 +55,7 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger, HostA
         {
             return ExecutionResult.Failed(
                 !string.IsNullOrEmpty(message) ? message : ex.Message,
-                ex);
+                TelemetryReporter.MarkExternal(ex));
         }
     }
 
@@ -98,7 +99,7 @@ public sealed class RevitCommandRunner(ILogger<RevitCommandRunner> logger, HostA
         {
             return ExecutionResult.Failed(
                 !string.IsNullOrEmpty(message) ? message : ex.Message,
-                ex);
+                TelemetryReporter.MarkExternal(ex));
         }
     }
 #endif

@@ -14,28 +14,32 @@ Telemetry is **not used** for user profiling, advertising, or any commercial dat
 
 ## What Is Collected
 
-### Session Usage Summary
+### Operations
 
-One aggregated event is sent when the host shuts down. It contains only **counts** — no content:
+Each script/assembly run, each MCP tool call, and each in-host test run is sent as one timed operation. It contains only:
 
-| Category | What is counted | Example |
-|----------|-----------------|---------|
-| Execution | Number of script/assembly runs by mode | "Python: 12, C#: 3, IronPython: 0" |
-| MCP | Number of MCP tool dispatches by backend type | "Assembly: 5, Python: 2" |
-| Visualization | Geometry rendering calls by type (Revit only) | "curve: 8, solid: 2" |
-| Logging | Log lines by severity level | "Info: 45, Warning: 3, Error: 1" |
+| Field | Example |
+|-------|---------|
+| Operation | `devtool.execution`, `devtool.mcp`, `devtool.test` |
+| Provider | `Python`, `CSharp`, `IronPython`, `Dotnet`, `BuiltIn`, `pytest`, `ipytest`, `NUnit`, `MSTest`, `TUnit` |
+| Status | ok, cancelled, failed |
+| Duration | 420 ms |
 
-No script names, tool names, log messages, or file paths are included in usage summaries.
+No script names, tool names, parameters, or output are included.
 
-### Critical Exceptions
+### Sessions
 
-When an unhandled crash occurs, an exception report is sent containing:
+The host process reports session start and end (release health), so crash-free rates can be measured per host and DevTool version.
+
+### Errors and Crashes
+
+An error report is sent only when a failure starts in RevitDevTool code. It contains:
 
 - Exception type and message
-- Stack trace
+- Stack trace (file names only, no directories)
 - Host environment (Revit/AutoCAD version, DevTool version)
 
-Exception reports help diagnose crashes that users may not report manually. Routine errors like cancellations and timeouts are filtered out and never sent.
+Errors in your own scripts, commands, MCP toolsets, or tests are **not** sent. They count only as a failed operation; failing tests count as a completed run. Visualization errors are sent at most once per error type and geometry server per session. Cancellations and timeouts are never sent. Exceptions from Revit, AutoCAD, or other add-ins are ignored. Absolute paths are removed from all text before sending, and the machine name is never sent.
 
 ## What Is Never Collected
 
@@ -47,9 +51,11 @@ Exception reports help diagnose crashes that users may not report manually. Rout
 - Windows username, email, or personal identity
 - Network configuration or IP-based geolocation
 
-## Installation ID
+## User ID
 
-A random UUID is generated once per machine and stored locally (`%AppData%\RevitDevTool\installation_id.txt`). This ID is used solely to correlate crash reports from the same installation — it is **not** linked to any user account, Windows identity, or Autodesk account.
+The user ID identifies one Windows user on one machine. It is a keyed one-way hash (HMAC-SHA256) of the Windows machine GUID and the account SID. The raw machine GUID, SID, and user name are never sent, and the hash cannot be reversed or matched with IDs from other applications. Nothing is stored on disk. The ID changes only when Windows is reinstalled or the account changes. If either value cannot be read, a random ID is used for that session only.
+
+The ID is used solely to correlate reports from the same user and to count users. It is **not** linked to any user account, email, or Autodesk account.
 
 ## How To Opt Out
 
@@ -61,4 +67,4 @@ When telemetry is disabled, no network requests are made to the telemetry servic
 
 Telemetry data is processed by [Sentry](https://sentry.io/) hosted in the **European Union (Germany)**. Data is subject to Sentry's data retention policies and GDPR compliance.
 
-No telemetry data is stored locally beyond the installation ID file.
+No telemetry data is stored locally.

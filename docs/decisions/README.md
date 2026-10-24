@@ -65,6 +65,10 @@ here.
   and landed (2026-10-13). The names are test pipe, MCP pipe, and
   daemon control pipe. The daemon control pipe has no reply. `DevTools.Ipc`
   stays the shared project. No `StreamJsonRpc` and no RPC engine.
+  [0045](0045-sentry-telemetry-operations-and-internal-errors.md) is **Accepted**
+  and landed (2026-10-24). One Sentry transaction per execution, MCP call, and
+  in-host test run. Errors only for DevTools code; external code is marked.
+  The user identity is an HMAC of the machine GUID and the account SID.
 
 ## Index
 
@@ -111,3 +115,4 @@ here.
 | [0042](0042-mtp-2-5-removable-test-workarounds.md) | MTP 2.5.1 / MSTest 4.5.1 / TUnit 1.73.19; public MSTest cancel | Accepted |
 | [0043](0043-ipc-shared-infrastructure-separate-protocols.md) | Shared `DevTools.Ipc`; test pipe, MCP pipe, daemon control pipe | Accepted — landed 2026-10-13 |
 | [0044](0044-hybrid-tool-retrieval.md) | Evaluate hybrid retrieval only if lexical baseline misses labeled tasks | Proposed |
+| [0045](0045-sentry-telemetry-operations-and-internal-errors.md) | Sentry telemetry: operations, sessions, internal errors only | Accepted — landed 2026-10-24 |

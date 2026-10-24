@@ -19,6 +19,7 @@ using DevTools.Mcp.Providers;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings;
+using DevTools.Telemetry;
 using DevTools.Testing.Host;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -65,6 +66,8 @@ internal static class AcadServiceRegistration
 
             services.AddHostedService<HostBackgroundController>();
             services.AddSingleton<IHostAppInfo, AcadHostAppInfo>();
+            services.AddTelemetryService(
+                sp => sp.GetRequiredService<IAcadSettingsService>().GeneralConfig.EnableTelemetry);
             services.AddSingleton<IContextEnricher>(sp =>
             {
                 var settings = sp.GetRequiredService<IAcadSettingsService>();

@@ -17,14 +17,17 @@ internal sealed class McpCallFilter(
     ITelemetry telemetry,
     ILogger<McpCallFilter> logger) : IConfigureOptions<McpServerOptions>
 {
+    private const string BuiltInContainerType = "BuiltIn";
+
     public void Configure(McpServerOptions options)
     {
         options.Filters.Request.CallToolFilters.Add(next => async (request, cancellationToken) =>
         {
             var toolName = request.Params.Name;
             catalogStore.TryGetTool(null, toolName, out var registered);
-            var sourceKind = registered?.Binding.SourceKind.ToString() ?? "unknown";
-            telemetry.RecordMcpInvocation(sourceKind);
+            var isBuiltIn = registered?.Binding.ContainerType == BuiltInContainerType;
+            var sourceKind = isBuiltIn ? BuiltInContainerType : registered?.Binding.SourceKind.ToString() ?? "unknown";
+            using var operation = telemetry.StartOperation(TelemetryKeys.Operation.Mcp, sourceKind);
 
             using var scope = executionTracker.BeginExecution(toolName);
             executionTracker.MarkRunning(scope);
@@ -33,22 +36,17 @@ internal sealed class McpCallFilter(
             try
             {
                 var callResult = await next(request, cancellationToken).ConfigureAwait(false);
+                if (callResult.IsError == true)
+                    operation.Fail();
+                else
+                    operation.Complete();
+
                 Complete(scope, registered, toolName, callResult);
                 return callResult;
             }
             catch (Exception ex)
             {
-                if (TelemetryReporting.ShouldReportCriticalException(ex))
-                {
-                    telemetry.RecordCriticalException(
-                        ex,
-                        TelemetryKeys.Feature.Mcp,
-                        new Dictionary<string, string>
-                        {
-                            [TelemetryKeys.Tag.Provider] = sourceKind
-                        });
-                }
-
+                operation.Fail(isBuiltIn ? ex : TelemetryReporter.MarkExternal(ex));
                 logger.LogError(ex, "Tool '{ToolName}' failed", toolName);
                 executionTracker.Complete(scope, ExecutionState.Failed, ex.Message);
                 return ToToolError(ex);

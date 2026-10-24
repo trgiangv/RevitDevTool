@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB.DirectContext3D;
+using DevTools.Telemetry;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
@@ -25,9 +26,10 @@ public sealed class SolidVisualizationServer : VisualizationServer<Solid>
     private bool _drawFace;
     private bool _drawEdge;
 
-    public SolidVisualizationServer(IRevitSettingsService settingsService, ILogger<SolidVisualizationServer> logger)
+    public SolidVisualizationServer(IRevitSettingsService settingsService, ILogger<SolidVisualizationServer> logger, ITelemetry telemetry)
     {
         Logger = logger;
+        Telemetry = telemetry;
         var settings = settingsService.VisualizationConfig.SolidSettings;
         _transparency = settings.Transparency / 100;
         _scale = settings.Scale / 100;

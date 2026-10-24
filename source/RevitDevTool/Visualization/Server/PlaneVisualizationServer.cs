@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB.DirectContext3D;
+using DevTools.Telemetry;
 using DevTools.Utilities;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
@@ -6,7 +7,6 @@ using RevitDevTool.Settings;
 using RevitDevTool.Visualization.Contracts;
 using RevitDevTool.Visualization.Helpers;
 using RevitDevTool.Visualization.Render;
-using ZLogger;
 using Color = Autodesk.Revit.DB.Color;
 
 namespace RevitDevTool.Visualization.Server;
@@ -35,9 +35,10 @@ public sealed class PlaneVisualizationServer : VisualizationServer<Plane>
     private double PlaneHalfSize => BasePlaneHalfSize + _extrusion * PlaneScaleFactor;
     private double PlaneNormalLength => PlaneHalfSize * PlaneNormalLengthFactor;
 
-    public PlaneVisualizationServer(IRevitSettingsService settingsService, ILogger<PlaneVisualizationServer> logger)
+    public PlaneVisualizationServer(IRevitSettingsService settingsService, ILogger<PlaneVisualizationServer> logger, ITelemetry telemetry)
     {
         Logger = logger;
+        Telemetry = telemetry;
         var settings = settingsService.VisualizationConfig.FaceSettings;
         _extrusion = settings.Extrusion / 12.0;
         _transparency = settings.Transparency / 100.0;
@@ -184,7 +185,7 @@ public sealed class PlaneVisualizationServer : VisualizationServer<Plane>
         }
         catch (Exception ex)
         {
-            Logger?.ZLogError($"Error mapping geometry buffer in PlaneVisualizationServer: {ex}");
+            ReportError("MapGeometryBuffer", ex);
         }
     }
 

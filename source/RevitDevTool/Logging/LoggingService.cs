@@ -5,7 +5,6 @@ using DevTools.Logging.Options;
 using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Settings.Configs;
-using DevTools.Telemetry;
 using DevTools.UI.Theme;
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Logging.Listeners;
@@ -22,8 +21,7 @@ public sealed class LoggingService(
     IHttpLogTarget httpLogTarget,
     IMonitorLogTarget monitor,
     IContextEnricher contextEnricher,
-    LoggingConfiguration loggingConfiguration,
-    ITelemetry telemetry) : ILoggingService
+    LoggingConfiguration loggingConfiguration) : ILoggingService
 {
     private bool _disposed;
 
@@ -139,7 +137,7 @@ public sealed class LoggingService(
         DisposeListeners();
 
         var logger = loggerFactory.CreateLogger("");
-        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener, telemetry.RecordLoggerTrace);
+        _loggerTraceListener = new LoggerTraceListener(logger, config.TraceListener);
 
         _geometryListener ??= new GeometryListener();
         _notifyListener ??= new NotifyListener();

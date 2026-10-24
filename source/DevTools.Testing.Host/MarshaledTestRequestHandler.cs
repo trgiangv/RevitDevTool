@@ -1,6 +1,7 @@
 using DevTools.Execution.Abstractions;
 using DevTools.Hosting;
 using DevTools.Ipc;
+using DevTools.Telemetry;
 using DevTools.Testing.Transport;
 using System.Text.Json;
 
@@ -15,11 +16,12 @@ public sealed class MarshaledTestRequestHandler : IBridgeRequestHandler, IBridge
     public MarshaledTestRequestHandler(
         TestingProviderRegistry registry,
         IHostAppInfo hostInfo,
-        IHostContextExecutor hostContext)
+        IHostContextExecutor hostContext,
+        ITelemetry? telemetry = null)
     {
         ArgumentNullException.ThrowIfNull(registry);
         ArgumentNullException.ThrowIfNull(hostInfo);
-        _inner = new TestingRequestHandler(registry, hostInfo.Host.ToString(), hostInfo.VersionNumber);
+        _inner = new TestingRequestHandler(registry, hostInfo.Host.ToString(), hostInfo.VersionNumber, telemetry);
         _hostContext = hostContext ?? throw new ArgumentNullException(nameof(hostContext));
     }
 

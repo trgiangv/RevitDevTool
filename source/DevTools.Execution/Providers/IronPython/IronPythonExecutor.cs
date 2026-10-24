@@ -1,5 +1,6 @@
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using DevTools.Telemetry;
 using IronPython.Compiler;
 using IronPython.Hosting;
 using IronPython.Runtime;
@@ -134,7 +135,7 @@ internal static class IronPythonExecutor
         }
         catch (Exception exception)
         {
-            return ExecutionResult.Failed(FormatExecutionException(engine, exception), exception);
+            return ExecutionResult.Failed(FormatExecutionException(engine, exception), TelemetryReporter.MarkExternal(exception));
         }
     }
 

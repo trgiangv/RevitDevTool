@@ -64,22 +64,21 @@ public sealed class TelemetryAssemblyBoundaryTests
     }
 
     [TestMethod]
-    public void Host_source_supplies_enable_and_dsn()
+    public void Host_composition_supplies_enable_switch()
     {
         var root = RepositoryRoot.Find();
         string[] hosts =
         [
-            Path.Combine(root, "source", "RevitDevTool", "Host.cs"),
-            Path.Combine(root, "source", "AcadDevTool", "Host.cs"),
+            Path.Combine(root, "source", "RevitDevTool", "Composition", "RevitServiceRegistration.cs"),
+            Path.Combine(root, "source", "AcadDevTool", "Composition", "AcadServiceRegistration.cs"),
         ];
 
         foreach (var path in hosts)
         {
             var text = File.ReadAllText(path);
-            Assert.Contains("AddDevToolsTelemetry(", text, StringComparison.Ordinal);
+            Assert.Contains("AddTelemetryService(", text, StringComparison.Ordinal);
             Assert.Contains("EnableTelemetry", text, StringComparison.Ordinal);
-            Assert.Contains("BuiltInSentryDsn", text, StringComparison.Ordinal);
-            Assert.DoesNotContain("AddDevToolsTelemetry()", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("AddTelemetryService()", text, StringComparison.Ordinal);
         }
     }
 }

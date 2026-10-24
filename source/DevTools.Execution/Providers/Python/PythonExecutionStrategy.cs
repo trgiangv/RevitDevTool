@@ -1,5 +1,6 @@
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using DevTools.Telemetry;
 using Microsoft.Extensions.Logging;
 using Python.Runtime;
 using System.Diagnostics;
@@ -45,10 +46,18 @@ public sealed class PythonExecutionStrategy(
                         scope =>
                         {
                             scope.Set(PythonInstances.Source, new PyString(scriptContent));
-                            scope.Exec("""
-                                       compiled_code = compile(__source__, __file__, 'exec')
-                                       exec(compiled_code, globals())
-                                       """);
+                            try
+                            {
+                                scope.Exec("""
+                                           compiled_code = compile(__source__, __file__, 'exec')
+                                           exec(compiled_code, globals())
+                                           """);
+                            }
+                            catch (PythonException ex)
+                            {
+                                TelemetryReporter.MarkExternal(ex);
+                                throw;
+                            }
                             return 0;
                         });
                     stopwatch.Stop();

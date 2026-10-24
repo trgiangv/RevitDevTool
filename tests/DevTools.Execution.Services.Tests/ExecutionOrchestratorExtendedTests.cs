@@ -27,7 +27,7 @@ public sealed class ExecutionOrchestratorExtendedTests
             });
 
         var node = ExecutionTestHelpers.CreateExecutableNode("exec://run", strategy.Object);
-        var telemetry = new Mock<ITelemetry>();
+        var (telemetry, operation) = CreateTelemetry();
         using var orchestrator = CreateOrchestrator(telemetry: telemetry.Object);
 
         var progressMessages = new List<string>();
@@ -38,7 +38,8 @@ public sealed class ExecutionOrchestratorExtendedTests
         Assert.IsTrue(result.Success);
         Assert.IsTrue(node.IsLastExecuted);
         Assert.Contains("done", progressMessages);
-        telemetry.Verify(t => t.RecordExecutionInvocation("CSharp", true), Times.Once);
+        telemetry.Verify(t => t.StartOperation(TelemetryKeys.Operation.Execution, "CSharp"), Times.Once);
+        operation.Verify(o => o.Complete(), Times.Once);
     }
 
     [TestMethod]
@@ -67,14 +68,14 @@ public sealed class ExecutionOrchestratorExtendedTests
             .Setup(s => s.ExecuteAsync(It.IsAny<IProgress<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ExecutionResult.Failed("boom"));
 
-        var telemetry = new Mock<ITelemetry>();
+        var (telemetry, operation) = CreateTelemetry();
         var node = ExecutionTestHelpers.CreateExecutableNode("exec://fail", strategy.Object);
         using var orchestrator = CreateOrchestrator(telemetry: telemetry.Object);
 
         var result = await orchestrator.ExecuteAsync(node, TestContext.CancellationToken);
 
         Assert.IsFalse(result.Success);
-        telemetry.Verify(t => t.RecordExecutionInvocation("CSharp", false), Times.Once);
+        operation.Verify(o => o.Fail(null), Times.Once);
     }
 
     [TestMethod]
@@ -177,6 +178,16 @@ public sealed class ExecutionOrchestratorExtendedTests
             built.GetRequiredService<IFileWatcherService>(),
             built.GetRequiredService<ITelemetry>(),
             NullLogger<ExecutionOrchestrator>.Instance);
+    }
+
+    private static (Mock<ITelemetry> Telemetry, Mock<ITelemetryOperation> Operation) CreateTelemetry()
+    {
+        var operation = new Mock<ITelemetryOperation>();
+        var telemetry = new Mock<ITelemetry>();
+        telemetry
+            .Setup(t => t.StartOperation(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(operation.Object);
+        return (telemetry, operation);
     }
 
     private static Mock<IFileWatcherService> CreateFileWatcher()

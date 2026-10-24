@@ -1,3 +1,4 @@
+using DevTools.Telemetry;
 using System.Text.Json;
 namespace DevTools.Execution.External.Handlers;
 
@@ -9,8 +10,11 @@ namespace DevTools.Execution.External.Handlers;
 public sealed class PytestRequestHandler(
     IHostContextExecutor hostContext,
     PytestDependencyService dependencyService,
-    PytestExecutionService executionService) : IBridgeRequestHandler, IBridgeNotificationPublisher
+    PytestExecutionService executionService,
+    ITelemetry? telemetry = null) : IBridgeRequestHandler, IBridgeNotificationPublisher
 {
+    private readonly ITelemetry _telemetry = telemetry ?? new NoOpTelemetry();
+
     public Action<string, JsonElement?>? NotificationSender { get; set; }
 
     public IReadOnlyCollection<string> SupportedMethods { get; } =
@@ -32,8 +36,10 @@ public sealed class PytestRequestHandler(
 
     private async Task<BridgeMessage> HandleRunAsync(string id, JsonElement? @params)
     {
+        using var operation = _telemetry.StartOperation(TelemetryKeys.Operation.Test, "pytest");
         if (!PytestExecutionService.TryParseRunRequest(@params, out var request, out var error))
         {
+            operation.Fail();
             var invalidRequest = PytestExecutionService.Error("prepare", error ?? "Invalid pytest run request.");
             var invalidRequestJson = JsonSerializer.SerializeToElement(invalidRequest);
             return BridgeMessage.Response(id, invalidRequestJson);
@@ -45,6 +51,7 @@ public sealed class PytestRequestHandler(
         }
         catch (Exception ex)
         {
+            operation.Fail();
             var prepareFailure = PytestExecutionService.Error("prepare", "Failed to prepare pytest session.", ex.ToString());
             var prepareJson = JsonSerializer.SerializeToElement(prepareFailure);
             return BridgeMessage.Response(id, prepareJson);
@@ -57,9 +64,11 @@ public sealed class PytestRequestHandler(
             result = await hostContext
                 .ExecuteAsync(() => executionService.Run(request!, CreateProgressCallback()))
                 .ConfigureAwait(false);
+            operation.Complete();
         }
         catch (Exception ex)
         {
+            operation.Fail(ex);
             result = PytestExecutionService.Error("run", "Failed to execute pytest session.", ex.ToString());
         }
 
