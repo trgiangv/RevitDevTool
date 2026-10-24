@@ -30,7 +30,7 @@ here.
   [0042](0042-mtp-2-5-removable-test-workarounds.md).
   [0035](0035-mstest-sdk-repo-tests.md) is **Accepted** remaining in-repo
   `tests/*.Tests` on the same SDK and collector (no xUnit, no Coverlet).
-  Amended by 0042: MSTest.Sdk 4.5.1, MTP 2.5.1, TUnit 1.73.19.
+  Amended by 0042: MSTest.Sdk 4.5.1, MTP 2.5.1, TUnit 1.76.0.
   [0036](0036-revit-monitor-link-element-tokens.md) is **Accepted** Revit
   link tokens (`linkInstanceId@` + three kinds), host-space zoom, Element
   Finder, and `RevitDevTool.Tools` ownership of select/search + Command
@@ -58,7 +58,7 @@ here.
   the end, and the path. Text is not dropped
   at 1 MiB.
   [0042](0042-mtp-2-5-removable-test-workarounds.md) is **Accepted**
-  (landed 2026-10-10). Pins are MSTest 4.5.1, MTP 2.5.1, TUnit 1.73.19.
+  (landed 2026-10-10). Pins are MSTest 4.5.1, MTP 2.5.1, TUnit 1.76.0.
   In-host MSTest cancel uses `TestApplicationOptions.CancellationToken`.
   TUnit in-host ceremony stays.
   [0043](0043-ipc-shared-infrastructure-separate-protocols.md) is **Accepted**
@@ -112,7 +112,7 @@ here.
 | [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) | MCP flow audit — SDK reuse, search contract v2, vocabulary | Accepted |
 | [0040](0040-bm25f-search-and-hit-annotations.md) | `code_mode` search: schema-aware BM25F and relevance policy | Accepted — amended 2026-10-22 |
 | [0041](0041-code-mode-result-artifact.md) | Large `code_mode` text is saved and the return includes its path | Accepted |
-| [0042](0042-mtp-2-5-removable-test-workarounds.md) | MTP 2.5.1 / MSTest 4.5.1 / TUnit 1.73.19; public MSTest cancel | Accepted |
+| [0042](0042-mtp-2-5-removable-test-workarounds.md) | MTP 2.5.1 / MSTest 4.5.1 / TUnit 1.76.0; public MSTest cancel | Accepted |
 | [0043](0043-ipc-shared-infrastructure-separate-protocols.md) | Shared `DevTools.Ipc`; test pipe, MCP pipe, daemon control pipe | Accepted — landed 2026-10-13 |
 | [0044](0044-hybrid-tool-retrieval.md) | Evaluate hybrid retrieval only if lexical baseline misses labeled tasks | Proposed |
 | [0045](0045-sentry-telemetry-operations-and-internal-errors.md) | Sentry telemetry: operations, sessions, internal errors only | Accepted — landed 2026-10-24 |

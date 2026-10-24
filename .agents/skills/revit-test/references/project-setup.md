@@ -15,7 +15,7 @@ Run commands stay in [SKILL.md](../SKILL.md).
   <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.3" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
   <PackageReference Include="NUnit" Version="5.0.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
@@ -27,7 +27,7 @@ Pin framework versions — the adapter does not pull NUnit, TUnit, or MSTest:
 | Package | Version |
 |---------|---------|
 | `NUnit` | 5.0.0 |
-| `TUnit` | 1.73.19 |
+| `TUnit` | 1.76.0 |
 | `MSTest.Sdk` / `MSTest.TestFramework` | 4.5.1 |
 | `Microsoft.Testing.Platform.MSBuild` | 2.5.1 (transitive from adapter — do not override) |
 

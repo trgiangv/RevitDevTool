@@ -14,7 +14,7 @@ public sealed class TUnitGenerationPolicyTests
 
         var tunit = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             ValidatePin("TUnit.Core.dll", typeof(TUnitGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("1.73.19.0", tunit.Message, StringComparison.Ordinal);
+        Assert.Contains("1.76.0.0", tunit.Message, StringComparison.Ordinal);
 
         var mtp = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
             ValidatePin("Microsoft.Testing.Platform.dll", typeof(TUnitGenerationPolicyTests).Assembly.Location));

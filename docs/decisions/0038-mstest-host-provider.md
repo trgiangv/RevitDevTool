@@ -6,7 +6,7 @@ Date: 2026-09-28
 
 Accepted. Amended 2026-10-10 by
 [0042](0042-mtp-2-5-removable-test-workarounds.md): the pin is MSTest
-**4.5.1**, Microsoft.Testing.Platform **2.5.1**, and TUnit **1.73.19**.
+**4.5.1**, Microsoft.Testing.Platform **2.5.1**, and TUnit **1.76.0**.
 In-host MSTest cancel uses `TestApplicationOptions.CancellationToken`.
 The provider shape below is unchanged. NUnit stays the default engine.
 TUnit stays the opt-in provider

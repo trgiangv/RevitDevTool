@@ -13,7 +13,7 @@ public sealed class TUnitGenerationPolicy(Func<RuntimeSource> runtimeSourceProvi
     public const string RuntimeFolderName = "TUnitRuntime";
     public const string RuntimeAssemblyFileName = "DevTools.TUnit.Runtime.dll";
     internal const string RuntimeSessionTypeName = "DevTools.TUnit.Runtime.TUnitRuntimeSession";
-    internal static readonly Version ExpectedTUnitAssemblyVersion = new(1, 73, 19, 0);
+    internal static readonly Version ExpectedTUnitAssemblyVersion = new(1, 76, 0, 0);
     internal static readonly Version ExpectedMtpAssemblyVersion = new(2, 5, 1, 0);
 
     internal static readonly TestingGenerationSpec Spec = new(

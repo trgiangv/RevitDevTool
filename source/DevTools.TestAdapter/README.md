@@ -6,13 +6,13 @@ Requires [RevitDevTool](https://github.com/trgiangv/RevitDevTool).
 Supports **NUnit** (default), **TUnit**, and **MSTest**. Pin the framework in
 the test project — the adapter does not pull it. It depends on
 `Microsoft.Testing.Platform.MSBuild` 2.5.1; do not add or override it.
-TUnit `1.73.19` and Microsoft.Testing.Platform `2.5.1` are a pair — pin
+TUnit `1.76.0` and Microsoft.Testing.Platform `2.5.1` are a pair — pin
 both. MSTest is pinned at `4.5.1` with the same MTP version.
 
 | Package | Version |
 |---------|---------|
 | `NUnit` | 5.0.0 |
-| `TUnit` | 1.73.19 |
+| `TUnit` | 1.76.0 |
 | `MSTest` (`MSTest.Sdk` / `MSTest.TestFramework`) | 4.5.1 |
 | `Microsoft.Testing.Platform.MSBuild` | 2.5.1 |
 
@@ -37,7 +37,7 @@ Do not use `.runsettings`.
   <LaunchTimeout>180</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.3" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
   <PackageReference Include="NUnit" Version="5.0.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
@@ -56,8 +56,8 @@ Do not use `.runsettings`.
   <TestingFramework>tunit</TestingFramework>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.3" />
-  <PackageReference Include="TUnit" Version="1.73.19" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
+  <PackageReference Include="TUnit" Version="1.76.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
@@ -85,7 +85,7 @@ Microsoft.Testing.Platform 2.5.1. A different MSTest version fails generation.
     <TestingFramework>mstest</TestingFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.3" />
+    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
     <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
       IncludeAssets="build; compile" PrivateAssets="All" />
   </ItemGroup>

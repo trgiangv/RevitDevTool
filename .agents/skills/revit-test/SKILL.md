@@ -38,7 +38,7 @@ Do **not** add `NUnit3TestAdapter`, `ricaun.RevitTest.TestAdapter`, or
 
 ## Quick start
 
-Default engine: **NUnit 5.0.0**. TUnit: `TestingFramework=tunit` + pin **TUnit 1.73.19**.
+Default engine: **NUnit 5.0.0**. TUnit: `TestingFramework=tunit` + pin **TUnit 1.76.0**.
 MSTest: `Sdk="MSTest.Sdk/4.5.1"` + `TestingFramework=mstest`.
 
 ```xml
@@ -50,7 +50,7 @@ MSTest: `Sdk="MSTest.Sdk/4.5.1"` + `TestingFramework=mstest`.
   <LaunchTimeout>360</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.3" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
   <PackageReference Include="NUnit" Version="5.0.0" />
   <!-- compile-only host API — pick a package that matches HostVersion -->
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"

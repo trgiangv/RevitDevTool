@@ -4,11 +4,11 @@ namespace DevTools.TUnit.SampleTests;
 
 public sealed class HookTests
 {
-    static int ClassRuns;
+    static int _classRuns;
     bool _ready;
 
     [Before(HookType.Class)]
-    public static void Mark_class_started() => ClassRuns++;
+    public static void Mark_class_started() => _classRuns++;
 
     [Before(HookType.Test)]
     public void Mark_ready() => _ready = true;
@@ -25,6 +25,6 @@ public sealed class HookTests
     [Test]
     public async Task Class_hook_ran_at_least_once()
     {
-        await Assert.That(ClassRuns).IsGreaterThan(0);
+        await Assert.That(_classRuns).IsGreaterThan(0);
     }
 }
