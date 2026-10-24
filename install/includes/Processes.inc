@@ -1,6 +1,9 @@
 {
-  Monitored EXE names. Each instance:  ImageName - file version (PE resource) - PID: nnnnn
-  Extend: MONITORED_EXE_COUNT + MonitoredExe case branches.
+  Monitored EXEs. Line: ImageName - file version - PID. Extend MONITORED_EXE_COUNT
+  + MonitoredExe.
+
+  Only processes owned by the user running Setup are listed or ended: the bundle
+  installs per user, so other users' instances must be left alone.
 }
 
 const
@@ -57,18 +60,83 @@ begin
   end;
 end;
 
+function WmiService: Variant;
+var
+  Locator: Variant;
+begin
+  Locator := CreateOleObject('WBEMScripting.SWBEMLocator');
+  Result  := Locator.ConnectServer('', 'root\CIMV2', '', '');
+end;
+
+function VariantText(const V: Variant): string;
+begin
+  if VarIsNull(V) then
+    Result := ''
+  else
+    Result := V;
+end;
+
+{ "domain\user" of the process owner, '' when unreadable (e.g. another user).
+  Pascal Script drops COM out-params, so GetOwner is called via ExecMethod_. }
+function ProcessOwner(Proc: Variant): string;
+var
+  OutParams: Variant;
+begin
+  Result := '';
+  try
+    OutParams := Proc.ExecMethod_('GetOwner');
+    if VarIsNull(OutParams) then Exit;
+    Result := VariantText(OutParams.Domain) + '\' + VariantText(OutParams.User);
+    if Result = '\' then Result := '';
+  except
+    Result := '';
+  end;
+end;
+
+function IsCurrentUserProcess(Proc: Variant; const ImageName: string): Boolean;
+var
+  Owner, Domain, User: string;
+begin
+  Result := False;
+  Owner  := ProcessOwner(Proc);
+  if Owner = '' then
+  begin
+    Log(Format('Skip %s: owner unavailable', [ImageName]));
+    Exit;
+  end;
+
+  Domain := Copy(Owner, 1, Pos('\', Owner) - 1);
+  User   := Copy(Owner, Pos('\', Owner) + 1, Length(Owner));
+
+  Result := SameText(User, GetUserNameString) and
+            ((Domain = '') or
+             SameText(Domain, GetComputerNameString) or
+             SameText(Domain, GetEnv('USERDOMAIN')));
+
+  if not Result then
+    Log(Format('Skip %s: owned by %s', [ImageName, Owner]));
+end;
+
 function WmiProcessCount(const ImageName: string): Integer;
 var
-  Locator, Service, ObjSet: Variant;
+  Service, ObjSet, Obj: Variant;
+  I, C: Integer;
 begin
   Result := 0;
+  if ImageName = '' then Exit;
   try
-    Locator := CreateOleObject('WBEMScripting.SWBEMLocator');
-    Service := Locator.ConnectServer('', 'root\CIMV2', '', '');
+    Service := WmiService;
     ObjSet  := Service.ExecQuery(
-      Format('SELECT ProcessId FROM Win32_Process WHERE Name="%s"', [ImageName]));
-    if not VarIsNull(ObjSet) then
-      Result := ObjSet.Count;
+      Format('SELECT * FROM Win32_Process WHERE Name="%s"', [ImageName]));
+    if VarIsNull(ObjSet) then Exit;
+    C := ObjSet.Count;
+    for I := 0 to C - 1 do
+    begin
+      Obj := ObjSet.ItemIndex(I);
+      if not VarIsNull(Obj) then
+        if IsCurrentUserProcess(Obj, ImageName) then
+          Result := Result + 1;
+    end;
   except
     Log(Format('WMI count failed for "%s": %s', [ImageName, GetExceptionMessage]));
   end;
@@ -76,16 +144,15 @@ end;
 
 procedure AppendLinesForExe(const ImageName: string; var Lines: string);
 var
-  Locator, Service, ObjSet, Obj: Variant;
+  Service, ObjSet, Obj: Variant;
   I, C: Integer;
   Path, Ver, Pid: string;
 begin
   if ImageName = '' then Exit;
   try
-    Locator := CreateOleObject('WBEMScripting.SWBEMLocator');
-    Service := Locator.ConnectServer('', 'root\CIMV2', '', '');
+    Service := WmiService;
     ObjSet  := Service.ExecQuery(
-      Format('SELECT ProcessId, ExecutablePath FROM Win32_Process WHERE Name="%s"', [ImageName]));
+      Format('SELECT * FROM Win32_Process WHERE Name="%s"', [ImageName]));
     if VarIsNull(ObjSet) then Exit;
     C := ObjSet.Count;
     if C <= 0 then Exit;
@@ -94,6 +161,7 @@ begin
     begin
       Obj := ObjSet.ItemIndex(I);
       if VarIsNull(Obj) then Continue;
+      if not IsCurrentUserProcess(Obj, ImageName) then Continue;
 
       try
         Pid := IntToStr(Obj.ProcessId);
@@ -143,23 +211,37 @@ end;
 
 procedure TerminateProcessesByImageName(const ImageName: string);
 var
-  Locator, Service, ObjSet, Obj: Variant;
-  Attempt: Integer;
+  Service, ObjSet, Obj: Variant;
+  Attempt, I, C: Integer;
+  Terminated: Boolean;
 begin
   if ImageName = '' then Exit;
   for Attempt := 1 to 64 do
   begin
     if WmiProcessCount(ImageName) <= 0 then Exit;
     try
-      Locator := CreateOleObject('WBEMScripting.SWBEMLocator');
-      Service := Locator.ConnectServer('', 'root\CIMV2', '', '');
+      Service := WmiService;
       ObjSet  := Service.ExecQuery(
         Format('SELECT * FROM Win32_Process WHERE Name="%s"', [ImageName]));
-      if VarIsNull(ObjSet) or (ObjSet.Count <= 0) then Exit;
-      Obj := ObjSet.ItemIndex(0);
-      if VarIsNull(Obj) then Exit;
-      Log(Format('Terminating %s PID %s', [ImageName, IntToStr(Obj.ProcessId)]));
-      Obj.Terminate(0);
+      if VarIsNull(ObjSet) then Exit;
+      C := ObjSet.Count;
+      if C <= 0 then Exit;
+
+      { One per query: terminating invalidates the enumerator. }
+      Terminated := False;
+      for I := 0 to C - 1 do
+      begin
+        Obj := ObjSet.ItemIndex(I);
+        if VarIsNull(Obj) then Continue;
+        if not IsCurrentUserProcess(Obj, ImageName) then Continue;
+
+        Log(Format('Terminating %s PID %s', [ImageName, VariantText(Obj.ProcessId)]));
+        Obj.Terminate(0);
+        Terminated := True;
+        Break;
+      end;
+
+      if not Terminated then Exit;
     except
       Log(Format('Terminate failed for "%s": %s', [ImageName, GetExceptionMessage]));
       Exit;
