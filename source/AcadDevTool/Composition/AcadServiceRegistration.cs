@@ -24,85 +24,85 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ZLogger.Scintilla.Public;
-// ReSharper disable ConvertToExtensionBlock
 
 namespace AcadDevTool.Composition;
 
 internal static class AcadServiceRegistration
 {
-    internal static HostApplicationBuilder AddSettingServices(this HostApplicationBuilder builder, string contentRoot)
+    extension(HostApplicationBuilder builder)
     {
-        var services = builder.Services;
-        services.AddSettingServices(contentRoot);
-        services.AddSingleton<SettingsService>();
-        services.AddSingleton<IAcadSettingsService>(sp => sp.GetRequiredService<SettingsService>());
-        services.AddSingleton<ISettingsService>(sp => sp.GetRequiredService<SettingsService>());
-        return builder;
-    }
+        internal HostApplicationBuilder AddSettingServices(string contentRoot)
+        {
+            var services = builder.Services;
+            services.AddSettingServices(contentRoot);
+            services.AddSingleton<SettingsService>();
+            services.AddSingleton<IAcadSettingsService>(sp => sp.GetRequiredService<SettingsService>());
+            services.AddSingleton<ISettingsService>(sp => sp.GetRequiredService<SettingsService>());
+            return builder;
+        }
 
-    internal static HostApplicationBuilder AddLoggingServices(
-        this HostApplicationBuilder builder,
-        Action<ScintillaOptions>? configureMonitor = null)
-    {
-        builder.AddLoggingProvider();
-        builder.AddMonitorLogging(configureMonitor);
-        builder.Logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
+        internal HostApplicationBuilder AddLoggingServices(Action<ScintillaOptions>? configureMonitor = null)
+        {
+            builder.AddLoggingProvider();
+            builder.AddMonitorLogging(configureMonitor);
+            builder.Logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
 #if RELEASE
         builder.Logging.SuppressHostingFrameworkLogs();
 #endif
 
-        var services = builder.Services;
-        services.AddSingleton<LoggingService>();
-        services.AddSingleton<ILoggingService>(sp => sp.GetRequiredService<LoggingService>());
-        services.AddSingleton<IHostIdlingBridge, AcadIdlingBridge>();
-        services.AddSingleton<ILogEnricherProvider, AcadLogEnricherProvider>();
+            var services = builder.Services;
+            services.AddSingleton<LoggingService>();
+            services.AddSingleton<ILoggingService>(sp => sp.GetRequiredService<LoggingService>());
+            services.AddSingleton<IHostIdlingBridge, AcadIdlingBridge>();
+            services.AddSingleton<ILogEnricherProvider, AcadLogEnricherProvider>();
 
-        return builder;
-    }
+            return builder;
+        }
 
-    internal static HostApplicationBuilder AddApplicationServices(this HostApplicationBuilder builder)
-    {
-        var services = builder.Services;
-
-        services.AddHostedService<HostBackgroundController>();
-        services.AddSingleton<IHostAppInfo, AcadHostAppInfo>();
-        services.AddSingleton<IContextEnricher>(sp =>
+        internal HostApplicationBuilder AddApplicationServices()
         {
-            var settings = sp.GetRequiredService<IAcadSettingsService>();
-            return new AcadContextProvider(settings.AcadEnrichers);
-        });
-        services.AddSingleton<PanelController>();
+            var services = builder.Services;
 
-        services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
-        services.AddTransient<MainPage>();
-        services.AddPresentationServices();
+            services.AddHostedService<HostBackgroundController>();
+            services.AddSingleton<IHostAppInfo, AcadHostAppInfo>();
+            services.AddSingleton<IContextEnricher>(sp =>
+            {
+                var settings = sp.GetRequiredService<IAcadSettingsService>();
+                return new AcadContextProvider(settings.AcadEnrichers);
+            });
+            services.AddSingleton<PanelController>();
 
-        return builder;
-    }
+            services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+            services.AddTransient<MainPage>();
+            services.AddPresentationServices();
 
-    internal static HostApplicationBuilder AddExecutionServices(this HostApplicationBuilder builder)
-    {
-        var services = builder.Services;
+            return builder;
+        }
 
-        services.AddSingleton<IHostContextExecutor, AcadHostContextExecutor>();
-        services.AddSingleton<IDocumentBridge, AcadDocumentBridge>();
-        services.AddSingleton<HostAssemblies, AcadHostAssemblies>();
-        services.AddSingleton<ICommandRunner, AcadCommandRunner>();
-        services.AddSingleton<ICommandDiscovery, AcadCommandDiscovery>();
-        services.AddSingleton<ICompiledScriptBridge, AcadCompiledScriptBridge>();
-        services.AddSingleton<IPythonBridge, AcadPythonBridge>();
-        services.AddSingleton<IIronPythonBridge, AcadIronPythonBridge>();
+        internal HostApplicationBuilder AddExecutionServices()
+        {
+            var services = builder.Services;
 
-        services.AddExecutionServices();
-        services.AddMcpAdapter();
-        services.AddTestingHostServices();
+            services.AddSingleton<IHostContextExecutor, AcadHostContextExecutor>();
+            services.AddSingleton<IDocumentBridge, AcadDocumentBridge>();
+            services.AddSingleton<HostAssemblies, AcadHostAssemblies>();
+            services.AddSingleton<ICommandRunner, AcadCommandRunner>();
+            services.AddSingleton<ICommandDiscovery, AcadCommandDiscovery>();
+            services.AddSingleton<ICompiledScriptBridge, AcadCompiledScriptBridge>();
+            services.AddSingleton<IPythonBridge, AcadPythonBridge>();
+            services.AddSingleton<IIronPythonBridge, AcadIronPythonBridge>();
 
-        services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();
-        services.AddSingleton<IBuiltInMcpResource, AcadPythonCheatsheet>();
-        services.AddSingleton<AcadHistoryNavigator>();
-        services.AddSingleton<IBuiltInMcpTool, NavigateHistoryTool>();
-        services.AddSingleton<IBuiltInMcpTool, ViewScreenshotTool>();
+            services.AddExecutionServices();
+            services.AddMcpAdapter();
+            services.AddTestingHostServices();
 
-        return builder;
+            services.AddSingleton<IBuiltInMcpResource, AcadCSharpCheatsheet>();
+            services.AddSingleton<IBuiltInMcpResource, AcadPythonCheatsheet>();
+            services.AddSingleton<AcadHistoryNavigator>();
+            services.AddSingleton<IBuiltInMcpTool, NavigateHistoryTool>();
+            services.AddSingleton<IBuiltInMcpTool, ViewScreenshotTool>();
+
+            return builder;
+        }
     }
 }

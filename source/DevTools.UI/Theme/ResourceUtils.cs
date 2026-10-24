@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Windows;
-// ReSharper disable ConvertToExtensionBlock
 
 namespace DevTools.UI.Theme;
 
@@ -38,33 +37,36 @@ public static class ResourceUtils
         return _handyDarkTheme ??= GetResource("Themes/SkinDark.xaml");
     }
 
-    public static void RemoveIfNotNull(this Collection<ResourceDictionary> mergedDictionaries, ResourceDictionary? item)
+    extension(Collection<ResourceDictionary> mergedDictionaries)
     {
-        if (item != null)
+        public void RemoveIfNotNull(ResourceDictionary? item)
         {
-            mergedDictionaries.Remove(item);
-        }
-    }
-
-    public static void InsertOrReplace(this Collection<ResourceDictionary> mergedDictionaries, int index, ResourceDictionary item)
-    {
-        if (mergedDictionaries.Count > index)
-        {
-            mergedDictionaries[index] = item;
-        }
-        else
-        {
-            mergedDictionaries.Insert(index, item);
-        }
-    }
-
-    public static void RemoveAll<T>(this Collection<ResourceDictionary> mergedDictionaries) where T : ResourceDictionary
-    {
-        for (var i = mergedDictionaries.Count - 1; i >= 0; i--)
-        {
-            if (mergedDictionaries[i] is T)
+            if (item != null)
             {
-                mergedDictionaries.RemoveAt(i);
+                mergedDictionaries.Remove(item);
+            }
+        }
+
+        public void InsertOrReplace(int index, ResourceDictionary item)
+        {
+            if (mergedDictionaries.Count > index)
+            {
+                mergedDictionaries[index] = item;
+            }
+            else
+            {
+                mergedDictionaries.Insert(index, item);
+            }
+        }
+
+        public void RemoveAll<T>() where T : ResourceDictionary
+        {
+            for (var i = mergedDictionaries.Count - 1; i >= 0; i--)
+            {
+                if (mergedDictionaries[i] is T)
+                {
+                    mergedDictionaries.RemoveAt(i);
+                }
             }
         }
     }

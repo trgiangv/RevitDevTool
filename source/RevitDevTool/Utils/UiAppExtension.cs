@@ -1,6 +1,5 @@
 using UIFramework;
 using TaskDialogResult = Autodesk.Revit.UI.TaskDialogResult;
-// ReSharper disable ConvertToExtensionBlock
 
 namespace RevitDevTool.Utils;
 
@@ -11,63 +10,64 @@ namespace RevitDevTool.Utils;
 [PublicAPI]
 public static class UiAppExtension
 {
-    /// <summary>
-    /// Checks if there is an active UI document in the Revit application.
-    /// </summary>
     /// <param name="uiapp">The UIApplication instance.</param>
-    /// <returns>True if there is an active UI document; otherwise, false.</returns>
-    public static bool HasActiveUiDocument(this UIApplication uiapp)
+    extension(UIApplication uiapp)
     {
-        if (uiapp.ActiveUIDocument is not null)
+        /// <summary>
+        /// Checks if there is an active UI document in the Revit application.
+        /// </summary>
+        /// <returns>True if there is an active UI document; otherwise, false.</returns>
+        public bool HasActiveUiDocument()
         {
-            return true;
-        }
-
-        var frameManager = MainWindow.getMainWnd().frameManager;
-        var activeFrameControl = frameManager.onGetActiveFrame();
-        var activeFrameHost = activeFrameControl?.Content as MFCMDIFrameHost;
-        return activeFrameHost?.document != null;
-    }
-
-    /// <summary>
-    /// Closes all open UI documents in the Revit application.
-    /// </summary>
-    /// <param name="uiapp">The UIApplication instance.</param>
-    /// <param name="saveModified">Indicates whether to save modified documents.</param>
-    public static void CloseAllUiDocument(this UIApplication uiapp, bool saveModified = false)
-    {
-        using (new DialogBoxShowingForceResultYesNo(uiapp, saveModified))
-        {
-            foreach (var frameControl in MainWindow.getMainWnd().getAllViews())
+            if (uiapp.ActiveUIDocument is not null)
             {
-                frameControl.closeWindow();
+                return true;
             }
+
+            var frameManager = MainWindow.getMainWnd().frameManager;
+            var activeFrameControl = frameManager.onGetActiveFrame();
+            var activeFrameHost = activeFrameControl?.Content as MFCMDIFrameHost;
+            return activeFrameHost?.document != null;
         }
-    }
 
-    /// <summary>
-    /// Closes the active UI document in the Revit application.
-    /// </summary>
-    /// <param name="uiapp">The UIApplication instance.</param>
-    /// <param name="saveModified">Indicates whether to save the modified document.</param>
-    public static void CloseActiveUiDocument(this UIApplication uiapp, bool saveModified = false)
-    {
-        var frameManager = MainWindow.getMainWnd().frameManager;
-        var activeFrameControl = frameManager.onGetActiveFrame();
-        if (activeFrameControl is null) return;
-
-        var activeFrameHost = activeFrameControl.Content as MFCMDIFrameHost;
-        var activeDocument = activeFrameHost?.document;
-
-        var allViews = frameManager.getAllMDIFrames();
-        using (new DialogBoxShowingForceResultYesNo(uiapp, saveModified))
+        /// <summary>
+        /// Closes all open UI documents in the Revit application.
+        /// </summary>
+        /// <param name="saveModified">Indicates whether to save modified documents.</param>
+        public void CloseAllUiDocument(bool saveModified = false)
         {
-            foreach (var frameControl in allViews)
+            using (new DialogBoxShowingForceResultYesNo(uiapp, saveModified))
             {
-                var frameHost = frameControl.Content as MFCMDIFrameHost;
-                if (frameHost?.document == activeDocument)
+                foreach (var frameControl in MainWindow.getMainWnd().getAllViews())
                 {
                     frameControl.closeWindow();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Closes the active UI document in the Revit application.
+        /// </summary>
+        /// <param name="saveModified">Indicates whether to save the modified document.</param>
+        public void CloseActiveUiDocument(bool saveModified = false)
+        {
+            var frameManager = MainWindow.getMainWnd().frameManager;
+            var activeFrameControl = frameManager.onGetActiveFrame();
+            if (activeFrameControl is null) return;
+
+            var activeFrameHost = activeFrameControl.Content as MFCMDIFrameHost;
+            var activeDocument = activeFrameHost?.document;
+
+            var allViews = frameManager.getAllMDIFrames();
+            using (new DialogBoxShowingForceResultYesNo(uiapp, saveModified))
+            {
+                foreach (var frameControl in allViews)
+                {
+                    var frameHost = frameControl.Content as MFCMDIFrameHost;
+                    if (frameHost?.document == activeDocument)
+                    {
+                        frameControl.closeWindow();
+                    }
                 }
             }
         }

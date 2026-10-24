@@ -34,128 +34,128 @@ using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel.Settings.Visualization;
 using RevitDevTool.Visualization.Server;
 using ZLogger.Scintilla.Public;
-// ReSharper disable ConvertToExtensionBlock
 
 namespace RevitDevTool.Composition;
 
 internal static class RevitServiceRegistration
 {
-    internal static HostApplicationBuilder AddSettingServices(this HostApplicationBuilder builder, string contentRoot)
+    extension(HostApplicationBuilder builder)
     {
-        var services = builder.Services;
-        services.AddSettingServices(contentRoot);
-        services.AddSingleton<SettingsService>();
-        services.AddSingleton<IRevitSettingsService>(sp => sp.GetRequiredService<SettingsService>());
-        services.AddSingleton<ISettingsService>(sp => sp.GetRequiredService<SettingsService>());
-        return builder;
-    }
+        internal HostApplicationBuilder AddSettingServices(string contentRoot)
+        {
+            var services = builder.Services;
+            services.AddSettingServices(contentRoot);
+            services.AddSingleton<SettingsService>();
+            services.AddSingleton<IRevitSettingsService>(sp => sp.GetRequiredService<SettingsService>());
+            services.AddSingleton<ISettingsService>(sp => sp.GetRequiredService<SettingsService>());
+            return builder;
+        }
 
-    internal static HostApplicationBuilder AddLoggingServices(
-        this HostApplicationBuilder builder,
-        Action<ScintillaOptions>? configureMonitor = null)
-    {
-        builder.AddLoggingProvider();
-        builder.AddMonitorLogging(configureMonitor);
-        builder.Logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
+        internal HostApplicationBuilder AddLoggingServices(Action<ScintillaOptions>? configureMonitor = null)
+        {
+            builder.AddLoggingProvider();
+            builder.AddMonitorLogging(configureMonitor);
+            builder.Logging.AddFilter("ModelContextProtocol", LogLevel.Warning);
 #if RELEASE
         builder.Logging.SuppressHostingFrameworkLogs();
 #endif
 
-        var services = builder.Services;
-        services.AddSingleton<LoggingService>();
-        services.AddSingleton<ILoggingService>(sp => sp.GetRequiredService<LoggingService>());
-        services.AddSingleton<IHostIdlingBridge, RevitIdlingBridge>();
-        services.AddSingleton<ILogEnricherProvider, RevitLogEnricherProvider>();
+            var services = builder.Services;
+            services.AddSingleton<LoggingService>();
+            services.AddSingleton<ILoggingService>(sp => sp.GetRequiredService<LoggingService>());
+            services.AddSingleton<IHostIdlingBridge, RevitIdlingBridge>();
+            services.AddSingleton<ILogEnricherProvider, RevitLogEnricherProvider>();
 
-        return builder;
-    }
+            return builder;
+        }
 
-    internal static HostApplicationBuilder AddApplicationServices(this HostApplicationBuilder builder)
-    {
-        var services = builder.Services;
-
-        services.AddHostedService<HostBackgroundController>();
-        services.AddSingleton<IHostAppInfo, RevitHostAppInfo>();
-        services.AddSingleton<IContextEnricher>(sp =>
+        internal HostApplicationBuilder AddApplicationServices()
         {
-            var settings = sp.GetRequiredService<IRevitSettingsService>();
-            return new RevitContextProvider(settings.RevitEnrichers);
-        });
-        services.AddSingleton<PanelController>();
+            var services = builder.Services;
 
-        services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
-        services.AddSingleton<MainPage>();
-        services.AddTransient<MainWindow>();
-        services.AddPresentationServices();
+            services.AddHostedService<HostBackgroundController>();
+            services.AddSingleton<IHostAppInfo, RevitHostAppInfo>();
+            services.AddSingleton<IContextEnricher>(sp =>
+            {
+                var settings = sp.GetRequiredService<IRevitSettingsService>();
+                return new RevitContextProvider(settings.RevitEnrichers);
+            });
+            services.AddSingleton<PanelController>();
 
-        services.AddSingleton<IVisualizationBridge, RevitVisualizationBridge>();
+            services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+            services.AddSingleton<MainPage>();
+            services.AddTransient<MainWindow>();
+            services.AddPresentationServices();
 
-        // Servers
-        services.AddSingleton<BoundingBoxVisualizationServer>();
-        services.AddSingleton<FaceVisualizationServer>();
-        services.AddSingleton<PlaneVisualizationServer>();
-        services.AddSingleton<MeshVisualizationServer>();
-        services.AddSingleton<PolylineVisualizationServer>();
-        services.AddSingleton<SolidVisualizationServer>();
-        services.AddSingleton<XyzVisualizationServer>();
+            services.AddSingleton<IVisualizationBridge, RevitVisualizationBridge>();
 
-        // ViewModels
-        services.AddSingleton<BoundingBoxVisualizationViewModel>();
-        services.AddSingleton<FaceVisualizationViewModel>();
-        services.AddSingleton<MeshVisualizationViewModel>();
-        services.AddSingleton<PolylineVisualizationViewModel>();
-        services.AddSingleton<SolidVisualizationViewModel>();
-        services.AddSingleton<XyzVisualizationViewModel>();
+            // Servers
+            services.AddSingleton<BoundingBoxVisualizationServer>();
+            services.AddSingleton<FaceVisualizationServer>();
+            services.AddSingleton<PlaneVisualizationServer>();
+            services.AddSingleton<MeshVisualizationServer>();
+            services.AddSingleton<PolylineVisualizationServer>();
+            services.AddSingleton<SolidVisualizationServer>();
+            services.AddSingleton<XyzVisualizationServer>();
 
-        // Views
-        services.AddTransient<BoundingBoxVisualizationSettingsView>();
-        services.AddTransient<FaceVisualizationSettingsView>();
-        services.AddTransient<MeshVisualizationSettingsView>();
-        services.AddTransient<PolylineVisualizationSettingsView>();
-        services.AddTransient<SolidVisualizationSettingsView>();
-        services.AddTransient<XyzVisualizationSettingsView>();
+            // ViewModels
+            services.AddSingleton<BoundingBoxVisualizationViewModel>();
+            services.AddSingleton<FaceVisualizationViewModel>();
+            services.AddSingleton<MeshVisualizationViewModel>();
+            services.AddSingleton<PolylineVisualizationViewModel>();
+            services.AddSingleton<SolidVisualizationViewModel>();
+            services.AddSingleton<XyzVisualizationViewModel>();
 
-        // Command Browser + floating tools
-        services.AddSingleton<RibbonSnoopService>();
-        services.AddSingleton<CommandBrowserCache>();
-        services.AddSingleton<CommandBrowserViewModel>();
-        services.AddSingleton<CommandBrowserController>();
-        services.AddSingleton<ToolWindowService>();
-        services.AddSingleton<ElementFinderViewModel>();
+            // Views
+            services.AddTransient<BoundingBoxVisualizationSettingsView>();
+            services.AddTransient<FaceVisualizationSettingsView>();
+            services.AddTransient<MeshVisualizationSettingsView>();
+            services.AddTransient<PolylineVisualizationSettingsView>();
+            services.AddTransient<SolidVisualizationSettingsView>();
+            services.AddTransient<XyzVisualizationSettingsView>();
 
-        return builder;
-    }
+            // Command Browser + floating tools
+            services.AddSingleton<RibbonSnoopService>();
+            services.AddSingleton<CommandBrowserCache>();
+            services.AddSingleton<CommandBrowserViewModel>();
+            services.AddSingleton<CommandBrowserController>();
+            services.AddSingleton<ToolWindowService>();
+            services.AddSingleton<ElementFinderViewModel>();
 
-    internal static HostApplicationBuilder AddExecutionServices(this HostApplicationBuilder builder)
-    {
-        var services = builder.Services;
+            return builder;
+        }
 
-        services.AddSingleton<IExecutionGuard, ExecutionGuard>();
-        services.AddSingleton<IHostContextExecutor, RevitHostContextExecutor>();
-        services.AddSingleton<IDocumentBridge, RevitDocumentBridge>();
-        services.AddSingleton<HostAssemblies, RevitHostAssemblies>();
-        services.AddSingleton<ICommandRunner, RevitCommandRunner>();
-        services.AddSingleton<ICommandDiscovery, RevitCommandDiscovery>();
-        services.AddSingleton<ICompiledScriptBridge, RevitCompiledScriptBridge>();
-        services.AddSingleton<IPythonBridge, RevitPythonBridge>();
-        services.AddSingleton<IIronPythonBridge, RevitIronPythonBridge>();
+        internal HostApplicationBuilder AddExecutionServices()
+        {
+            var services = builder.Services;
 
-        services.AddExecutionServices(registerDefaultScriptProvider: false);
-        services.AddMcpAdapter();
-        services.AddTestingHostServices();
-        services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
-        services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
-        services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);
+            services.AddSingleton<IExecutionGuard, ExecutionGuard>();
+            services.AddSingleton<IHostContextExecutor, RevitHostContextExecutor>();
+            services.AddSingleton<IDocumentBridge, RevitDocumentBridge>();
+            services.AddSingleton<HostAssemblies, RevitHostAssemblies>();
+            services.AddSingleton<ICommandRunner, RevitCommandRunner>();
+            services.AddSingleton<ICommandDiscovery, RevitCommandDiscovery>();
+            services.AddSingleton<ICompiledScriptBridge, RevitCompiledScriptBridge>();
+            services.AddSingleton<IPythonBridge, RevitPythonBridge>();
+            services.AddSingleton<IIronPythonBridge, RevitIronPythonBridge>();
 
-        services.AddSingleton<IBuiltInMcpResource, RevitCSharpCheatsheet>();
-        services.AddSingleton<IBuiltInMcpResource, RevitPythonCheatsheet>();
-        services.AddSingleton<IBuiltInMcpResource, RevitModelContext>();
-        services.AddSingleton<IBuiltInMcpResource, RevitModelWarnings>();
-        services.AddSingleton<IBuiltInMcpResource, RevitVersionInfo>();
-        services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.NavigateHistoryTool>();
-        services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.ViewScreenshotTool>();
-        services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.FindElementsTool>();
+            services.AddExecutionServices(registerDefaultScriptProvider: false);
+            services.AddMcpAdapter();
+            services.AddTestingHostServices();
+            services.AddSingleton<IScriptExecutionStrategyFactory, RevitScriptExecutionStrategyFactory>();
+            services.AddSingleton<IExecutionProvider, ScriptExecutionProvider>();
+            services.AddKeyedSingleton<IExecutionProvider, ScriptExecutionProvider>(ContainerMode.Script);
 
-        return builder;
+            services.AddSingleton<IBuiltInMcpResource, RevitCSharpCheatsheet>();
+            services.AddSingleton<IBuiltInMcpResource, RevitPythonCheatsheet>();
+            services.AddSingleton<IBuiltInMcpResource, RevitModelContext>();
+            services.AddSingleton<IBuiltInMcpResource, RevitModelWarnings>();
+            services.AddSingleton<IBuiltInMcpResource, RevitVersionInfo>();
+            services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.NavigateHistoryTool>();
+            services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.ViewScreenshotTool>();
+            services.AddSingleton<IBuiltInMcpTool, DevTools.Mcp.Revit.Tools.FindElementsTool>();
+
+            return builder;
+        }
     }
 }
