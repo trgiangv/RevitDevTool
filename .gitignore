@@ -59,3 +59,6 @@ coverage*.xml
 
 # Local TestAdapter runtime
 source/DevTools.TestAdapter/build/runtime/
+
+# Local link to .agents/skills for Claude Code (symlinks are not tracked; core.symlinks=false)
+.claude/skills
