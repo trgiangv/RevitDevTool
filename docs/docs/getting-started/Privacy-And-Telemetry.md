@@ -38,6 +38,7 @@ An error report is sent only when a failure starts in RevitDevTool code. It cont
 - Exception type and message
 - Stack trace (file names only, no directories)
 - Host environment (Revit/AutoCAD version, DevTool version)
+- Runtime context added by the Sentry SDK: OS version, .NET runtime, time zone, culture, process start and boot time, memory and thread pool statistics
 
 Errors in your own scripts, commands, MCP toolsets, or tests are **not** sent. They count only as a failed operation; failing tests count as a completed run. Visualization errors are sent at most once per error type and geometry server per session. Cancellations and timeouts are never sent. Exceptions from Revit, AutoCAD, or other add-ins are ignored. Absolute paths are removed from all text before sending, and the machine name is never sent.
 

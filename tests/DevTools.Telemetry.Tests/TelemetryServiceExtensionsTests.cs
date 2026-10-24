@@ -1,6 +1,5 @@
 using DevTools.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace DevTools.Telemetry.Tests;
 
@@ -21,12 +20,11 @@ public sealed class TelemetryServiceExtensionsTests
 
     private static ITelemetry Resolve(Func<IServiceProvider, bool> isEnabled)
     {
-        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { DisableDefaults = true });
-        builder.Services.AddSingleton<IHostAppInfo>(new FakeHostAppInfo());
-        builder.AddTelemetryService(isEnabled);
-
-        using var host = builder.Build();
-        return host.Services.GetRequiredService<ITelemetry>();
+        using var provider = new ServiceCollection()
+            .AddSingleton<IHostAppInfo>(new FakeHostAppInfo())
+            .AddTelemetryService(isEnabled)
+            .BuildServiceProvider();
+        return provider.GetRequiredService<ITelemetry>();
     }
 
     private sealed class FakeHostAppInfo : IHostAppInfo

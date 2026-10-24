@@ -9,7 +9,7 @@ namespace DevTools.Telemetry;
 /// </summary>
 public sealed class SentryTelemetry : ITelemetry
 {
-    private const string Dsn = "https://2e64ea9f4ccffe2bbb4d6e8757515962@o4510710170845184.ingest.de.sentry.io/4511389304815696";
+    internal const string Dsn = "https://2e64ea9f4ccffe2bbb4d6e8757515962@o4510710170845184.ingest.de.sentry.io/4511389304815696";
 
     private readonly IDisposable _sdkHandle;
     private readonly ConcurrentDictionary<string, byte> _reportedErrors = new();
@@ -19,13 +19,13 @@ public sealed class SentryTelemetry : ITelemetry
     {
     }
 
-    internal SentryTelemetry(IHostAppInfo hostApp, string dsn)
+    internal SentryTelemetry(IHostAppInfo hostApp, string dsn, string? environment = null, string? userId = null)
     {
         ArgumentNullException.ThrowIfNull(hostApp);
         ArgumentException.ThrowIfNullOrWhiteSpace(dsn);
 
         var version = typeof(SentryTelemetry).Assembly.GetName().Version?.ToString() ?? "0.0.0";
-        var userId = UserIdentity.Get();
+        userId ??= UserIdentity.Get();
         var hostName = hostApp.Host.ToString();
         var release = $"devtool-{hostName}@{version}";
 
@@ -33,6 +33,11 @@ public sealed class SentryTelemetry : ITelemetry
         {
             o.Dsn = dsn;
             o.Release = release;
+            if (environment is not null)
+            {
+                o.Environment = environment;
+            }
+
             o.IsGlobalModeEnabled = true;
             o.SendDefaultPii = false;
             o.DefaultTags[TelemetryKeys.Tag.HostApp] = hostName;
@@ -91,10 +96,11 @@ public sealed class SentryTelemetry : ITelemetry
         _sdkHandle.Dispose();
     }
 
-    private static void Report(Exception exception, string operation, string kind)
+    private static void Report(Exception exception, string operation, string kind, ISpan? span = null)
     {
         SentrySdk.CaptureException(exception, scope =>
         {
+            scope.Span = span;
             scope.SetTag(TelemetryKeys.Tag.Operation, operation);
             scope.SetTag(TelemetryKeys.Tag.Provider, kind);
         });
@@ -122,10 +128,13 @@ public sealed class SentryTelemetry : ITelemetry
                 return;
             }
 
-            if (End(SpanStatus.InternalError))
+            if (Volatile.Read(ref _ended) != 0)
             {
-                Report(exception, operation, kind);
+                return;
             }
+
+            Report(exception, operation, kind, transaction);
+            End(SpanStatus.InternalError);
         }
 
         public void Dispose() => Cancel();
