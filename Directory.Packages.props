@@ -27,8 +27,8 @@
         <PackageVersion Include="pythonnet" Version="3.2.1" />
         <PackageVersion Include="IronPython" Version="3.4.2" />
         <!--MCP-->
-        <PackageVersion Include="ModelContextProtocol" Version="2.2.0" />
-        <PackageVersion Include="ModelContextProtocol.Extensions.Tasks" Version="2.2.0" />
+        <PackageVersion Include="ModelContextProtocol" Version="2.3.0" />
+        <PackageVersion Include="ModelContextProtocol.Extensions.Tasks" Version="2.3.0" />
         <!--FSharp-->
         <PackageVersion Include="FSharp.Core" Version="11.0.101-rc1.26425.128" />
         <PackageVersion Include="FSharp.Compiler.Service" Version="43.13.101-rc1.26425.128" />
