@@ -5,6 +5,13 @@ Use `docs/templates/exec-plan.md`, keep progress and validation current, avoid
 parallel duplicate plans for the same workstream, and move a plan to
 `../completed/` only after the result is verified.
 
+## Auto-update (active)
+
+Velopack Daemon package plus custom per-year folders
+([0046](../../decisions/0046-per-year-release-payloads-and-update-manifest.md)–[0053](../../decisions/0053-velopack-for-daemon-distribution.md)):
+[2026-10-25-auto-update](2026-10-25-auto-update.md). `dotnet run --project build -- pack`
+produces the new release assets; the Inno installer is removed.
+
 ## Daemon
 
 Production publish is framework-dependent single-file. Native AOT is dropped

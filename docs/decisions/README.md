@@ -69,6 +69,18 @@ here.
   and landed (2026-10-24). One Sentry transaction per execution, MCP call, and
   in-host test run. Errors only for DevTools code; external code is marked.
   The user identity is an HMAC of the machine GUID and the account SID.
+  [0046](0046-per-year-release-payloads-and-update-manifest.md)–[0053](0053-velopack-for-daemon-distribution.md)
+  are **Proposed** auto-update. Velopack installs and self-updates a
+  self-contained Daemon under `%LOCALAPPDATA%\RevitDevTool\` (0053, 0052:
+  crash-on-start rollback). Custom code in `DevTools.Update` handles Autodesk
+  year folders only: one signed-manifest asset per year, a first-run host
+  picker (0047), hourly checks without the REST API, per-year lock and apply
+  that never ends host processes, and `auto` (default)/`notify`/`off` modes with
+  toasts. Not shipped.
+  [0054](0054-release-automation-channels-and-4-0-cutover.md) is **Proposed**:
+  next stable is 4.0.0 after `4.0.0-beta.N` on the `prerelease` channel; the release
+  waits for green CI on the SHA, verifies signatures with the shipped public key,
+  and `TestReleaseInstall.yml` installs the published `Setup.exe` on a clean runner.
 
 ## Index
 
@@ -116,3 +128,12 @@ here.
 | [0043](0043-ipc-shared-infrastructure-separate-protocols.md) | Shared `DevTools.Ipc`; test pipe, MCP pipe, daemon control pipe | Accepted — landed 2026-10-13 |
 | [0044](0044-hybrid-tool-retrieval.md) | Evaluate hybrid retrieval only if lexical baseline misses labeled tasks | Proposed |
 | [0045](0045-sentry-telemetry-operations-and-internal-errors.md) | Sentry telemetry: operations, sessions, internal errors only | Accepted — landed 2026-10-24 |
+| [0046](0046-per-year-release-payloads-and-update-manifest.md) | Per-year release payloads and update manifest | Proposed |
+| [0047](0047-velopack-setup-and-host-picker.md) | Velopack Setup plus a first-run host picker replaces Inno Setup | Proposed |
+| [0048](0048-daemon-hosted-update-engine.md) | Update engine in `DevTools.Update`, hosted by the Daemon | Proposed |
+| [0049](0049-lock-aware-per-year-apply.md) | Lock-aware per-year apply, mixed versions, rollback | Proposed |
+| [0050](0050-update-policy-and-toast-notifications.md) | Update modes and Windows toast notifications | Proposed |
+| [0051](0051-update-integrity-and-trust.md) | Update integrity and trust | Proposed |
+| [0052](0052-updater-self-update.md) | Updater self-update through Velopack, plus crash-on-start rollback | Proposed |
+| [0053](0053-velopack-for-daemon-distribution.md) | Velopack owns Daemon install and self-update; year folders stay custom | Proposed |
+| [0054](0054-release-automation-channels-and-4-0-cutover.md) | Release automation, channels, and the 4.0.0 cutover | Proposed |
