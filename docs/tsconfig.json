@@ -8,7 +8,8 @@
     "moduleResolution": "bundler",
     "module": "esnext",
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "strict": true
   },
   "include": ["docusaurus.config.ts", "sidebars.ts", "src"]
 }

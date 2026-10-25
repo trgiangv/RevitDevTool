@@ -3,7 +3,7 @@ import Microsoft from '@lobehub/icons/es/Microsoft';
 import {FileText, FlaskConical, LayoutDashboard, Play} from 'lucide-react';
 import DocSidebarItemCategoryOriginal from '@theme-original/DocSidebarItem/Category';
 
-type Props = React.ComponentProps<typeof DocSidebarItemCategoryOriginal>;
+type Props = Readonly<React.ComponentProps<typeof DocSidebarItemCategoryOriginal>>;
 
 export default function DocSidebarItemCategory(props: Props) {
   if (props.item.className?.includes('sidebar-icon--microsoft')) {
