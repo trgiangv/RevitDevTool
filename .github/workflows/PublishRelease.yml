@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (e.g. 3.1.0, 3.1.0-beta.1)"
+        description: "Release version (e.g. 4.0.0, 4.0.0-beta.1)"
         required: false
         type: string
 
@@ -15,17 +15,42 @@ concurrency:
   group: publish-release
   cancel-in-progress: false
 
+permissions:
+  contents: write
+  actions: read
+
 jobs:
   windows:
     name: windows-2025
+    if: github.repository == 'trgiangv/RevitDevTool'
     runs-on: windows-2025
+    environment: release
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           submodules: recursive
+
+      - name: Wait for green CI on this commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            run_id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow Compile.yml --commit "$GITHUB_SHA" --event push --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+            if [ -n "$run_id" ]; then
+              echo "Compile.yml run $run_id"
+              gh run watch "$run_id" -R "$GITHUB_REPOSITORY" --exit-status
+              exit 0
+            fi
+            echo "No Compile.yml run for $GITHUB_SHA yet ($attempt/60)"
+            sleep 20
+          done
+          echo "::error::No Compile.yml push run exists for $GITHUB_SHA. Push the commit to a branch first."
+          exit 1
 
       - name: Create release tag
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.version != ''
@@ -36,7 +61,7 @@ jobs:
           git push origin ${{ github.event.inputs.version }}
 
       - name: Cache packages
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props') }}
@@ -49,6 +74,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOTNET_ENVIRONMENT: Production
           Build__Version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
+          Update__SigningKey: ${{ secrets.UPDATE_SIGNING_KEY }}
+          Update__RequireSignature: true
 
       - name: Fast-forward develop to include release tag
         if: success()

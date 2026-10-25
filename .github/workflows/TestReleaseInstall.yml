@@ -1,0 +1,90 @@
+name: Test release install
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to install (e.g. 4.0.0-beta.1)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: test-release-install-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: windows-2025
+    if: github.repository == 'trgiangv/RevitDevTool'
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+
+      - name: Install the published Setup
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          gh release download $env:TAG -R $env:GITHUB_REPOSITORY -p RevitDevTool-Setup.exe -D setup
+          Start-Process setup\RevitDevTool-Setup.exe -ArgumentList '--silent' -Wait
+          $app = Join-Path $env:LOCALAPPDATA 'RevitDevTool\current'
+          if (-not (Test-Path (Join-Path $app 'DevTools.Daemon.exe'))) { throw "Velopack did not install the Daemon in $app." }
+          if (-not (Test-Path (Join-Path $app 'DevTools.TestRunner.exe'))) { throw "Velopack did not install the TestRunner in $app." }
+          "APP=$app" >> $env:GITHUB_ENV
+
+      - name: Install payloads with --select
+        shell: pwsh
+        env:
+          Update__GitHubToken: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $daemon = Join-Path $env:APP 'DevTools.Daemon.exe'
+          $arguments = '--select "Revit 2025" --select "AutoCAD 2025"'
+          $process = Start-Process $daemon -ArgumentList $arguments -Wait -PassThru -RedirectStandardOutput select.out.txt -RedirectStandardError select.err.txt
+          Get-Content select.out.txt, select.err.txt
+          if ($process.ExitCode -ne 0) { throw "--select exited with $($process.ExitCode)." }
+
+      - name: Check the installation
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bundle = Join-Path $env:APPDATA 'Autodesk\ApplicationPlugins\RevitDevTool.bundle'
+          $installation = Get-Content (Join-Path $bundle 'installation.json') -Raw | ConvertFrom-Json
+          $payload = $installation.payloads | Where-Object hostVersion -eq '2025'
+          if ($payload.version -ne $env:TAG) { throw "Payload 2025 is '$($payload.version)', not $env:TAG." }
+
+          [xml]$package = Get-Content (Join-Path $bundle 'PackageContents.xml')
+          $modules = $package.ApplicationPackage.Components.ComponentEntry.ModuleName
+          foreach ($module in './Contents/2025/RevitDevTool.addin', './Contents/2025/AcadDevTool.dll') {
+            if ($modules -notcontains $module) { throw "PackageContents.xml has no $module." }
+            if (-not (Test-Path (Join-Path $bundle $module))) { throw "$module is not on disk." }
+          }
+          if (Test-Path (Join-Path $bundle 'Contents\DevTools.Daemon.exe')) { throw 'The bundle must not contain the Daemon.' }
+
+      - name: Start the TestRunner and the MCP server
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $runner = Start-Process (Join-Path $env:APP 'DevTools.TestRunner.exe') -ArgumentList '--version' -Wait -PassThru -RedirectStandardOutput runner.txt
+          if ($runner.ExitCode -ne 0) { throw "TestRunner --version exited with $($runner.ExitCode)." }
+
+          New-Item empty.txt -ItemType File -Force | Out-Null
+          $mcp = Start-Process (Join-Path $env:APP 'DevTools.Daemon.exe') -ArgumentList '--stdio' -PassThru -RedirectStandardInput empty.txt -RedirectStandardOutput mcp.out.txt -RedirectStandardError mcp.err.txt
+          if (-not $mcp.WaitForExit(60000)) { $mcp.Kill(); throw 'DevTools.Daemon.exe --stdio did not stop when its input ended.' }
+          if ($mcp.ExitCode -ne 0) { Get-Content mcp.err.txt; throw "DevTools.Daemon.exe --stdio exited with $($mcp.ExitCode)." }
+
+      - name: Report a failure
+        if: failure()
+        shell: pwsh
+        run: |
+          gh issue create -R $env:GITHUB_REPOSITORY --label bug `
+            --title "Release install test failed: $env:TAG" `
+            --body "The install test of $env:TAG failed: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"

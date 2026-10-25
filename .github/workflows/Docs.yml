@@ -2,15 +2,25 @@ name: Build documentation site
 
 on:
   push:
-    branches: [develop, main]
-    paths:
-      - 'docs/**'
+    branches: [develop]
+    paths: &site
+      - 'docs/docs/**'
+      - 'docs/src/**'
+      - 'docs/static/**'
+      - 'docs/docusaurus.config.ts'
+      - 'docs/sidebars.ts'
+      - 'docs/package.json'
+      - 'docs/bun.lock'
+      - 'docs/tsconfig.json'
       - '.github/workflows/Docs.yml'
   pull_request:
-    paths:
-      - 'docs/**'
-      - '.github/workflows/Docs.yml'
+    paths: *site
+  release:
+    types: [published]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: docs-${{ github.workflow }}-${{ github.ref }}
@@ -19,19 +29,20 @@ concurrency:
 jobs:
   build:
     name: Build Docusaurus
+    if: github.event_name != 'release' || !github.event.release.prerelease
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: docs
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           lfs: true
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: 1.4.2
 
@@ -45,14 +56,14 @@ jobs:
         run: bun run build
 
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: docs/build
 
   deploy:
     name: Deploy to GitHub Pages
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -64,4 +75,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

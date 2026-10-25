@@ -2,12 +2,15 @@ name: Compile solution
 
 on:
   push:
-    branches:
-      - '*'
-    tags-ignore:
-      - '*'
+    branches: [develop, main]
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: compile-${{ github.ref }}
@@ -20,13 +23,13 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
           submodules: recursive
 
       - name: Cache packages
-        uses: actions/cache@v5
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props') }}
@@ -39,11 +42,25 @@ jobs:
           DOTNET_ENVIRONMENT: ${{ github.ref_name == 'main' && 'Production' || 'Development' }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: build-output
           path: |
-            output/*.zip
-            output/*.exe
+            output/RevitDevTool.bundle.zip
+            output/RevitDevTool-Setup.exe
+            output/update-manifest.json
+            output/releases.*.json
           if-no-files-found: warn
+          retention-days: 3
+
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: diagnostics
+          path: |
+            **/log_*.diag
+            **/hangdump*
+            **/*.binlog
+          if-no-files-found: ignore
           retention-days: 7
