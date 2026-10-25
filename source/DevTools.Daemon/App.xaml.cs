@@ -1,5 +1,7 @@
 using DevTools.Daemon.Control;
+using DevTools.Daemon.Desktop.Updates;
 using DevTools.Daemon.Desktop.Views;
+using DevTools.Update.Engine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Windows;
@@ -31,6 +33,7 @@ public partial class App
             _host.Services.GetRequiredService<TrayMenu>().Start();
 
             await _host.StartAsync();
+            _host.Services.GetRequiredService<UpdateTray>().ShowSetupIfNotConfigured(_host.Services.GetRequiredService<DaemonUpdater>());
         }
         catch (Exception ex)
         {

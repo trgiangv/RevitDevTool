@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using System.IO;
 
 namespace DevTools.Daemon.Control;
 
@@ -15,9 +16,27 @@ public static class StartupRegistration
         }
     }
 
-    public static void Enable()
+    /// <summary>
+    ///     The Velopack stub beside <c>current\</c> when installed by Velopack, so the Run value survives updates.
+    /// </summary>
+    public static string? DefaultExePath
     {
-        var exePath = Environment.ProcessPath;
+        get
+        {
+            var processPath = Environment.ProcessPath;
+            if (processPath is null) return null;
+
+            var folder = Path.GetDirectoryName(processPath);
+            if (!string.Equals(Path.GetFileName(folder), "current", StringComparison.OrdinalIgnoreCase)) return processPath;
+
+            var stub = Path.Combine(Path.GetDirectoryName(folder)!, Path.GetFileName(processPath));
+            return File.Exists(stub) ? stub : processPath;
+        }
+    }
+
+    public static void Enable(string? exePath = null)
+    {
+        exePath ??= DefaultExePath;
         if (exePath is null) return;
 
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);

@@ -1,8 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DevTools.Daemon.Desktop.Helpers;
+using DevTools.Daemon.Desktop.Updates;
 using DevTools.Daemon.Desktop.ViewModels;
+using DevTools.Update.Engine;
 using HandyControl.Controls;
+using HandyControl.Data;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -20,10 +23,16 @@ public partial class TrayMenu : ObservableObject
     [ObservableProperty]
     public partial string StatusText { get; set; } = DefaultStatusText;
 
-    public TrayMenu(ShellViewModel state, MainWindow window)
+    public TrayMenu(ShellViewModel state, MainWindow window, UpdateTray? updates = null)
     {
         _state = state;
         _window = window;
+        Updates = updates;
+        if (updates is not null)
+        {
+            updates.NoticeRaised += ShowNotice;
+            updates.ShowUpdatesRequested += ShowUpdatesTab;
+        }
         ThemeHelper.Changed += ApplyIcon;
         _state.Overview.PropertyChanged += (_, args) =>
         {
@@ -52,6 +61,8 @@ public partial class TrayMenu : ObservableObject
         _notify.Init();
     }
 
+    public UpdateTray? Updates { get; }
+
     public void ShowMainWindow()
     {
         UiDispatchHelper.Send(() =>
@@ -78,6 +89,19 @@ public partial class TrayMenu : ObservableObject
     partial void OnStatusTextChanged(string value)
     {
         _notify?.Text = value;
+    }
+
+    private void ShowUpdatesTab(bool check)
+    {
+        _state.SelectedTabIndex = ShellViewModel.UpdatesTabIndex;
+        ShowMainWindow();
+        if (check) _ = _state.Updates?.CheckAfterLoadAsync();
+    }
+
+    private void ShowNotice(UpdateNotice notice)
+    {
+        var type = notice.Kind == UpdateNoticeKind.Failed ? NotifyIconInfoType.Error : NotifyIconInfoType.Info;
+        _notify?.ShowBalloonTip(notice.Title, notice.Message, type);
     }
 
     private void ApplyIcon()

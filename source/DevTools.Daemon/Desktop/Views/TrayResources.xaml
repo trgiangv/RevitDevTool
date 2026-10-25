@@ -13,6 +13,11 @@
                   Header="Sign In" />
         <MenuItem Command="{Binding SignOutCommand}" Header="Sign Out" />
         <Separator />
+        <MenuItem Command="{Binding Updates.RunActionCommand}"
+                  Header="{Binding Updates.ActionHeader}"
+                  Visibility="{Binding Updates.HasAction, Converter={StaticResource Boolean2VisibilityConverter}, FallbackValue=Collapsed}" />
+        <MenuItem Command="{Binding Updates.CheckForUpdatesCommand}" Header="Check for updates" />
+        <Separator />
         <MenuItem Margin="0,0,0,4"
                   Command="{Binding ExitApplicationCommand}"
                   Header="Quit" />

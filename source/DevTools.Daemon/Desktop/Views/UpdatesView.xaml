@@ -1,0 +1,77 @@
+<UserControl x:Class="DevTools.Daemon.Desktop.Views.UpdatesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:desktop="clr-namespace:DevTools.Daemon.Desktop.ViewModels"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:updates="clr-namespace:DevTools.Daemon.Desktop.Updates"
+             d:DataContext="{d:DesignInstance desktop:ShellViewModel}"
+             d:DesignHeight="400"
+             d:DesignWidth="400"
+             mc:Ignorable="d">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <hc:LoadingLine Margin="0,0,0,8" Visibility="{Binding Updates.IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}" />
+
+        <TextBlock Grid.Row="1"
+                   Margin="0,0,0,4"
+                   Foreground="{DynamicResource PrimaryTextBrush}"
+                   Text="{Binding Updates.Status}"
+                   TextWrapping="Wrap" />
+        <TextBlock Grid.Row="2"
+                   Margin="0,0,0,8"
+                   FontSize="11"
+                   Foreground="{DynamicResource ThirdlyTextBrush}"
+                   Text="{Binding Updates.Installed}"
+                   TextWrapping="Wrap" />
+
+        <ListBox Grid.Row="3"
+                 ItemsSource="{Binding Updates.Rows}"
+                 Style="{StaticResource ListBoxBaseStyle}">
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="updates:TargetRow">
+                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Style="{StaticResource CheckBoxBaseStyle}">
+                        <StackPanel>
+                            <TextBlock Foreground="{DynamicResource PrimaryTextBrush}" Text="{Binding Component.Description}" />
+                            <TextBlock FontSize="11"
+                                       Foreground="{DynamicResource ThirdlyTextBrush}"
+                                       Text="{Binding Detail}" />
+                        </StackPanel>
+                    </CheckBox>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="4" Margin="0,12,0,0">
+            <CheckBox Content="Install updates automatically"
+                      IsChecked="{Binding Updates.AutoUpdate, Mode=TwoWay}"
+                      Style="{StaticResource CheckBoxBaseStyle}" />
+            <CheckBox Margin="0,8,0,0"
+                      Content="Include pre-releases"
+                      IsChecked="{Binding Updates.IncludePrereleases, Mode=TwoWay}"
+                      Style="{StaticResource CheckBoxBaseStyle}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="5"
+                    Margin="0,12,0,0"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+            <Button Margin="0,0,8,0"
+                    Command="{Binding Updates.CheckForUpdatesCommand}"
+                    Content="Check for updates"
+                    Style="{StaticResource ButtonDefault}" />
+            <Button Command="{Binding Updates.ApplyCommand}"
+                    Content="Apply"
+                    Style="{StaticResource ButtonPrimary}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

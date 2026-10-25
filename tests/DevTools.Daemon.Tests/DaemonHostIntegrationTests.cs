@@ -1,5 +1,6 @@
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
+using DevTools.Daemon.Desktop.ViewModels;
 using DevTools.Daemon.Desktop.Views;
 using DevTools.Daemon.Tests.Support;
 using DevTools.Daemon.Tunnel;
@@ -24,6 +25,8 @@ public sealed class DaemonHostIntegrationTests
             Assert.IsNotNull(host.Services.GetService<ControlHandler>());
             Assert.IsNotNull(host.Services.GetService<TunnelHostedService>());
             Assert.IsNotNull(host.Services.GetService<ITunnelStatusProvider>());
+            Assert.IsNotNull(host.Services.GetRequiredService<TrayMenu>().Updates);
+            Assert.IsNotNull(host.Services.GetRequiredService<ShellViewModel>().Updates);
         });
     }
 

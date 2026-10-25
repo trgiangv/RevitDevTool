@@ -1,6 +1,7 @@
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Desktop.Models;
+using DevTools.Daemon.Desktop.Updates;
 using DevTools.Daemon.Desktop.ViewModels;
 using DevTools.Daemon.Desktop.Views;
 using DevTools.Daemon.Logging;
@@ -14,6 +15,8 @@ using DevTools.FileMetadata.Revit;
 using DevTools.Hosting;
 using DevTools.Hosting.Acad;
 using DevTools.Hosting.Revit;
+using DevTools.Update;
+using DevTools.Update.Engine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,11 +35,33 @@ public static class AppHostBuilder
         builder.Services.AddSingleton<TunnelHostedService>();
         builder.Services.AddHostedService(sp => sp.GetRequiredService<TunnelHostedService>());
         builder.Services.AddSingleton<ITunnelStatusProvider>(sp => sp.GetRequiredService<TunnelHostedService>());
+        AddUpdates(builder);
+        builder.Services.AddSingleton<UpdateTray>();
+        builder.Services.AddSingleton<UpdateNotices>();
+        builder.Services.AddSingleton<IUpdateNotifier>(sp => sp.GetRequiredService<UpdateNotices>());
+        builder.Services.AddSingleton<UpdatesViewModel>();
         builder.Services.AddSingleton<ShellViewModel>();
         builder.Services.AddSingleton<MainWindow>();
         builder.Services.AddSingleton<TrayMenu>();
 
         return builder.Build();
+    }
+
+    /// <summary>
+    ///     Headless host for <c>--select</c>: the update engine without UI, scheduler, or pipes.
+    /// </summary>
+    public static IHost CreateUpdateHost()
+    {
+        var builder = CreateBuilder();
+        FileLogging.Configure(builder.Logging, builder.Configuration, clearProviders: true);
+        AddUpdates(builder);
+        return builder.Build();
+    }
+
+    private static void AddUpdates(HostApplicationBuilder builder)
+    {
+        builder.Services.Configure<UpdateEngineOptions>(builder.Configuration.GetSection(UpdateEngineOptions.SectionName));
+        builder.Services.AddUpdateEngine();
     }
 
     public static IHost CreateStdioHost(string[]? args = null)

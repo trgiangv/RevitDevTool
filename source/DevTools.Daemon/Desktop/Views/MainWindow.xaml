@@ -25,5 +25,8 @@
         <TabItem Header="Settings">
             <views:SettingsView />
         </TabItem>
+        <TabItem Header="Updates">
+            <views:UpdatesView />
+        </TabItem>
     </TabControl>
 </Window>
