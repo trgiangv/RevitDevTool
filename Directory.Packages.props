@@ -44,10 +44,14 @@
         <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
         <GlobalPackageReference Include="Polyfill" Version="11.4.5" />
         <PackageVersion Include="Microsoft-WindowsAPICodePack-Shell" Version="1.1.5" />
+        <!-- Assembly -->
         <PackageVersion Include="Lokad.ILPack" Version="0.3.1" />
         <PackageVersion Include="Lib.Harmony" Version="2.4.3" />
         <!--Auth-->
         <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.1" />
+        <!--Update-->
+        <PackageVersion Include="Velopack" Version="1.2.161" />
+        <PackageVersion Include="Octokit" Version="14.0.0" />
         <!--Console-->
         <PackageVersion Include="CliWrap" Version="3.10.5" />
         <PackageVersion Include="ConsoleAppFramework" Version="5.7.13" />
