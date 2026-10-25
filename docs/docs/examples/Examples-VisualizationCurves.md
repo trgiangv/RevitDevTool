@@ -1,6 +1,6 @@
 # Example: Curve Visualization
 
-**Demo:** Visualize curves and edges in 3D view
+**Demo:** Visualize curves and edges in the Revit view
 **Script:** [`visualization_curve_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/visualization_curve_script.py)
 **Time:** 1-2 minutes
 
@@ -11,7 +11,7 @@
 - Pick edges from elements
 - Extract location curves from walls
 - Generate lines, arcs, and splines
-- Display geometry in 3D view without creating model elements
+- Display geometry in the active view without creating model elements
 
 ---
 
@@ -27,12 +27,12 @@ elem = doc.GetElement(ref)
 edge = elem.GetGeometryObjectFromReference(ref)
 
 if edge:
-    print(edge)  # Auto-visualized in 3D view
+    print(edge)  # Auto-visualized in the active view
 ```
 
 **Result:**
 - User picks edge in Revit
-- Edge highlighted in 3D view
+- Edge highlighted in the active view
 - Color-coded for visibility
 
 ---
@@ -87,7 +87,7 @@ print(arc)
 1. **Load** folder: `samples/PythonDemo/commands/`
 2. **Execute** `visualization_curve_script.py`
 3. **Pick** edges when prompted (or ESC to skip)
-4. **See** geometry in 3D view
+4. **See** geometry in the active view
 
 **Full source:** [`visualization_curve_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/visualization_curve_script.py)
 

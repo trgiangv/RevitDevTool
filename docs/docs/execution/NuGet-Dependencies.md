@@ -2,29 +2,37 @@
 
 RevitDevTool supports NuGet references for C# scripts, F# scripts, and compiled .NET projects. This page is the shared guide for resolving packages, keeping host API references aligned, and diagnosing restore problems.
 
+<LogoRow items={['nuget', 'dotnet', 'csharp', 'fsharp']} />
+
 ## Where NuGet applies
 
 | Workflow | Syntax or source | Best use |
 | --- | --- | --- |
-| C# script | `#r "nuget: Package, Version"` | Add a library to a `.csx` without creating a project |
-| F# script | `#r "nuget: Package, Version"` | Reference libraries from an `.fsx` script |
-| .NET assembly | Project `PackageReference` | Build a repeatable add-in or command assembly |
+| <ProductLogo name="csharp" size={16} /> [C# script](/docs/execution/csharp-script/Execution-CSharp) | `#r "nuget: Package, Version"` | Add a library to a `.csx` without creating a project |
+| <ProductLogo name="fsharp" size={16} /> [F# script](/docs/execution/fsharp-script/Execution-FSharp) | `#r "nuget: Package, Version"` | Reference libraries from an `.fsx` script |
+| <ProductLogo name="dotnet" size={16} /> [.NET assembly](/docs/execution/dotnet-assembly/Execution-Assembly) | Project `PackageReference` | Build a repeatable add-in or command assembly |
 
-Python dependencies use PEP 723 metadata and PyPI/conda-forge instead. See [Modern Python Scripting](/docs/execution/python/Execution-Python).
+:::info Python is different
+Python dependencies use PEP 723 metadata and PyPI or conda-forge instead of NuGet. See [Python Dependencies](/docs/execution/Python-Dependencies).
+:::
 
 ## C# and F# scripts
 
-Declare the package directly in the script:
+Scripts resolve their own packages, so you do not need a project file. Declare the package directly in the script:
 
-```csharp
+```csharp title="main_script.csx"
 #r "nuget: Humanizer, 2.14.1"
 ```
 
-```fsharp
+```fsharp title="main_script.fsx"
 #r "nuget: MathNet.Numerics, 5.0.0"
 ```
 
 The shared resolver restores packages under `%APPDATA%\RevitDevTool\nuget`. Keep versions explicit while debugging or sharing a script so another machine resolves the same dependency graph.
+
+:::tip Pin the version
+`#r "nuget: Humanizer"` without a version works while you explore, but a later release can change the result. Pin it once the script works.
+:::
 
 ## Compiled assemblies
 

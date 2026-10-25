@@ -10,15 +10,18 @@ RevitDevTool uses product names and small reference icons only to describe suppo
 
 | Reference | Asset source | Notes |
 | --- | --- | --- |
-| Revit | [Revit product icon](https://www.autodesk.com/products/revit/overview) | Autodesk product mark; used to identify the supported host |
-| AutoCAD | [AutoCAD product icon](https://www.autodesk.com/products/autocad/overview) | Autodesk product mark; used to identify the supported host |
-| .NET | [.NET brand repository](https://github.com/dotnet/brand) | Microsoft .NET brand asset |
-| C# | [C# logo source](https://commons.wikimedia.org/wiki/File:C_Sharp_Logo_2023.svg) | Used to identify the language |
-| Python / F# / pytest / VS Code | [Devicon](https://github.com/devicons/devicon) | Reference icons; see the repository license |
+| Revit, AutoCAD, Civil 3D, Plant 3D | [Autodesk products](https://www.autodesk.com/products) | Autodesk product marks; used only to identify the supported hosts |
+| .NET, C#, F# | [.NET brand repository](https://github.com/dotnet/brand) | Microsoft .NET brand assets (language icons); used to identify the platform and languages |
+| Python / pytest / VS Code | [Devicon](https://github.com/devicons/devicon) | Reference icons; see the repository license |
+| Debugger (bug) | [Lucide](https://lucide.dev/) | Sidebar icon, ISC license |
 | IronPython | [IronPython logo source](https://github.com/IronLanguages/ironpython3/blob/master/Documentation/logo.svg) | Used to identify the runtime |
 | NUnit | [NUnit repository](https://github.com/nunit/nunit) | NUnit code is MIT licensed; the name and logo remain project branding |
 | TUnit | [TUnit repository](https://github.com/thomhurst/TUnit) | TUnit project branding |
 | MCP | [LobeHub Lobe Icons](https://github.com/lobehub/lobe-icons) | MCP reference icon |
+| NuGet, PyPI, conda-forge, uv, pytest, MCP, Cursor, Claude, GitHub Copilot | [Simple Icons](https://simpleicons.org/) | Glyphs are CC0; the marks remain trademarks of their owners |
+| pyRevit | [pyRevit repository](https://github.com/pyrevitlabs/pyRevit) | pyRevit project logo, used to identify the engine and compatibility |
+| Dynamo | [Dynamo repository](https://github.com/DynamoDS/Dynamo) | Dynamo project logo, used to identify the product |
+| Pixi | [Pixi repository](https://github.com/prefix-dev/pixi) | Pixi project logo, used to identify the package manager |
 
 ## Usage boundary
 

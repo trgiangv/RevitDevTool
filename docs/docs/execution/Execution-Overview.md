@@ -1,6 +1,8 @@
 # Execution Overview
 
-Use Execution when you want to run automation code inside the host without a slow rebuild/restart loop.
+Use Execution when you want to run automation code inside the host without a slow rebuild/restart loop. Turn on the **Execution** toggle in the panel to see your scripts, then use **Load Scripts** or **Load .NET Assembly** to add sources.
+
+![Running a script from the RevitDevTool panel](/images/features/Feature_Execution.gif)
 
 Execution has two main user-facing paths:
 
@@ -11,12 +13,12 @@ Execution has two main user-facing paths:
 
 ## Capability Table
 
-This table is the source of truth for what each runtime supports today.
+What each runtime supports:
 
 | Runtime | Entry suffix | Debugger | Packages / references | Hosts |
 | --- | --- | --- | --- | --- |
-| CPython | `*script.py` | **Yes** — `debugpy` attach (default port 5678) | **Pixi** (conda-forge + PyPI) default; pip / pyRevit `cengines` fallback. **uv sidecar only on Plant 3D** — an AutoCAD-family exception where the host already embeds CPython; not a separate claimed host | Revit, AutoCAD-family (Pixi 3.14). Plant 3D uses host attach + uv sidecar — see [Modern Python Scripting](/docs/execution/python/Execution-Python) |
-| IronPython | `*_ipy_script.py` | **No** attach | No PEP 723 / package manager | Revit + AutoCAD-family |
+| CPython | `*script.py` | **Yes** — attach your IDE (preferred port 5678) | **Pixi** (conda-forge + PyPI) default; pyRevit CPython engine fallback. **uv sidecar only on Plant 3D**, where the host already embeds CPython | Revit, AutoCAD, Civil 3D (CPython 3.14). Plant 3D uses its built-in CPython with uv — see [Modern Python Scripting](/docs/execution/python/Execution-Python) |
+| IronPython | `*_ipy_script.py` | **Yes** — attach your IDE (preferred port 4567) | No PEP 723 / package manager | Revit + AutoCAD-family |
 | C# script | `*script.csx` | **Yes** — attach to host process (VS / VS Code) | `#r "nuget: …"` via NuGet resolver | Revit + AutoCAD-family |
 | F# script | `*script.fsx` | **Yes** — attach to host process (VS / VS Code) | `#r "nuget: …"`; cache `%APPDATA%\RevitDevTool\nuget` | Revit + AutoCAD-family |
 | .NET assembly | `.dll` | **Yes** — attach to host process (VS / VS Code) | Compiled references | Revit + AutoCAD-family |
@@ -25,7 +27,7 @@ This table is the source of truth for what each runtime supports today.
 
 | Host | Engine |
 | --- | --- |
-| **Revit** | pyRevit engine first when pyRevit is loaded (default **IronPython 2.7.12**); embedded **IronPython 3.4.2** fallback |
+| **Revit** | pyRevit engine first when pyRevit is loaded; embedded **IronPython 3.4.2** fallback |
 | **AutoCAD-family** | Bundled **IronPython 3.4.2** (no pyRevit) |
 
 IronPython execution and IronPython pytest routing (`test_*_ipy.py`) share the same Revit engine preference.
@@ -45,16 +47,34 @@ Build output, package folders, virtual environments, docs, and tooling folders a
 
 ## Choose The Right Mode
 
+```mermaid
+flowchart TD
+    Start{What are you building?} -->|Quick script| Q{Which language?}
+    Start -->|Compiled command| Asm[".NET assembly"]:::ok
+    Q -->|Need packages, debugger, data work| Py[CPython script]:::ok
+    Q -->|Existing pyRevit or IronPython code| Ipy[IronPython script]:::ok
+    Q -->|Small typed snippet| Cs["C# script (.csx)"]:::ok
+    Q -->|F# experiments| Fs["F# script (.fsx)"]:::ok
+```
+
 | Need | Recommended mode |
 | --- | --- |
 | Explore model data quickly | CPython scripting |
 | Use pandas/polars/numpy/shapely-style packages | CPython scripting |
-| Debug Python with VS Code | CPython scripting — [Debugging](/docs/execution/python/Execution-PythonDebugging) |
+| Debug Python from VS Code or PyCharm | CPython scripting — [Debugging](/docs/execution/python/Execution-PythonDebugging) |
 | Reuse IronPython or pyRevit-style code | IronPython scripting |
 | Try a small typed snippet | C# script — [C# Scripts](/docs/execution/csharp-script/Execution-CSharp) |
 | Prototype with F# interactive-style code | F# script — [F# Scripts](/docs/execution/fsharp-script/Execution-FSharp) |
 | Run compiled commands without Add-In Manager | .NET assembly |
 | Build a production add-in command | .NET assembly |
+
+## Package manager
+
+The **Execution** view lists the packages your scripts have resolved across all runtimes, grouped by source: NuGet, conda-forge and PyPI. A **Latest** badge marks the newest version in the cache.
+
+![Package manager in the RevitDevTool panel](/images/features/Feature_PackageManager.png)
+
+Dependencies are declared in the script itself: see [Python Dependencies](/docs/execution/Python-Dependencies) and [NuGet Dependencies](/docs/execution/NuGet-Dependencies).
 
 ## Host Context Reminder
 

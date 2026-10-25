@@ -2,6 +2,8 @@
 
 Declare Python dependencies next to the script with **PEP 723** metadata. RevitDevTool reads that metadata, prepares the supported Python environment, and then runs the script with its dependencies available.
 
+<LogoRow items={['python', 'pixi', 'conda-forge', 'pypi', 'uv']} />
+
 ## Inline metadata
 
 ```python
@@ -20,10 +22,12 @@ The metadata is part of the script, so it can be committed, reviewed, and reprod
 
 | Host path | Primary source | Fallback or exception |
 | --- | --- | --- |
-| Revit and most AutoCAD-family hosts | Pixi with conda-forge and PyPI | pip or pyRevit `cengines` |
-| Plant 3D | uv sidecar environment | pip matching the host Python minor version |
+| Revit and most AutoCAD-family hosts | Pixi with conda-forge and PyPI | pyRevit CPython engine |
+| Plant 3D | uv, from PyPI only | none |
 
-Plant 3D is different because it embeds CPython before RevitDevTool loads. RevitDevTool attaches to that interpreter and uses a uv sidecar; it does not start a second in-process interpreter.
+:::info Plant 3D uses the host's Python
+Plant 3D embeds CPython, so scripts run on the host's own Python version (Plant 3D 2027 uses 3.13) and packages install with uv into a separate folder. Pick packages that publish wheels for that version.
+:::
 
 For runtime selection and host differences, see [Python Ecosystems For Revit](/docs/execution/python/Execution-PythonEcosystems).
 
@@ -57,7 +61,7 @@ Add computational-geometry or scientific packages when the workflow needs them, 
 
 ### Debugging dependency code
 
-Prepare dependencies before starting the debugger. For CPython breakpoints, attach VS Code to the `debugpy` port shown by RevitDevTool, then run the script. See [Attach Debugger](/docs/execution/python/Execution-PythonDebugging).
+Prepare dependencies before starting the debugger. For CPython breakpoints, attach your IDE to the debug port shown by RevitDevTool, then run the script. See [Attach Debugger](/docs/execution/python/Execution-PythonDebugging).
 
 ## Troubleshooting
 

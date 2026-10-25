@@ -1,6 +1,6 @@
 # Build From Source
 
-The solution source of truth is:
+Build from the solution file:
 
 ```text
 RevitDevTool.slnx
@@ -80,14 +80,6 @@ Packaging depends on compiled `bin/publish` outputs and includes bundle creation
 
 ## Tests
 
-Current test projects are useful for smoke validation and focused behavior checks, but they are not complete end-to-end proof of host behavior.
+Test projects live under `tests/`. Run one with `dotnet run --project tests/<project>/<project>.csproj`.
 
-Known test areas:
-
-- execution and Python bridge tests under `tests/DevTools.Execution.Tests/`
-- MCP daemon and dynamic-tool tests under `tests/DevTools.Mcp.Server.Tests/` and `tests/DevTools.Daemon.Tests/`
-- telemetry tests under `tests/DevTools.Telemetry.Tests/`
-- MTP adapter tests under `tests/DevTools.NUnit.MTP.Tests/`
-- external event test hosts under `tests/RevitDevTool.ExternalEvent.App/`
-
-Some tests rely on prepared sample assets, a Pixi environment, or a live host bridge. Treat failures as signals to inspect context, not as always-isolated unit test failures.
+Some tests need prepared sample assets, a Pixi environment, or a running host. If one fails, check that environment first. Contributor workflow details are in the [repository documentation map](https://github.com/trgiangv/RevitDevTool/blob/develop/docs/README.md).

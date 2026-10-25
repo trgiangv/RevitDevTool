@@ -1,6 +1,6 @@
 # Geometry Visualization
 
-Geometry visualization is currently supported only on Revit through the `DirectContext3D` API. RevitDevTool can display recognized geometry temporarily in the active Revit 3D view; AutoCAD-family hosts support the logging outputs, but not this visualization path.
+Geometry visualization is currently supported only on Revit through the `DirectContext3D` API. RevitDevTool can display recognized geometry temporarily in the active Revit view; AutoCAD-family hosts support the logging outputs, but not this visualization path.
 
 ## How the flow works
 
@@ -10,6 +10,8 @@ Geometry visualization is part of the normal trace pipeline. There is no special
 2. The registered trace listeners receive the value.
 3. On Revit, RevitDevTool recognizes supported geometry objects and renders them through `DirectContext3D`.
 4. The same trace event can continue to the configured [Log Output](/docs/logging/Observability-Http) targets.
+
+![Geometry drawn in the Revit view while a script runs](/images/features/Feature_Visualization.gif)
 
 The value must reach the listener as an object. Writing only a formatted string produces a normal log entry, not geometry.
 
@@ -65,15 +67,16 @@ print(curve, sep=" | ")             # text only
 
 For a Python script executed by RevitDevTool, the flow is:
 
-```text
-print(geometry)
-    -> RevitDevTool Python print bridge
-    -> System.Diagnostics.Trace
-    -> registered TraceListeners
-    -> Revit geometry display + configured log outputs
+```mermaid
+flowchart LR
+    P["print(geometry)"] --> T[System.Diagnostics.Trace]
+    T --> O["Log outputs<br/>Monitor, File, HTTP"]:::ok
+    T --> L{Supported<br/>geometry object?}
+    L -->|yes| V["Also shown in the<br/>active Revit view"]:::ok
+    L -->|no| X["Log entry only"]:::muted
 ```
 
-The registered listeners handle the event in the normal trace pipeline. RevitDevTool renders recognized geometry transiently; the model is not modified and no model element is created.
+RevitDevTool renders recognized geometry transiently; the model is not modified and no model element is created.
 
 ## Supported geometry
 
@@ -86,13 +89,42 @@ The registered listeners handle the event in the normal trace pipeline. RevitDev
 
 Collections of supported geometry can also be traced when each item is supported.
 
+### Examples by type
+
+Each of these draws in the active view. `element` is any Revit element you have picked:
+
+```python title="geometry_script.py"
+from Autodesk.Revit.DB import Line, Options, Solid, XYZ
+
+print(XYZ(10, 20, 5))                                  # point
+print(Line.CreateBound(XYZ(0, 0, 0), XYZ(10, 0, 0)))   # curve
+
+bbox = element.get_BoundingBox(None)
+if bbox:
+    print(bbox)                                        # bounding box
+
+for geo in element.get_Geometry(Options()):
+    if isinstance(geo, Solid) and geo.Volume > 0:
+        print(geo)                                     # the solid with its faces and edges
+        for face in geo.Faces:
+            print(face)                                # each face on its own
+```
+
+In C#, pass the same objects to `Trace.Write`, including a whole list of them, as the [`CSharpDemo`](https://github.com/trgiangv/RevitDevTool/tree/main/samples/CSharpDemo) commands do.
+
 ## Requirements and behavior
 
-- Revit must have an active 3D view.
+- Geometry is drawn in the active graphical view; a view with no graphics, such as a schedule, shows nothing.
 - The Trace Log listener must be enabled.
 - The minimum [Log Level](/docs/logging/Logging-Overview) must allow the entry through.
 - Geometry is transient and exists only for the current session.
 - Use **Clear Geometry** in the Trace panel to remove displayed objects.
+
+## Appearance
+
+Choose how each geometry type is drawn in **Settings → Visualization**: surface color, transparency and scale, edge color and axis color. The side tabs switch between geometry types.
+
+![Visualization settings for surfaces, edges and axes](/images/settings/Settings_Visualization.png)
 
 ## Examples
 

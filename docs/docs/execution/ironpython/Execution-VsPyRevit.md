@@ -2,6 +2,8 @@
 
 RevitDevTool supports running Python scripts through the **pyRevit IronPython engine**. Any script whose filename matches `*_ipy_script.py` can be selected and executed as an IronPython/pyRevit command.
 
+<LogoRow items={['pyrevit', 'ironpython']} />
+
 ## Script recognition
 
 Use the `_ipy_script.py` suffix for any Python script that should run with IronPython or the pyRevit engine:
@@ -28,28 +30,36 @@ This allows existing pyRevit-style scripts to be used as RevitDevTool commands w
 
 ## Engine behavior
 
-On Revit, RevitDevTool uses the installed pyRevit IronPython engine when pyRevit is available (current default **IronPython 2.7.12**). If pyRevit is not installed, RevitDevTool uses its IronPython 3.4.2 fallback.
+:::info Which engine runs your script
+On Revit, RevitDevTool uses the installed pyRevit engine when pyRevit is available, and pyRevit controls which engine and version that is. If pyRevit is not installed, RevitDevTool uses its IronPython 3.4.2 fallback.
+:::
 
 AutoCAD-family hosts use bundled **IronPython 3.4.2**, because pyRevit is a Revit-only engine. For that independent runtime, see [IronPython Standalone](/docs/execution/ironpython/Execution-IronPythonStandalone).
 
 ## Example command
 
-```python
+```python title="count_walls_ipy_script.py"
 from Autodesk.Revit import DB
 
 doc = __revit__.ActiveUIDocument.Document
 walls = DB.FilteredElementCollector(doc).OfClass(DB.Wall).ToElements()
-print(f"Found {len(walls)} walls")
+print("Found {} walls".format(len(walls)))
 ```
 
 Save the file with the `_ipy_script.py` suffix, select its folder in RevitDevTool, and run the discovered command.
 
+:::tip Write for either engine
+The example uses `str.format` instead of an f-string, so it runs on IronPython 2.7 as well as 3.x. Which one you get depends on your pyRevit setup.
+:::
+
+More scripts, such as [`dashboard_ipy_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/dashboard_ipy_script.py), are in [PythonDemo/commands](https://github.com/trgiangv/RevitDevTool/tree/main/samples/PythonDemo/commands) on GitHub.
+
 ## Limitations
 
 - IronPython does not support the CPython package workflow or PEP 723 dependencies.
-- IronPython has no `debugpy` or debugger attach path in RevitDevTool.
+- Debug from your IDE on the IronPython port; see [Attach Debugger](/docs/execution/python/Execution-PythonDebugging).
 - Host API access still follows the active document, transaction, and document-lock rules.
-- Use [Python Dependencies](/docs/execution/Python-Dependencies) and [Attach Debugger](/docs/execution/python/Execution-PythonDebugging) when the workflow requires modern packages or breakpoints.
+- Use [Python Dependencies](/docs/execution/Python-Dependencies) when the workflow requires modern packages.
 
 ## Related
 

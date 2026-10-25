@@ -34,4 +34,4 @@ Visualization (DirectContext3D) is Revit-only and not available in AutoCAD. All 
 ## Related
 
 - [AutoCAD](/docs/hosts/Hosts-AutoCAD)
-- [Feature Overview](/docs/getting-started/Platform-v3.0-Overview)
+- [Overview](/docs/)

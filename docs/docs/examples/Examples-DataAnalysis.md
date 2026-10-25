@@ -11,7 +11,7 @@
 Complete workflow combining all three modules:
 1. **Code Execution** - Auto-install Polars via PEP 723
 2. **Logging** - Structured output with syntax highlighting
-3. **Visualization** - Display outliers in 3D view
+3. **Visualization** - Display outliers in the Revit view
 
 ---
 
@@ -103,11 +103,11 @@ outlier_walls = [doc.GetElement(id) for id in outlier_ids]
 for wall in outlier_walls:
     curve = wall.Location.Curve
     print(f"Wall {wall.Id}: Area={wall_area:.1f} sq ft")
-    print(curve)  # Appears in 3D view with color
+    print(curve)  # Appears in the active view with color
 ```
 
 **Result:**
-- Outlier walls highlighted in 3D view
+- Outlier walls highlighted in the active view
 - Trace Panel shows IDs + areas
 - Clear visual feedback for analysis
 
@@ -120,7 +120,7 @@ for wall in outlier_walls:
 3. **Load** folder: `samples/PythonDemo/commands/`
 4. **Click** `data_analysis_script.py`
 5. **Watch** dependencies install (first run only)
-6. **See** results in Trace Panel + 3D view
+6. **See** results in Trace Panel + active view
 
 **Full source:** [`data_analysis_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/data_analysis_script.py)
 

@@ -1,17 +1,24 @@
 # pytest
 
-Run CPython pytest tests inside a live Revit or AutoCAD-family host through the RevitDevTool pytest bridge. The client package is `revitdevtool_pytest` `0.4.0`. Collection and reporting happen in the local Python process; Revit API code executes in the host.
+Run CPython pytest tests inside a live Revit or AutoCAD-family host through the RevitDevTool pytest bridge. The client package is `revitdevtool_pytest` `0.5.0`. Collection and reporting happen in the local Python process; Revit API code executes in the host.
+
+:::info Prerequisites
+
+- RevitDevTool installed in the host you test against
+- [uv](https://docs.astral.sh/uv/) and a Python project for your tests
+- Python 3.10 or later; the package installs pytest 9.1.1 or later (below 10) and pywin32
+  :::
 
 ## Install and configure
 
 From the test project, add the pinned client package and run through `uv`:
 
-```powershell
-uv add "revitdevtool_pytest==0.4.0"
+```powershell title="Terminal"
+uv add "revitdevtool_pytest==0.5.0"
 uv run pytest --host revit --host-version 2025 -v
 ```
 
-The test client connects to the selected host automatically. Choose the host and version with the command-line options shown below.
+The test client connects to the selected host automatically. Choose the host and version with the command-line options, or in `pyproject.toml`; see [Host settings](/docs/testing/Testing-Overview#host-settings).
 
 Example configuration:
 
@@ -30,11 +37,11 @@ def test_active_document(revit):
     assert revit.active_document is not None
 ```
 
-Useful options include `--force-launch`, `--launch-timeout`, `--per-test-timeout`, and `--host-pipe` for connecting to a known host.
+Options such as `--force-launch`, `--launch-timeout`, `--per-test-timeout` and `--host-pipe` are listed in [Host settings](/docs/testing/Testing-Overview#host-settings).
 
 ## Debugging
 
-CPython starts `debugpy` during initialization. Attach VS Code to the port shown by RevitDevTool, usually `5678`, before running the test. See [Attach Debugger](/docs/execution/python/Execution-PythonDebugging).
+CPython starts `debugpy` during initialization. Attach your IDE (VS Code or PyCharm) to the port shown by RevitDevTool (preferred port `5678`) before running the test. See [Attach Debugger](/docs/execution/python/Execution-PythonDebugging).
 
 ## Troubleshooting
 

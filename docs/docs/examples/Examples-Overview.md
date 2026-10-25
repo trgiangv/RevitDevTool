@@ -1,8 +1,6 @@
 # Example Scripts
 
-Practical samples grouped by the [four platform pillars](/docs/getting-started/Platform-v3.0-Overview#four-pillars). Most Revit-focused scripts live under [`samples/PythonDemo/commands/`](https://github.com/trgiangv/RevitDevTool/tree/main/samples/PythonDemo/commands/).
-
-![Python Demo](/images/examples/PythonDemo.gif)
+Practical samples grouped by capability: execution, testing, AI tool integration, and logging. Most Revit-focused scripts live under [`samples/PythonDemo/commands/`](https://github.com/trgiangv/RevitDevTool/tree/main/samples/PythonDemo/commands/).
 
 ---
 

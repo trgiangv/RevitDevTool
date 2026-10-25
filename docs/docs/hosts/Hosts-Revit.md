@@ -1,17 +1,29 @@
 # Revit
 
-Revit is the primary RevitDevTool v3.0 host — full [four pillars](/docs/getting-started/Platform-v3.0-Overview#four-pillars).
+Revit is the primary RevitDevTool host and supports every capability, including geometry visualization. See the [Overview](/docs/) for the whole platform.
 
-| Pillar | Entry points |
-|--------|--------------|
-| **Execution** | [Execution Overview](/docs/execution/Execution-Overview), [Modern Python Scripting](/docs/execution/python/Execution-Python), [C# Scripts](/docs/execution/csharp-script/Execution-CSharp), [F# Scripts](/docs/execution/fsharp-script/Execution-FSharp), [.NET Assembly](/docs/execution/dotnet-assembly/Execution-Assembly) |
-| **Testing** | [pytest](/docs/testing/pytest), [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest) |
-| **AI Tool Integration** | [MCP .NET](/docs/mcp/MCP-CSharp), [MCP Python](/docs/mcp/MCP-Python) |
-| **Observability** | [Log Level](/docs/logging/Logging-Overview), [Geometry Visualization](/docs/logging/Visualization-Overview) |
+<LogoRow items={['revit']} />
 
-## Supported Versions
+## What you can do in Revit
 
-The current build matrix supports Autodesk/Revit configurations from 2022 through 2027:
+- **Run scripts and add-ins**
+  - [Python](/docs/execution/python/Execution-Python) scripts that call the Revit API, with dependencies installed from script metadata
+  - [C#](/docs/execution/csharp-script/Execution-CSharp) `.csx`, [F#](/docs/execution/fsharp-script/Execution-FSharp) `.fsx` and [IronPython](/docs/execution/ironpython/Execution-VsPyRevit) scripts
+  - Compiled [.NET assemblies](/docs/execution/dotnet-assembly/Execution-Assembly)
+- **Debug**
+  - [Attach VS Code or PyCharm](/docs/execution/python/Execution-PythonDebugging) to Python scripts
+  - Read logs and Python stack traces with [Log Level](/docs/logging/Logging-Overview) and [Log Output](/docs/logging/Observability-Http)
+  - Preview temporary geometry with [Geometry Visualization](/docs/logging/Visualization-Overview)
+- **Test inside a live Revit session**
+  - [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit) or [MSTest](/docs/testing/MSTest)
+  - [pytest](/docs/testing/pytest) checks that need Revit context
+- **Connect AI clients**
+  - Expose tools through [MCP .NET](/docs/mcp/MCP-CSharp) or [MCP Python](/docs/mcp/MCP-Python); clients reach them through the `code_mode` tool
+- **Work faster in Revit**
+  - Search and run ribbon commands
+  - Find elements by ID
+
+## Supported versions
 
 | Revit version | Target framework |
 | --- | --- |
@@ -19,67 +31,25 @@ The current build matrix supports Autodesk/Revit configurations from 2022 throug
 | 2025-2026 | `net8.0-windows` |
 | 2027 | `net10.0-windows` |
 
-## What You Can Do In Revit
+## Revit utilities
 
-- run Python scripts that call the Revit API;
-- install Python dependencies from script metadata;
-- debug Python in VSCode;
-- run compiled Revit add-ins;
-- run C# `.csx`, F# `.fsx`, and IronPython scripts;
-- inspect logs and Python stack traces;
-- visualize temporary Revit geometry;
-- expose selected tools through MCP;
-- run pytest-style checks that need Revit context;
-- run NUnit, TUnit, or MSTest inside a live Revit session;
-- search and run commands through Command Browser;
-- watch memory usage when diagnosing heavy scripts.
+Two utilities are available on Revit only:
 
-## Good Use Cases
+- **Search Commands** finds any ribbon command by name and runs it. Recently used commands appear first, and you can mark favorites.
+- **Element Finder** takes ElementIds, UniqueIds or IFC GUIDs, comma or line separated, and finds the elements in the active document or in a linked model. It can select them, zoom to them, or zoom with a section box in a 3D view, and it copies the IDs of the current selection as ElementId, UniqueId or IfcGuid.
 
-| Use case | Recommended page |
-| --- | --- |
-| Quick Python automation | [Modern Python Scripting](/docs/execution/python/Execution-Python) |
-| Revit API add-in development | [.NET Assembly](/docs/execution/dotnet-assembly/Execution-Assembly) |
-| Fast C# or F# experiment | [C# Scripts](/docs/execution/csharp-script/Execution-CSharp), [F# Scripts](/docs/execution/fsharp-script/Execution-FSharp) |
-| Visual geometry debugging | [Geometry Visualization](/docs/logging/Visualization-Overview) |
-| AI-assisted tool access | [MCP .NET](/docs/mcp/MCP-CSharp), [MCP Python](/docs/mcp/MCP-Python) |
-| Tests that need Revit API context (pytest) | [pytest](/docs/testing/pytest) |
-| Tests that need Revit API context (NUnit/TUnit/MSTest) | [NUnit](/docs/testing/NUnit), [TUnit](/docs/testing/TUnit), [MSTest](/docs/testing/MSTest) |
+![Search Commands and Element Finder in Revit](/images/features/Feature_SearchCommandElementFinder.gif)
 
-## Python Runtime
+## Python runtime
 
-CPython runs through Python.NET with a Pixi-owned interpreter (Python 3.14 in `%APPDATA%\RevitDevTool\pixi-env`). Revit does not embed CPython — there is **no uv sidecar** on this host.
+CPython runs through Python.NET with a Pixi-owned interpreter (Python 3.14 in `%APPDATA%\RevitDevTool\pixi-env`). Revit does not embed CPython, so there is no uv sidecar on this host.
 
-IronPython **execution** (`*_ipy_script.py`) and IronPython **testing** (`test_*_ipy.py`) both prefer the **pyRevit engine** when pyRevit is installed. pyRevit's current default engine is still **IronPython 2.7.12**, which matches most pyRevit tool development. Without pyRevit, RevitDevTool falls back to IronPython 3.4.2. See [Modern Python Scripting](/docs/execution/python/Execution-Python), [Python Ecosystems](/docs/execution/python/Execution-PythonEcosystems), and [IronPython — pyRevit Folder Compatibility](/docs/execution/ironpython/Execution-VsPyRevit).
+IronPython execution (`*_ipy_script.py`) and IronPython testing (`test_*_ipy.py`) both prefer the pyRevit engine when pyRevit is installed. Without pyRevit, RevitDevTool falls back to IronPython 3.4.2. See [Python Ecosystems](/docs/execution/python/Execution-PythonEcosystems) and [IronPython — pyRevit Folder Compatibility](/docs/execution/ironpython/Execution-VsPyRevit).
 
-## Revit API Context
+## Revit API context
 
-Revit API calls must run in a valid Revit API context. Scripts launched through RevitDevTool are designed for that. Modeless UI or background work still needs to marshal Revit API calls back through the provided Revit execution path.
+Revit API calls must run in a valid Revit API context. Scripts launched through RevitDevTool already do. Modeless UI or background work must marshal Revit API calls back through the provided execution path.
 
-## Geometry Visualization
-
-Visualization is currently a Revit DirectContext3D feature. Geometry traced or printed by scripts can be shown temporarily in the active view without creating model elements.
-
-Supported geometry categories include:
-
-- XYZ/points
-- curves and polylines
-- bounding boxes/outlines
-- meshes
-- faces
-- solids
-- planes
-
-See [Geometry Visualization](/docs/logging/Visualization-Overview).
-
-## MCP Integration
-
-Local MCP ([MCP .NET](/docs/mcp/MCP-CSharp) or [MCP Python](/docs/mcp/MCP-Python)) discovers running Revit instances (`DevToolsMcp_Revit_{Year}_{PID}`) and exposes host capabilities through `search_dynamic` and `invoke_dynamic`.
-
-## Revit-Specific Caveats
-
-- Revit API behavior cannot be fully validated by pure unit tests.
-- Some workflows need a live Revit session.
-- Geometry visualization is tied to active Revit view/rendering state.
-- `net48` compatibility still matters for Revit 2022-2024.
-- Python/IronPython behavior depends on installed runtimes and enterprise machine restrictions.
+:::info Revit 2022–2024
+Code that targets these versions runs on .NET Framework 4.8. Tests that touch the Revit API need a live Revit session; see [Testing Overview](/docs/testing/Testing-Overview).
+:::

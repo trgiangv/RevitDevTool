@@ -4,25 +4,60 @@ Use CPython scripting when you want fast automation, data extraction, computatio
 
 This page covers the modern CPython path: PythonNet in-process with CAD/BIM hosts. For IronPython, C#/F# scripts, and assemblies, see [Execution Overview](/docs/execution/Execution-Overview).
 
-![Python runtimes](/images/execution/PythonRuntimes.png)
+<LogoRow items={['python', 'pixi', 'conda-forge', 'pypi', 'uv', 'pyrevit']} />
 
-![PEP 723 dependency resolve](/images/execution/PythonDependencyResolve.gif)
+## How a script runs
+
+```mermaid
+flowchart LR
+    Script["*script.py with<br/>PEP 723 header"] e1@--> Pick{Which host?}
+    Pick e2@-->|Revit, AutoCAD, Civil 3D| Pixi["Pixi installs packages<br/>conda-forge + PyPI"]:::accent
+    Pick e3@-->|Plant 3D| UV["uv installs packages<br/>from PyPI"]:::accent
+    Pixi e4@--> Run["Script runs on<br/>CPython 3.14"]:::ok
+    UV e5@--> RunP["Script runs on the<br/>host's own CPython"]:::ok
+    Pixi -. blocked .-> Eng{"pyRevit CPython<br/>engine installed?"}
+    Eng -->|yes| RunE["Script and packages resolve<br/>from the pyRevit CPython engine"]:::muted
+    Eng -->|no| Off["CPython unavailable"]:::fail
+    UV -. blocked .-> Off
+    e1@{ animate: true }
+    e2@{ animate: true }
+    e3@{ animate: true }
+    e4@{ animate: true }
+    e5@{ animate: true }
+```
 
 ## Python runtime by host
 
-**Claimed hosts** for CPython today: **Revit** and the **AutoCAD-family** (AutoCAD, Civil 3D, Architecture, MEP, Electrical, Mechanical, Map 3D, Plant 3D).
+| Host | Python | Packages |
+| --- | --- | --- |
+| **Revit**, **AutoCAD**, **Civil 3D** | CPython 3.14, installed by RevitDevTool | Pixi: conda-forge and PyPI |
+| **Plant 3D** | The CPython built into the host, so the version follows the host (Plant 3D 2027 uses 3.13) | uv: PyPI only |
 
-In the current product lineup, **only Plant 3D** ships an embedded CPython runtime. All other claimed hosts use a Pixi-owned interpreter.
+:::info Other AutoCAD products
+Architecture, MEP, Electrical, Mechanical and Map 3D follow the AutoCAD path. See [Host settings](/docs/testing/Testing-Overview#host-settings) for the `host_name` values.
+:::
 
-### Default — Pixi-owned (Revit, AutoCAD, Civil 3D, Architecture, MEP, Electrical, Mechanical, Map 3D)
+### Revit, AutoCAD, Civil 3D
 
-In-process CPython from Pixi. `pixi.toml` pins `python = "3.14.*"`. Environment: `%APPDATA%\RevitDevTool\pixi-env`. PEP 723 packages install through **Pixi** (conda-forge + PyPI). If Pixi cannot run, pip / pyRevit `cengines` is the fallback.
+CPython 3.14 runs in the host process. The environment lives in `%APPDATA%\RevitDevTool\pixi-env`, and PEP 723 packages install through **Pixi**.
 
-### Plant 3D only — host-owned + uv sidecar
+### Plant 3D
 
-Plant 3D is an AutoCAD-family vertical — the **only** one that embeds CPython before the add-in loads. RevitDevTool attaches pythonnet to the host `python3xx.dll` and never starts a second in-process interpreter (a Pixi 3.14 DLL would crash). PEP 723 packages install into a **uv sidecar** at `%APPDATA%\RevitDevTool\uv-env\{major.minor}` (often `3.13`), then `site.addsitedir` overlays that prefix. Pixi is not used on this path. If uv cannot run, pip matching the host minor via pyRevit `cengines` is the fallback.
+Plant 3D already embeds CPython, so RevitDevTool uses that interpreter instead of starting a second one. Packages install with **uv** from PyPI into `%APPDATA%\RevitDevTool\uv-env\{major.minor}`, matching the host's Python version.
 
-See the [Plant 3D example](/docs/hosts/Hosts-AutoCAD) for the Plant-specific workflow.
+:::warning Match the host's Python
+On Plant 3D, choose packages that publish wheels for the host's CPython version and ABI. A package that only supports a newer Python, or is available only on conda-forge, will not install.
+:::
+
+### pyRevit CPython engine
+
+If Pixi cannot run, RevitDevTool falls back to the CPython engine installed by pyRevit. The script and its packages are resolved from that engine, so the Python version is whatever pyRevit provides.
+
+:::info When Pixi or uv cannot run
+This is usually company policy blocking the executable, not a problem with your script. If your company allows pyRevit, RevitDevTool falls back to its CPython engine. Otherwise ask IT to allow Pixi. Plant 3D has no fallback and needs uv. See [Known Limitations](/docs/getting-started/Known-Limitations).
+:::
+
+pyRevit also controls its own IronPython engine for `*_ipy_script.py` scripts, which is a separate path described in [IronPython — pyRevit Engine](/docs/execution/ironpython/Execution-VsPyRevit).
 
 ## Entry File
 
@@ -32,13 +67,23 @@ CPython script folders are discovered through files ending with:
 *script.py
 ```
 
-Example (repo path):
+A complete script looks like this:
 
-```text
-samples/PythonDemo/commands/data_analysis_script.py
+```python title="walls_script.py"
+# /// script
+# dependencies = ["polars"]
+# ///
+
+import polars as pl
+from Autodesk.Revit import DB
+
+doc = __revit__.ActiveUIDocument.Document
+walls = DB.FilteredElementCollector(doc).OfClass(DB.Wall)
+
+print(pl.DataFrame({"name": [w.Name for w in walls]}))
 ```
 
-Browse samples on GitHub: [PythonDemo/commands](https://github.com/trgiangv/RevitDevTool/tree/main/samples/PythonDemo/commands)
+More complete scripts, such as [`data_analysis_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/data_analysis_script.py), are in [PythonDemo/commands](https://github.com/trgiangv/RevitDevTool/tree/main/samples/PythonDemo/commands) on GitHub.
 
 ## Dependency Metadata
 
@@ -50,7 +95,7 @@ Dependencies are declared with PEP 723 metadata in the script file:
 # ///
 ```
 
-The runtime parses metadata before execution and prepares the environment with **Pixi** on every claimed host except Plant 3D, which uses the **uv sidecar**.
+The runtime parses metadata before execution and prepares the environment with **Pixi** on every host except Plant 3D, which uses the **uv sidecar**.
 
 ## Host Context
 
@@ -66,7 +111,7 @@ For modeless UI or background work in any host, route host API calls through the
 
 ## Debugging
 
-Python debugging uses `debugpy` and the debugger bridge. Configure VSCode attach, start the debugger, then run the script from RevitDevTool.
+Attach your IDE (VS Code or PyCharm) to the debug port, then run the script from RevitDevTool.
 
 For the full workflow, port settings, .NET attach for scripts/assemblies, and troubleshooting, see [Attach Debugger](/docs/execution/python/Execution-PythonDebugging).
 
@@ -76,34 +121,28 @@ These suffixes serve different purposes — do not mix them:
 
 | Purpose | Entry suffix | Notes |
 | --- | --- | --- |
-| Run IronPython automation | `*_ipy_script.py` | No debugger attach — [Execution Overview](/docs/execution/Execution-Overview) |
+| Run IronPython automation | `*_ipy_script.py` | Attach your IDE to the IronPython port — [Attach Debugger](/docs/execution/python/Execution-PythonDebugging) |
 | Test IronPython in-host | `test_*_ipy.py` | pytest routing only; same Revit engine preference — [unittest](/docs/testing/unittest) |
 
 `*_ipy_script.py` is for commands you run from RevitDevTool. `test_*_ipy.py` is how the pytest plugin routes IronPython unittest files to the host — it is not an execution entry name.
 
 ## Examples
 
-Current Python samples live under:
+All samples live in [`PythonDemo/commands`](https://github.com/trgiangv/RevitDevTool/tree/main/samples/PythonDemo/commands). Good places to start:
 
-```text
-samples/PythonDemo/commands/
-```
-
-Notable examples:
-
-- `data_analysis_script.py`
-- `dashboard_ipy_script.py`
-- `debugpy_script.py`
-- `selectionfilter_script.py`
-- `visualization_curve_script.py`
-- `visualization_solid_script.py`
-- `visualization_xyz_script.py`
-- `logging_format_script.py`
-- `modeless_script.py`
+| Script | Shows |
+| --- | --- |
+| [`data_analysis_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/data_analysis_script.py) | Collect model data and analyze it with Polars |
+| [`debugpy_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/debugpy_script.py) | Debug a script from your IDE |
+| [`selectionfilter_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/selectionfilter_script.py) | Selection filters |
+| [`visualization_curve_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/visualization_curve_script.py) | Draw curves in the active view |
+| [`logging_format_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/logging_format_script.py) | Log levels, JSON and stack traces |
+| [`modeless_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/modeless_script.py) | Modeless windows |
+| [`dashboard_ipy_script.py`](https://github.com/trgiangv/RevitDevTool/blob/main/samples/PythonDemo/commands/dashboard_ipy_script.py) | An IronPython dashboard with WebView2 |
 
 ## Caveats
 
-- Package installation can be blocked by local policy, a missing `pixi` executable (or `uv` on Plant 3D), or network access.
+- Package installation can be blocked by local policy, a missing `pixi` executable (or `uv` on Plant 3D, which has no fallback), or network access.
 - On Plant 3D, host-owned attach cannot load conda `Library\bin` activation or a second in-process Python layout — prefer PyPI wheels with private native deps.
 - Host API calls still require valid host context.
 - PythonNet behavior differs from IronPython, especially around .NET interop.

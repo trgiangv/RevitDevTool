@@ -1,352 +1,118 @@
 # RevitDevTool
 
-<p style="vertical-align: center;">
-Bring standard development ecosystems into live Autodesk CAD/BIM hosts — without replacing them.
-</p>
+Bring standard development ecosystems into CAD/BIM hosts — without replacing them.
 
 <div style="vertical-align: center;">
-    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/badge/Revit-2022--2027-blue.svg?style=for-the-badge" alt="RevitVersion"></a>
-    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/badge/AutoCAD-2022--2027-orange.svg?style=for-the-badge" alt="AutoCADVersion"></a>
-    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/v/release/trgiangv/RevitDevTool?style=for-the-badge" alt="Badge"></a>
-    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/downloads/trgiangv/RevitDevTool/total?style=for-the-badge" alt="Badge"></a>
-    <a href="https://github.com/trgiangv/RevitDevTool/commits/develop"><img src="https://img.shields.io/github/last-commit/trgiangv/RevitDevTool/develop?style=for-the-badge" alt="Badge"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/badge/Revit-2022--2027-blue.svg?style=flat-square" alt="RevitVersion"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/badge/AutoCAD-2022--2027-orange.svg?style=flat-square" alt="AutoCADVersion"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/v/release/trgiangv/RevitDevTool?style=flat-square" alt="Release"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/downloads/trgiangv/RevitDevTool/total?style=flat-square" alt="Downloads"></a>
 </div>
 
----
+**The development platform for BIM and CAD.** Run scripts and add-ins in the live session, test them in-process, and let AI assistants work with your open model, all from one add-in.
 
-## 🎯 Why RevitDevTool?
+- **Run code** — CPython¹, IronPython², C# `.csx`, F# `.fsx`, and compiled .NET `.dll`³
+- **Debug** — breakpoints in VS Code or PyCharm for CPython and IronPython, your IDE for .NET code
+- **Test in the host** — pytest, NUnit, TUnit and MSTest inside a real Revit or AutoCAD session
+- **Connect AI** — [MCP](https://modelcontextprotocol.io/) for Cursor, Claude, GitHub Copilot, Codex and more, extensible with your own Python or C# toolsets
+- **See what happens** — color-coded logs with stack traces, plus 3D geometry preview in Revit
 
-RevitDevTool is a **development platform for .NET-based CAD/BIM applications**. Run Python/C#/F# scripts, connect AI assistants, and execute tests against live host instances, all from a single toolkit. Currently supports Revit and AutoCAD-family — designed to extend to any .NET-capable host.
+<sub>¹ CPython 3.14 with inline dependencies (PEP 723 + [Pixi](https://pixi.sh/)) · ² pyRevit-compatible · ³ hot reload</sub>
 
-**For developers and researchers who need:**
+## Supported hosts
 
-- **Modern Python** — CPython 3.14 with full ecosystem (pandas, numpy, scikit-learn, AI/ML)
-- **VSCode Debugging** — Set breakpoints, step through code, inspect Revit/AutoCAD API objects
-- **Zero-friction dependencies** — Declare packages inline (PEP 723), auto-install with [Pixi](https://pixi.sh/)
-- **AI-powered workflows** — [Model Context Protocol (MCP)](docs/docs/mcp/overview.md) integration for AI assistants
-- **Remote testing** — [pytest bridge](https://github.com/trgiangv/RevitDevTool.PyTest) runs tests inside live Revit/AutoCAD/Civil3D
-- **Multiple script runtimes** — CPython, IronPython (pyRevit), C# `.csx`, F# `.fsx`
-- **3D Visualization** — Render geometry directly in Revit view (Revit host)
-- **Real-time logging** — Color-coded output with stack traces and JSON formatting
+| Host                                    | Versions  | Run code | Test | AI (MCP) | Geometry preview |
+| --------------------------------------- | --------- | :------: | :--: | :------: | :--------------: |
+| **Revit**                               | 2022–2027 |    ✓     |  ✓   |    ✓     |        ✓         |
+| **AutoCAD**, **Civil 3D**, **Plant 3D** | 2022–2027 |    ✓     |  ✓   |    ✓     |        —         |
 
----
+Other AutoCAD-based products load the same add-in. Plant 3D embeds its own CPython, so it uses the host's Python version and installs packages with uv from PyPI.
 
-## 🖥️ Supported Hosts
+## Quick start
 
-| Host | Versions | Python | .NET | MCP | PyTest | Visualization |
-|------|----------|--------|------|-----|--------|---------------|
-| **Revit** | 2022–2027 | CPython 3.14 | C# / F# / Assembly | Full | Full | DirectContext3D |
-| **AutoCAD** | 2022–2027 | CPython 3.14 | C# / Assembly | Full | Full | — |
-| **Civil 3D** | 2022–2027 | CPython 3.14 | C# / Assembly | Full | Full | — |
-| **Plant 3D** | 2022–2027 | CPython 3.14 | C# / Assembly | Full | Full | — |
+**1. Install.** Download `RevitDevTool-Setup.exe` from [Releases](https://github.com/trgiangv/RevitDevTool/releases/latest) and run it. It installs for the current user and needs no administrator rights.
 
-AutoCAD-family hosts (Civil 3D, Plant 3D, AutoCAD Architecture, MEP, Electrical, Mechanical, Map 3D) share the same add-in and feature set.
-
----
-
-## 🎬 See It In Action
-
-### Python Debugging with VSCode
-
-Set breakpoints, inspect variables, step through Revit API calls in real-time.
-
-**[Python Debugging Guide](docs/docs/workflows/python-dependencies.md)**
-
----
-
-### Automatic Dependency Management
-
-Declare packages inline. Pixi auto-installs. No manual pip, no venv setup.
+**2. Write a script.** Create `hello_script.py` in an empty folder. Dependencies go in the header:
 
 ```python
 # /// script
-# dependencies = ["pandas==2.1.0", "numpy>=1.24"]
+# dependencies = ["polars"]
 # ///
 
+import polars as pl
 from Autodesk.Revit import DB
 
 doc = __revit__.ActiveUIDocument.Document
 walls = DB.FilteredElementCollector(doc).OfClass(DB.Wall)
 
-data = [{"Name": w.Name, "Area": w.Area} for w in walls]
-df = pd.DataFrame(data)
-print(df.groupby("Level").agg({"Area": ["sum", "mean"]}))
+df = pl.DataFrame({"name": [w.Name for w in walls]})
+print(df.group_by("name").len())
 ```
 
-**[Python Execution Guide](docs/docs/execution/python/Execution-Python.md)**
+**3. Run it.** Open the RevitDevTool panel in Revit (or the DevTools panel in AutoCAD), add the folder, click the script, and read the output in the Trace panel. Dependencies install on first run.
 
----
+Next: [run your first script](https://trgiangv.github.io/RevitDevTool/docs/getting-started/installation/#run-your-first-script).
 
-### Real-time Logging with Stack Traces
+## Documentation
 
-Monitor output with color coding, JSON formatting, and Python stack traces.
+Full guides live on the **[documentation site](https://trgiangv.github.io/RevitDevTool/)**.
 
-**[Logging Guide](docs/product/logging.md)**
+| I want to…                         | Read                                                                                                                                                                                                       |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install and run a first script     | [Installation](https://trgiangv.github.io/RevitDevTool/docs/getting-started/installation/) · [First script](https://trgiangv.github.io/RevitDevTool/docs/getting-started/installation/#run-your-first-script)           |
+| Choose a script runtime            | [Execution Overview](https://trgiangv.github.io/RevitDevTool/docs/execution/Execution-Overview/)                                                                                                           |
+| Use Python packages                | [Python Dependencies](https://trgiangv.github.io/RevitDevTool/docs/execution/Python-Dependencies/)                                                                                                         |
+| Debug Python in VS Code or PyCharm | [Attach Debugger](https://trgiangv.github.io/RevitDevTool/docs/execution/python/Execution-PythonDebugging/)                                                                                                |
+| Write tests that run in the host   | [Testing Overview](https://trgiangv.github.io/RevitDevTool/docs/testing/Testing-Overview/)                                                                                                                 |
+| Connect an AI assistant            | [MCP Protocol](https://trgiangv.github.io/RevitDevTool/docs/mcp/MCP-Protocol/)                                                                                                                             |
+| Customize logging and 3D preview   | [Log Level](https://trgiangv.github.io/RevitDevTool/docs/logging/Logging-Overview/) · [Geometry Visualization](https://trgiangv.github.io/RevitDevTool/docs/logging/Visualization-Overview/)              |
+| Fix a problem                      | [Troubleshooting](https://trgiangv.github.io/RevitDevTool/docs/getting-started/Troubleshooting/) · [Known Limitations](https://trgiangv.github.io/RevitDevTool/docs/getting-started/Known-Limitations/)    |
 
----
+## Samples
 
-### 3D Geometry Visualization (Revit)
+| Sample                                                                                                                                          | Contents                                                                                                         |
+| ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| [`samples/PythonDemo/commands`](samples/PythonDemo/commands)                                                                                    | Data analysis (Polars), WebView2 dashboard, logging formats, 3D geometry preview, scikit-learn, shapely, trimesh |
+| [`samples/PythonDemo/mcp_toolset`](samples/PythonDemo/mcp_toolset)                                                                              | Custom MCP toolset in Python                                                                                     |
+| [`samples/CSharpDemo`](samples/CSharpDemo) · [`CSharpScriptDemo`](samples/CSharpScriptDemo) · [`FSharpScriptDemo`](samples/FSharpScriptDemo)    | .NET add-in, C# script and F# script                                                                             |
+| [`samples/McpToolsetDemo`](samples/McpToolsetDemo) · [`RevitMcpToolSet`](samples/RevitMcpToolSet)                                               | Custom MCP toolsets in C#                                                                                        |
+| `samples/DevTools.NUnit.SampleTests` and its TUnit / MSTest siblings                                                                            | In-host .NET tests                                                                                               |
 
-Render curves, faces, solids directly in Revit view without creating model elements.
+Walkthroughs: [Examples](https://trgiangv.github.io/RevitDevTool/docs/examples/Examples-Overview/).
 
-```python
-ref = uidoc.Selection.PickObject(ObjectType.Edge)
-edge = elem.GetGeometryObjectFromReference(ref)
-print(edge)  # Renders in 3D view
-```
+## Contributing
 
-**[Visualization Guide](docs/product/visualization.md)**
+Contributions are welcome. Start with the [repository documentation map](docs/README.md), which separates product behavior, architecture and contributor workflow. Keep shared platform code in `DevTools.*` and host-specific code in `RevitDevTool` or `AcadDevTool`.
 
----
-
-## ⚡ Quick Start
-
-### 1. Install
-
-Download and run the MSI installer from [Releases](https://github.com/trgiangv/RevitDevTool/releases/latest).
-
-### 2. Write Your First Script
-
-Create `hello.script.py`:
-
-```python
-# /// script
-# dependencies = []
-# ///
-
-from Autodesk.Revit import DB
-
-doc = __revit__.ActiveUIDocument.Document
-walls = DB.FilteredElementCollector(doc).OfClass(DB.Wall)
-
-print(f"Found {walls.GetElementCount()} walls")
-```
-
-### 3. Execute
-
-1. Open RevitDevTool panel in Revit (or AutoCAD)
-2. Load folder containing your script
-3. Click Execute
-4. See output in Trace panel
-
-**[Complete Getting Started Guide](docs/docs/intro.md)** · **[Documentation site](https://trgiangv.github.io/RevitDevTool/)**
-
----
-
-## 🌟 Key Features
-
-### Python Execution
-
-- **CPython 3.14** with full ecosystem access
-- **PEP 723 inline dependencies** — no separate requirements.txt
-- **Pixi resolver** — automatic package installation with conda-forge + PyPI
-- **VSCode debugger** — full IDE debugging with breakpoints
-- **Module isolation** — clean cache between runs
-- **Type stubs** — full Revit/AutoCAD API autocomplete in IDE
-
-### .NET Execution
-
-- **IExternalCommand discovery** — automatic command detection
-- **FileWatcher** — auto-reload on assembly changes
-- **Dependency loading** — all DLLs loaded automatically
-- **C# / F# scripts** — Roslyn-based script execution
-
-### AI Integration (MCP)
-
-- **Model Context Protocol** — AI assistants interact with live host instances
-- **Multi-host discovery** — `DevTools.Daemon` tray app finds all running hosts
-- **Built-in tools** — `list_processes`, `launch_host`, `code_mode`
-- **Custom toolsets** — Python/C# MCP tools registered via file convention
-- **Works with** — Cursor, Claude Desktop, VS Code Copilot, any MCP client
-- **Architecture docs**: [MCP Architecture](docs/architecture/MCP/README.md)
-
-### Remote Testing (PyTest)
-
-- **pytest bridge** — run tests inside live host processes via Named Pipe
-- **Multi-host** — `--host revit`, `--host autocad`, `--host civil3d`
-- **Auto-discovery** — finds running host instances automatically
-- **Auto-launch** — spawns host process if needed
-- **IDE integration** — VS Code, Cursor, PyCharm test runners
-- **Separate repo**: [`RevitDevTool.PyTest`](https://github.com/trgiangv/RevitDevTool.PyTest) | PyPI: [`revitdevtool_pytest`](https://pypi.org/project/revitdevtool_pytest/)
-- **Architecture docs**: [Pytest Bridge](docs/architecture/Execution/pytest-bridge.md)
-
-### Logging System
-
-- **Multi-source capture** — Trace, Console, Debug, Python print
-- **Syntax highlighting** — automatic color coding by keywords
-- **JSON formatting** — pretty-print with syntax highlighting
-- **Stack traces** — Python exception formatting with file links
-- **Geometry interception** — auto-visualize printed geometry (Revit)
-
-### Visualization (Revit)
-
-- **DirectContext3D** — transient rendering (no model elements)
-- **Multiple geometry types** — curves, faces, solids, meshes, points, bounding boxes
-- **Thread-safe** — buffered rendering from any thread
-- **Performance optimized** — caching and batch updates
-
----
-
-## 🆚 Comparisons
-
-### vs pyRevit
-
-| Aspect | RevitDevTool | pyRevit |
-|--------|-------------|---------|
-| **Target User** | Developers & researchers | End users |
-| **Hosts** | Revit + AutoCAD family | Revit only |
-| **Python** | CPython 3.14 | IronPython 2.7 (default) |
-| **Packages** | Full ecosystem (pandas, numpy, AI/ML) | Limited (Revit API only) |
-| **Dependencies** | Automatic (PEP 723 + Pixi) | Manual pip install |
-| **Debugging** | VSCode (full IDE) | pdb (command-line) |
-| **AI Integration** | MCP protocol | — |
-| **Testing** | pytest bridge | — |
-| **Best For** | Development, research, data science | Ribbon automation for teams |
-
-**[Detailed Comparison](docs/docs/hosts/revit.md)**
-
-### Python Ecosystem Options
-
-| Tool | Python | Auto-deps | Debugger | AI (MCP) | Best For |
-|------|--------|-----------|----------|----------|----------|
-| **pyRevit** | IronPython 2.7 | — | — | — | End-user automation |
-| **Dynamo** | CPython 3.9 | — | — | — | Visual programming |
-| **RevitDevTool** | CPython 3.14 | Pixi | VSCode | Full | Development & research |
-
-**[Complete Ecosystem Analysis](docs/docs/workflows/python-dependencies.md)**
-
----
-
-## 📦 Installation
-
-### Requirements
-
-- Autodesk Revit 2022–2027 and/or AutoCAD-family 2022–2027
-- Windows 10/11
-- .NET Framework 4.8 (Revit 2022–2024), .NET 8.0 (2025–2026), .NET 10.0 (2027)
-
-### Install Steps
-
-1. Download MSI installer from [Releases](https://github.com/trgiangv/RevitDevTool/releases/latest)
-2. Run installer (admin rights required)
-3. Launch Revit or AutoCAD
-4. Find RevitDevTool in the ribbon
-
-**[Installation Guide](docs/docs/getting-started/installation.md)**
-
----
-
-## 📖 Examples
-
-<table>
-<tr>
-<td valign="top">
-
-## Python
-**[samples/PythonDemo/](samples/PythonDemo)**
-
-- `dashboard_ipy_script.py` — BIM dashboard (WebView2 + React)
-- `data_analysis_script.py` — Polars data analysis
-- `visualization_curve_script.py` — 3D geometry rendering
-- `logging_format_script.py` — Log formatting examples
-- `sklearn_script.py` — ML with scikit-learn
-- `shapely_script.py` — Geometric operations
-- `trimesh_script.py` — 3D mesh processing
-
-</td>
-<td valign="top">
-
-## .NET
-**[samples/CSharpDemo/](samples/CSharpDemo)**
-
-- Logging sample with stack trace and JSON formatting
-- Geometry visualization sample
-
-## MCP Toolsets
-**[samples/PythonDemo/mcp_tools/](samples/PythonDemo/mcp_tools)**
-
-- Python MCP toolsets for AI integration
-- Custom tools and resources
-
-</td>
-</tr>
-</table>
-
-**[All Examples](samples)**
-
----
-
-## 🛠️ Building from Source
-
-### Prerequisites
-
-- .NET 10.0 SDK (via `global.json`)
-
-### Build Steps
-
-```bash
+```powershell
 git clone https://github.com/trgiangv/RevitDevTool.git
 cd RevitDevTool
 
-# Stop that host year, then build and deploy
+# stop the host, then build and deploy
 scripts/build-host.ps1 -HostApp Revit -Year 2025
 
-# Several hosts and years (one year after another)
-scripts/build-host.ps1 -HostApp Revit,AutoCAD -Year 2025,2026 -Mode Release
-
-# Or build the solution directly
+# or build the solution without touching a running host
 dotnet build RevitDevTool.slnx -c "Debug.Autodesk.2025"
 ```
 
-**Available configurations:** `Debug.Autodesk.2022` through `Debug.Autodesk.2027`, `Release.Autodesk.2022` through `Release.Autodesk.2027`.
+Requires the .NET SDK pinned in `global.json`. Configurations run from `Debug.Autodesk.2022` to `Release.Autodesk.2027`. More: [Build From Source](https://trgiangv.github.io/RevitDevTool/docs/getting-started/Build-From-Source/).
 
-**[Build Guide](docs/agents/build-matrix.md)**
+## Get help
 
----
+- [Documentation](https://trgiangv.github.io/RevitDevTool/)
+- [Bug reports](https://github.com/trgiangv/RevitDevTool/issues)
+- [Questions and ideas](https://github.com/trgiangv/RevitDevTool/discussions)
 
-## 🤝 Contributing
-
-Contributions welcome!
-
-1. **Read architecture docs** — [docs/](docs) for the module you're modifying
-2. **Follow design patterns** — Provider, Strategy, Composite patterns
-3. **Keep host boundaries** — shared platform in `DevTools.*`, host-specific in `RevitDevTool` / `AcadDevTool`
-4. **Update docs** — the appropriate repository docs layer and `docs/docs/` when user-facing
-
-**[GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)** for ideas |
-**[GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues)** for bugs
-
----
-
-## 🙏 Acknowledgments
-
-Built on the shoulders of giants:
+## Acknowledgments
 
 - [RevitLookup](https://github.com/lookup-foundation/RevitLookup) — DirectContext3D implementation reference
-- [RevitDevTool (Original)](https://github.com/Zhuangkh/RevitDevTool) — original project inspiration
+- [RevitDevTool (original)](https://github.com/Zhuangkh/RevitDevTool) — project inspiration
 - [RevitAddinManager](https://github.com/chuongmep/RevitAddinManager) — add-in hot reload patterns
-- [pyRevit](https://github.com/pyrevitlabs/pyRevit) — Python integration inspiration
-- [RevitPythonShell](https://github.com/architecture-building-systems/revitpythonshell) — IronPython scripting environment
-- [Dynamo](https://github.com/DynamoDS/Dynamo) — visual programming
-- [Pixi](https://pixi.sh/) — fast cross-platform package management
-- [PythonNet](https://github.com/pythonnet/pythonnet) — Python.NET bridge
+- [pyRevit](https://github.com/pyrevitlabs/pyRevit) and [RevitPythonShell](https://github.com/architecture-building-systems/revitpythonshell) — Python scripting in Revit
+- [RevitToolkit](https://github.com/Nice3point/RevitToolkit) — Revit context for test projects
+- [Pixi](https://pixi.sh/) — package management
+- [Python.NET](https://github.com/pythonnet/pythonnet) — Python and .NET bridge
 
----
+## License
 
-## 📜 License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-## 💬 Get Help
-
-- 📖 **Documentation** — [Docusaurus documentation site](https://trgiangv.github.io/RevitDevTool/)
-- 🐛 **Bug Reports** — [GitHub Issues](https://github.com/trgiangv/RevitDevTool/issues)
-- 💡 **Feature Requests** — [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)
-- ❓ **Questions** — [GitHub Discussions](https://github.com/trgiangv/RevitDevTool/discussions)
-
----
-
-**Made with ❤️ for the CAD/BIM developer community**
-⭐ Star this repo if you find it useful!
+MIT — see [LICENSE](LICENSE).

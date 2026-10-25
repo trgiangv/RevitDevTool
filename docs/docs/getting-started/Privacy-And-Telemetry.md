@@ -52,15 +52,11 @@ Errors in your own scripts, commands, MCP toolsets, or tests are **not** sent. T
 - Windows username, email, or personal identity
 - Network configuration or IP-based geolocation
 
-## User ID
-
-The user ID identifies one Windows user on one machine. It is a keyed one-way hash (HMAC-SHA256) of the Windows machine GUID and the account SID. The raw machine GUID, SID, and user name are never sent, and the hash cannot be reversed or matched with IDs from other applications. Nothing is stored on disk. The ID changes only when Windows is reinstalled or the account changes. If either value cannot be read, a random ID is used for that session only.
-
-The ID is used solely to correlate reports from the same user and to count users. It is **not** linked to any user account, email, or Autodesk account.
-
 ## How To Opt Out
 
-Open RevitDevTool settings and disable **"Anonymous diagnostics"**. When disabled, no telemetry data is sent. The change takes effect on the next host restart.
+Open **Settings → General** and disable **Anonymous diagnostics**. The change takes effect on the next host restart.
+
+![General settings with the Anonymous diagnostics switch](/images/settings/Settings_General.png)
 
 When telemetry is disabled, no network requests are made to the telemetry service.
 

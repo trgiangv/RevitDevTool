@@ -1,6 +1,6 @@
 # MCP Python
 
-Use the Python MCP SDK to create a toolset for Revit or an AutoCAD-family host. RevitDevTool discovers a Python toolset from a folder containing an entry file that matches `*mcp.py`. The entry file owns the toolset's package dependencies through PEP 723 metadata. Register the folder in **Settings → MCP**.
+Use the Python MCP SDK to create a toolset for Revit or an AutoCAD-family host. RevitDevTool discovers a Python toolset from a folder containing an entry file that matches `*mcp.py`. The entry file owns the toolset's package dependencies through PEP 723 metadata. Load the folder from the **MCP** toggle in the panel.
 
 RevitDevTool pins the Python SDK to **`2.3.0`**.
 
@@ -57,8 +57,8 @@ The user flow is:
 1. Create a folder with one `*mcp.py` entry file.
 2. Declare third-party packages in that entry file's PEP 723 header.
 3. Import the modules that register tools, resources, or prompts.
-4. Add the folder path in **Settings → MCP**.
-5. Wait for the catalog to reload, then verify the capabilities from the host MCP registry or an AI client.
+4. Turn on the **MCP** toggle in the panel, choose **Load Python Toolset**, then select the folder.
+5. Wait for the catalog to reload, then verify the capabilities in the **MCP** view or from an AI client.
 
 The sample at [`samples/PythonDemo/mcp_toolset`](https://github.com/trgiangv/RevitDevTool/tree/main/samples/PythonDemo/mcp_toolset) follows this pattern. `unittest` is not an alternative MCP toolset entry workflow; use the MCP entry file and its registered capabilities directly.
 

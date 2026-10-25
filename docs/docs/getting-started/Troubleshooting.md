@@ -18,16 +18,6 @@ Check this file first when the ribbon tab is missing, MCP lists no hosts after a
 
 Rolling session logs use the `log_*` pattern in the same folder. AutoClean removes `log_*` only — `crash_*` files are kept.
 
-## Build Configuration Not Found
-
-Use `.slnx` and Autodesk configuration names:
-
-```powershell
-dotnet build RevitDevTool.slnx -c "Debug.Autodesk.2025"
-```
-
-Do not use old names like `Release R25`. Available configurations: `Debug.Autodesk.2022` through `Debug.Autodesk.2027` and `Release.Autodesk.2022` through `Release.Autodesk.2027`.
-
 ## Python Dependencies Do Not Install
 
 Check:
@@ -38,14 +28,14 @@ Check:
 - Package indexes are reachable (conda-forge + PyPI for Pixi; PyPI for the Plant 3D uv sidecar)
 - PEP 723 `# /// script` block is present and valid at the top of the script
 
-If both managers are blocked, confirm pyRevit is installed for pip/pyRevit CPython fallback.
+If Pixi is blocked on Revit, AutoCAD or Civil 3D, confirm pyRevit is installed so its CPython engine can be used as the fallback. Plant 3D has no fallback: uv must be able to run.
 
 ## Python Debugger Does Not Attach
 
 Check:
 
-- VSCode is listening on the configured port
-- The RevitDevTool debugger port matches VSCode
+- Your IDE is attached to the configured port
+- The port shown for that instance in RevitDevTool matches your attach configuration
 - `debugpy` is installed in the active Python environment (Pixi env, Plant 3D uv sidecar, or fallback)
 - Firewall/security policy allows local attach
 
@@ -88,4 +78,4 @@ The stdio MCP server writes to:
 %APPDATA%\RevitDevTool\logs\
 ```
 
-Useful when the AI client times out or `list_host_instances` returns empty.
+Useful when the AI client times out or `list_processes` returns empty.

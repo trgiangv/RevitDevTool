@@ -12,6 +12,15 @@ Logging output is delivered through independent targets. The same trace entry ca
 
 These are output mechanisms, not separate logging systems. Log level filtering happens before the selected targets receive the entry.
 
+```mermaid
+flowchart LR
+    Src["Trace, Console.WriteLine,<br/>Python print"] --> Level{Minimum<br/>log level}
+    Level -->|passes| Monitor[Monitor pane]:::ok
+    Level -->|passes| File["File<br/>.log or .json"]:::ok
+    Level -->|passes| Http["HTTP endpoint<br/>batched POST"]:::ok
+    Level -->|below level| Drop[Dropped]:::muted
+```
+
 ## Monitor
 
 The Monitor pane is the interactive output target. Open the Trace Log panel from the host UI, start the listener, and use the level filter to focus on the messages you need.
@@ -32,6 +41,10 @@ Enable HTTP output when another service should receive the log stream. RevitDevT
 HTTP errors do not stop the local logging pipeline. The remote endpoint must accept the configured format.
 
 ## Choosing an output
+
+Pick the targets under **Log Sinks** in **Settings → Log**. **File Logging** sets the rolling interval, automatic cleanup and the log folder.
+
+![Log settings with the Monitor and File sinks enabled](/images/settings/Settings_Logging.png)
 
 - Use **Monitor** while actively running a script or add-in.
 - Use **File** when the result must survive a host restart.

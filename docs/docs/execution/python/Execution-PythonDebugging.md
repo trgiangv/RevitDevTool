@@ -1,13 +1,16 @@
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Attach Debugger
 
-This page covers debugging for **CPython** (`debugpy`) and **.NET attach** (C# `.csx`, F# `.fsx`, compiled `.dll`). IronPython has **no** debugger attach in RevitDevTool.
+This page covers debugging for **CPython** and **IronPython** (attach from VS Code, PyCharm or any IDE that speaks the debug adapter protocol) and **.NET attach** (C# `.csx`, F# `.fsx`, compiled `.dll`).
 
 ## Quick Reference
 
 | Runtime | Attach method | Notes |
 | --- | --- | --- |
-| CPython `*script.py` | `debugpy` on localhost (default port **5678**) | Attach **before** running the script |
-| IronPython `*_ipy_script.py` | **Not supported** | Use print tracing or migrate to CPython for breakpoints |
+| CPython `*script.py` | Attach to a localhost port (preferred **5678**) | Attach **before** running the script |
+| IronPython `*_ipy_script.py` | Attach to a localhost port (preferred **4567**) | Works on the pyRevit engine and on IronPython 3.4.2; attach **before** running |
 | C# `*script.csx` | Attach to host process | Debug + portable PDB binds to original `.csx` |
 | F# `*script.fsx` | Attach to host process | FSI `--debug+` maps back to original `.fsx` |
 | .NET `.dll` | Attach to host process | Standard compiled command debugging |
@@ -16,27 +19,45 @@ This page covers debugging for **CPython** (`debugpy`) and **.NET attach** (C# `
 
 ## CPython — debugpy
 
-Python debugging lets you attach VSCode (or any `debugpy` client) to a Python script running inside RevitDevTool. Use it when print debugging is too slow or when a bug only appears with real host API objects.
+Python debugging lets you attach your IDE (VS Code, PyCharm, or any client of the same protocol) to a Python script running inside RevitDevTool. Use it when print debugging is too slow or when a bug only appears with real host API objects.
 
-![Python Debugger Demo](/images/execution/PythonDebugger.gif)
+<SequenceFlow
+  participants={[
+    { id: 'ide', title: 'Your IDE', subtitle: 'VS Code or PyCharm' },
+    { id: 'host', title: 'Revit / AutoCAD', subtitle: 'RevitDevTool + your script' },
+  ]}
+  steps={[
+    { note: 'The host listens on a localhost port', over: ['ide', 'host'], detail: 'Each host instance listens on its own port when Python starts' },
+    { from: 'ide', to: 'host', text: 'Attach', detail: 'Start the attach configuration in your IDE' },
+    { note: 'You run the script from RevitDevTool', over: ['ide', 'host'], detail: 'Run the command from the RevitDevTool panel' },
+    { from: 'host', to: 'ide', text: 'Stopped at breakpoint', back: true, detail: 'Execution pauses at your breakpoint and the host UI waits' },
+    { from: 'ide', to: 'host', text: 'Inspect, step, continue', detail: 'Read variables, step through the code, then continue' },
+    { from: 'host', to: 'ide', text: 'Script finished', back: true, detail: 'The script ends and its output appears in the Trace panel' },
+  ]}
+/>
 
 ### Quick Start
 
 1. Open the host with RevitDevTool loaded.
-2. Open your script folder in VSCode.
-3. Add a VSCode debug attach configuration.
+2. Open your script folder in your IDE.
+3. Add an attach configuration (see below).
 4. Set breakpoints in your Python script.
-5. Start the VSCode debugger.
+5. Start the attach configuration.
 6. Run the script from RevitDevTool.
 7. Inspect variables when execution pauses.
 
-RevitDevTool starts `debugpy.listen` during Python initialization. The default port is **5678**; if that port is busy, an alternate localhost port is chosen automatically. Match the port shown in the RevitDevTool panel.
+:::tip Debug port
+CPython prefers port **5678** and IronPython prefers **4567**. Each host instance, Revit or AutoCAD, uses its preferred port when it is free; otherwise the OS assigns a free port. Set your attach configuration to the port shown in the RevitDevTool panel for that instance.
+:::
 
-### VSCode Launch Configuration
+### Attach configuration
+
+<Tabs groupId="python-ide">
+<TabItem value="vscode" label="VS Code" default>
 
 Create or update `.vscode/launch.json`:
 
-```json
+```json title=".vscode/launch.json"
 {
   "version": "0.2.0",
   "configurations": [
@@ -54,7 +75,28 @@ Create or update `.vscode/launch.json`:
 }
 ```
 
-The port must match the debug port configured in RevitDevTool.
+</TabItem>
+<TabItem value="pycharm" label="PyCharm (JetBrains)">
+
+Add a shared run configuration in the `.run` folder of your project. The repository ships this one:
+
+```xml title=".run/Attach.run.xml"
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Attach Host: Python" type="PythonDapAttachConfiguration">
+    <option name="localRoot" value="$PROJECT_DIR$" />
+    <option name="remoteAddress" value="localhost:5678" />
+    <option name="remoteRoot" value="$PROJECT_DIR$" />
+    <method v="2" />
+  </configuration>
+</component>
+```
+
+`localRoot` and `remoteRoot` both point at the project folder, so breakpoints map to the files on disk.
+
+</TabItem>
+</Tabs>
+
+Change the port (`5678` here) to the one your instance uses.
 
 ### Sample Script
 
@@ -128,22 +170,26 @@ element = doc.GetElement(ref)
 
 | Symptom | Check |
 | --- | --- |
-| Breakpoint is never hit | VSCode is attached before running the script |
-| VSCode cannot connect | debug port matches RevitDevTool settings |
+| Breakpoint is never hit | your IDE is attached before running the script |
+| IDE cannot connect | the port in your configuration matches the one shown in the RevitDevTool panel for that instance |
 | `debugpy` import fails | Python dependencies were prepared successfully |
-| Debugger attaches but file is not mapped | open the same script folder in VSCode |
+| Debugger attaches but file is not mapped | open the same script folder in your IDE |
 | Script blocks waiting | a modal host selection/dialog may be active |
-| Host freezes while paused | this is expected; continue/step from VSCode |
+| Host freezes while paused | this is expected; continue/step from your IDE |
 
 ---
 
-## IronPython — No Attach
+## IronPython — attach
 
-IronPython scripts (`*_ipy_script.py`) do **not** support debugger attach in RevitDevTool. There is no `debugpy` bridge and no host attach hook for IronPython execution.
+IronPython scripts (`*_ipy_script.py`) can be debugged the same way as CPython, on the pyRevit engine and on IronPython 3.4.2. Use the same attach configuration as above, with the IronPython port: preferred **4567**.
 
-If you need VSCode breakpoints, use CPython `*script.py` instead. If you need to stay on IronPython, use print tracing or run under pyRevit's own tooling.
+The steps are the same as for CPython: start the attach configuration, set breakpoints, then run the script from RevitDevTool. This also covers IronPython tests (`test_*_ipy.py`): the debugger attaches to the port, so whichever engine runs your file stops at its breakpoints.
 
-On **Revit**, IronPython execution prefers the pyRevit engine (default **IronPython 2.7.12**); **AutoCAD-family** hosts use bundled **IronPython 3.4.2**.
+:::tip One port per runtime and instance
+CPython prefers **5678** and IronPython **4567**. If the preferred port is taken, the OS assigns a free one, so use the port shown in the RevitDevTool panel.
+:::
+
+On **Revit**, IronPython execution prefers the pyRevit engine, else IronPython 3.4.2; **AutoCAD-family** hosts use bundled **IronPython 3.4.2**. A breakpoint on the very first line is missed unless your IDE is already attached. The first session downloads the debugger, so it needs the network once, like the Pixi and uv setup.
 
 ---
 
@@ -159,7 +205,7 @@ C# `.csx`, F# `.fsx`, and compiled `.dll` commands all run inside the host proce
 4. **Debug → Attach to Process…** and select the host.
 5. Run the command from RevitDevTool.
 
-For C# scripts, Roslyn emits Debug + portable PDB so breakpoints bind to the original `.csx` on disk. For F# scripts, FSI runs with `--debug+` and `#line` mapping back to your `.fsx` files.
+Breakpoints in C# and F# scripts bind to the original `.csx` and `.fsx` files on disk.
 
 ### VS Code (C# Dev Kit)
 
@@ -170,26 +216,15 @@ For C# scripts, Roslyn emits Debug + portable PDB so breakpoints bind to the ori
 
 Ionide can edit F# scripts; attach still targets the host process the same way.
 
-### Placeholder Screenshots
-
-![C# script debugger](/images/execution/CsxDebugger.png)
-
-*Placeholder — replace with a product screenshot.*
-
-![F# NuGet and debugging](/images/execution/FsxNuget.png)
-
-*Placeholder — replace with a product screenshot.*
-
-![Assembly debugger](/images/execution/AssemblyDebugger.png)
-
-*Placeholder — replace with a product screenshot.*
-
 ### .NET Attach Tips
 
 - Attach **before** running the command when you need to break on startup logic.
-- Keep script sources on disk at the paths used when the script was compiled — PDB and `#line` mapping depend on those paths.
-- On Revit 2022–2024 (.NET Framework), assembly loading differs from Revit 2025+ (collectible ALC). Breakpoints still work; unloading behavior differs — see [.NET Assembly](/docs/execution/dotnet-assembly/Execution-Assembly).
-- While paused at a breakpoint, the host UI is frozen until you continue — same as CPython `debugpy`.
+- Keep script files at the same paths while debugging; moving them breaks the link to your breakpoints.
+- On Revit 2022–2024 (.NET Framework), loaded assemblies cannot be unloaded, so restart the host to release one. Breakpoints still work — see [.NET Assembly](/docs/execution/dotnet-assembly/Execution-Assembly).
+
+:::warning The host freezes while paused
+While paused at a breakpoint, the host UI is frozen until you continue. This is the same as with CPython `debugpy`.
+:::
 
 ---
 

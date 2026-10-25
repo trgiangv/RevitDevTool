@@ -18,7 +18,7 @@ The suffix marks the file as an IronPython test. It does not make the test a CPy
 | Test style | `unittest.TestCase` |
 | pytest fixtures | Not supported |
 | PEP 723 dependencies | Not supported |
-| Debugger attach | Not supported |
+| Debugger attach | Supported, attach your IDE to the IronPython port |
 
 ## Example
 
@@ -40,13 +40,16 @@ The test client discovers `test_*_ipy.py` files separately from regular `test_*.
 
 ## Engine selection
 
-On Revit, RevitDevTool prefers the pyRevit IronPython engine when pyRevit is installed (default IronPython 2.7.12). Without pyRevit it falls back to IronPython 3.4.2. AutoCAD-family hosts use bundled IronPython 3.4.2.
+On Revit, RevitDevTool prefers the pyRevit IronPython engine when pyRevit is installed. Without pyRevit it falls back to IronPython 3.4.2. AutoCAD-family hosts use bundled IronPython 3.4.2.
+
+## Debugging
+
+Attach your IDE to the IronPython port (preferred port **4567**) before running the test, as you would for an IronPython script. Whichever engine runs the test stops at your breakpoints in the test file on disk. See [Attach Debugger](/docs/execution/python/Execution-PythonDebugging).
 
 ## Limitations
 
 - Do not use pytest fixtures or PEP 723 metadata in an IronPython test.
-- Do not expect `debugpy` or .NET debugger attach for IronPython tests.
 - Keep host API access inside valid document, transaction, and document-lock context.
-- Use [pytest](/docs/testing/pytest) or CPython when modern packages or breakpoints are required.
+- Use [pytest](/docs/testing/pytest) or CPython when modern packages are required.
 
 See [Testing Overview](/docs/testing/Testing-Overview) for the shared pipe and mixed-tree behavior.
