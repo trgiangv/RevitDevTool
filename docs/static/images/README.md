@@ -1,19 +1,14 @@
 # Documentation images
 
-Images imported from `RevitDevTool.Wiki/images/` retain their source grouping:
+Screenshots and recordings of the RevitDevTool panel, grouped by purpose:
 
-- `start/` — installation and first-launch UI
-- `execution/` — Python, C#, F#, debugging, and dependency workflows
-- `testing/` — host testing and pytest bridge
-- `mcp/` — MCP client and SDK workflows
-- `observability/` — logging, tracing, and crash diagnostics
-- `examples/` — dashboard and sample workflows
+- `start/` — the panel and ribbon buttons in each host
+- `settings/` — one screenshot per Settings tab
+- `features/` — feature recordings and panel views, placed on the page that describes the feature
+- `examples/` — sample workflows
 
 Use root-relative paths in Docusaurus Markdown, for example:
 
 ```md
-![Python debugger](/images/execution/PythonDebugger.gif)
+![Log settings](/images/settings/Settings_Logging.png)
 ```
-
-New image categories should be created here before adding references from a
-public documentation page.
