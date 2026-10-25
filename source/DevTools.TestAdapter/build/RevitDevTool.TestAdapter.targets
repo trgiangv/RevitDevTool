@@ -225,9 +225,7 @@
         Condition="'$(_MtpHookType)' == ''"
         Text="RevitDevTool.TestAdapter requires TestingFramework nunit, tunit, or mstest (got '$(TestingFramework)')." />
     <PropertyGroup>
-      <_RunnerPath Condition="'$(TestingRunnerPath)' != ''">$(TestingRunnerPath)</_RunnerPath>
-      <_RunnerPath Condition="'$(_RunnerPath)' == ''">$([System.Environment]::GetFolderPath(SpecialFolder.ApplicationData))\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\DevTools.TestRunner.exe</_RunnerPath>
-      <_RunnerPathJson>$(_RunnerPath.Replace('\', '\\'))</_RunnerPathJson>
+      <_RunnerPathJson>$(TestingRunnerPath.Replace('\', '\\'))</_RunnerPathJson>
       <_GeneratedTestConfigPath>$(IntermediateOutputPath)devtools.testconfig.json</_GeneratedTestConfigPath>
       <_MergedTestConfigPath>$(IntermediateOutputPath)testconfig.json</_MergedTestConfigPath>
     </PropertyGroup>

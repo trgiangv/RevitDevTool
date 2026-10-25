@@ -115,11 +115,11 @@ adapter package.
 
 ## Runner install
 
-Default path:
+The adapter finds the runner with `AppUtils.GetTestRunnerExePath()`: first the
+Velopack install (`%LOCALAPPDATA%/RevitDevTool/current/DevTools.TestRunner.exe`),
+then the dev deploy (`%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.TestRunner.exe`).
 
-`%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.TestRunner.exe`
-
-Override with MSBuild `TestingRunnerPath` when the bundle is elsewhere.
+Override with MSBuild `TestingRunnerPath` or `DEVTOOLS_TESTING_RUNNER_PATH`.
 Missing file → `"RevitDevTool is not installed"`.
 
 Install from [RevitDevTool releases](https://github.com/trgiangv/RevitDevTool).

@@ -14,17 +14,17 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<string> ToolsetSources { get; } = [];
 
-    public static string StdioConfigSnippet => """
-                                               {
-                                                 "mcpServers": {
-                                                   "revitdevtool": {
-                                                     "type": "stdio",
-                                                     "command": "~/AppData/Roaming/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.Daemon.exe",
-                                                     "args": ["--stdio"]
-                                                   }
-                                                 }
-                                               }
-                                               """;
+    public string StdioConfigSnippet { get; } = $$"""
+                                                  {
+                                                    "mcpServers": {
+                                                      "revitdevtool": {
+                                                        "type": "stdio",
+                                                        "command": "{{Utilities.AppUtils.GetDaemonExePath().Replace('\\', '/')}}",
+                                                        "args": ["--stdio"]
+                                                      }
+                                                    }
+                                                  }
+                                                  """;
 
     public McpSettingViewModel(ISettingsService settingsService, McpCatalogStore catalogStore)
     {

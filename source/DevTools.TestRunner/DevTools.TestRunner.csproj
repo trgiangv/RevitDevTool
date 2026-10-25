@@ -26,7 +26,17 @@
         <DebugSymbols>false</DebugSymbols>
     </PropertyGroup>
 
-    <Target Name="DeployDevToolsTestRunner" AfterTargets="Publish">
+    <PropertyGroup Condition="'$(VelopackPublish)' == 'true'">
+        <SelfContained>true</SelfContained>
+        <PublishSingleFile>false</PublishSingleFile>
+        <UseWPF>true</UseWPF>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(VelopackPublish)' == 'true'">
+        <Using Include="System.IO"/>
+    </ItemGroup>
+
+    <Target Name="DeployDevToolsTestRunner" AfterTargets="Publish" Condition="'$(VelopackPublish)' != 'true'">
         <Exec Command="taskkill /F /IM DevTools.TestRunner.exe 2>nul &amp; ping -n 2 127.0.0.1 >nul" IgnoreExitCode="true"/>
         <MakeDir Directories="$(BundleContentsFolder)"/>
         <Copy SourceFiles="$(PublishDir)DevTools.TestRunner.exe"
