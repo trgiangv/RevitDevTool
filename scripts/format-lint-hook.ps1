@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$scopes = @('source', 'tests', 'build', 'install')
+$scopes = @('source', 'tests', 'build')
 $hostConfiguration = 'Debug.Autodesk.2025'
 $stylerConfig = Join-Path $repoRoot 'Settings.XamlStyler'
 Set-Location $repoRoot

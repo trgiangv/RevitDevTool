@@ -14,6 +14,7 @@ builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddOptions<BuildOptions>().Bind(builder.Configuration.GetSection("Build"));
 builder.Services.AddOptions<BundleOptions>().Bind(builder.Configuration.GetSection("Bundle"));
 builder.Services.AddOptions<PublishOptions>().Bind(builder.Configuration.GetSection("Publish"));
+builder.Services.AddOptions<UpdateOptions>().Bind(builder.Configuration.GetSection("Update"));
 
 if (args.Length == 0)
 {
@@ -32,7 +33,11 @@ if (args.Contains("pack"))
 {
     SolutionCompile.DeployAddin = false;
     builder.Services.AddModule<CreateBundleModule>();
-    builder.Services.AddModule<CreateInstallerModule>();
+    builder.Services.AddModule<PackPayloadsModule>();
+    builder.Services.AddModule<GenerateUpdateManifestModule>();
+    builder.Services.AddModule<PackDaemonModule>();
+    builder.Services.AddModule<SignUpdateFeedsModule>();
+    builder.Services.AddModule<VerifyReleaseModule>();
 }
 
 if (args.Contains("publish"))

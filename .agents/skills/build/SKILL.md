@@ -26,7 +26,7 @@ change actually reaches:
 | Shared `DevTools.*` / tests (multi-TFM) | `dotnet build <csproj> -c Debug` |
 | `RevitDevTool` / `DevTools.Mcp.Revit` | `dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025` + compile-only props |
 | `AcadDevTool` / `DevTools.Mcp.Acad` | `dotnet build source/AcadDevTool/AcadDevTool.csproj -c Debug.Autodesk.2025` + compile-only props |
-| `build/` or `install/` packaging | `-c Release` on the affected project |
+| `build/` packaging | `-c Release` on the affected project |
 | Unsure about host-year coverage | Repeat with `-c Debug.Autodesk.2022` (net48) and `.2027` (net10) |
 
 Compile-only props (host projects only):
@@ -89,7 +89,7 @@ and `-Year` values it builds; leave other running versions untouched.
 
 | Artifact | Command |
 |----------|---------|
-| Installer / all years | `dotnet run --project build -- pack` |
+| Release assets in `output/`: bundle zip, year zips, `update-manifest.json`, Velopack `RevitDevTool-Setup.exe` + nupkg + `releases.*.json` | `dotnet run --project build -- pack`. Plan: `docs/plans/active/2026-10-25-auto-update.md` |
 | TestAdapter NuGet | `dotnet run --project build -- adapter` |
 
 Pack writes `output/nuget` (repo `NuGet.config` maps `RevitDevTool.TestAdapter`

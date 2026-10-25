@@ -66,7 +66,7 @@ dotnet publish source/DevTools.Daemon -c Release
 | Command | Daemon / Runner behavior |
 |---------|-----------------|
 | `dotnet run --project build` (no args) | `PublishDaemonModule` + `PublishTestRunnerModule` publish + deploy to AppData Contents |
-| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs both exes into bundle zip |
+| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs both exes into bundle zip; `PackDaemonModule` publishes the Daemon self-contained and packs it with Velopack into `output/` |
 | `dotnet publish source/DevTools.Daemon -c Release` | Direct Daemon publish + deploy (csproj target) |
 | `dotnet publish source/DevTools.TestRunner -c Release` | Direct Runner publish + deploy (csproj target) |
 

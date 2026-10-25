@@ -12,6 +12,8 @@ using ModularPipelines.Modules;
 using Octokit;
 using Shouldly;
 using System.Text;
+using ReleaseSignature = DevTools.Update.Releases.ReleaseSignature;
+using UpdateManifest = DevTools.Update.Releases.UpdateManifest;
 
 namespace Build.Modules;
 
@@ -22,7 +24,10 @@ namespace Build.Modules;
 [DependsOn<ResolveVersionModule>]
 [DependsOn<GenerateChangelogModule>]
 [DependsOn<CreateBundleModule>(Optional = true)]
-[DependsOn<CreateInstallerModule>(Optional = true)]
+[DependsOn<GenerateUpdateManifestModule>(Optional = true)]
+[DependsOn<PackDaemonModule>(Optional = true)]
+[DependsOn<SignUpdateFeedsModule>(Optional = true)]
+[DependsOn<VerifyReleaseModule>(Optional = true)]
 [UsedImplicitly]
 public sealed class PublishGithubModule(IOptions<BuildOptions> buildOptions) : Module
 {
@@ -34,34 +39,68 @@ public sealed class PublishGithubModule(IOptions<BuildOptions> buildOptions) : M
         var changelog = AppendGitHubCompareUrl(context, changelogResult.ValueOrDefault!, versioning);
 
         var outputFolder = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory);
-        var targetFiles = outputFolder.ListFiles().ToArray();
+        var targetFiles = CollectAssets(outputFolder, versioning.Version);
         targetFiles.ShouldNotBeEmpty("No artifacts were found to create the Release");
 
+        var feeds = targetFiles.Where(IsFeed).ToArray();
+        var payloads = targetFiles.Except(feeds).ToArray();
+
         var repositoryInfo = context.GitHub().RepositoryInfo;
+        var client = context.GitHub().Client.Repository.Release;
         var newRelease = new NewRelease(versioning.Version)
         {
             Name = versioning.Version,
             Body = changelog,
             TargetCommitish = context.Git().Information.LastCommitSha,
-            Prerelease = versioning.IsPrerelease
+            Prerelease = versioning.IsPrerelease,
+            Draft = true
         };
 
-        var release = await context.GitHub().Client.Repository.Release.Create(repositoryInfo.Owner, repositoryInfo.RepositoryName, newRelease);
-        await targetFiles.ForEachAsync(async file =>
+        var release = await client.Create(repositoryInfo.Owner, repositoryInfo.RepositoryName, newRelease);
+        await payloads.ForEachAsync(file => UploadAsync(context, release, file, cancellationToken), cancellationToken).ProcessInParallel();
+        foreach (var feed in feeds)
         {
-            var asset = new ReleaseAssetUpload
-            {
-                ContentType = "application/x-binary",
-                FileName = file.Name,
-                RawData = file.GetStream()
-            };
+            await UploadAsync(context, release, feed, cancellationToken);
+        }
 
-            context.Logger.LogInformation("Uploading asset: {Asset}", asset.FileName);
-
-            await context.GitHub().Client.Repository.Release.UploadAsset(release, asset, cancellationToken);
-        }, cancellationToken).ProcessInParallel();
-
+        release = await client.Edit(repositoryInfo.Owner, repositoryInfo.RepositoryName, release.Id, new ReleaseUpdate { Draft = false });
         context.Summary.KeyValue("Deployment", "GitHub", release.HtmlUrl);
+    }
+
+    /// <summary>
+    ///     Top-level files in <c>output</c>. The previous release's full package that <see cref="PackDaemonModule"/>
+    ///     downloads for deltas is left out.
+    /// </summary>
+    private static ModularPipelines.FileSystem.File[] CollectAssets(ModularPipelines.FileSystem.Folder outputFolder, string version)
+    {
+        return outputFolder.ListFiles()
+            .Where(file => !file.Name.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase) ||
+                           file.Name.Contains($"-{version}-", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+    }
+
+    /// <summary>
+    ///     Feeds are uploaded after every payload, so a client never reads a feed that names a missing asset.
+    /// </summary>
+    private static bool IsFeed(ModularPipelines.FileSystem.File file)
+    {
+        return file.Name == UpdateManifest.FileName ||
+               file.Name.EndsWith(ReleaseSignature.Extension, StringComparison.OrdinalIgnoreCase) ||
+               file.Name.StartsWith("releases.", StringComparison.OrdinalIgnoreCase) ||
+               file.Name.StartsWith("RELEASES", StringComparison.Ordinal);
+    }
+
+    private static async Task UploadAsync(IModuleContext context, Release release, ModularPipelines.FileSystem.File file, CancellationToken cancellationToken)
+    {
+        var asset = new ReleaseAssetUpload
+        {
+            ContentType = "application/x-binary",
+            FileName = file.Name,
+            RawData = file.GetStream()
+        };
+
+        context.Logger.LogInformation("Uploading asset: {Asset}", asset.FileName);
+        await context.GitHub().Client.Repository.Release.UploadAsset(release, asset, cancellationToken);
     }
 
     private static string AppendGitHubCompareUrl(IModuleContext context, string changelog, ResolveVersioningResult versioning)

@@ -1,3 +1,5 @@
 mode: ContinuousDeployment
+next-version: 4.0.0
 strategies:
+  - ConfiguredNextVersion
   - Mainline

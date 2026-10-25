@@ -8,6 +8,7 @@ using ModularPipelines.Modules;
 using Shouldly;
 using Sourcy.DotNet;
 using System.Diagnostics.CodeAnalysis;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Xml;
 using File = ModularPipelines.FileSystem.File;
@@ -15,12 +16,10 @@ using File = ModularPipelines.FileSystem.File;
 namespace Build.Modules;
 
 /// <summary>
-///     Create the Autodesk .bundle package.
+///     Create the Autodesk .bundle package: the payload folders and <c>PackageContents.xml</c>.
 /// </summary>
 [DependsOn<ResolveVersionModule>]
 [DependsOn<CompileExpandModule>]
-[DependsOn<CompileDaemonModule>]
-[DependsOn<CompileTestRunnerModule>]
 [UsedImplicitly]
 public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptions) : Module<string>
 {
@@ -29,33 +28,33 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
     private const string ManifestFile = "PackageContents.xml";
     private const string BinFolder = "bin";
     private const string PublishFolder = "publish";
-    private const string DaemonExecutable = "DevTools.Daemon.exe";
-    private const string TestRunnerExecutable = "DevTools.TestRunner.exe";
 
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var versioningResult = await context.GetModule<ResolveVersionModule>();
-        var daemonResult = await context.GetModule<CompileDaemonModule>();
-        var runnerResult = await context.GetModule<CompileTestRunnerModule>();
         var versioning = versioningResult.ValueOrDefault!;
 
         var revitTarget = new File(Projects.RevitDevTool.FullName);
         var acadTarget = new File(Projects.ACadDevTool.FullName);
 
-        var revitPublishDirs = revitTarget.Folder!.GetFolder(BinFolder).GetFolders(folder => folder.Name == PublishFolder).ToArray();
-        var acadPublishDirs = acadTarget.Folder!.GetFolder(BinFolder).GetFolders(folder => folder.Name == PublishFolder).ToArray();
+        var revitPublishDirs = revitTarget.Folder!.GetFolder(BinFolder).GetFolders(IsReleasePublishFolder).ToArray();
+        var acadPublishDirs = acadTarget.Folder!.GetFolder(BinFolder).GetFolders(IsReleasePublishFolder).ToArray();
 
         revitPublishDirs.ShouldNotBeEmpty("No Revit content were found to create a bundle");
 
         var outputFolder = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory);
+        var staleBundle = Path.Combine(outputFolder.Path, $"{revitTarget.NameWithoutExtension}.bundle");
+        if (Directory.Exists(staleBundle))
+        {
+            Directory.Delete(staleBundle, recursive: true);
+        }
+
         var bundleFolder = outputFolder.CreateFolder($"{revitTarget.NameWithoutExtension}.bundle");
         var contentFolder = bundleFolder.CreateFolder(AdskBundleContentsFolder);
         var manifestFile = bundleFolder.GetFile(ManifestFile);
 
         PackFiles(revitPublishDirs, contentFolder);
         PackFiles(acadPublishDirs, contentFolder);
-        PackDaemon(daemonResult.ValueOrDefault!, contentFolder);
-        PackTestRunner(runnerResult.ValueOrDefault!, contentFolder);
         CopyManifest(context, manifestFile, versioning);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
@@ -70,6 +69,19 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         return bundleFolder.Path;
     }
 
+    /// <summary>
+    ///     Only <c>bin/Release.*/publish</c>. A local <c>Debug.*</c> publish must not leak into the bundle.
+    /// </summary>
+    private static bool IsReleasePublishFolder(Folder folder)
+    {
+        return folder.Name == PublishFolder &&
+               Path.GetFileName(Path.GetDirectoryName(folder.Path))!.StartsWith("Release", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    ///     Copy each host's output into <c>Contents\&lt;host version&gt;</c>. Hosts of one host version share the folder,
+    ///     so a file both hosts publish must be byte-identical (0046).
+    /// </summary>
     private static void PackFiles(Folder[] targetDirectories, Folder contentFolder)
     {
         foreach (var targetDirectory in targetDirectories)
@@ -89,27 +101,26 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
                     destinationPath.Folder!.Create();
                 }
 
+                if (destinationPath.Exists && !HaveSameContent(filePath.Path, destinationPath.Path))
+                {
+                    throw new InvalidOperationException(
+                        $"Contents\\{version}\\{relativePath} differs between hosts of the same host version: '{filePath.Path}' vs '{destinationPath.Path}'.");
+                }
+
                 filePath.CopyTo(destinationPath.Path);
             }
         }
     }
 
-    private static void PackDaemon(string daemonPublishDir, Folder contentFolder)
+    private static bool HaveSameContent(string left, string right)
     {
-        var daemonExe = new File(Path.Combine(daemonPublishDir, DaemonExecutable));
-        if (!daemonExe.Exists) return;
+        if (new FileInfo(left).Length != new FileInfo(right).Length) return false;
 
-        daemonExe.CopyTo(contentFolder.GetFile(DaemonExecutable).Path);
+        using var leftStream = System.IO.File.OpenRead(left);
+        using var rightStream = System.IO.File.OpenRead(right);
+        return SHA256.HashData(leftStream).AsSpan().SequenceEqual(SHA256.HashData(rightStream));
     }
 
-    private static void PackTestRunner(string runnerPublishDir, Folder contentFolder)
-    {
-        var runnerExe = new File(Path.Combine(runnerPublishDir, TestRunnerExecutable));
-        runnerExe.Exists.ShouldBeTrue(
-            $"Expected {TestRunnerExecutable} at '{runnerExe.Path}' after CompileTestRunnerModule.");
-
-        runnerExe.CopyTo(contentFolder.GetFile(TestRunnerExecutable).Path);
-    }
 
     private static void CopyManifest(IModuleContext context, File manifestFile, ResolveVersioningResult versioning)
     {

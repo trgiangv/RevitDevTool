@@ -25,7 +25,7 @@ For diagnostics, use Rider's inspections and the .NET SDK code analyzers during 
 
 ## Codex and Claude Code
 
-The repo hooks run `scripts/format-lint-hook.ps1` after each successful edit/write. It handles only changed `.cs` and `.xaml` files under `source/`, `tests/`, `build/`, and `install/` (never `bin`/`obj`). C# files get `dotnet format whitespace` and `dotnet format style` (warning severity and above) on the nearest project, then a `--verify-no-changes` style pass; anything left that the formatter cannot fix, such as an `IDE1006` naming violation, makes the hook exit 2 so the agent receives the diagnostics. XAML files use the pinned local XamlStyler tool. The hook does not build; compile proof stays with `.agents/skills/build/SKILL.md`.
+The repo hooks run `scripts/format-lint-hook.ps1` after each successful edit/write. It handles only changed `.cs` and `.xaml` files under `source/`, `tests/`, and `build/` (never `bin`/`obj`). C# files get `dotnet format whitespace` and `dotnet format style` (warning severity and above) on the nearest project, then a `--verify-no-changes` style pass; anything left that the formatter cannot fix, such as an `IDE1006` naming violation, makes the hook exit 2 so the agent receives the diagnostics. XAML files use the pinned local XamlStyler tool. The hook does not build; compile proof stays with `.agents/skills/build/SKILL.md`.
 
 Style rules without a severity in `.editorconfig` (for example `dotnet_style_qualification_for_field = false`) are silent, so the hook neither fixes nor reports them.
 

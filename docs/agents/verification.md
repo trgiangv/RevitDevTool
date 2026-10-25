@@ -22,7 +22,7 @@ dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:D
 |--------------|--------|
 | `UseRevit` / `UseAutoCad` | `Debug.Autodesk.2025` (spot-check `2022` + `2027` if TFM-sensitive) |
 | Shared multi-TFM `DevTools.*` | `Debug` |
-| `build/` / `install/` | `Release` |
+| `build/` | `Release` |
 
 Host API matrix (all years): `build-matrix.md`.
 
