@@ -1,0 +1,81 @@
+.page {
+  background: var(--rdt-paper);
+  color: var(--rdt-ink);
+}
+
+.container { width: min(1180px, calc(100% - 4rem)); margin-inline: auto; }
+.page h1, .page h2, .page h3 { color: var(--rdt-ink); }
+.page p { color: var(--rdt-body); }
+.page a { color: var(--rdt-accent); font-weight: 600; text-underline-offset: 4px; }
+.page a:hover { color: var(--rdt-ink); }
+.page button { font: inherit; cursor: pointer; }
+
+.sectionTitle { margin: 0 0 0.75rem; font-size: clamp(1.6rem, 2.6vw, 2.1rem); font-weight: 650; line-height: 1.15; letter-spacing: -0.03em; }
+.sectionLead { max-width: 52ch; margin: 0 0 2.5rem; font-size: 1.08rem; line-height: 1.6; }
+
+.primaryButton, .textLink { display: inline-flex; align-items: center; min-height: 2.9rem; }
+.page .primaryButton { padding: 0.7rem 1.35rem; border-radius: 6px; background: var(--rdt-ink); color: var(--rdt-paper); font-weight: 600; text-decoration: none; }
+.page .primaryButton:hover { background: var(--rdt-accent); color: var(--rdt-paper); }
+.page .textLink { text-decoration: underline; text-decoration-thickness: 1px; }
+
+.hero { padding: clamp(3rem, 7vw, 5.5rem) 0 clamp(3rem, 6vw, 4.5rem); }
+.heroTop { display: grid; gap: 1.25rem; margin-bottom: 3rem; }
+.eyebrow { margin: 0 0 1.25rem; color: var(--rdt-muted); font-family: var(--rdt-mono); font-size: 0.75rem; font-stretch: 87.5%; letter-spacing: 0.02em; }
+.heroTitle { margin: 0; max-width: 16ch; font-size: clamp(2.6rem, 5.6vw, 4.4rem); font-weight: 700; line-height: 1; letter-spacing: -0.045em; }
+.heroAside p { max-width: 54ch; margin: 0 0 1.6rem; font-size: 1.15rem; line-height: 1.6; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; }
+
+.claims { padding-block: clamp(3.5rem, 7vw, 5.5rem); border-top: 1px solid var(--rdt-border); }
+.claimList { border-top: 1px solid var(--rdt-border); }
+.claim { border-bottom: 1px solid var(--rdt-border); }
+.claim summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1rem; padding: 1.15rem 0.25rem; cursor: pointer; list-style: none; }
+.claim summary::-webkit-details-marker { display: none; }
+.claim summary:hover .claimName { color: var(--rdt-accent); }
+.passCell { position: relative; width: 1rem; height: 1rem; border-radius: 3px; background: var(--rdt-pass-fill); }
+.passCell::after { content: ''; position: absolute; left: 0.32rem; top: 0.15rem; width: 0.28rem; height: 0.52rem; border: solid var(--rdt-on-primary); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.claimName { font-family: var(--rdt-mono); font-size: clamp(0.88rem, 1.4vw, 1.05rem); font-stretch: 87.5%; font-weight: 500; line-height: 1.4; letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.claimStatus { display: flex; align-items: center; gap: 0.75rem; color: var(--rdt-pass); font-size: 0.88rem; font-weight: 600; }
+.claimStatus::after { content: ''; width: 0.45rem; height: 0.45rem; border: solid var(--rdt-muted); border-width: 0 1.5px 1.5px 0; transform: rotate(45deg) translate(-2px, -2px); transition: transform 0.2s ease; }
+.claim[open] .claimStatus::after { transform: rotate(-135deg) translate(-2px, -2px); }
+.claimBody { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: 2.5rem; padding: 0.25rem 0.25rem 2rem 2.25rem; }
+.claimText p { max-width: 46ch; font-size: 1.02rem; line-height: 1.65; }
+
+.page .code { margin: 0; padding: 1rem 1.2rem; border: 1px solid var(--rdt-border); border-radius: 8px; background: var(--rdt-code); color: var(--rdt-ink); font-size: 0.76rem; line-height: 1.8; tab-size: 4; overflow-x: auto; }
+.page .code code { display: block; padding: 0; border: 0; background: transparent; color: inherit; font-size: inherit; }
+.code :global(.token.keyword) { color: var(--syntax-keyword); }
+.code :global(.token:is(.string, .attr-value)) { color: var(--syntax-string); }
+.code :global(.token:is(.function, .method, .property)) { color: var(--syntax-function); }
+.code :global(.token:is(.class-name, .builtin)) { color: var(--syntax-class); }
+.code :global(.token:is(.number, .boolean)) { color: var(--syntax-number); }
+.code :global(.token.comment) { color: var(--syntax-comment); }
+
+.start { padding-block: clamp(3.5rem, 7vw, 5rem); background: var(--rdt-surface); border-top: 1px solid var(--rdt-border); }
+.startGrid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 5rem; align-items: start; }
+.start .sectionTitle { margin-bottom: 1.5rem; }
+.steps { display: grid; gap: 0.6rem; margin: 0 0 1.75rem; padding-left: 1.25rem; max-width: 54ch; }
+.steps li { color: var(--rdt-body); line-height: 1.6; }
+.terminalLabel { margin: 0 0 0.6rem; font-size: 0.92rem; }
+.terminal { display: grid; gap: 0.15rem; margin: 0; padding: 0.85rem 1.1rem; list-style: none; border-radius: 8px; background: #132120; }
+:global([data-theme='dark']) .terminal { background: var(--rdt-paper); border: 1px solid var(--rdt-border); }
+.terminal li { display: flex; align-items: center; gap: 0.25rem; min-height: 2.6rem; }
+.prompt { margin-right: 0.5rem; color: #5cc7d3; font-family: var(--rdt-mono); }
+.page .terminal code { flex: 1; min-width: 0; padding: 0; border: 0; background: transparent; color: #e4eeed; font-size: 0.78rem; overflow-wrap: anywhere; }
+.page .terminal button { min-height: 2.1rem; padding: 0.25rem 0.7rem; border: 1px solid #31484a; border-radius: 6px; background: transparent; color: #e4eeed; font-size: 0.8rem; }
+.page .terminal button:hover { border-color: #8fa5a7; }
+.page .copyStatus { display: block; min-height: 1.5rem; margin: 0.5rem 0 1rem; font-size: 0.85rem; }
+.migration { padding-left: 1.5rem; border-left: 2px solid var(--rdt-pass-fill); }
+.migration h3 { font-size: 1.2rem; font-weight: 650; letter-spacing: -0.015em; }
+.migration p { max-width: 40ch; line-height: 1.65; }
+
+@media (max-width: 996px) {
+  .claimBody { grid-template-columns: 1fr; gap: 1.5rem; }
+  .startGrid { grid-template-columns: 1fr; gap: 3rem; }
+}
+
+@media (max-width: 640px) {
+  .container { width: calc(100% - 2rem); }
+  .claim summary { gap: 0.75rem; }
+  .claimStatus { font-size: 0; gap: 0; }
+  .claimBody { padding-left: 0.25rem; }
+  .page .code { font-size: 0.7rem; padding: 0.85rem; }
+}
