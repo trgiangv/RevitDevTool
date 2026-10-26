@@ -105,7 +105,7 @@ it, a beta install looks at the stable channel and finds no update.
    - Draft → upload payloads → upload feeds and signatures → publish (as today).
    - Release notes: GitHub generated notes from the previous tag, grouped by `.github/release.yml` labels.
    - Fast-forward `develop` (as today).
-3. **`TestReleaseInstall.yml` (new, after `release: published`):** on a clean `windows-2025` runner:
+3. **`TestReleaseInstall.yml` (new, started by `PublishRelease.yml`):** on a clean `windows-2025` runner:
    1. Install the published `Setup.exe` with `--silent`.
    2. Run `DevTools.Daemon.exe --select "Revit 2025" --select "AutoCAD 2025"`.
    3. Check `installation.json`, the payload folders, the generated `PackageContents.xml`, and that
@@ -126,13 +126,15 @@ it, a beta install looks at the stable channel and finds no update.
 | Push to `develop` that changes site files | `Docs.yml` (build) | `ubuntu-latest` | Builds Docusaurus | Nothing |
 | Pull request (also Dependabot) | `Compile.yml`; `Docs.yml` if site files change | as above | Same checks on the PR head | Nothing |
 | Tag push, or dispatch with a version | `PublishRelease.yml` | `windows-2025`, `release` environment (reviewer, `UPDATE_SIGNING_KEY`) | Waits for the `Compile.yml` push run of the commit, `pack publish`, required signatures | GitHub release: draft, then published |
-| Release published (stable or prerelease) | `TestReleaseInstall.yml` | clean `windows-2025` | Installs the published `Setup.exe`, `--select`, checks the install | An issue if it fails |
-| Stable release published, or dispatch | `Docs.yml` (deploy) | `ubuntu-latest`, `github-pages` environment | Builds and deploys the site | GitHub Pages |
+| End of `PublishRelease.yml`, or dispatch with a tag | `TestReleaseInstall.yml` | clean `windows-2025` | Installs the published `Setup.exe`, `--select`, checks the install | An issue if it fails |
+| End of `PublishRelease.yml` for a stable tag, or dispatch | `Docs.yml` (deploy) | `ubuntu-latest`, `github-pages` environment | Builds and deploys the site from the tag | GitHub Pages |
 | Manual dispatch | `PublishTestAdapter.yml` | `windows-2025` | Packs the TestAdapter | nuget.org (OIDC) |
 | Weekly, GitHub-managed | Dependabot (GitHub Actions) | GitHub | One grouped PR to update pinned actions; rebases it when `develop` changes | A pull request |
 
 A commit runs `Compile.yml` once: a push to `develop` or `main`, or a pull request for other branches.
 A Dependabot rebase is a new PR commit, so its checks run again.
+A release made with `GITHUB_TOKEN` does not start `release` triggers, so `PublishRelease.yml`
+dispatches the follow-up workflows.
 
 ### Hygiene for all workflows
 

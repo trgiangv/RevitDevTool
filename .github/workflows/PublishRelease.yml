@@ -17,7 +17,7 @@ concurrency:
 
 permissions:
   contents: write
-  actions: read
+  actions: write
 
 jobs:
   windows:
@@ -25,6 +25,8 @@ jobs:
     if: github.repository == 'trgiangv/RevitDevTool'
     runs-on: windows-2025
     environment: release
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
     steps:
 
       - name: Checkout
@@ -73,7 +75,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOTNET_ENVIRONMENT: Production
-          Build__Version: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}
+          Build__Version: ${{ env.TAG }}
           Update__SigningKey: ${{ secrets.UPDATE_SIGNING_KEY }}
           Update__RequireSignature: true
 
@@ -82,8 +84,18 @@ jobs:
         shell: bash
         run: |
           set -e
-          TAG="${{ github.event_name == 'workflow_dispatch' && github.event.inputs.version || github.ref_name }}"
           git fetch origin develop
           git checkout develop
           git merge --no-edit "tags/$TAG" || true
           git push origin develop || echo "::warning::Could not push develop merge. Manual merge needed."
+
+      - name: Start the release follow-up workflows
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh workflow run TestReleaseInstall.yml -R "$GITHUB_REPOSITORY" --ref develop -f tag="$TAG"
+          if [[ "$TAG" != *-* ]]; then
+            gh workflow run Docs.yml -R "$GITHUB_REPOSITORY" --ref "$TAG"
+          fi
