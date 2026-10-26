@@ -286,6 +286,6 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
         var broker = DaemonTestDoubles.CreateHostConnections().Object;
         var scanner = DaemonTestDoubles.CreatePipeScanner().Object;
         var store = DaemonTestDoubles.CreateUserSettingsStore();
-        return new ShellViewModel(auth, broker, scanner, store, tunnel);
+        return new ShellViewModel(auth, broker, scanner, DaemonTestDoubles.CreateUpdates(), store, tunnel);
     }
 }

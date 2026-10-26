@@ -6,6 +6,7 @@ namespace DevTools.Update.Apply;
 
 public enum PayloadStage
 {
+    Waiting,
     Downloading,
     Installing
 }
@@ -38,7 +39,7 @@ public sealed class PayloadInstaller(AutodeskBundle bundle, IFolderLock folderLo
                 throw new UpdateIntegrityException($"{payload.Asset} does not match the update manifest.");
 
             progress?.Report(new PayloadProgress(payload.HostVersion, PayloadStage.Installing, null));
-            ZipFile.ExtractToDirectory(zipPath, target + ".partial", overwriteFiles: true);
+            await ZipFile.ExtractToDirectoryAsync(zipPath, target + ".partial", overwriteFiles: true, cancellationToken: cancellationToken);
             Directory.Move(target + ".partial", target);
             return target;
         }

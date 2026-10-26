@@ -26,7 +26,7 @@ public sealed class DaemonHostIntegrationTests
             Assert.IsNotNull(host.Services.GetService<TunnelHostedService>());
             Assert.IsNotNull(host.Services.GetService<ITunnelStatusProvider>());
             Assert.IsNotNull(host.Services.GetRequiredService<TrayMenu>().Updates);
-            Assert.IsNotNull(host.Services.GetRequiredService<ShellViewModel>().Updates);
+            Assert.IsNotNull(host.Services.GetRequiredService<ShellViewModel>().Updater);
         });
     }
 

@@ -95,7 +95,7 @@ public partial class TrayMenu : ObservableObject
     {
         _state.SelectedTabIndex = ShellViewModel.UpdatesTabIndex;
         ShowMainWindow();
-        if (check) _ = _state.Updates?.CheckAfterLoadAsync();
+        if (check) _state.Updater.CheckAfterLoadAsync().ConfigureAwait(false);
     }
 
     private void ShowNotice(UpdateNotice notice)

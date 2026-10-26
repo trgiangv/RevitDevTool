@@ -6,6 +6,7 @@ using DevTools.Update.Autodesk;
 using DevTools.Update.Engine;
 using DevTools.Update.Installations;
 using System.Collections.ObjectModel;
+// ReSharper disable UnusedParameterInPartialMethod
 
 namespace DevTools.Daemon.Desktop.Updates;
 
@@ -17,8 +18,18 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
     public ObservableCollection<TargetRow> Rows { get; } = [];
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ApplyCommand), nameof(CheckForUpdatesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(InstallCommand), nameof(CheckForUpdatesCommand))]
     public partial bool IsBusy { get; set; }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(InstallCommand))]
+    public partial bool IsInstalling { get; set; }
+
+    [ObservableProperty]
+    public partial double Progress { get; set; }
+
+    [ObservableProperty]
+    public partial string ProgressText { get; set; } = "";
 
     [ObservableProperty]
     public partial bool AutoUpdate { get; set; } = true;
@@ -28,6 +39,8 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
 
     [ObservableProperty]
     public partial string Status { get; set; } = "";
+
+    private const string SelectPrompt = "Select the hosts, then select Install.";
 
     private Task _load = Task.CompletedTask;
 
@@ -40,7 +53,7 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
         IncludePrereleases = policy.IsPrerelease;
         Status = Rows.Count == 0 ? "No release with update data is available."
             : engine.Store.Exists ? ""
-            : "Select the hosts, then select Apply.";
+            : SelectPrompt;
     });
 
     /// <summary>
@@ -56,31 +69,58 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
     private Task CheckForUpdatesAsync() => RunAsync(async () =>
     {
         var result = await engine.CheckAsync(UpdateTrigger.Manual, CancellationToken.None).ConfigureAwait(true);
-        Status = result.Status == UpdateCycleStatus.NotConfigured ? "Select the hosts, then select Apply." : "";
+        Status = result.Status == UpdateCycleStatus.NotConfigured ? SelectPrompt : "";
         await LoadRowsAsync().ConfigureAwait(true);
     });
 
-    [RelayCommand(CanExecute = nameof(IsIdle))]
-    private Task ApplyAsync() => RunAsync(async () =>
+    [RelayCommand(CanExecute = nameof(CanInstall), AllowConcurrentExecutions = true)]
+    private Task InstallAsync() => RunAsync(async () =>
     {
         Status = "";
-        var selection = Rows.Where(row => row.IsSelected).Select(row => row.Component.Target).ToArray();
-        var progress = new Progress<PayloadProgress>(report =>
+        Progress = 0;
+        ProgressText = "Installing";
+        IsInstalling = true;
+        try
         {
-            foreach (var row in Rows.Where(row => row.Component.Target.HostVersion == report.HostVersion)) row.Show(report);
-        });
-        await engine.ApplySelectionAsync(selection, ChosenPolicy(), null, progress, CancellationToken.None).ConfigureAwait(true);
+            var selection = Rows.Where(row => row.IsSelected).Select(row => row.Component.Target).ToArray();
+            await engine.ApplySelectionAsync(selection, ChosenPolicy(), null, TrackProgress(), CancellationToken.None).ConfigureAwait(true);
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
+
         await LoadRowsAsync().ConfigureAwait(true);
     });
+
+    private Progress<PayloadProgress> TrackProgress()
+    {
+        var payloads = new Dictionary<string, double>(StringComparer.Ordinal);
+        return new Progress<PayloadProgress>(report =>
+        {
+            foreach (var row in Rows.Where(row => row.Component.Target.HostVersion == report.HostVersion)) row.Show(report);
+
+            payloads[report.HostVersion] = report.Stage == PayloadStage.Installing ? 100 : report.Percent ?? 0;
+            Progress = payloads.Values.Average();
+            ProgressText = Progress < 100 ? $"Downloading {Progress:0}%" : "Installing";
+        });
+    }
 
     private async Task LoadRowsAsync()
     {
         var options = await engine.GetTargetsAsync(CancellationToken.None).ConfigureAwait(true);
         Rows.Clear();
-        foreach (var option in options) Rows.Add(new TargetRow(option) { IsSelected = option.Selected });
+        foreach (var option in options)
+        {
+            var row = new TargetRow(option);
+            row.IsSelected = option.Selected && row.CanSelect;
+            Rows.Add(row);
+        }
     }
 
     private bool IsIdle() => !IsBusy;
+
+    private bool CanInstall() => !IsBusy || IsInstalling;
 
     partial void OnAutoUpdateChanged(bool value) => SavePolicy();
 
@@ -126,13 +166,14 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
 public sealed partial class TargetRow(TargetOption option) : ObservableObject
 {
     public AddinComponent Component { get; } = option.Component;
-    public bool OnComputer { get; } = option.OnComputer;
-    public string HostTip { get; } = option.OnComputer
-        ? $"On this computer: {string.Join(", ", option.Hosts.Select(host => $"{ProductName(host)} {option.Component.Target.HostVersion}"))}"
-        : "Not found on this computer";
-    public string Installed { get; } = option.Installed ?? "—";
+    public string Description { get; } = option.OnComputer ? option.Component.Description : $"{option.Component.Description} <Not installed>";
+    public bool CanSelect { get; } = option.OnComputer || option.Installed is not null;
+    public string? HostTip { get; } = option.OnComputer
+        ? string.Join(", ", option.Hosts.Select(host => $"{ProductName(host)} {option.Component.Target.HostVersion}"))
+        : null;
+    public string? Installed { get; } = option.Installed;
     public bool IsPending { get; } = option.Pending is not null;
-    public string InstalledTip { get; } = option.Pending is { } pending ? $"{pending} is installed when the host closes" : "Installed version";
+    public string? PendingTip { get; } = option.Pending is { } pending ? $"{pending} is installed when the host closes" : null;
     public string Latest { get; } = option.Latest;
     public bool HasUpdate { get; } = (option.Pending ?? option.Installed) is { } version && version != option.Latest;
 
@@ -156,7 +197,12 @@ public sealed partial class TargetRow(TargetOption option) : ObservableObject
         IsWorking = true;
         IsIndeterminate = progress.Percent is null;
         Percent = progress.Percent ?? 0;
-        ProgressTip = progress.Stage == PayloadStage.Downloading ? $"Downloading {Percent:0}%" : "Installing";
+        ProgressTip = progress.Stage switch
+        {
+            PayloadStage.Waiting => "Waiting",
+            PayloadStage.Downloading => $"Downloading {Percent:0}%",
+            _ => "Installing"
+        };
     }
 
     private static string ProductName(HostApp host) => host switch

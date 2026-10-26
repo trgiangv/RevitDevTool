@@ -191,7 +191,7 @@ public sealed class ExtendedCoverageTests
             var scanner = DaemonTestDoubles.CreatePipeScanner().Object;
             var store = DaemonTestDoubles.CreateUserSettingsStore();
             var tunnel = DaemonTestDoubles.CreateTunnelStatus(TunnelStatus.Connected).Object;
-            return new ShellViewModel(auth, broker, scanner, store, tunnel);
+            return new ShellViewModel(auth, broker, scanner, DaemonTestDoubles.CreateUpdates(), store, tunnel);
         }
     }
 

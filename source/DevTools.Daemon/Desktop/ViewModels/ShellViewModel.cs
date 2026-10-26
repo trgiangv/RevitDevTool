@@ -12,12 +12,12 @@ public partial class ShellViewModel(
     IAuthService authService,
     IHostConnections sessions,
     IMcpPipeScanner pipeScanner,
+    UpdatesViewModel updater,
     UserSettingsStore settings,
-    ITunnelStatusProvider tunnelStatus,
-    UpdatesViewModel? updates = null) : ObservableObject
+    ITunnelStatusProvider tunnelStatus) : ObservableObject
 {
     private const string DefaultVersion = "1.0.0";
-    public const int UpdatesTabIndex = 3;
+    public const int UpdatesTabIndex = 2;
 
     [ObservableProperty]
     public partial int SelectedTabIndex { get; set; }
@@ -25,7 +25,7 @@ public partial class ShellViewModel(
     public OverviewViewModel Overview { get; } = new(authService, tunnelStatus);
     public HostsViewModel Hosts { get; } = new(sessions, pipeScanner);
     public SettingsViewModel Settings { get; } = new(settings);
-    public UpdatesViewModel? Updates { get; } = updates;
+    public UpdatesViewModel Updater { get; } = updater;
     public string Version { get; } = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? DefaultVersion;
 
     partial void OnSelectedTabIndexChanged(int value)
@@ -35,11 +35,11 @@ public partial class ShellViewModel(
             case 1:
                 Hosts.Refresh();
                 break;
-            case 2:
+            case 3:
                 Settings.ReloadAutoStart();
                 break;
             case UpdatesTabIndex:
-                _ = Updates?.LoadAsync();
+                Updater.LoadAsync().ConfigureAwait(false);
                 break;
         }
     }

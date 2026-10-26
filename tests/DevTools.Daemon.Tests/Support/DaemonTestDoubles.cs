@@ -1,9 +1,16 @@
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Desktop.Models;
+using DevTools.Daemon.Desktop.Updates;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Tunnel;
 using DevTools.Ipc;
+using DevTools.Update.Apply;
+using DevTools.Update.Autodesk;
+using DevTools.Update.Engine;
+using DevTools.Update.Installations;
+using DevTools.Update.Releases;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using Moq;
@@ -97,5 +104,22 @@ internal static class DaemonTestDoubles
         var tunnel = new Mock<ITunnelStatusProvider>();
         tunnel.Setup(t => t.Status).Returns(status);
         return tunnel;
+    }
+
+    public static UpdatesViewModel CreateUpdates()
+    {
+        var bundle = new AutodeskBundle(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+        var reader = new ReleaseReader(new HttpClient(), new ReleaseSignature(null));
+        var engine = new UpdateEngine(
+            bundle,
+            new InstallationStore(bundle),
+            Mock.Of<IReleaseProvider>(),
+            reader,
+            new PayloadInstaller(bundle, Mock.Of<IFolderLock>(), reader),
+            new DaemonUpdater(reader),
+            Mock.Of<IUpdateNotifier>(),
+            [],
+            NullLogger<UpdateEngine>.Instance);
+        return new UpdatesViewModel(engine);
     }
 }

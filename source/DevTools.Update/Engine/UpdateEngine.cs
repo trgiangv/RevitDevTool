@@ -242,8 +242,7 @@ public sealed class UpdateEngine(
         if (_offeredVersion == manifest.Version && trigger == UpdateTrigger.Scheduled) return new UpdateCycleResult(UpdateCycleStatus.Notified, manifest.Version);
 
         _offeredVersion = manifest.Version;
-        var scope = outdated.Length > 0 ? string.Join(", ", outdated.Select(payload => payload.HostVersion)) : "DevTools Daemon";
-        notifier.Notify(new UpdateNotice(UpdateNoticeKind.Available, $"RevitDevTool {manifest.Version} is available", $"It updates {scope}.", manifest.Version, manifest.NotesUrl));
+        notifier.Notify(new UpdateNotice(UpdateNoticeKind.Available, "Update available", $"{manifest.Version} is available.", manifest.Version, manifest.NotesUrl));
         return new UpdateCycleResult(UpdateCycleStatus.Notified, manifest.Version);
     }
 
@@ -274,8 +273,8 @@ public sealed class UpdateEngine(
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogError(ex, "The update of {HostVersion} to {Version} failed", payload.HostVersion, release.Version);
-                notifier.Notify(new UpdateNotice(UpdateNoticeKind.Failed, $"The update to {release.Version} failed",
-                    $"{payload.HostVersion} stays on {installation.InstalledVersion(payload.HostVersion)}.", release.Version));
+                notifier.Notify(new UpdateNotice(UpdateNoticeKind.Failed, "Update failed",
+                    $"{release.Version} is not installed. The current version stays in use.", release.Version));
             }
         }
 
@@ -293,6 +292,8 @@ public sealed class UpdateEngine(
         batch.Unavailable.AddRange(wanted.Where(hostVersion => manifest.FindPayload(hostVersion) is null));
 
         var missing = wanted.Select(manifest.FindPayload).OfType<ManifestPayload>().Where(payload => !IsInstalled(installation, payload.HostVersion, manifest.Version)).ToArray();
+        foreach (var payload in missing) progress?.Report(new PayloadProgress(payload.HostVersion, PayloadStage.Waiting, 0));
+
         var staged = new string[missing.Length];
         await Parallel.ForAsync(0, missing.Length, new ParallelOptions { MaxDegreeOfParallelism = ParallelDownloads, CancellationToken = cancellationToken },
             async (index, token) => staged[index] = await installer.StageAsync(release, missing[index], progress, token).ConfigureAwait(false)).ConfigureAwait(false);
@@ -421,15 +422,13 @@ public sealed class UpdateEngine(
     private void Report(PayloadBatch batch, string? notesUrl)
     {
         if (batch.Applied.Count > 0)
-        {
-            notifier.Notify(new UpdateNotice(UpdateNoticeKind.Applied, "RevitDevTool is updated",
-                $"{string.Join(", ", batch.Applied)} now use {batch.Version}.", batch.Version, notesUrl));
-        }
+            notifier.Notify(new UpdateNotice(UpdateNoticeKind.Applied, "Update installed", $"{batch.Version} is installed.", batch.Version, notesUrl));
 
-        foreach (var (hostVersion, lockers) in batch.Pending)
+        if (batch.Pending.Count > 0)
         {
-            notifier.Notify(new UpdateNotice(UpdateNoticeKind.Pending, $"The {hostVersion} update waits",
-                $"{hostVersion} updates to {batch.Version} when {string.Join(", ", lockers.Select(locker => locker.Name).Distinct())} closes.", batch.Version));
+            var names = batch.Pending.SelectMany(item => item.Lockers).Select(locker => locker.Name).Distinct();
+            notifier.Notify(new UpdateNotice(UpdateNoticeKind.Pending, "Update waits",
+                $"{batch.Version} is installed when {string.Join(", ", names)} closes.", batch.Version));
         }
     }
 

@@ -108,6 +108,7 @@ public sealed class UpdateEngineTests
         CollectionAssert.AreEquivalent(new[] { "2024", "2026" }, result.Applied.ToArray());
         Assert.IsTrue(reports.Any(report => report is { HostVersion: "2024", Stage: PayloadStage.Downloading, Percent: 100 }));
         Assert.IsTrue(reports.Any(report => report is { HostVersion: "2026", Stage: PayloadStage.Installing, Percent: null }));
+        Assert.AreEqual("3.1.0 is installed.", harness.Notifier.Notices.Single(notice => notice.Kind == UpdateNoticeKind.Applied).Message);
 
         Assert.AreEqual(2, harness.Releases.PayloadDownloads);
         var modules = XDocument.Load(harness.Temp.Bundle.PackageContentsPath).Root!.Elements("Components")

@@ -22,11 +22,11 @@
         <TabItem Header="Hosts">
             <views:HostsView />
         </TabItem>
-        <TabItem Header="Settings">
-            <views:SettingsView />
-        </TabItem>
         <TabItem Header="Updates">
             <views:UpdatesView />
+        </TabItem>
+        <TabItem Header="Settings">
+            <views:SettingsView />
         </TabItem>
     </TabControl>
 </Window>
