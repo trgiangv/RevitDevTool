@@ -101,7 +101,7 @@ public sealed class BundleTests
         var installer = new PayloadInstaller(temp.Bundle, new FakeFolderLock(), reader);
         var manifest = await reader.ReadManifestAsync(release, CancellationToken.None);
 
-        await Assert.ThrowsExactlyAsync<UpdateIntegrityException>(() => installer.StageAsync(release, manifest.FindPayload("2024")!, CancellationToken.None));
+        await Assert.ThrowsExactlyAsync<UpdateIntegrityException>(() => installer.StageAsync(release, manifest.FindPayload("2024")!, null, CancellationToken.None));
         Assert.IsFalse(installer.IsStaged("3.1.0", "2024"));
     }
 

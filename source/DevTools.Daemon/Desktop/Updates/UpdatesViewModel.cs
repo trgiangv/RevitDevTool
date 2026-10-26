@@ -1,5 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DevTools.Hosting;
+using DevTools.Update.Apply;
 using DevTools.Update.Autodesk;
 using DevTools.Update.Engine;
 using DevTools.Update.Installations;
@@ -27,16 +29,11 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
     [ObservableProperty]
     public partial string Status { get; set; } = "";
 
-    [ObservableProperty]
-    public partial string Installed { get; set; } = "";
-
     private Task _load = Task.CompletedTask;
 
     public Task LoadAsync() => _load = RunAsync(async () =>
     {
-        var options = await engine.GetTargetsAsync(CancellationToken.None).ConfigureAwait(true);
-        Rows.Clear();
-        foreach (var option in options) Rows.Add(new TargetRow(option.Component, option.OnComputer) { IsSelected = option.Selected });
+        await LoadRowsAsync().ConfigureAwait(true);
 
         var policy = engine.Policy;
         AutoUpdate = policy.Mode != UpdateMode.Notify;
@@ -59,30 +56,39 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
     private Task CheckForUpdatesAsync() => RunAsync(async () =>
     {
         var result = await engine.CheckAsync(UpdateTrigger.Manual, CancellationToken.None).ConfigureAwait(true);
-        Status = result.Status switch
-        {
-            UpdateCycleStatus.Notified => $"Version {result.Version} is available.",
-            UpdateCycleStatus.Updated => $"Version {result.Version} is installed.",
-            UpdateCycleStatus.NotConfigured => "Select the hosts, then select Apply.",
-            _ => "No update is available."
-        };
+        Status = result.Status == UpdateCycleStatus.NotConfigured ? "Select the hosts, then select Apply." : "";
+        await LoadRowsAsync().ConfigureAwait(true);
     });
 
     [RelayCommand(CanExecute = nameof(IsIdle))]
     private Task ApplyAsync() => RunAsync(async () =>
     {
+        Status = "";
         var selection = Rows.Where(row => row.IsSelected).Select(row => row.Component.Target).ToArray();
-        var result = await engine.ApplySelectionAsync(selection, ChosenPolicy(), null, CancellationToken.None).ConfigureAwait(true);
-        Status = result.Pending.Count > 0
-            ? $"Version {result.Version} is installed. {string.Join(", ", result.Pending)} completes when the host closes."
-            : $"Version {result.Version} is installed.";
+        var progress = new Progress<PayloadProgress>(report =>
+        {
+            foreach (var row in Rows.Where(row => row.Component.Target.HostVersion == report.HostVersion)) row.Show(report);
+        });
+        await engine.ApplySelectionAsync(selection, ChosenPolicy(), null, progress, CancellationToken.None).ConfigureAwait(true);
+        await LoadRowsAsync().ConfigureAwait(true);
     });
+
+    private async Task LoadRowsAsync()
+    {
+        var options = await engine.GetTargetsAsync(CancellationToken.None).ConfigureAwait(true);
+        Rows.Clear();
+        foreach (var option in options) Rows.Add(new TargetRow(option) { IsSelected = option.Selected });
+    }
 
     private bool IsIdle() => !IsBusy;
 
     partial void OnAutoUpdateChanged(bool value) => SavePolicy();
 
-    partial void OnIncludePrereleasesChanged(bool value) => SavePolicy();
+    partial void OnIncludePrereleasesChanged(bool value)
+    {
+        SavePolicy();
+        if (!IsBusy) LoadAsync();
+    }
 
     private UpdatePolicy ChosenPolicy()
     {
@@ -112,23 +118,57 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
         }
         finally
         {
-            Installed = Describe(engine.Store.Load());
             IsBusy = false;
         }
     }
-
-    private static string Describe(Installation? installation) => installation is null || installation.Payloads.Count == 0
-        ? "Nothing is installed."
-        : string.Join("   ", installation.Payloads.Select(payload => payload.PendingVersion is { } pending
-            ? $"{payload.HostVersion}: {payload.Version} → {pending} (waits)"
-            : $"{payload.HostVersion}: {payload.Version}"));
 }
 
-public sealed partial class TargetRow(AddinComponent component, bool onComputer) : ObservableObject
+public sealed partial class TargetRow(TargetOption option) : ObservableObject
 {
-    public AddinComponent Component { get; } = component;
-    public string Detail { get; } = onComputer ? "Installed on this computer" : "Not found on this computer";
+    public AddinComponent Component { get; } = option.Component;
+    public bool OnComputer { get; } = option.OnComputer;
+    public string HostTip { get; } = option.OnComputer
+        ? $"On this computer: {string.Join(", ", option.Hosts.Select(host => $"{ProductName(host)} {option.Component.Target.HostVersion}"))}"
+        : "Not found on this computer";
+    public string Installed { get; } = option.Installed ?? "—";
+    public bool IsPending { get; } = option.Pending is not null;
+    public string InstalledTip { get; } = option.Pending is { } pending ? $"{pending} is installed when the host closes" : "Installed version";
+    public string Latest { get; } = option.Latest;
+    public bool HasUpdate { get; } = (option.Pending ?? option.Installed) is { } version && version != option.Latest;
 
     [ObservableProperty]
     public partial bool IsSelected { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsWorking { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsIndeterminate { get; set; }
+
+    [ObservableProperty]
+    public partial double Percent { get; set; }
+
+    [ObservableProperty]
+    public partial string ProgressTip { get; set; } = "";
+
+    public void Show(PayloadProgress progress)
+    {
+        IsWorking = true;
+        IsIndeterminate = progress.Percent is null;
+        Percent = progress.Percent ?? 0;
+        ProgressTip = progress.Stage == PayloadStage.Downloading ? $"Downloading {Percent:0}%" : "Installing";
+    }
+
+    private static string ProductName(HostApp host) => host switch
+    {
+        HostApp.AutoCad => "AutoCAD",
+        HostApp.Civil3D => "Civil 3D",
+        HostApp.Plant3D => "Plant 3D",
+        HostApp.AcadArch => "AutoCAD Architecture",
+        HostApp.AcadMech => "AutoCAD Mechanical",
+        HostApp.AcadElec => "AutoCAD Electrical",
+        HostApp.AcadMep => "AutoCAD MEP",
+        HostApp.AcadMap3D => "AutoCAD Map 3D",
+        _ => host.ToString()
+    };
 }

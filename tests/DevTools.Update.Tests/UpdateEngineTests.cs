@@ -101,12 +101,45 @@ public sealed class UpdateEngineTests
             new[] { new AddinTarget("Revit", "2024"), new AddinTarget("AutoCAD*", "2026") },
             options.Where(option => option.Selected).Select(option => option.Component.Target).ToArray());
 
-        var result = await harness.Engine.ApplySelectionAsync([new AddinTarget("Revit", "2024"), new AddinTarget("AutoCAD*", "2026")], new UpdatePolicy(), null, CancellationToken.None);
+        var reports = new List<PayloadProgress>();
+        var result = await harness.Engine.ApplySelectionAsync([new AddinTarget("Revit", "2024"), new AddinTarget("AutoCAD*", "2026")], new UpdatePolicy(), null,
+            new SynchronousProgress<PayloadProgress>(reports.Add), CancellationToken.None);
 
         CollectionAssert.AreEquivalent(new[] { "2024", "2026" }, result.Applied.ToArray());
+        Assert.IsTrue(reports.Any(report => report is { HostVersion: "2024", Stage: PayloadStage.Downloading, Percent: 100 }));
+        Assert.IsTrue(reports.Any(report => report is { HostVersion: "2026", Stage: PayloadStage.Installing, Percent: null }));
+
+        Assert.AreEqual(2, harness.Releases.PayloadDownloads);
         var modules = XDocument.Load(harness.Temp.Bundle.PackageContentsPath).Root!.Elements("Components")
             .Select(component => component.Element("ComponentEntry")!.Attribute("ModuleName")!.Value).ToArray();
         CollectionAssert.AreEquivalent(new[] { "./Contents/2024/RevitDevTool.addin", "./Contents/2026/AcadDevTool.dll" }, modules);
+
+        var rows = await harness.Engine.GetTargetsAsync(CancellationToken.None);
+        Assert.IsTrue(rows.All(row => row.Latest == "3.1.0"));
+        Assert.AreEqual("3.1.0", rows.Single(row => row.Component.Target == new AddinTarget("Revit", "2024")).Installed);
+        Assert.IsNull(rows.Single(row => row.Component.Target == new AddinTarget("AutoCAD*", "2024")).Installed);
+
+        reports.Clear();
+        await harness.Engine.ApplySelectionAsync([new AddinTarget("Revit", "2024"), new AddinTarget("AutoCAD*", "2024"), new AddinTarget("AutoCAD*", "2026")], null, null,
+            new SynchronousProgress<PayloadProgress>(reports.Add), CancellationToken.None);
+        Assert.IsEmpty(reports);
+        Assert.AreEqual(2, harness.Releases.PayloadDownloads);
+        Assert.HasCount(3, XDocument.Load(harness.Temp.Bundle.PackageContentsPath).Root!.Elements("Components"));
+    }
+
+    [TestMethod]
+    public async Task AutoCad_based_products_select_the_AutoCad_component()
+    {
+        using var harness = new Harness(null, (HostApp.Civil3D, "2026"), (HostApp.Plant3D, "2027"));
+        harness.Releases.Publish("4.0.0", null, ("2026", ["AutoCAD*", "Revit"], "a"), ("2027", ["AutoCAD*", "Revit"], "b"));
+
+        var options = await harness.Engine.GetTargetsAsync(CancellationToken.None);
+
+        var civil = options.Single(option => option.Component.Target == new AddinTarget("AutoCAD*", "2026"));
+        Assert.IsTrue(civil.Selected);
+        CollectionAssert.AreEqual(new[] { HostApp.Civil3D }, civil.Hosts.ToArray());
+        Assert.IsTrue(options.Single(option => option.Component.Target == new AddinTarget("AutoCAD*", "2027")).OnComputer);
+        Assert.IsFalse(options.Single(option => option.Component.Target == new AddinTarget("Revit", "2026")).OnComputer);
     }
 
     [TestMethod]
@@ -142,10 +175,29 @@ public sealed class UpdateEngineTests
         harness.Releases.Publish("4.0.0-beta.1", null, ("2025", ["Revit"], "beta"));
         harness.Releases.Publish("3.9.0", null, ("2025", ["Revit"], "other"));
 
-        var result = await harness.Engine.ApplySelectionAsync([new AddinTarget("Revit", "2025")], null, null, CancellationToken.None);
+        var result = await harness.Engine.ApplySelectionAsync([new AddinTarget("Revit", "2025")], null, null, null, CancellationToken.None);
 
         Assert.AreEqual("4.0.0-beta.1", result.Version);
         Assert.AreEqual("beta", harness.Temp.Marker("2025"));
+        Assert.AreEqual(UpdatePolicy.PrereleaseChannel, harness.Store.Load()!.Policy.Channel);
+    }
+
+    [TestMethod]
+    public async Task Daemon_without_a_release_uses_the_latest_release_of_the_chosen_channel()
+    {
+        using var harness = new Harness(null, daemon: reader => new InstalledDaemon(reader, "4.0.0-alpha.480", UpdatePolicy.StableChannel));
+        harness.Releases.PublishWithoutManifest("3.0.0");
+        harness.Releases.Publish("4.0.0-beta.1", null, ("2025", ["Revit"], "beta"));
+
+        Assert.IsEmpty(await harness.Engine.GetTargetsAsync(CancellationToken.None));
+
+        harness.Engine.SetPolicy(new UpdatePolicy { Channel = UpdatePolicy.PrereleaseChannel });
+        Assert.IsFalse(harness.Store.Exists);
+        Assert.HasCount(1, await harness.Engine.GetTargetsAsync(CancellationToken.None));
+
+        var result = await harness.Engine.ApplySelectionAsync([new AddinTarget("Revit", "2025")], null, null, null, CancellationToken.None);
+
+        Assert.AreEqual("4.0.0-beta.1", result.Version);
         Assert.AreEqual(UpdatePolicy.PrereleaseChannel, harness.Store.Load()!.Policy.Channel);
     }
 

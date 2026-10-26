@@ -53,12 +53,17 @@ public sealed class ReleaseReader(HttpClient http, ReleaseSignature signature)
 
         var buffer = new byte[81920];
         long copied = 0;
+        var reported = -1;
         int read;
         while ((read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
         {
             await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
             copied += read;
-            progress((int)(copied * 100 / total.Value));
+            var percent = (int)(copied * 100 / total.Value);
+            if (percent == reported) continue;
+
+            reported = percent;
+            progress(percent);
         }
     }
 }

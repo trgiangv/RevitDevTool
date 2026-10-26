@@ -23,30 +23,116 @@
         <hc:LoadingLine Margin="0,0,0,8" Visibility="{Binding Updates.IsBusy, Converter={StaticResource Boolean2VisibilityConverter}}" />
 
         <TextBlock Grid.Row="1"
-                   Margin="0,0,0,4"
+                   Margin="0,0,0,8"
                    Foreground="{DynamicResource PrimaryTextBrush}"
                    Text="{Binding Updates.Status}"
-                   TextWrapping="Wrap" />
-        <TextBlock Grid.Row="2"
-                   Margin="0,0,0,8"
-                   FontSize="11"
-                   Foreground="{DynamicResource ThirdlyTextBrush}"
-                   Text="{Binding Updates.Installed}"
-                   TextWrapping="Wrap" />
+                   TextWrapping="Wrap"
+                   Visibility="{Binding Updates.Status, Converter={StaticResource String2VisibilityConverter}}" />
+
+        <Grid Grid.Row="2" Margin="12,0,12,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="100" />
+            </Grid.ColumnDefinitions>
+            <TextBlock FontSize="11"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       Text="Host" />
+            <TextBlock Grid.Column="1"
+                       FontSize="11"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       Text="Installed" />
+            <TextBlock Grid.Column="2"
+                       FontSize="11"
+                       Foreground="{DynamicResource SecondaryTextBrush}"
+                       Text="Latest" />
+        </Grid>
 
         <ListBox Grid.Row="3"
+                 HorizontalContentAlignment="Stretch"
                  ItemsSource="{Binding Updates.Rows}"
                  Style="{StaticResource ListBoxBaseStyle}">
             <ListBox.ItemTemplate>
                 <DataTemplate DataType="updates:TargetRow">
-                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" Style="{StaticResource CheckBoxBaseStyle}">
-                        <StackPanel>
-                            <TextBlock Foreground="{DynamicResource PrimaryTextBrush}" Text="{Binding Component.Description}" />
-                            <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource ThirdlyTextBrush}"
-                                       Text="{Binding Detail}" />
-                        </StackPanel>
-                    </CheckBox>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="100" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox VerticalAlignment="Center"
+                                  IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                  Style="{StaticResource CheckBoxBaseStyle}" />
+                        <Path Grid.Column="1"
+                              Width="12"
+                              Height="12"
+                              Margin="8,0,6,0"
+                              VerticalAlignment="Center"
+                              Data="{StaticResource SuccessGeometry}"
+                              Stretch="Uniform"
+                              ToolTip="{Binding HostTip}">
+                            <Path.Style>
+                                <Style TargetType="Path">
+                                    <Setter Property="Fill" Value="{DynamicResource SecondaryTextBrush}" />
+                                    <Setter Property="Opacity" Value="0.4" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OnComputer}" Value="True">
+                                            <Setter Property="Fill" Value="{DynamicResource SuccessBrush}" />
+                                            <Setter Property="Opacity" Value="1" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Path.Style>
+                        </Path>
+                        <TextBlock Grid.Column="2"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource PrimaryTextBrush}"
+                                   Text="{Binding Component.Description}" />
+                        <TextBlock Grid.Column="3"
+                                   VerticalAlignment="Center"
+                                   Text="{Binding Installed}"
+                                   ToolTip="{Binding InstalledTip}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsPending}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Grid.Column="4"
+                                   VerticalAlignment="Center"
+                                   Text="{Binding Latest}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasUpdate}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ProgressBar Grid.Row="1"
+                                     Grid.Column="2"
+                                     Grid.ColumnSpan="3"
+                                     Margin="0,4,0,0"
+                                     IsIndeterminate="{Binding IsIndeterminate}"
+                                     Style="{StaticResource ProgressBarFlat}"
+                                     ToolTip="{Binding ProgressTip}"
+                                     Visibility="{Binding IsWorking, Converter={StaticResource Boolean2VisibilityConverter}}"
+                                     Value="{Binding Percent}" />
+                    </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>

@@ -114,16 +114,33 @@ internal sealed class FakeReleases : HttpMessageHandler, IReleaseProvider
         return stream.ToArray();
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-        Task.FromResult(_files.TryGetValue(request.RequestUri!, out var content)
+    public int PayloadDownloads => _payloadDownloads;
+
+    private int _payloadDownloads;
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        if (request.RequestUri!.AbsolutePath.EndsWith(".zip", StringComparison.Ordinal)) Interlocked.Increment(ref _payloadDownloads);
+        return Task.FromResult(_files.TryGetValue(request.RequestUri, out var content)
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(content) }
             : new HttpResponseMessage(HttpStatusCode.NotFound));
+    }
 
     private void Add(Dictionary<string, Uri> assets, string version, string name, byte[] content)
     {
         var uri = new Uri($"https://releases.example.test/{version}/{name}");
         assets[name] = uri;
         _files[uri] = content;
+    }
+}
+
+internal sealed class SynchronousProgress<T>(Action<T> handler) : IProgress<T>
+{
+    private readonly Lock _lock = new();
+
+    public void Report(T value)
+    {
+        lock (_lock) handler(value);
     }
 }
 

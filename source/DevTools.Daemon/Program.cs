@@ -74,7 +74,7 @@ internal static class Program
         var policy = engine.Policy;
         policy.Mode = args.Contains(AppConstants.NotifyArg, StringComparer.OrdinalIgnoreCase) ? UpdateMode.Notify : UpdateMode.Auto;
         var selection = names.Select(name => components[name].Target).ToArray();
-        var result = await engine.ApplySelectionAsync(selection, policy, Values(args, AppConstants.SourceArg).FirstOrDefault(), CancellationToken.None).ConfigureAwait(false);
+        var result = await engine.ApplySelectionAsync(selection, policy, Values(args, AppConstants.SourceArg).FirstOrDefault(), null, CancellationToken.None).ConfigureAwait(false);
 
         Console.WriteLine($"RevitDevTool {result.Version}: installed [{string.Join(", ", result.Applied)}], pending [{string.Join(", ", result.Pending)}], unavailable [{string.Join(", ", result.Unavailable)}].");
         StartupRegistration.Enable();

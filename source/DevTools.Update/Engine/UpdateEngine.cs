@@ -32,9 +32,12 @@ public sealed record UpdateCycleResult(
     IReadOnlyList<string>? Pending = null);
 
 /// <summary>
-///     One row of the Updates tab: a component of the release, if its host is on this computer, and if the user selected it.
+///     One row of the Updates tab.
 /// </summary>
-public sealed record TargetOption(AddinComponent Component, bool OnComputer, bool Selected);
+public sealed record TargetOption(AddinComponent Component, IReadOnlyList<HostApp> Hosts, bool Selected, string? Installed, string? Pending, string Latest)
+{
+    public bool OnComputer => Hosts.Count > 0;
+}
 
 public sealed record SelectionResult(string Version, IReadOnlyList<string> Applied, IReadOnlyList<string> Pending, IReadOnlyList<string> Unavailable);
 
@@ -53,30 +56,33 @@ public sealed class UpdateEngine(
     IEnumerable<IHostPathResolver> resolvers,
     ILogger<UpdateEngine> logger) : IDisposable
 {
-    private static readonly (HostApp App, string Platform)[] Platforms =
-    [
-        (HostApp.Revit, PackageContents.RevitPlatform),
-        (HostApp.AutoCad, PackageContents.AutoCadPlatform)
-    ];
+    private static readonly (HostApp App, string Platform)[] Platforms = Enum.GetValues<HostApp>()
+        .Where(app => app == HostApp.Revit || app.IsAcadFamily())
+        .Select(app => (app, app == HostApp.Revit ? PackageContents.RevitPlatform : PackageContents.AutoCadPlatform))
+        .ToArray();
+
+    private const int ParallelDownloads = 3;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     private readonly HashSet<int> _watched = [];
     private string? _offeredVersion;
+    private UpdatePolicy? _chosenPolicy;
 
     public InstallationStore Store => store;
 
     /// <summary>
-    ///     The saved policy. Before the first selection, the default policy in the channel of the install.
+    ///     The saved policy. Before the first selection, the policy that the user chose, else the default policy in the channel of the install.
     /// </summary>
-    public UpdatePolicy Policy => store.Load()?.Policy ?? new UpdatePolicy { Channel = daemon.InstalledChannel };
+    public UpdatePolicy Policy => store.Load()?.Policy ?? _chosenPolicy ?? new UpdatePolicy { Channel = daemon.InstalledChannel };
 
     /// <summary>
-    ///     Saves a policy change. Before the first selection, <see cref="ApplySelectionAsync"/> saves the policy.
+    ///     Saves a policy change. Before the first selection, keeps it in memory and <see cref="ApplySelectionAsync"/> saves it.
     /// </summary>
     public void SetPolicy(UpdatePolicy policy)
     {
         if (store.Exists) store.Update(installation => installation.Policy = policy);
+        else _chosenPolicy = policy;
     }
 
     public async Task<UpdateCycleResult> CheckAsync(UpdateTrigger trigger, CancellationToken cancellationToken)
@@ -102,16 +108,26 @@ public sealed class UpdateEngine(
         var release = await FindSetupReleaseAsync(installation, cancellationToken).ConfigureAwait(false);
         if (release is not { HasManifest: true }) return [];
 
-        var onComputer = DetectInstalledTargets().ToHashSet();
-        var selected = installation?.Targets.ToHashSet() ?? DefaultSelection(onComputer);
+        var hosts = DetectHosts();
+        var selected = installation?.Targets.ToHashSet() ?? DefaultSelection(hosts.Keys.ToHashSet());
         var manifest = await reader.ReadManifestAsync(release, cancellationToken).ConfigureAwait(false);
         var released = manifest.Payloads
             .SelectMany(payload => payload.Platforms.Select(platform => new AddinTarget(platform, payload.HostVersion)))
             .ToHashSet();
 
+        var newest = await provider.GetLatestAsync((installation?.Policy ?? Policy).IsPrerelease, cancellationToken).ConfigureAwait(false);
+        var latest = Versions.Max([manifest.Version, newest is { HasManifest: true } ? newest.Version : null])!;
+        var installed = installation?.Targets.ToHashSet() ?? [];
         return PackageContents.TemplateComponents()
             .Where(component => released.Contains(component.Target))
-            .Select(component => new TargetOption(component, onComputer.Contains(component.Target), selected.Contains(component.Target)))
+            .Select(component =>
+            {
+                var payload = installed.Contains(component.Target)
+                    ? installation!.Payloads.Find(entry => entry.HostVersion == component.Target.HostVersion)
+                    : null;
+                return new TargetOption(component, hosts.GetValueOrDefault(component.Target, []), selected.Contains(component.Target),
+                    payload?.Version, payload?.PendingVersion, latest);
+            })
             .ToArray();
     }
 
@@ -119,7 +135,8 @@ public sealed class UpdateEngine(
     ///     Installs or changes the host selection (first run, Updates tab, <c>--select</c>). The payloads come from the release
     ///     of the Daemon version, or from <paramref name="offlineBundle"/> (<c>RevitDevTool.bundle.zip</c>).
     /// </summary>
-    public async Task<SelectionResult> ApplySelectionAsync(IReadOnlyList<AddinTarget> selection, UpdatePolicy? policy, string? offlineBundle, CancellationToken cancellationToken)
+    public async Task<SelectionResult> ApplySelectionAsync(IReadOnlyList<AddinTarget> selection, UpdatePolicy? policy, string? offlineBundle,
+        IProgress<PayloadProgress>? progress, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -131,7 +148,7 @@ public sealed class UpdateEngine(
             RemoveUnselected(installation);
 
             var batch = offlineBundle is null
-                ? await InstallFromReleaseAsync(installation, cancellationToken).ConfigureAwait(false)
+                ? await InstallFromReleaseAsync(installation, progress, cancellationToken).ConfigureAwait(false)
                 : InstallFromBundle(installation, offlineBundle);
 
             Commit(installation);
@@ -159,13 +176,15 @@ public sealed class UpdateEngine(
         return onDisk.Count > 0 ? onDisk : onComputer;
     }
 
-    public IReadOnlyList<AddinTarget> DetectInstalledTargets() => Platforms
+    public IReadOnlyList<AddinTarget> DetectInstalledTargets() => DetectHosts().Keys.ToArray();
+
+    private Dictionary<AddinTarget, HostApp[]> DetectHosts() => Platforms
         .SelectMany(platform => resolvers
             .Where(resolver => resolver.Supports(platform.App))
             .SelectMany(resolver => resolver.GetInstalledVersions(platform.App))
-            .Select(hostVersion => new AddinTarget(platform.Platform, hostVersion)))
-        .Distinct()
-        .ToArray();
+            .Select(hostVersion => (Target: new AddinTarget(platform.Platform, hostVersion), platform.App)))
+        .GroupBy(host => host.Target, host => host.App)
+        .ToDictionary(group => group.Key, group => group.Distinct().ToArray());
 
     /// <summary>
     ///     Velopack uninstall hook. Removes the bundle that the engine installed.
@@ -250,7 +269,7 @@ public sealed class UpdateEngine(
         {
             try
             {
-                Apply(installation, payload.HostVersion, await installer.StageAsync(release, payload, cancellationToken).ConfigureAwait(false), batch);
+                Apply(installation, payload.HostVersion, await installer.StageAsync(release, payload, null, cancellationToken).ConfigureAwait(false), batch);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -264,7 +283,7 @@ public sealed class UpdateEngine(
         installer.CleanStaging(installation.Payloads.Select(payload => payload.PendingVersion).OfType<string>());
     }
 
-    private async Task<PayloadBatch> InstallFromReleaseAsync(Installation installation, CancellationToken cancellationToken)
+    private async Task<PayloadBatch> InstallFromReleaseAsync(Installation installation, IProgress<PayloadProgress>? progress, CancellationToken cancellationToken)
     {
         var release = await SetupReleaseAsync(installation, cancellationToken).ConfigureAwait(false);
         var manifest = await reader.ReadManifestAsync(release, cancellationToken).ConfigureAwait(false);
@@ -273,9 +292,13 @@ public sealed class UpdateEngine(
         var batch = new PayloadBatch(manifest.Version);
         batch.Unavailable.AddRange(wanted.Where(hostVersion => manifest.FindPayload(hostVersion) is null));
 
-        var missing = wanted.Select(manifest.FindPayload).OfType<ManifestPayload>().Where(payload => !IsInstalled(installation, payload.HostVersion, manifest.Version));
-        foreach (var payload in missing)
-            Apply(installation, payload.HostVersion, await installer.StageAsync(release, payload, cancellationToken).ConfigureAwait(false), batch);
+        var missing = wanted.Select(manifest.FindPayload).OfType<ManifestPayload>().Where(payload => !IsInstalled(installation, payload.HostVersion, manifest.Version)).ToArray();
+        var staged = new string[missing.Length];
+        await Parallel.ForAsync(0, missing.Length, new ParallelOptions { MaxDegreeOfParallelism = ParallelDownloads, CancellationToken = cancellationToken },
+            async (index, token) => staged[index] = await installer.StageAsync(release, missing[index], progress, token).ConfigureAwait(false)).ConfigureAwait(false);
+
+        for (var index = 0; index < missing.Length; index++)
+            Apply(installation, missing[index].HostVersion, staged[index], batch);
 
         return batch;
     }
@@ -436,10 +459,15 @@ public sealed class UpdateEngine(
             ? release
             : throw new InvalidOperationException("No release with update data is available.");
 
-    private Task<Release?> FindSetupReleaseAsync(Installation? installation, CancellationToken cancellationToken) =>
-        daemon.InstalledVersion is { } version
-            ? provider.GetAsync(version, cancellationToken)
-            : provider.GetLatestAsync((installation?.Policy.Channel ?? daemon.InstalledChannel) == UpdatePolicy.PrereleaseChannel, cancellationToken);
+    private async Task<Release?> FindSetupReleaseAsync(Installation? installation, CancellationToken cancellationToken)
+    {
+        var release = daemon.InstalledVersion is { } version
+            ? await provider.GetAsync(version, cancellationToken).ConfigureAwait(false)
+            : null;
+        return release is { HasManifest: true }
+            ? release
+            : await provider.GetLatestAsync((installation?.Policy ?? Policy).IsPrerelease, cancellationToken).ConfigureAwait(false);
+    }
 
     private sealed class PayloadBatch(string version)
     {

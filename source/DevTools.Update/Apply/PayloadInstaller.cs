@@ -4,6 +4,14 @@ using System.IO.Compression;
 
 namespace DevTools.Update.Apply;
 
+public enum PayloadStage
+{
+    Downloading,
+    Installing
+}
+
+public sealed record PayloadProgress(string HostVersion, PayloadStage Stage, int? Percent);
+
 /// <summary>
 ///     Stages and swaps one payload folder (0049). Staging verifies the zip and extracts it to
 ///     <c>.updates\&lt;version&gt;\&lt;host version&gt;</c>. The swap renames it to <c>Contents\&lt;host version&gt;</c>.
@@ -15,7 +23,7 @@ public sealed class PayloadInstaller(AutodeskBundle bundle, IFolderLock folderLo
 
     public bool IsStaged(string version, string hostVersion) => Directory.Exists(StagedPath(version, hostVersion));
 
-    public async Task<string> StageAsync(Release release, ManifestPayload payload, CancellationToken cancellationToken)
+    public async Task<string> StageAsync(Release release, ManifestPayload payload, IProgress<PayloadProgress>? progress, CancellationToken cancellationToken)
     {
         var target = StagedPath(release.Version, payload.HostVersion);
         if (Directory.Exists(target)) return target;
@@ -23,10 +31,13 @@ public sealed class PayloadInstaller(AutodeskBundle bundle, IFolderLock folderLo
         var zipPath = Path.Combine(bundle.StagingPath(release.Version), payload.Asset);
         try
         {
-            var sha256 = await reader.DownloadAsync(release.Asset(payload.Asset), zipPath, null, cancellationToken).ConfigureAwait(false);
+            progress?.Report(new PayloadProgress(payload.HostVersion, PayloadStage.Downloading, 0));
+            var sha256 = await reader.DownloadAsync(release.Asset(payload.Asset), zipPath,
+                percent => progress?.Report(new PayloadProgress(payload.HostVersion, PayloadStage.Downloading, percent)), cancellationToken).ConfigureAwait(false);
             if (sha256 != payload.Sha256 || new FileInfo(zipPath).Length != payload.Size)
                 throw new UpdateIntegrityException($"{payload.Asset} does not match the update manifest.");
 
+            progress?.Report(new PayloadProgress(payload.HostVersion, PayloadStage.Installing, null));
             ZipFile.ExtractToDirectory(zipPath, target + ".partial", overwriteFiles: true);
             Directory.Move(target + ".partial", target);
             return target;
