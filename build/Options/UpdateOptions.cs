@@ -30,7 +30,8 @@ public sealed record UpdateOptions
     public string? SigningKey { get; init; }
 
     /// <summary>
-    ///     Fail the pipeline when <see cref="SigningKey"/> is empty. <c>PublishRelease.yml</c> sets it.
+    ///     Marks a release build: fail when <see cref="SigningKey"/> is empty, require a newer version, and build a delta.
+    ///     <c>PublishRelease.yml</c> sets it.
     /// </summary>
     public bool RequireSignature { get; init; }
 }

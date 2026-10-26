@@ -20,7 +20,8 @@ namespace Build.Modules;
 /// </summary>
 /// <remarks>
 ///     Runs after <see cref="CompileDaemonModule"/> so the two publishes of the same project do not share <c>obj</c> at once.
-///     The previous release is downloaded first so <c>vpk pack</c> can build a delta.
+///     A release build downloads the previous release first so <c>vpk pack</c> can build a delta.
+///     A CI build has no delta, because its version can be lower than a published prerelease.
 /// </remarks>
 /// <seealso href="../../docs/decisions/0053-velopack-for-daemon-distribution.md">0053</seealso>
 [DependsOn<ResolveVersionModule>]
@@ -57,7 +58,8 @@ public sealed class PackDaemonModule(
         await RunVpkAsync(context, root.Path, ["tool", "restore"], throwOnError: true, cancellationToken);
 
         var channel = versioning.IsPrerelease ? PrereleaseChannel : null;
-        await DownloadPreviousAsync(context, root.Path, outputPath, channel, versioning.IsPrerelease, cancellationToken);
+        if (updateOptions.Value.RequireSignature)
+            await DownloadPreviousAsync(context, root.Path, outputPath, channel, versioning.IsPrerelease, cancellationToken);
 
         var icon = Path.Combine(daemonFolder, "..", "DevTools.UI", "Resources", "icons", "DevTools-32-Dark.ico");
         List<string> pack =
