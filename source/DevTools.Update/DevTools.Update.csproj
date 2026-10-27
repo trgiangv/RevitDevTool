@@ -18,6 +18,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj"/>
+        <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

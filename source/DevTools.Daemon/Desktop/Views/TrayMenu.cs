@@ -91,7 +91,7 @@ public partial class TrayMenu : ObservableObject
         _notify?.Text = value;
     }
 
-    private void ShowUpdatesTab(bool check)
+    public void ShowUpdatesTab(bool check)
     {
         _state.SelectedTabIndex = ShellViewModel.UpdatesTabIndex;
         ShowMainWindow();

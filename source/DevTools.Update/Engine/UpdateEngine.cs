@@ -224,7 +224,7 @@ public sealed class UpdateEngine(
         if (!WaitsForDaemon(manifest)) await UpdatePayloadsAsync(installation, release, outdated, batch, cancellationToken).ConfigureAwait(false);
 
         Report(batch, manifest.NotesUrl);
-        ApplyDaemonUpdate(daemonTarget);
+        ApplyDaemonUpdate(daemonTarget, trigger);
 
         var status = batch.Changed || daemonTarget is not null ? UpdateCycleStatus.Updated : UpdateCycleStatus.UpToDate;
         return new UpdateCycleResult(status, manifest.Version, batch.Applied, batch.PendingHostVersions);
@@ -404,13 +404,13 @@ public sealed class UpdateEngine(
         }
     }
 
-    private void ApplyDaemonUpdate(string? target)
+    private void ApplyDaemonUpdate(string? target, UpdateTrigger trigger)
     {
         if (target is null) return;
 
         if (daemon.GetBlockingProcesses().Count == 0)
         {
-            daemon.ApplyOnExit();
+            daemon.ApplyOnExit(showUpdates: trigger != UpdateTrigger.Scheduled);
             notifier.RequestShutdownForUpdate();
             return;
         }

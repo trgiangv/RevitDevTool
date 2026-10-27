@@ -238,6 +238,20 @@ public sealed class UpdateEngineTests
     }
 
     [TestMethod]
+    public async Task Daemon_restarts_on_the_Updates_tab_only_after_a_check_that_the_user_started()
+    {
+        UpdatableDaemon? daemon = null;
+        using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
+        harness.Releases.Publish("3.1.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Store.Save(new Installation { Targets = [new AddinTarget("Revit", "2024")] });
+
+        await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
+        await harness.Engine.CheckAsync(UpdateTrigger.Manual, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { false, true }, daemon!.Restarts);
+    }
+
+    [TestMethod]
     public async Task Scheduler_runs_the_cycle_after_the_startup_delay()
     {
         using var harness = new Harness(null);

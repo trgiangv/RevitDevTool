@@ -1,3 +1,4 @@
+using DevTools.Ipc;
 using DevTools.Update.Installations;
 using DevTools.Update.Releases;
 using System.Diagnostics;
@@ -71,14 +72,18 @@ public class DaemonUpdater(ReleaseReader reader)
 
     /// <summary>
     ///     Gives the update to Velopack. Velopack waits for this process to stop, swaps the files, and starts the Daemon again.
+    ///     The Daemon opens the Updates tab if <paramref name="showUpdates"/> is true, else it starts in the background.
     /// </summary>
-    public virtual void ApplyOnExit() => _manager!.WaitExitThenApplyUpdates(_pending!.TargetFullRelease, silent: true, restart: true, []);
+    public virtual void ApplyOnExit(bool showUpdates) =>
+        _manager!.WaitExitThenApplyUpdates(_pending!.TargetFullRelease, silent: true, restart: true, [RestartArg(showUpdates)]);
 
     /// <summary>
-    ///     Applies the update now. Velopack stops all processes in the install root, also the MCP <c>--stdio</c> processes.
+    ///     Applies the update now and opens the Updates tab. Velopack stops all processes in the install root, also the MCP <c>--stdio</c> processes.
     /// </summary>
     public virtual void ApplyNow()
     {
-        if (_pending is not null) _manager!.ApplyUpdatesAndRestart(_pending.TargetFullRelease, []);
+        if (_pending is not null) _manager!.ApplyUpdatesAndRestart(_pending.TargetFullRelease, [RestartArg(showUpdates: true)]);
     }
+
+    private static string RestartArg(bool showUpdates) => showUpdates ? IpcConstants.DaemonArgs.ShowUpdates : IpcConstants.DaemonArgs.Background;
 }

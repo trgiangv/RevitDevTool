@@ -6,6 +6,7 @@ using DevTools.Daemon.Desktop.Views;
 using DevTools.Daemon.Logging;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Tests.Support;
+using DevTools.Ipc;
 using DevTools.Settings.Configs;
 using DevTools.Utilities;
 using Microsoft.Extensions.Configuration;
@@ -61,6 +62,20 @@ public sealed class DesktopComponentTests
     }
 
     [TestMethod]
+    public void SingleInstanceGuard_SecondStartAsksTheFirstToShow()
+    {
+        using var first = new SingleInstanceGuard();
+        if (!first.IsFirstInstance)
+            return;
+
+        using var shown = new ManualResetEventSlim();
+        first.OnShowRequested(shown.Set);
+        SingleInstanceGuard.RequestShow();
+
+        Assert.IsTrue(shown.Wait(TimeSpan.FromSeconds(5)));
+    }
+
+    [TestMethod]
     public void StartupRegistration_EnableDisable_RoundTripsRegistryValue()
     {
         var runKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
@@ -75,7 +90,11 @@ public sealed class DesktopComponentTests
 
             StartupRegistration.Enable();
             if (Environment.ProcessPath is not null)
+            {
                 Assert.IsTrue(StartupRegistration.IsEnabled);
+                using var key = Registry.CurrentUser.OpenSubKey(runKey);
+                Assert.EndsWith($" {IpcConstants.DaemonArgs.Background}", (string)key!.GetValue(AppConstants.AutoStartValueName)!);
+            }
 
             StartupRegistration.Disable();
             Assert.IsFalse(StartupRegistration.IsEnabled);

@@ -1,3 +1,4 @@
+using DevTools.Ipc;
 using Microsoft.Win32;
 using System.IO;
 
@@ -34,13 +35,24 @@ public static class StartupRegistration
         }
     }
 
+    /// <summary>
+    ///     Starts the Daemon with Windows, in the background.
+    /// </summary>
     public static void Enable(string? exePath = null)
     {
         exePath ??= DefaultExePath;
         if (exePath is null) return;
 
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
-        key?.SetValue(AppConstants.AutoStartValueName, $"\"{exePath}\"");
+        key?.SetValue(AppConstants.AutoStartValueName, $"\"{exePath}\" {IpcConstants.DaemonArgs.Background}");
+    }
+
+    /// <summary>
+    ///     Writes the Run value again if it is on, so a value from an earlier version also gets the background argument.
+    /// </summary>
+    public static void Refresh()
+    {
+        if (IsEnabled) Enable();
     }
 
     public static void Disable()

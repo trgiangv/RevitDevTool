@@ -23,7 +23,7 @@ public static class DaemonClient
         var exePath = Utilities.AppUtils.GetDaemonExePath();
         if (!System.IO.File.Exists(exePath)) return;
 
-        Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo(exePath, IpcConstants.DaemonArgs.Background) { UseShellExecute = true });
 
         for (var i = 0; i < ReadyPollMaxAttempts; i++)
         {

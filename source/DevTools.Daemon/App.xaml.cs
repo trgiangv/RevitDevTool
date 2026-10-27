@@ -1,6 +1,7 @@
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Desktop.Updates;
 using DevTools.Daemon.Desktop.Views;
+using DevTools.Ipc;
 using DevTools.Update.Engine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -20,9 +21,11 @@ public partial class App
 
         try
         {
+            var background = e.Args.Contains(IpcConstants.DaemonArgs.Background, StringComparer.OrdinalIgnoreCase);
             _singleInstance = new SingleInstanceGuard();
             if (!_singleInstance.IsFirstInstance)
             {
+                if (!background) SingleInstanceGuard.RequestShow();
                 _singleInstance.Dispose();
                 _singleInstance = null;
                 Shutdown();
@@ -30,9 +33,13 @@ public partial class App
             }
 
             _host = AppHostBuilder.CreateDesktop();
-            _host.Services.GetRequiredService<TrayMenu>().Start();
+            var tray = _host.Services.GetRequiredService<TrayMenu>();
+            tray.Start();
+            _singleInstance.OnShowRequested(tray.ShowMainWindow);
 
             await _host.StartAsync();
+            if (e.Args.Contains(IpcConstants.DaemonArgs.ShowUpdates, StringComparer.OrdinalIgnoreCase)) tray.ShowUpdatesTab(check: false);
+            else if (!background) tray.ShowMainWindow();
             _host.Services.GetRequiredService<UpdateTray>().ShowSetupIfNotConfigured(_host.Services.GetRequiredService<DaemonUpdater>());
         }
         catch (Exception ex)

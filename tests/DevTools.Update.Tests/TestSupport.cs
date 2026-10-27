@@ -164,6 +164,19 @@ internal sealed class InstalledDaemon(ReleaseReader reader, string version, stri
     public override Task<string?> PrepareAsync(Release release, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
 }
 
+/// <summary>
+///     An installed Daemon that has an update ready. It records how Velopack must start it again.
+/// </summary>
+internal sealed class UpdatableDaemon(ReleaseReader reader) : DaemonUpdater(reader)
+{
+    public List<bool> Restarts { get; } = [];
+    public override string? InstalledVersion => "3.0.0";
+    public override string InstalledChannel => Installations.UpdatePolicy.StableChannel;
+    public override Task<string?> PrepareAsync(Release release, CancellationToken cancellationToken) => Task.FromResult<string?>(release.Version);
+    public override IReadOnlyList<int> GetBlockingProcesses() => [];
+    public override void ApplyOnExit(bool showUpdates) => Restarts.Add(showUpdates);
+}
+
 internal sealed class RecordingNotifier : IUpdateNotifier
 {
     public List<UpdateNotice> Notices { get; } = [];

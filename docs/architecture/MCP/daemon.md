@@ -4,8 +4,8 @@ Standalone HandyControl WPF tray application that composes the external MCP serv
 
 ## Capabilities
 
-1. **Auto-starts** with Windows (HKCU Run value `DevToolsDaemon`, set by installer)
-2. **Single-instance tray** enforced by mutex `DevToolsDaemon_v1`; duplicate tray launches exit silently
+1. **Auto-starts** with Windows in the background (HKCU Run value `DevToolsDaemon` with `--background`, set by the installer and written again at each start)
+2. **Single-instance tray** enforced by mutex `DevToolsDaemon_v1`; a second start without `--background` shows the window of the first process, then exits
 3. **Owns authentication** — OIDC/PKCE flow via system browser, tokens stored with DPAPI
 4. **Hosts the MCP engine** — Stdio mode (separate process) for local AI clients, Gateway mode (tray process) for remote
 5. **Multi-machine aware** — registers with Gateway including device metadata and host_apps
@@ -17,7 +17,11 @@ Standalone HandyControl WPF tray application that composes the external MCP serv
 | Args | Behavior |
 |------|----------|
 | `--stdio` | Direct MCP server on stdin/stdout. Self-contained process, no mutex, exits on disconnect. |
-| _(none)_ | Desktop process. Acquires mutex; if already held, exits silently. Runs gateway + control pipe + UI. |
+| _(none)_ | The user started the app. Desktop process that runs gateway + control pipe + UI and opens the main window. If the mutex is held, the running process shows its window. |
+| `--background` | Windows start (Run value) or a host add-in (`DaemonClient`). Desktop process without a window. |
+| `--show-updates` | Velopack starts the Daemon again after an update that the user started (Check for updates, Update, Restart now). Opens the Updates tab. A scheduled update starts it again with `--background`. |
+
+The first run of an install with no host selection opens the Updates tab in all modes.
 
 Stdio and desktop processes are fully independent — no IPC between them. Both discover host pipes via their own `DiscoveryHostedService`.
 
