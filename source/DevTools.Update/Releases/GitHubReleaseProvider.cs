@@ -1,14 +1,17 @@
 using Octokit;
+using System.Net;
 
 namespace DevTools.Update.Releases;
 
 /// <summary>
 ///     Reads releases with the GitHub REST API (Octokit). One check uses one request.
-///     Without a token, GitHub allows 60 requests each hour for each IP address.
+///     Without a token, GitHub allows 60 requests each hour for each IP address. Asset downloads do not count.
+///     All rate limit responses become <see cref="UpdateThrottledException"/>.
 /// </summary>
 public sealed class GitHubReleaseProvider(IGitHubClient client, string owner, string name) : IReleaseProvider
 {
     private const int PrereleasePageSize = 10;
+    private const int SecondaryWaitSeconds = 60;
 
     public GitHubReleaseProvider(string repository, string? token = null)
         : this(CreateClient(token), repository.Split('/')[0], repository.Split('/')[1])
@@ -48,6 +51,18 @@ public sealed class GitHubReleaseProvider(IGitHubClient client, string owner, st
         catch (RateLimitExceededException ex)
         {
             throw new UpdateThrottledException(ex.Reset - DateTimeOffset.UtcNow, ex);
+        }
+        catch (AbuseException ex)
+        {
+            throw new UpdateThrottledException(TimeSpan.FromSeconds(ex.RetryAfterSeconds ?? SecondaryWaitSeconds), ex);
+        }
+        catch (SecondaryRateLimitExceededException ex)
+        {
+            throw new UpdateThrottledException(TimeSpan.FromSeconds(SecondaryWaitSeconds), ex);
+        }
+        catch (ApiException ex) when (ex.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            throw new UpdateThrottledException(null, ex);
         }
     }
 

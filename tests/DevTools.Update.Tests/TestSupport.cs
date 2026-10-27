@@ -118,12 +118,30 @@ internal sealed class FakeReleases : HttpMessageHandler, IReleaseProvider
 
     private int _payloadDownloads;
 
+    public int FileRequests => _fileRequests;
+
+    private int _fileRequests;
+
+    public int DroppedResponses { get; set; }
+
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        Interlocked.Increment(ref _fileRequests);
         if (request.RequestUri!.AbsolutePath.EndsWith(".zip", StringComparison.Ordinal)) Interlocked.Increment(ref _payloadDownloads);
-        return Task.FromResult(_files.TryGetValue(request.RequestUri, out var content)
-            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(content) }
-            : new HttpResponseMessage(HttpStatusCode.NotFound));
+        if (!_files.TryGetValue(request.RequestUri, out var content)) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+
+        HttpContent body = DroppedResponses-- > 0 ? new StreamContent(new DroppedStream()) : new ByteArrayContent(content);
+        body.Headers.ContentLength = content.Length;
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = body });
+    }
+
+    private sealed class DroppedStream : MemoryStream
+    {
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            throw new IOException("An existing connection was forcibly closed by the remote host.");
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new IOException("An existing connection was forcibly closed by the remote host.");
     }
 
     private void Add(Dictionary<string, Uri> assets, string version, string name, byte[] content)

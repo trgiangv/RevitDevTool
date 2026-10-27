@@ -5,6 +5,7 @@ using DevTools.Update.Installations;
 using DevTools.Update.Releases;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace DevTools.Update;
@@ -21,9 +22,10 @@ public static class UpdateServiceCollectionExtensions
         services.AddOptions<UpdateEngineOptions>();
         services.TryAddSingleton<IUpdateNotifier, NullUpdateNotifier>();
         services.TryAddSingleton<IFolderLock, RestartManagerFolderLock>();
-        services.TryAddSingleton<IReleaseProvider>(sp => new GitHubReleaseProvider(Options(sp).Repository, Options(sp).GitHubToken));
+        services.TryAddSingleton<IReleaseProvider>(sp => new CachedReleaseProvider(
+            new GitHubReleaseProvider(Options(sp).Repository, Options(sp).GitHubToken), TimeProvider.System));
         services.AddSingleton(sp => new AutodeskBundle(Options(sp).BundlePath ?? AutodeskBundle.DefaultRoot));
-        services.AddSingleton(sp => new ReleaseReader(new HttpClient(), new ReleaseSignature(Options(sp).PublicKey)));
+        services.AddSingleton(sp => new ReleaseReader(new HttpClient(), new ReleaseSignature(Options(sp).PublicKey), sp.GetService<ILogger<ReleaseReader>>()));
         services.AddSingleton<InstallationStore>();
         services.AddSingleton<PayloadInstaller>();
         services.AddSingleton<DaemonUpdater>();

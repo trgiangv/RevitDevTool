@@ -73,6 +73,72 @@ public sealed class ReleaseTests
     }
 
     [TestMethod]
+    public async Task Download_starts_again_when_the_connection_drops()
+    {
+        var releases = new FakeReleases { DroppedResponses = ReleaseReader.Attempts - 1 };
+        var release = releases.Publish("3.1.0", null, ("2024", ["Revit"], "new"));
+        var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(null)) { RetryDelay = TimeSpan.Zero };
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.zip");
+
+        try
+        {
+            var sha256 = await reader.DownloadAsync(release.Asset("RevitDevTool-3.1.0-2024.zip"), path, null, CancellationToken.None);
+
+            Assert.AreEqual(Convert.ToHexStringLower(SHA256.HashData(FakeReleases.PayloadZip("new"))), sha256);
+            Assert.AreEqual(ReleaseReader.Attempts, releases.FileRequests);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [TestMethod]
+    public async Task Download_stops_after_the_last_attempt()
+    {
+        var releases = new FakeReleases { DroppedResponses = ReleaseReader.Attempts };
+        var release = releases.Publish("3.1.0", null, ("2024", ["Revit"], "new"));
+        var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(null)) { RetryDelay = TimeSpan.Zero };
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => reader.ReadManifestAsync(release, CancellationToken.None));
+        Assert.AreEqual(ReleaseReader.Attempts, releases.FileRequests);
+    }
+
+    [TestMethod]
+    public async Task Missing_asset_is_not_downloaded_again()
+    {
+        var releases = new FakeReleases();
+        var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(null)) { RetryDelay = TimeSpan.Zero };
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => reader.DownloadAsync(new Uri("https://releases.example.test/missing.zip"), Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.zip"), null, CancellationToken.None));
+        Assert.AreEqual(1, releases.FileRequests);
+    }
+
+    [TestMethod]
+    public async Task Cached_provider_asks_one_time_in_the_lifetime()
+    {
+        var releases = new FakeReleases();
+        releases.Publish("3.1.0", null, ("2024", ["Revit"], "new"));
+        var time = new ManualTime();
+        var provider = new CachedReleaseProvider(releases, time);
+
+        await provider.GetLatestAsync(false, CancellationToken.None);
+        await provider.GetLatestAsync(false, CancellationToken.None);
+        Assert.AreEqual(1, releases.Requests);
+
+        time.Now += CachedReleaseProvider.Lifetime;
+        await provider.GetLatestAsync(false, CancellationToken.None);
+        Assert.AreEqual(2, releases.Requests);
+    }
+
+    private sealed class ManualTime : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = DateTimeOffset.UnixEpoch;
+
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+
+    [TestMethod]
     public void Backoff_doubles_obeys_retry_after_and_stops_at_one_day()
     {
         var hour = TimeSpan.FromHours(1);

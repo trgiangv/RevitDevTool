@@ -72,7 +72,15 @@ once (toast, 0050). It is never added without the user.
   of the 60 calls per hour that every machine behind the same IP shares, and on
   the download endpoint it gains nothing, because releases ship days apart.
 - **Backoff:** on 403/429 or network failure, double the interval up to 24 hours;
-  honor `Retry-After`.
+  honor `Retry-After`. The primary limit waits for `x-ratelimit-reset`; a secondary
+  limit waits for `Retry-After`, else at least 60 seconds.
+- (Revised 2026-10-27) **Asset retry:** asset downloads (manifest, signatures,
+  Velopack feed and packages, payload zips) are not REST calls and do not count
+  against the 60/hour limit. A download that fails with a network error, 408, 429
+  or 5xx starts again up to 3 times (2 s, 4 s) in the same check. A 4xx is final.
+  REST calls are not retried in the check; the scheduler backoff covers them.
+- (Revised 2026-10-27) **Request cache:** each provider answer is kept for 1 minute,
+  so a check from the Updates tab (load, check, reload) sends 2 REST calls, not 5.
 - Proxy: use the system proxy (`HttpClient` default) so corporate PAC/WPAD works.
 
 ### Running-instance awareness
