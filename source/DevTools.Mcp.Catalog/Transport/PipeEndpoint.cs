@@ -48,8 +48,24 @@ public sealed class PipeEndpoint : IAsyncDisposable
         return new PipeEndpoint(pipe, transport, server);
     }
 
-    public Task RunAsync(CancellationToken cancellationToken) =>
-        _server.RunAsync(cancellationToken);
+    /// <summary>
+    ///     Runs the session until the host stops or the client goes. When the client goes, it cancels the requests that
+    ///     stay open (<c>subscriptions/listen</c>), so the pipe instance is free again.
+    /// </summary>
+    public async Task RunAsync(CancellationToken cancellationToken)
+    {
+        using var session = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var run = _server.RunAsync(session.Token);
+        await Task.WhenAny(run, _transport.MessageReader.Completion).ConfigureAwait(false);
+        session.Cancel();
+        try
+        {
+            await run.ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {

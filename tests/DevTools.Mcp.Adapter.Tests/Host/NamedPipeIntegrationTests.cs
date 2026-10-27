@@ -201,6 +201,63 @@ public sealed class NamedPipeIntegrationTests
         server.Dispose();
     }
 
+    [TestMethod]
+    public async Task McpPipeServer_frees_the_session_of_a_client_that_dies()
+    {
+        var version = Guid.NewGuid().ToString("N");
+        var processId = Process.GetCurrentProcess().Id;
+        var hostInfo = Mock.Of<IHostAppInfo>(info =>
+            info.Host == HostApp.Revit
+            && info.VersionNumber == version
+            && info.ProcessId == processId);
+        var (_, source, catalogStore, appServices) = McpHostTestHarness.CreateServerOptionsWithTool("ping");
+        using var server = new McpPipeServer(
+            catalogStore,
+            [source],
+            new Mock<IConnectTracker>().Object,
+            new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance),
+            appServices.GetRequiredService<IHostContextExecutor>(),
+            hostInfo,
+            appServices,
+            NullLogger<McpPipeServer>.Instance);
+        var pipeName = HostPipeName.FormatMcp(hostInfo.Host.ToString(), version, processId);
+        await server.StartAsync(TestContext.CancellationToken);
+
+        for (var client = 0; client <= NamedPipes.DefaultMaxInstances; client++)
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+            timeout.CancelAfter(TimeSpan.FromSeconds(5));
+            var pipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+            await pipe.ConnectAsync(timeout.Token);
+            var mcp = await McpClient.CreateAsync(
+                new StreamClientTransport(pipe, pipe, NullLoggerFactory.Instance),
+                loggerFactory: NullLoggerFactory.Instance,
+                cancellationToken: timeout.Token);
+            _ = await mcp.ListToolsAsync(cancellationToken: timeout.Token);
+
+            var acknowledged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            await using var registration = mcp.RegisterNotificationHandler(
+                NotificationMethods.SubscriptionsAcknowledgedNotification,
+                (_, _) =>
+                {
+                    acknowledged.TrySetResult();
+                    return default;
+                });
+            _ = mcp.SendRequestAsync<SubscriptionsListenRequestParams, EmptyResult>(
+                RequestMethods.SubscriptionsListen,
+                new SubscriptionsListenRequestParams
+                {
+                    Notifications = new SubscriptionsListenNotifications { ToolsListChanged = true, ResourcesListChanged = true }
+                },
+                cancellationToken: CancellationToken.None);
+            await acknowledged.Task.WaitAsync(timeout.Token);
+            await pipe.DisposeAsync();
+        }
+
+        await server.StopAsync(TestContext.CancellationToken);
+        appServices.Dispose();
+    }
+
     private sealed class NonPumpingSynchronizationContext : SynchronizationContext
     {
         public override void Post(SendOrPostCallback callback, object? state)
