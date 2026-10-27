@@ -68,6 +68,7 @@ const config: Config = {
         highlightSearchTermsOnTargetPage: true,
         explicitSearchResultPath: true,
         searchResultLimits: 8,
+        searchBarShortcutHint: false,
       },
     ],
   ],
@@ -112,7 +113,7 @@ const config: Config = {
           items: [
             { label: 'Run code', to: '/docs/execution/Execution-Overview' },
             { label: 'Test in the host', to: '/docs/testing/Testing-Overview' },
-            { label: 'Connect AI (MCP)', to: '/docs/mcp/MCP-Protocol' },
+            { label: 'Connect MCP', to: '/docs/mcp/MCP-Protocol' },
             { label: 'Logging', to: '/docs/logging/Logging-Overview' },
           ],
         },

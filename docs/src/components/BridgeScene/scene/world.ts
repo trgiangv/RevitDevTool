@@ -30,7 +30,8 @@ export interface World {
 }
 
 export function computeViewRadius(aspect: number): number {
-  return clamp(CAMERA.radiusFactor / aspect, CAMERA.minRadius, CAMERA.maxRadius);
+  const boost = CAMERA.narrowBoost * clamp(CAMERA.narrowAspect - aspect, 0, 1);
+  return clamp((CAMERA.radiusFactor + boost) / aspect, CAMERA.minRadius, CAMERA.maxRadius);
 }
 
 function addPoints(scene: Scene, geometry: BufferGeometry, material: Material, order: number): Points {

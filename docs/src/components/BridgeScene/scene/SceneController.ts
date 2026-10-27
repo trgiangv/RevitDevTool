@@ -69,7 +69,7 @@ export class SceneController {
     this.visibilityObserver.observe(stage);
     this.setDark(options.dark);
     this.resize();
-    this.orbit.placeAt(homePose(world.viewRadius));
+    this.orbit.placeAt(homePose(world.viewRadius, world.camera.aspect));
     if (reducedMotion) this.renderStatic();
     else this.frameId = requestAnimationFrame(this.frame);
   }
@@ -99,7 +99,7 @@ export class SceneController {
     const viewport = {radius, aspect: this.world.camera.aspect, narrow: window.matchMedia(NARROW_QUERY).matches};
     if (selection.kind === 'idle') {
       this.orbit.userControlled = false;
-      this.orbit.flyTo(homePose(radius), ORBIT.homeFlightSeconds);
+      this.orbit.flyTo(homePose(radius, this.world.camera.aspect), ORBIT.homeFlightSeconds);
     } else if (selection.kind === 'stack') {
       this.orbit.userControlled = true;
       this.orbit.flyTo(stackPose(selection.index, viewport), ORBIT.stackFlightSeconds);
@@ -112,7 +112,7 @@ export class SceneController {
 
   resetView(): void {
     this.orbit.userControlled = false;
-    this.orbit.flyTo(homePose(this.world.viewRadius), ORBIT.homeFlightSeconds);
+    this.orbit.flyTo(homePose(this.world.viewRadius, this.world.camera.aspect), ORBIT.homeFlightSeconds);
     this.renderStatic();
   }
 
@@ -143,7 +143,7 @@ export class SceneController {
     this.world.resize(this.width, this.height);
     const limits = distanceLimits(this.world.viewRadius);
     this.orbit.setLimits(limits.min, limits.max);
-    if (!this.orbit.userControlled) this.orbit.placeAt(homePose(this.world.viewRadius));
+    if (!this.orbit.userControlled) this.orbit.placeAt(homePose(this.world.viewRadius, this.world.camera.aspect));
     this.renderStatic();
   }
 

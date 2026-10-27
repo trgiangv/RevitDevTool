@@ -1,7 +1,8 @@
 import Link from '@docusaurus/Link';
 import Layout from '@theme/Layout';
+import {Blocks, Bot, Bug, FlaskConical, Package, ScrollText, Spline, type LucideIcon} from 'lucide-react';
 import {Highlight, themes} from 'prism-react-renderer';
-import {useState, type JSX} from 'react';
+import type {JSX} from 'react';
 
 import {BridgeScene} from '../components/BridgeScene';
 
@@ -57,17 +58,8 @@ function Code({code, language}: Readonly<{code: string; language: string}>): JSX
   );
 }
 
-type Claim = {name: string; text: string; to: string; link: string; code: string; language: string};
-
-const claims: Claim[] = [
-  {
-    name: 'Installs_python_packages_from_the_script_header',
-    text: 'Declare dependencies in the script itself. Pixi resolves them from conda-forge and PyPI on first run, into a CPython 3.14 that runs in the host process.',
-    to: '/docs/execution/python/Execution-Python',
-    link: 'Modern Python scripting',
-    language: 'python',
-    code: `# /// script
-# dependencies = ["polars", "numpy"]
+const helloScript = `# /// script
+# dependencies = ["polars"]
 # ///
 
 import polars as pl
@@ -75,10 +67,23 @@ from Autodesk.Revit import DB
 
 doc = __revit__.ActiveUIDocument.Document
 walls = DB.FilteredElementCollector(doc).OfClass(DB.Wall)
-print(pl.DataFrame({"name": [w.Name for w in walls]}))`,
+print(pl.DataFrame({"name": [w.Name for w in walls]}))`;
+
+type Claim = {name: string; icon: LucideIcon; text: string; to: string; link: string; code: string; language: string};
+
+const claims: Claim[] = [
+  {
+    name: 'Install Python packages from the script header',
+    icon: Package,
+    text: 'Declare dependencies in the script itself. Pixi resolves them from conda-forge and PyPI on first run, into a CPython 3.14 that runs in the host process.',
+    to: '/docs/execution/python/Execution-Python',
+    link: 'Modern Python scripting',
+    language: 'python',
+    code: helloScript,
   },
   {
-    name: 'Stops_at_your_breakpoints',
+    name: 'Stop at your breakpoints',
+    icon: Bug,
     text: 'Attach VS Code or PyCharm to a running CPython or IronPython script and inspect real Revit and AutoCAD API objects. For C#, F# and compiled add-ins, attach your IDE to the host process.',
     to: '/docs/execution/python/Execution-PythonDebugging',
     link: 'Attach a debugger',
@@ -91,7 +96,8 @@ print(pl.DataFrame({"name": [w.Name for w in walls]}))`,
 }`,
   },
   {
-    name: 'Runs_your_tests_in_a_live_session',
+    name: 'Run your tests in a live session',
+    icon: FlaskConical,
     text: 'pytest, NUnit, TUnit and MSTest execute inside a real Revit or AutoCAD process. Results come back to your terminal or IDE.',
     to: '/docs/testing/Testing-Overview',
     link: 'Testing overview',
@@ -102,7 +108,8 @@ print(pl.DataFrame({"name": [w.Name for w in walls]}))`,
 # uv run pytest --host revit --host-version 2025 -v`,
   },
   {
-    name: 'Lets_AI_assistants_work_with_your_model',
+    name: 'Let AI assistants work with your model',
+    icon: Bot,
     text: 'An MCP server connects assistants such as Cursor, Claude, GitHub Copilot and Codex to running hosts. Ask in plain language: the assistant searches for a capability, calls it, and reads back the result.',
     to: '/docs/mcp/MCP-Protocol',
     link: 'MCP protocol',
@@ -118,7 +125,8 @@ print(pl.DataFrame({"name": [w.Name for w in walls]}))`,
 }`,
   },
   {
-    name: 'Extends_MCP_with_your_own_toolsets',
+    name: 'Extend MCP with your own toolsets',
+    icon: Blocks,
     text: 'Write tools, resources and prompts as a Python folder or a .NET assembly and register it in Settings → MCP. Every connected assistant can then find and call it, so your own automation becomes something the whole team can ask for.',
     to: '/docs/mcp/MCP-Python',
     link: 'Build a toolset',
@@ -129,7 +137,8 @@ async def revit_get_model_summary() -> ModelSummaryResult:
     return service.get_model_summary()`,
   },
   {
-    name: 'Shows_color_coded_logs_and_stack_traces',
+    name: 'Read color-coded logs and stack traces',
+    icon: ScrollText,
     text: 'Output from Trace, print() and Console is colored by level, with JSON and Python stack traces formatted for you, in a dockable panel, a file, or an HTTP endpoint.',
     to: '/docs/logging/Logging-Overview',
     link: 'Log level and output',
@@ -139,7 +148,8 @@ Trace.TraceWarning("Room 31 has no boundary");
 Trace.TraceError("Export failed: {0}", exception.Message);`,
   },
   {
-    name: 'Previews_geometry_without_touching_the_model',
+    name: 'Preview geometry without touching the model',
+    icon: Spline,
     text: 'Print a curve, face or solid and it appears in the active Revit view. Nothing is added to the document.',
     to: '/docs/logging/Visualization-Overview',
     link: 'Geometry visualization',
@@ -150,30 +160,19 @@ print(edge)  # drawn in the active view`,
   },
 ];
 
-function TestName({name}: Readonly<{name: string}>): JSX.Element {
-  const words = name.split('_');
-  let offset = 0;
-  const parts = words.map((word, position) => {
-    const part = {word, offset, last: position === words.length - 1};
-    offset += word.length + 1;
-    return part;
-  });
-  return <>{parts.map((part) => <span key={part.offset}>{part.word}{!part.last && <>_<wbr /></>}</span>)}</>;
-}
-
 function Claims(): JSX.Element {
   return (
     <section className={styles.claims} aria-labelledby="claims-title">
       <div className={styles.container}>
-        <h2 id="claims-title" className={styles.sectionTitle}>What it does, written as tests.</h2>
-        <p className={styles.sectionLead}>Open any result to see the code behind it.</p>
+        <h2 id="claims-title" className={styles.sectionTitle}>What you can do with it.</h2>
+        <p className={styles.sectionLead}>Open any item to see the code behind it.</p>
         <div className={styles.claimList}>
-          {claims.map((claim, index) => (
+          {claims.map(({icon: ClaimIcon, ...claim}, index) => (
             <details key={claim.name} className={styles.claim} open={index === 0}>
               <summary>
-                <span className={styles.passCell} aria-hidden="true" />
-                <span className={styles.claimName}><TestName name={claim.name} /></span>
-                <span className={styles.claimStatus}>Ready</span>
+                <ClaimIcon className={styles.claimIcon} aria-hidden="true" />
+                <span className={styles.claimName}>{claim.name}</span>
+                <span className={styles.chevron} aria-hidden="true" />
               </summary>
               <div className={styles.claimBody}>
                 <div className={styles.claimText}>
@@ -190,34 +189,7 @@ function Claims(): JSX.Element {
   );
 }
 
-const installSteps = [
-  {label: 'Add the pytest client', command: 'uv add revitdevtool_pytest'},
-  {label: 'Run a test in Revit', command: 'uv run pytest --host revit --host-version 2025 -v'},
-];
-
-interface CopyStatus {
-  readonly index: number;
-  readonly ok: boolean;
-}
-
-function describeCopyStatus(status: CopyStatus | null): string {
-  if (!status) return ' ';
-  if (!status.ok) return 'Couldn’t copy automatically. Select the command and copy it.';
-  return `${installSteps[status.index].label}: command copied.`;
-}
-
 function Start(): JSX.Element {
-  const [copyStatus, setCopyStatus] = useState<CopyStatus | null>(null);
-
-  async function copyCommand(command: string, index: number) {
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopyStatus({index, ok: true});
-    } catch {
-      setCopyStatus({index, ok: false});
-    }
-  }
-
   return (
     <section className={styles.start} aria-labelledby="start-title">
       <div className={`${styles.container} ${styles.startGrid}`}>
@@ -229,29 +201,21 @@ function Start(): JSX.Element {
               <a href="https://github.com/trgiangv/RevitDevTool/releases/latest">GitHub Releases</a>. It installs for
               the current user, no administrator rights needed.
             </li>
-            <li><strong>Write.</strong> Save <code>hello_script.py</code> in a folder and add the folder in the panel.</li>
-            <li><strong>Run.</strong> Click the script and read the Trace panel.</li>
+            <li><strong>Write.</strong> Save this as <code>hello_script.py</code> in an empty folder.</li>
           </ol>
-          <p className={styles.terminalLabel}>Then test it from your terminal:</p>
-          <ol className={styles.terminal}>
-            {installSteps.map((step, index) => (
-              <li key={step.label}>
-                <span className={styles.prompt} aria-hidden="true">&gt;</span>
-                <code aria-label={step.label}>{step.command}</code>
-                <button type="button" onClick={() => copyCommand(step.command, index)} aria-label={`Copy command: ${step.label}`}>
-                  {copyStatus?.index === index && copyStatus.ok ? 'Copied' : 'Copy'}
-                </button>
-              </li>
-            ))}
+          <Code code={helloScript} language="python" />
+          <ol className={styles.steps} start={3}>
+            <li><strong>Load.</strong> In the panel, turn on <strong>Execution</strong>, choose <strong>Load Scripts</strong> and select the folder.</li>
+            <li><strong>Run.</strong> Pick the discovered command and read the output in the log view.</li>
           </ol>
-          <output className={styles.copyStatus}>{describeCopyStatus(copyStatus)}</output>
-          <Link className={styles.primaryButton} to="/docs/getting-started/installation">Run your first script</Link>
+          <Link className={styles.primaryButton} to="/docs/getting-started/installation">Full walkthrough</Link>
         </div>
         <div className={styles.migration}>
-          <h3>Coming from pyRevit or Add-In Manager?</h3>
+          <h3>Already use pyRevit or Add-In Manager?</h3>
           <p>
-            IronPython scripts run on the pyRevit engine when it is installed, and compiled add-ins reload without a
-            restart. See how the Python options compare.
+            Keep them. RevitDevTool works beside them rather than replacing them: use pyRevit for ribbon buttons
+            and team distribution, and RevitDevTool for development, debugging and testing. IronPython scripts run on
+            the pyRevit engine when it is installed.
           </p>
           <Link className={styles.textLink} to="/docs/execution/python/Execution-PythonEcosystems">Compare Python options</Link>
         </div>

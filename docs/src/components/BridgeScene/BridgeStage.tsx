@@ -43,19 +43,21 @@ export default function BridgeStage(): JSX.Element {
 
   return (
     <>
-      <div ref={stageRef} className={styles.stage}>
-        <canvas ref={canvasRef} className={styles.canvas} aria-label={CANVAS_LABEL} />
-        <div className={clsx(styles.overlay, beat >= 0 && styles.ready)}>
-          <StackBadges
-            registry={overlay}
-            selectedIndex={stackIndex}
-            hoveredIndex={hoveredStack}
-            onToggle={(index) => dispatch({type: 'toggleStack', index})}
-            onHover={setHoveredStack}
-          />
-          <GateBadge registry={overlay} />
-          <HostBadges registry={overlay} focusedIndex={hostIndex} hoveredIndex={hoveredHost} />
-          <SignalPills registry={overlay} />
+      <div className={styles.stage}>
+        <div ref={stageRef} className={styles.viewport}>
+          <canvas ref={canvasRef} className={styles.canvas} aria-label={CANVAS_LABEL} />
+          <div className={clsx(styles.overlay, beat >= 0 && styles.ready)}>
+            <StackBadges
+              registry={overlay}
+              selectedIndex={stackIndex}
+              hoveredIndex={hoveredStack}
+              onToggle={(index) => dispatch({type: 'toggleStack', index})}
+              onHover={setHoveredStack}
+            />
+            <GateBadge registry={overlay} />
+            <HostBadges registry={overlay} focusedIndex={hostIndex} hoveredIndex={hoveredHost} />
+            <SignalPills registry={overlay} />
+          </div>
         </div>
         {host && <HostPanel host={host} onClose={closeSelection} />}
         {stack && <StackPanel key={stack.label} stack={stack} onClose={closeSelection} />}

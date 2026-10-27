@@ -22,13 +22,14 @@ export function distanceLimits(radius: number): {min: number; max: number} {
   return {min: radius * ORBIT.minDistanceFactor, max: radius * ORBIT.maxDistanceFactor};
 }
 
-export function homePose(radius: number): CameraPose {
+export function homePose(radius: number, aspect: number): CameraPose {
   const [x, y, z] = CAMERA.homeTarget;
+  const narrowness = clamp((CAMERA.narrowAspect - aspect) / CAMERA.narrowShiftSpan, 0, 1);
   return {
     yaw: CAMERA.homeYaw,
     pitch: Math.atan2(CAMERA.homeLift, radius),
     distance: Math.hypot(radius, CAMERA.homeLift),
-    target: new Vector3(x, y, z),
+    target: new Vector3(x - CAMERA.narrowShift * narrowness, y, z),
   };
 }
 
