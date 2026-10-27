@@ -22,6 +22,19 @@ public sealed class BundleTests
     }
 
     [TestMethod]
+    public void Only_the_newest_template_component_of_a_platform_has_no_series_max()
+    {
+        using var stream = typeof(PackageContents).Assembly.GetManifestResourceStream("DevTools.Update.PackageContents.xml")!;
+        var open = XDocument.Load(stream).Root!.Elements("Components")
+            .Select(component => component.Element("RuntimeRequirements")!)
+            .Where(requirements => requirements.Attribute("SeriesMax") is null)
+            .Select(requirements => requirements.Attribute("SeriesMin")!.Value)
+            .ToArray();
+
+        CollectionAssert.AreEqual(new[] { "R26.0" }, open);
+    }
+
+    [TestMethod]
     public void PackageContents_keeps_only_selected_targets_that_are_on_disk()
     {
         using var temp = new TempBundle();
