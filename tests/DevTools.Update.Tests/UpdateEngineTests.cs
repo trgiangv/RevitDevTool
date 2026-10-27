@@ -112,6 +112,7 @@ public sealed class UpdateEngineTests
         Assert.AreEqual("3.1.0 is installed.", harness.Notifier.Notices.Single(notice => notice.Kind == UpdateNoticeKind.Applied).Message);
 
         Assert.AreEqual(2, harness.Releases.PayloadDownloads);
+        Assert.IsFalse(Directory.Exists(harness.Temp.Bundle.StagingPath("3.1.0")));
         var modules = XDocument.Load(harness.Temp.Bundle.PackageContentsPath).Root!.Elements("Components")
             .Select(component => component.Element("ComponentEntry")!.Attribute("ModuleName")!.Value).ToArray();
         CollectionAssert.AreEquivalent(new[] { "./Contents/2024/RevitDevTool.addin", "./Contents/2026/AcadDevTool.dll" }, modules);

@@ -279,7 +279,7 @@ public sealed class UpdateEngine(
         }
 
         if (batch.Changed) Commit(installation);
-        installer.CleanStaging(installation.Payloads.Select(payload => payload.PendingVersion).OfType<string>());
+        else CleanStaging(installation);
     }
 
     private async Task<PayloadBatch> InstallFromReleaseAsync(Installation installation, IProgress<PayloadProgress>? progress, CancellationToken cancellationToken)
@@ -451,7 +451,11 @@ public sealed class UpdateEngine(
             PackageContents.Write(bundle, installation.Targets, version);
         else
             File.Delete(bundle.PackageContentsPath);
+        CleanStaging(installation);
     }
+
+    private void CleanStaging(Installation installation) =>
+        installer.CleanStaging(installation.Payloads.Select(payload => payload.PendingVersion).OfType<string>());
 
     private async Task<Release> SetupReleaseAsync(Installation? installation, CancellationToken cancellationToken) =>
         await FindSetupReleaseAsync(installation, cancellationToken).ConfigureAwait(false) is { HasManifest: true } release
