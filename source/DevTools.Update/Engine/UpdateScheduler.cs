@@ -17,10 +17,6 @@ public sealed class UpdateScheduler(UpdateEngine engine, IOptions<UpdateEngineOp
     private readonly SemaphoreSlim _wake = new(0, 1);
     private UpdateTrigger _nextTrigger = UpdateTrigger.Scheduled;
 
-    public event Action<UpdateCycleResult>? CycleCompleted;
-
-    public event Action<Exception>? CycleFailed;
-
     public void Trigger(UpdateTrigger trigger = UpdateTrigger.Manual)
     {
         _nextTrigger = trigger;
@@ -38,15 +34,16 @@ public sealed class UpdateScheduler(UpdateEngine engine, IOptions<UpdateEngineOp
             var interval = engine.Store.Load()?.Policy.Interval ?? new UpdatePolicy().Interval;
             try
             {
-                CycleCompleted?.Invoke(await engine.CheckAsync(trigger, stoppingToken).ConfigureAwait(false));
+                var result = await engine.CheckAsync(trigger, stoppingToken).ConfigureAwait(false);
                 failures = 0;
                 delay = Jitter(interval, Random.Shared.NextDouble());
+                logger.LogInformation("The {Trigger} update check ended with {Status} ({Version}). The next check is in {Delay}",
+                    trigger, result.Status, result.Version, delay);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 delay = Backoff(interval, ++failures, (ex as UpdateThrottledException)?.RetryAfter);
                 logger.LogWarning(ex, "The update check failed. The next check is in {Delay}", delay);
-                CycleFailed?.Invoke(ex);
             }
         }
     }

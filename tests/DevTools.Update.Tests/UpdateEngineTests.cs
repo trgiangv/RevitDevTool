@@ -5,6 +5,7 @@ using DevTools.Update.Engine;
 using DevTools.Update.Installations;
 using DevTools.Update.Releases;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 
@@ -233,6 +234,28 @@ public sealed class UpdateEngineTests
         harness.Engine.SetPolicy(new UpdatePolicy { Channel = UpdatePolicy.PrereleaseChannel });
         Assert.AreEqual("4.1.0-beta.1", (await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None)).Version);
         Assert.AreEqual("beta", harness.Temp.Marker("2024"));
+    }
+
+    [TestMethod]
+    public async Task Scheduler_runs_the_cycle_after_the_startup_delay()
+    {
+        using var harness = new Harness(null);
+        harness.Releases.Publish("3.1.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+        using var scheduler = new UpdateScheduler(harness.Engine, Options.Create(new UpdateEngineOptions { StartupDelay = TimeSpan.Zero }),
+            NullLogger<UpdateScheduler>.Instance);
+
+        await scheduler.StartAsync(CancellationToken.None);
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (harness.Temp.Marker("2024") != "2024-new" && DateTime.UtcNow < deadline) await Task.Delay(50);
+        await scheduler.StopAsync(CancellationToken.None);
+
+        Assert.AreEqual("2024-new", harness.Temp.Marker("2024"));
     }
 
     private sealed class Harness : IDisposable
