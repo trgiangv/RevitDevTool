@@ -74,6 +74,8 @@ public sealed class PytestExecutionServiceTests
 
     public sealed class RunTests
     {
+        private const int PytestUsageError = 4;
+
         [TestMethod]
         public async Task Run_ExecutesRunnerAndReturnsCollectionError_ForMissingNode()
         {
@@ -94,8 +96,8 @@ public sealed class PytestExecutionServiceTests
 
                 var response = service.Run(request);
 
-                Assert.AreEqual(1, response.ExitCode);
-                Assert.IsNotEmpty(response.CollectionErrors);
+                Assert.AreEqual(PytestUsageError, response.ExitCode);
+                Assert.Contains("tests/missing.py::test_x", response.CollectionErrors.Single().Message, StringComparison.Ordinal);
             }
             finally
             {

@@ -337,6 +337,15 @@ def _success_response(exit_code: int, plugin: _BridgePlugin, test_root: str) -> 
     })
 
 
+def _stopped_error(exit_code: int, request: dict[str, Any], test_root: str) -> _CollectError:
+    """pytest reports a usage error only on stderr, which the host routes to the log viewer."""
+    import pytest
+
+    nodeids = ", ".join(str(nid) for nid in request.get("nodeids", []) if nid) or test_root
+    message = f"pytest stopped with {pytest.ExitCode(exit_code).name} before running {nodeids}. Check that they exist."
+    return _CollectError("", test_root, message, "")
+
+
 def _error_response(test_root: str, ex: Exception) -> str:
     return json.dumps({
         "exit_code": 1,
@@ -404,6 +413,8 @@ def _run() -> str:
         plugin = _BridgePlugin(progress_callback)
         args = _build_args(request)
         exit_code = pytest.main(args, plugins=[plugin])
+        if exit_code in (pytest.ExitCode.USAGE_ERROR, pytest.ExitCode.INTERNAL_ERROR) and not plugin.collection_errors:
+            plugin.collection_errors.append(_stopped_error(exit_code, request, test_root))
         return _success_response(exit_code, plugin, test_root)
     except Exception as ex:  # noqa: BLE001
         return _error_response(
