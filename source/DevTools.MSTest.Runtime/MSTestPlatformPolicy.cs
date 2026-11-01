@@ -20,7 +20,7 @@ internal static class MSTestPlatformPolicy
         }
 
         throw new InvalidOperationException(
-            "MSTest runtime requires loaded MSTest.TestFramework 4.5.2 and Microsoft.Testing.Platform 2.5.2. Found "
+            "MSTest runtime requires loaded MSTest.TestFramework " + ExpectedFrameworkVersion + " and Microsoft.Testing.Platform " + ExpectedPlatformVersion + ". Found "
             + framework.GetName().Name + " " + frameworkVersion + " and "
             + platform.GetName().Name + " " + platformVersion + ".");
     }

@@ -22,11 +22,15 @@
     <Error Condition="!Exists('$(_MSTestRuntimeMtpPath)')"
            Text="MSTest runtime payload requires Microsoft.Testing.Platform.dll under '$(_MSTestRuntimeOutputDir)'." />
 
+    <PropertyGroup>
+      <_MSTestRuntimeExpectedMtpVersion>2.5.2.0</_MSTestRuntimeExpectedMtpVersion>
+    </PropertyGroup>
+
     <GetAssemblyIdentity AssemblyFiles="$(_MSTestRuntimeMtpPath)">
       <Output TaskParameter="Assemblies" ItemName="_MSTestRuntimeMtpIdentity" />
     </GetAssemblyIdentity>
-    <Error Condition="'%(_MSTestRuntimeMtpIdentity.Version)' != '2.5.2.0'"
-           Text="MSTest runtime payload requires Microsoft.Testing.Platform 2.5.2 (assembly version 2.5.2.0). Found '%(_MSTestRuntimeMtpIdentity.Version)' at '$(_MSTestRuntimeMtpPath)'." />
+    <Error Condition="'%(_MSTestRuntimeMtpIdentity.Version)' != '$(_MSTestRuntimeExpectedMtpVersion)'"
+           Text="MSTest runtime payload requires Microsoft.Testing.Platform assembly version $(_MSTestRuntimeExpectedMtpVersion). Found '%(_MSTestRuntimeMtpIdentity.Version)' at '$(_MSTestRuntimeMtpPath)'." />
 
     <RemoveDir Directories="$(_MSTestRuntimePayloadDir)" Condition="Exists('$(_MSTestRuntimePayloadDir)')" />
     <MakeDir Directories="$(_MSTestRuntimePayloadDir)" />
