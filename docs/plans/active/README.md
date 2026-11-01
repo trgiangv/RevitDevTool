@@ -5,6 +5,12 @@ Use `docs/templates/exec-plan.md`, keep progress and validation current, avoid
 parallel duplicate plans for the same workstream, and move a plan to
 `../completed/` only after the result is verified.
 
+## Test stack bump and versioning (active)
+
+MSTest 4.5.2 / MTP 2.5.2 / TUnit 1.78.0, then the 0055
+steps ([0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)):
+[2026-10-31-test-stack-bump-and-versioning-0055](2026-10-31-test-stack-bump-and-versioning-0055.md).
+
 ## Auto-update (active)
 
 Velopack Daemon package plus custom per-year folders

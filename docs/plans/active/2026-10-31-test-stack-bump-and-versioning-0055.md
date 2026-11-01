@@ -1,0 +1,165 @@
+# Execution Plan: Test Stack Bump, Then ADR 0055 Versioning
+
+Date: 2026-10-31
+
+## Status
+
+Active. Phase 0 (test stack bump) is implemented and verified except the items
+under "Not proven". Phases 1–8 follow
+[0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md),
+which is **Proposed**; accept or amend it before Phase 2. Nothing is published.
+
+## Outcome
+
+1. The repo, the in-host generation pins, the consumer docs, and a new
+   `RevitDevTool.TestAdapter` move to the current stable MSTest, MTP, and TUnit.
+2. The product version, wire contracts, and the satellites (NuGet, pytest,
+   McpGateway) follow 0055, each step shippable alone.
+
+## Context
+
+- Decisions: 0055 (this plan implements it), [0042](../../decisions/0042-mtp-2-5-removable-test-workarounds.md)
+  (pins; a pin change is a plan), [0035](../../decisions/0035-mstest-sdk-repo-tests.md),
+  [0038](../../decisions/0038-mstest-host-provider.md).
+- Precedent: [2026-10-10-mtp-2-5-pin](../completed/2026-10-10-mtp-2-5-pin.md).
+- Proof commands: `.agents/skills/build/SKILL.md`, `docs/agents/host-testing.md`.
+
+## Phase 0 — Test stack bump
+
+Pins are exact assembly versions in code and tests, so a bump is not props-only.
+Touch points: `Directory.Packages.props`, `global.json`, the MSTest
+`PackageVersion` in `DevTools.MSTest.{Runtime,MTP}` and the two MSTest fixture
+projects, `MSTestPlatformPolicy`, `MSTestRuntimePayload.targets`,
+`TUnitGenerationPolicy`, `MSTestGenerationPolicy`, the tests asserting them, and
+the docs and skills that state the pins.
+
+| Package | Before | Now | Adapter |
+|---------|--------|-----|---------|
+| MSTest (`Sdk`, `TestFramework`, `TestAdapter`) | 4.5.1 | 4.5.2 | — |
+| `Microsoft.Testing.Platform`, `.MSBuild` | 2.5.1 | 2.5.2 | — |
+| TUnit (`TUnit`, `.Core`, `.Engine`) | 1.76.0 | 1.78.0 | — |
+| NUnit | 5.0.0 | 5.0.0 (already latest) | — |
+| `RevitDevTool.TestAdapter` | 0.1.4 | 0.1.4 | not bumped until the 0055 work is finished |
+
+Assembly versions equal the package versions (read from the packages):
+`TUnit.Core` 1.78.0.0, MTP 2.5.2.0, MSTest framework/adapter/platform-services
+4.5.2.0.
+
+### Reflection seams, checked against upstream
+
+Every member the in-host code reaches by reflection was checked in the new
+binaries, and the upstream diff was read for each seam
+(`thomhurst/TUnit` v1.76.0→v1.77.0→v1.78.0, `microsoft/testfx` v4.5.1→v4.5.2).
+
+| Seam | Result |
+|------|--------|
+| `TUnitEngineBindings`: `TUnitExtension`, `TUnitTestFramework(IExtension, IServiceProvider, ITestFrameworkCapabilities)`, MTP `ServiceProvider.AddService(object, bool)`, `NopPlatformOutputDevice`, the three session-context constructors | All present in TUnit.Engine 1.78.0 and MTP 2.5.2. No changed line in either diff touches their signatures |
+| `TUnitSourceCatalog` over `Sources.*` | `Sources` is not in the 1.76.0→1.78.0 file lists; it compiles. 1.78.0 changes no `TUnit.Engine` or `TUnit.Core` file |
+| `TUnitEngineCommandLine`, `TUnitEngineMessageBus` | 1.77.0 reads a new option and publishes a new data type. The fake returns `false` for the option; the bus ignores unknown data |
+| MTP `ServiceProvider.GetServiceInternal` rewritten in 2.5.2 | Same first-match semantics; engine run and `TUnit.Runtime.Tests` pass on it |
+| MSTest/MTP: `_host`, `ServiceProvider`, `_discoveredTestsForJson`, `OriginalOutputDevice`, `SystemConsole.CaptureConsoleOutWriter` | All present in MTP 2.5.2. None of those names appears in a changed line of the diff. The #11896 JSON change only escapes non-ASCII in the printed JSON; the code reads nodes from the buffer |
+| `ReflectionMetadataHook`, `Logger.OnLogMessage`, `captureTrace`, `ExternallyCancellableHost` | Not in any changed line of the diff |
+
+### Verification
+
+- Compile `-c Debug`, 0 warnings, 0 errors: `DevTools.MSTest.{Runtime,MTP}`,
+  `DevTools.TUnit.{Runtime,MTP}`, `DevTools.NUnit.MTP`, `DevTools.Testing.Host`,
+  `DevTools.TestAdapter` (`ILRepackable=false`).
+- `dotnet run --project tests/...`: `Testing.Host` 69/69, `TUnit.Host` 1/1,
+  `TUnit.Runtime` 15/15, `NUnit.MTP` 52/52, `Daemon` 107/107, `Mcp.Client` 41/41,
+  `MSTest.Runtime` and `MSTest.MTP` PASS lines, `TestAdapter.Tests` 88/89.
+  24 of the other 32 `tests/*.Tests` pass; the 8 that fail fail identically at
+  HEAD (`AcadDevTool`, `AssemblyIsolation` ×2, `Execution.Pytest`,
+  `HandyControl`, `Mcp.Adapter`, `Mcp.Catalog`, `NUnit.Host.NetFramework`).
+- **Real engine run.** `TUnit.Runtime.Tests` only resolves bindings and builds
+  the framework, so a throwaway harness (not committed) ran a TUnit probe
+  assembly through `TUnitRuntimeSession` (pass, fail with message, two
+  parameterized cases, console output). Result: the same 5 results at TUnit
+  1.76.0 / MTP 2.5.1 and at 1.78.0 / MTP 2.5.2. With the new
+  `FailOnUnobservedTaskExceptions` setting forced on, 1.77.0 adds one extra
+  `Error` result for the unobserved exception and the bus maps it; 1.76.0 does
+  not have the setting.
+- `dotnet run --project build -- adapter` packs to `output/nuget` only; nothing is published.
+
+Two defects found at HEAD, not caused by the bump:
+
+- The MSTest fixtures exclude `buildTransitive`, which carries the MSTest
+  `global using`, and did not compile. Fixed with a direct `<Using>`.
+- `PackageConsumerTests.Packed_package_discovers_tests_for_both_nunit_and_tunit_consumers`
+  fails at the net8.0-windows NUnit consumer with `MSB3030 ... apphost.exe`
+  (SDK 10.0.400, `--no-restore`).
+
+### Not proven
+
+- net8.0 consumer discovery against the new pins (the `apphost` failure above).
+- A live Revit or AutoCAD run of MSTest and TUnit in-host.
+- The `FailOnUnobservedTaskExceptions` path with a real user-set value (`TUnitSettings.Default`
+  is internal, so the harness set it by reflection).
+- Release notes for MSTest 4.5.2, MTP 2.5.2, and TUnit 1.76.1–1.78.0 were read
+  as diffs and commit subjects, not as published notes.
+
+### Remaining
+
+- The adapter stays `0.1.4` until the 0055 work is finished; then it is bumped and
+  published once.
+- Release note: hosts at or after this release require MSTest 4.5.2 and TUnit
+  1.78.0 in the test project; a test project on the old pins fails at generation.
+
+## Phases 1–8 — ADR 0055
+
+Each step is additive on the wire (`Current = Min = 2` until a step raises it)
+and is reverted per step.
+
+| # | Step | Where | Proof |
+|---|------|-------|-------|
+| 1 | One product-version accessor; fix `ShellViewModel` (`ToString(3)` drops `-beta.N`) and `SentryTelemetry` | `DevTools.Utilities/AppUtils.cs`, `ShellViewModel`, `SentryTelemetry` | Unit test: suffix round-trips; compile the Revit host |
+| 2 | `ProtocolRange` and negotiation; extend `testing/hello` and `ProtocolIncompatible` | `TestingProtocol.cs`, `ProcessTestRunnerClient`, `TestPipeClient`, `TestingRequestHandler` | Property test of `A.Min ≤ B.Current && B.Min ≤ A.Current`; a legacy peer reads as `Current=Min=p` |
+| 3 | Golden fixtures and cross-version CI matrix | `tests/DevTools.Testing.Transport.Tests`, `Compile.yml` | Last published adapter and runner against the HEAD host. First read what `TestingProtocolGoldenTests` covers |
+| 4 | `instance/info` fields and the pytest gate | `InstanceInfo.cs`, `PytestContracts`, PyTest `bridge.py` | `revitdevtool_pytest 0.5.0` still works; a new client rejects an out-of-range host |
+| 5 | Content-hash gate for the adapter | `PublishRelease.yml`, `PublishTestAdapter.yml` | Dry run: same hash pushes nothing; changed hash with the same `Version` fails |
+| 6 | Tunnel `register` ranges and `register_ack` | Daemon tunnel client, `McpGateway/src/{tunnel-relay,types}.ts`, `docs/api.md` | Gateway deployed first (0055 §10.3); gateway repo tests |
+| 7 | Daemon holds a major swap while a selected payload is pending | `DevTools.Update/Engine/{UpdateEngine,DaemonUpdater}.cs` with 0049 | `DevTools.Update.Tests` |
+| 8 | Notification path: host text contract, `control/compat_conflict`, new `UpdateNoticeKind`s, manifest `clients`, client messages | `TestingRequestHandler`, `App.xaml.cs`, `IUpdateNotifier`, PyTest, gateway | Start with the host-authored `ErrorMessage` (reaches shipped clients: `TestPipeClient.cs:231`, `bridge.py:211`) |
+
+Pytest-specific work (single version source, `publish.yml` gates, one pytest
+range) is not in 0055 yet. Decide in step 4 whether it becomes a 0055
+subsection or a plan in the PyTest repo.
+
+## Risks And Recovery
+
+- **A host with the new pins breaks test projects on the old pins** (generation
+  fails closed). A user reaches this by updating RevitDevTool alone. The pin
+  failure message must name the package, the version, and the fix; 0055 §10.1
+  makes that a contract.
+- **Assembly version equals the package patch version**, so every patch bump
+  edits all the touch points above. Single-sourcing the constants is an open
+  follow-up; loosening the exact pin is out of scope (it weakens 0042).
+- Rollback of Phase 0: revert the commit. `0.1.4` stays listed on nuget.org.
+
+## Progress
+
+- [x] Phase 0: bump, upstream seam review, real engine run, docs
+- [ ] Bump and publish the adapter once, after 0055; release note
+- [ ] Accept or amend 0055
+- [ ] 1 Version accessor
+- [ ] 2 Range negotiation
+- [ ] 3 Golden fixtures and CI matrix
+- [ ] 4 `instance/info` and pytest gate
+- [ ] 5 Adapter content-hash gate
+- [ ] 6 Tunnel ranges (with McpGateway)
+- [ ] 7 Daemon major-swap hold
+- [ ] 8 Notification path
+
+## Decisions
+
+- 2026-10-31: Keep the exact assembly-version pin for this bump.
+- 2026-11-01: The adapter is not bumped for a pin change. It is bumped once,
+  when the 0055 versioning work is finished.
+- 2026-11-01: TUnit moved to 1.78.0 in the same Phase 0 after the seam review
+  above.
+- 2026-10-31: Phase 0 lands before any 0055 step; it needs no wire change.
+
+## Result
+
+Complete after Phases 1–8. Record the verified outcome, limitations, and
+follow-up before moving the plan to `docs/plans/completed/`.

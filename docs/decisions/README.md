@@ -81,6 +81,13 @@ here.
   next stable is 4.0.0 after `4.0.0-beta.N` on the `prerelease` channel; the release
   waits for green CI on the SHA, verifies signatures with the shipped public key,
   and `TestReleaseInstall.yml` installs the published `Setup.exe` on a clean runner.
+  [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) is **Proposed**:
+  compatibility is decided by per-wire `Current`/`Min` ranges, not product
+  versions; `Min` rises only in a new major; the NuGet adapter keeps its own
+  version and the release publishes it only when its content hash changed;
+  pytest and the gateway declare ranges; the newer side explains the conflict
+  and both directions notify the user (host-authored error text, Daemon toast,
+  client output).
 
 ## Index
 
@@ -124,7 +131,7 @@ here.
 | [0039](0039-mcp-flow-audit-sdk-reuse-and-vocabulary.md) | MCP flow audit — SDK reuse, search contract v2, vocabulary | Accepted |
 | [0040](0040-bm25f-search-and-hit-annotations.md) | `code_mode` search: schema-aware BM25F and relevance policy | Accepted — amended 2026-10-22 |
 | [0041](0041-code-mode-result-artifact.md) | Large `code_mode` text is saved and the return includes its path | Accepted |
-| [0042](0042-mtp-2-5-removable-test-workarounds.md) | MTP 2.5.1 / MSTest 4.5.1 / TUnit 1.76.0; public MSTest cancel | Accepted |
+| [0042](0042-mtp-2-5-removable-test-workarounds.md) | MTP 2.5.2 / MSTest 4.5.2 / TUnit 1.78.0; public MSTest cancel | Accepted |
 | [0043](0043-ipc-shared-infrastructure-separate-protocols.md) | Shared `DevTools.Ipc`; test pipe, MCP pipe, daemon control pipe | Accepted — landed 2026-10-13 |
 | [0044](0044-hybrid-tool-retrieval.md) | Evaluate hybrid retrieval only if lexical baseline misses labeled tasks | Proposed |
 | [0045](0045-sentry-telemetry-operations-and-internal-errors.md) | Sentry telemetry: operations, sessions, internal errors only | Accepted — landed 2026-10-24 |
@@ -137,3 +144,4 @@ here.
 | [0052](0052-updater-self-update.md) | Updater self-update through Velopack, plus crash-on-start rollback | Proposed |
 | [0053](0053-velopack-for-daemon-distribution.md) | Velopack owns Daemon install and self-update; year folders stay custom | Proposed |
 | [0054](0054-release-automation-channels-and-4-0-cutover.md) | Release automation, channels, and the 4.0.0 cutover | Proposed |
+| [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) | Product version, wire contract ranges, and satellite (NuGet, pytest, gateway) compatibility | Proposed |

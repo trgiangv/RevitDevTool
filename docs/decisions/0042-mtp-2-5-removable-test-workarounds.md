@@ -6,9 +6,11 @@ Date: 2026-10-10
 
 Accepted. Landed 2026-10-10
 ([plan](../plans/completed/2026-10-10-mtp-2-5-pin.md)). Pins are MSTest
-**4.5.1**, Microsoft.Testing.Platform **2.5.1**, and TUnit **1.76.0**
-(moved from 1.73.19 on 2026-10-24; `TUnit.Engine` 1.76.0 still depends
-on MTP 2.5.1). `MSTestPlatformPolicy.Cancel` is deleted. The other seams in this
+**4.5.2**, Microsoft.Testing.Platform **2.5.2**, and TUnit **1.78.0**
+(moved from 4.5.1 / 2.5.1 / 1.76.0 on 2026-11-01, see
+[the plan](../plans/active/2026-10-31-test-stack-bump-and-versioning-0055.md);
+`TUnit.Engine` 1.78.0 depends on MTP 2.5.2). The body below keeps the 2.5.1
+analysis it was written against. `MSTestPlatformPolicy.Cancel` is deleted. The other seams in this
 decision stay.
 
 Inherits [0021](0021-testing-kernel-and-provider-owned-framework-runtime.md),
