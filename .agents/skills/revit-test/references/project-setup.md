@@ -27,12 +27,11 @@ Pin framework versions — the adapter does not pull NUnit, TUnit, or MSTest:
 | Package | Version |
 |---------|---------|
 | `NUnit` | 5.0.0 |
-| `TUnit` | 1.76.0 |
-| `MSTest.Sdk` / `MSTest.TestFramework` | 4.5.1 |
-| `Microsoft.Testing.Platform.MSBuild` | 2.5.1 (transitive from adapter — do not override) |
+| `TUnit` | 1.78.0 |
+| `MSTest.Sdk` / `MSTest.TestFramework` | 4.5.2 |
+| `Microsoft.Testing.Platform.MSBuild` | 2.5.2 (transitive from adapter — do not override) |
 
-The adapter depends on `Microsoft.Testing.Platform.MSBuild` 2.5.1. Do not add
-`Microsoft.Testing.Platform` as a compile package or override MTP.MSBuild.
+Do not add `Microsoft.Testing.Platform` as a compile package or override MTP.MSBuild.
 
 ### Host properties
 

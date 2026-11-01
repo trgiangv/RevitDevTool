@@ -38,8 +38,8 @@ Do **not** add `NUnit3TestAdapter`, `ricaun.RevitTest.TestAdapter`, or
 
 ## Quick start
 
-Default engine: **NUnit 5.0.0**. TUnit: `TestingFramework=tunit` + pin **TUnit 1.76.0**.
-MSTest: `Sdk="MSTest.Sdk/4.5.1"` + `TestingFramework=mstest`.
+Default engine: **NUnit 5.0.0**. TUnit: `TestingFramework=tunit` + pin **TUnit 1.78.0**.
+MSTest: `Sdk="MSTest.Sdk/4.5.2"` + `TestingFramework=mstest`.
 
 ```xml
 <PropertyGroup>
@@ -58,14 +58,8 @@ MSTest: `Sdk="MSTest.Sdk/4.5.1"` + `TestingFramework=mstest`.
 </ItemGroup>
 ```
 
-```json
-{
-  "sdk": { "version": "10.0.0", "rollForward": "latestMinor" },
-  "test": { "runner": "Microsoft.Testing.Platform" }
-}
-```
-
-Full properties, `global.json` placement, conflicts, runner path:
+Full properties, the `global.json` to copy and where to place it, conflicts,
+runner path:
 [project-setup.md](references/project-setup.md).
 
 ## Run

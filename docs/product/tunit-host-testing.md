@@ -15,14 +15,14 @@ verification evidence, not an allow-list.
 
 | Host | TFM | TUnit |
 |------|-----|-------|
-| Revit | `net48` / `net8.0-windows` / `net10.0-windows` | 1.76.0 |
-| AutoCAD / Civil 3D | `net48` / `net8.0-windows` / `net10.0-windows` | 1.76.0 |
+| Revit | `net48` / `net8.0-windows` / `net10.0-windows` | 1.78.0 |
+| AutoCAD / Civil 3D | `net48` / `net8.0-windows` / `net10.0-windows` | 1.78.0 |
 
 NUnit remains the default framework. Use `TestingFramework=tunit` to opt in.
 
-TUnit **1.76.0** restores with `Microsoft.Testing.Platform` **2.5.1**.
-Generation pins assembly versions only: `TUnit.Core` `1.76.0.0`
-and `Microsoft.Testing.Platform` `2.5.1.0`. Testhost output and the in-host
+TUnit **1.78.0** restores with `Microsoft.Testing.Platform` **2.5.2**.
+Generation pins assembly versions only: `TUnit.Core` `1.78.0.0`
+and `Microsoft.Testing.Platform` `2.5.2.0`. Testhost output and the in-host
 `TUnitRuntime\` copy must match those identities. Generation fails closed on a
 different DLL instead of mixing copies. Bump TUnit and MTP together in a
 release.
@@ -40,7 +40,7 @@ Same `HostName` / `HostVersion` / host API as NUnit. Opt in with
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
-  <PackageReference Include="TUnit" Version="1.76.0" />
+  <PackageReference Include="TUnit" Version="1.78.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>

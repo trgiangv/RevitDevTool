@@ -2,9 +2,9 @@
 
 Run MSTest tests inside a live Revit or AutoCAD-based host through Microsoft Testing Platform (MTP).
 
-- **Framework:** MSTest `4.5.1` (`MSTest.Sdk`)
+- **Framework:** MSTest `4.5.2` (`MSTest.Sdk`)
 - **Adapter:** [`RevitDevTool.TestAdapter`](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.4) `0.1.4`
-- **Microsoft.Testing.Platform:** `2.5.1`
+- **Microsoft.Testing.Platform:** `2.5.2`
 - **Lifecycle:** the same as [NUnit](/docs/testing/NUnit); the project SDK and attributes differ
 
 ## Project setup
@@ -12,7 +12,7 @@ Run MSTest tests inside a live Revit or AutoCAD-based host through Microsoft Tes
 Use `Sdk="MSTest.Sdk"` so the MSTest runner is on:
 
 ```xml title="MyHostTests.csproj"
-<Project Sdk="MSTest.Sdk/4.5.1">
+<Project Sdk="MSTest.Sdk/4.5.2">
   <PropertyGroup>
     <TestingFramework>mstest</TestingFramework>
     <HostName>Revit</HostName>
@@ -30,20 +30,20 @@ Use `Sdk="MSTest.Sdk"` so the MSTest runner is on:
 `Microsoft.NET.Sdk` with `<EnableMSTestRunner>true</EnableMSTestRunner>` is the other accepted shape. Without that runner, MSTest turns Microsoft.Testing.Platform off and no testhost entry point is generated.
 :::
 
-Pin `MSTest.Sdk` `4.5.1` on the `Sdk` attribute, or in `global.json`:
+Pin `MSTest.Sdk` `4.5.2` on the `Sdk` attribute, or in `global.json`:
 
 ```json title="global.json"
 {
   "sdk": { "version": "10.0.0", "rollForward": "latestMinor" },
   "test": { "runner": "Microsoft.Testing.Platform" },
-  "msbuild-sdks": { "MSTest.Sdk": "4.5.1" }
+  "msbuild-sdks": { "MSTest.Sdk": "4.5.2" }
 }
 ```
 
 `HostName` and `HostVersion` are required. For the full list of host names and the optional launch and timeout settings, see [Host settings](/docs/testing/Testing-Overview#host-settings).
 
 :::warning Keep versions and packages exact
-- The in-host closure is MSTest.TestFramework `4.5.1` plus Microsoft.Testing.Platform `2.5.1`. A different MSTest version fails generation.
+- The in-host closure is MSTest.TestFramework `4.5.2` plus Microsoft.Testing.Platform `2.5.2`. A different MSTest version fails generation.
 - Do not add `NUnit3TestAdapter`, `Microsoft.Testing.Extensions.VSTestBridge` or a `.runsettings` file.
 - Do not set `<RuntimeIdentifier>` on net8 or net10.
 - On net48, set `win-x64` only when the SDK needs it for an x64 executable.

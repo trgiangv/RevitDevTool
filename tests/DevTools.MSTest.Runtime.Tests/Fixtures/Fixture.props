@@ -10,7 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="MSTest.TestFramework" Version="4.5.1" />
+    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    <PackageVersion Include="MSTest.TestFramework" Version="4.5.2" />
     <PackageReference Include="MSTest.TestFramework">
       <ExcludeAssets>analyzers;build;buildTransitive</ExcludeAssets>
     </PackageReference>

@@ -2,7 +2,7 @@
 
 Run TUnit tests inside a live Revit or AutoCAD-based host through Microsoft Testing Platform (MTP).
 
-- **Framework:** TUnit `1.76.0`
+- **Framework:** TUnit `1.78.0`
 - **Adapter:** [`RevitDevTool.TestAdapter`](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.4) `0.1.4`
 - **Lifecycle:** the same as [NUnit](/docs/testing/NUnit); only the framework and attributes differ
 
@@ -24,7 +24,7 @@ Set `TestingFramework` to `tunit` and reference the adapter and TUnit:
 
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
-  <PackageReference Include="TUnit" Version="1.76.0" />
+  <PackageReference Include="TUnit" Version="1.78.0" />
   <PackageReference Include="Nice3point.Revit.Toolkit" Version="2025.*" />
 </ItemGroup>
 ```

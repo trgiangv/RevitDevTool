@@ -18,7 +18,7 @@ The package versions on these pages are the ones that work with the latest Revit
 
 | Stack | Framework | Package | Entry doc |
 | --- | --- | --- | --- |
-| **.NET** | NUnit `5.0.0` (default), TUnit `1.76.0`, or MSTest `4.5.1` | NuGet: [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.4) `0.1.4` | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) |
+| **.NET** | NUnit `5.0.0` (default), TUnit `1.78.0`, or MSTest `4.5.2` | NuGet: [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.4) `0.1.4` | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) |
 | **CPython** | pytest | PyPI: [revitdevtool_pytest 0.5.0](https://pypi.org/project/revitdevtool_pytest/0.5.0/) | [pytest](/docs/testing/pytest) |
 | **IronPython** | unittest (`TestCase`) | Name files `test_*_ipy.py`; pytest discovers them as IronPython tests | [unittest](/docs/testing/unittest) |
 
@@ -52,7 +52,7 @@ The package versions on these pages are the ones that work with the latest Revit
 
 **For .NET tests**
 
-- Add the [`RevitDevTool.TestAdapter`](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.4) package. It runs NUnit, TUnit and MSTest inside the host through Microsoft Testing Platform `2.5.1`.
+- Add the [`RevitDevTool.TestAdapter`](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.4) package. It runs NUnit, TUnit and MSTest inside the host through Microsoft Testing Platform `2.5.2`.
 - NUnit is the default. Set `TestingFramework` to `tunit` or `mstest` to opt in.
 - Pin the framework package yourself; the adapter does not pull it.
 

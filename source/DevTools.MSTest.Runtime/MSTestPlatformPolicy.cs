@@ -4,8 +4,8 @@ namespace DevTools.MSTest.Runtime;
 
 internal static class MSTestPlatformPolicy
 {
-    private static readonly Version ExpectedFrameworkVersion = new(4, 5, 1, 0);
-    private static readonly Version ExpectedPlatformVersion = new(2, 5, 1, 0);
+    private static readonly Version ExpectedFrameworkVersion = new(4, 5, 2, 0);
+    private static readonly Version ExpectedPlatformVersion = new(2, 5, 2, 0);
 
     public static void EnsurePinnedVersions()
     {
@@ -20,7 +20,7 @@ internal static class MSTestPlatformPolicy
         }
 
         throw new InvalidOperationException(
-            "MSTest runtime requires loaded MSTest.TestFramework 4.5.1 and Microsoft.Testing.Platform 2.5.1. Found "
+            "MSTest runtime requires loaded MSTest.TestFramework 4.5.2 and Microsoft.Testing.Platform 2.5.2. Found "
             + framework.GetName().Name + " " + frameworkVersion + " and "
             + platform.GetName().Name + " " + platformVersion + ".");
     }

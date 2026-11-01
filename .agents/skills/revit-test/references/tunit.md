@@ -1,7 +1,7 @@
 # TUnit patterns
 
-Opt in with `TestingFramework=tunit`. Pin **TUnit 1.76.0** (paired with MTP
-`Microsoft.Testing.Platform.MSBuild` 2.5.1 from the adapter).
+Opt in with `TestingFramework=tunit`. Pin **TUnit 1.78.0** (paired with MTP
+`Microsoft.Testing.Platform.MSBuild` 2.5.2 from the adapter).
 
 Project setup: [project-setup.md](project-setup.md). Shared rules:
 [test-patterns.md](test-patterns.md). Filters: [mtp-filter.md](mtp-filter.md).
@@ -11,7 +11,7 @@ Project setup: [project-setup.md](project-setup.md). Shared rules:
   <TestingFramework>tunit</TestingFramework>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="TUnit" Version="1.76.0" />
+  <PackageReference Include="TUnit" Version="1.78.0" />
 </ItemGroup>
 ```
 
