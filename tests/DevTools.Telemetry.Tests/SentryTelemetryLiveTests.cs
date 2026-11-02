@@ -18,6 +18,7 @@ public sealed class SentryTelemetryLiveTests
 
         using (var telemetry = new SentryTelemetry(
                    new LiveHostAppInfo(),
+                   "1.0.0-live-test",
                    SentryTelemetry.Dsn,
                    TestEnvironment,
                    TestUser))

@@ -1,6 +1,5 @@
 using DevTools.Hosting;
 using System.Collections.Concurrent;
-using System.Reflection;
 
 namespace DevTools.Telemetry;
 
@@ -16,19 +15,16 @@ public sealed class SentryTelemetry : ITelemetry
     private readonly ConcurrentDictionary<string, byte> _reportedErrors = new();
     private bool _disposed;
 
-    public SentryTelemetry(IHostAppInfo hostApp) : this(hostApp, Dsn)
+    public SentryTelemetry(IHostAppInfo hostApp, string version) : this(hostApp, version, Dsn)
     {
     }
 
-    internal SentryTelemetry(IHostAppInfo hostApp, string dsn, string? environment = null, string? userId = null)
+    internal SentryTelemetry(IHostAppInfo hostApp, string version, string dsn, string? environment = null, string? userId = null)
     {
         ArgumentNullException.ThrowIfNull(hostApp);
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
         ArgumentException.ThrowIfNullOrWhiteSpace(dsn);
 
-        var version = typeof(SentryTelemetry).Assembly
-            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
-            .InformationalVersion
-            .Split('+')[0];
         userId ??= UserIdentity.Get();
         var hostName = hostApp.Host.ToString();
         var release = $"devtool-{hostName}@{version}";

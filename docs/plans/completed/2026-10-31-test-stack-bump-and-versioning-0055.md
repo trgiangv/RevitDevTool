@@ -181,8 +181,8 @@ subsection or a plan in the PyTest repo.
   in `DevTools.Ipc` (already the JSON layer), so `DevTools.Utilities` keeps no
   dependencies. `AppVersion` lives in `DevTools.Utilities`; Transport references
   it and the adapter merges it (its linked `AppUtils.cs` is gone).
-  `DevTools.Telemetry` stays on Hosting and Sentry only (0018) and reads the
-  informational version of its own assembly.
+  `DevTools.Telemetry` stays on Hosting and Sentry only (0018); the composition
+  root passes `AppVersion.Current` to `AddTelemetryService`.
 - 2026-11-01: `instance/info` lists only the `pytest` range. `DevTools.Execution`
   does not reference the testing transport, and testing clients get the range
   from `hello`.

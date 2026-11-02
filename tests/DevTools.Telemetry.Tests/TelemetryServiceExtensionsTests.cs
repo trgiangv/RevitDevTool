@@ -22,7 +22,7 @@ public sealed class TelemetryServiceExtensionsTests
     {
         using var provider = new ServiceCollection()
             .AddSingleton<IHostAppInfo>(new FakeHostAppInfo())
-            .AddTelemetryService(isEnabled)
+            .AddTelemetryService("1.0.0-test", isEnabled)
             .BuildServiceProvider();
         return provider.GetRequiredService<ITelemetry>();
     }

@@ -6,18 +6,20 @@ namespace DevTools.Telemetry.Tests;
 public sealed class SentryTelemetryTests
 {
     private const string DummyDsn = "https://publickey@127.0.0.1/1";
+    private const string Version = "1.0.0-test";
 
     [TestMethod]
     public void Constructor_validates_arguments()
     {
-        Assert.ThrowsExactly<ArgumentNullException>(() => new SentryTelemetry(null!, DummyDsn));
-        Assert.ThrowsExactly<ArgumentException>(() => new SentryTelemetry(new FakeHostAppInfo(), "  "));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SentryTelemetry(null!, Version, DummyDsn));
+        Assert.ThrowsExactly<ArgumentException>(() => new SentryTelemetry(new FakeHostAppInfo(), "  ", DummyDsn));
+        Assert.ThrowsExactly<ArgumentException>(() => new SentryTelemetry(new FakeHostAppInfo(), Version, "  "));
     }
 
     [TestMethod]
     public void Operations_and_errors_do_not_throw()
     {
-        using var telemetry = new SentryTelemetry(new FakeHostAppInfo { VersionBuild = "26.0" }, DummyDsn);
+        using var telemetry = new SentryTelemetry(new FakeHostAppInfo { VersionBuild = "26.0" }, Version, DummyDsn);
 
         telemetry.StartOperation(TelemetryKeys.Operation.Execution, "  ").Complete();
         telemetry.StartOperation(TelemetryKeys.Operation.Execution, "CSharp").Fail();

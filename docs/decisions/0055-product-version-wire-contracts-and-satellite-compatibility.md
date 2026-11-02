@@ -190,8 +190,8 @@ train. They join the range scheme:
 informational version without `+metadata` (`4.0.0-beta.4`). The build stamps
 one version on every assembly of a release; the adapter merges
 `DevTools.Utilities`, so there it is the package version. `DevTools.Telemetry`
-references only Hosting and Sentry (0018), so it reads the same attribute from
-its own assembly. The version feeds `sender`, `instance/info`, the Sentry release, and the titles
+references only Hosting and Sentry (0018), so the composition root passes
+`AppVersion.Current` to `AddTelemetryService`. The version feeds `sender`, `instance/info`, the Sentry release, and the titles
 the user sees: the Daemon window, the Revit dock pane and floating window, and
 the AutoCAD palette (`DevTools 4.0.0-beta.4`).
 
