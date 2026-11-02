@@ -273,6 +273,7 @@ public sealed class PackageConsumerTests
                 <TargetFramework>{tfm}</TargetFramework>
                 <LangVersion>latest</LangVersion>
                 <ImplicitUsings>enable</ImplicitUsings>
+                <OutputType>Exe</OutputType>
                 <HostName>Revit</HostName>
                 <HostVersion>2025</HostVersion>
                 {(netFx ? "<RuntimeIdentifier>win-x64</RuntimeIdentifier>" : "")}
