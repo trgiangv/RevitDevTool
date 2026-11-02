@@ -1,7 +1,6 @@
 """Named Pipe client for the DevTool bridge.
 
-Protocol: ``[4-byte LE body length][UTF-8 JSON body]``
-Matches ``RevitDevTool.McpParser.Models.BridgePipeConnection``.
+Frame: ``[4-byte LE body length][UTF-8 JSON body]``.
 """
 
 from __future__ import annotations

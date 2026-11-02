@@ -1,4 +1,4 @@
-"""AutoCAD-family installs via InstalledProducts (mirrors AcadPathResolver)."""
+"""AutoCAD-family installs via InstalledProducts."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from .winreg import open_hklm, subkey_count
 ACAD_REGISTRY_ROOT: Final = r"SOFTWARE\Autodesk\AutoCAD"
 ACAD_INSTALLED_PRODUCTS: Final = "InstalledProducts"
 
-# InstalledProducts subkey, keyed by the host name constants. Mirrors AcadProductCatalog.ProductCodes.
+# InstalledProducts subkey, keyed by the host name constants.
 _PRODUCT_CODES: Final[dict[str, str]] = {
     AUTOCAD: "ACAD",
     CIVIL3D: "C3D",

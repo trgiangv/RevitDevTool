@@ -43,7 +43,7 @@ PIPE_DIR: Final = r"//./pipe"
 
 PIPE_PREFIX: Final = "DevTools"
 
-# Mirrors C# InstanceManager: DevTools_{Host}_{Version}_{PID}
+# Host pipe name: DevTools_{Host}_{Version}_{PID}
 # Version is [^_]+ (any non-underscore chars) to support year, semver, etc.
 PIPE_PATTERN: Final = rf"^{PIPE_PREFIX}_(\w+)_([^_]+)_(\d+)$"
 

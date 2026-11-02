@@ -1,4 +1,4 @@
-"""AutoCAD-family discovery mirrors AcadPathResolver."""
+"""AutoCAD-family discovery."""
 
 import winreg
 

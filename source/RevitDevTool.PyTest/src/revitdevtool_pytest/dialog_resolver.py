@@ -1,6 +1,5 @@
 """Auto-dismiss host startup dialogs via Win32 polling.
 
-Ported from ``RevitDevTool.Console.Services.Hosting.StartupDialogResolver``.
 Runs in a background thread and clicks whitelisted buttons on known dialog
 windows belonging to the host process (Revit, AutoCAD, Civil3D, etc.).
 """

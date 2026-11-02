@@ -1,4 +1,4 @@
-"""Revit installs via the Autodesk Revit registry key (mirrors RevitPathResolver)."""
+"""Revit installs via the Autodesk Revit registry key."""
 
 from __future__ import annotations
 

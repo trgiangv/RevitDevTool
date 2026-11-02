@@ -1,7 +1,6 @@
 """Data models for the RevitDevTool bridge protocol.
 
-Mirrors ``RevitDevTool.McpParser.Models.BridgeMessage`` on the C# side
-and ``PytestContracts.cs`` response models.
+Bridge message envelope and the ``tests/run`` request and response contracts.
 """
 
 from __future__ import annotations
@@ -57,7 +56,7 @@ class BridgeResponse:
         )
 
 
-# -- Request contracts (mirrors PytestContracts.cs requests) -----------------
+# -- Request contracts --------------------------------------------------------
 
 
 @dataclass(slots=True)
@@ -71,7 +70,7 @@ class RunRequest:
         return asdict(self)
 
 
-# -- Response contracts (mirrors PytestContracts.cs responses) ---------------
+# -- Response contracts -------------------------------------------------------
 
 
 @dataclass(frozen=True, slots=True)
