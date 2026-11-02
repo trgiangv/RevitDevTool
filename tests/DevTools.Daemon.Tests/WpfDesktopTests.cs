@@ -7,10 +7,12 @@ using DevTools.Daemon.Desktop.Views;
 using DevTools.Daemon.Tests.Support;
 using DevTools.Daemon.Tunnel;
 using DevTools.Settings.Configs;
+using DevTools.Utilities;
 using Moq;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+
 
 namespace DevTools.Daemon.Tests;
 
@@ -27,7 +29,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
             var window = new MainWindow(state);
             window.Show();
 
-            Assert.AreEqual("DevTools Daemon", window.Title);
+            Assert.AreEqual($"DevTools Daemon {AppVersion.Current}", window.Title);
             Assert.AreEqual(400, window.Width);
             Assert.AreEqual(400, window.Height);
             Assert.AreEqual(300, window.MinWidth);

@@ -4,7 +4,7 @@ using DevTools.Daemon.Desktop.Models;
 using DevTools.Daemon.Desktop.Updates;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.Daemon.Tunnel;
-using System.Reflection;
+using DevTools.Utilities;
 
 namespace DevTools.Daemon.Desktop.ViewModels;
 
@@ -16,7 +16,6 @@ public partial class ShellViewModel(
     UserSettingsStore settings,
     ITunnelStatusProvider tunnelStatus) : ObservableObject
 {
-    private const string DefaultVersion = "1.0.0";
     public const int UpdatesTabIndex = 2;
 
     [ObservableProperty]
@@ -26,7 +25,9 @@ public partial class ShellViewModel(
     public HostsViewModel Hosts { get; } = new(sessions, pipeScanner);
     public SettingsViewModel Settings { get; } = new(settings);
     public UpdatesViewModel Updater { get; } = updater;
-    public string Version { get; } = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? DefaultVersion;
+    public string Version { get; } = AppVersion.Current;
+
+    public string Title { get; } = $"DevTools Daemon {AppVersion.Current}";
 
     partial void OnSelectedTabIndexChanged(int value)
     {

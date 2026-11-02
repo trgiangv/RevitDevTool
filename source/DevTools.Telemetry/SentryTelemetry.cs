@@ -1,5 +1,6 @@
 using DevTools.Hosting;
 using System.Collections.Concurrent;
+using System.Reflection;
 
 namespace DevTools.Telemetry;
 
@@ -24,7 +25,10 @@ public sealed class SentryTelemetry : ITelemetry
         ArgumentNullException.ThrowIfNull(hostApp);
         ArgumentException.ThrowIfNullOrWhiteSpace(dsn);
 
-        var version = typeof(SentryTelemetry).Assembly.GetName().Version?.ToString() ?? "0.0.0";
+        var version = typeof(SentryTelemetry).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!
+            .InformationalVersion
+            .Split('+')[0];
         userId ??= UserIdentity.Get();
         var hostName = hostApp.Host.ToString();
         var release = $"devtool-{hostName}@{version}";

@@ -1,5 +1,6 @@
 using Autodesk.Revit.Attributes;
 using DevTools.Presentation.ViewModels;
+using DevTools.Utilities;
 using RevitDevTool.Controllers;
 using System.Windows.Input;
 
@@ -10,6 +11,8 @@ namespace RevitDevTool.Commands;
 public class DevToolsCommand : IExternalCommand, IExternalCommandAvailability
 {
     public const string CommandName = "DevTools";
+
+    public static string Title { get; } = $"{CommandName} {AppVersion.Current}";
 
     public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
     {

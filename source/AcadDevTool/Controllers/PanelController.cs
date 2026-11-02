@@ -1,6 +1,7 @@
 using AcadDevTool.View;
 using Autodesk.AutoCAD.Windows;
 using DevTools.Logging.Listeners;
+using DevTools.Utilities;
 using System.Windows.Forms.Integration;
 namespace AcadDevTool.Controllers;
 
@@ -17,7 +18,7 @@ public sealed class PanelController
 
         _mainPage = new MainPage();
 
-        _paletteSet = new PaletteSet("DevTools", PaletteGuid)
+        _paletteSet = new PaletteSet($"DevTools {AppVersion.Current}", PaletteGuid)
         {
             Style = PaletteSetStyles.ShowAutoHideButton
                     | PaletteSetStyles.ShowCloseButton

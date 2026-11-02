@@ -37,7 +37,7 @@ public sealed class PanelController(LogViewModel logViewModel, ILogger<PanelCont
         _paneProxy.Content = _mainPage;
 
         DockablePaneProvider
-            .Register(application, PaneGuid, DevToolsCommand.CommandName)
+            .Register(application, PaneGuid, DevToolsCommand.Title)
             .SetConfiguration(data =>
             {
                 data.FrameworkElement = _paneProxy;
