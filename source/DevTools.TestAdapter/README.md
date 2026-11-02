@@ -36,7 +36,7 @@ Do not use `.runsettings`.
   <LaunchTimeout>180</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
   <PackageReference Include="NUnit" Version="5.0.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
@@ -55,7 +55,7 @@ Do not use `.runsettings`.
   <TestingFramework>tunit</TestingFramework>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
   <PackageReference Include="TUnit" Version="1.78.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
@@ -84,7 +84,7 @@ Microsoft.Testing.Platform 2.5.2. A different MSTest version fails generation.
     <TestingFramework>mstest</TestingFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
+    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
     <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
       IncludeAssets="build; compile" PrivateAssets="All" />
   </ItemGroup>

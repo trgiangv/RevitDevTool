@@ -3,7 +3,7 @@
 Run NUnit tests inside a live Revit or AutoCAD-based host through Microsoft Testing Platform (MTP).
 
 - **Framework:** NUnit `5.0.0`, the default engine
-- **Adapter:** [`RevitDevTool.TestAdapter`](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.4) `0.1.4`
+- **Adapter:** [`RevitDevTool.TestAdapter`](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.2.0) `0.2.0`
 - **Other frameworks:** [TUnit](/docs/testing/TUnit) and [MSTest](/docs/testing/MSTest) are opt-in
 
 ## Project setup
@@ -17,7 +17,7 @@ Add the adapter and NUnit to the test project:
 </PropertyGroup>
 
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
   <PackageReference Include="NUnit" Version="5.0.0" />
   <PackageReference Include="Nice3point.Revit.Toolkit" Version="2025.*" />
 </ItemGroup>

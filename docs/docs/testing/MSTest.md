@@ -3,7 +3,7 @@
 Run MSTest tests inside a live Revit or AutoCAD-based host through Microsoft Testing Platform (MTP).
 
 - **Framework:** MSTest `4.5.2` (`MSTest.Sdk`)
-- **Adapter:** [`RevitDevTool.TestAdapter`](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.1.4) `0.1.4`
+- **Adapter:** [`RevitDevTool.TestAdapter`](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.2.0) `0.2.0`
 - **Microsoft.Testing.Platform:** `2.5.2`
 - **Lifecycle:** the same as [NUnit](/docs/testing/NUnit); the project SDK and attributes differ
 
@@ -20,7 +20,7 @@ Use `Sdk="MSTest.Sdk"` so the MSTest runner is on:
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.1.4" />
+    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
     <PackageReference Include="Nice3point.Revit.Toolkit" Version="2025.*" />
   </ItemGroup>
 </Project>
