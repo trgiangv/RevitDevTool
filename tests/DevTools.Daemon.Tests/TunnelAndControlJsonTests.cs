@@ -1,5 +1,6 @@
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Tunnel;
+using DevTools.Ipc;
 using System.Text.Json;
 
 namespace DevTools.Daemon.Tests;
@@ -16,7 +17,8 @@ public sealed class TunnelAndControlJsonTests
             "register",
             "machine-1",
             "WORKSTATION",
-            ["Revit", "AutoCad"]);
+            ["Revit", "AutoCad"],
+            new ProtocolSender("4.0.0-beta.5", new ProtocolRange(1, 1)));
 
         var json = JsonSerializer.Serialize(message, ControlJsonContext.Default.GatewayRegisterMessage);
         var loaded = JsonSerializer.Deserialize(json, ControlJsonContext.Default.GatewayRegisterMessage);
@@ -26,6 +28,7 @@ public sealed class TunnelAndControlJsonTests
         Assert.AreEqual("WORKSTATION", loaded.MachineName);
         Assert.Contains("Revit", loaded.HostApps);
         Assert.Contains("machine_id", json, StringComparison.Ordinal);
+        Assert.Contains("\"sender\":{\"version\":\"4.0.0-beta.5\",\"protocol\":{\"current\":1,\"min\":1}}", json, StringComparison.Ordinal);
     }
 
     [TestMethod]

@@ -6,6 +6,7 @@ public enum TunnelStatus
     Connecting,
     Connected,
     Reconnecting,
+    Incompatible,
 }
 
 public sealed class TunnelStatusChangedArgs(TunnelStatus status) : EventArgs

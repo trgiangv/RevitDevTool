@@ -1,5 +1,6 @@
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Mcp.Processes;
+using DevTools.Ipc;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using System.Net.WebSockets;
@@ -58,6 +59,12 @@ internal sealed class TunnelClient(
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
                 SetStatus(TunnelStatus.Disconnected);
+                return;
+            }
+            catch (TunnelIncompatibleException ex)
+            {
+                logger.ZLogError($"The gateway rejected this Daemon: {ex.Message}");
+                SetStatus(TunnelStatus.Incompatible);
                 return;
             }
             catch (Exception ex)
@@ -120,6 +127,9 @@ internal sealed class TunnelClient(
                 try { await heartbeatTask.ConfigureAwait(false); }
                 catch (OperationCanceledException) { }
             }
+
+            if (ws.CloseStatus == TunnelProtocol.IncompatibleCloseStatus)
+                throw new TunnelIncompatibleException(ws.CloseStatusDescription ?? string.Empty);
         }
         finally
         {
@@ -136,7 +146,8 @@ internal sealed class TunnelClient(
             RegisterMessageType,
             metadata.MachineId,
             metadata.MachineName,
-            hostApps.ToList());
+            hostApps.ToList(),
+            TunnelProtocol.Sender);
 
         var json = JsonSerializer.Serialize(register, ControlJsonContext.Default.GatewayRegisterMessage);
         var bytes = Encoding.UTF8.GetBytes(json);
@@ -161,6 +172,8 @@ internal sealed class TunnelClient(
             catch { break; }
         }
     }
+
+    private sealed class TunnelIncompatibleException(string reason) : Exception(reason);
 
     public async ValueTask DisposeAsync()
     {

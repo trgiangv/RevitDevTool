@@ -149,6 +149,49 @@ public sealed class TunnelComponentTests
         try { await serverTask; } catch (OperationCanceledException) { }
     }
 
+    [TestMethod]
+    public async Task TunnelClient_stops_reconnecting_when_the_gateway_rejects_its_sender()
+    {
+        var port = GetFreeTcpPort();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var connections = 0;
+        string? register = null;
+        var serverTask = RunEchoWebSocketServerAsync(port, cts.Token, async (ws, ct) =>
+        {
+            Interlocked.Increment(ref connections);
+            var buffer = new byte[4096];
+            var result = await ws.ReceiveAsync(buffer, ct);
+            register = Encoding.UTF8.GetString(buffer, 0, result.Count);
+            await ws.CloseAsync(TunnelProtocol.IncompatibleCloseStatus, "Update RevitDevTool to the latest version.", ct);
+        });
+
+        using var host = AppHostBuilder.CreateStdioHostForTests();
+        var engine = host.Services.GetRequiredService<McpEngine>();
+        var options = McpServerFactory.CreateOptions(
+            engine.ToolCollection, engine.PromptCollection, host.Services);
+        var client = new TunnelClient(
+            new Uri($"ws://127.0.0.1:{port}/"),
+            () => Task.FromResult<string?>("token"),
+            options,
+            DaemonTestDoubles.CreatePipeScanner().Object,
+            NullLoggerFactory.Instance,
+            host.Services,
+            NullLogger<TunnelClient>.Instance);
+        TunnelStatus? lastStatus = null;
+        client.StatusChanged += (_, args) => lastStatus = args.Status;
+
+        await client.RunAsync(cts.Token);
+        await client.DisposeAsync();
+
+        Assert.IsFalse(cts.IsCancellationRequested);
+        Assert.AreEqual(TunnelStatus.Incompatible, lastStatus);
+        Assert.AreEqual(1, connections);
+        Assert.Contains("\"sender\":{\"version\":", register!, StringComparison.Ordinal);
+
+        await cts.CancelAsync();
+        try { await serverTask; } catch (OperationCanceledException) { }
+    }
+
     private static int GetFreeTcpPort()
     {
         using var listener = new TcpListener(IPAddress.Loopback, 0);

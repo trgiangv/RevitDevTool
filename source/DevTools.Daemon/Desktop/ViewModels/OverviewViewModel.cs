@@ -145,6 +145,7 @@ public partial class OverviewViewModel : ObservableObject
             Tunnel.TunnelStatus.Connecting => "Connecting...",
             Tunnel.TunnelStatus.Reconnecting => "Reconnecting...",
             Tunnel.TunnelStatus.Disconnected => StatusDisconnected,
+            Tunnel.TunnelStatus.Incompatible => "Not compatible with the gateway",
             _ => StatusUnknown,
         };
     }

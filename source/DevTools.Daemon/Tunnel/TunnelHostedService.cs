@@ -103,8 +103,12 @@ internal sealed class TunnelHostedService(
             finally
             {
                 tunnel.StatusChanged -= OnTunnelStatusChanged;
-                Status = TunnelStatus.Disconnected;
-                StatusChanged?.Invoke(this, new TunnelStatusChangedArgs(TunnelStatus.Disconnected));
+                if (Status != TunnelStatus.Incompatible)
+                {
+                    Status = TunnelStatus.Disconnected;
+                    StatusChanged?.Invoke(this, new TunnelStatusChangedArgs(TunnelStatus.Disconnected));
+                }
+
                 await tunnel.DisposeAsync().ConfigureAwait(false);
             }
         }, ct);
