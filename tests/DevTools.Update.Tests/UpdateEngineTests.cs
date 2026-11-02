@@ -252,6 +252,69 @@ public sealed class UpdateEngineTests
     }
 
     [TestMethod]
+    public async Task Major_Daemon_update_waits_while_an_add_in_of_that_major_is_pending()
+    {
+        UpdatableDaemon? daemon = null;
+        using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
+        harness.Releases.Publish("4.0.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
+        harness.FolderLock.Lock(harness.Temp.Bundle.PayloadPath("2024"));
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
+
+        Assert.IsEmpty(daemon!.Restarts);
+        Assert.IsTrue(harness.Notifier.Notices.Any(notice => notice.Kind == UpdateNoticeKind.DaemonPending && notice.Version == "4.0.0"));
+
+        harness.FolderLock.Unlock(harness.Temp.Bundle.PayloadPath("2024"));
+        await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
+
+        Assert.AreEqual("2024-new", harness.Temp.Marker("2024"));
+        CollectionAssert.AreEqual(new[] { false }, daemon.Restarts);
+    }
+
+    [TestMethod]
+    public async Task Major_Daemon_update_does_not_wait_for_an_add_in_the_release_no_longer_ships()
+    {
+        UpdatableDaemon? daemon = null;
+        using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
+        harness.Releases.Publish("4.0.0", null, ("2025", ["Revit"], "2025-new"));
+        harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { false }, daemon!.Restarts);
+    }
+
+    [TestMethod]
+    public async Task Minor_Daemon_update_does_not_wait_for_a_busy_add_in()
+    {
+        UpdatableDaemon? daemon = null;
+        using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
+        harness.Releases.Publish("3.1.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
+        harness.FolderLock.Lock(harness.Temp.Bundle.PayloadPath("2024"));
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { false }, daemon!.Restarts);
+    }
+
+    [TestMethod]
     public async Task Scheduler_runs_the_cycle_after_the_startup_delay()
     {
         using var harness = new Harness(null);

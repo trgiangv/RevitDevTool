@@ -8,4 +8,6 @@ internal static class Versions
         installed is null || SemanticVersion.Parse(candidate).CompareTo(SemanticVersion.Parse(installed)) > 0;
 
     public static string? Max(IEnumerable<string?> versions) => versions.OfType<string>().MaxBy(SemanticVersion.Parse);
+
+    public static int Major(string version) => SemanticVersion.Parse(version).Major;
 }

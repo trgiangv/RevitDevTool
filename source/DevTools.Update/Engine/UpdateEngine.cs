@@ -4,42 +4,8 @@ using DevTools.Update.Autodesk;
 using DevTools.Update.Installations;
 using DevTools.Update.Releases;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace DevTools.Update.Engine;
-
-public enum UpdateTrigger
-{
-    Scheduled,
-    Manual,
-    UserApproved
-}
-
-public enum UpdateCycleStatus
-{
-    NotConfigured,
-    Disabled,
-    NoRelease,
-    UpToDate,
-    Notified,
-    Updated
-}
-
-public sealed record UpdateCycleResult(
-    UpdateCycleStatus Status,
-    string? Version = null,
-    IReadOnlyList<string>? Applied = null,
-    IReadOnlyList<string>? Pending = null);
-
-/// <summary>
-///     One row of the Updates tab.
-/// </summary>
-public sealed record TargetOption(AddinComponent Component, IReadOnlyList<HostApp> Hosts, bool Selected, string? Installed, string? Pending, string Latest)
-{
-    public bool OnComputer => Hosts.Count > 0;
-}
-
-public sealed record SelectionResult(string Version, IReadOnlyList<string> Applied, IReadOnlyList<string> Pending, IReadOnlyList<string> Unavailable);
 
 /// <summary>
 ///     Runs the update cycle. First Velopack updates the Daemon, then the engine updates the payload folders (0048–0052).
@@ -56,16 +22,11 @@ public sealed class UpdateEngine(
     IEnumerable<IHostPathResolver> resolvers,
     ILogger<UpdateEngine> logger) : IDisposable
 {
-    private static readonly (HostApp App, string Platform)[] Platforms = Enum.GetValues<HostApp>()
-        .Where(app => app == HostApp.Revit || app.IsAcadFamily())
-        .Select(app => (app, app == HostApp.Revit ? PackageContents.RevitPlatform : PackageContents.AutoCadPlatform))
-        .ToArray();
-
     private const int ParallelDownloads = 3;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
-    private readonly HashSet<int> _watched = [];
+    private LockerWatcher? _lockers;
     private string? _offeredVersion;
     private UpdatePolicy? _chosenPolicy;
 
@@ -178,13 +139,7 @@ public sealed class UpdateEngine(
 
     public IReadOnlyList<AddinTarget> DetectInstalledTargets() => DetectHosts().Keys.ToArray();
 
-    private Dictionary<AddinTarget, HostApp[]> DetectHosts() => Platforms
-        .SelectMany(platform => resolvers
-            .Where(resolver => resolver.Supports(platform.App))
-            .SelectMany(resolver => resolver.GetInstalledVersions(platform.App))
-            .Select(hostVersion => (Target: new AddinTarget(platform.Platform, hostVersion), platform.App)))
-        .GroupBy(host => host.Target, host => host.App)
-        .ToDictionary(group => group.Key, group => group.Distinct().ToArray());
+    private Dictionary<AddinTarget, HostApp[]> DetectHosts() => InstalledHosts.Detect(resolvers);
 
     /// <summary>
     ///     Velopack uninstall hook. Removes the bundle that the engine installed.
@@ -221,10 +176,10 @@ public sealed class UpdateEngine(
 
         var daemonTarget = await PrepareDaemonAsync(release, cancellationToken).ConfigureAwait(false);
         var batch = new PayloadBatch(manifest.Version);
-        if (!WaitsForDaemon(manifest)) await UpdatePayloadsAsync(installation, release, outdated, batch, cancellationToken).ConfigureAwait(false);
+        if (!RequiresNewerUpdater(manifest)) await UpdatePayloadsAsync(installation, release, outdated, batch, cancellationToken).ConfigureAwait(false);
 
         Report(batch, manifest.NotesUrl);
-        ApplyDaemonUpdate(daemonTarget, trigger);
+        SwapUpdater(installation, daemonTarget, trigger);
 
         var status = batch.Changed || daemonTarget is not null ? UpdateCycleStatus.Updated : UpdateCycleStatus.UpToDate;
         return new UpdateCycleResult(status, manifest.Version, batch.Applied, batch.PendingHostVersions);
@@ -246,7 +201,17 @@ public sealed class UpdateEngine(
         return new UpdateCycleResult(UpdateCycleStatus.Notified, manifest.Version);
     }
 
-    private bool WaitsForDaemon(UpdateManifest manifest) =>
+    /// <summary>
+    ///     A new major Daemon waits while an add-in of that major is staged and waiting for its host to close (0055 §8).
+    ///     This is the mirror of <see cref="RequiresNewerUpdater"/>.
+    /// </summary>
+    private bool HoldsMajorUpdate(Installation installation, string target) =>
+        daemon.InstalledVersion is { } installed
+        && Versions.Major(target) > Versions.Major(installed)
+        && installation.Payloads.Any(payload =>
+            payload.PendingVersion is { } pending && Versions.Major(pending) == Versions.Major(target));
+
+    private bool RequiresNewerUpdater(UpdateManifest manifest) =>
         daemon.InstalledVersion is { } installed && manifest.MinUpdaterVersion is { } minimum && Versions.IsNewer(minimum, installed);
 
     private async Task<string?> PrepareDaemonAsync(Release release, CancellationToken cancellationToken)
@@ -330,7 +295,7 @@ public sealed class UpdateEngine(
         {
             payload.PendingVersion = batch.Version;
             batch.Pending.Add((hostVersion, lockers));
-            WatchLockers(lockers);
+            (_lockers ??= new LockerWatcher(RetryPendingAsync, logger)).Watch(lockers, _lifetime.Token);
             return;
         }
 
@@ -364,35 +329,8 @@ public sealed class UpdateEngine(
         if (changed) Commit(installation);
     }
 
-    private void WatchLockers(IEnumerable<LockingProcess> lockers)
+    private async Task RetryPendingAsync()
     {
-        foreach (var locker in lockers)
-        {
-            lock (_watched)
-            {
-                if (!_watched.Add(locker.ProcessId)) continue;
-            }
-
-            _ = Task.Run(() => RetryAfterExitAsync(locker.ProcessId))
-                .ContinueWith(task => logger.LogWarning(task.Exception, "A pending payload could not be applied"), TaskContinuationOptions.OnlyOnFaulted);
-        }
-    }
-
-    private async Task RetryAfterExitAsync(int processId)
-    {
-        try
-        {
-            using var process = Process.GetProcessById(processId);
-            await process.WaitForExitAsync(_lifetime.Token).ConfigureAwait(false);
-        }
-        catch (ArgumentException)
-        {
-        }
-        finally
-        {
-            lock (_watched) _watched.Remove(processId);
-        }
-
         await _gate.WaitAsync(_lifetime.Token).ConfigureAwait(false);
         try
         {
@@ -404,9 +342,16 @@ public sealed class UpdateEngine(
         }
     }
 
-    private void ApplyDaemonUpdate(string? target, UpdateTrigger trigger)
+    private void SwapUpdater(Installation installation, string? target, UpdateTrigger trigger)
     {
         if (target is null) return;
+
+        if (HoldsMajorUpdate(installation, target))
+        {
+            notifier.Notify(new UpdateNotice(UpdateNoticeKind.DaemonPending, $"DevTools Daemon {target} is ready",
+                "Close the host apps to finish the update. The add-ins update first.", target));
+            return;
+        }
 
         if (daemon.GetBlockingProcesses().Count == 0)
         {
@@ -470,15 +415,5 @@ public sealed class UpdateEngine(
         return release is { HasManifest: true }
             ? release
             : await provider.GetLatestAsync((installation?.Policy ?? Policy).IsPrerelease, cancellationToken).ConfigureAwait(false);
-    }
-
-    private sealed class PayloadBatch(string version)
-    {
-        public string Version { get; } = version;
-        public List<string> Applied { get; } = [];
-        public List<(string HostVersion, IReadOnlyList<LockingProcess> Lockers)> Pending { get; } = [];
-        public List<string> Unavailable { get; } = [];
-        public bool Changed => Applied.Count > 0 || Pending.Count > 0;
-        public string[] PendingHostVersions => Pending.Select(item => item.HostVersion).ToArray();
     }
 }
