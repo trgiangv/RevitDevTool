@@ -42,6 +42,10 @@ public sealed class PytestExecutionService(PythonInitializer initializer)
             return false;
         }
 
+        error = PytestProtocol.Mismatch(request);
+        if (error is not null)
+            return false;
+
         var nodeIds = request.NodeIds?.Where(nodeId => !string.IsNullOrWhiteSpace(nodeId)).ToList() ?? [];
         if (nodeIds.Count == 0)
         {
@@ -51,7 +55,13 @@ public sealed class PytestExecutionService(PythonInitializer initializer)
 
         var workspaceRoot = PytestPathResolver.ResolveWorkspaceRoot(request.WorkspaceRoot, request.TestRoot);
         var pytestArgs = request.PytestArgs?.Where(arg => !string.IsNullOrWhiteSpace(arg)).ToList() ?? [];
-        request = new PytestRunRequest(workspaceRoot, PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot), nodeIds, pytestArgs);
+        request = request with
+        {
+            WorkspaceRoot = workspaceRoot,
+            TestRoot = PytestPathResolver.ResolvePath(request.TestRoot, workspaceRoot),
+            NodeIds = nodeIds,
+            PytestArgs = pytestArgs
+        };
         error = null;
         return true;
     }

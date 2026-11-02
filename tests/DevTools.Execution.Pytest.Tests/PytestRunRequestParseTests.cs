@@ -7,6 +7,8 @@ namespace DevTools.Execution.Tests;
 
 public sealed class PytestRunRequestParseTests
 {
+    private static readonly object Sender = new { version = "1.0.0", protocol = new { current = PytestProtocol.CurrentVersion, min = PytestProtocol.MinVersion } };
+
     [TestMethod]
     public void TryParseRunRequest_NullParams_ReturnsError()
     {
@@ -32,6 +34,7 @@ public sealed class PytestRunRequestParseTests
             workspace_root = "C:\\ws",
             test_root = "C:\\ws\\tests",
             nodeids = Array.Empty<string>(),
+            sender = Sender,
         });
 
         Assert.IsFalse(PytestExecutionService.TryParseRunRequest(json, out _, out var error));
@@ -52,6 +55,7 @@ public sealed class PytestRunRequestParseTests
                 workspace_root = workspace,
                 test_root = "tests",
                 nodeids = new[] { "tests/test_foo.py::test_bar" },
+                sender = Sender,
                 pytest_args = new[] { "-v" },
             });
 
@@ -94,6 +98,7 @@ public sealed class PytestRunRequestParseTests
                 workspace_root = workspace,
                 test_root = "tests",
                 nodeids = new[] { " ", "tests/test_foo.py::test_bar", "" },
+                sender = Sender,
                 pytest_args = new[] { "", "-q", "  " },
             });
 
@@ -119,6 +124,7 @@ public sealed class PytestRunRequestParseTests
             workspace_root = "C:\\ws",
             test_root = "tests",
             nodeids = new[] { " ", "" },
+            sender = Sender,
         });
 
         Assert.IsFalse(PytestExecutionService.TryParseRunRequest(json, out _, out var error));

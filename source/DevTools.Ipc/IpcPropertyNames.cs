@@ -24,6 +24,8 @@ public static class IpcPropertyNames
     public const string Name = "name";
     public const string PipeName = "pipeName";
     public const string ProcessId = "processId";
+    public const string ProductVersion = "productVersion";
+    public const string Protocols = "protocols";
     public const string Success = "success";
     public const string Uri = "uri";
     public const string Version = "version";

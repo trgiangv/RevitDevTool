@@ -1,4 +1,7 @@
+using DevTools.Execution.External.Testing;
 using DevTools.Hosting;
+using DevTools.Ipc;
+using DevTools.Utilities;
 using System.Text.Json;
 namespace DevTools.Execution.External.Handlers;
 
@@ -29,5 +32,10 @@ public sealed class InstanceRequestHandler(IHostAppInfo hostInfo) : IBridgeReque
         HostApp = hostInfo.Host.ToString(),
         ProcessId = Environment.ProcessId,
         VersionNumber = hostInfo.VersionNumber,
+        ProductVersion = AppVersion.Current,
+        Protocols = new Dictionary<string, ProtocolRange>(StringComparer.Ordinal)
+        {
+            [PytestProtocol.Name] = PytestProtocol.Range,
+        },
     };
 }

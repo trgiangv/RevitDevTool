@@ -5,6 +5,7 @@ namespace DevTools.Ipc;
 [JsonSerializable(typeof(BridgeMessage))]
 [JsonSerializable(typeof(BridgeError))]
 [JsonSerializable(typeof(InstanceInfo))]
+[JsonSerializable(typeof(ProtocolRange))]
 [JsonSourceGenerationOptions(
     PropertyNameCaseInsensitive = true,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]

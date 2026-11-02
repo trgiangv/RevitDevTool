@@ -1,3 +1,4 @@
+using DevTools.Ipc;
 using System.Text.Json.Serialization;
 
 namespace DevTools.Execution.External.Testing;
@@ -7,7 +8,8 @@ public sealed record PytestRunRequest(
     [property: JsonPropertyName("workspace_root")] string WorkspaceRoot,
     [property: JsonPropertyName("test_root")] string TestRoot,
     [property: JsonPropertyName("nodeids")] IReadOnlyList<string> NodeIds,
-    [property: JsonPropertyName("pytest_args")] IReadOnlyList<string> PytestArgs);
+    [property: JsonPropertyName("pytest_args")] IReadOnlyList<string> PytestArgs,
+    [property: JsonPropertyName("sender")] ProtocolSender? Sender = null);
 
 [UsedImplicitly]
 public sealed record PytestRunResponse(

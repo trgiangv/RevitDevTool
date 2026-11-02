@@ -1,4 +1,5 @@
 using DevTools.Execution.External.Handlers;
+using DevTools.Execution.External.Testing;
 using DevTools.Hosting;
 using DevTools.Ipc;
 using System.Text.Json;
@@ -26,6 +27,9 @@ public sealed class InstanceRequestHandlerTests
         Assert.AreEqual(hostInfo.Host.ToString(), info!.HostApp);
         Assert.AreEqual(hostInfo.VersionNumber, info.VersionNumber);
         Assert.AreEqual(Environment.ProcessId, info.ProcessId);
+        Assert.IsFalse(string.IsNullOrWhiteSpace(info.ProductVersion));
+        Assert.AreEqual(PytestProtocol.Range, info.Protocols![PytestProtocol.Name]);
+        Assert.Contains("\"protocols\":{\"pytest\":{\"current\":1,\"min\":1}}", response.Result.Value.GetRawText(), StringComparison.Ordinal);
     }
 
     [TestMethod]
