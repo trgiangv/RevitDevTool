@@ -12,7 +12,7 @@ public static class TestRunnerCli
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(hostOptions);
         return JsonSerializer.Serialize(
-            new TestRunExecute(TestingProtocol.CurrentVersion, hostOptions, request),
+            new TestRunExecute(TestingProtocol.Sender, hostOptions, request),
             TestingJsonContext.Default.TestRunExecute);
     }
 }

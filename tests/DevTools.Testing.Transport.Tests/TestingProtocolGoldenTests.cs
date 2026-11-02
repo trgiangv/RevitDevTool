@@ -16,11 +16,11 @@ public sealed class TestingProtocolGoldenTests
             "1",
             TestingProtocol.Hello,
             JsonSerializer.SerializeToElement(
-                new TestHelloRequest(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit),
+                new TestHelloRequest(TestFrameworkId.NUnit, new ProtocolSender("5.0.0", new ProtocolRange(1, 1))),
                 TestingJsonContext.Default.TestHelloRequest));
 
         Assert.AreEqual(
-            """{"type":"request","id":"1","method":"testing/hello","params":{"protocol_version":2,"framework_id":"NUnit"},"isError":false}""",
+            """{"type":"request","id":"1","method":"testing/hello","params":{"framework_id":"NUnit","sender":{"version":"5.0.0","protocol":{"current":1,"min":1}}},"isError":false}""",
             Serialize(message));
         Assert.DoesNotContain("testing/discover", Serialize(message), StringComparison.Ordinal);
     }
@@ -29,7 +29,6 @@ public sealed class TestingProtocolGoldenTests
     public void Run_request_round_trips_opaque_ids_and_selection_kind()
     {
         var request = CreateRunRequest(
-            TestingProtocol.CurrentVersion,
             ["  spaced id  ", "xunit.v3://method/Theory(input: 1)/0"]);
         var json = JsonSerializer.Serialize(request, TestingJsonContext.Default.TestRunRequest);
         var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunRequest);
@@ -39,26 +38,24 @@ public sealed class TestingProtocolGoldenTests
         Assert.AreEqual(TestSelectionKind.TestIds, roundTrip.Selection.Kind);
         Assert.AreEqual(request.Selection.TestIds[0], roundTrip.Selection.TestIds[0]);
         Assert.AreEqual(request.Selection.TestIds[1], roundTrip.Selection.TestIds[1]);
-        Assert.Contains("\"protocol_version\":2", json, StringComparison.Ordinal);
         Assert.Contains("\"framework_id\":\"NUnit\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain("testing/discover", json, StringComparison.Ordinal);
     }
 
     [TestMethod]
-    public void Execute_round_trips_run_id_and_envelope_version()
+    public void Execute_round_trips_run_id_and_sender()
     {
         var request = CreateRunRequest(
-            TestingProtocol.CurrentVersion,
             ["  spaced id  ", "xunit.v3://method/Theory(input: 1)/0"]);
         var invocation = new TestRunExecute(
-            TestingProtocol.CurrentVersion,
+            TestingProtocol.Sender,
             new TestHostOptions("Revit", "2025", true, 60, 180, DebugParentPid: 4242),
             request);
         var json = JsonSerializer.Serialize(invocation, TestingJsonContext.Default.TestRunExecute);
         var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
 
         Assert.IsNotNull(roundTrip);
-        Assert.AreEqual(TestingProtocol.CurrentVersion, roundTrip.ProtocolVersion);
+        Assert.AreEqual(TestingProtocol.Sender, roundTrip.Sender);
         Assert.AreEqual(request.RunId, roundTrip.Run.RunId);
         Assert.AreEqual(request.Selection.TestIds[0], roundTrip.Run.Selection.TestIds[0]);
         Assert.AreEqual("Revit", roundTrip.Host.HostName);
@@ -119,20 +116,6 @@ public sealed class TestingProtocolGoldenTests
     }
 
     [TestMethod]
-    public void Protocol_mismatch_rejects_version_1()
-    {
-        Assert.IsFalse(TestingProtocol.IsCompatible(1));
-        Assert.IsTrue(TestingProtocol.IsCompatible(TestingProtocol.CurrentVersion));
-
-        var error = TestingProtocol.CreateIncompatibleResponse("9", 1);
-        var json = Serialize(error);
-        Assert.Contains("testing/protocol_incompatible", json, StringComparison.Ordinal);
-        Assert.Contains("\"requested\":1", json, StringComparison.Ordinal);
-        Assert.Contains("\"expected\":2", json, StringComparison.Ordinal);
-        Assert.DoesNotContain("nunit/protocol_incompatible", json, StringComparison.Ordinal);
-    }
-
-    [TestMethod]
     public void Transport_has_no_discover_endpoint()
     {
 #pragma warning disable MSTEST0032 // const endpoint names document the transport contract.
@@ -152,9 +135,8 @@ public sealed class TestingProtocolGoldenTests
         Assert.IsNull(typeof(ITestRunnerTransport).GetMethod("Discover"));
     }
 
-    static TestRunRequest CreateRunRequest(int protocolVersion, IReadOnlyList<string> testIds) =>
+    static TestRunRequest CreateRunRequest(IReadOnlyList<string> testIds) =>
         new(
-            protocolVersion,
             SampleRunId,
             TestFrameworkId.NUnit,
             new TestAssemblyReference(@"C:\tests\Sample.dll"),

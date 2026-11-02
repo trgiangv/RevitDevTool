@@ -23,7 +23,6 @@ internal sealed class TestRunSession
         _runId = Guid.NewGuid();
         ArgumentException.ThrowIfNullOrWhiteSpace(assemblyPath);
         var request = new TestRunRequest(
-            TestingProtocol.CurrentVersion,
             _runId,
             frameworkId,
             new TestAssemblyReference(Path.GetFullPath(assemblyPath)),

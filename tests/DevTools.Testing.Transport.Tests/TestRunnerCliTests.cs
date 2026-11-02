@@ -8,7 +8,6 @@ public sealed class TestRunnerCliTests
 {
     static TestRunRequest CreateRequest(TestSelection selection) =>
         new(
-            TestingProtocol.CurrentVersion,
             Guid.Empty,
             TestFrameworkId.NUnit,
             new TestAssemblyReference(@"C:\tests\Sample.dll"),
@@ -29,7 +28,7 @@ public sealed class TestRunnerCliTests
         var invocation = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
 
         Assert.IsNotNull(invocation);
-        Assert.AreEqual(TestingProtocol.CurrentVersion, invocation.ProtocolVersion);
+        Assert.AreEqual(TestingProtocol.Sender, invocation.Sender);
         Assert.IsTrue(invocation.Host.ForceLaunch);
         Assert.AreEqual(4242, invocation.Host.DebugParentPid);
         Assert.DoesNotContain("framework_id\":\"nunit", json.Replace(" ", ""), StringComparison.Ordinal);
@@ -44,7 +43,6 @@ public sealed class TestRunnerCliTests
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
         var json = TestRunnerCli.SerializeExecute(
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 runId,
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(@"C:\tests\Sample.dll"),

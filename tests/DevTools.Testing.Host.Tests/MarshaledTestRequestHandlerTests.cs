@@ -24,7 +24,7 @@ public sealed class MarshaledTestRequestHandlerTests
             executor);
 
         var hello = JsonSerializer.SerializeToElement(
-            new TestHelloRequest(TestingProtocol.CurrentVersion, provider.FrameworkId),
+            new TestHelloRequest(provider.FrameworkId, TestingProtocol.Sender),
             TestingJsonContext.Default.TestHelloRequest);
         var helloResponse = await handler.HandleAsync(
             "hello", TestingProtocol.Hello, hello, TestContext.CancellationToken);
@@ -34,7 +34,6 @@ public sealed class MarshaledTestRequestHandlerTests
         var runId = Guid.NewGuid();
         var run = JsonSerializer.SerializeToElement(
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 runId,
                 provider.FrameworkId,
                 new TestAssemblyReference(@"C:\tests\Sample.dll"),

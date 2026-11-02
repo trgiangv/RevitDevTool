@@ -137,7 +137,6 @@ public sealed class ContractRoundTripTests
     public void Run_request_rejects_an_undefined_framework_id()
     {
         var exception = Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => new TestRunRequest(
-            ProtocolVersion: 1,
             RunId: Guid.NewGuid(),
             FrameworkId: (TestFrameworkId)42,
             Assembly: new TestAssemblyReference("tests.dll"),
@@ -150,7 +149,6 @@ public sealed class ContractRoundTripTests
     public void Run_request_with_expression_rejects_an_undefined_framework_id()
     {
         var request = new TestRunRequest(
-            ProtocolVersion: 1,
             RunId: Guid.NewGuid(),
             FrameworkId: TestFrameworkId.NUnit,
             Assembly: new TestAssemblyReference("tests.dll"),

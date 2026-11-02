@@ -328,7 +328,7 @@ public sealed class TestingGenerationStoreTests
     }
 
     private static TestRunRequest Request(string path) => new(
-        1, Guid.NewGuid(), TestFrameworkId.NUnit, new TestAssemblyReference(path),
+        Guid.NewGuid(), TestFrameworkId.NUnit, new TestAssemblyReference(path),
         TestSelection.All);
 
     private sealed class FixedPolicy(TestingGenerationPlan plan) : ITestingGenerationPolicy

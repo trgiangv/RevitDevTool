@@ -75,7 +75,6 @@ public sealed class TUnitRuntimeSessionTests
 
     private static TestRunRequest CreateRequest(TestSelection selection, Guid? runId = null) =>
         new(
-            2,
             runId ?? Guid.NewGuid(),
             TestFrameworkId.TUnit,
             new TestAssemblyReference(typeof(TUnitRuntimeSessionTests).Assembly.Location),

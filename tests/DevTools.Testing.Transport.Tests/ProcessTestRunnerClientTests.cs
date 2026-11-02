@@ -58,7 +58,6 @@ public sealed class ProcessTestRunnerClientTests
         using var client = new ProcessTestRunnerClient(runnerPath);
         var result = client.Run(
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 runId,
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(@"C:\tests\Sample.dll"),
@@ -78,32 +77,13 @@ public sealed class ProcessTestRunnerClientTests
         var stdin = File.ReadAllText(stdinPath);
         var execute = JsonSerializer.Deserialize(stdin, TestingJsonContext.Default.TestRunExecute);
         Assert.IsNotNull(execute);
-        Assert.AreEqual(TestingProtocol.CurrentVersion, execute.ProtocolVersion);
+        Assert.AreEqual(TestingProtocol.Sender, execute.Sender);
         Assert.AreEqual(runId, execute.Run.RunId);
         Assert.AreEqual(TestFrameworkId.NUnit, execute.Run.FrameworkId);
         Assert.AreEqual(TestSelectionKind.TestIds, execute.Run.Selection.Kind);
         Assert.AreEqual("Revit", execute.Host.HostName);
         Assert.AreEqual(60, execute.Host.PerTestTimeoutSeconds);
         Assert.DoesNotContain("runner_path", stdin, StringComparison.Ordinal);
-    }
-
-    [TestMethod]
-    public void Run_returns_protocol_mismatch_without_starting_the_executable()
-    {
-        var runnerPath = Path.Combine(Path.GetTempPath(), "missing-devtools-testrunner.exe");
-        using var client = new ProcessTestRunnerClient(runnerPath);
-        var result = client.Run(
-            new TestRunRequest(
-                1,
-                Guid.NewGuid(),
-                TestFrameworkId.TUnit,
-                new TestAssemblyReference(@"C:\tests\Sample.dll"),
-                TestSelection.All),
-            new TestHostOptions("Revit", "2025", false, 60, 180),
-            _ => throw new InvalidOperationException("onEvent must not run for a protocol mismatch."));
-
-        Assert.AreEqual(TestingProtocol.IncompatibleCode, result.DiagnosticCode);
-        Assert.AreEqual(TestCancellationState.None, result.CancellationState);
     }
 
     [TestMethod]

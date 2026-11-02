@@ -54,7 +54,7 @@ public sealed class TestPipeClient : IAsyncDisposable
                 requestId,
                 TestingProtocol.Hello,
                 JsonSerializer.SerializeToElement(
-                    new TestHelloRequest(TestingProtocol.CurrentVersion, frameworkId),
+                    new TestHelloRequest(frameworkId, TestingProtocol.Sender),
                     TestingJsonContext.Default.TestHelloRequest)),
             progress: null,
             runId: null,
@@ -64,8 +64,8 @@ public sealed class TestPipeClient : IAsyncDisposable
         var hello = response.Result!.Value.Deserialize(TestingJsonContext.Default.TestHelloResponse)
             ?? throw new InvalidOperationException("Empty testing hello response.");
 
-        if (!TestingProtocol.IsCompatible(hello.ProtocolVersion))
-            throw new InvalidOperationException(TestingProtocol.CreateUnsupportedMessage(hello.ProtocolVersion));
+        if (TestingProtocol.Mismatch(hello) is { } mismatch)
+            throw new InvalidOperationException(mismatch);
 
         return hello;
     }

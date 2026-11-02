@@ -138,7 +138,6 @@ public sealed class NUnitAssemblyIsolationTests
         var runId = Guid.NewGuid();
         var response = session.Run(
             new TestRunRequest(
-                1,
                 runId,
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(manifest.ShadowAssemblyPath),

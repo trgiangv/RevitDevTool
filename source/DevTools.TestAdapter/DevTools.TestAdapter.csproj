@@ -127,7 +127,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\DevTools.Utilities\AppUtils.cs" Link="AppUtils.cs"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj">
             <PrivateAssets>all</PrivateAssets>
         </ProjectReference>

@@ -48,7 +48,6 @@ public sealed class TestHostTimingTests
     {
         var json = TestRunnerCli.SerializeExecute(
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 Guid.Empty,
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference("C:\\tests\\Sample.dll"),

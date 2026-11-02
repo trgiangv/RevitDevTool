@@ -4,6 +4,7 @@ using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Transport;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace DevTools.Testing.Host;
@@ -66,8 +67,8 @@ public sealed class TestingRequestHandler(
         if (!TryReadHello(@params, out var request, out var error))
             return Invalid(requestId, error);
 
-        if (!TestingProtocol.IsCompatible(request!.ProtocolVersion))
-            return TestingProtocol.CreateIncompatibleResponse(requestId, request.ProtocolVersion);
+        if (TestingProtocol.Mismatch(request) is { } mismatch)
+            return TestingProtocol.CreateIncompatibleResponse(requestId, mismatch);
 
         if (!Enum.IsDefined(request.FrameworkId))
             return Invalid(requestId, "Framework ID is required.");
@@ -83,12 +84,12 @@ public sealed class TestingRequestHandler(
         }
 
         var response = new TestHelloResponse(
-            ProtocolVersion: TestingProtocol.CurrentVersion,
             FrameworkId: frameworkId,
             Host: _host,
             HostVersion: _hostVersion,
             ProcessId: Environment.ProcessId,
-            IsBusy: Volatile.Read(ref _isBusy) != 0);
+            IsBusy: Volatile.Read(ref _isBusy) != 0,
+            Sender: TestingProtocol.Sender);
 
         return BridgeMessage.Response(
             requestId,
@@ -105,9 +106,6 @@ public sealed class TestingRequestHandler(
 
         if (!TryReadRun(@params, out var request, out var error))
             return Invalid(requestId, error);
-
-        if (!TestingProtocol.IsCompatible(request!.ProtocolVersion))
-            return TestingProtocol.CreateIncompatibleResponse(requestId, request.ProtocolVersion);
 
         if (!TryGetProvider(request, requestId, out var provider, out var invalid))
             return invalid!;
@@ -251,7 +249,7 @@ public sealed class TestingRequestHandler(
 
     private static bool TryReadHello(
         JsonElement? @params,
-        out TestHelloRequest? request,
+        [NotNullWhen(true)] out TestHelloRequest? request,
         out string error)
     {
         request = null;
@@ -278,7 +276,7 @@ public sealed class TestingRequestHandler(
 
     private static bool TryReadRun(
         JsonElement? @params,
-        out TestRunRequest? request,
+        [NotNullWhen(true)] out TestRunRequest? request,
         out string error)
     {
         request = null;

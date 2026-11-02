@@ -14,24 +14,52 @@ public sealed class RequestHandlerTests
     public async Task Hello_uses_testing_envelope()
     {
         var handler = CreateHandler(out _);
-        var response = await Handle(handler,
-            "1",
-            TestingProtocol.Hello,
-            JsonSerializer.SerializeToElement(
-                new TestHelloRequest(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit),
-                TestingJsonContext.Default.TestHelloRequest));
+        var response = await Hello(handler, TestingProtocol.Sender);
 
         Assert.IsFalse(response.IsError);
-        var hello = response.Result!.Value.Deserialize(TestingJsonContext.Default.TestHelloResponse);
-        Assert.AreEqual(TestFrameworkId.NUnit, hello!.FrameworkId);
+        var hello = response.Result!.Value.Deserialize(TestingJsonContext.Default.TestHelloResponse)!;
+        Assert.AreEqual(TestFrameworkId.NUnit, hello.FrameworkId);
         Assert.AreEqual("Revit", hello.Host);
+        Assert.AreEqual(TestingProtocol.Sender, hello.Sender);
     }
 
+    [TestMethod]
+    public async Task Hello_from_a_newer_compatible_runner_is_accepted()
+    {
+        var handler = CreateHandler(out _);
+        var response = await Hello(handler, Sender("9.0.0", TestingProtocol.CurrentVersion + 1, TestingProtocol.MinVersion));
+
+        Assert.IsFalse(response.IsError);
+    }
+
+    [TestMethod]
+    public async Task Hello_from_a_runner_above_the_host_range_says_to_restart_the_host()
+    {
+        var handler = CreateHandler(out _);
+        var response = await Hello(handler, Sender("9.0.0", TestingProtocol.CurrentVersion + 1, TestingProtocol.CurrentVersion + 1));
+
+        Assert.IsTrue(response.IsError);
+        Assert.AreEqual(TestingProtocol.IncompatibleCode, response.ErrorDetail!.Code);
+        Assert.Contains("DevTools.TestRunner 9.0.0 is not compatible with DevTool add-in", response.ErrorMessage!, StringComparison.Ordinal);
+        Assert.EndsWith(TestingProtocol.RestartHostMessage, response.ErrorMessage!, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task Hello_without_a_sender_says_to_update_RevitDevTool()
+    {
+        var handler = CreateHandler(out _);
+        using var document = JsonDocument.Parse("""{"protocol_version":2,"framework_id":"NUnit"}""");
+        var response = await Handle(handler, "1", TestingProtocol.Hello, document.RootElement);
+
+        Assert.IsTrue(response.IsError);
+        Assert.AreEqual(TestingProtocol.IncompatibleCode, response.ErrorDetail!.Code);
+        Assert.EndsWith(TestingProtocol.UpdateProductMessage, response.ErrorMessage!, StringComparison.Ordinal);
+    }
     [TestMethod]
     public async Task Legacy_nunit_hello_is_not_routed_by_the_generic_handler()
     {
         var handler = CreateHandler(out _);
-        using var document = JsonDocument.Parse("""{"protocol_version":2}""");
+        using var document = JsonDocument.Parse("""{"framework_id":"NUnit"}""");
         var response = await Handle(handler, "1", "nunit/hello", document.RootElement);
 
         Assert.IsTrue(response.IsError);
@@ -45,7 +73,7 @@ public sealed class RequestHandlerTests
             new TestingProviderRegistry([new FakeProvider(TestFrameworkId.NUnit)]),
             "Revit",
             "2025");
-        using var document = JsonDocument.Parse("""{"protocol_version":2,"framework_id":""}""");
+        using var document = JsonDocument.Parse("""{"framework_id":""}""");
 
         var response = await Handle(handler, "1", TestingProtocol.Hello, document.RootElement);
 
@@ -173,7 +201,7 @@ public sealed class RequestHandlerTests
             "2",
             TestingProtocol.Hello,
             JsonSerializer.SerializeToElement(
-                new TestHelloRequest(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit),
+                new TestHelloRequest(TestFrameworkId.NUnit, TestingProtocol.Sender),
                 TestingJsonContext.Default.TestHelloRequest));
         Assert.IsFalse(hello.IsError);
         Assert.AreEqual(TestCancellationState.None, handler.CancellationState);
@@ -267,11 +295,20 @@ public sealed class RequestHandlerTests
 
     static TestRunRequest CreateRunRequest() =>
         new(
-            TestingProtocol.CurrentVersion,
             Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
             TestFrameworkId.NUnit,
             new TestAssemblyReference(@"C:\tests\Sample.dll"),
             TestSelection.FromTestIds(["id-1"]));
+
+    static ProtocolSender Sender(string version, int current, int min) => new(version, new ProtocolRange(current, min));
+
+    static Task<BridgeMessage> Hello(TestingRequestHandler handler, ProtocolSender sender) =>
+        Handle(handler,
+            "1",
+            TestingProtocol.Hello,
+            JsonSerializer.SerializeToElement(
+                new TestHelloRequest(TestFrameworkId.NUnit, sender),
+                TestingJsonContext.Default.TestHelloRequest));
 
     static Task<BridgeMessage> Handle(
         TestingRequestHandler handler,

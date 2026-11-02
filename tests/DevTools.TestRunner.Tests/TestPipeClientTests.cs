@@ -1,3 +1,4 @@
+using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Transport;
 using DevTools.TestRunner.Services;
@@ -24,7 +25,62 @@ public sealed class TestPipeClientTests
         Assert.Contains("wrong session", error.Message, StringComparison.Ordinal);
     }
 
+    [TestMethod]
+    public async Task HelloAsync_rejects_a_host_whose_range_is_above_the_runner()
+    {
+        await using var duplex = new DuplexMemoryStream();
+        using var server = new BridgePipeConnection(duplex.Server);
+        await using var client = TestPipeClient.ConnectForTesting(duplex.Client);
+
+        var newer = new ProtocolSender("9.0.0", new ProtocolRange(TestingProtocol.CurrentVersion + 1, TestingProtocol.CurrentVersion + 1));
+        server.MessageReceived += message => _ = ReplyWithHostSenderAsync(server, message, newer);
+        server.StartReadLoop();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.HelloAsync(TestFrameworkId.NUnit, TestContext.CancellationToken));
+
+        Assert.Contains("DevTool add-in 9.0.0 is not compatible with DevTools.TestRunner", error.Message, StringComparison.Ordinal);
+        Assert.EndsWith(TestingProtocol.UpdateProductMessage, error.Message, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task HelloAsync_tells_the_user_to_restart_a_host_without_a_sender()
+    {
+        await using var duplex = new DuplexMemoryStream();
+        using var server = new BridgePipeConnection(duplex.Server);
+        await using var client = TestPipeClient.ConnectForTesting(duplex.Client);
+
+        server.MessageReceived += message => _ = ReplyWithHostSenderAsync(server, message, sender: null);
+        server.StartReadLoop();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.HelloAsync(TestFrameworkId.NUnit, TestContext.CancellationToken));
+
+        Assert.AreEqual(
+            $"DevTool add-in is not compatible with DevTools.TestRunner {TestingProtocol.Sender.Version}. {TestingProtocol.RestartHostMessage}",
+            error.Message);
+    }
+
     public TestContext TestContext { get; set; } = null!;
+
+    private static async Task ReplyWithHostSenderAsync(BridgePipeConnection server, BridgeMessage message, ProtocolSender? sender)
+    {
+        if (message.Id is null)
+            return;
+
+        await server.WriteAsync(BridgeMessage.Response(
+                message.Id,
+                JsonSerializer.SerializeToElement(
+                    new TestHelloResponse(
+                        TestFrameworkId.NUnit,
+                        "Revit",
+                        "2026",
+                        1,
+                        false,
+                        sender),
+                    TestingJsonContext.Default.TestHelloResponse)))
+            .ConfigureAwait(false);
+    }
 
     private static async Task ReplyAsync(BridgePipeConnection server, BridgeMessage message)
     {
@@ -34,17 +90,11 @@ public sealed class TestPipeClientTests
         var other = BridgeMessage.Response(
             "other-id",
             JsonSerializer.SerializeToElement(
-                new TestHelloResponse(
-                    TestingProtocol.CurrentVersion,
-                    TestFrameworkId.NUnit,
-                    "Revit",
-                    "2026",
-                    1,
-                    false),
+                new TestHelloResponse(TestFrameworkId.NUnit, "Revit", "2026", 1, false, TestingProtocol.Sender),
                 TestingJsonContext.Default.TestHelloResponse));
         await server.WriteAsync(other).ConfigureAwait(false);
         await server.WriteAsync(
-            BridgeMessage.Error(message.Id, TestingProtocol.IncompatibleCode, "wrong session"))
+            BridgeMessage.Error(message.Id, IpcErrorCodes.InternalError, "wrong session"))
             .ConfigureAwait(false);
     }
 

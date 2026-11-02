@@ -422,7 +422,6 @@ public sealed class NetFrameworkGenerationTests
     }
 
     private static TestRunRequest CreateTestingRequest(Guid runId, string assemblyPath, string? filter) => new(
-        1,
         runId,
         TestFrameworkId.NUnit,
         new TestAssemblyReference(assemblyPath),

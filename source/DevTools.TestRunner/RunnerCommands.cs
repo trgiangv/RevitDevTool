@@ -39,14 +39,9 @@ public sealed class RunnerCommands(
             return RunnerExitCode.CliError;
         }
 
-        if (!TestingProtocol.IsCompatible(execute.ProtocolVersion)
-            || !TestingProtocol.IsCompatible(execute.Run.ProtocolVersion))
+        if (TestingProtocol.Mismatch(execute) is { } mismatch)
         {
-            var version = TestingProtocol.IsCompatible(execute.ProtocolVersion)
-                ? execute.Run.ProtocolVersion
-                : execute.ProtocolVersion;
-            await Console.Error.WriteLineAsync(TestingProtocol.CreateUnsupportedMessage(version))
-                .ConfigureAwait(false);
+            await Console.Error.WriteLineAsync(mismatch).ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
 

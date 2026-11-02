@@ -13,10 +13,9 @@ public sealed class ComposedCliTests : RunnerTests
     public async Task Run_missing_assembly_exits_before_host_contact()
     {
         var execute = new TestRunExecute(
-            TestingProtocol.CurrentVersion,
+            TestingProtocol.Sender,
             new TestHostOptions("Revit", "2026", false, 60, 180),
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(Path.Combine(Path.GetTempPath(), "missing-devtools-tests.dll")),

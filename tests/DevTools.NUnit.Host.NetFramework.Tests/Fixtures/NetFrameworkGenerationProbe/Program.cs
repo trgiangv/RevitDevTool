@@ -197,7 +197,6 @@ internal static class Program
     }
 
     private static TestRunRequest CreateRequest(Guid runId, string assemblyPath, string? filter) => new(
-        1,
         runId,
         TestFrameworkId.NUnit,
         new TestAssemblyReference(assemblyPath),

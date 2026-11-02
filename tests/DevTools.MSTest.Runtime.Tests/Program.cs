@@ -387,7 +387,6 @@ public static class Program
         using var session = new MSTestRuntimeSession(assembly, path, "cancel");
         var runId = Guid.NewGuid();
         var request = new TestRunRequest(
-            1,
             runId,
             TestFrameworkId.NUnit,
             new TestAssemblyReference(path),
@@ -439,7 +438,7 @@ public static class Program
     }
 
     private static TestRunRequest Request(string path, TestSelection selection) =>
-        new(1, Guid.NewGuid(), TestFrameworkId.NUnit, new TestAssemblyReference(path), selection);
+        new(Guid.NewGuid(), TestFrameworkId.NUnit, new TestAssemblyReference(path), selection);
 
     private static Assembly LoadFixture(string path)
     {

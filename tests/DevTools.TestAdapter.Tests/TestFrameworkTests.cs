@@ -170,7 +170,6 @@ public sealed class ProcessTestRunnerCliTests
     {
         var json = TestRunnerCli.SerializeExecute(
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(@"C:\tests\HostTests.dll"),
@@ -190,7 +189,6 @@ public sealed class ProcessTestRunnerCliTests
     {
         var json = TestRunnerCli.SerializeExecute(
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(@"C:\tests\HostTests.dll"),
@@ -205,7 +203,6 @@ public sealed class ProcessTestRunnerCliTests
     {
         var json = TestRunnerCli.SerializeExecute(
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 Guid.NewGuid(),
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(@"C:\tests\HostTests.dll"),
@@ -221,7 +218,6 @@ public sealed class ProcessTestRunnerCliTests
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
         var json = TestRunnerCli.SerializeExecute(
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 runId,
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(@"C:\tests\HostTests.dll"),

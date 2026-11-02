@@ -117,14 +117,12 @@ public sealed class NUnitRuntimeSessionOutputTests
     }
 
     private static TestRunRequest CreateRequest(string? filter) => new(
-        1,
         Guid.NewGuid(),
         TestFrameworkId.NUnit,
         new TestAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
         SelectionFromFilter(filter));
 
     private static TestRunRequest CreateFullSemanticsRequest(string? filter) => new(
-        1,
         Guid.NewGuid(),
         TestFrameworkId.NUnit,
         new TestAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),

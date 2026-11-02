@@ -120,7 +120,6 @@ public sealed class NUnitRuntimeSessionMtpTests
     {
         using var session = DedicatedTestFixturesHarness.CreateSession();
         var request = new TestRunRequest(
-            1,
             Guid.NewGuid(),
             TestFrameworkId.NUnit,
             new TestAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
@@ -166,7 +165,6 @@ public sealed class NUnitRuntimeSessionMtpTests
         foreach (var selection in selections)
         {
             var request = new TestRunRequest(
-                1,
                 Guid.NewGuid(),
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),
@@ -184,7 +182,6 @@ public sealed class NUnitRuntimeSessionMtpTests
         using var session = DedicatedTestFixturesHarness.CreateSession();
         var runId = Guid.NewGuid();
         var request = new TestRunRequest(
-            1,
             runId,
             TestFrameworkId.NUnit,
             new TestAssemblyReference(DedicatedTestFixturesHarness.AssemblyPath),
@@ -206,7 +203,6 @@ public sealed class NUnitRuntimeSessionMtpTests
     }
 
     private static TestRunRequest CreateRequest(string? filter) => new(
-        1,
         Guid.NewGuid(),
         TestFrameworkId.NUnit,
         new TestAssemblyReference(FixtureTestHarness.FixtureAssemblyPath),

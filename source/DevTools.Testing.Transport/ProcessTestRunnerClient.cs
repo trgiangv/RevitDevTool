@@ -27,18 +27,6 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         ArgumentNullException.ThrowIfNull(hostOptions);
         ArgumentNullException.ThrowIfNull(onEvent);
 
-        if (!TestingProtocol.IsCompatible(request.ProtocolVersion))
-        {
-            return new TestRunResponse(
-                request.RunId,
-                request.FrameworkId,
-                GenerationId: null,
-                Results: [],
-                CancellationState: TestCancellationState.None,
-                DiagnosticCode: TestingProtocol.IncompatibleCode,
-                DiagnosticMessage: TestingProtocol.CreateUnsupportedMessage(request.ProtocolVersion));
-        }
-
         var json = TestRunnerCli.SerializeExecute(request, hostOptions);
         return RunProcess(hostOptions, json, request.RunId, onEvent);
     }

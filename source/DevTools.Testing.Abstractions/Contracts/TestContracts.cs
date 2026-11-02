@@ -137,20 +137,17 @@ public sealed record TestDiscoveredTest(
 public sealed record TestRunRequest
 {
     public TestRunRequest(
-        int ProtocolVersion,
         Guid RunId,
         TestFrameworkId FrameworkId,
         TestAssemblyReference Assembly,
         TestSelection Selection)
     {
-        this.ProtocolVersion = ProtocolVersion;
         this.RunId = RunId;
         this.FrameworkId = FrameworkId;
         this.Assembly = Assembly;
         this.Selection = Selection;
     }
 
-    public int ProtocolVersion { get; init; }
     public Guid RunId { get; init; }
     public TestFrameworkId FrameworkId
     {
@@ -171,15 +168,6 @@ public sealed record TestRunRequest
     public TestAssemblyReference Assembly { get; init; }
     public TestSelection Selection { get; init; }
 }
-
-/// <summary>
-/// Adapter → TestRunner execute envelope. Nested <see cref="Run"/> is the
-/// same <see cref="TestRunRequest"/> the host receives on <c>testing/run</c>.
-/// </summary>
-public sealed record TestRunExecute(
-    int ProtocolVersion,
-    TestHostOptions Host,
-    TestRunRequest Run);
 
 public sealed record TestAttachment(
     string Path,

@@ -12,5 +12,6 @@
     <ItemGroup>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
+        <ProjectReference Include="..\DevTools.Utilities\DevTools.Utilities.csproj"/>
     </ItemGroup>
 </Project>

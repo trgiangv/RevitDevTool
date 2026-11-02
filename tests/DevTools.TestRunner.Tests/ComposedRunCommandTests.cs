@@ -26,10 +26,9 @@ public sealed class ComposedRunCommandTests : RunnerTests
         await using var provider = services.BuildServiceProvider();
         var runId = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
         var execute = new TestRunExecute(
-            TestingProtocol.CurrentVersion,
+            TestingProtocol.Sender,
             new TestHostOptions("Revit", "2026", false, 60, 180),
             new TestRunRequest(
-                TestingProtocol.CurrentVersion,
                 runId,
                 TestFrameworkId.NUnit,
                 new TestAssemblyReference(typeof(ComposedRunCommandTests).Assembly.Location),
@@ -132,7 +131,7 @@ public sealed class ComposedRunCommandTests : RunnerTests
                 await connection.WriteAsync(BridgeMessage.Response(
                     request.Id,
                     JsonSerializer.SerializeToElement(
-                        new TestHelloResponse(TestingProtocol.CurrentVersion, TestFrameworkId.NUnit, "Revit", "2026", 1234, false),
+                        new TestHelloResponse(TestFrameworkId.NUnit, "Revit", "2026", 1234, false, TestingProtocol.Sender),
                         TestingJsonContext.Default.TestHelloResponse)), _cancellation.Token);
                 return;
             }
