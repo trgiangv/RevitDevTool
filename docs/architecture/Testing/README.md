@@ -195,7 +195,7 @@ flowchart LR
 ```
 
 The adapter launches `DevTools.TestRunner run` and writes one
-`TestRunExecute` JSON document to stdin (`ProtocolVersion` + host
+`TestRunExecute` JSON document to stdin (`sender` + host
 options + `TestRunRequest`). Nested `RunId` is the same id the host
 receives on `testing/run`. TestRunner is an adapter/IDE process, not a
 human CLI.

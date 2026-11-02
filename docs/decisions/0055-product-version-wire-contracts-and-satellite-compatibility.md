@@ -4,7 +4,7 @@ Date: 2026-10-29
 
 ## Status
 
-**Proposed 2026-10-29.** Builds on the auto-update set
+**Proposed 2026-10-29, amended 2026-11-02 to match the implementation.** Builds on the auto-update set
 ([0046](0046-per-year-release-payloads-and-update-manifest.md)–[0054](0054-release-automation-channels-and-4-0-cutover.md)),
 [0043](0043-ipc-shared-infrastructure-separate-protocols.md) (the pipes), and
 [0009](0009-multi-host-pytest-client.md) (pytest client). It does not change
@@ -77,24 +77,32 @@ Compatibility is decided by contract ranges, not by comparing product
 versions. This avoids SemVer prerelease ordering rules (`beta.4 < beta.10`,
 `4.0.0-beta.9 < 4.0.0`) in a place where they would be easy to get wrong.
 
-### 2. Range negotiation replaces exact equality
+### 2. Range overlap replaces exact equality
 
 Each endpoint of a wire declares `Current` and `Min` with `Min ≤ Current`.
 
 ```
 compatible(A, B)  = A.Min <= B.Current  and  B.Min <= A.Current
-negotiated(A, B)  = min(A.Current, B.Current)
 ```
 
-Both ends speak `negotiated` for the whole session. If not compatible, the
-side whose `Current` is below the other's `Min` is **too old**; that side is
-the one to update (§4).
+If not compatible, the side whose `Current` is below the other's `Min` is
+**too old**; that side is the one to update (§4). A newer side that accepts an
+older one speaks the older shape; there is no negotiated number on the wire.
 
-**Legacy peers.** A peer that sends only `ProtocolVersion = p` is read as
-`Current = Min = p`. The responder answers `ProtocolVersion = negotiated`,
-which is `p` for such a peer. The shipped `RevitDevTool.TestAdapter 0.1.x`
-checks `hello.ProtocolVersion == 2` and so keeps working while the host's
-range includes 2.
+**One `sender` per message.** Every checked message carries the side that sent
+it, in one shape:
+
+```json
+"sender": { "version": "4.0.0-beta.5", "protocol": { "current": 1, "min": 1 } }
+```
+
+`ProtocolRange`, `ProtocolSender`, and `ProtocolPeer` (the name and update
+message of a peer) live in `DevTools.Ipc`, the JSON layer every checked wire
+already uses.
+
+**Shipped peers.** Messages from before this ADR carry `protocol_version` and
+no `sender`. They are read as too old and get the §4 sentence. The
+`protocol_version` field is gone; there is no legacy path.
 
 ### 3. When `Current` and `Min` change
 
@@ -112,178 +120,128 @@ Rules that follow:
 - **Prerelease series are exempt.** Between `4.0.0-beta.N` builds, `Min` may
   rise. The range check still runs, so a beta mismatch fails with the §4
   message, not a JSON error.
-- **`4.0.0` keeps `Min = 2` on the testing wire.** Existing `0.1.x` adapters
-  keep working. Raising `Min` is a deliberate act of a later major, because a
-  `0.1.x` adapter prints a message that cannot explain it.
+- **Every range starts at `1`** (testing, pytest, tunnel). Shipped peers are
+  rejected for the missing `sender`, so their old `protocol_version 2` does not
+  count; no major has changed a protocol yet.
 - **Unknown members are ignored and defaults are explicit** on every
   `BridgeMessage` payload and `TestRunExecute`/`TestRunnerStreamMessage`. This
   is what makes "new optional field" safe. Golden tests (below) enforce it.
 
-### 4. Handshake carries versions and produces a remedy
+### 4. Each side checks the other and names the update
 
-The testing `hello` (both legs) and `instance/info` carry, in addition to the
-range:
+- **Testing `hello`.** The request and the response each carry `sender`. The
+  host checks the runner; the runner checks the host. `testing/run` carries no
+  version: `hello` already decided.
+- **Adapter → runner.** `TestRunExecute` carries `sender`; the runner checks it
+  before it starts a host.
+- A missing `sender` reads as too old.
+- One call per message type answers the check:
+  `TestingProtocol.Mismatch(message)` and `PytestProtocol.Mismatch(request)`
+  return `null`, or one sentence: `<A> is not compatible with <B>. <update message
+  of the older side>`. The update messages are "Update RevitDevTool.TestAdapter to the
+  latest version.", "Update RevitDevTool to the latest version.", and "Restart
+  the host app to load the latest RevitDevTool."
+- `ProtocolIncompatible` carries the sentence as its message and no details.
 
-| Field | Meaning |
-|-------|---------|
-| `ProductVersion` | Informational version of the **add-in** (host side) or runner, with prerelease suffix, without build metadata |
-| `Protocols` | Map of wire name → `{ current, min }` for every wire that endpoint serves (`testing`, `pytest`) |
-| `ClientKind` / `ClientVersion` | `adapter`, `pytest`, `runner` plus the package version of the caller |
+The product version is shown in the sentence and logged. It is never compared.
 
-`ProtocolIncompatible` details carry both ranges, both product versions, and a
-`remedy` computed with §2:
+### 5. The NuGet package has its own version, bumped by hand
 
-| Condition | `remedy` | Message (shape) |
-|-----------|----------|-----------------|
-| client `Current < ` host `Min` | `update-client` | `RevitDevTool.TestAdapter 4.0.0 is too old for RevitDevTool 5.0.0. Update the package.` |
-| host `Current < ` client `Min` | `update-product` | `RevitDevTool.TestAdapter 5.0.0 needs RevitDevTool ≥ protocol 4; installed 4.0.0 speaks 3. Update in the Daemon Updates tab.` |
-| host reports `PendingVersion` payload | `restart-host` | `The RevitDevTool update is installed when Revit closes.` |
+A product release often changes neither the adapter nor the testing protocol.
+`RevitDevTool.TestAdapter` keeps its **own SemVer**, separate from the product
+version. Compatibility with the product is the range check (§2), not the
+package number.
 
-`ProductVersion` is displayed in the message and logged. It is not compared.
-
-### 5. The NuGet package has its own version and is published only when it changes
-
-A product release often changes neither the adapter nor the testing wire.
-`RevitDevTool.TestAdapter` therefore keeps its **own SemVer**, and a release
-publishes it only if its content changed. Compatibility with the product is
-the range check (§2), not the package number.
-
-- **What counts as a change.** The packed content: the adapter and its private
-  runtime closure, the framework MTP assemblies, the `build/` targets, and the
-  embedded `DevTools.Testing.Transport`, `Testing.Abstractions`, and `Ipc`
-  assemblies. A change to `Current` or `Min` of a wire the adapter speaks is a
-  change by definition.
-- **Release step.** `PublishRelease.yml` packs the adapter and compares a
-  content hash (over the files, not the nupkg bytes, which carry timestamps)
-  with the latest version on nuget.org.
-  - Same hash: nothing is pushed. The release notes say `TestAdapter: unchanged
-    (latest x.y.z)`.
-  - Different hash and a higher `<Version>`: pushed after the GitHub release.
-  - Different hash and the same `<Version>`: the release fails. A bump is
-    never forgotten, and an unchanged package is never re-pushed.
-- **Who bumps.** A person bumps `<Version>` in `DevTools.TestAdapter.csproj`
-  when a change touches the packed content (the same hand edit as today). The
-  gate turns the existing convention into a check. The package major rises
-  only when its `Min` rises (§3).
-- **Where compatibility is written.** The package embeds its `{ current, min }`
-  per wire. Each release's notes list the product's ranges next to the latest
-  adapter, so a user can read which pairs work. The error message (§4) carries
-  both versions.
-- `PublishTestAdapter.yml` stays as a manual dispatch for a re-push or a hotfix
-  and runs the same hash check.
-- The `0.x` line stays listed on nuget.org. It is valid by §3 while `Min = 2`
-  holds.
+A person decides when the adapter changed enough to publish, bumps `<Version>`
+in `DevTools.TestAdapter.csproj`, and runs `PublishTestAdapter.yml`. No release
+step decides it: whether a change matters to consumers is a judgment, and the
+packed assemblies are not byte-stable across builds (`+<sha>`, ILRepack), so
+nothing in the build can tell it reliably. The adapter is bumped once per
+coherent change, not per pin move; it stays `0.1.4` until this ADR is
+implemented. Shipped `0.1.x` adapters send no `sender`, so the release that
+ships this ADR needs a new adapter published with it.
 
 ### 6. Satellites outside this repo declare, they do not follow
 
 `RevitDevTool.PyTest` and `McpGateway` keep their own version and release
-train, because their source is not in this repo. They still join the range scheme:
+train. They join the range scheme:
 
-- **PyTest** declares `PYTEST_PROTOCOL = (current, min)` in `models.py` and
-  reads `Protocols["pytest"]` from `instance/info` before the first
-  `tests/run`. On mismatch it fails with the §4 message. `models.py` and
-  `PytestContracts.cs` carry the same protocol number, and a golden fixture
-  (below) is the check that they agree.
-- **McpGateway** `register` carries `daemonVersion` and a
-  `tunnel: { current, min }` range; the gateway answers with its own range and
-  closes the socket with a named close code when they do not intersect. The
-  Daemon surfaces the remedy in its window. This ADR defines the shape; the
-  gateway change is in its repo.
-- **MCP clients** stay on the spec date and SDK negotiation (0039). Not
-  touched.
+- **PyTest.** `PROTOCOL_CURRENT` and `PROTOCOL_MIN` in `constants.py` mirror
+  C# `PytestProtocol`. Right after it connects, the plugin reads
+  `protocols.pytest` from `instance/info` and ends the session with
+  `pytest.exit` and the §4 sentence on a mismatch. Each `tests/run` and
+  `ipytests/run` also sends `sender`, and the host checks it. A host without
+  `protocols`, and a request without `sender`, read as too old.
+- **`instance/info`** adds `productVersion` and `protocols`. It lists only
+  `pytest`: testing clients get their range from `hello`, and
+  `DevTools.Execution` does not reference the testing transport.
+- **McpGateway.** `register` carries `sender`. When the ranges do not overlap,
+  or `sender` is missing, the gateway
+  closes the socket with code `4001` and a one-sentence reason of at most 123
+  bytes. There is no `register_ack`: after `register` the socket carries
+  JSON-RPC to the Daemon's MCP server, so a gateway frame would land in that
+  stream. On `4001` the Daemon logs the reason, stops reconnecting, and shows
+  "Not compatible with the gateway". `/machines` reports each `product_version`
+  from `sender.version`.
+- **MCP clients** stay on the spec date and SDK negotiation (0039).
 
-### 7. One way to read the product version
+### 7. One product version per process
 
-A single accessor returns the informational version (suffix kept, `+metadata`
-removed) and replaces `GetName().Version` in `ShellViewModel`, `SentryTelemetry`,
-`TestHelloResponse`, and `InstanceInfo`. A release gate fails the build if any
-shipped binary reports a different informational version than the Daemon.
+`AppVersion.Current` in `DevTools.Utilities` (no dependencies) is the
+informational version without `+metadata` (`4.0.0-beta.4`). The build stamps
+one version on every assembly of a release; the adapter merges
+`DevTools.Utilities`, so there it is the package version. `DevTools.Telemetry`
+references only Hosting and Sentry (0018), so it reads the same attribute from
+its own assembly. The version feeds `sender`, `instance/info`, the Sentry release, and the titles
+the user sees: the Daemon window, the Revit dock pane and floating window, and
+the AutoCAD palette (`DevTools 4.0.0-beta.4`).
 
 ### 8. The lag window is closed, not only reported
 
-The Daemon does not apply a **major** version bump (Velopack swap) while a
-selected payload is pending or still on the old major, because that is the one
-case where §3 gives no guarantee. Inside a major, §2 makes the lag window safe
-and the user only sees the `restart-host` message if a range ever diverges.
-This is the mirror of `WaitsForDaemon` (0052) and amends 0049 when it lands.
+A Daemon update to a higher **major** waits while an add-in of that major is
+staged and waiting for its host to close (`UpdateEngine.HoldsMajorUpdate`),
+because two majors may not share a range. An add-in the new release does not ship,
+or one that failed to download, does not hold the Daemon. The user sees "Close the host apps to finish the update."
+The add-in updates when the host closes, and the next cycle swaps the Daemon. A
+minor update does not wait. This is the mirror of `RequiresNewerUpdater` (0052).
 
 ### 9. Proof, not convention
 
-- **Golden fixtures** (extend `TestingProtocolGoldenTests`): the frozen JSON of
-  every message of each shipped `Current` is committed. A change that fails a
-  frozen fixture is, by §3, a `Current` bump or a rejected change.
-- **Cross-version matrix in CI** (`Compile.yml` or its own workflow): current
-  host ↔ the latest published adapter nupkg, the previous stable adapter, and
-  the latest `revitdevtool_pytest`, over the in-process pipe. This is the test
-  that would have caught problems 1–2 above.
-- **Release gate**: `Min` may not rise on a non-major tag; a changed adapter
-  content hash needs a higher `<Version>`, and an unchanged hash pushes nothing
-  (§5).
+- **Shipped-peer fixtures** (`ShippedPeerTests`): the frozen messages of
+  TestAdapter `0.1.4` and TestRunner `4.0.0-beta.4` get the exact §4 sentence
+  that names their update.
+- **Cross-version runs** need a host app, which CI does not have. They are run
+  by hand before a release: the shipped runner and the shipped pytest plugin
+  against the new add-in.
 
-### 10. The newer side explains, and both directions notify the user
 
-A side can only explain what it knows, and a shipped older side cannot be
-taught afterward. So **the side with the higher `Current` carries the message**;
-the older side only has to avoid hiding the other's message.
+### 10. The newer side explains
 
-| Case | Detected by | Reaches the user through | User action |
-|------|-------------|--------------------------|-------------|
-| **Client older than host** (adapter, pytest) | Host, at `hello` (testing) or first `tests/run` (pytest) | 1. The host-authored `ErrorMessage`, shown by the client in its own output. 2. A Daemon toast and an Updates-tab row | Update the package |
-| **Client newer than host** | Client, from the host reply | The client's own output: a typed exception with the §4 message. Optional: start the Daemon Updates tab | Update RevitDevTool |
-| **Daemon older than gateway** | Gateway, at `register` | `register_ack` with `remedy`, then a named close code. The Daemon raises a toast | Update RevitDevTool |
-| **Gateway older than Daemon** | Daemon, from `register_ack` | A quiet "remote access unavailable" state in the Daemon window. No user action exists | None. The service owner deploys (§10.3) |
+A shipped older side cannot be taught afterward, so **the side that knows both
+ranges writes the sentence**, and the older side only prints it.
 
-What this relies on, read from code on 2026-10-31:
+| Case | Detected by | Reaches the user through |
+|------|-------------|--------------------------|
+| Client older than host (adapter, runner, pytest) | Host | The host sentence in the client output. Shipped clients already print it: `TestPipeClient` rethrows `ErrorMessage`, pytest `0.5.0` turns it into a collection error |
+| Client newer than host | Client | The client's own sentence |
+| Daemon and gateway | Gateway | Close code `4001`; the Daemon status and log |
 
-- **Old clients already show the host's text.** `TestPipeClient` rethrows
-  `response.ErrorMessage` for `ProtocolIncompatible` (`TestPipeClient.cs:231`).
-  `revitdevtool_pytest 0.5.0` turns any error response into a
-  `CollectionError(message=response.error_message)` (`bridge.py:211`), so it
-  prints in the pytest report. The legacy response also carries
-  `{ requested, expected }`, from which a new client can compute the remedy
-  when the host is the older side.
-- **The Daemon can already be pointed at its Updates tab.**
-  `IpcConstants.DaemonArgs.ShowUpdates` (`--show-updates`) opens it
-  (`App.xaml.cs:41`). There is no control-pipe command for it today.
+#### 10.1 The sentence is a contract
 
-#### 10.1 Contract for host-authored text
+The sentence is the only channel to clients that cannot change, so it stays
+plain text, one sentence plus one update message, and never asks the user to
+compare ranges.
 
-`ErrorMessage` of `ProtocolIncompatible` is a stable, plain-text contract
-because it is the only channel to clients that cannot be changed. It is one or
-two complete sentences that say which side is old, the two versions, and one
-action (package id, version needed or "the latest", the command to run). It
-never asks the user to compare ranges. Example:
+#### 10.2 Gateway deployment order
 
-`RevitDevTool 5.0.0 no longer accepts RevitDevTool.TestAdapter 0.1.4. Update the package: dotnet add package RevitDevTool.TestAdapter (latest 1.0.0).`
+The gateway is hosted, so its owner, not the user, updates it. Deploy the
+gateway before releasing a Daemon that raises the tunnel `current`. Keep the
+tunnel `min` unchanged for at least one product major.
 
-The structured `details` (ranges, versions, `remedy`) are additional, never
-required to read the message. The other shapes are in the §4 table.
-
-#### 10.2 What each party adds
-
-| Party | Adds |
-|-------|------|
-| **NuGet adapter** | Its package version and `{ current, min }` in `hello` (`ClientKind`, `ClientVersion`). A `TestProtocolIncompatibleException` with `Remedy`, both versions, both ranges, and a formatted message. For a legacy host reply (`requested`/`expected` only) it infers the host range as `[expected..expected]`. Opening the Daemon Updates tab is off by default and enabled by `DEVTOOLS_TESTING_OPEN_UPDATES=1`, so CI never shows a window |
-| **Pytest plugin** | `PYTEST_PROTOCOL`, `__version__` as `ClientVersion` in the first `instance/info` call. On a conflict `pytest.exit` with the §4 message, and a one-line fix (`uv add -U revitdevtool_pytest`). Works unchanged against 0.5.0 hosts through the host-authored text above |
-| **McpGateway** | `register` carries `daemonVersion` and `tunnel { current, min }`. The gateway answers `register_ack { gatewayVersion, tunnel { current, min }, remedy? }`. On no overlap it closes with a named code (for example `4001 incompatible`; today it closes with `1000` and a reason string). Message names are constants beside the existing `Msg` set. `docs/api.md` documents them |
-| **Host add-in** | Ranges and `ProductVersion` in `hello`/`instance/info`; the §10.1 text. On a rejected client, one `control/compat_conflict { clientKind, clientVersion, remedy }` to the Daemon (a one-line command with no reply, as in 0043) |
-| **Daemon** | `UpdateNoticeKind.ClientIncompatible` and `ProductIncompatible` in `IUpdateNotifier`. A toast with the same text as the client output. Dedupe by `(clientKind, clientVersion, productVersion)` once per day, like `_offeredVersion` for updates (0050). No toast without an interactive desktop session. An Updates-tab list of companion clients seen (kind, version, status) |
-| **Release pipeline** | `update-manifest.json` gains `clients: { testAdapter: { latest }, pytest: { latest } }`, read from nuget.org and PyPI at release time. It is shown in messages and never used to decide compatibility (§1) |
-
-#### 10.3 Gateway deployment order
-
-The gateway is hosted, so its owner, not the user, "updates" it; a gateway
-older than a shipped Daemon is a service defect. Deploy the gateway before
-releasing a Daemon that raises `tunnel.current`. Keep `tunnel.min` unchanged
-for at least one product major, and raise it only after §10.4 shows no Daemon
-older than the new `min`.
-
-#### 10.4 Telemetry
-
-Each conflict is a metric (`clientKind`, `clientVersion`, `productVersion`,
-`remedy`; nothing else beyond the 0045 rules), not an exception, so it opens no
-Sentry issue. It tells a maintainer when `Min` can rise. Review it against 0045
-before it ships.
+The release that adds `sender` is the reverse. A gateway from before it ignores
+`sender`, and a gateway with the check rejects every Daemon without one; those
+Daemons do not know `4001` and keep reconnecting. Release the Daemon first,
+let installed Daemons update, then deploy the gateway.
 
 ## Alternatives Considered
 
@@ -297,77 +255,52 @@ before it ships.
    product release.
 3. **Nupkg version equal to the product version (lockstep).** One number for
    the set, but it publishes unchanged packages and implies a change that did
-   not happen (§5).
+   not happen.
 4. **A compatibility matrix in `update-manifest.json`.** A fourth source of
    truth beside the ranges.
 5. **Feature flags per capability instead of integer ranges.** More precise,
    and more to maintain for six wires with one or two peers each. Reconsider
    only if a wire gets many independent optional features.
-6. **Make the runner pass through any protocol and let the host decide.** The
-   runner would still need to speak the adapter's leg. Keeping the negotiation
+6. **A Daemon notification for a rejected client** (a control command, a toast,
+   the latest client versions in `update-manifest.json`). The user already sees
+   the sentence in the client output when the run fails, so it repeats the same
+   message through more moving parts.
+7. **Make the runner pass through any protocol and let the host decide.** The
+   runner would still need to speak the adapter's leg. Keeping the check
    per leg (§2) keeps the runner honest about what it emits.
+8. **Keep reading `protocol_version` from shipped peers.** Keeps `0.1.x`
+   adapters working, but leaves two shapes and a negotiated number on every
+   message. One `sender` shape and one sentence for anything older is simpler.
 
 ## Consequences
 
 Positive:
 
 - Additive changes stop being breaking; within a stable major any adapter,
-  runner, host, and pytest interoperate (the `0.1.x` adapters keep working
-  through `4.x`).
-- A mismatch ends with an instruction ("update the package", "update
-  RevitDevTool", or "close Revit"), and logs hold both product versions.
-- A release that changes neither the adapter nor the testing wire publishes
-  nothing to NuGet. Pytest and the gateway get a gate at a small cost.
+  runner, host, and pytest that send `sender` interoperate.
+- A mismatch ends with one sentence that names the update to make.
+- A product release does not force an adapter release. Pytest and the gateway
+  get a check at a small cost.
 
 Tradeoffs:
 
-- Two numbers per wire and a rule for when each changes; a contributor must
-  classify a wire change (§3).
-- The package number does not say which product it fits. The ranges, the §4
-  message, and the release notes do.
-- The content hash must ignore timestamps and build metadata. NuGet versions
-  are immutable, so a bad push is fixed with the next version.
-- `Min = 2` through `4.x` keeps old shapes alive and tested until a later major,
-  and the §8 hold can delay a major Daemon update until Revit closes.
+- Two numbers per protocol and a rule for when each changes; a contributor must
+  classify a protocol change (§3).
+- The package number does not say which product it fits. The ranges and the
+  sentence do.
+- Bumping and publishing the adapter is a manual step that can be forgotten.
+- Shipped adapters (`0.1.x`), runners, pytest plugins (`0.5.x`), and Daemons
+  stop working with the release that ships this ADR; they get the sentence, not
+  a fallback.
+- The §8 hold can delay a major Daemon update until the hosts close.
 - Changes cross three repos (`RevitDevTool`, `RevitDevTool.PyTest`,
-  `McpGateway`); this repo can only define and test its side.
+  `McpGateway`).
 
 ## Follow-Up
 
-Not verified in this ADR (read before implementing):
-
-- Whether payloads use `JsonUnmappedMemberHandling.Disallow` or a source-gen
-  option that rejects unknown members. §3 depends on them being ignored.
-- What `TestingProtocolGoldenTests` covers today. (Checked 2026-10-31:
-  `revitdevtool_pytest 0.5.0` does not call `instance/info`.)
-- How Visual Studio Test Explorer and `dotnet test` render the adapter's
-  exception text, and whether the MTP exit code can carry the remedy.
-- Whether the host can send `control/compat_conflict` to a Daemon older than
-  4.0 (it cannot; the toast is then skipped and the client output still shows).
-- Whether `UpdateNotice` needs new fields for a client kind and version, or
-  `Message` is enough.
-- Whether the host `McpServer` fills `serverInfo.version`. If it does, the
-  Daemon ↔ host MCP wire can take its `ProductVersion` from `initialize`
-  without a new field.
-- The exact `Min` for the pytest and tunnel wires on the first release (this
-  ADR assumes `Current = Min = 1` at first, `testing` stays `2/2`).
-
-Implementation order, each step shippable alone:
-
-1. Single version accessor (§7); fix `ShellViewModel` and telemetry.
-2. Range type and negotiation in `DevTools.Testing.Transport`; `hello` and
-   `ProtocolIncompatible` fields (§2, §4). Keep `Current = 2, Min = 2` at first
-   so nothing changes on the wire.
-3. Golden fixtures and the cross-version CI matrix (§9).
-4. `instance/info` fields and the pytest gate (§4, §6).
-5. Content-hash gate for the adapter in `PublishRelease.yml` (§5).
-6. Tunnel `register` ranges, with the gateway repo (§6).
-7. Daemon hold on a major bump, with 0049 (§8).
-8. Notification path (§10): host text contract, `control/compat_conflict`,
-   Daemon toast kinds, the manifest `clients` block, and the adapter, pytest,
-   and gateway messages. Start with the host-authored text (§10.1) because it
-   reaches already shipped clients.
-
-Update `docs/architecture/Testing/README.md` (the NuGet row currently says
-"Independent of installer GitVersion") and `docs/agents/mcp-pytest-bridge.md`
-when steps 2–5 land.
+- Progress and verification: [the plan](../plans/active/2026-10-31-test-stack-bump-and-versioning-0055.md).
+- A cross-version CI run needs a runner with a host app.
+- No check stops `Min` from rising on a non-major tag.
+- Not verified: how Visual Studio Test Explorer shows the adapter's sentence.
+- Update `docs/architecture/Testing/README.md` (the NuGet row) and
+  `docs/agents/mcp-pytest-bridge.md` when this ADR is accepted.

@@ -107,19 +107,20 @@ Two defects found at HEAD, not caused by the bump:
 
 ## Phases 1–8 — ADR 0055
 
-Each step is additive on the wire (`Current = Min = 2` until a step raises it)
-and is reverted per step.
+Every range starts at `1` (testing, pytest, tunnel).
+The `sender` shape breaks shipped clients on purpose (0055 §2); they get the
+sentence.
 
 | # | Step | Where | Proof |
 |---|------|-------|-------|
-| 1 | One product-version accessor; fix `ShellViewModel` (`ToString(3)` drops `-beta.N`) and `SentryTelemetry` | `DevTools.Utilities/AppUtils.cs`, `ShellViewModel`, `SentryTelemetry` | Unit test: suffix round-trips; compile the Revit host |
-| 2 | `ProtocolRange` and negotiation; extend `testing/hello` and `ProtocolIncompatible` | `TestingProtocol.cs`, `ProcessTestRunnerClient`, `TestPipeClient`, `TestingRequestHandler` | Property test of `A.Min ≤ B.Current && B.Min ≤ A.Current`; a legacy peer reads as `Current=Min=p` |
+| 1 | One product-version accessor; fix `ShellViewModel` (`ToString(3)` drops `-beta.N`) and `SentryTelemetry` | `DevTools.Utilities/AppVersion.cs`, `ShellViewModel`, `SentryTelemetry` | Unit test: suffix round-trips; compile the Revit host |
+| 2 | `ProtocolRange` and one `sender` per message; `testing/hello` and `ProtocolIncompatible` | `DevTools.Ipc/ProtocolRange.cs`, `TestingProtocol.cs`, `TestPipeClient`, `TestingRequestHandler` | Property test of `A.Min ≤ B.Current && B.Min ≤ A.Current`; a message without `sender` gets the sentence |
 | 3 | Golden fixtures and cross-version CI matrix | `tests/DevTools.Testing.Transport.Tests`, `Compile.yml` | Last published adapter and runner against the HEAD host. First read what `TestingProtocolGoldenTests` covers |
-| 4 | `instance/info` fields and the pytest gate | `InstanceInfo.cs`, `PytestContracts`, PyTest `bridge.py` | `revitdevtool_pytest 0.5.0` still works; a new client rejects an out-of-range host |
-| 5 | Content-hash gate for the adapter | `PublishRelease.yml`, `PublishTestAdapter.yml` | Dry run: same hash pushes nothing; changed hash with the same `Version` fails |
-| 6 | Tunnel `register` ranges and `register_ack` | Daemon tunnel client, `McpGateway/src/{tunnel-relay,types}.ts`, `docs/api.md` | Gateway deployed first (0055 §10.3); gateway repo tests |
+| 4 | `instance/info` fields and the pytest gate | `InstanceInfo.cs`, `PytestContracts`, PyTest `bridge.py` | `revitdevtool_pytest 0.5.0` gets the sentence; a new client rejects an out-of-range host |
+| 5 | Adapter release stays manual | `DevTools.TestAdapter.csproj` `<Version>`, `PublishTestAdapter.yml` | — |
+| 6 | Tunnel `register` ranges and `register_ack` | Daemon tunnel client, `McpGateway/src/{tunnel-relay,types}.ts`, `docs/api.md` | Gateway deployed first (0055 §10.2); gateway repo tests |
 | 7 | Daemon holds a major swap while a selected payload is pending | `DevTools.Update/Engine/{UpdateEngine,DaemonUpdater}.cs` with 0049 | `DevTools.Update.Tests` |
-| 8 | Notification path: host text contract, `control/compat_conflict`, new `UpdateNoticeKind`s, manifest `clients`, client messages | `TestingRequestHandler`, `App.xaml.cs`, `IUpdateNotifier`, PyTest, gateway | Start with the host-authored `ErrorMessage` (reaches shipped clients: `TestPipeClient.cs:231`, `bridge.py:211`) |
+| 8 | One mismatch sentence in the client output; no Daemon notification | `TestingProtocol`, `PytestProtocol`, PyTest `protocol.py`, gateway `tunnel-protocol.ts` | Shipped clients print the host sentence (`TestPipeClient.cs:231`, `bridge.py:211`) |
 
 Pytest-specific work (single version source, `publish.yml` gates, one pytest
 range) is not in 0055 yet. Decide in step 4 whether it becomes a 0055
@@ -140,15 +141,15 @@ subsection or a plan in the PyTest repo.
 
 - [x] Phase 0: bump, upstream seam review, real engine run, docs
 - [ ] Bump and publish the adapter once, after 0055; release note
-- [ ] Accept or amend 0055
-- [ ] 1 Version accessor
-- [ ] 2 Range negotiation
-- [ ] 3 Golden fixtures and CI matrix
-- [ ] 4 `instance/info` and pytest gate
-- [ ] 5 Adapter content-hash gate
-- [ ] 6 Tunnel ranges (with McpGateway)
-- [ ] 7 Daemon major-swap hold
-- [ ] 8 Notification path
+- [x] Amend 0055 to match the implementation (accepting it is the owner's call)
+- [x] 1 Version accessor (uncommitted)
+- [x] 2 Ranges with one `sender` per message, with the host-authored text of step 8 (uncommitted)
+- [x] 3 Shipped-peer fixtures (`ShippedPeerTests`); a CI cross-version run needs a host app, so it stays manual
+- [x] 4 `instance/info` and pytest gate, in both repos (uncommitted)
+- [x] 5 Dropped: no automatic adapter gate; the adapter is bumped and published by hand (0055 §5)
+- [x] 6 Tunnel ranges, both repos (uncommitted; gateway not deployed)
+- [x] 7 Daemon major-update hold (`UpdateEngine.HoldsMajorUpdate`)
+- [x] 8 Mismatch sentence in the client output; the Daemon notification is dropped (0055 Alternatives 6)
 
 ## Decisions
 
@@ -158,6 +159,63 @@ subsection or a plan in the PyTest repo.
 - 2026-11-01: TUnit moved to 1.78.0 in the same Phase 0 after the seam review
   above.
 - 2026-10-31: Phase 0 lands before any 0055 step; it needs no wire change.
+- 2026-11-02: One `sender { version, protocol { current, min } }` per checked
+  message (testing `hello` both ways, `TestRunExecute`, pytest runs, tunnel
+  `register`) replaces `protocol_version`, `min_protocol_version`,
+  `client_version`, and `product_version`. `TestRunRequest` has no version;
+  `hello` decides. No legacy path: a message without `sender` is too old and
+  gets the sentence. `ProtocolRange`, `ProtocolSender`, and `ProtocolPeer` live
+  in `DevTools.Ipc` (already the JSON layer), so `DevTools.Utilities` keeps no
+  dependencies. `AppVersion` lives in `DevTools.Utilities`; Transport references
+  it and the adapter merges it (its linked `AppUtils.cs` is gone).
+  `DevTools.Telemetry` stays on Hosting and Sentry only (0018) and reads the
+  informational version of its own assembly.
+- 2026-11-01: `instance/info` lists only the `pytest` range. `DevTools.Execution`
+  does not reference the testing transport, and testing clients get the range
+  from `hello`.
+- 2026-11-01: `revitdevtool_pytest` checks the range right after it connects
+  and ends the session with `pytest.exit`. An `instance/info` failure does not
+  block the run; the host still checks the range on `tests/run`.
+- 2026-11-01: One version per process, `AppVersion.Current` (the
+  `DevTools.Utilities` assembly; merged into the adapter, so there it is the package version,
+  checked in the packed nupkg). Shown in the Daemon window, the Revit pane and
+  floating window, and the AutoCAD palette titles.
+- 2026-11-01: Each message type has `TestingProtocol.Mismatch(message)` /
+  `PytestProtocol.Mismatch(request)`, which returns one short sentence naming
+  both sides and the update message, or `null`. The machine `remedy` field of 0055
+  §4 is dropped until the Daemon notification (step 8) reads it.
+- 2026-11-01: Live check on Revit 2025 (`F:\Project1.rvt`, dev build `1.0.0`):
+  dock pane title `DevTools 1.0.0`; `instance/info` returns `productVersion`
+  and `protocols.pytest {1,1}`; NUnit sample passes through the new adapter and
+  dev runner, and through the shipped `4.0.0-beta.4` runner; pytest smoke 2/2
+  with the new plugin; a `tests/run` at protocol 3/min 2 gets the mismatch
+  sentence. The Daemon title is checked by `WpfDesktopTests`, not live.
+- 2026-11-01: Full run on Revit 2025 with the local runner and the packed
+  adapter, TUnit 1.78.0: NUnit 71 pass / 2 fail, TUnit 59 / 1, MSTest 35 / 0;
+  every failure is a sample that fails on purpose. pytest `tests/Revit` 44 pass /
+  21 fail, the same 21 with the PyTest code at HEAD (schedule tests need a model
+  with schedules; image export hits a pythonnet list conversion).
+  `tests/Revit_Ipy` 8 pass / 1 skip.
+- 2026-11-01: Step 6 uses a close code instead of `register_ack`. After
+  `register`, the Daemon hands the socket to the MCP server, so a gateway frame
+  would land in the JSON-RPC stream. The gateway closes with `4001` and a
+  one-sentence reason; the Daemon stops reconnecting and shows
+  "Not compatible with the gateway". `register` carries `sender`.
+- 2026-11-02: The automatic adapter gate is removed. Whether an adapter change
+  matters to consumers is a judgment, and the packed assemblies are not
+  byte-stable, so no build step can decide it. `PublishTestAdapter.yml` is back to
+  its manual form.
+- 2026-11-02: Test cleanup. The two long-failing tests had real causes:
+  `PackageConsumerTests` (net8 consumer) failed because its isolated, empty
+  package cache meets the first restore before the package props set
+  `OutputType=Exe`, so the net8 apphost is not downloaded. That consumer now
+  declares `OutputType=Exe` like the other consumers in the same test; samples
+  and docs stay as they were, since the package props cover real consumers.
+  `Run_ExecutesRunnerAndReturnsCollectionError_ForMissingNode` expected exit
+  code 1; pytest returns 4 for a missing node, and the runner returned no reason,
+  so `PytestRunner.py` now adds one. Removed the adapter's self-check of its own
+  request version and its test, and merged duplicate hello tests.
+- 2026-11-01: Unknown JSON members are ignored by `TestingJsonContext` (tested).
 
 ## Result
 

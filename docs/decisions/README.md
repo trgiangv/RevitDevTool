@@ -82,12 +82,13 @@ here.
   waits for green CI on the SHA, verifies signatures with the shipped public key,
   and `TestReleaseInstall.yml` installs the published `Setup.exe` on a clean runner.
   [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) is **Proposed**:
-  compatibility is decided by per-wire `Current`/`Min` ranges, not product
-  versions; `Min` rises only in a new major; the NuGet adapter keeps its own
-  version and the release publishes it only when its content hash changed;
-  pytest and the gateway declare ranges; the newer side explains the conflict
-  and both directions notify the user (host-authored error text, Daemon toast,
-  client output).
+  compatibility is decided by per-protocol `Current`/`Min` ranges, not product
+  versions; each checked message carries one `sender` (version and range),
+  and shipped clients without it get the update sentence; `Min` rises only in
+  a new major; the NuGet adapter keeps its own
+  version, bumped by hand when it changes; pytest and the
+  gateway declare ranges; a mismatch ends with one sentence that names the
+  update to make; a major Daemon update waits for the add-ins.
 
 ## Index
 
