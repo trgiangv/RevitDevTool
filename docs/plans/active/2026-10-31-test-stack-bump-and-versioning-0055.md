@@ -39,7 +39,7 @@ the docs and skills that state the pins.
 | `Microsoft.Testing.Platform`, `.MSBuild` | 2.5.1 | 2.5.2 | — |
 | TUnit (`TUnit`, `.Core`, `.Engine`) | 1.76.0 | 1.78.0 | — |
 | NUnit | 5.0.0 | 5.0.0 (already latest) | — |
-| `RevitDevTool.TestAdapter` | 0.1.4 | 0.1.4 | not bumped until the 0055 work is finished |
+| `RevitDevTool.TestAdapter` | 0.1.4 | 0.2.0 | bumped once, with the 0055 work |
 
 Assembly versions equal the package versions (read from the packages):
 `TUnit.Core` 1.78.0.0, MTP 2.5.2.0, MSTest framework/adapter/platform-services
@@ -100,10 +100,22 @@ Two defects found at HEAD, not caused by the bump:
 
 ### Remaining
 
-- The adapter stays `0.1.4` until the 0055 work is finished; then it is bumped and
-  published once.
 - Release note: hosts at or after this release require MSTest 4.5.2 and TUnit
   1.78.0 in the test project; a test project on the old pins fails at generation.
+
+### Release order
+
+1. Product release (Daemon, TestRunner, add-in payloads).
+2. Same day: publish `RevitDevTool.TestAdapter 0.2.0` (`PublishTestAdapter.yml`)
+   and `revitdevtool_pytest 0.6.0` (PyPI).
+3. Deploy McpGateway after most installed Daemons have updated (0055 §10.2).
+
+Release note: *RevitDevTool.TestAdapter 0.2.0 and revitdevtool_pytest 0.6.0
+need this RevitDevTool release or later; older adapters and pytest plugins get
+a message that names the update. After updating, restart Revit or AutoCAD
+before running tests.* A new adapter against an older RevitDevTool shows the
+old runner's "Testing protocol version 0 is not supported" (that runner has no
+`sender`); later releases name the update.
 
 ## Phases 1–8 — ADR 0055
 
@@ -140,7 +152,7 @@ subsection or a plan in the PyTest repo.
 ## Progress
 
 - [x] Phase 0: bump, upstream seam review, real engine run, docs
-- [ ] Bump and publish the adapter once, after 0055; release note
+- [x] Bump the adapter to `0.2.0` and pytest to `0.6.0` (publishing is the release step)
 - [x] Amend 0055 to match the implementation (accepting it is the owner's call)
 - [x] 1 Version accessor (uncommitted)
 - [x] 2 Ranges with one `sender` per message, with the host-authored text of step 8 (uncommitted)
@@ -216,6 +228,13 @@ subsection or a plan in the PyTest repo.
   so `PytestRunner.py` now adds one. Removed the adapter's self-check of its own
   request version and its test, and merged duplicate hello tests.
 - 2026-11-01: Unknown JSON members are ignored by `TestingJsonContext` (tested).
+- 2026-11-02: Live check of the sender model on Revit 2025 (`F:\Project1.rvt`,
+  dev build `1.0.0`): NUnit 2/2, TUnit 1/1, MSTest 1/1 through the new adapter,
+  runner, and add-in; pytest smoke 2/2 and `tests/Revit_Ipy` 8 pass / 1 skip.
+  Shipped peers get the sentence: pytest `0.5.0`, adapter `0.1.4` with the new
+  runner, and adapter `0.1.4` with runner `4.0.0-beta.4` against the new add-in.
+  The new adapter with runner `4.0.0-beta.4` gets that runner's own message; it
+  is accepted as the one-time cost of the break (no leg-1 check from the adapter).
 
 ## Result
 

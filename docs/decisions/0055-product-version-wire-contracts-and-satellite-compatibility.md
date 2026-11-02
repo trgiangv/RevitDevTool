@@ -157,9 +157,8 @@ in `DevTools.TestAdapter.csproj`, and runs `PublishTestAdapter.yml`. No release
 step decides it: whether a change matters to consumers is a judgment, and the
 packed assemblies are not byte-stable across builds (`+<sha>`, ILRepack), so
 nothing in the build can tell it reliably. The adapter is bumped once per
-coherent change, not per pin move; it stays `0.1.4` until this ADR is
-implemented. Shipped `0.1.x` adapters send no `sender`, so the release that
-ships this ADR needs a new adapter published with it.
+coherent change, not per pin move. Shipped `0.1.x` adapters send no `sender`,
+so `0.2.0` is published with the release that ships this ADR.
 
 ### 6. Satellites outside this repo declare, they do not follow
 
