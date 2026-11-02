@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-11-02
+
+### Added
+
+- Protocol check right after connecting. The plugin reads `protocols.pytest`
+  from `instance/info`. When the host range does not overlap the plugin range,
+  or the host reports no range, the session ends with exit code 4 and one
+  sentence that names the update to make:
+  `RevitDevTool <version> is not compatible with revitdevtool_pytest <version>.
+  Update RevitDevTool to the latest version.` (or `Update revitdevtool_pytest
+  to the latest version.` when the host is newer).
+- Each `tests/run` and `ipytests/run` request sends
+  `sender: { version, protocol: { current, min } }`. The host checks it and
+  answers a mismatch with the same kind of sentence.
+- `HostBridge.instance_info()`.
+
+### Changed
+
+- **Breaking:** needs the RevitDevTool release that reports
+  `protocols.pytest` in `instance/info`. With an older RevitDevTool, the
+  session stops with `Update RevitDevTool to the latest version.` An older
+  plugin against this RevitDevTool gets `Update revitdevtool_pytest to the
+  latest version.` as a collection error.
+- After updating RevitDevTool, restart Revit or AutoCAD before running tests,
+  so the host loads the new add-in.
+
 ## [0.5.0] - 2026-10-12
 
 ### Changed
