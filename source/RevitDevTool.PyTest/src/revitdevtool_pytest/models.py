@@ -10,6 +10,8 @@ import uuid
 from dataclasses import asdict, dataclass, field, fields
 from typing import Any, TypeVar
 
+from .protocol import SENDER
+
 _T = TypeVar("_T")
 
 
@@ -65,6 +67,7 @@ class RunRequest:
     test_root: str = ""
     nodeids: list[str] = field(default_factory=list)
     pytest_args: list[str] = field(default_factory=list)
+    sender: dict[str, Any] = field(default_factory=lambda: dict(SENDER))
 
     def to_params(self) -> dict[str, Any]:
         return asdict(self)

@@ -9,6 +9,11 @@ PLUGIN_NAME: Final = "RevitDevTool.PyTest"
 
 BRIDGE_METHOD_TESTS_RUN: Final = "tests/run"
 BRIDGE_METHOD_IPY_TESTS_RUN: Final = "ipytests/run"
+BRIDGE_METHOD_INSTANCE_INFO: Final = "instance/info"
+
+PROTOCOL_NAME: Final = "pytest"
+PROTOCOL_CURRENT: Final = 1
+PROTOCOL_MIN: Final = 1
 BRIDGE_MSG_TYPE_NOTIFICATION: Final = "notification"
 BRIDGE_NOTIFY_TEST_PROGRESS: Final = "notifications/tests/progress"
 

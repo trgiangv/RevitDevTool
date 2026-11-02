@@ -28,6 +28,7 @@ from .discovery import (
     wait_for_host_pipe,
 )
 from .hosts import find_executable
+from .protocol import explain_mismatch
 
 if TYPE_CHECKING:
     from .dialog_resolver import StartupDialogResolver
@@ -287,6 +288,7 @@ def connect_pipe(pipe_name: str) -> HostBridge:
         bridge = HostBridge(pipe_name)
         try:
             bridge.connect()
+            _exit_if_incompatible(bridge)
             return bridge
         except ConnectionError as exc:
             bridge.disconnect()
@@ -295,6 +297,15 @@ def connect_pipe(pipe_name: str) -> HostBridge:
                 log.debug("Pipe connect attempt %d failed, retrying...", attempt + 1)
                 time.sleep(CONNECT_RETRY_DELAY_S)
     raise last_exc  # type: ignore[misc]
+
+
+def _exit_if_incompatible(bridge: HostBridge) -> None:
+    mismatch = explain_mismatch(bridge.instance_info())
+    if mismatch is None:
+        return
+
+    bridge.disconnect()
+    pytest.exit(f"{PLUGIN_NAME}: {mismatch}", returncode=EXIT_CODE_CONFIG_ERROR)
 
 
 def _resolve_launch_version(

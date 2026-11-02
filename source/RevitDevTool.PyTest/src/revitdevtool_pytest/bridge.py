@@ -13,6 +13,7 @@ from collections.abc import Callable
 from typing import Any
 
 from .constants import (
+    BRIDGE_METHOD_INSTANCE_INFO,
     BRIDGE_METHOD_IPY_TESTS_RUN,
     BRIDGE_METHOD_TESTS_RUN,
     BRIDGE_MSG_TYPE_NOTIFICATION,
@@ -104,6 +105,10 @@ class HostBridge:
             return False
 
     # -- Public RPC methods -------------------------------------------------
+
+    def instance_info(self, timeout_s: float = DEFAULT_CONNECT_TIMEOUT_MS / 1000.0) -> dict[str, Any]:
+        response = self._request(BridgeRequest(method=BRIDGE_METHOD_INSTANCE_INFO), timeout_s)
+        return response.result
 
     def run_tests(
         self,
