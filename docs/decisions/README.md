@@ -81,7 +81,7 @@ here.
   next stable is 4.0.0 after `4.0.0-beta.N` on the `prerelease` channel; the release
   waits for green CI on the SHA, verifies signatures with the shipped public key,
   and `TestReleaseInstall.yml` installs the published `Setup.exe` on a clean runner.
-  [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) is **Proposed**:
+  [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) is **Accepted**:
   compatibility is decided by per-protocol `Current`/`Min` ranges, not product
   versions; each checked message carries one `sender` (version and range),
   and shipped clients without it get the update sentence; `Min` rises only in
@@ -145,4 +145,4 @@ here.
 | [0052](0052-updater-self-update.md) | Updater self-update through Velopack, plus crash-on-start rollback | Proposed |
 | [0053](0053-velopack-for-daemon-distribution.md) | Velopack owns Daemon install and self-update; year folders stay custom | Proposed |
 | [0054](0054-release-automation-channels-and-4-0-cutover.md) | Release automation, channels, and the 4.0.0 cutover | Proposed |
-| [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) | Product version, wire contract ranges, and satellite (NuGet, pytest, gateway) compatibility | Proposed |
+| [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) | Product version, wire contract ranges, and satellite (NuGet, pytest, gateway) compatibility | Accepted |

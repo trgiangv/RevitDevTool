@@ -5,11 +5,6 @@ Use `docs/templates/exec-plan.md`, keep progress and validation current, avoid
 parallel duplicate plans for the same workstream, and move a plan to
 `../completed/` only after the result is verified.
 
-## Test stack bump and versioning (active)
-
-MSTest 4.5.2 / MTP 2.5.2 / TUnit 1.78.0, then the 0055
-steps ([0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)):
-[2026-10-31-test-stack-bump-and-versioning-0055](2026-10-31-test-stack-bump-and-versioning-0055.md).
 
 ## Auto-update (active)
 
@@ -106,6 +101,13 @@ passed on Revit 2025 process 20936, including the image block and the
 
 NUnit MTP-only ([0022](../../decisions/0022-nunit-mtp-only-testing-stack.md)) is
 [completed](../completed/2026-08-18-nunit-mtp-only.md).
+
+## Test stack bump and versioning (closed)
+
+MSTest 4.5.2 / MTP 2.5.2 / TUnit 1.78.0, then the
+[0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)
+steps: [completed](../completed/2026-10-31-test-stack-bump-and-versioning-0055.md).
+Live check on Revit 2025, shipped peers included.
 
 ## IPC pipes (closed)
 

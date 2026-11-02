@@ -4,10 +4,11 @@ Date: 2026-10-31
 
 ## Status
 
-Active. Phase 0 (test stack bump) is implemented and verified except the items
-under "Not proven". Phases 1–8 follow
+Completed 2026-11-02. Phase 0 (test stack bump) is verified except the items
+under "Not proven". Phases 1–8 implement
 [0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md),
-which is **Proposed**; accept or amend it before Phase 2. Nothing is published.
+which is **Accepted**. Publishing the adapter and pytest, and deploying the
+gateway, are release steps (Release order below).
 
 ## Outcome
 
@@ -153,13 +154,13 @@ subsection or a plan in the PyTest repo.
 
 - [x] Phase 0: bump, upstream seam review, real engine run, docs
 - [x] Bump the adapter to `0.2.0` and pytest to `0.6.0` (publishing is the release step)
-- [x] Amend 0055 to match the implementation (accepting it is the owner's call)
-- [x] 1 Version accessor (uncommitted)
-- [x] 2 Ranges with one `sender` per message, with the host-authored text of step 8 (uncommitted)
+- [x] Amend and accept 0055
+- [x] 1 Version accessor
+- [x] 2 Ranges with one `sender` per message, with the host-authored text of step 8
 - [x] 3 Shipped-peer fixtures (`ShippedPeerTests`); a CI cross-version run needs a host app, so it stays manual
-- [x] 4 `instance/info` and pytest gate, in both repos (uncommitted)
+- [x] 4 `instance/info` and pytest gate, in both repos
 - [x] 5 Dropped: no automatic adapter gate; the adapter is bumped and published by hand (0055 §5)
-- [x] 6 Tunnel ranges, both repos (uncommitted; gateway not deployed)
+- [x] 6 Tunnel ranges, both repos (gateway not deployed)
 - [x] 7 Daemon major-update hold (`UpdateEngine.HoldsMajorUpdate`)
 - [x] 8 Mismatch sentence in the client output; the Daemon notification is dropped (0055 Alternatives 6)
 

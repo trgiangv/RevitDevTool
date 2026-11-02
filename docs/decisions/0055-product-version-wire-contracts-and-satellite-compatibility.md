@@ -4,7 +4,7 @@ Date: 2026-10-29
 
 ## Status
 
-**Proposed 2026-10-29, amended 2026-11-02 to match the implementation.** Builds on the auto-update set
+**Accepted 2026-11-02** (proposed 2026-10-29, amended to match the implementation). Builds on the auto-update set
 ([0046](0046-per-year-release-payloads-and-update-manifest.md)–[0054](0054-release-automation-channels-and-4-0-cutover.md)),
 [0043](0043-ipc-shared-infrastructure-separate-protocols.md) (the pipes), and
 [0009](0009-multi-host-pytest-client.md) (pytest client). It does not change
@@ -297,9 +297,8 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Progress and verification: [the plan](../plans/active/2026-10-31-test-stack-bump-and-versioning-0055.md).
+- Progress and verification: [the plan](../plans/completed/2026-10-31-test-stack-bump-and-versioning-0055.md).
 - A cross-version CI run needs a runner with a host app.
 - No check stops `Min` from rising on a non-major tag.
 - Not verified: how Visual Studio Test Explorer shows the adapter's sentence.
-- Update `docs/architecture/Testing/README.md` (the NuGet row) and
-  `docs/agents/mcp-pytest-bridge.md` when this ADR is accepted.
+

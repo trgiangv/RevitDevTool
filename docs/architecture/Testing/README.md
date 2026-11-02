@@ -56,7 +56,8 @@ Installer `build/Modules/*` does **not** pack or publish the test adapter.
 | NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.NUnit.MTP.dll` + `DevTools.TUnit.MTP.dll` + `DevTools.MSTest.MTP.dll` | `dotnet run --project build -- adapter` · `PublishTestAdapter.yml` |
 | Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers), NUnit, TUnit, and MSTest Runtime, `DevTools.TestRunner.exe` | `dotnet run --project build -- pack` · `build/Modules/*` · `PublishRelease.yml` |
 
-- Bump `<Version>` in `DevTools.TestAdapter.csproj` before `PublishTestAdapter.yml`. Independent of installer GitVersion.
+- Bump `<Version>` in `DevTools.TestAdapter.csproj` before `PublishTestAdapter.yml`. Independent of installer GitVersion: compatibility with the product is the testing protocol range, not the package number ([0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)).
+- `TestingProtocol` owns the range (`CurrentVersion`, `MinVersion`). `TestRunExecute` and `testing/hello` (both ways) carry `sender { version, protocol }`; the runner checks the adapter, the host checks the runner, the runner checks the host. A mismatch is one sentence that names the update. Bump the range by 0055 §3.
 - Only TestAdapter is packable. MTP, Runtime, Host, Abstractions, and Transport are `IsPackable=false`.
 - Changing Host/Runtime/Runner needs an installer deploy. Changing testhost discovery or launch options needs a TestAdapter pack.
 
