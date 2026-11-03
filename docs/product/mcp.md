@@ -36,6 +36,20 @@ In-host MCP runtime is shared across registered hosts.
   quotes inside that string must be doubled. Search and invocation locators
   remain inside the Daemon; neither `search_dynamic` nor `invoke_dynamic` is
   an external MCP tool.
+- `run_command(path, entry?)` runs an entry point the agent just built
+  ([0056](../decisions/0056-mcp-run-command.md)). A `.dll` path needs `entry`:
+  the Revit `IExternalCommand` full class name, or the AutoCAD `CommandMethod` as
+  `TypeFullName.MethodName`. For scripts, `path` is the working folder (the
+  script root) and `entry` is the entry script relative to it (`*script.py`,
+  `*_ipy_script.py`, `*script.fsx`, `*script.csx`). A single script file as
+  `path` is rejected, so sibling modules always resolve from the folder. The
+  match is exact and ordinal; a bad path or an unknown entry runs nothing and
+  suggests nothing. Each run loads the DLL fresh
+  in a new isolation session. The tool is destructive. It returns status,
+  message, exception, and elapsed time, with the same `[RUNTIME ERROR]` /
+  `[ROLLBACK]` tags as `execute_csharp_code`; command output goes to the log. A
+  command that opens a dialog, a window, or a pick prompt blocks the call until
+  a person answers it.
 - **MRTR is not a product workflow** ([0027](../decisions/0027-mcp-product-surface.md)).
   The working loop is one `code_mode` program: search, call, and return a projection.
   Execute error tags (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`) are retried inside that program. Destructive
@@ -82,6 +96,7 @@ In-host MCP runtime is shared across registered hosts.
 - Architecture: [`docs/architecture/MCP/README.md`](../architecture/MCP/README.md)
 - SDK gaps: [`docs/architecture/MCP/sdk-gap-matrix.md`](../architecture/MCP/sdk-gap-matrix.md)
 - Product surface: [`docs/decisions/0027-mcp-product-surface.md`](../decisions/0027-mcp-product-surface.md)
+- `run_command`: [`docs/decisions/0056-mcp-run-command.md`](../decisions/0056-mcp-run-command.md)
 - Host pipe (partially superseded): [`docs/decisions/0012-host-mcp-spec-engine.md`](../decisions/0012-host-mcp-spec-engine.md)
 - Boundaries (host wire): [`docs/architecture/MCP/platform-boundaries.md`](../architecture/MCP/platform-boundaries.md)
 - Workflows: [`docs/architecture/MCP/workflows.md`](../architecture/MCP/workflows.md)

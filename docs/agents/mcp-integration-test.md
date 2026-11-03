@@ -440,6 +440,25 @@ host with updated Catalog + register `McpToolsetDemo` before running this scenar
 **Contrast Scenario 10:** bulk delete stays warning-first (`dryRun` preview); do not expect
 `input_required` from `revit_delete_elements`.
 
+### Scenario 12: Run a built command (`run_command`)
+
+**Goal**: Verify `run_command` runs an exact DLL entry and runs nothing on an unknown entry
+([0056](../decisions/0056-mcp-run-command.md)).
+
+**Prerequisite**: Revit open (a document is optional for `BatchTraceLogCmd`). Build the sample
+for that year: `dotnet build samples/CSharpDemo -c Debug.Autodesk.<Year>`. The DLL is at
+`samples/CSharpDemo/bin/Debug.Autodesk.<Year>/CSharpDemo.dll`; pass its absolute path.
+
+```
+1. code_mode: SearchAsync("run_command") → InvokeAsync with
+   {path: "<...>\CSharpDemo.dll", entry: "CSharpDemo.BatchTraceLogCmd"}
+   Expected: Succeeded with elapsed ms; trace lines in the log pane and host log
+2. Same call with entry: "CSharpDemo.NoSuchCmd"
+   Expected: error naming path and entry, no suggestions, no new log output
+```
+
+For AutoCAD, use a command DLL you built and pass `entry` as `TypeFullName.MethodName`.
+
 ---
 
 ## Token Usage Measurement
@@ -550,7 +569,8 @@ Recommended sequence for a full integration pass:
 8. **Scenario 7** — Multi-host routing
 9. **Scenario 8** — External package install
 10. **Scenario 9** — Resource templates (requires toolset config + restart)
-11. **Repacked-host toolset identity** — register `McpToolsetDemo`, invoke `test_forwarder_calltoolresult`; `CallToolResult` must bridge without foreign-type errors (unit tests skip in xunit when `ModelContextProtocol.Core` is a sibling DLL — ADR 0019)
+11. **Scenario 12** — `run_command` exact entry and unknown entry
+12. **Repacked-host toolset identity** — register `McpToolsetDemo`, invoke `test_forwarder_calltoolresult`; `CallToolResult` must bridge without foreign-type errors (unit tests skip in xunit when `ModelContextProtocol.Core` is a sibling DLL — ADR 0019)
 
 ---
 

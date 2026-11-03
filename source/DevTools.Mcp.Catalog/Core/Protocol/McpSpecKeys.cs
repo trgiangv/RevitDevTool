@@ -170,6 +170,7 @@ public static class McpSpecKeys
         public const string ExecuteCSharp = "execute_csharp_code";
         public const string ExecutePython = "execute_python_code";
         public const string OpenDocument = "open_document";
+        public const string RunCommand = "run_command";
         public const string NavigateHistory = "navigate_history";
         public const string ViewScreenshot = "view_screenshot";
         public const string FindElements = "find_elements";

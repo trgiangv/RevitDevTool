@@ -192,6 +192,7 @@ Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, pixi, live `DevToolsMcp_
 ### Not in headless CI
 
 - **Live host** — `execute_*` success on a real Revit/AutoCAD thread — manual checklist (`mcp-integration-test.md`)
+- **`run_command` real run** — loading a built DLL and running its command in Revit/AutoCAD — `mcp-integration-test.md` Scenario 12
 - **Packaging & reload** — ILRepack year matrix, daemon hot-reload, shared-runtime layout (some packaging asserts, not full matrix)
 - **End-to-end toolset invoke** — catalog discovery → host dispatch → Revit API (no single CI test)
 
@@ -261,7 +262,7 @@ Measure Execution (and other net10 testhosts) with `--coverage`.
   via list JSON; pixi CLI (`--version` / `--help`) after `SetupPixiAsync`
 - **Execution guard** — `ExecutionGuardContext` ambient mode / rollback summary
 - **MCP dispatch** — `IMcpSource.InvokeToolAsync` / resource read; built-in and dotnet backends (`DevTools.Execution.Mcp.Tests`)
-- **Built-in tools (headless)** — `open_document` via mock `IDocumentBridge`; `execute_csharp_code` empty + compile-fail; `execute_python_code` empty (before pythonnet init, else Skip)
+- **Built-in tools (headless)** — `open_document` via mock `IDocumentBridge`; `execute_csharp_code` empty + compile-fail; `execute_python_code` empty (before pythonnet init, else Skip); `run_command` path/entry validation and dispatch via mocked runner (`RunCommandToolTests`)
 - **Orchestration load** — `ExecutionOrchestrator.LoadFromPathAsync` no-provider / covered-root skip / watch + `TreeChanged`
 - **C# directives** — `#r nuget` + `#load` graph (`CSharpDirectiveParser`)
 - **File watcher** — watch / debounce / unwatch / dispose (`FileWatcherService`)

@@ -11,9 +11,7 @@ public sealed class ScriptExecutionProvider(
     IScriptExecutionStrategyFactory strategyFactory,
     ILogger<ScriptExecutionProvider> logger) : IExecutionProvider
 {
-    private static readonly string[] WatchPatterns = ["*script.py", "*script.fsx", "*script.csx"];
-
-    private const string IronPythonEntryFileSuffix = "_ipy_script.py";
+    private static readonly string[] WatchPatterns = [.. ScriptEntryMode.EntryPatterns];
 
     private static readonly HashSet<string> SkippedScriptSubfolderNames = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -138,20 +136,11 @@ public sealed class ScriptExecutionProvider(
         };
     }
 
-    private static ExecutionMode GetExecutionMode(string scriptPath)
-    {
-        var extension = Path.GetExtension(scriptPath);
-
-        return extension.ToLowerInvariant() switch
-        {
-            ".py" when IsIronPythonEntryScript(scriptPath) => ExecutionMode.IronPython,
-            ".py" => ExecutionMode.Python,
-            ".fsx" => ExecutionMode.FSharp,
-            ".csx" => ExecutionMode.CSharp,
-            _ => throw new NotSupportedException(
-                $"Unsupported script extension '{extension}' for file '{scriptPath}'.")
-        };
-    }
+    private static ExecutionMode GetExecutionMode(string scriptPath) =>
+        ScriptEntryMode.TryResolve(scriptPath, out var mode)
+            ? mode
+            : throw new NotSupportedException(
+                $"Unsupported script extension '{Path.GetExtension(scriptPath)}' for file '{scriptPath}'.");
 
     private static string GetScheme(ExecutionMode mode) =>
         mode switch
@@ -179,9 +168,6 @@ public sealed class ScriptExecutionProvider(
 
     private static bool IsSkippedScriptSubfolder(string folderName) =>
         !string.IsNullOrWhiteSpace(folderName) && SkippedScriptSubfolderNames.Contains(folderName);
-
-    private static bool IsIronPythonEntryScript(string filePath) =>
-        filePath.EndsWith(IronPythonEntryFileSuffix, StringComparison.OrdinalIgnoreCase);
 
     private static bool HasAnyEntryScript(string rootPath) =>
         WatchPatterns.Any(pattern =>

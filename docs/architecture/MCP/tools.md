@@ -86,6 +86,7 @@ Registered via DI in host projects and exposed on the host SDK server
 |------|------|-------------|
 | `execute_csharp_code` | Revit + AutoCAD | Compile and run C# with host API context |
 | `execute_python_code` | Revit + AutoCAD | Execute inline Python with PEP 723 deps |
+| `run_command` | Revit + AutoCAD | Run a built DLL entry, or an entry script inside a script folder, by exact path and name in a new isolation session ([0056](../../decisions/0056-mcp-run-command.md)) |
 | `open_document` | Revit + AutoCAD | Open model file via `IDocumentBridge` |
 | `navigate_history` | Revit + AutoCAD | Undo/redo navigation |
 | `view_screenshot` | Revit + AutoCAD | Active viewport PNG (1280 px / 1280×720) as MCP image content |
