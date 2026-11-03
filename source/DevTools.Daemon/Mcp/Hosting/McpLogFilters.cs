@@ -6,7 +6,7 @@ using ZLogger;
 
 namespace DevTools.Daemon.Mcp.Hosting;
 
-/// <summary>SDK request filters that log <c>tools/call</c> and <c>resources/read</c> at the protocol boundary.</summary>
+/// <summary>SDK filters that log <c>tools/call</c>, <c>resources/read</c>, and <c>tasks/*</c> at the protocol boundary.</summary>
 internal static class McpLogFilters
 {
     public static void Attach(McpServerOptions options, ILoggerFactory loggerFactory)
@@ -15,6 +15,7 @@ internal static class McpLogFilters
             CreateCallToolFilter(loggerFactory.CreateLogger("DevTools.Mcp.ToolCall")));
         options.Filters.Request.ReadResourceFilters.Add(
             CreateReadResourceFilter(loggerFactory.CreateLogger("DevTools.Mcp.ResourceRead")));
+        new McpTaskLogFilter(loggerFactory.CreateLogger("DevTools.Mcp.Tasks")).Attach(options);
     }
 
     private static McpRequestFilter<CallToolRequestParams, CallToolResult> CreateCallToolFilter(ILogger logger) =>

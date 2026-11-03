@@ -10,9 +10,9 @@ namespace DevTools.Daemon.Mcp;
 /// Selects MCP task execution mode for Daemon tools.
 /// Only <see cref="McpTaskExecutionMode.Synchronous"/> and
 /// <see cref="McpTaskExecutionMode.Optional"/> are returned.
-/// <see cref="McpTaskExecutionMode.Required"/> is unused: clients in use do not
-/// advertise <c>io.modelcontextprotocol/tasks</c>, so Required fails the call
-/// with <c>-32021</c> before the tool runs.
+/// <see cref="McpTaskExecutionMode.Required"/> is unused: a client that does not
+/// advertise <c>io.modelcontextprotocol/tasks</c> fails the call with
+/// <c>-32021</c> before the tool runs.
 /// <c>launch_host</c> and <c>code_mode</c> are Optional.
 /// The other infrastructure tools are synchronous.
 /// </summary>

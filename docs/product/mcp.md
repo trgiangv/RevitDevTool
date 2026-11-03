@@ -77,7 +77,8 @@ In-host MCP runtime is shared across registered hosts.
   process catalog; the external daemon collections stay unchanged.
 - Call observability is always-on at protocol boundaries. Host in-process MCP logs
   via `McpLogFilters` and `ILogger`; daemon `code_mode` and infrastructure tools
-  log the same shape. Arguments and results are protocol JSON via SDK
+  log the same shape. The daemon also logs each `tasks/*` request and its
+  response or error with the request id, `taskId`, and status. Arguments and results are protocol JSON via SDK
   `McpJsonUtilities` (not hash-only summaries). Binary blocks are described by
   type / mime / length — never base64 `Data` on monitor lines.
 - MCP Tasks extension (`io.modelcontextprotocol/tasks`) is advertised on the daemon SDK
