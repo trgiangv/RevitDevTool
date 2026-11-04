@@ -4,7 +4,9 @@ Date: 2026-11-03
 
 ## Status
 
-Accepted (landed 2026-11-03). Plan:
+Accepted (landed 2026-11-03), partly superseded by
+[0057](0057-command-execution-shared-by-panel-and-mcp.md): the tool now runs
+through the Command Execution tree and also adds, removes, and lists roots. Plan:
 [`2026-11-03-mcp-run-command`](../plans/completed/2026-11-03-mcp-run-command.md).
 Extends [0027](0027-mcp-product-surface.md): one host built-in tool joins
 the catalog behind `code_mode`. Daemon `tools/list` and search

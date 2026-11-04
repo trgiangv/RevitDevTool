@@ -2,7 +2,6 @@ using DevTools.AssemblyIsolation;
 using DevTools.Execution.Diagnostics;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
-using DevTools.Settings;
 using DevTools.UI.Theme;
 using Microsoft.Extensions.Logging;
 using System.Collections.ObjectModel;
@@ -17,7 +16,6 @@ namespace DevTools.Presentation.ViewModels;
 public partial class CommandViewModel : ObservableObject, IBusyViewModel
 {
     private readonly IExecutionOrchestrator _orchestrator;
-    private readonly ISettingsService _settingsService;
     private readonly MemoryViewModel _memoryViewModel;
     private readonly DebugEndpoints? _endpoints;
     private readonly ILogger<CommandViewModel> _logger;
@@ -64,18 +62,15 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
 
     public CommandViewModel(
         IExecutionOrchestrator orchestrator,
-        ISettingsService settingsService,
         MemoryViewModel memoryViewModel,
         ILogger<CommandViewModel> logger,
         DebugEndpoints? endpoints = null)
     {
         _orchestrator = orchestrator;
-        _settingsService = settingsService;
         _memoryViewModel = memoryViewModel;
         _logger = logger;
         _endpoints = endpoints;
         _orchestrator.TreeChanged += OnTreeChanged;
-        _orchestrator.RootRemoved += OnRootRemoved;
         _orchestrator.ExecutionProgressChanged += OnExecutionProgressChanged;
         ThemeManager.Current.ActualApplicationThemeChanged += OnThemeChanged;
 
@@ -103,12 +98,9 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
 
     public async Task LoadSavedPathsAsync()
     {
-        var config = _settingsService.ExecutionConfig;
-        var allPaths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths).ToList();
         await this.WhileBusy("Loading saved paths...", async () =>
         {
-            var failedPaths = await _orchestrator.LoadSavedPathsAsync(allPaths);
-            foreach (var path in failedPaths) RemovePathFromSettings(path);
+            await _orchestrator.LoadSavedPathsAsync();
             UpdateTreeRoot();
         });
     }
@@ -122,12 +114,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
             Title = "Select Assembly DLL"
         };
         if (dialog.ShowDialog() != true) return;
-        await this.WhileBusy("Loading assembly...", async () =>
-        {
-            await _orchestrator.LoadFromPathAsync(dialog.FileName);
-            SavePathToSettings(dialog.FileName, ContainerMode.Assembly);
-            UpdateTreeRoot();
-        });
+        await this.WhileBusy("Loading assembly...", () => _orchestrator.LoadFromPathAsync(dialog.FileName));
     }
 
     [RelayCommand]
@@ -135,34 +122,15 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     {
         var selectedFolder = AppUtils.SelectFolder("Select Scripts Folder");
         if (string.IsNullOrEmpty(selectedFolder)) return;
-        await this.WhileBusy("Loading scripts...", async () =>
-        {
-            await _orchestrator.LoadFromPathAsync(selectedFolder);
-            SavePathToSettings(selectedFolder, ContainerMode.Script);
-            UpdateTreeRoot();
-        });
+        await this.WhileBusy("Loading scripts...", () => _orchestrator.LoadFromPathAsync(selectedFolder));
     }
 
-    private async Task LoadFromPathAsync(string? path)
+    private async Task LoadFromPathAsync(string path)
     {
-        if (path is null || path.Length == 0) return;
         if (File.Exists(path) && path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-        {
-            await this.WhileBusy("Loading assembly...", async () =>
-            {
-                await _orchestrator.LoadFromPathAsync(path);
-                SavePathToSettings(path, ContainerMode.Assembly);
-            });
-        }
+            await this.WhileBusy("Loading assembly...", () => _orchestrator.LoadFromPathAsync(path));
         else if (Directory.Exists(path))
-        {
-            await this.WhileBusy("Loading scripts...", async () =>
-            {
-                await _orchestrator.LoadFromPathAsync(path);
-                SavePathToSettings(path, ContainerMode.Script);
-            });
-        }
-        UpdateTreeRoot();
+            await this.WhileBusy("Loading scripts...", () => _orchestrator.LoadFromPathAsync(path));
     }
 
     [RelayCommand(CanExecute = nameof(CanExecute))]
@@ -213,20 +181,14 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     [RelayCommand]
     private async Task ReloadAsync()
     {
-        await this.WhileBusy("Reloading nodes...", async () =>
-        {
-            await _orchestrator.ReloadAsync();
-            UpdateTreeRoot();
-        });
+        await this.WhileBusy("Reloading nodes...", () => _orchestrator.ReloadAsync());
     }
 
     [RelayCommand(CanExecute = nameof(CanRemove))]
     private void Remove()
     {
         if (SelectedNode == null) return;
-        if (SelectedNode is ExecutionNodeRoot rootNode) RemovePathFromSettings(rootNode.RootPath);
         var nextSelection = _orchestrator.RemoveNode(SelectedNode);
-        UpdateTreeRoot();
         if (nextSelection == null) return;
         SelectedNode = nextSelection;
         nextSelection.IsSelected = true;
@@ -235,12 +197,7 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     private bool CanRemove() => SelectedNode != null;
 
     [RelayCommand]
-    private void Clear()
-    {
-        _orchestrator.ClearAll();
-        ClearAllPathsFromSettings();
-        UpdateTreeRoot();
-    }
+    private void Clear() => _orchestrator.ClearAll();
 
     [RelayCommand] private void ExpandAll() => ExecutionTreeViewHelper.ExpandAll(_treeRoot);
     [RelayCommand] private void CollapseAll() => ExecutionTreeViewHelper.CollapseAll(_treeRoot);
@@ -271,12 +228,6 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
     };
 
     private void OnTreeChanged(object? sender, EventArgs e) => UpdateTreeRoot();
-
-    private void OnRootRemoved(object? sender, RootRemovedEventArgs e)
-    {
-        RemovePathFromSettings(e.RootPath);
-        if (e.IsRename) SavePathToSettings(e.NewPath!, ContainerMode.Script);
-    }
 
     private void OnThemeChanged(object? sender, EventArgs e)
     {
@@ -333,32 +284,6 @@ public partial class CommandViewModel : ObservableObject, IBusyViewModel
 
     partial void OnIsBusyChanged(bool value) => ExecuteCommand.NotifyCanExecuteChanged();
     partial void OnSearchTextChanged(string value) => RefreshFilteredItems();
-
-    private void SavePathToSettings(string path, ContainerMode container)
-    {
-        var config = _settingsService.ExecutionConfig;
-        var list = container switch
-        {
-            ContainerMode.Assembly => config.DotnetAssemblyPaths,
-            ContainerMode.Script => config.ScriptFolderPaths,
-            _ => throw new ArgumentOutOfRangeException(nameof(container))
-        };
-        if (!list.Contains(path, StringComparer.OrdinalIgnoreCase)) list.Add(path);
-    }
-
-    private void RemovePathFromSettings(string path)
-    {
-        var config = _settingsService.ExecutionConfig;
-        config.DotnetAssemblyPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
-        config.ScriptFolderPaths.RemoveAll(p => p.Equals(path, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private void ClearAllPathsFromSettings()
-    {
-        var config = _settingsService.ExecutionConfig;
-        config.DotnetAssemblyPaths.Clear();
-        config.ScriptFolderPaths.Clear();
-    }
 
     private async Task WhileBusy(string message, ExecutionMode? executionMode, Func<Task> action)
     {

@@ -442,8 +442,9 @@ host with updated Catalog + register `McpToolsetDemo` before running this scenar
 
 ### Scenario 12: Run a built command (`run_command`)
 
-**Goal**: Verify `run_command` runs an exact DLL entry and runs nothing on an unknown entry
-([0056](../decisions/0056-mcp-run-command.md)).
+**Goal**: Verify `run_command` runs an exact DLL entry through the Command Execution tree,
+runs nothing on an unknown entry, and lists and removes roots
+([0056](../decisions/0056-mcp-run-command.md), [0057](../decisions/0057-command-execution-shared-by-panel-and-mcp.md)).
 
 **Prerequisite**: Revit open (a document is optional for `BatchTraceLogCmd`). Build the sample
 for that year: `dotnet build samples/CSharpDemo -c Debug.Autodesk.<Year>`. The DLL is at
@@ -452,9 +453,18 @@ for that year: `dotnet build samples/CSharpDemo -c Debug.Autodesk.<Year>`. The D
 ```
 1. code_mode: SearchAsync("run_command") → InvokeAsync with
    {path: "<...>\CSharpDemo.dll", entry: "CSharpDemo.BatchTraceLogCmd"}
-   Expected: Succeeded with elapsed ms; trace lines in the log pane and host log
+   Expected: Succeeded with elapsed ms; trace lines in the log pane and host log;
+   CSharpDemo.dll appears once in the Command Execution tree, BatchTraceLogCmd marked last executed
 2. Same call with entry: "CSharpDemo.NoSuchCmd"
    Expected: error naming path and entry, no suggestions, no new log output
+3. {action: "list"}
+   Expected: roots include CSharpDemo.dll with CSharpDemo.BatchTraceLogCmd among its entries
+4. {action: "remove", path: "<...>\CSharpDemo.dll"}
+   Expected: Removed; the root leaves the panel and is not reloaded after a host restart
+5. {action: "add", path: "<folder with hello_ipy_script.py>"} twice
+   Expected: Added, then AlreadyLoaded; then {path: <folder>, entry: "hello_ipy_script.py"} Succeeded
+6. Create later_ipy_script.py in that folder, then run it without add
+   Expected: Succeeded (file watcher or reload-on-miss picks it up)
 ```
 
 For AutoCAD, use a command DLL you built and pass `entry` as `TypeFullName.MethodName`.

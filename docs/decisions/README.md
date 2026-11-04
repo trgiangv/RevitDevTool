@@ -152,4 +152,5 @@ here.
 | [0053](0053-velopack-for-daemon-distribution.md) | Velopack owns Daemon install and self-update; year folders stay custom | Proposed |
 | [0054](0054-release-automation-channels-and-4-0-cutover.md) | Release automation, channels, and the 4.0.0 cutover | Proposed |
 | [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) | Product version, wire contract ranges, and satellite (NuGet, pytest, gateway) compatibility | Accepted |
-| [0056](0056-mcp-run-command.md) | MCP `run_command` runs a built entry point by exact path and name | Accepted — landed 2026-11-03 |
+| [0056](0056-mcp-run-command.md) | MCP `run_command` runs a built entry point by exact path and name | Accepted — landed 2026-11-03; partly superseded by 0057 |
+| [0057](0057-command-execution-shared-by-panel-and-mcp.md) | Command Execution has one owner, shared by the panel and `run_command` | Accepted |

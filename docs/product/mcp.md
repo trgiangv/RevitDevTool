@@ -36,20 +36,26 @@ In-host MCP runtime is shared across registered hosts.
   quotes inside that string must be doubled. Search and invocation locators
   remain inside the Daemon; neither `search_dynamic` nor `invoke_dynamic` is
   an external MCP tool.
-- `run_command(path, entry?)` runs an entry point the agent just built
-  ([0056](../decisions/0056-mcp-run-command.md)). A `.dll` path needs `entry`:
-  the Revit `IExternalCommand` full class name, or the AutoCAD `CommandMethod` as
-  `TypeFullName.MethodName`. For scripts, `path` is the working folder (the
-  script root) and `entry` is the entry script relative to it (`*script.py`,
-  `*_ipy_script.py`, `*script.fsx`, `*script.csx`). A single script file as
-  `path` is rejected, so sibling modules always resolve from the folder. The
-  match is exact and ordinal; a bad path or an unknown entry runs nothing and
-  suggests nothing. Each run loads the DLL fresh
-  in a new isolation session. The tool is destructive. It returns status,
-  message, exception, and elapsed time, with the same `[RUNTIME ERROR]` /
-  `[ROLLBACK]` tags as `execute_csharp_code`; command output goes to the log. A
-  command that opens a dialog, a window, or a pick prompt blocks the call until
-  a person answers it.
+- `run_command(action?, path?, entry?)` drives the Command Execution tree, the
+  same tree and saved paths as the panel ([0056](../decisions/0056-mcp-run-command.md),
+  [0057](../decisions/0057-command-execution-shared-by-panel-and-mcp.md)).
+  `path` is a built `.dll` or a script folder (the script root); a single
+  script file is rejected so sibling modules resolve from the folder.
+  - `run` (default) needs `entry`: the Revit `IExternalCommand` full class
+    name, the AutoCAD `CommandMethod` as `TypeFullName.MethodName`, or the
+    entry script relative to the folder (`*script.py`, `*_ipy_script.py`,
+    `*script.fsx`, `*script.csx`). The path is loaded into the tree if needed;
+    on a miss the root is reloaded once. The match is exact and ordinal; an
+    unknown entry runs nothing and suggests nothing. The run is a click: the
+    DLL loads fresh in a new isolation session and the node becomes "last
+    executed". It returns status, message, exception, and elapsed time, with
+    the same `[RUNTIME ERROR]` / `[ROLLBACK]` tags as `execute_csharp_code`;
+    command output goes to the log.
+  - `add` loads `path` (`Added`, `AlreadyLoaded`, or `CoveredByRoot`), `remove`
+    drops the root at exactly `path`, `list` returns roots with entries in the
+    form `run` accepts (all roots, or the one holding `path`).
+  - The tool is destructive. A command that opens a dialog, a window, or a pick
+    prompt blocks the call until a person answers it.
 - **MRTR is not a product workflow** ([0027](../decisions/0027-mcp-product-surface.md)).
   The working loop is one `code_mode` program: search, call, and return a projection.
   Execute error tags (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`) are retried inside that program. Destructive

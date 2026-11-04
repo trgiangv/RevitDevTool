@@ -128,6 +128,7 @@ public sealed class ExecutionOrchestratorTests
             serviceProvider.Object,
             state,
             watcher,
+            ExecutionTestHelpers.CreateSettings(),
             Mock.Of<ITelemetry>(),
             NullLogger<ExecutionOrchestrator>.Instance);
     }

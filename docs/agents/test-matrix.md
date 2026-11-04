@@ -262,7 +262,7 @@ Measure Execution (and other net10 testhosts) with `--coverage`.
   via list JSON; pixi CLI (`--version` / `--help`) after `SetupPixiAsync`
 - **Execution guard** — `ExecutionGuardContext` ambient mode / rollback summary
 - **MCP dispatch** — `IMcpSource.InvokeToolAsync` / resource read; built-in and dotnet backends (`DevTools.Execution.Mcp.Tests`)
-- **Built-in tools (headless)** — `open_document` via mock `IDocumentBridge`; `execute_csharp_code` empty + compile-fail; `execute_python_code` empty (before pythonnet init, else Skip); `run_command` path/entry validation and dispatch via mocked runner (`RunCommandToolTests`)
+- **Built-in tools (headless)** — `open_document` via mock `IDocumentBridge`; `execute_csharp_code` empty + compile-fail; `execute_python_code` empty (before pythonnet init, else Skip); `run_command` run/add/remove/list through a real orchestrator and providers with mocked discovery, runner, and script strategies (`RunCommandToolTests`)
 - **Orchestration load** — `ExecutionOrchestrator.LoadFromPathAsync` no-provider / covered-root skip / watch + `TreeChanged`
 - **C# directives** — `#r nuget` + `#load` graph (`CSharpDirectiveParser`)
 - **File watcher** — watch / debounce / unwatch / dispose (`FileWatcherService`)

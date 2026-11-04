@@ -3,14 +3,13 @@ using System.Windows.Threading;
 namespace DevTools.UI;
 
 /// <summary>
-/// Helper class for dispatching actions to the Autodesk UI thread.
-/// Uses ComponentManager.Ribbon.Dispatcher which is the official Autodesk UI dispatcher.
+/// Helper class for dispatching actions to the UI thread.
 /// </summary>
 [PublicAPI]
 public static class HostUiHelper
 {
     /// <summary>
-    /// Gets the Autodesk UI thread dispatcher.
+    /// Gets the main UI thread dispatcher.
     /// </summary>
     public static Dispatcher? HostDispatcher { get; private set; }
 
@@ -26,7 +25,7 @@ public static class HostUiHelper
     }
 
     /// <summary>
-    /// Executes an action on the Autodesk main UI thread.
+    /// Executes an action on the main UI thread.
     /// If already on the UI thread, executes synchronously.
     /// </summary>
     public static void RunOnMainThread(Action action)
@@ -40,9 +39,23 @@ public static class HostUiHelper
     }
 
     /// <summary>
+    /// Runs an async action on the main UI thread and completes when it does.
+    /// If already on the UI thread, runs inline.
+    /// </summary>
+    public static Task<T> RunOnMainThreadAsync<T>(Func<Task<T>> action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        if (HostDispatcher is null || HostDispatcher.CheckAccess())
+            return action();
+
+        return HostDispatcher.InvokeAsync(action).Task.Unwrap();
+    }
+
+    /// <summary>
     /// Observe a host <c>StartAsync</c> task that must already be complete.
     /// The synchronous prefix ran on the caller. An incomplete task means a
-    /// hosted service awaited; blocking here deadlocks the CAD dispatcher,
+    /// hosted service awaited; blocking here deadlocks the host dispatcher,
     /// and dropping the task hides the fault.
     /// </summary>
     public static void RequireCompleted(Task start)

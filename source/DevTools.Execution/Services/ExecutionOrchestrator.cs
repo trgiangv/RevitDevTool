@@ -1,5 +1,7 @@
+using DevTools.Execution.Abstractions;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
+using DevTools.Settings;
 using DevTools.Telemetry;
 using DevTools.UI;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,49 +12,84 @@ using ZLogger;
 namespace DevTools.Execution.Services;
 
 /// <summary>
-/// Main orchestrator that coordinates all services and providers.
+/// Owns Command Execution: the root tree, its saved paths, file watching, and execution.
 /// </summary>
 public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ITreeStateManager _stateManager;
     private readonly IFileWatcherService _fileWatcher;
+    private readonly ISettingsService _settingsService;
     private readonly ITelemetry _telemetry;
     private readonly ILogger<ExecutionOrchestrator> _logger;
     private readonly ObservableCollection<ExecutionNodeBase> _treeRoot = [];
     private readonly SemaphoreSlim _reloadGate = new(1, 1);
     private ExecutionNodeBase? _lastExecutedNode;
+    private Task? _savedPathsLoad;
 
     public IEnumerable<ExecutionNodeBase> TreeRoot => _treeRoot;
 
     public event EventHandler? TreeChanged;
-    public event EventHandler<RootRemovedEventArgs>? RootRemoved;
     public event EventHandler<ExecutionProgressEventArgs>? ExecutionProgressChanged;
 
     public ExecutionOrchestrator(
         IServiceProvider serviceProvider,
         ITreeStateManager stateManager,
         IFileWatcherService fileWatcher,
+        ISettingsService settingsService,
         ITelemetry telemetry,
         ILogger<ExecutionOrchestrator> logger)
     {
         _serviceProvider = serviceProvider;
         _stateManager = stateManager;
         _fileWatcher = fileWatcher;
+        _settingsService = settingsService;
         _telemetry = telemetry;
         _logger = logger;
         _fileWatcher.FileChanged += OnFileChanged;
     }
 
+    public Task LoadSavedPathsAsync(CancellationToken cancellationToken = default) =>
+        _savedPathsLoad ??= LoadSavedPathsCoreAsync();
+
+    private async Task LoadSavedPathsCoreAsync()
+    {
+        var config = _settingsService.ExecutionConfig;
+        var paths = config.DotnetAssemblyPaths.Concat(config.ScriptFolderPaths).ToList();
+        foreach (var path in paths)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                ForgetPath(path);
+                continue;
+            }
+
+            try
+            {
+                await LoadFromPathAsync(path).ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                _logger.ZLogError($"{ex.Message}");
+            }
+
+            if (FindRoot(path) is null)
+                ForgetPath(path);
+        }
+    }
+
     public async Task LoadFromPathAsync(string path, CancellationToken cancellationToken = default)
     {
-        if (IsPathUnderExistingRoot(path))
+        if (string.IsNullOrWhiteSpace(path))
+            throw new ArgumentException("Path must not be empty.", nameof(path));
+
+        var existing = FindRoot(path);
+        if (existing is not null)
         {
-            _logger.ZLogWarning($"Path '{path}' is already covered by an existing parent root. Skipping.");
+            if (!AreSamePath(existing.RootPath, path))
+                _logger.ZLogWarning($"Path '{path}' is already covered by root '{existing.RootPath}'. Skipping.");
             return;
         }
-
-        AbsorbChildRoots(path);
 
         var providers = _serviceProvider.GetServices<IExecutionProvider>()
             .Where(p => p.CanHandle(path))
@@ -61,6 +98,8 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
         if (providers.Count == 0)
             throw new ArgumentException($"No suitable provider found or path not exist: {path}");
+
+        AbsorbChildRoots(path);
 
         var state = _stateManager.CaptureState(_treeRoot);
         var allWatchPatterns = new List<string>();
@@ -76,50 +115,16 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
         _stateManager.RestoreState(_treeRoot, state, autoExpandNew: true);
         _fileWatcher.Watch(path, allWatchPatterns);
+
+        if (FindRoot(path) is { } root)
+            RememberPath(root.RootPath, root.ContainerMode);
+
         TreeChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task<IReadOnlyList<string>> LoadSavedPathsAsync(IEnumerable<string> paths, CancellationToken cancellationToken = default)
-    {
-        var failed = new List<string>();
-        foreach (var path in paths)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                failed.Add(path);
-                continue;
-            }
-
-            try
-            {
-                await LoadFromPathAsync(path, cancellationToken).ConfigureAwait(true);
-            }
-            catch (Exception ex)
-            {
-                _logger.ZLogError($"{ex.Message}");
-                failed.Add(path);
-                continue;
-            }
-
-            if (!HasRootForConfiguredPath(path))
-            {
-                failed.Add(path);
-            }
-        }
-
-        return failed;
-    }
-
-    private bool HasRootForConfiguredPath(string path)
-    {
-        foreach (var root in _treeRoot.OfType<ExecutionNodeRoot>())
-        {
-            if (AreSamePath(path, root.RootPath))
-                return true;
-        }
-
-        return false;
-    }
+    public ExecutionNodeRoot? FindRoot(string path) =>
+        _treeRoot.OfType<ExecutionNodeRoot>().FirstOrDefault(root => AreSamePath(root.RootPath, path))
+        ?? _treeRoot.OfType<ExecutionNodeRoot>().FirstOrDefault(root => CoversAsScriptRoot(root, path));
 
     public async Task ReloadAsync(CancellationToken cancellationToken = default)
     {
@@ -134,11 +139,9 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             var currentRoots = _treeRoot.OfType<ExecutionNodeRoot>().ToList();
             var reloadedRoots = new List<ExecutionNodeRoot>(currentRoots.Count);
 
-            var removedRootPaths = new List<string>();
-
             foreach (var currentRoot in currentRoots)
             {
-                var result = await ReloadRootAsync(currentRoot, cancellationToken).ConfigureAwait(true);
+                var result = await DiscoverRootAsync(currentRoot, cancellationToken).ConfigureAwait(true);
 
                 if (result.RootNode != null)
                 {
@@ -153,7 +156,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
                 else
                 {
                     _fileWatcher.Unwatch(currentRoot.RootPath);
-                    removedRootPaths.Add(currentRoot.RootPath);
+                    ForgetPath(currentRoot.RootPath);
                 }
             }
 
@@ -161,11 +164,22 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             _stateManager.RestoreState(_treeRoot, state, autoExpandNew: false);
             _lastExecutedNode = TreeNodeOperations.PromoteLatestNewExecutable(_treeRoot, previousExecutableIds) ?? _lastExecutedNode;
             TreeChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _reloadGate.Release();
+        }
+    }
 
-            foreach (var rootPath in removedRootPaths)
-            {
-                RootRemoved?.Invoke(this, new RootRemovedEventArgs(rootPath));
-            }
+    public async Task<ExecutionNodeRoot?> ReloadRootAsync(ExecutionNodeRoot root, CancellationToken cancellationToken = default)
+    {
+        await _reloadGate.WaitAsync(cancellationToken).ConfigureAwait(true);
+        try
+        {
+            if (await ReloadRootCoreAsync(root, cancellationToken).ConfigureAwait(true))
+                TreeChanged?.Invoke(this, EventArgs.Empty);
+
+            return _treeRoot.OfType<ExecutionNodeRoot>().FirstOrDefault(r => AreSamePath(r.RootPath, root.RootPath));
         }
         finally
         {
@@ -175,7 +189,11 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     public ExecutionNodeBase? RemoveNode(ExecutionNodeBase node)
     {
-        var result = TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, node, rootPath => _fileWatcher.Unwatch(rootPath));
+        var result = TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, node, rootPath =>
+        {
+            _fileWatcher.Unwatch(rootPath);
+            ForgetPath(rootPath);
+        });
         if (result.Removed)
             TreeChanged?.Invoke(this, EventArgs.Empty);
 
@@ -186,6 +204,9 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     {
         _treeRoot.Clear();
         _fileWatcher.UnwatchAll();
+        var config = _settingsService.ExecutionConfig;
+        config.DotnetAssemblyPaths.Clear();
+        config.ScriptFolderPaths.Clear();
         TreeChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -236,32 +257,46 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         _reloadGate.Dispose();
     }
 
-    private bool IsPathUnderExistingRoot(string path)
+    private void RememberPath(string path, ContainerMode container)
     {
-        return _treeRoot
-            .OfType<ExecutionNodeRoot>()
-            .Any(root => IsPathUnderRoot(path, root.RootPath));
+        var config = _settingsService.ExecutionConfig;
+        var list = container == ContainerMode.Assembly ? config.DotnetAssemblyPaths : config.ScriptFolderPaths;
+        if (!list.Contains(path, StringComparer.OrdinalIgnoreCase))
+            list.Add(path);
     }
+
+    private void ForgetPath(string path)
+    {
+        var config = _settingsService.ExecutionConfig;
+        config.DotnetAssemblyPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        config.ScriptFolderPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+    }
+
 
     private void AbsorbChildRoots(string path)
     {
+        if (!Directory.Exists(path))
+            return;
+
         var childRoots = _treeRoot
             .OfType<ExecutionNodeRoot>()
-            .Where(root => IsPathUnderRoot(root.RootPath, path) && !AreSamePath(root.RootPath, path))
+            .Where(root => root.ContainerMode == ContainerMode.Script
+                           && !AreSamePath(root.RootPath, path)
+                           && IsPathUnderRoot(root.RootPath, path))
             .ToList();
 
         foreach (var child in childRoots)
         {
             _fileWatcher.Unwatch(child.RootPath);
             TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, child, _ => { });
-            RootRemoved?.Invoke(this, new RootRemovedEventArgs(child.RootPath));
+            ForgetPath(child.RootPath);
         }
     }
 
     private static string GetProviderKind(ExecutionNodeBase node) =>
         node is ExecutionNode executable ? executable.ExecutionMode.ToString() : "unknown";
 
-    private async Task<ReloadRootResult> ReloadRootAsync(ExecutionNodeRoot currentExecutionNodeRoot, CancellationToken cancellationToken)
+    private async Task<ReloadRootResult> DiscoverRootAsync(ExecutionNodeRoot currentExecutionNodeRoot, CancellationToken cancellationToken)
     {
         try
         {
@@ -335,13 +370,13 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
         if (e.ChangeType == FileChangeType.Deleted)
         {
-            var deletedRoot = FindRootByPath(e.Path);
+            var deletedRoot = FindExactRoot(e.Path);
             if (deletedRoot == null)
                 return false;
 
             _fileWatcher.Unwatch(deletedRoot.RootPath);
             TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, deletedRoot, _ => { });
-            RootRemoved?.Invoke(this, new RootRemovedEventArgs(deletedRoot.RootPath));
+            ForgetPath(deletedRoot.RootPath);
             return true;
         }
 
@@ -350,7 +385,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
     private async Task<bool> HandleRootRenameAsync(string oldPath, string newPath)
     {
-        var renamedRoot = FindRootByPath(oldPath);
+        var renamedRoot = FindExactRoot(oldPath);
 
         if (renamedRoot == null)
         {
@@ -359,44 +394,43 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
         _fileWatcher.Unwatch(oldPath);
         TreeNodeOperations.RemoveNodeWithCascade(_treeRoot, renamedRoot, _ => { });
+        ForgetPath(oldPath);
 
         var provider = _serviceProvider.GetKeyedService<IExecutionProvider>(renamedRoot.ContainerMode);
         if (provider == null)
         {
             _logger.ZLogWarning($"No keyed provider found for container mode '{renamedRoot.ContainerMode}'");
-            RootRemoved?.Invoke(this, new RootRemovedEventArgs(oldPath));
             return true;
         }
 
-        var loadedRenamedRoot = false;
         if (provider.ValidatePath(newPath))
         {
             var discoveredNodes = await provider.DiscoverAsync(newPath).ConfigureAwait(true);
             var incomingNodes = discoveredNodes as ExecutionNodeBase[] ?? discoveredNodes.ToArray();
             TreeNodeOperations.MergeNodesIntoTree(_treeRoot, incomingNodes);
             _fileWatcher.Watch(newPath, provider.GetWatchPatterns());
-            loadedRenamedRoot = incomingNodes.OfType<ExecutionNodeRoot>().Any();
+            if (incomingNodes.OfType<ExecutionNodeRoot>().Any())
+                RememberPath(newPath, renamedRoot.ContainerMode);
         }
 
-        RootRemoved?.Invoke(this, loadedRenamedRoot
-            ? new RootRemovedEventArgs(oldPath, newPath)
-            : new RootRemovedEventArgs(oldPath));
         return true;
     }
 
-    private async Task<bool> ReloadAffectedRootAsync(FileChangedEventArgs e)
+    private Task<bool> ReloadAffectedRootAsync(FileChangedEventArgs e)
     {
         var affectedRoot = FindAffectedRoot(e);
-        if (affectedRoot == null)
-            return false;
+        return affectedRoot == null
+            ? Task.FromResult(false)
+            : ReloadRootCoreAsync(affectedRoot, CancellationToken.None);
+    }
 
+    private async Task<bool> ReloadRootCoreAsync(ExecutionNodeRoot root, CancellationToken cancellationToken)
+    {
         var state = _stateManager.CaptureState(_treeRoot);
         var previousExecutableIds = TreeNodeOperations.CollectExecutableIdSet(_treeRoot);
 
-        var result = await ReloadRootAsync(affectedRoot, CancellationToken.None).ConfigureAwait(true);
-        var changed = ApplyRootReloadResult(affectedRoot, result);
-
-        if (!changed)
+        var result = await DiscoverRootAsync(root, cancellationToken).ConfigureAwait(true);
+        if (!ApplyRootReloadResult(root, result))
             return false;
 
         _stateManager.RestoreState(_treeRoot, state, autoExpandNew: false);
@@ -421,7 +455,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
         _fileWatcher.Unwatch(currentExecutionNodeRoot.RootPath);
         _treeRoot.RemoveAt(rootIndex);
-        RootRemoved?.Invoke(this, new RootRemovedEventArgs(currentExecutionNodeRoot.RootPath));
+        ForgetPath(currentExecutionNodeRoot.RootPath);
         return true;
     }
 
@@ -434,12 +468,17 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
                 !string.IsNullOrEmpty(e.OldPath) && IsPathUnderRoot(e.OldPath!, root.RootPath));
     }
 
-    private ExecutionNodeRoot? FindRootByPath(string path)
+    private ExecutionNodeRoot? FindExactRoot(string path)
     {
         return _treeRoot
             .OfType<ExecutionNodeRoot>()
             .FirstOrDefault(root => AreSamePath(root.RootPath, path));
     }
+
+    private static bool CoversAsScriptRoot(ExecutionNodeRoot root, string path) =>
+        root.ContainerMode == ContainerMode.Script
+        && !path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+        && IsPathUnderRoot(path, root.RootPath);
 
     private static bool IsPathUnderRoot(string path, string rootPath)
     {

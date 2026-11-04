@@ -2,9 +2,8 @@ using DevTools.Execution.Models;
 namespace DevTools.Execution.Interfaces;
 
 /// <summary>
-/// Main orchestrator that coordinates all services and providers.
-/// This is the main entry point for the ViewModel.
-/// Follows Single Responsibility Principle: coordination only.
+/// Owns Command Execution: the root tree, its saved paths, file watching, and execution.
+/// The panel and the <c>run_command</c> MCP tool both drive it. Call it on the host UI thread.
 /// </summary>
 public interface IExecutionOrchestrator
 {
@@ -19,69 +18,52 @@ public interface IExecutionOrchestrator
     event EventHandler? TreeChanged;
 
     /// <summary>
-    /// Event raised when a root node is automatically removed (e.g. folder renamed/deleted externally).
-    /// Consumers should use this to clean up persisted settings.
-    /// </summary>
-    event EventHandler<RootRemovedEventArgs>? RootRemoved;
-
-    /// <summary>
     /// Event raised to publish execution progress text for UI feedback.
     /// </summary>
     event EventHandler<ExecutionProgressEventArgs>? ExecutionProgressChanged;
 
     /// <summary>
-    /// Load nodes from a path using the current provider
+    /// Load the saved paths once. Paths that no longer load are dropped from the settings.
+    /// Later calls return without loading again.
     /// </summary>
-    /// <param name="path">Path to load from</param>
-    /// <param name="cancellationToken">Cancellation token</param>
+    Task LoadSavedPathsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Load an assembly or a script folder as a root and save its path.
+    /// A path that is already a root, or that a loaded script root covers, is left as is.
+    /// </summary>
     Task LoadFromPathAsync(string path, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Load all saved paths from settings (called on startup).
-    /// Provider detection is automatic via CanHandle.
+    /// The root at <paramref name="path"/>, or the script root that contains it.
     /// </summary>
-    /// <param name="paths">List of paths to load (assemblies, folders, etc.)</param>
-    /// <param name="cancellationToken">Cancellation token</param>
-    Task<IReadOnlyList<string>> LoadSavedPathsAsync(IEnumerable<string> paths, CancellationToken cancellationToken = default);
+    ExecutionNodeRoot? FindRoot(string path);
 
     /// <summary>
-    /// Reload the current tree (e.g., after file changes)
+    /// Reload every root.
     /// </summary>
-    /// <param name="cancellationToken">Cancellation token</param>
     Task ReloadAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Remove a node from the tree.
-    /// Returns the next sibling for selection, or null if none available.
-    /// Also removes empty parent containers automatically.
+    /// Reload one root from disk. Returns the root now in the tree, or null when it no longer loads.
     /// </summary>
-    /// <param name="node">Node to remove</param>
-    /// <returns>Next sibling to select, or null</returns>
+    Task<ExecutionNodeRoot?> ReloadRootAsync(ExecutionNodeRoot root, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Remove a node, and its parents that become empty. A removed root's path is dropped from the settings.
+    /// Returns the next sibling for selection, or null.
+    /// </summary>
     ExecutionNodeBase? RemoveNode(ExecutionNodeBase node);
 
     /// <summary>
-    /// Clear all nodes
+    /// Remove every root and its saved path.
     /// </summary>
     void ClearAll();
 
     /// <summary>
-    /// Execute a node
+    /// Execute a node and mark it as the last executed one.
     /// </summary>
-    /// <param name="node">Node to execute</param>
-    /// <param name="cancellationToken">Cancellation token</param>
     Task<ExecutionResult> ExecuteAsync(ExecutionNodeBase node, CancellationToken cancellationToken = default);
-}
-
-public sealed class RootRemovedEventArgs(string rootPath, string? newPath = null) : EventArgs
-{
-    public string RootPath { get; } = rootPath;
-
-    /// <summary>
-    /// New path after rename (null if deleted)
-    /// </summary>
-    public string? NewPath { get; } = newPath;
-
-    public bool IsRename => NewPath != null;
 }
 
 public sealed class ExecutionProgressEventArgs(string message) : EventArgs

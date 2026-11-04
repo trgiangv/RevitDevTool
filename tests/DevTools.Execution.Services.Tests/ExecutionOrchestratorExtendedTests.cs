@@ -2,6 +2,7 @@ using DevTools.Execution.Abstractions;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Services;
+using DevTools.Settings.Configs;
 using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -114,12 +115,144 @@ public sealed class ExecutionOrchestratorExtendedTests
     }
 
     [TestMethod]
-    public async Task LoadSavedPathsAsync_InvalidPath_ReturnsFailedEntry()
+    public async Task LoadSavedPathsAsync_InvalidPath_DropsItFromSettings()
     {
-        using var orchestrator = CreateOrchestrator();
-        var failed = await orchestrator.LoadSavedPathsAsync(["   ", "missing-path"], TestContext.CancellationToken);
+        var config = new ExecutionConfig { ScriptFolderPaths = ["   ", "missing-path"], DotnetAssemblyPaths = ["missing.dll"] };
+        using var orchestrator = CreateOrchestrator(config: config);
 
-        Assert.AreEqual(2, failed.Count);
+        await orchestrator.LoadSavedPathsAsync(TestContext.CancellationToken);
+
+        Assert.IsEmpty(config.ScriptFolderPaths);
+        Assert.IsEmpty(config.DotnetAssemblyPaths);
+    }
+
+    [TestMethod]
+    public async Task LoadSavedPathsAsync_SecondCall_DoesNotLoadAgain()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-saved");
+        var provider = CreateScriptProvider(directory);
+        var config = new ExecutionConfig { ScriptFolderPaths = [directory] };
+        using var orchestrator = CreateOrchestrator(providers: [provider.Object], config: config);
+
+        try
+        {
+            await orchestrator.LoadSavedPathsAsync(TestContext.CancellationToken);
+            await orchestrator.LoadSavedPathsAsync(TestContext.CancellationToken);
+
+            provider.Verify(p => p.DiscoverAsync(directory, It.IsAny<CancellationToken>()), Times.Once);
+            CollectionAssert.AreEqual(new[] { directory }, config.ScriptFolderPaths);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task LoadFromPathAsync_SavesRootPathOnce()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-save");
+        var provider = CreateScriptProvider(directory);
+        var config = new ExecutionConfig();
+        using var orchestrator = CreateOrchestrator(providers: [provider.Object], config: config);
+
+        try
+        {
+            await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+            await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+
+            CollectionAssert.AreEqual(new[] { directory }, config.ScriptFolderPaths);
+            provider.Verify(p => p.DiscoverAsync(directory, It.IsAny<CancellationToken>()), Times.Once);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task FindRoot_ReturnsExactRootOrScriptRootThatContainsPath()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-find");
+        var provider = CreateScriptProvider(directory);
+        using var orchestrator = CreateOrchestrator(providers: [provider.Object]);
+
+        try
+        {
+            await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+
+            Assert.AreEqual(directory, orchestrator.FindRoot(directory)?.RootPath);
+            Assert.AreEqual(directory, orchestrator.FindRoot(Path.Combine(directory, "sub"))?.RootPath);
+            Assert.IsNull(orchestrator.FindRoot(Path.Combine(directory, "bin", "Commands.dll")));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task RemoveNodeAndClearAll_DropSavedPaths()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-forget");
+        var provider = CreateScriptProvider(directory);
+        var config = new ExecutionConfig { DotnetAssemblyPaths = ["other.dll"] };
+        using var orchestrator = CreateOrchestrator(providers: [provider.Object], config: config);
+
+        try
+        {
+            await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+            orchestrator.RemoveNode(orchestrator.FindRoot(directory)!);
+            Assert.IsEmpty(config.ScriptFolderPaths);
+
+            orchestrator.ClearAll();
+            Assert.IsEmpty(config.DotnetAssemblyPaths);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task ReloadRootAsync_ReturnsReloadedRoot()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-reload-root");
+        var provider = CreateScriptProvider(directory);
+        provider
+            .SetupSequence(p => p.DiscoverAsync(directory, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([ExecutionTestHelpers.CreateScriptRoot(directory, ExecutionTestHelpers.CreateExecutableNode("exec://first"))])
+            .ReturnsAsync([ExecutionTestHelpers.CreateScriptRoot(directory, ExecutionTestHelpers.CreateExecutableNode("exec://second"))]);
+        using var orchestrator = CreateOrchestrator(
+            providers: [provider.Object],
+            keyedProviders: [(ContainerMode.Script, provider.Object)]);
+
+        try
+        {
+            await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+            var reloaded = await orchestrator.ReloadRootAsync(orchestrator.FindRoot(directory)!, TestContext.CancellationToken);
+
+            Assert.IsNotNull(reloaded);
+            Assert.AreEqual("exec://second", reloaded.Children.Single().Id);
+            Assert.AreSame(reloaded, orchestrator.TreeRoot.Single());
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    private static Mock<IExecutionProvider> CreateScriptProvider(string directory)
+    {
+        var provider = new Mock<IExecutionProvider>();
+        provider.SetupGet(p => p.Priority).Returns(100);
+        provider.Setup(p => p.CanHandle(directory)).Returns(true);
+        provider.Setup(p => p.ValidatePath(directory)).Returns(true);
+        provider.Setup(p => p.GetWatchPatterns()).Returns(["*script.csx"]);
+        provider
+            .Setup(p => p.DiscoverAsync(directory, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([ExecutionTestHelpers.CreateScriptRoot(directory, ExecutionTestHelpers.CreateExecutableNode("exec://one"))]);
+        return provider;
     }
 
     [TestMethod]
@@ -158,7 +291,8 @@ public sealed class ExecutionOrchestratorExtendedTests
         IReadOnlyList<IExecutionProvider>? providers = null,
         IReadOnlyList<(ContainerMode Mode, IExecutionProvider Provider)>? keyedProviders = null,
         IFileWatcherService? fileWatcher = null,
-        ITelemetry? telemetry = null)
+        ITelemetry? telemetry = null,
+        ExecutionConfig? config = null)
     {
         var services = new ServiceCollection();
         foreach (var provider in providers ?? [])
@@ -176,6 +310,7 @@ public sealed class ExecutionOrchestratorExtendedTests
             built,
             built.GetRequiredService<ITreeStateManager>(),
             built.GetRequiredService<IFileWatcherService>(),
+            ExecutionTestHelpers.CreateSettings(config),
             built.GetRequiredService<ITelemetry>(),
             NullLogger<ExecutionOrchestrator>.Instance);
     }

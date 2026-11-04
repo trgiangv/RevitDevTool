@@ -5,6 +5,8 @@ using DevTools.Execution.Models;
 using DevTools.Execution.Providers;
 using DevTools.Execution.Providers.Python;
 using DevTools.Hosting;
+using DevTools.Settings;
+using DevTools.Settings.Configs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -23,6 +25,13 @@ public static class ExecutionTestHelpers
     }
 
     public static IHostContextExecutor InlineHostContext() => new InlineHostContextExecutor();
+
+    public static ISettingsService CreateSettings(ExecutionConfig? config = null)
+    {
+        var settings = new Mock<ISettingsService>();
+        settings.SetupGet(s => s.ExecutionConfig).Returns(config ?? new ExecutionConfig());
+        return settings.Object;
+    }
 
     public static Mock<IHostContextExecutor> MockHostContext()
     {

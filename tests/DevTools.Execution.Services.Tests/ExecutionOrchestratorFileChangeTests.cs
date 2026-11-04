@@ -2,6 +2,7 @@ using DevTools.Execution.Abstractions;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Services;
+using DevTools.Settings.Configs;
 using DevTools.Telemetry;
 using DevTools.UI;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,13 +57,13 @@ public sealed class ExecutionOrchestratorFileChangeTests
         var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-delete");
         var provider = CreateProvider(directory);
         var fileWatcher = ExecutionTestHelpers.CreateFileWatcher();
-        string? removedPath = null;
-        using var orchestrator = CreateOrchestrator([provider.Object], fileWatcher, ContainerMode.Script, provider.Object);
-        orchestrator.RootRemoved += (_, args) => removedPath = args.RootPath;
+        var config = new ExecutionConfig();
+        using var orchestrator = CreateOrchestrator([provider.Object], fileWatcher, ContainerMode.Script, provider.Object, config);
 
         try
         {
             await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+            CollectionAssert.AreEqual(new[] { directory }, config.ScriptFolderPaths);
             fileWatcher.Raise(new FileChangedEventArgs
             {
                 Path = directory,
@@ -70,10 +71,9 @@ public sealed class ExecutionOrchestratorFileChangeTests
                 Scope = FileWatcherScope.RootLifecycle,
             });
 
-            await WaitForAsync(() => removedPath is not null, TestContext.CancellationToken);
+            await WaitForAsync(() => !orchestrator.TreeRoot.Any(), TestContext.CancellationToken);
 
-            Assert.AreEqual(directory, removedPath);
-            Assert.IsEmpty(orchestrator.TreeRoot);
+            Assert.IsEmpty(config.ScriptFolderPaths);
         }
         finally
         {
@@ -137,9 +137,8 @@ public sealed class ExecutionOrchestratorFileChangeTests
             .ReturnsAsync([ExecutionTestHelpers.CreateScriptRoot(newDirectory, ExecutionTestHelpers.CreateExecutableNode("exec://renamed"))]);
 
         var fileWatcher = ExecutionTestHelpers.CreateFileWatcher();
-        RootRemovedEventArgs? removed = null;
-        using var orchestrator = CreateOrchestrator([provider.Object], fileWatcher, ContainerMode.Script, provider.Object);
-        orchestrator.RootRemoved += (_, args) => removed = args;
+        var config = new ExecutionConfig();
+        using var orchestrator = CreateOrchestrator([provider.Object], fileWatcher, ContainerMode.Script, provider.Object, config);
 
         try
         {
@@ -152,10 +151,9 @@ public sealed class ExecutionOrchestratorFileChangeTests
                 Scope = FileWatcherScope.RootLifecycle,
             });
 
-            await WaitForAsync(() => removed is not null, TestContext.CancellationToken);
+            await WaitForAsync(() => config.ScriptFolderPaths.Contains(newDirectory), TestContext.CancellationToken);
 
-            Assert.AreEqual(oldDirectory, removed!.RootPath);
-            Assert.AreEqual(newDirectory, removed.NewPath);
+            CollectionAssert.AreEqual(new[] { newDirectory }, config.ScriptFolderPaths);
             var root = Assert.IsInstanceOfType<ExecutionNodeRoot>(orchestrator.TreeRoot.Single());
             Assert.AreEqual(newDirectory, root.RootPath);
         }
@@ -189,7 +187,8 @@ public sealed class ExecutionOrchestratorFileChangeTests
         IReadOnlyList<IExecutionProvider> providers,
         ExecutionTestHelpers.FakeFileWatcherService fileWatcher,
         ContainerMode mode,
-        IExecutionProvider keyedProvider)
+        IExecutionProvider keyedProvider,
+        ExecutionConfig? config = null)
     {
         var services = new ServiceCollection();
         foreach (var provider in providers)
@@ -204,6 +203,7 @@ public sealed class ExecutionOrchestratorFileChangeTests
             built,
             built.GetRequiredService<ITreeStateManager>(),
             built.GetRequiredService<IFileWatcherService>(),
+            ExecutionTestHelpers.CreateSettings(config),
             built.GetRequiredService<ITelemetry>(),
             NullLogger<ExecutionOrchestrator>.Instance);
     }
