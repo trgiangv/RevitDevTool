@@ -206,6 +206,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         var config = _settingsService.ExecutionConfig;
         config.DotnetAssemblyPaths.Clear();
         config.ScriptFolderPaths.Clear();
+        PersistPaths();
         TreeChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -255,17 +256,33 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     {
         var config = _settingsService.ExecutionConfig;
         var list = container == ContainerMode.Assembly ? config.DotnetAssemblyPaths : config.ScriptFolderPaths;
-        if (!list.Contains(path, StringComparer.OrdinalIgnoreCase))
-            list.Add(path);
+        if (list.Contains(path, StringComparer.OrdinalIgnoreCase))
+            return;
+
+        list.Add(path);
+        PersistPaths();
     }
 
     private void ForgetPath(string path)
     {
         var config = _settingsService.ExecutionConfig;
-        config.DotnetAssemblyPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
-        config.ScriptFolderPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        var removed = config.DotnetAssemblyPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase))
+                      + config.ScriptFolderPaths.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        if (removed > 0)
+            PersistPaths();
     }
 
+    private void PersistPaths()
+    {
+        try
+        {
+            _settingsService.SaveSettings();
+        }
+        catch (Exception ex)
+        {
+            _logger.ZLogWarning(ex, $"Saving Command Execution paths failed: {ex.Message}");
+        }
+    }
 
     private void AbsorbChildRoots(string path)
     {

@@ -2,6 +2,7 @@ using DevTools.Execution.Abstractions;
 using DevTools.Execution.Interfaces;
 using DevTools.Execution.Models;
 using DevTools.Execution.Services;
+using DevTools.Settings;
 using DevTools.Settings.Configs;
 using DevTools.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
@@ -219,6 +220,33 @@ public sealed class ExecutionOrchestratorExtendedTests
     }
 
     [TestMethod]
+    public async Task PathChanges_WriteSettingsImmediately()
+    {
+        var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-persist");
+        var provider = CreateScriptProvider(directory);
+        var settings = new Mock<ISettingsService>();
+        settings.SetupGet(s => s.ExecutionConfig).Returns(new ExecutionConfig());
+        using var orchestrator = CreateOrchestrator(providers: [provider.Object], settings: settings.Object);
+
+        try
+        {
+            await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+            await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+            settings.Verify(s => s.SaveSettings(), Times.Once);
+
+            orchestrator.RemoveNode(orchestrator.FindRoot(directory)!);
+            settings.Verify(s => s.SaveSettings(), Times.Exactly(2));
+
+            orchestrator.ClearAll();
+            settings.Verify(s => s.SaveSettings(), Times.Exactly(3));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [TestMethod]
     public async Task FindRoot_ReturnsExactRootOrScriptRootThatContainsPath()
     {
         var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-find");
@@ -340,7 +368,8 @@ public sealed class ExecutionOrchestratorExtendedTests
         IReadOnlyList<(ContainerMode Mode, IExecutionProvider Provider)>? keyedProviders = null,
         IFileWatcherService? fileWatcher = null,
         ITelemetry? telemetry = null,
-        ExecutionConfig? config = null)
+        ExecutionConfig? config = null,
+        ISettingsService? settings = null)
     {
         var services = new ServiceCollection();
         foreach (var provider in providers ?? [])
@@ -358,7 +387,7 @@ public sealed class ExecutionOrchestratorExtendedTests
             built,
             built.GetRequiredService<ITreeStateManager>(),
             built.GetRequiredService<IFileWatcherService>(),
-            ExecutionTestHelpers.CreateSettings(config),
+            settings ?? ExecutionTestHelpers.CreateSettings(config),
             built.GetRequiredService<ITelemetry>(),
             NullLogger<ExecutionOrchestrator>.Instance);
     }

@@ -467,6 +467,9 @@ for that year: `dotnet build samples/CSharpDemo -c Debug.Autodesk.<Year>`. The D
    Expected: Succeeded (file watcher or reload-on-miss picks it up)
 ```
 
+Each root change is written to `ExecutionConfig.json` immediately, for both the panel and MCP, so the roots
+survive a host that `scripts/build-host.ps1` kills.
+
 For AutoCAD, use a command DLL you built and pass `entry` as `TypeFullName.MethodName`.
 
 ---
