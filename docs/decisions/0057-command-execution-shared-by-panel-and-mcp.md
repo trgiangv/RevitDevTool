@@ -22,7 +22,9 @@ the orchestrator would have had to copy that settings logic.
 ## Decision
 
 1. **`ExecutionOrchestrator` owns all Command Execution state**: roots, saved
-   paths, file watching, and the last executed node. Loading a root saves its
+   paths, file watching, and the last executed node. `ExecuteAsync` marks the
+   node it was given as last executed before it runs, whatever the result, and
+   clears the mark everywhere else in the tree. Loading a root saves its
    path. Removing a root (directly, by cascade, by delete or rename on disk, by
    a failed reload, or when a parent folder absorbs it) drops or moves its saved
    path. `RootRemoved` is gone. Saved paths load once

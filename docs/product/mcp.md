@@ -48,7 +48,7 @@ In-host MCP runtime is shared across registered hosts.
     on a miss the root is reloaded once. The match is exact and ordinal; an
     unknown entry runs nothing and suggests nothing. The run is a click: the
     DLL loads fresh in a new isolation session and the node becomes "last
-    executed". It returns status, message, exception, and elapsed time, with
+    executed" when the run starts, whether it then succeeds or fails. It returns status, message, exception, and elapsed time, with
     the same `[RUNTIME ERROR]` / `[ROLLBACK]` tags as `execute_csharp_code`;
     command output goes to the log.
   - `add` loads `path` (`Added`, `AlreadyLoaded`, or `CoveredByRoot`), `remove`

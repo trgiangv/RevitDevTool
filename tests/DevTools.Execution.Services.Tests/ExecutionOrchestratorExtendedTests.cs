@@ -44,6 +44,54 @@ public sealed class ExecutionOrchestratorExtendedTests
     }
 
     [TestMethod]
+    public async Task ExecuteAsync_MarksClickedNodeOnlyWhileRunningAndAfterFailure()
+    {
+        var passing = new Mock<IExecutionStrategy>();
+        passing
+            .Setup(s => s.ExecuteAsync(It.IsAny<IProgress<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ExecutionResult.Succeeded("ok", 1));
+        var first = ExecutionTestHelpers.CreateExecutableNode("exec://first", passing.Object);
+
+        ExecutionNodeBase? second = null;
+        var markedWhileRunning = false;
+        var firstMarkedWhileRunning = true;
+        var failing = new Mock<IExecutionStrategy>();
+        failing
+            .Setup(s => s.ExecuteAsync(It.IsAny<IProgress<string>>(), It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                markedWhileRunning = second!.IsLastExecuted;
+                firstMarkedWhileRunning = first.IsLastExecuted;
+                throw new InvalidOperationException("boom");
+            });
+        second = ExecutionTestHelpers.CreateExecutableNode("exec://second", failing.Object);
+
+        var directory = ExecutionTestHelpers.CreateTempDirectory("orchestrator-last-executed");
+        var provider = CreateScriptProvider(directory);
+        provider
+            .Setup(p => p.DiscoverAsync(directory, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([ExecutionTestHelpers.CreateScriptRoot(directory, first, second)]);
+        using var orchestrator = CreateOrchestrator(providers: [provider.Object], telemetry: new NoOpTelemetry());
+
+        try
+        {
+            await orchestrator.LoadFromPathAsync(directory, TestContext.CancellationToken);
+            await orchestrator.ExecuteAsync(first, TestContext.CancellationToken);
+            var result = await orchestrator.ExecuteAsync(second, TestContext.CancellationToken);
+
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(markedWhileRunning);
+            Assert.IsFalse(firstMarkedWhileRunning);
+            Assert.IsTrue(second.IsLastExecuted);
+            Assert.IsFalse(first.IsLastExecuted);
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [TestMethod]
     public async Task ExecuteAsync_NonExecutable_ReturnsSkipped()
     {
         var container = new ExecutionNodeIntermediate

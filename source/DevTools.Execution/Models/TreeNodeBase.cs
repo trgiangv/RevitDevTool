@@ -87,18 +87,14 @@ public abstract partial class ExecutionNodeBase : TreeNodeBase
         try
         {
             progress?.Report($"Executing '{Name}'...");
-            var result = await ExecutionStrategy!.ExecuteAsync(progress, cancellationToken);
-            IsLastExecuted = result.Success;
-            return result;
+            return await ExecutionStrategy!.ExecuteAsync(progress, cancellationToken);
         }
         catch (OperationCanceledException)
         {
-            IsLastExecuted = false;
             return ExecutionResult.Cancelled("Execution cancelled by user.");
         }
         catch (Exception ex)
         {
-            IsLastExecuted = false;
             return ExecutionResult.Failed(ex.Message, ex);
         }
         finally

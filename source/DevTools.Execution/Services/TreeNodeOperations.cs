@@ -42,9 +42,14 @@ internal static class TreeNodeOperations
         var lastNewExecutable = FindLatestNewExecutableRecursive(nodeSnapshot, previousExecutableIds);
         if (lastNewExecutable == null) return null;
 
-        ClearLastExecutedFlagRecursive(nodeSnapshot);
-        lastNewExecutable.IsLastExecuted = true;
+        MarkLastExecuted(nodeSnapshot, lastNewExecutable);
         return lastNewExecutable;
+    }
+
+    public static void MarkLastExecuted(IEnumerable<ExecutionNodeBase> nodes, ExecutionNodeBase node)
+    {
+        ClearLastExecutedFlagRecursive(nodes);
+        node.IsLastExecuted = true;
     }
 
     public static (bool Removed, ExecutionNodeBase? NextSelection) RemoveNodeWithCascade(

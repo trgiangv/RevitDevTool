@@ -24,7 +24,6 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
     private readonly ILogger<ExecutionOrchestrator> _logger;
     private readonly ObservableCollection<ExecutionNodeBase> _treeRoot = [];
     private readonly SemaphoreSlim _reloadGate = new(1, 1);
-    private ExecutionNodeBase? _lastExecutedNode;
     private Task? _savedPathsLoad;
 
     public IEnumerable<ExecutionNodeBase> TreeRoot => _treeRoot;
@@ -162,7 +161,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
 
             TreeNodeOperations.ReplaceRootSnapshot(_treeRoot, reloadedRoots);
             _stateManager.RestoreState(_treeRoot, state, autoExpandNew: false);
-            _lastExecutedNode = TreeNodeOperations.PromoteLatestNewExecutable(_treeRoot, previousExecutableIds) ?? _lastExecutedNode;
+            TreeNodeOperations.PromoteLatestNewExecutable(_treeRoot, previousExecutableIds);
             TreeChanged?.Invoke(this, EventArgs.Empty);
         }
         finally
@@ -215,8 +214,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         if (!node.IsExecutable)
             return ExecutionResult.Skipped();
 
-        if (_lastExecutedNode != null && _lastExecutedNode != node)
-            _lastExecutedNode.IsLastExecuted = false;
+        TreeNodeOperations.MarkLastExecuted(_treeRoot, node);
 
         var progress = new Progress<string>(message =>
         {
@@ -230,10 +228,6 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
         using var operation = _telemetry.StartOperation(TelemetryKeys.Operation.Execution, providerKind);
 
         var result = await node.ExecuteAsync(progress, cancellationToken);
-        if (result.Success)
-        {
-            _lastExecutedNode = node;
-        }
 
         if (!string.IsNullOrWhiteSpace(result.Message))
         {
@@ -434,7 +428,7 @@ public sealed class ExecutionOrchestrator : IExecutionOrchestrator, IDisposable
             return false;
 
         _stateManager.RestoreState(_treeRoot, state, autoExpandNew: false);
-        _lastExecutedNode = TreeNodeOperations.PromoteLatestNewExecutable(_treeRoot, previousExecutableIds) ?? _lastExecutedNode;
+        TreeNodeOperations.PromoteLatestNewExecutable(_treeRoot, previousExecutableIds);
         return true;
     }
 
