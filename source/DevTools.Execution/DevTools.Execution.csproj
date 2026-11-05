@@ -12,6 +12,7 @@
         <!--Python-->
         <PackageReference Include="pythonnet"/>
         <PackageReference Include="IronPython"/>
+        <PackageReference Include="IronPython.StdLib" ExcludeAssets="all" PrivateAssets="all" GeneratePathProperty="true"/>
 
         <!--MCP-->
         <PackageReference Include="ModelContextProtocol"/>
@@ -65,5 +66,12 @@
         <EmbeddedResource Include="Resources\*.*" />
         <EmbeddedResource Include="Resources\scripts\*.*" />
     </ItemGroup>
+
+    <Target Name="EmbedIronPythonStdLib" BeforeTargets="AssignTargetPaths">
+        <ZipDirectory SourceDirectory="$(PkgIronPython_StdLib)\content\lib" DestinationFile="$(IntermediateOutputPath)IronPython.StdLib.zip" Overwrite="true" />
+        <ItemGroup>
+            <EmbeddedResource Include="$(IntermediateOutputPath)IronPython.StdLib.zip" LogicalName="DevTools.Execution.Resources.IronPython.StdLib.zip" />
+        </ItemGroup>
+    </Target>
 
 </Project>

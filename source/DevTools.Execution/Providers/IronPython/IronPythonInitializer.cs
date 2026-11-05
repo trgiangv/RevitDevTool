@@ -21,7 +21,7 @@ public sealed class IronPythonInitializer(
     DebugEndpoints endpoints,
     ILogger<IronPythonInitializer> logger)
 {
-    private const string StdLibResourceSuffix = "IronPython.StdLib.3.4.2.zip";
+    private const string StdLibResourceSuffix = "IronPython.StdLib.zip";
     private readonly Lock _gate = new();
     private static string? _stdlibResourceName;
 

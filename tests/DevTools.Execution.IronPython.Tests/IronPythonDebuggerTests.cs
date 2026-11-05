@@ -28,6 +28,17 @@ public sealed class IronPythonDebuggerTests : IronPythonSessionTestBase
     }
 
     [TestMethod]
+    public void SessionEngine_ImportsPureStdLibFromEmbeddedZip()
+    {
+        var engine = Initializer.GetOrCreateEngine(Mock.Of<IIronPythonBridge>());
+        var scope = engine.CreateScope();
+        engine.CreateScriptSourceFromString(
+            "import json, argparse, unittest\n__dumped__ = json.dumps({'a': 1})").Execute(scope);
+
+        Assert.AreEqual("{\"a\": 1}", scope.GetVariable<string>("__dumped__"));
+    }
+
+    [TestMethod]
     public void ImportPydevd_WhenExtractPresent_ReportsIronPython()
     {
         if (!PydevdInstaller.IsInstalled())
