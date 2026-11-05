@@ -16,7 +16,7 @@ Create a normal **Class Library** project, as you would for a Revit or AutoCAD a
 
 ```xml title="McpToolsetDemo.csproj"
 <ItemGroup>
-  <PackageReference Include="ModelContextProtocol" Version="2.3.0" />
+  <PackageReference Include="ModelContextProtocol" Version="2.3.1" />
 </ItemGroup>
 ```
 
