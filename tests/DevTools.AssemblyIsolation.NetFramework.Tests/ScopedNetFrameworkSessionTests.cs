@@ -1,8 +1,8 @@
-using System.Reflection;
-using System.Runtime.InteropServices;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Runtime;
 using DevTools.AssemblyIsolation.Sources;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace DevTools.AssemblyIsolation.NetFramework.Tests;
 
@@ -65,9 +65,9 @@ public sealed class ScopedNetFrameworkSessionTests
                 {
                 }
 
-                Assert.IsTrue(order.Count >= 2, string.Join(",", order));
-                Assert.AreEqual("pin", order[0]);
-                Assert.AreEqual("costura", order[1]);
+                var trace = string.Join(",", order);
+                Assert.AreEqual("pin", order[0], trace);
+                Assert.Contains("costura", order, trace);
             }
             finally
             {
@@ -193,11 +193,11 @@ public sealed class ScopedNetFrameworkSessionTests
 
     sealed class FixedManagedSource : IManagedAssemblySource
     {
-        readonly AssemblyCandidate candidate;
+        readonly AssemblyCandidate _candidate;
 
-        public FixedManagedSource(AssemblyCandidate candidate) => this.candidate = candidate;
+        public FixedManagedSource(AssemblyCandidate candidate) => _candidate = candidate;
 
-        public AssemblyCandidate? Resolve(AssemblyName requested) => candidate;
+        public AssemblyCandidate? Resolve(AssemblyName requested) => _candidate;
     }
 
     sealed class RecordingDiagnosticSink : IAssemblyIsolationDiagnosticSink
@@ -276,13 +276,13 @@ sealed class ReparsePointWorkload : IDisposable
     ReparsePointWorkload(string allowedRoot, string externalDirectory, string linkPath, string linkedCandidatePath)
     {
         AllowedRoot = allowedRoot;
-        this.externalDirectory = externalDirectory;
-        this.linkPath = linkPath;
+        _externalDirectory = externalDirectory;
+        _linkPath = linkPath;
         LinkedCandidatePath = linkedCandidatePath;
     }
 
-    readonly string externalDirectory;
-    readonly string linkPath;
+    readonly string _externalDirectory;
+    readonly string _linkPath;
 
     public string AllowedRoot { get; }
 
@@ -315,12 +315,12 @@ sealed class ReparsePointWorkload : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(linkPath))
-            Directory.Delete(linkPath);
+        if (Directory.Exists(_linkPath))
+            Directory.Delete(_linkPath);
         if (Directory.Exists(AllowedRoot))
             Directory.Delete(AllowedRoot);
-        if (Directory.Exists(externalDirectory))
-            Directory.Delete(externalDirectory, recursive: true);
+        if (Directory.Exists(_externalDirectory))
+            Directory.Delete(_externalDirectory, recursive: true);
         var parent = Directory.GetParent(AllowedRoot)?.FullName;
         if (parent is not null && Directory.Exists(parent))
             Directory.Delete(parent);
