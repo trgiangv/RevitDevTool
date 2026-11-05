@@ -6,98 +6,41 @@ using System.Text.Json;
 namespace DevTools.Mcp.Discovery;
 
 /// <summary>
-/// Single JSON crossing from an isolated toolset ALC into the host SDK <see cref="CallToolResult"/>.
+/// Turns what the host SDK returns for an isolated toolset tool into the host <see cref="CallToolResult"/>.
 /// </summary>
 public static class ResultBridge
 {
-    public static CallToolResult ToHostCallToolResult(object? raw, JsonElement? outputSchema)
+    public static CallToolResult ToHostCallToolResult(CallToolResult sdkResult, bool returnsToolsetProtocol) =>
+        returnsToolsetProtocol ? ReadToolsetProtocolResult(sdkResult) : sdkResult;
+
+    private static CallToolResult ReadToolsetProtocolResult(CallToolResult sdkResult)
     {
-        switch (raw)
-        {
-            case null:
-                return new CallToolResult { Content = [] };
-            case CallToolResult hostResult when ReferenceEquals(raw.GetType(), typeof(CallToolResult)):
-                return hostResult;
-            case ContentBlock hostBlock:
-                return new CallToolResult
-                {
-                    Content = [hostBlock],
-                };
-        }
+        if (sdkResult.Content is not [TextContentBlock { Text: var json }])
+            return sdkResult;
 
-        var element = JsonSerializer.SerializeToElement(raw, raw.GetType(), ToolHelpers.RuntimeJsonOptions);
-        if (TryReadCallToolResult(element, out var bridged) && bridged is not null)
-            return bridged;
+        using var document = JsonDocument.Parse(json);
+        var element = document.RootElement;
+        if (HasProperty(element, McpSpecKeys.ToolResult.Content))
+            return Read<CallToolResult>(element);
 
-        if (TryReadContentBlock(element, out var contentBlock) && contentBlock is not null)
-        {
-            return new CallToolResult
-            {
-                Content = [contentBlock],
-            };
-        }
-
-        return MapPlainResult(raw, element, outputSchema);
+        return HasProperty(element, McpSpecKeys.Content.Type)
+            ? new CallToolResult { Content = [Read<ContentBlock>(element)] }
+            : sdkResult;
     }
 
-    private static bool HasProperty(JsonElement element, string name, string alternate) =>
-        element.TryGetProperty(name, out _) || element.TryGetProperty(alternate, out _);
+    private static bool HasProperty(JsonElement element, string name) =>
+        element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out _);
 
-    private static bool TryReadCallToolResult(JsonElement element, out CallToolResult? result)
+    private static T Read<T>(JsonElement element)
     {
-        result = null;
-        if (element.ValueKind != JsonValueKind.Object || !HasProperty(element, McpSpecKeys.ToolResult.Content, McpSpecKeys.ToolResult.ContentPascal))
-            return false;
-
         try
         {
-            result = element.Deserialize<CallToolResult>(ToolHelpers.ProtocolOptions);
-            return result is not null;
+            return element.Deserialize<T>(ToolHelpers.ProtocolOptions)
+                   ?? throw new JsonException($"MCP {typeof(T).Name} JSON was null.");
         }
         catch (JsonException ex)
         {
             throw new InvalidOperationException("MCP tool result JSON did not match the SDK contract.", ex);
         }
-    }
-
-    private static bool TryReadContentBlock(JsonElement element, out ContentBlock? block)
-    {
-        block = null!;
-        if (element.ValueKind != JsonValueKind.Object || !HasProperty(element, McpSpecKeys.Content.Type, McpSpecKeys.Content.TypePascal))
-            return false;
-
-        try
-        {
-            block = element.Deserialize<ContentBlock>(ToolHelpers.ProtocolOptions);
-            return block is not null;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
-    }
-
-    private static CallToolResult MapPlainResult(object raw, JsonElement element, JsonElement? outputSchema)
-    {
-        JsonElement? structured = outputSchema is null ? null : element.Clone();
-        return raw switch
-        {
-            string text => new CallToolResult
-            {
-                Content = [new TextContentBlock { Text = text }],
-                StructuredContent = structured,
-            },
-            bool isError => new CallToolResult
-            {
-                IsError = isError,
-                Content = [new TextContentBlock { Text = element.GetRawText() }],
-                StructuredContent = structured,
-            },
-            _ => new CallToolResult
-            {
-                Content = [new TextContentBlock { Text = element.GetRawText() }],
-                StructuredContent = structured,
-            }
-        };
     }
 }

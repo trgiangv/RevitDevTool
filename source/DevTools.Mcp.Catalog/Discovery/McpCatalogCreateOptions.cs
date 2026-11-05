@@ -1,4 +1,5 @@
 using DevTools.Mcp.Core.Models;
+using DevTools.Mcp.Isolation;
 using ModelContextProtocol.Server;
 
 namespace DevTools.Mcp.Discovery;
@@ -37,6 +38,7 @@ public static class McpCatalogCreateOptions
             Title = descriptor.Title,
             Description = descriptor.Description,
             UseStructuredContent = descriptor.OutputSchema is not null,
+            SerializerOptions = ToolsetProtocolJson.SerializerOptions,
             Icons = descriptor.Icons,
             Meta = descriptor.Meta,
         };

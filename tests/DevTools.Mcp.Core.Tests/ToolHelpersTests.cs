@@ -8,15 +8,6 @@ namespace DevTools.Mcp.Core.Tests;
 public sealed class ToolHelpersTests
 {
     [TestMethod]
-    public void RuntimeJsonOptions_UsesCamelCaseAndReflectionResolver()
-    {
-        var options = ToolHelpers.RuntimeJsonOptions;
-
-        Assert.AreSame(JsonNamingPolicy.CamelCase, options.PropertyNamingPolicy);
-        Assert.IsNotNull(options.TypeInfoResolver);
-    }
-
-    [TestMethod]
     public void ErrorResult_String_SetsIsErrorAndTextContent()
     {
         var result = ToolHelpers.ErrorResult("boom");

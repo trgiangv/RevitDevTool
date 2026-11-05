@@ -1,6 +1,7 @@
 using DevTools.Mcp.Bridging;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Hosting;
+using DevTools.Mcp.Isolation;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -14,7 +15,7 @@ public sealed class DotnetSource(
     IServiceProvider serviceProvider,
     DotnetMethodResolver methodResolver) : IMcpSource
 {
-    private readonly ConcurrentDictionary<string, McpServerTool> _tools =
+    private readonly ConcurrentDictionary<string, ToolsetTool> _tools =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, McpServerResource> _resources =
         new(StringComparer.OrdinalIgnoreCase);
@@ -42,24 +43,24 @@ public sealed class DotnetSource(
         return await hostContext.ExecuteAsync(
             () =>
             {
-                var serverTool = GetOrCreateTool(tool);
-                if (serverTool is null)
+                var toolsetTool = GetOrCreateTool(tool);
+                if (toolsetTool is null)
                     return ToolHelpers.ErrorResult($"No .NET tool method mapped for '{tool.Descriptor.Name}'.");
 
                 var context = RequestFactory.ToToolContext(tool.Descriptor.Name, request);
-                var pending = serverTool.InvokeAsync(context, cancellationToken);
+                var pending = toolsetTool.ServerTool.InvokeAsync(context, cancellationToken);
                 if (!pending.IsCompleted)
                 {
                     throw new NotSupportedException(
                         $".NET MCP tool '{tool.Descriptor.Name}' returned an incomplete task. The host dispatcher runs synchronous delegates only.");
                 }
 
-                return ResultBridge.ToHostCallToolResult(pending.GetAwaiter().GetResult(), tool.Descriptor.OutputSchema);
+                return ResultBridge.ToHostCallToolResult(pending.GetAwaiter().GetResult(), toolsetTool.ReturnsProtocolObject);
             },
             cancellationToken).ConfigureAwait(false);
     }
 
-    private McpServerTool? GetOrCreateTool(RegisteredTool tool)
+    private ToolsetTool? GetOrCreateTool(RegisteredTool tool)
     {
         if (_tools.TryGetValue(tool.Id, out var cached))
             return cached;
@@ -71,13 +72,14 @@ public sealed class DotnetSource(
         var target = method.IsStatic
             ? null
             : ActivatorUtilities.CreateInstance(serviceProvider, method.DeclaringType!);
-        var serverTool = McpServerTool.Create(
-            method,
-            target,
-            McpCatalogCreateOptions.ForTool(tool, serviceProvider));
-        _tools.TryAdd(tool.Id, serverTool);
-        return serverTool;
+        var toolsetTool = new ToolsetTool(
+            McpServerTool.Create(method, target, McpCatalogCreateOptions.ForTool(tool, serviceProvider)),
+            ToolsetProtocolJson.ReturnsToolsetProtocolObject(method));
+        _tools.TryAdd(tool.Id, toolsetTool);
+        return toolsetTool;
     }
+
+    private sealed record ToolsetTool(McpServerTool ServerTool, bool ReturnsProtocolObject);
 
     public async Task<ReadResourceResult> ReadResourceAsync(
         RegisteredResource resource,

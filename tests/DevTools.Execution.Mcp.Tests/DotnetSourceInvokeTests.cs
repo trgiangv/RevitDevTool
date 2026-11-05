@@ -135,6 +135,39 @@ public sealed class DotnetSourceInvokeTests
         Assert.AreNotEqual(true, result.IsError);
     }
 
+    [TestMethod]
+    public async Task InvokeToolAsync_ToolsetShippingItsOwnSdk_ReturnsItsCallToolResultIntact()
+    {
+        var dll = FindMcpToolsetDemoDll();
+        if (dll is null)
+            Assert.Inconclusive("Build toolset: dotnet build samples/McpToolsetDemo -c Debug.Autodesk.2025");
+
+        var tool = new McpAssemblyParser(NullLogger<McpAssemblyParser>.Instance)
+            .ParseCatalogFromAssembly(dll)
+            .Tools.Single(item => item.Descriptor.Name == "test_forwarder_calltoolresult");
+
+        var result = await CreateBackend().InvokeToolAsync(
+            tool,
+            new CallToolRequestParams { Name = tool.Descriptor.Name },
+            ExecutionTestHelpers.InlineHostContext(),
+            TestContext.CancellationToken);
+
+        Assert.AreEqual("forwarder-spike-ok", result.Content.OfType<TextContentBlock>().Single().Text);
+        Assert.IsTrue(result.StructuredContent!.Value.GetProperty("spike").GetBoolean());
+    }
+
+    private static string? FindMcpToolsetDemoDll()
+    {
+        for (var dir = new DirectoryInfo(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        {
+            var candidate = Path.Combine(dir.FullName, "samples", "McpToolsetDemo", "bin", "Debug.Autodesk.2025", "McpToolsetDemo.dll");
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        return null;
+    }
+
     private static DotnetSource CreateBackend()
     {
         var services = new ServiceCollection();

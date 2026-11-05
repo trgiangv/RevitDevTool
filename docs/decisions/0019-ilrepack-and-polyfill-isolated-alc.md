@@ -42,9 +42,9 @@ plus `KeepScintillaWinX64Native` in `props/Common.props`). They are not
 copy-local at output root, so they are not ILRepack inputs.
 
 MCP follows that same input rule, split by who loads the assembly. .NET
-toolsets compile against MCP (`ExcludeAssets=runtime`) and do not ship it.
-Catalog loads them in a collectible ALC whose isolation plan `Pin`s MCP
-contract assemblies from the host default context. Host ILRepack embeds
+toolsets ship their own MCP SDK (decision 7, S1). Catalog loads them in a
+collectible ALC whose isolation plan `Pin`s MCP contract assemblies from the
+host default context. Host ILRepack embeds
 copy-local MCP into the add-in DLL, removing standalone `ModelContextProtocol*`
 assembly identities from the output directory. Kernel `Pin` keys shares by
 **simple name** only; automatic bind from the host load context for repacked
@@ -88,8 +88,7 @@ filename.
 6. **ILRepack only sees copy-local managed DLLs.** What must not merge must not
    land in `TargetDir`. Scintilla/Lexilla live under `runtimes/win-x64/native/`.
    JetBrains.Annotations is compile-only (`PrivateAssets=all`,
-   `ExcludeAssets=runtime` in `props/Common.props`). .NET toolsets keep MCP
-   compile-only the same way. Host-loaded projects still copy-local MCP so
+   `ExcludeAssets=runtime` in `props/Common.props`). Host-loaded projects still copy-local MCP so
    ILRepack embeds it (no siblings). That merge removes standalone
    `ModelContextProtocol*` identities; toolset ALC name-based bind from the
    host load context is not implemented in the isolation kernel. None of these
@@ -106,13 +105,14 @@ filename.
 7. **MCP uses that rule, not a special ILRepack mode.** Copy-local MCP on the
    host merges into the host DLL (no siblings). That ILRepack step removes
    standalone `ModelContextProtocol*` assembly identities from the output
-   directory. Toolsets use `ExcludeAssets=runtime` — they do not ship MCP.
-   `McpAssemblyIsolationPlan` `Pin`s host-loaded MCP contract assemblies
-   (kernel share table keyed by simple name). Automatic toolset ALC bind from
-   the host load context for repacked MCP is **not implemented** in the
-   isolation kernel; toolsets on that path cannot resolve MCP by name without a
-   separate strategy (S1 / S2 — open;
-   [`2026-09-03-mcp-layer-identity-s5`](../plans/completed/2026-09-03-mcp-layer-identity-s5.md)).
+   directory, so a toolset cannot bind MCP by name from the host.
+   **S1 (chosen 2026-11-05): a .NET toolset ships its own MCP SDK**, merged
+   into the toolset by ILRepack or as sibling DLLs. A toolset compiled with
+   `ExcludeAssets=runtime` does not load: `add_tools` and the registry report
+   the missing `ModelContextProtocol.Core`. Protocol objects the toolset returns
+   are its own SDK's types; `ToolsetProtocolJson` writes them with that SDK's
+   serializer and `ResultBridge` reads them with the host's. S2
+   (a toolset abstractions DLL beside the host) is not pursued.
    Do not exclude `ModelContextProtocol*` by name from ILRepack.
 8. **Defaults live in `props/ILRepack.targets`; a csproj only opts in or
    overrides.** Driver defaults: `ILRepackable=false`, `ILRepackUnion=true`,
@@ -160,8 +160,8 @@ Positive:
   APIs; net8 / net10 still compile against the BCL where the API already exists.
 - Native runtimes and compile-only packages stay out of the merge without
   filename excludes.
-- MCP toolsets stay compile-only; the host image carries one in-process MCP
-  copy but removes standalone assembly identities needed for name-based ALC bind.
+- The host image carries one in-process MCP copy; each .NET toolset carries its
+  own, so no toolset depends on a host MCP identity.
 
 Tradeoffs:
 
@@ -173,19 +173,17 @@ Tradeoffs:
 - Catalog still uses SDK types to reflect-invoke toolsets, so the host pack
   embeds MCP. [0027](0027-mcp-product-surface.md) owns the pipe DTOs, not
   this merge. Do not add an MCP filename exclude.
-- Toolsets with `ExcludeAssets=runtime` on a repacked host need a foreign JSON
-  bridge or a packaging strategy (S1 / S2 — open;
-  [`2026-09-03-mcp-layer-identity-s5`](../plans/completed/2026-09-03-mcp-layer-identity-s5.md)).
+- Toolset protocol results always cross one JSON bridge, written by the
+  toolset's SDK and read by the host's.
 
 ## Follow-Up
 
 - Drop the Nice3point sidecar when that package no longer embeds
   `Polyfills.Polyfill` on net10.
 - Revisit `/allowdup` only with pack + isolated-ALC load evidence.
-- Choose S1 or S2 at the
+- The S1 / S2 gate of
   [`2026-09-03-mcp-layer-identity-s5`](../plans/completed/2026-09-03-mcp-layer-identity-s5.md)
-  strategy gate before changing toolset packaging or expecting name-based MCP
-  bind on a repacked host. Do not paper over with `RepackBinariesExcludes`.
+  is closed with S1 (decision 7). Do not paper over with `RepackBinariesExcludes`.
 
 ## References
 

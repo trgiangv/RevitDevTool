@@ -1,7 +1,7 @@
 namespace DevTools.Mcp.Catalog.Tests;
 
 /// <summary>
-/// Layout-only packaging checks: toolsets strip MCP siblings; host ILRepack embeds MCP (no siblings, large DLL).
+/// Layout-only packaging checks: toolsets ship the MCP SDK; host ILRepack embeds MCP (no siblings, large DLL).
 /// CallToolResult identity on repacked host is covered by <see cref="Isolation.McpMergedHostIdentityTests"/>
 /// (skips in xunit when ModelContextProtocol.Core is a separate assembly — false-green guard).
 /// </summary>
@@ -20,7 +20,7 @@ public sealed class McpSharedRuntimePackagingTests
     }
 
     [TestMethod]
-    public void ToolsetBuilds_StripMcpSiblings_KeepExternalRef()
+    public void ToolsetBuilds_CarryTheirOwnMcpSdk()
     {
         var dlls = DiscoverToolsetDlls().ToList();
         if (dlls.Count == 0)
@@ -29,18 +29,18 @@ public sealed class McpSharedRuntimePackagingTests
         foreach (var toolsetDllPath in dlls)
         {
             var toolsetDir = Path.GetDirectoryName(toolsetDllPath)!;
-            Assert.IsEmpty(Directory.GetFiles(toolsetDir, "ModelContextProtocol*.dll"));
-
             using var context = new McpAssemblyContext(toolsetDllPath);
-            var toolsetAsm = context.LoadAssembly();
-            Assert.IsTrue(toolsetAsm.GetReferencedAssemblies()
-                .Select(static a => a.Name)
-                .Any(name => string.Equals(name, "ModelContextProtocol.Core", StringComparison.Ordinal)));
+            var referencesSdk = context.LoadAssembly().GetReferencedAssemblies()
+                .Any(static a => string.Equals(a.Name, "ModelContextProtocol.Core", StringComparison.Ordinal));
+
+            Assert.IsTrue(
+                !referencesSdk || File.Exists(Path.Combine(toolsetDir, "ModelContextProtocol.Core.dll")),
+                $"{toolsetDllPath} references the MCP SDK without shipping it.");
         }
     }
 
     [TestMethod]
-    public void DotnetParser_ParsesCompileOnlyMcpToolset_WithoutMcpSiblings()
+    public void DotnetParser_ParsesToolsetThatShipsMcpSdk()
     {
         var toolsetDllPath = DiscoverToolsetDlls().FirstOrDefault();
         if (toolsetDllPath is null)

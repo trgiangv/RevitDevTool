@@ -10,18 +10,6 @@ public static class ToolHelpers
 {
     public static JsonSerializerOptions ProtocolOptions => McpJsonUtilities.DefaultOptions;
 
-    /// <summary>
-    /// Runtime-object options for values that may come from another load context.
-    /// Keeps the MCP converters while using camelCase and reflection metadata.
-    /// </summary>
-    public static JsonSerializerOptions RuntimeJsonOptions { get; } = CreateRuntimeJsonOptions();
-
-    private static JsonSerializerOptions CreateRuntimeJsonOptions() => new(ProtocolOptions)
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
-    };
-
     public static CallToolResult ErrorResult(string message) =>
         new() { IsError = true, Content = [new TextContentBlock { Text = message }] };
 

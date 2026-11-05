@@ -16,9 +16,7 @@ Create a normal **Class Library** project, as you would for a Revit or AutoCAD a
 
 ```xml title="McpToolsetDemo.csproj"
 <ItemGroup>
-  <PackageReference Include="ModelContextProtocol" Version="2.3.0">
-    <ExcludeAssets>runtime</ExcludeAssets>
-  </PackageReference>
+  <PackageReference Include="ModelContextProtocol" Version="2.3.0" />
 </ItemGroup>
 ```
 
@@ -77,7 +75,7 @@ For complete samples see [`McpToolsetDemo`](https://github.com/trgiangv/RevitDev
 ## Runtime guidance
 
 - Load the compiled assembly, not a source file.
-- Keep `ExcludeAssets="runtime"` on the MCP packages; the host provides the MCP SDK.
+- Ship the MCP SDK with the toolset: keep it copy-local (or ILRepack it into the toolset DLL). Do not set `ExcludeAssets="runtime"`; the host does not lend its own copy.
 - Keep tool inputs small and return structured results where practical.
 - Use host transactions and document rules for operations that modify a model.
 

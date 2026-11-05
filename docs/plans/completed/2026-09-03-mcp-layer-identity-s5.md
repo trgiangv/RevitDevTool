@@ -188,7 +188,7 @@ Recovery: revert slice branch; S5 has no kernel or packaging change.
 - [x] S5-B Cheap wins ([Dead code + Python move](3664ff80-dd82-4ac2-98f4-b9f3aa4ac98b)) — 48/48 filtered tests; `Execution → Adapter` csproj ref deferred to P1.
 - [x] S5-C Isolation module ([Catalog/Isolation](6000ef0b-da5b-426b-9bc2-dc885eefe01d)) — 32/32 filtered tests; input-side `ForeignMcpWriter` deferred.
 - [x] S5-D Test honesty ([Merged host tests](35220f6e-78e9-4de3-b5f4-ceff61633aee)) — 4 pass, 2 skip (xunit false-green documented); live checklist item 11 added.
-- [ ] Strategy gate (S1 vs S2) — **human; follow-on**, not this plan.
+- [x] Strategy gate (S1 vs S2) — S1 chosen 2026-11-05 ([0019](../../decisions/0019-ilrepack-and-polyfill-isolated-alc.md) decision 7).
 - [ ] P1 layer split — **follow-on plan**, not this plan.
 - [x] Follow-up: split the former dispatcher into a thin router and source-specific
   .NET, Python, and built-in backends.

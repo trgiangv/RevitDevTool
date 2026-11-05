@@ -116,9 +116,9 @@ Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/complete
 |---------|-----|
 | Opaque `id` (`CatalogId` / `dci2.*`) | Daemon-local locator; external surface stays two dynamic tools |
 | `CallToolPassthroughAsync` | Avoid client auto-MRTR on daemon→host hop (`McpClientPassthrough`) |
-| `ResultBridge` | ALC toolset object → host `CallToolResult` |
+| `ResultBridge` | Toolset protocol result, written as JSON by the toolset SDK → host `CallToolResult` |
 | `InvokeState` | Embed locator `id` in daemon `requestState` on MRTR plumbing hops |
-| Toolset MCP `ExcludeAssets=runtime` | Toolset-only | Compile against MCP; no MCP DLLs in toolset output; `McpAssemblyContext` + `AssemblyResolve` maps to host MCP. |
+| Toolset ships MCP SDK | Toolset carries its own SDK (merged or sibling); results cross `ResultBridge` via `ToolsetProtocolJson` ([0019](../../decisions/0019-ilrepack-and-polyfill-isolated-alc.md) S1) |
 
 ---
 
@@ -139,7 +139,7 @@ Detail + test matrix: [`2026-08-02-mrtr-implementation.md`](../../plans/complete
 
 ```powershell
 dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.csproj -- --filter "InvokeDynamicSdkHarness|StructuredOutput"
-dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj -- --filter "ToolsetResultSerializer|RevitMcpToolSetParser"
+dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj -- --filter "ResultBridge|RevitMcpToolSetParser"
 ```
 
 ---

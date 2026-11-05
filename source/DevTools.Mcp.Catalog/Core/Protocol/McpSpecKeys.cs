@@ -79,20 +79,18 @@ public static class McpSpecKeys
         public const string RequestState = "requestState";
     }
 
-    /// <summary><c>tools/call</c> result shape, including ALC PascalCase <c>Content</c>.</summary>
+    /// <summary><c>tools/call</c> result shape.</summary>
     public static class ToolResult
     {
         public const string Content = "content";
-        public const string ContentPascal = "Content";
         public const string IsError = "isError";
         public const string StructuredContent = "structuredContent";
     }
 
-    /// <summary>Content block fields (<c>TextContent</c>, etc.). Pascal names are the ALC serializer.</summary>
+    /// <summary>Content block fields (<c>TextContent</c>, etc.).</summary>
     public static class Content
     {
         public const string Type = "type";
-        public const string TypePascal = "Type";
         public const string Text = "text";
     }
 

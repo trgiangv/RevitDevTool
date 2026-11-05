@@ -136,14 +136,18 @@ composition, not persisted MCP registry configuration or parser hardcoded paths.
 | Low-level `InputRequiredException` | ✅ Forwarded on wire; retry via `InputResponses` / `RequestState` |
 | High-level `ElicitAsync` / `MrtrContext` suspend | ❌ Sync invoker — documented unsupported |
 
-Toolsets reference MCP with `ExcludeAssets=runtime`. Resolving MCP contracts on a
-repacked host without a private toolset copy requires a packaging strategy not yet
-chosen ([S5 strategy gate](../../plans/completed/2026-09-03-mcp-layer-identity-s5.md)
-— S1 / S2 open). Private toolset dependencies remain toolset-local.
+.NET toolsets ship their own MCP SDK ([0019](../../decisions/0019-ilrepack-and-polyfill-isolated-alc.md)
+decision 7, S1). The host SDK's `McpServerTool` marshals every return value. A return value that is the
+toolset SDK's protocol type is written with that SDK's serializer (`Isolation/ToolsetProtocolJson`, set as
+the tool's `SerializerOptions`) into one text block. `DotnetSource` knows from the method signature that
+the tool returns a protocol object, and `ResultBridge.ToHostCallToolResult` reads that JSON back as the host
+`CallToolResult`. Any other result passes through unchanged. Private toolset dependencies remain
+toolset-local.
 
 ### Tests
 
-- `tests/DevTools.Mcp.Catalog.Tests/AlcCallToolResultBridgeReproTests.cs`
+- `tests/DevTools.Mcp.Catalog.Tests/ResultBridgeTests.cs`
+- `tests/DevTools.Execution.Mcp.Tests/DotnetSourceInvokeTests.cs` (real `samples/McpToolsetDemo`)
 - `tests/DevTools.Mcp.Catalog.Tests/ToolsetInvokerTests.cs`
 - Live checklist: `docs/agents/mcp-integration-test.md`
 
@@ -289,7 +293,8 @@ Register **one** overlapping toolset at a time (Python vs C# `revit_*` name coll
 
 ```powershell
 # ALC mapper (Catalog) + invoke harness (Server) — no live host
-dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj -- --filter "ToolsetResultSerializer|ToolsetInvoker"
+dotnet run --project tests/DevTools.Mcp.Catalog.Tests/DevTools.Mcp.Catalog.Tests.csproj -- --filter "ResultBridge|ToolsetInvoker"
+dotnet run --project tests/DevTools.Execution.Mcp.Tests/DevTools.Execution.Mcp.Tests.csproj -- --filter "DotnetSourceInvokeTests"
 dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.csproj -- --filter "InvokeDynamicSdkHarness"
 
 # Parser / structured output
