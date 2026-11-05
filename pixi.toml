@@ -4,22 +4,23 @@ channels = ["conda-forge"]
 name = "RevitDevTool"
 platforms = ["win-64"]
 version = "0.1.0"
+requires-pixi = ">=0.84.1"
 
 [tasks]
 
 [dependencies]
 python = "3.14.*"
-polars = "==2.0.0"
-numpy = "==2.5.3"
-openpyxl = "==3.1.5"
+polars = "=2.1.0"
+numpy = "=2.5.4"
+openpyxl = "=3.1.5"
 xlsxwriter = ">=3.2.9,<4"
-shapely = "==2.2.0"
-trimesh = "==5.1.1"
-networkx = "==3.7"
-scikit-learn = "==1.9.1"
-debugpy = "==1.8.22"
-pytest = "==9.1.1"
-pixi-pycharm = "==0.0.12"
+shapely = "=2.2.0"
+trimesh = "=5.2.0"
+networkx = "=3.7"
+scikit-learn = "=1.9.1"
+debugpy = "=1.8.22"
+pytest = "=9.2.0"
+pixi-pycharm = "=0.0.12"
 
 [pypi-dependencies]
 manifold3d = "==3.5.4"
