@@ -9,7 +9,7 @@ namespace DevTools.Mcp.Catalog.Tests;
 public sealed class McpCatalogStoreTests
 {
     [TestMethod]
-    public async Task ReloadAsync_DoesNotRaiseCatalogChanged_WhenIdsUnchanged()
+    public async Task ReloadAsync_RaisesCatalogChanged_WhenMetadataUnchanged()
     {
         var catalog = Catalog(Tool("execute_csharp_code"));
         var store = CreateStore(() => catalog);
@@ -19,7 +19,7 @@ public sealed class McpCatalogStoreTests
         store.EnsureLoaded();
         await store.ReloadAsync();
 
-        Assert.AreEqual(0, raised);
+        Assert.AreEqual(1, raised);
         Assert.HasCount(1, store.RegisteredTools);
     }
 

@@ -17,6 +17,7 @@ public sealed class McpCatalogStore(ICatalogLoader catalogLoader, ISettingsServi
     public event EventHandler? CatalogChanged;
 
     public IReadOnlyList<RegisteredTool> RegisteredTools { get; private set; } = [];
+    public IReadOnlyDictionary<string, string> LoadFailures { get; private set; } = RegistryCatalog.Empty.Failures;
     public IReadOnlyList<RegisteredResource> ResourceCatalog { get; private set; } = [];
 
     public List<Tool> GetToolDescriptors() =>
@@ -28,68 +29,112 @@ public sealed class McpCatalogStore(ICatalogLoader catalogLoader, ISettingsServi
     public List<ResourceTemplate> GetResourceTemplateDescriptors() =>
         ResourceCatalog.Where(r => r.TemplateDescriptor is not null).Select(r => r.TemplateDescriptor!).ToList();
 
+    public IReadOnlyList<string> ToolsetPaths =>
+        [.. settingsService.McpRegistryConfig.DotnetPaths, .. settingsService.McpRegistryConfig.PythonPaths];
+
     public async Task ReloadAsync()
     {
-        bool changed;
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
-            var loaded = await Task.Run(() =>
-            {
-                var catalog = catalogLoader.LoadCatalog(
-                    settingsService.McpRegistryConfig.DotnetPaths,
-                    settingsService.McpRegistryConfig.PythonPaths);
+            var config = settingsService.McpRegistryConfig;
+            var saved = ToolsetPaths;
+            var loaded = await Task.Run(() => catalogLoader.LoadCatalog(config.DotnetPaths, config.PythonPaths)).ConfigureAwait(false);
 
-                McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, catalog);
-                return catalog;
-            }).ConfigureAwait(false);
-
-            changed = TryApplyCatalog(loaded);
+            McpPathValidator.PruneInvalidConfiguredPaths(config, loaded);
+            ApplyLoadedCatalog(loaded);
+            SaveIfPathsChanged(saved);
         }
         finally
         {
             _gate.Release();
         }
 
-        if (changed)
-            CatalogChanged?.Invoke(this, EventArgs.Empty);
+        CatalogChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task AddPathAsync(string path)
+    public async Task<ToolsetChange> AddPathAsync(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
-            return;
+            return ToolsetChange.Unsupported;
 
         var normalizedPath = Path.GetFullPath(path);
         var inputKind = McpPathValidator.ClassifyInputPath(normalizedPath);
         if (inputKind == ExecutionMode.Unsupported)
-            return;
+            return ToolsetChange.Unsupported;
 
-        bool changed;
+        ToolsetChange change;
         await _gate.WaitAsync().ConfigureAwait(false);
         try
         {
-            var dotnetCandidates = settingsService.McpRegistryConfig.DotnetPaths.ToList();
-            var pythonCandidates = settingsService.McpRegistryConfig.PythonPaths.ToList();
+            var config = settingsService.McpRegistryConfig;
+            var saved = ToolsetPaths;
+            var registered = saved.Any(p => McpPathValidator.IsSamePath(p, normalizedPath));
+            var dotnetCandidates = config.DotnetPaths.ToList();
+            var pythonCandidates = config.PythonPaths.ToList();
 
             if (inputKind == ExecutionMode.Dotnet)
                 McpPathValidator.AddDistinct(dotnetCandidates, normalizedPath);
-            else if (inputKind == ExecutionMode.Python)
+            else
                 McpPathValidator.AddDistinct(pythonCandidates, normalizedPath);
 
             var loaded = await Task.Run(() => catalogLoader.LoadCatalog(dotnetCandidates, pythonCandidates)).ConfigureAwait(false);
-            changed = TryApplyCatalog(loaded);
+            ApplyLoadedCatalog(loaded);
 
             PersistAcceptedPath(inputKind, normalizedPath, loaded);
-            McpPathValidator.PruneInvalidConfiguredPaths(settingsService.McpRegistryConfig, loaded);
+            McpPathValidator.PruneInvalidConfiguredPaths(config, loaded);
+            SaveIfPathsChanged(saved);
+
+            change = !McpPathValidator.PathProducesCatalogItems(normalizedPath, inputKind, loaded)
+                ? ToolsetChange.NoItems
+                : registered ? ToolsetChange.Reloaded : ToolsetChange.Added;
         }
         finally
         {
             _gate.Release();
         }
 
-        if (changed)
-            CatalogChanged?.Invoke(this, EventArgs.Empty);
+        CatalogChanged?.Invoke(this, EventArgs.Empty);
+        return change;
+    }
+
+    public async Task<ToolsetChange> RemovePathAsync(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return ToolsetChange.NotRegistered;
+
+        await _gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var config = settingsService.McpRegistryConfig;
+            var removed = config.DotnetPaths.RemoveAll(p => McpPathValidator.IsSamePath(p, path))
+                          + config.PythonPaths.RemoveAll(p => McpPathValidator.IsSamePath(p, path));
+            if (removed == 0)
+                return ToolsetChange.NotRegistered;
+
+            settingsService.SaveSettings();
+            var loaded = await Task.Run(() => catalogLoader.LoadCatalog(config.DotnetPaths, config.PythonPaths)).ConfigureAwait(false);
+            ApplyLoadedCatalog(loaded);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+
+        CatalogChanged?.Invoke(this, EventArgs.Empty);
+        return ToolsetChange.Removed;
+    }
+
+    private void ApplyLoadedCatalog(RegistryCatalog catalog)
+    {
+        ApplyCatalog(catalog);
+        _contentHash = McpCatalogHash.Compute(catalog);
+    }
+
+    private void SaveIfPathsChanged(IReadOnlyList<string> saved)
+    {
+        if (!saved.SequenceEqual(ToolsetPaths, StringComparer.OrdinalIgnoreCase))
+            settingsService.SaveSettings();
     }
 
     public bool TryGetTool(string? toolId, string? toolName, out RegisteredTool? tool)
@@ -183,6 +228,7 @@ public sealed class McpCatalogStore(ICatalogLoader catalogLoader, ISettingsServi
 
     private void ApplyCatalog(RegistryCatalog catalog)
     {
+        LoadFailures = catalog.Failures;
         ClearIndexes();
 
         RegisteredTools = catalog.Tools;

@@ -154,3 +154,4 @@ here.
 | [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) | Product version, wire contract ranges, and satellite (NuGet, pytest, gateway) compatibility | Accepted |
 | [0056](0056-mcp-run-command.md) | MCP `run_command` runs a built entry point by exact path and name | Accepted — landed 2026-11-03; partly superseded by 0057 |
 | [0057](0057-command-execution-shared-by-panel-and-mcp.md) | Command Execution has one owner, shared by the panel and `run_command` | Accepted |
+| [0058](0058-mcp-toolsets-shared-by-panel-and-add-tools.md) | MCP toolsets have one owner, shared by the registry panel and `add_tools` | Accepted |

@@ -31,7 +31,8 @@ public sealed class PythonMcpRegistryProvider(
         if (!pythonInitializer.IsInitialized)
         {
             logger.ZLogWarning($"Python environment is not ready. Skipping Python MCP registry discovery");
-            return RegistryCatalog.Empty;
+            return Directories.Aggregate(RegistryCatalog.Empty,
+                (catalog, directory) => catalog.Merge(RegistryCatalog.Failed(directory, "The Python environment is not ready yet.")));
         }
 
         PreResolveDependencies(Directories);
@@ -50,6 +51,7 @@ public sealed class PythonMcpRegistryProvider(
             catch (Exception ex)
             {
                 logger.ZLogWarning($"Failed to parse Python directory '{dir}': {ex.Message}\n{ex.StackTrace}");
+                all = all.Merge(RegistryCatalog.Failed(dir, ex.Message));
             }
         }
 

@@ -46,6 +46,17 @@ public static class McpPathValidator
             || catalog.Resources.Any(t => t.Binding.SourceKind == mode && IsItemFromPath(normalized, t.Binding.SourcePath));
     }
 
+    public static bool BelongsTo(string path, PrimitiveBinding binding)
+    {
+        var mode = string.Equals(Path.GetExtension(path), DotnetToolPattern, StringComparison.OrdinalIgnoreCase)
+            ? ExecutionMode.Dotnet
+            : ExecutionMode.Python;
+        return binding.SourceKind == mode && IsItemFromPath(NormalizePath(path), binding.SourcePath);
+    }
+
+    public static bool IsSamePath(string left, string right) =>
+        string.Equals(NormalizePath(left), NormalizePath(right), StringComparison.OrdinalIgnoreCase);
+
     private static bool IsItemFromPath(string configuredPath, string? itemSourcePath)
     {
         if (itemSourcePath is null || string.IsNullOrWhiteSpace(itemSourcePath))

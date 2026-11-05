@@ -32,6 +32,7 @@ public sealed class DotnetMcpRegistry(
             catch (Exception ex)
             {
                 logger.ZLogWarning($"Failed to parse .NET MCP tools from '{assemblyPath}': {ex.Message}");
+                catalog = catalog.Merge(RegistryCatalog.Failed(assemblyPath, ex.Message));
             }
         }
 

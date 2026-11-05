@@ -87,6 +87,7 @@ Registered via DI in host projects and exposed on the host SDK server
 | `execute_csharp_code` | Revit + AutoCAD | Compile and run C# with host API context |
 | `execute_python_code` | Revit + AutoCAD | Execute inline Python with PEP 723 deps |
 | `run_command` | Revit + AutoCAD | Run, add, remove, or list Command Execution roots and entries through `IExecutionOrchestrator` on the UI thread; `run` matches path and entry exactly ([0056](../../decisions/0056-mcp-run-command.md), [0057](../../decisions/0057-command-execution-shared-by-panel-and-mcp.md)) |
+| `add_tools` | Revit + AutoCAD | Add, reload, remove, or list MCP toolsets through `McpCatalogStore`; each change rebuilds the host collections and load contexts ([0058](../../decisions/0058-mcp-toolsets-shared-by-panel-and-add-tools.md)) |
 | `open_document` | Revit + AutoCAD | Open model file via `IDocumentBridge` |
 | `navigate_history` | Revit + AutoCAD | Undo/redo navigation |
 | `view_screenshot` | Revit + AutoCAD | Active viewport PNG (1280 px / 1280×720) as MCP image content |

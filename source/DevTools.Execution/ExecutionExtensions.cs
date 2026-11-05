@@ -97,6 +97,7 @@ public static class ExecutionExtensions
         services.AddSingleton<IRegistryProvider>(sp => sp.GetRequiredService<PythonMcpRegistryProvider>());
         services.AddSingleton<IBuiltInMcpTool, CSharpCodeTool>();
         services.AddSingleton<IBuiltInMcpTool, RunCommandTool>();
+        services.AddSingleton<IBuiltInMcpTool, AddToolsTool>();
         services.AddSingleton<IBuiltInMcpTool, PythonCodeTool>();
         services.AddSingleton<IBuiltInMcpTool>(sp =>
             new OpenDocumentTool(sp.GetService<IDocumentBridge>() ?? NullDocumentBridge.Instance));

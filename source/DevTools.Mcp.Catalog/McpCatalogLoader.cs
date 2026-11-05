@@ -22,24 +22,27 @@ public sealed class McpCatalogLoader(IEnumerable<IRegistryProvider> providers, I
         var toolNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var resourceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        LoadProviders(toolMap, resourceMap, toolNames, resourceNames);
+        var failures = LoadProviders(toolMap, resourceMap, toolNames, resourceNames);
 
-        var loaded = CreateCatalog(toolMap, resourceMap);
+        var loaded = CreateCatalog(toolMap, resourceMap) with { Failures = failures };
         UpdateKnownIds(loaded);
         return loaded;
     }
 
-    private void LoadProviders(
+    private IReadOnlyDictionary<string, string> LoadProviders(
         Dictionary<string, RegisteredTool> toolMap,
         Dictionary<string, RegisteredResource> resourceMap,
         HashSet<string> toolNames,
         HashSet<string> resourceNames)
     {
-        foreach (var provider in _providers.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
-            LoadProvider(provider, toolMap, resourceMap, toolNames, resourceNames);
+        var failures = _providers
+            .OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(provider => LoadProvider(provider, toolMap, resourceMap, toolNames, resourceNames))
+            .ToArray();
+        return RegistryCatalog.MergeFailures(failures);
     }
 
-    private void LoadProvider(
+    private IReadOnlyDictionary<string, string> LoadProvider(
         IRegistryProvider provider,
         Dictionary<string, RegisteredTool> toolMap,
         Dictionary<string, RegisteredResource> resourceMap,
@@ -53,10 +56,12 @@ public sealed class McpCatalogLoader(IEnumerable<IRegistryProvider> providers, I
             Collect(provider.Name, catalog.Tools, toolMap, toolNames, tool => tool.Id, tool => tool.Descriptor.Name, "tool");
             Collect(provider.Name, catalog.Resources, resourceMap, resourceNames,
                 resource => resource.Id, resource => resource.DisplayName, "resource");
+            return catalog.Failures;
         }
         catch (Exception ex)
         {
             logger.ZLogWarning($"Provider '{provider.Name}' failed: {ex.Message}");
+            return RegistryCatalog.Empty.Failures;
         }
     }
 

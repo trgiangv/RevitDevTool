@@ -56,6 +56,18 @@ In-host MCP runtime is shared across registered hosts.
     form `run` accepts (all roots, or the one holding `path`).
   - The tool is destructive. A command that opens a dialog, a window, or a pick
     prompt blocks the call until a person answers it.
+- `add_tools(action?, path?)` registers the agent's own MCP toolsets, the same
+  toolsets and saved paths as the registry panel
+  ([0058](../decisions/0058-mcp-toolsets-shared-by-panel-and-add-tools.md)).
+  `path` is a built `[McpTool]` `.dll` that ships its own MCP SDK, or a folder
+  with `*mcp.py` files. A failed load returns its reason.
+  - `add` (default) registers `path`, or reloads it when it is already
+    registered; a rebuilt DLL loads fresh. `reload` reloads every toolset,
+    `remove` unregisters exactly `path`, `list` returns paths with tool names
+    and resource URIs.
+  - Saved paths are written at once. A path that yields no tools is not saved.
+  - New or changed tools are callable from the next `code_mode` program, after
+    the daemon re-lists the host.
 - **MRTR is not a product workflow** ([0027](../decisions/0027-mcp-product-surface.md)).
   The working loop is one `code_mode` program: search, call, and return a projection.
   Execute error tags (`[COMPILATION ERROR]`, `[RUNTIME ERROR]`, `[ROLLBACK]`) are retried inside that program. Destructive
@@ -104,6 +116,7 @@ In-host MCP runtime is shared across registered hosts.
 - SDK gaps: [`docs/architecture/MCP/sdk-gap-matrix.md`](../architecture/MCP/sdk-gap-matrix.md)
 - Product surface: [`docs/decisions/0027-mcp-product-surface.md`](../decisions/0027-mcp-product-surface.md)
 - `run_command`: [`docs/decisions/0056-mcp-run-command.md`](../decisions/0056-mcp-run-command.md)
+- `add_tools`: [`docs/decisions/0058-mcp-toolsets-shared-by-panel-and-add-tools.md`](../decisions/0058-mcp-toolsets-shared-by-panel-and-add-tools.md)
 - Host pipe (partially superseded): [`docs/decisions/0012-host-mcp-spec-engine.md`](../decisions/0012-host-mcp-spec-engine.md)
 - Boundaries (host wire): [`docs/architecture/MCP/platform-boundaries.md`](../architecture/MCP/platform-boundaries.md)
 - Workflows: [`docs/architecture/MCP/workflows.md`](../architecture/MCP/workflows.md)

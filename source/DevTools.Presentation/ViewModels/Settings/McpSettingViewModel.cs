@@ -1,6 +1,5 @@
 using DevTools.Mcp;
 using DevTools.Presentation.Services;
-using DevTools.Settings;
 using System.Collections.ObjectModel;
 using System.Windows.Threading;
 
@@ -8,7 +7,6 @@ namespace DevTools.Presentation.ViewModels.Settings;
 
 public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
 {
-    private readonly ISettingsService _settingsService;
     private readonly McpCatalogStore _catalogStore;
     private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
 
@@ -26,9 +24,8 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
                                                   }
                                                   """;
 
-    public McpSettingViewModel(ISettingsService settingsService, McpCatalogStore catalogStore)
+    public McpSettingViewModel(McpCatalogStore catalogStore)
     {
-        _settingsService = settingsService;
         _catalogStore = catalogStore;
         _catalogStore.CatalogChanged += OnCatalogChanged;
         LoadSources();
@@ -47,21 +44,13 @@ public sealed partial class McpSettingViewModel : ObservableObject, IDisposable
     private async Task RemoveSourceAsync(string source)
     {
         if (string.IsNullOrWhiteSpace(source)) return;
-
-        var config = _settingsService.McpRegistryConfig;
-        config.DotnetPaths = config.DotnetPaths.Where(p => p != source).ToList();
-        config.PythonPaths = config.PythonPaths.Where(p => p != source).ToList();
-
-        await _catalogStore.ReloadAsync().ConfigureAwait(true);
+        await _catalogStore.RemovePathAsync(source).ConfigureAwait(true);
     }
 
     private void LoadSources()
     {
         ToolsetSources.Clear();
-        var config = _settingsService.McpRegistryConfig;
-        foreach (var path in config.DotnetPaths)
-            ToolsetSources.Add(path);
-        foreach (var path in config.PythonPaths)
+        foreach (var path in _catalogStore.ToolsetPaths)
             ToolsetSources.Add(path);
     }
 

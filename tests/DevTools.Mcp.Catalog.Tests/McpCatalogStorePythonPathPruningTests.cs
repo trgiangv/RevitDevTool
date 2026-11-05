@@ -9,7 +9,7 @@ namespace DevTools.Mcp.Catalog.Tests;
 public sealed class McpCatalogStorePythonPathPruningTests
 {
     [TestMethod]
-    public void EnsureLoaded_RemovesPathsThatProduceNoCatalogItems()
+    public void EnsureLoaded_KeepsSavedPathsThatLoadNothing()
     {
         var pythonPath = CreatePythonDirectory();
         var missingDotnet = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "missing.dll");
@@ -27,8 +27,8 @@ public sealed class McpCatalogStorePythonPathPruningTests
 
             store.EnsureLoaded();
 
-            Assert.IsEmpty(config.PythonPaths);
-            Assert.IsEmpty(config.DotnetPaths);
+            CollectionAssert.AreEqual(new[] { pythonPath }, config.PythonPaths);
+            CollectionAssert.AreEqual(new[] { missingDotnet }, config.DotnetPaths);
         }
         finally
         {

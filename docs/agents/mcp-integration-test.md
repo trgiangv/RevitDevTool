@@ -472,6 +472,26 @@ survive a host that `scripts/build-host.ps1` kills.
 
 For AutoCAD, use a command DLL you built and pass `entry` as `TypeFullName.MethodName`.
 
+### Scenario 13: Register and reload a toolset (`add_tools`)
+
+**Goal**: Verify `add_tools` registers, reloads after a rebuild, and removes a toolset
+([0058](../decisions/0058-mcp-toolsets-shared-by-panel-and-add-tools.md)).
+
+**Prerequisite**: Revit open. Build `samples/McpToolsetDemo -c Debug.Autodesk.<Year>` (it merges its own MCP
+SDK, [0019](../decisions/0019-ilrepack-and-polyfill-isolated-alc.md) S1) and copy the DLL to a scratch folder.
+
+```
+1. {path: "<scratch>\McpToolsetDemo.dll"}
+   Expected: Added with ping_infrastructure among tools; path in McpRegistryConfig.json at once
+2. Next code_mode program: InvokeAsync("ping_infrastructure"), then "test_forwarder_calltoolresult"
+   Expected: "pong", then "forwarder-spike-ok" (the same program as step 1 reports the tool as not found: the
+   daemon has not re-listed yet)
+3. Change PingInfrastructure's return value, rebuild, copy over the scratch DLL, repeat step 1
+   Expected: Reloaded; the DLL was not locked; the next program returns the new value
+4. {action: "remove", path: <same>}, then {action: "list"}
+   Expected: Removed; list no longer holds it; a host restart does not reload it
+```
+
 ---
 
 ## Token Usage Measurement
