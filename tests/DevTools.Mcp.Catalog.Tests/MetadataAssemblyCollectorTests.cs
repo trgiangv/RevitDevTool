@@ -51,9 +51,9 @@ public sealed class MetadataAssemblyCollectorTests
         Assert.Contains(typeof(MetadataAssemblyCollectorTests), types);
     }
 
-    private static IReadOnlyList<string> InvokeCollect(string entryPath, IEnumerable<string>? dependencyPaths)
+    private static IReadOnlyCollection<string> InvokeCollect(string entryPath, IEnumerable<string>? dependencyPaths)
     {
         var method = CollectorType.GetMethod("Collect", BindingFlags.Public | BindingFlags.Static)!;
-        return (IReadOnlyList<string>)method.Invoke(null, [entryPath, dependencyPaths])!;
+        return (IReadOnlyCollection<string>)method.Invoke(null, [entryPath, dependencyPaths])!;
     }
 }
