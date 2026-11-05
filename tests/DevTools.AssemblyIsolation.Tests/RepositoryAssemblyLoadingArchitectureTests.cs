@@ -27,6 +27,9 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
         foreach (var path in EnumerateRepositoryInputs())
         {
             var relativePath = Normalize(Path.GetRelativePath(RepositoryRoot, path));
+            if (relativePath.StartsWith(StubGeneratorSubmodule, StringComparison.Ordinal))
+                continue;
+
             var content = File.ReadAllText(path);
 
             foreach (var pattern in DirectLoaderPatterns)
@@ -67,18 +70,19 @@ public sealed class RepositoryAssemblyLoadingArchitectureTests
     }
 
     [TestMethod]
-    public void Shipped_stub_generator_uses_the_kernel_without_framework_runtime_probing()
+    public void Stub_generator_submodule_stays_independent_of_the_kernel()
     {
-        const string relativePath = "libs/pythonnet-stub-generator/csharp/PythonNetStubGenerator/StubBuilder.cs";
-        var content = File.ReadAllText(Path.Combine(RepositoryRoot, relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        var gitmodules = File.ReadAllText(Path.Combine(RepositoryRoot, ".gitmodules"));
+        var project = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            (StubGeneratorSubmodule + "csharp/PythonNetStubGenerator/PythonNetStubGenerator.csproj")
+                .Replace('/', Path.DirectorySeparatorChar)));
 
-        Assert.Contains("AssemblyLoader", content, StringComparison.Ordinal);
-        Assert.DoesNotContain("Assembly.LoadFrom", content, StringComparison.Ordinal);
-        Assert.DoesNotContain("AssemblyResolve +=", content, StringComparison.Ordinal);
-        Assert.DoesNotContain("Microsoft.WindowsDesktop.App", content, StringComparison.Ordinal);
-        Assert.DoesNotContain("Microsoft.NETCore.App", content, StringComparison.Ordinal);
-        Assert.DoesNotContain("Microsoft.AspNetCore.App", content, StringComparison.Ordinal);
+        Assert.Contains("path = " + StubGeneratorSubmodule.TrimEnd('/'), gitmodules, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.AssemblyIsolation", project, StringComparison.Ordinal);
     }
+
+    private const string StubGeneratorSubmodule = "libs/pythonnet-stub-generator/";
 
     private static readonly string[] DirectLoaderPatterns =
     [

@@ -1,6 +1,7 @@
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.AssemblyIsolation.Loading;
 using System.Reflection;
+using System.Runtime.Loader;
 
 namespace DevTools.AssemblyIsolation.Tests;
 
@@ -86,6 +87,32 @@ public sealed class AssemblyLoaderTests
             .Invoke(null, null));
 
         Assert.IsInstanceOfType<FileNotFoundException>(exception.InnerException);
+    }
+
+    [TestMethod]
+    public void Default_context_loader_path_loads_into_the_default_context_once()
+    {
+        using var directory = new LoadTestDirectory();
+        var path = MetadataAssemblySessionTests.CopyFixture("IsolationSibling", "IsolationSibling.dll", directory.Path);
+        var loader = AssemblyLoader.ForDefaultContext();
+
+        var assembly = loader.LoadPath(path);
+
+        Assert.AreSame(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(assembly));
+        Assert.AreSame(assembly, Assembly.Load(assembly.GetName()));
+        Assert.AreSame(assembly, loader.LoadPath(path));
+    }
+
+    [TestMethod]
+    public void Default_loader_path_loads_outside_the_default_context()
+    {
+        using var directory = new LoadTestDirectory();
+        var path = MetadataAssemblySessionTests.CopyFixture("IsolationEntry", "entry.dll", directory.Path);
+        var loader = new AssemblyLoader();
+
+        var assembly = loader.LoadPath(path);
+
+        Assert.AreNotSame(AssemblyLoadContext.Default, AssemblyLoadContext.GetLoadContext(assembly));
     }
 
     sealed class RecordingDiagnosticSink : IAssemblyIsolationDiagnosticSink

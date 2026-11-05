@@ -49,8 +49,13 @@ fourth path. Feature adapters compose its plans: `CommandIsolationPlan`,
 host command-discovery metadata sessions. `Share(assembly)` reuses that loaded
 instance and forgives version for it only. `Pin(assembly)` requires full
 identity. Neither is an ambient name list. PyRevit uses
-its application-lifetime `AssemblyLoader` for selected extension
-candidates.
+its application-lifetime `AssemblyLoader.ForDefaultContext()` for selected
+extension candidates, so IronPython `clr.AddReference` binds the same copy.
+Daemon `code_mode` loads its emitted script through a `Collectible`
+`AssemblyIsolationSession`. Stub dumping (`AssemblyGenerator`) resolves ILPack
+manifest references with the kernel's `LoadedAssemblyResolveScope` (loaded
+instances, full identity only). MSTest testhost discovery opens the test
+assembly with `DiscoveryAssemblyLoad`, like NUnit and TUnit.
 
 | Job | Entry |
 |-----|--------|
@@ -62,10 +67,10 @@ Compile-only Autodesk refs used by testhost discovery are resolved through
 `DiscoveryAssemblyLoad` (`discovery-refs.txt`). The selected MTP sibling is a
 normal testhost assembly reference, not a private bootstrap loader.
 
-The shipped `PythonNetStubGenerator` uses the kernel's `AssemblyLoader` for
-caller-selected DLL directories. It
-does not probe shared framework installations or apply `System.*`/`Microsoft.*`
-sharing rules; unresolved framework requests fall back to the CLR.
+`libs/pythonnet-stub-generator` is an independent submodule with no
+`DevTools.AssemblyIsolation` reference. Its own `StubBuilder` resolver and
+shared-framework probing are outside the kernel; the repository loading scan
+skips that submodule and asserts it stays decoupled.
 
 Native dialog/stdio P/Invoke for **launch** stays inside `DevTools.Hosting` (`DialogNative`, `HostLaunchService.StdioInheritance`). Do not create `Hosting → Utilities` for Interop. WPF owner/title-bar stays `DevTools.UI/Win32Utils`.
 

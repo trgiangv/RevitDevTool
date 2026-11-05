@@ -1,6 +1,6 @@
+using DevTools.AssemblyIsolation.Loading;
 using Microsoft.Extensions.Logging;
 using System.IO;
-using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Runtime.Versioning;
@@ -16,6 +16,7 @@ namespace RevitDevTool.Execution.PyRevit;
 internal static class PyRevitAssemblyLoader
 {
     private static readonly Lock LoadLock = new();
+    private static readonly AssemblyLoader Loader = AssemblyLoader.ForDefaultContext();
     private static readonly HashSet<string> LoadedRoots = new(StringComparer.OrdinalIgnoreCase);
     private static readonly Dictionary<string, IReadOnlyList<string>> SelectedByRoot = new(StringComparer.OrdinalIgnoreCase);
 
@@ -124,7 +125,7 @@ internal static class PyRevitAssemblyLoader
 
             try
             {
-                Assembly.LoadFrom(dllPath);
+                Loader.LoadPath(dllPath);
                 logger?.ZLogInformation($"[PyRevit] Loaded extension DLL: {Path.GetFileName(dllPath)}");
             }
             catch (Exception ex)

@@ -1,5 +1,6 @@
 using DevTools.Testing.Abstractions;
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Abstractions.Loading;
 using Microsoft.VisualStudio.TestPlatform.MSTestAdapter.PlatformServices.SourceGeneration;
 using System.Reflection;
 
@@ -24,26 +25,14 @@ public sealed class MSTestTestDiscoverer : ITestDiscoverer
         if (!File.Exists(fullPath))
             throw new TestingDiscoveryFailedException("MSTest test assembly not found: " + fullPath);
 
-        var testAssembly = LoadTestAssembly(fullPath);
+        using var load = DiscoveryAssemblyLoad.Open(fullPath);
+        var testAssembly = load.Assembly;
         RegisterWhenAnotherCopyIsLoaded(testAssembly);
         var listed = MSTestListing.List(testAssembly);
         var selected = Select(listed, selection);
         return selection.Kind == TestSelectionKind.All
             ? selected
             : WithPrerequisites(testAssembly, listed, selected);
-    }
-
-    private static Assembly LoadTestAssembly(string fullPath)
-    {
-        foreach (var loaded in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            if (loaded.IsDynamic || loaded.Location.Length == 0)
-                continue;
-            if (string.Equals(Path.GetFullPath(loaded.Location), fullPath, StringComparison.OrdinalIgnoreCase))
-                return loaded;
-        }
-
-        return Assembly.LoadFrom(fullPath);
     }
 
     private static void RegisterWhenAnotherCopyIsLoaded(Assembly testAssembly)

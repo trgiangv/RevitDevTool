@@ -12,7 +12,9 @@ namespace DevTools.AssemblyIsolation.Loading;
 /// <summary>
 /// Path-loads assemblies once for the process lifetime. Optional
 /// <see cref="Register"/> probes one directory when the default context asks
-/// for a missing sibling (managed or native).
+/// for a missing sibling (managed or native). <see cref="ForDefaultContext"/>
+/// path-loads into the default context so name-based binds in that context
+/// see the same instance.
 /// </summary>
 public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics = null) : IDisposable
 {
@@ -22,6 +24,11 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
     private DirectoryAssemblySource? _managedSource;
     private bool _registered;
     private bool _disposed;
+
+    private bool DefaultContext { get; init; }
+
+    public static AssemblyLoader ForDefaultContext(IAssemblyIsolationDiagnosticSink? diagnostics = null) =>
+        new(diagnostics) { DefaultContext = true };
 
 #if NET
     private AssemblyLoadContext LoadContext { get; } = new("DevTools.AssemblyLoader", isCollectible: false);
@@ -63,7 +70,9 @@ public sealed class AssemblyLoader(IAssemblyIsolationDiagnosticSink? diagnostics
 #if NETFRAMEWORK
             var assembly = Assembly.LoadFrom(normalizedPath);
 #else
-            var assembly = LoadContext.LoadFromAssemblyPath(normalizedPath);
+            var assembly = DefaultContext
+                ? Assembly.LoadFrom(normalizedPath)
+                : LoadContext.LoadFromAssemblyPath(normalizedPath);
 #endif
             _assembliesByPath.Add(normalizedPath, new LoadedPath(identity, fingerprint, assembly));
             _assembliesByIdentity.Add(identity, new SelectedAssembly(normalizedPath, assembly));

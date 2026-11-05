@@ -1,3 +1,4 @@
+using DevTools.AssemblyIsolation;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -28,6 +29,10 @@ public static class CodeModeCompiler
         "System.Threading",
         "netstandard",
     ];
+
+    private static readonly AssemblyIsolationPlan IsolationPlan =
+        AssemblyIsolationPlan.Create(Path.Combine(Path.GetTempPath(), "DevTools.Daemon", "DevTools.Daemon.CodeMode.dll"))
+            .WithKind(AssemblyIsolationKind.Collectible);
 
     public static CompiledScript Compile(string? code) => Load(Emit(code));
 
@@ -63,11 +68,19 @@ public static class CodeModeCompiler
 
     public static CompiledScript Load(byte[] pe)
     {
-        var context = new ScriptLoadContext();
-        var assembly = context.LoadFromStream(new MemoryStream(pe));
-        var type = assembly.GetType("DevTools.Daemon.Mcp.Code.Generated.Script")
-            ?? throw new InvalidOperationException("Compiled script type was not emitted.");
-        return new CompiledScript(context, type);
+        var session = AssemblyIsolationSession.Create(IsolationPlan);
+        try
+        {
+            var assembly = session.LoadAssembly(pe);
+            var type = assembly.GetType("DevTools.Daemon.Mcp.Code.Generated.Script")
+                ?? throw new InvalidOperationException("Compiled script type was not emitted.");
+            return new CompiledScript(session, type);
+        }
+        catch
+        {
+            session.Dispose();
+            throw;
+        }
     }
 
     private static string Wrap(string code) =>
@@ -116,30 +129,23 @@ public static class CodeModeCompiler
         var module = ModuleMetadata.CreateFromMetadata((IntPtr)blob, length);
         return AssemblyMetadata.Create(module).GetReference();
     }
-
-    private sealed class ScriptLoadContext : AssemblyLoadContext
-    {
-        public ScriptLoadContext()
-            : base(isCollectible: true)
-        {
-        }
-    }
 }
 
 /// <summary>A collectible compiled script. Dispose drops the load context so it can unload.</summary>
 public sealed class CompiledScript : IDisposable
 {
-    private AssemblyLoadContext? _context;
+    private AssemblyIsolationSession? _session;
     private Type? _type;
 
-    internal CompiledScript(AssemblyLoadContext context, Type type)
+    internal CompiledScript(AssemblyIsolationSession session, Type type)
     {
-        _context = context;
+        _session = session;
         _type = type;
     }
 
     internal AssemblyLoadContext LoadContext =>
-        _context ?? throw new ObjectDisposedException(nameof(CompiledScript));
+        AssemblyLoadContext.GetLoadContext(
+            (_type ?? throw new ObjectDisposedException(nameof(CompiledScript))).Assembly)!;
 
     public Task<object?> RunAsync(CancellationToken cancellationToken = default) =>
         RunAsync(runtime: null, cancellationToken);
@@ -157,8 +163,8 @@ public sealed class CompiledScript : IDisposable
 
     public void Dispose()
     {
-        var context = Interlocked.Exchange(ref _context, null);
+        var session = Interlocked.Exchange(ref _session, null);
         _type = null;
-        context?.Unload();
+        session?.Dispose();
     }
 }

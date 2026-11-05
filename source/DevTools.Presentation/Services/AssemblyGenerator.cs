@@ -1,3 +1,4 @@
+using DevTools.AssemblyIsolation.Loading;
 using System.IO;
 using System.Reflection;
 
@@ -25,7 +26,7 @@ public static class AssemblyGenerator
         var generator = new Lokad.ILPack.AssemblyGenerator();
         var results = new Result[chain.Count];
 
-        using var resolveScope = new AssemblyResolveScope(loaded);
+        using var resolveScope = new LoadedAssemblyResolveScope(loaded.Values);
         for (var i = 0; i < chain.Count; i++)
             results[i] = Generate(generator, chain[i], loaded, outputDirectory);
 
@@ -141,29 +142,5 @@ public static class AssemblyGenerator
             return true;
 
         return assembly.GetModules(false).Any(module => File.Exists(module.FullyQualifiedName));
-    }
-
-    /// <summary>
-    /// ILPack calls <c>Assembly.Load</c> for a manifest reference that has no file.
-    /// Return the loaded instance only when the identity matches. A different version is not a substitute.
-    /// </summary>
-    private sealed class AssemblyResolveScope : IDisposable
-    {
-        private readonly Dictionary<string, Assembly> _byFullName;
-
-        public AssemblyResolveScope(Dictionary<string, Assembly> byFullName)
-        {
-            _byFullName = byFullName;
-            AppDomain.CurrentDomain.AssemblyResolve += Resolve;
-        }
-
-        public void Dispose() => AppDomain.CurrentDomain.AssemblyResolve -= Resolve;
-
-        private Assembly? Resolve(object? sender, ResolveEventArgs args)
-        {
-            var fullName = new AssemblyName(args.Name).FullName;
-            return _byFullName.GetValueOrDefault(fullName);
-
-        }
     }
 }
