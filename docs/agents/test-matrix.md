@@ -58,7 +58,7 @@ instrumented `(file, line)` hits across all seven MCP testhosts below (not Cover
 | `DevTools.Execution.Mcp.Tests` | 29 | 0 | 0 | `DevTools.Execution` 3.0% (scoped; whole Execution not gated here) |
 | `DevTools.Daemon.Tests` | 88 | 0 | 0 | Daemon **67.0%** |
 
-Adapter failure: `LiveHost_ExecuteCsharp_SyncAndTasksOptIn` — live `DevToolsMcp_*` host without `tasks/get` (Skip when no pipe; fails when an old host is connected). Coverage still collected.
+Adapter live check: `LiveHost_ExecuteCsharp_SyncAndTasksOptIn` needs a live `DevToolsMcp_*` host (Inconclusive when no pipe). A host built before pipe sessions copied `RequestHandlers` fails it with "Method 'tasks/get' is not available"; `HostSessionTasksTests` covers the same path headlessly.
 
 Non-MCP rows below are still the **2026-09-04 Coverlet** snapshot until re-run.
 

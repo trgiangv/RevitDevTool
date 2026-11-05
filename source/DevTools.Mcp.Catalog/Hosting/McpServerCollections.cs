@@ -40,6 +40,25 @@ public static class McpServerCollections
         return options;
     }
 
+    public static McpServerOptions CreateSessionOptions(McpServerOptions shared) =>
+        new()
+        {
+            ServerInfo = shared.ServerInfo,
+            ToolCollection = shared.ToolCollection,
+            ResourceCollection = shared.ResourceCollection,
+            PromptCollection = shared.PromptCollection,
+            Capabilities = shared.Capabilities,
+            Filters = shared.Filters,
+            Handlers = shared.Handlers,
+#pragma warning disable MCPEXP002
+            RequestHandlers = shared.RequestHandlers,
+#pragma warning restore MCPEXP002
+            ServerInstructions = shared.ServerInstructions,
+            ProtocolVersion = shared.ProtocolVersion,
+            InitializationTimeout = shared.InitializationTimeout,
+            ScopeRequests = shared.ScopeRequests
+        };
+
     public static void RebuildCollections(
         McpCatalogStore catalogStore,
         IEnumerable<IMcpSource> sources,

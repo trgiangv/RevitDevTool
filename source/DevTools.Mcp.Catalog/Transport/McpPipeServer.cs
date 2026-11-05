@@ -189,7 +189,7 @@ public sealed class McpPipeServer(
         PipeEndpoint? endpoint = null;
         try
         {
-            var options = CloneSharedOptions(_sharedOptions);
+            var options = McpServerCollections.CreateSessionOptions(_sharedOptions);
             endpoint = PipeEndpoint.Create(pipe, options, services, $"Mcp-{sessionId}");
             _sessions[sessionId] = endpoint;
             connect.SetClientCount(_sessions.Count);
@@ -252,19 +252,6 @@ public sealed class McpPipeServer(
             logger.ZLogError(ex, $"Failed to reload MCP host catalog");
         }
     }
-
-    private static McpServerOptions CloneSharedOptions(McpServerOptions sharedOptions) =>
-        new()
-        {
-            ServerInfo = sharedOptions.ServerInfo,
-            ToolCollection = sharedOptions.ToolCollection,
-            ResourceCollection = sharedOptions.ResourceCollection,
-            Capabilities = sharedOptions.Capabilities,
-            Filters = sharedOptions.Filters,
-            Handlers = sharedOptions.Handlers,
-            ServerInstructions = sharedOptions.ServerInstructions,
-            ProtocolVersion = sharedOptions.ProtocolVersion
-        };
 
     public void Dispose()
     {
