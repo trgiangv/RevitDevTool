@@ -258,6 +258,96 @@ public sealed class NamedPipeIntegrationTests
         appServices.Dispose();
     }
 
+    [TestMethod]
+    public async Task PipeEndpoint_client_leaving_with_an_open_listen_logs_no_cancellation()
+    {
+        var pipeName = HostPipeName.FormatMcp("TestHost", Guid.NewGuid().ToString("N")[..8], Environment.ProcessId);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(20));
+
+        var (options, _, _, appServices) = McpHostTestHarness.CreateServerOptionsWithTool("ping");
+        var log = new RecordingLoggerProvider();
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddProvider(log).SetMinimumLevel(LogLevel.Trace));
+        var services = new LoggerOverrideServices(appServices, loggerFactory);
+
+        using var serverPipe = NamedPipes.Open(pipeName);
+        var acceptTask = serverPipe.WaitForConnectionAsync(cts.Token);
+        var clientPipe = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await clientPipe.ConnectAsync(cts.Token);
+        await acceptTask;
+
+        await using var endpoint = PipeEndpoint.Create(serverPipe, options, services, "test-host");
+        var serverTask = endpoint.RunAsync(cts.Token);
+
+        var client = await McpClient.CreateAsync(
+            new StreamClientTransport(clientPipe, clientPipe, NullLoggerFactory.Instance),
+            loggerFactory: NullLoggerFactory.Instance,
+            cancellationToken: cts.Token);
+        var acknowledged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using (client.RegisterNotificationHandler(
+                         NotificationMethods.SubscriptionsAcknowledgedNotification,
+                         (_, _) =>
+                         {
+                             acknowledged.TrySetResult();
+                             return default;
+                         }))
+        {
+            _ = client.SendRequestAsync<SubscriptionsListenRequestParams, EmptyResult>(
+                RequestMethods.SubscriptionsListen,
+                new SubscriptionsListenRequestParams
+                {
+                    Notifications = new SubscriptionsListenNotifications { ToolsListChanged = true }
+                },
+                cancellationToken: CancellationToken.None);
+            await acknowledged.Task.WaitAsync(cts.Token);
+        }
+
+        await clientPipe.DisposeAsync();
+        await serverTask.WaitAsync(cts.Token);
+        await endpoint.DisposeAsync();
+        await client.DisposeAsync();
+        appServices.Dispose();
+
+        var cancellations = log.Entries.Where(entry => entry.Exception is OperationCanceledException).ToList();
+        Assert.IsEmpty(cancellations, string.Join(Environment.NewLine, cancellations.Select(entry => entry.Message)));
+    }
+
+    private sealed class LoggerOverrideServices(IServiceProvider inner, ILoggerFactory loggerFactory) : IServiceProvider
+    {
+        public object? GetService(Type serviceType) =>
+            serviceType == typeof(ILoggerFactory) ? loggerFactory : inner.GetService(serviceType);
+    }
+
+    private sealed record LogEntry(LogLevel Level, string Message, Exception? Exception);
+
+    private sealed class RecordingLoggerProvider : ILoggerProvider
+    {
+        private readonly System.Collections.Concurrent.ConcurrentQueue<LogEntry> _entries = new();
+
+        public IReadOnlyCollection<LogEntry> Entries => _entries.ToArray();
+
+        public ILogger CreateLogger(string categoryName) => new RecordingLogger(_entries);
+
+        public void Dispose()
+        {
+        }
+
+        private sealed class RecordingLogger(System.Collections.Concurrent.ConcurrentQueue<LogEntry> entries) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(
+                LogLevel logLevel,
+                EventId eventId,
+                TState state,
+                Exception? exception,
+                Func<TState, Exception?, string> formatter) =>
+                entries.Enqueue(new LogEntry(logLevel, formatter(state, exception), exception));
+        }
+    }
+
     private sealed class NonPumpingSynchronizationContext : SynchronizationContext
     {
         public override void Post(SendOrPostCallback callback, object? state)

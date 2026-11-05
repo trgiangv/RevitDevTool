@@ -11,12 +11,18 @@ public sealed class PipeEndpoint : IAsyncDisposable
     private readonly NamedPipeServerStream _pipe;
     private readonly StreamServerTransport _transport;
     private readonly McpServer _server;
+    private readonly CancellationTokenSource _session;
 
-    private PipeEndpoint(NamedPipeServerStream pipe, StreamServerTransport transport, McpServer server)
+    private PipeEndpoint(
+        NamedPipeServerStream pipe,
+        StreamServerTransport transport,
+        McpServer server,
+        CancellationTokenSource session)
     {
         _pipe = pipe;
         _transport = transport;
         _server = server;
+        _session = session;
     }
 
     public McpServer Server => _server;
@@ -42,10 +48,11 @@ public sealed class PipeEndpoint : IAsyncDisposable
         IServiceProvider services,
         string transportName)
     {
-        var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+        var session = new CancellationTokenSource();
+        var loggerFactory = new SessionLoggerFactory(services.GetRequiredService<ILoggerFactory>(), session.Token);
         var transport = new StreamServerTransport(pipe, pipe, transportName, loggerFactory);
         var server = McpServer.Create(transport, options, loggerFactory, services);
-        return new PipeEndpoint(pipe, transport, server);
+        return new PipeEndpoint(pipe, transport, server, session);
     }
 
     /// <summary>
@@ -54,10 +61,10 @@ public sealed class PipeEndpoint : IAsyncDisposable
     /// </summary>
     public async Task RunAsync(CancellationToken cancellationToken)
     {
-        using var session = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var run = _server.RunAsync(session.Token);
+        using var hostStopping = cancellationToken.Register(_session.Cancel);
+        var run = _server.RunAsync(_session.Token);
         await Task.WhenAny(run, _transport.MessageReader.Completion).ConfigureAwait(false);
-        session.Cancel();
+        _session.Cancel();
         try
         {
             await run.ConfigureAwait(false);
@@ -77,5 +84,7 @@ public sealed class PipeEndpoint : IAsyncDisposable
 
         try { await _pipe.DisposeAsync().ConfigureAwait(false); }
         catch { /* ignored */ }
+
+        _session.Dispose();
     }
 }

@@ -58,6 +58,12 @@ before the first catalog list. Initialize-handshake sessions (`2025-11-25` and
 earlier) still receive the session-wide broadcast; they do not open
 `subscriptions/listen`.
 
+When the daemon leaves (restart, kill, or a test client closing), the host's
+`PipeEndpoint` cancels the session and the SDK reports the open listen as a
+cancelled handler. `SessionLoggerFactory` drops those cancellation
+entries once the session is closing; every other handler failure still reaches
+the host log.
+
 **Search ranking** (`ProcessCatalogs.Search`): the product behavior is in
 [`docs/product/mcp.md`](../../product/mcp.md); the accepted ranker and fallback
 policy are in [decision 0040](../../decisions/0040-bm25f-search-and-hit-annotations.md).
