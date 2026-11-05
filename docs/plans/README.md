@@ -31,7 +31,10 @@ Rename an active plan when its ADR number or workstream id changed.
 
 ## Active Plans
 
-None.
+| Plan | Decision |
+|------|----------|
+| [2026-11-06-release-trains-0059.md](active/2026-11-06-release-trains-0059.md) | [0059](../decisions/0059-independent-release-trains-and-one-gate-ci.md) four release trains, `channels.json`, one-gate CI |
+| [2026-11-06-framework-shims-nettest-0060.md](active/2026-11-06-framework-shims-nettest-0060.md) | [0060](../decisions/0060-framework-runtime-shims-ship-with-nettest.md) framework shims in the nettest nupkg, major-only check |
 
 ## Recently Completed
 
