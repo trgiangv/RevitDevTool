@@ -71,6 +71,26 @@ public sealed class DotnetMethodResolverTests
         Assert.AreEqual("Run", method!.Name);
     }
 
+    [TestMethod]
+    public void ResolveTool_AfterContextClear_UsesRebuiltToolsetNotTheOldStreamLoadedOne()
+    {
+        using var workload = McpResolverWorkload.Create("v1");
+        var contexts = new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance);
+        var resolver = new DotnetMethodResolver(contexts, NullLogger<DotnetMethodResolver>.Instance);
+        var tool = CreateToolRegistration("resolver_tool", workload.EntryPath, "Tools", "Run");
+
+        var first = resolver.ResolveTool(tool);
+        if (first is null)
+            Assert.Inconclusive("Compiled resolver toolset could not be loaded in this environment.");
+
+        contexts.Clear();
+        workload.Rebuild("v2");
+        var second = resolver.ResolveTool(tool);
+
+        Assert.AreEqual("v1", first!.Invoke(null, null));
+        Assert.AreEqual("v2", second!.Invoke(null, null));
+    }
+
     private static DotnetMethodResolver CreateResolver() =>
         new(new McpAssemblyContextManager(NullLogger<McpAssemblyContextManager>.Instance), NullLogger<DotnetMethodResolver>.Instance);
 
@@ -106,21 +126,27 @@ internal sealed class McpResolverWorkload : IDisposable
     public string Directory { get; }
     public string EntryPath => Path.Combine(Directory, "ResolverToolset.dll");
 
-    public static McpResolverWorkload Create()
+    public static McpResolverWorkload Create(string result = "ok")
     {
         var directory = Path.Combine(Path.GetTempPath(), "DevTools.Mcp.Tests", Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(directory);
         var workload = new McpResolverWorkload(directory);
+        workload.Rebuild(result);
+        return workload;
+    }
+
+    public void Rebuild(string result)
+    {
         var mcpServerPath = typeof(McpServerToolAttribute).Assembly.Location;
 
-        var source = """
+        var source = $$"""
                      using ModelContextProtocol.Server;
 
                      [McpServerToolType]
                      public static class Tools
                      {
                          [McpServerTool(Name = "resolver_tool")]
-                         public static string Run() => "ok";
+                         public static string Run() => "{{result}}";
                      }
                      """;
 
@@ -135,11 +161,9 @@ internal sealed class McpResolverWorkload : IDisposable
             trusted,
             new Microsoft.CodeAnalysis.CSharp.CSharpCompilationOptions(Microsoft.CodeAnalysis.OutputKind.DynamicallyLinkedLibrary));
 
-        using var stream = File.Create(workload.EntryPath);
-        var result = compilation.Emit(stream);
-        Assert.IsTrue(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
-
-        return workload;
+        using var stream = File.Create(EntryPath);
+        var emitted = compilation.Emit(stream);
+        Assert.IsTrue(emitted.Success, string.Join(Environment.NewLine, emitted.Diagnostics));
     }
 
     public void Dispose()

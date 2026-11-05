@@ -10,10 +10,10 @@ internal static class MethodResolutionHelper
             return true;
 
         var assemblyPath = GetAssemblyPath(assembly);
-        return string.IsNullOrWhiteSpace(assemblyPath) ||
+        return assemblyPath is not null &&
                string.Equals(
                    Path.GetFullPath(assemblyPath),
-                    Path.GetFullPath(sourcePath),
+                   Path.GetFullPath(sourcePath),
                    StringComparison.OrdinalIgnoreCase);
     }
 
