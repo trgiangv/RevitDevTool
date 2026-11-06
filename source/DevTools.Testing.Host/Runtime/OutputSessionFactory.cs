@@ -6,14 +6,20 @@ using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Transport;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace DevTools.Testing.Host.Runtime;
 
 /// <summary>
 /// Activates the framework runtime named by the manifest in the user's output, on the
 /// user's closure. Bind failures during activation or a run become the one-sentence stop.
+/// With <paramref name="shareFramework"/>, the framework is one host-wide copy shared with the
+/// session, and the session runs on the calling thread.
 /// </summary>
-internal sealed class OutputSessionFactory(TestFrameworkId frameworkId, ILogger logger) : ITestingRuntimeSessionFactory
+internal sealed class OutputSessionFactory(
+    TestFrameworkId frameworkId,
+    ILogger logger,
+    Func<string, Assembly>? shareFramework = null) : ITestingRuntimeSessionFactory
 {
     public ITestingRuntimeSession Create(TestingGenerationManifest generation)
     {
@@ -22,23 +28,15 @@ internal sealed class OutputSessionFactory(TestFrameworkId frameworkId, ILogger 
         var manifest = RuntimeCompatChecker.Check(frameworkId, root);
         var found = RuntimeCompatChecker.ReadFrameworkVersion(manifest, root);
         var adapterVersion = RuntimeManifest.ReadAdapterVersion(root);
-
-        var plan = AssemblyIsolationPlan.Create(generation.RuntimeAssemblyPath)
-            .WithKind(AssemblyIsolationKind.Isolated)
-#if NETFRAMEWORK
-            .WithDistinctFileIdentity()
-#endif
-            .Pin(typeof(ITestingRuntimeSession).Assembly)
-            .WithDiagnosticSink(new LoggerDiagnosticSink(logger))
-            .AddManagedSource(new ManifestAssemblySource(
-                generation.ManagedAssemblies.Select(path => new AssemblyCandidate(path, root)),
-                bindsAnyVersion: true));
+        var shared = shareFramework?.Invoke(Path.Combine(root, manifest.Assembly + ".dll"));
 
         return IsolatedRuntimeActivator.Activate(
             generation,
-            plan,
+            CreatePlan(generation, shared, logger),
             manifest.Entry,
-            testAssembly => [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId],
+            testAssembly => shared is null
+                ? [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId]
+                : [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId, true],
             failure =>
             {
                 var sentence = RuntimeBindFailure.TryExplain(failure, manifest, found, adapterVersion);
@@ -47,6 +45,25 @@ internal sealed class OutputSessionFactory(TestFrameworkId frameworkId, ILogger 
 
                 return sentence;
             });
+    }
+
+    internal static AssemblyIsolationPlan CreatePlan(
+        TestingGenerationManifest generation,
+        Assembly? shared,
+        ILogger logger)
+    {
+        var plan = AssemblyIsolationPlan.Create(generation.RuntimeAssemblyPath)
+            .WithKind(AssemblyIsolationKind.Isolated)
+#if NETFRAMEWORK
+            .WithDistinctFileIdentity()
+#endif
+            .Pin(typeof(ITestingRuntimeSession).Assembly)
+            .WithDiagnosticSink(new LoggerDiagnosticSink(logger))
+            .AddManagedSource(new ManifestAssemblySource(
+                generation.ManagedAssemblies.Select(path => new AssemblyCandidate(path, Path.GetFullPath(generation.ShadowDirectory))),
+                bindsAnyVersion: true));
+
+        return shared is null ? plan : plan.Share(shared);
     }
 
     private sealed class LoggerDiagnosticSink(ILogger logger) : IAssemblyIsolationDiagnosticSink

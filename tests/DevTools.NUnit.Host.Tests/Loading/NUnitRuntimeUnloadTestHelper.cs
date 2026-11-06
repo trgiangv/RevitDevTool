@@ -1,4 +1,3 @@
-using DevTools.Testing.Host.NUnit;
 using System.Reflection;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
@@ -15,7 +14,7 @@ internal static class NUnitRuntimeUnloadTestHelper
         "bin",
         "Debug",
         "net10.0",
-        NUnitGenerationPolicy.FrameworkAssemblyFileName);
+        NUnitGenerationTestEnvironment.FrameworkFileName);
 
     public static string GenerationPrivateDependencyStubPath { get; } = Path.Combine(
         NUnitGenerationTestEnvironment.RepositoryRoot,
@@ -55,7 +54,7 @@ internal static class NUnitRuntimeUnloadTestHelper
             "DevTools.nunit.conflict-" + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(isolatedCopyDirectory);
-        var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationPolicy.FrameworkAssemblyFileName);
+        var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationTestEnvironment.FrameworkFileName);
         File.Copy(ConflictingNUnitStubPath, isolatedCopyPath, overwrite: true);
 
         var loaded = Assembly.Load(File.ReadAllBytes(isolatedCopyPath));

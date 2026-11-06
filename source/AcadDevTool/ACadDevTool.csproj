@@ -60,7 +60,7 @@
         <Using Include="ZLogger.Providers" />
     </ItemGroup>
 
-    <Import Project="..\DevTools.NUnit.Runtime\build\NUnitHostPackaging.targets" />
+    <Import Project="..\..\props\HostLayout.targets" />
 
     <!-- Start AutoCad -->
     <PropertyGroup>

@@ -1,5 +1,8 @@
 using DevTools.AssemblyIsolation.Identity;
 using DevTools.AssemblyIsolation.Loading;
+using DevTools.Testing.Host.Loading;
+using DevTools.Testing.Transport;
+using System.Diagnostics;
 using System.Reflection;
 #if NET
 using System.Runtime.Loader;
@@ -8,10 +11,9 @@ using System.Runtime.Loader;
 namespace DevTools.Testing.Host.NUnit;
 
 /// <summary>
-/// Loads our generation's <c>nunit.framework</c> once into the host context so
-/// generation isolation does not own NUnit statics / <c>AsyncLocal</c> roots.
-/// Version identity is pinned to the shadow copy — Dynamo or other conflicting
-/// <c>nunit.framework</c> instances are ignored unless the full identity matches.
+/// Loads the user's <c>nunit.framework</c> once into the host context, because NUnit statics
+/// and <c>AsyncLocal</c> roots are per process. A later run with another file version stops.
+/// A copy that another add-in loaded is reused only when its identity and file version both match.
 /// </summary>
 internal static class NUnitFrameworkHostShare
 {
@@ -19,13 +21,15 @@ internal static class NUnitFrameworkHostShare
 
     private static readonly Lock Gate = new();
     private static Assembly? _shared;
+    private static string? _sharedFileVersion;
 
     internal static bool IsFrameworkSimpleName(string? simpleName) =>
         string.Equals(simpleName, FrameworkSimpleName, StringComparison.OrdinalIgnoreCase);
 
-    internal static Assembly GetOrLoadFromShadow(string shadowFrameworkPath)
+    internal static Assembly GetOrLoadFromShadow(string shadowFrameworkPath, string hostName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(shadowFrameworkPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostName);
 
         var fullPath = Path.GetFullPath(shadowFrameworkPath);
         if (!File.Exists(fullPath))
@@ -42,48 +46,22 @@ internal static class NUnitFrameworkHostShare
                 $"Shadow path '{fullPath}' is not nunit.framework (identity '{identity.FullName}').");
         }
 
+        var fileVersion = ReadFileVersion(fullPath, identity);
         lock (Gate)
         {
             if (_shared is not null)
             {
-                if (!AssemblyIdentityMatcher.IsCompatible(identity, _shared.GetName()))
+                if (!AssemblyIdentityMatcher.IsCompatible(identity, _shared.GetName())
+                    || !string.Equals(fileVersion, _sharedFileVersion, StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException(
-                        $"Host-shared nunit.framework '{_shared.FullName}' is incompatible with generation shadow '{identity.FullName}'.");
+                    throw new TestingRuntimeIncompatibleException(SecondVersion(hostName, _sharedFileVersion!, fileVersion));
                 }
 
                 return _shared;
             }
 
-#if NET
-            var hostContext = AssemblyLoadContext.GetLoadContext(typeof(NUnitFrameworkHostShare).Assembly)
-                ?? AssemblyLoadContext.Default;
-
-            if (TryFindCompatible(hostContext.Assemblies, identity, out var fromHost))
-            {
-                _shared = fromHost;
-                return _shared;
-            }
-
-            // Reuse Default only when the already-loaded identity matches our shadow
-            // (same version/token). Never bind to Dynamo / stub 3.x copies.
-            if (!ReferenceEquals(hostContext, AssemblyLoadContext.Default)
-                && TryFindCompatible(AssemblyLoadContext.Default.Assemblies, identity, out var fromDefault))
-            {
-                _shared = fromDefault;
-                return _shared;
-            }
-
-            _shared = AssemblyStreamLoader.Load(hostContext, fullPath);
-#else
-            if (TryFindCompatible(AppDomain.CurrentDomain.GetAssemblies(), identity, out var fromDomain))
-            {
-                _shared = fromDomain;
-                return _shared;
-            }
-
-            _shared = AssemblyStreamLoader.Load(fullPath);
-#endif
+            _shared = FindOrLoad(fullPath, identity, fileVersion);
+            _sharedFileVersion = fileVersion;
             return _shared;
         }
     }
@@ -97,18 +75,21 @@ internal static class NUnitFrameworkHostShare
         }
     }
 
-    private static bool TryFindCompatible(
+    internal static bool TryFindSameCopy(
         IEnumerable<Assembly> assemblies,
         AssemblyName required,
+        string fileVersion,
         out Assembly assembly)
     {
         foreach (var loaded in assemblies)
         {
-            if (!IsFrameworkSimpleName(loaded.GetName().Name))
+            var name = loaded.GetName();
+            if (!IsFrameworkSimpleName(name.Name)
+                || !AssemblyIdentityMatcher.IsCompatible(required, name)
+                || !string.Equals(fileVersion, ReadFileVersion(loaded), StringComparison.Ordinal))
+            {
                 continue;
-
-            if (!AssemblyIdentityMatcher.IsCompatible(required, loaded.GetName()))
-                continue;
+            }
 
             assembly = loaded;
             return true;
@@ -117,4 +98,41 @@ internal static class NUnitFrameworkHostShare
         assembly = null!;
         return false;
     }
+
+    private static Assembly FindOrLoad(string fullPath, AssemblyName identity, string fileVersion)
+    {
+#if NET
+        var hostContext = AssemblyLoadContext.GetLoadContext(typeof(NUnitFrameworkHostShare).Assembly)
+            ?? AssemblyLoadContext.Default;
+
+        if (TryFindSameCopy(hostContext.Assemblies, identity, fileVersion, out var fromHost))
+            return fromHost;
+
+        if (!ReferenceEquals(hostContext, AssemblyLoadContext.Default)
+            && TryFindSameCopy(AssemblyLoadContext.Default.Assemblies, identity, fileVersion, out var fromDefault))
+        {
+            return fromDefault;
+        }
+
+        return AssemblyStreamLoader.Load(hostContext, fullPath);
+#else
+        return TryFindSameCopy(AppDomain.CurrentDomain.GetAssemblies(), identity, fileVersion, out var fromDomain)
+            ? fromDomain
+            : AssemblyStreamLoader.Load(fullPath);
+#endif
+    }
+
+    private static string ReadFileVersion(string path, AssemblyName identity) =>
+        FileVersionInfo.GetVersionInfo(path).FileVersion ?? identity.Version?.ToString() ?? string.Empty;
+
+    private static string ReadFileVersion(Assembly assembly) =>
+        assembly.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version
+        ?? assembly.GetName().Version?.ToString()
+        ?? string.Empty;
+
+    private static string SecondVersion(string hostName, string loaded, string requested) =>
+        $"{hostName} has NUnit {Display(loaded)} loaded from an earlier run. Restart {hostName} to run tests with NUnit {Display(requested)}.";
+
+    private static string Display(string fileVersion) =>
+        Version.TryParse(fileVersion, out var version) ? RuntimeManifest.Display(version) : fileVersion;
 }

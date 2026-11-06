@@ -632,6 +632,8 @@ public sealed class PackageConsumerTests
             Assert.DoesNotContain($"build/runtime/{tfm}/System.IO.Pipelines.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"build/runtime/{tfm}/System.Runtime.CompilerServices.Unsafe.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"build/runtime/{tfm}/System.Threading.Tasks.Extensions.dll", entries, StringComparer.OrdinalIgnoreCase);
+            foreach (var merged in new[] { "System.Reflection.Metadata", "System.Collections.Immutable", "System.Memory", "System.Buffers", "System.Numerics.Vectors", "nunit.framework" })
+                Assert.DoesNotContain($"build/runtime/{tfm}/{merged}.dll", entries, StringComparer.OrdinalIgnoreCase);
         }
 
         Assert.IsFalse(entries.Any(entry =>

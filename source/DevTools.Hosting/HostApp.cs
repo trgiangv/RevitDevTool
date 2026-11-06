@@ -46,6 +46,19 @@ public static class HostAppExtensions
 
     public static bool IsAcadFamily(this HostApp app) => AcadFamily.Contains(app);
 
+    public static string ProductName(this HostApp app) => app switch
+    {
+        HostApp.AutoCad => "AutoCAD",
+        HostApp.Civil3D => "Civil 3D",
+        HostApp.Plant3D => "Plant 3D",
+        HostApp.AcadArch => "AutoCAD Architecture",
+        HostApp.AcadMech => "AutoCAD Mechanical",
+        HostApp.AcadElec => "AutoCAD Electrical",
+        HostApp.AcadMep => "AutoCAD MEP",
+        HostApp.AcadMap3D => "AutoCAD Map 3D",
+        _ => app.ToString()
+    };
+
     public static HostApp? FromExtension(string? extension)
     {
         if (extension is not { Length: > 0 }) return null;

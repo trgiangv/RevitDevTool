@@ -4,7 +4,7 @@ Date: 2026-11-06
 
 ## Status
 
-Active. P0, P1, P2 (MSTest), and P3 (TUnit) done; NUnit stays on the old path. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
+Active. P0 to P4 done; all three frameworks run from the user's output. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
 (Accepted). Depends on the `nettest` train of
 [2026-11-06-release-trains-0059](2026-11-06-release-trains-0059.md) for shipping;
 the code work here can start before that plan's P3.
@@ -228,7 +228,7 @@ the user's closure are proved in P2 and P3.
 - [x] P1 shared infrastructure (machinery only; the current path still ships `*Runtime\`, keeps the equality pins, and no framework has moved)
 - [x] P2 MSTest (the add-in ships no `MSTestRuntime\`; TUnit and NUnit stay on the old path)
 - [x] P3 TUnit (the add-in ships no `TUnitRuntime\`; TUnit 1.81.0 ran on Revit 2024 and 2027 with no add-in or adapter change)
-- [ ] P4 NUnit
+- [x] P4 NUnit (the add-in ships no `NUnitRuntime\`; open for the owner: the net48 async request is answered by other add-ins, see Decisions)
 - [ ] P5 remove old path + docs
 - [ ] P6 live verification
 
@@ -381,6 +381,46 @@ the user's closure are proved in P2 and P3.
   - Local leftovers: `bin\...\TUnitRuntime` folders were deleted once, for the reason given under P2.
     `Contents\2025\TUnitRuntime` and `Contents\2026\TUnitRuntime` remain because those years were
     not rebuilt. Nothing reads them.
+- 2026-11-07 P4 (verified live on Revit 2024, 2025, 2027):
+  - Shape: `OutputSessionFactory` takes an optional function that returns the shared framework.
+    When set, the plan uses `Share` and the session gets the fourth argument `true`. The layout
+    assertion moved to `props/HostLayout.targets`, and a stray `nunit.framework.dll` beside the
+    add-in fails it. `HostApp.ProductName()` moved from the Daemon to `DevTools.Hosting` so the S7
+    sentence uses the same names.
+  - Samples, identical on all three years: 71 passed, 2 skipped, and only
+    `Intentional_failure_for_demo` and `Wall_type_id_is_valid` failed. MSTest (35 passed, 2 skipped)
+    and TUnit (59 passed, 1 skipped, the intentional failure) on 2024 did not change.
+  - S12: the net48 runtime is 1.4 MB. Its references are `mscorlib`, `System`, `System.Core`,
+    `System.Xml`, `System.Xml.Linq`, `System.Numerics`, `nunit.framework`,
+    `DevTools.Testing.Abstractions`, `System.Threading.Tasks.Extensions`, and
+    `System.Runtime.CompilerServices.Unsafe`. `nunit.framework.legacy.dll` must be kept out of the
+    merge too, because the targets merge every DLL in the output. `ILRepackKeepSymbols` keeps the
+    merged pdb in Release, which the pack requires. A copy of the sample with its own `System.Memory`
+    4.0.1.2 passed on 2024, with 4.0.5.0 copies from other add-ins loaded in the same domain.
+  - S7 needs the file version, not the identity: NUnit has no newer 5.x, so a copy of 5.0.0 with its
+    file version strings patched to 5.0.0.9 was used, with assembly version still 5.0.0.0. The stop
+    appeared through `dotnet test` in the same process, the original then ran 75 tests there, the
+    copy ran after a restart, and the original then stopped with the reverse sentence. A foreign copy
+    with another file version and a non-Revit host name are proved only by unit tests.
+  - Build check: a real NUnit below the floor does not exist, because `5.0.0-beta.1` has the same
+    assembly version and `VersionLessThan` ignores the suffix. The sentence was proved by raising the
+    floor to 5.0.1.0 in an isolated package folder. Another major used real NUnit 4.3.2.
+  - Async on net48: 7 of 7 async cases passed in each of 3 runs in a fresh Revit 2024 process
+    (`Task`, `Task<int>`, `ValueTask`, `ValueTask<int>`, completed `ValueTask`, `Assert.ThatAsync`),
+    plus `Async_delay_then_pass`, and again in a later generation. **This does not prove the kernel is
+    right, because the machine masks it.** `nunit.framework` requests
+    `System.Threading.Tasks.Extensions` 4.2.4.0. Called directly with that request, both kernel
+    resolvers return null, as predicted from `ShouldServe`. Autodesk's PnIDModeler add-in answers with
+    the 4.2.4.0 copy from an earlier generation's shadow directory, and Speckle (Carbon Insights) and
+    pythonnet answer with 4.2.0.1. A machine without them is expected to give the P0 harness
+    failure. That was not run. Left unchanged as instructed; the owner decides on the fix.
+  - Found, not changed: `Async_delay_then_pass` has no source location on net48 or net8, while the
+    other 74 sample results have one. `NUnitLocationProvider` reads the sequence points of the test
+    method, and an `async` method keeps them on its state machine. P6 lists source location as a check.
+  - Local notes: redirecting with PowerShell's `2>$null` around a run that launches Revit hangs the
+    command until Revit exits, because Revit inherits the handle. `bin\...\NUnitRuntime` was deleted
+    for Release 2024, 2025, 2027 only; other configurations and `Contents\2026\NUnitRuntime` remain
+    and nothing reads them.
 
 ## Validation
 

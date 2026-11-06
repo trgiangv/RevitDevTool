@@ -169,7 +169,7 @@ public sealed partial class TargetRow(TargetOption option) : ObservableObject
     public string Description { get; } = option.OnComputer ? option.Component.Description : $"{option.Component.Description} <Not installed>";
     public bool CanSelect { get; } = option.OnComputer || option.Installed is not null;
     public string? HostTip { get; } = option.OnComputer
-        ? string.Join(", ", option.Hosts.Select(host => $"{ProductName(host)} {option.Component.Target.HostVersion}"))
+        ? string.Join(", ", option.Hosts.Select(host => $"{host.ProductName()} {option.Component.Target.HostVersion}"))
         : null;
     public string? Installed { get; } = option.Installed;
     public bool IsPending { get; } = option.Pending is not null;
@@ -204,17 +204,4 @@ public sealed partial class TargetRow(TargetOption option) : ObservableObject
             _ => "Installing"
         };
     }
-
-    private static string ProductName(HostApp host) => host switch
-    {
-        HostApp.AutoCad => "AutoCAD",
-        HostApp.Civil3D => "Civil 3D",
-        HostApp.Plant3D => "Plant 3D",
-        HostApp.AcadArch => "AutoCAD Architecture",
-        HostApp.AcadMech => "AutoCAD Mechanical",
-        HostApp.AcadElec => "AutoCAD Electrical",
-        HostApp.AcadMep => "AutoCAD MEP",
-        HostApp.AcadMap3D => "AutoCAD Map 3D",
-        _ => host.ToString()
-    };
 }

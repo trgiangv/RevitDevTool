@@ -126,7 +126,7 @@ public sealed class NetFrameworkGenerationTests
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
         Assert.That(generationTwo.GenerationId, Is.Not.EqualTo(generationOne.GenerationId));
 
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         using (var sessionOne = factory.Create(generationOne))
         {
             Assert.That(sessionOne.GenerationId, Is.EqualTo(generationOne.GenerationId));
@@ -144,7 +144,7 @@ public sealed class NetFrameworkGenerationTests
     public void Run_maps_the_source_assembly_request_to_the_loaded_shadow_generation()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         using var session = factory.Create(manifest);
 
         var run = session.Run(
@@ -165,7 +165,7 @@ public sealed class NetFrameworkGenerationTests
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildDependencyGenerationTwo();
         Assert.That(generationTwo.GenerationId, Is.Not.EqualTo(generationOne.GenerationId));
 
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         using var sessionOne = factory.Create(generationOne);
         using var sessionTwo = factory.Create(generationTwo);
 
@@ -184,7 +184,7 @@ public sealed class NetFrameworkGenerationTests
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildRootDependencyGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildRootDependencyGenerationTwo();
 
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         using var sessionOne = factory.Create(generationOne);
         using var sessionTwo = factory.Create(generationTwo);
 
@@ -201,7 +201,7 @@ public sealed class NetFrameworkGenerationTests
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
 
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         ITestingRuntimeSession? sessionOne = null;
         ITestingRuntimeSession? sessionTwo = null;
 
@@ -234,7 +234,7 @@ public sealed class NetFrameworkGenerationTests
     [TestMethod]
     public void Dispose_unregisters_the_scoped_resolver_and_is_idempotent()
     {
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         var session = factory.Create(NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne());
 
         session.Dispose();
@@ -255,7 +255,7 @@ public sealed class NetFrameworkGenerationTests
     public void Create_binds_the_concrete_neutral_contract_identity()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         using var session = factory.Create(manifest);
         var handle = (IsolatedRuntimeSessionHandle)session;
         var runtimeContract = handle.RuntimeSession.GetType().Assembly.GetReferencedAssemblies()
@@ -284,7 +284,7 @@ public sealed class NetFrameworkGenerationTests
         using var release = new EventWaitHandle(false, EventResetMode.ManualReset, releaseEventName);
         using var remaining = new EventWaitHandle(false, EventResetMode.ManualReset, remainingEventName);
         using var cancellation = new CancellationTokenSource();
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         using var session = factory.Create(manifest);
         var request = CreateTestingRequest(

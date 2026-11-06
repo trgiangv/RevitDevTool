@@ -51,7 +51,7 @@ internal static class Program
         if (conflicting.Location.StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase))
             return 3;
 
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         using var session = factory.Create(manifest);
 
         var run = session.Run(
@@ -70,7 +70,7 @@ internal static class Program
 
         var generationFrameworkIdentity = HostSharedFrameworkIdentity();
         var expectedFrameworkIdentity = AssemblyName.GetAssemblyName(
-            NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest)).FullName;
+            NetFrameworkGenerationTestEnvironment.FrameworkPath(manifest)).FullName;
 
         Console.WriteLine($"ConflictingLocation={conflicting.Location}");
         Console.WriteLine($"GenerationFrameworkIdentity={generationFrameworkIdentity}");
@@ -99,7 +99,7 @@ internal static class Program
         try
         {
             var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
-            var factory = new NUnitRuntimeSessionFactory();
+            var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
             using var session = factory.Create(manifest);
 
             var run = session.Run(
@@ -118,7 +118,7 @@ internal static class Program
 
             var generationFrameworkIdentity = HostSharedFrameworkIdentity();
             var expectedFrameworkIdentity = AssemblyName.GetAssemblyName(
-                NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest)).FullName;
+                NetFrameworkGenerationTestEnvironment.FrameworkPath(manifest)).FullName;
 
             Console.WriteLine($"CosturaLocation={conflicting.Location}");
             Console.WriteLine($"GenerationFrameworkIdentity={generationFrameworkIdentity}");
@@ -139,7 +139,7 @@ internal static class Program
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
 
-        var factory = new NUnitRuntimeSessionFactory();
+        var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         ITestingRuntimeSession? sessionOne = null;
         ITestingRuntimeSession? sessionTwo = null;
 
@@ -155,10 +155,10 @@ internal static class Program
 
         try
         {
-            if (!string.Equals(handleOneIdentity, AssemblyName.GetAssemblyName(NUnitGenerationPolicy.GetFrameworkAssemblyPath(generationOne)).FullName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(handleOneIdentity, AssemblyName.GetAssemblyName(NetFrameworkGenerationTestEnvironment.FrameworkPath(generationOne)).FullName, StringComparison.OrdinalIgnoreCase))
                 return 2;
 
-            if (!string.Equals(handleTwoIdentity, AssemblyName.GetAssemblyName(NUnitGenerationPolicy.GetFrameworkAssemblyPath(generationTwo)).FullName, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(handleTwoIdentity, AssemblyName.GetAssemblyName(NetFrameworkGenerationTestEnvironment.FrameworkPath(generationTwo)).FullName, StringComparison.OrdinalIgnoreCase))
                 return 3;
 
             Console.WriteLine($"GenerationOneFramework={handleOneIdentity}");

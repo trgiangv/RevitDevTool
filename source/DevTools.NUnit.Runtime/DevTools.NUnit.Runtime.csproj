@@ -10,9 +10,16 @@
         <RuntimeManifestAssembly>nunit.framework</RuntimeManifestAssembly>
     </PropertyGroup>
 
+    <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+        <ILRepackable>true</ILRepackable>
+        <ILRepackInternalize>true</ILRepackInternalize>
+        <ILRepackKeepSymbols>true</ILRepackKeepSymbols>
+        <RepackBinariesKeep>nunit.framework.dll;nunit.framework.legacy.dll;System.Runtime.CompilerServices.Unsafe.dll;System.Threading.Tasks.Extensions.dll</RepackBinariesKeep>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="NUnit"/>
-        <PackageReference Include="System.Reflection.Metadata"/>
+        <PackageReference Include="System.Reflection.Metadata" Condition="'$(TargetFramework)' == 'net48'"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -25,7 +32,6 @@
         <InternalsVisibleTo Include="DevTools.NUnit.Runtime.Tests"/>
     </ItemGroup>
 
-    <Import Project="build\NUnitRuntimePayload.targets"/>
     <Import Project="..\..\props\RuntimeManifest.targets"/>
 
 </Project>

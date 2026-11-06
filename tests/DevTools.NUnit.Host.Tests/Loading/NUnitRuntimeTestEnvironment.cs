@@ -1,41 +1,34 @@
+using DevTools.AssemblyIsolation;
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
+using DevTools.Testing.Host.Runtime;
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Reflection;
 
 namespace DevTools.NUnit.Host.Tests.Loading;
 
 internal static class NUnitRuntimeTestEnvironment
 {
-    public static string RuntimeAssemblyPath { get; } = Path.Combine(
-        NUnitGenerationTestEnvironment.RepositoryRoot,
-        "source",
-        "DevTools.NUnit.Runtime",
-        "bin",
-        "Debug",
-        "net10.0-windows",
-        NUnitGenerationPolicy.RuntimeAssemblyFileName);
+    public const string HostName = "Revit";
 
-    public static string RuntimeSymbolPath { get; } = Path.Combine(
-        NUnitGenerationTestEnvironment.RepositoryRoot,
-        "source",
-        "DevTools.NUnit.Runtime",
-        "bin",
-        "Debug",
-        "net10.0-windows",
-        NUnitGenerationPolicy.RuntimeSymbolFileName);
+    public static string FrameworkPath(TestingGenerationManifest manifest) =>
+        Path.Combine(manifest.ShadowDirectory, NUnitGenerationTestEnvironment.FrameworkFileName);
+
+    public static Assembly LoadFramework(TestingGenerationManifest manifest) =>
+        NUnitFrameworkHostShare.GetOrLoadFromShadow(FrameworkPath(manifest), HostName);
+
+    public static AssemblyIsolationPlan CreatePlan(TestingGenerationManifest manifest, Assembly framework) =>
+        OutputSessionFactory.CreatePlan(manifest, framework, NullLogger.Instance);
+
+    public static OutputSessionFactory CreateFactory() =>
+        new(
+            TestFrameworkId.NUnit,
+            NullLogger.Instance,
+            frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, HostName));
 
     public static NUnitGenerationHarness CreateBuilder(string generationsRoot) =>
-        new(
-            new TestingGenerationStore(generationsRoot),
-            new NUnitGenerationPolicy(() => new RuntimeSource(
-                RuntimeAssemblyPath,
-                File.Exists(RuntimeSymbolPath) ? RuntimeSymbolPath : null,
-                RuntimeDependencyPaths())));
-
-    private static IReadOnlyList<string> RuntimeDependencyPaths() =>
-        new[] { "System.Reflection.Metadata.dll", "System.Collections.Immutable.dll" }
-            .Select(name => Path.Combine(Path.GetDirectoryName(RuntimeAssemblyPath)!, name))
-            .Where(File.Exists)
-            .ToList();
+        new(new TestingGenerationStore(generationsRoot), new NUnitGenerationPolicy());
 
     public static TestingGenerationManifest BuildFixtureGeneration()
     {

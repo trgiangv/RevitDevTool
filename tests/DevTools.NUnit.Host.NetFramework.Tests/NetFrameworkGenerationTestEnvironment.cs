@@ -1,5 +1,8 @@
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
+using DevTools.Testing.Host.Runtime;
+using Microsoft.Extensions.Logging.Abstractions;
 using System.Reflection;
 using System.Text;
 
@@ -7,6 +10,8 @@ namespace DevTools.NUnit.Host.NetFramework.Tests;
 
 public static class NetFrameworkGenerationTestEnvironment
 {
+    private const string FrameworkFileName = "nunit.framework.dll";
+    private const string RuntimeFileName = "DevTools.NUnit.Runtime";
     private const string GenerationOneMarker = "generation-one";
     private const string GenerationTwoMarker = "generation-two";
     private const string BehaviorOneMarker = "behavior-one";
@@ -22,23 +27,14 @@ public static class NetFrameworkGenerationTestEnvironment
         "Debug",
         "net48");
 
-    public static string RuntimeAssemblyPath { get; } = Path.Combine(
+    private static string RuntimeOutputBase { get; } = Path.Combine(
         RepositoryRoot,
         "source",
         "DevTools.NUnit.Runtime",
         "bin",
         "Debug",
         "net48",
-        NUnitGenerationPolicy.RuntimeAssemblyFileName);
-
-    public static string RuntimeSymbolPath { get; } = Path.Combine(
-        RepositoryRoot,
-        "source",
-        "DevTools.NUnit.Runtime",
-        "bin",
-        "Debug",
-        "net48",
-        NUnitGenerationPolicy.RuntimeSymbolFileName);
+        RuntimeFileName);
 
     public static string ConflictingNUnitStubPath { get; } = Path.Combine(
         RepositoryRoot,
@@ -49,7 +45,7 @@ public static class NetFrameworkGenerationTestEnvironment
         "bin",
         "Debug",
         "net48",
-        NUnitGenerationPolicy.FrameworkAssemblyFileName);
+        FrameworkFileName);
 
     public static string DependencyConsumerOutputDirectory { get; } = Path.Combine(
         RepositoryRoot,
@@ -70,18 +66,23 @@ public static class NetFrameworkGenerationTestEnvironment
     }
 
     public static NetFrameworkGenerationHarness CreateBuilder(string generationsRoot) =>
-        new(
-            new TestingGenerationStore(generationsRoot),
-            new NUnitGenerationPolicy(() => new RuntimeSource(
-                RuntimeAssemblyPath,
-                File.Exists(RuntimeSymbolPath) ? RuntimeSymbolPath : null,
-                RuntimeDependencyPaths())));
+        new(new TestingGenerationStore(generationsRoot), new NUnitGenerationPolicy());
 
-    private static IReadOnlyList<string> RuntimeDependencyPaths() =>
-        new[] { "System.Reflection.Metadata.dll", "System.Collections.Immutable.dll" }
-            .Select(name => Path.Combine(Path.GetDirectoryName(RuntimeAssemblyPath)!, name))
-            .Where(File.Exists)
-            .ToList();
+    public static string FrameworkPath(TestingGenerationManifest manifest) =>
+        Path.Combine(manifest.ShadowDirectory, FrameworkFileName);
+
+    public static ITestingRuntimeSessionFactory CreateFactory() =>
+        new OutputSessionFactory(
+            TestFrameworkId.NUnit,
+            NullLogger.Instance,
+            frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, "Revit"));
+
+    private static void AddRuntime(string workspace)
+    {
+        foreach (var extension in new[] { ".dll", ".json", ".pdb" })
+            File.Copy(RuntimeOutputBase + extension, Path.Combine(workspace, RuntimeFileName + extension), overwrite: true);
+        File.Copy(typeof(NUnitGenerationPolicy).Assembly.Location, Path.Combine(workspace, "DevTools.TestAdapter.dll"), overwrite: true);
+    }
 
     public static string CreateGenerationOneAssembly(string parentDirectory, string folderName) =>
         CreateFixtureWorkspace(parentDirectory, folderName);
@@ -169,7 +170,7 @@ public static class NetFrameworkGenerationTestEnvironment
             "DevTools.nunit.conflict-" + Guid.NewGuid().ToString("N"));
 
         Directory.CreateDirectory(isolatedCopyDirectory);
-        var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, NUnitGenerationPolicy.FrameworkAssemblyFileName);
+        var isolatedCopyPath = Path.Combine(isolatedCopyDirectory, FrameworkFileName);
         File.Copy(ConflictingNUnitStubPath, isolatedCopyPath, overwrite: true);
 
         var loaded = Assembly.LoadFile(isolatedCopyPath);
@@ -186,6 +187,7 @@ public static class NetFrameworkGenerationTestEnvironment
     {
         var workspace = Path.Combine(parentDirectory, folderName);
         CopyDirectory(FixtureOutputDirectory, workspace);
+        AddRuntime(workspace);
         return Path.Combine(workspace, "DevTools.NUnit.Runtime.Fixtures.dll");
     }
 
@@ -193,6 +195,7 @@ public static class NetFrameworkGenerationTestEnvironment
     {
         var workspace = Path.Combine(parentDirectory, folderName);
         CopyDirectory(DependencyConsumerOutputDirectory, workspace);
+        AddRuntime(workspace);
 
         var dependencyPath = Path.Combine(workspace, "GenerationPrivateDependency.dll");
         if (File.Exists(dependencyPath))
@@ -209,6 +212,7 @@ public static class NetFrameworkGenerationTestEnvironment
     {
         var workspace = Path.Combine(parentDirectory, folderName);
         CopyDirectory(DependencyConsumerOutputDirectory, workspace);
+        AddRuntime(workspace);
         return Path.Combine(workspace, "DependencyConsumer.dll");
     }
 

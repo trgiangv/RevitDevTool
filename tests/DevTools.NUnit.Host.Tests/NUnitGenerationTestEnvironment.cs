@@ -9,6 +9,9 @@ internal static class NUnitGenerationTestEnvironment
 {
     private const string GenerationOneMarker = "generation-one";
     private const string GenerationTwoMarker = "generation-two";
+    private const string RuntimeFileName = "DevTools.NUnit.Runtime";
+
+    public const string FrameworkFileName = "nunit.framework.dll";
 
     public static string RepositoryRoot { get; } = LocateRepositoryRoot();
 
@@ -19,6 +22,15 @@ internal static class NUnitGenerationTestEnvironment
         "bin",
         "Debug",
         "net10.0-windows");
+
+    private static string RuntimeOutputBase { get; } = Path.Combine(
+        RepositoryRoot,
+        "source",
+        "DevTools.NUnit.Runtime",
+        "bin",
+        "Debug",
+        "net10.0-windows",
+        RuntimeFileName);
 
     public static string SharedAssemblyPath { get; } = Path.Combine(
         RepositoryRoot,
@@ -44,6 +56,9 @@ internal static class NUnitGenerationTestEnvironment
     {
         var workspace = Path.Combine(parentDirectory, folderName);
         CopyDirectory(FixtureOutputDirectory, workspace);
+        foreach (var extension in new[] { ".dll", ".json", ".pdb" })
+            File.Copy(RuntimeOutputBase + extension, Path.Combine(workspace, RuntimeFileName + extension), overwrite: true);
+        File.Copy(typeof(NUnitGenerationPolicy).Assembly.Location, Path.Combine(workspace, "DevTools.TestAdapter.dll"), overwrite: true);
         configure?.Invoke(workspace);
         return Path.Combine(workspace, "DevTools.NUnit.Runtime.Fixtures.dll");
     }
@@ -112,36 +127,18 @@ internal static class NUnitGenerationTestEnvironment
         return Path.Combine(outputDirectory, "DevTools.NUnit.Runtime.Fixtures.dll");
     }
 
-    public static RuntimeSource CreateRuntimeStub(string parentDirectory)
+    public static NUnitGenerationHarness CreateBuilder(string generationsRoot) =>
+        new(new TestingGenerationStore(generationsRoot), new NUnitGenerationPolicy());
+
+    public static string PatchFileVersion(string assemblyPath)
     {
-        var runtimeDirectory = Path.Combine(parentDirectory, "runtime-source");
-        Directory.CreateDirectory(runtimeDirectory);
-
-        var assemblyPath = Path.Combine(runtimeDirectory, NUnitGenerationPolicy.RuntimeAssemblyFileName);
-        var symbolPath = Path.Combine(runtimeDirectory, NUnitGenerationPolicy.RuntimeSymbolFileName);
-
-        File.Copy(typeof(NUnitGenerationPolicyTests).Assembly.Location, assemblyPath, overwrite: true);
-
-        var sourceSymbolPath = Path.ChangeExtension(
-            typeof(NUnitGenerationPolicyTests).Assembly.Location,
-            ".pdb");
-
-        if (File.Exists(sourceSymbolPath))
-            File.Copy(sourceSymbolPath, symbolPath, overwrite: true);
-
-        return new RuntimeSource(
-            assemblyPath,
-            File.Exists(symbolPath) ? symbolPath : null,
-            Array.Empty<string>());
-    }
-
-    public static NUnitGenerationHarness CreateBuilder(
-        string generationsRoot,
-        string runtimeParentDirectory)
-    {
-        var runtimeSource = CreateRuntimeStub(runtimeParentDirectory);
-        return new NUnitGenerationHarness(new TestingGenerationStore(generationsRoot),
-            new NUnitGenerationPolicy(() => runtimeSource));
+        var original = FileVersionInfo.GetVersionInfo(assemblyPath).FileVersion!;
+        var patched = original[..^1] + (original[^1] == '9' ? '8' : '9');
+        var bytes = File.ReadAllBytes(assemblyPath);
+        ReplaceAll(bytes, Encoding.UTF8.GetBytes(original), Encoding.UTF8.GetBytes(patched));
+        ReplaceAll(bytes, Encoding.Unicode.GetBytes(original), Encoding.Unicode.GetBytes(patched));
+        File.WriteAllBytes(assemblyPath, bytes);
+        return patched;
     }
 
     public static void PatchGenerationMarker(string assemblyPath, string marker)
@@ -163,9 +160,15 @@ internal static class NUnitGenerationTestEnvironment
         File.WriteAllBytes(assemblyPath, bytes);
     }
 
-    private static int IndexOf(byte[] buffer, byte[] pattern)
+    private static void ReplaceAll(byte[] buffer, byte[] pattern, byte[] replacement)
     {
-        for (var i = 0; i <= buffer.Length - pattern.Length; i++)
+        for (var index = IndexOf(buffer, pattern); index >= 0; index = IndexOf(buffer, pattern, index + 1))
+            Array.Copy(replacement, 0, buffer, index, replacement.Length);
+    }
+
+    private static int IndexOf(byte[] buffer, byte[] pattern, int start = 0)
+    {
+        for (var i = start; i <= buffer.Length - pattern.Length; i++)
         {
             var matched = true;
             for (var j = 0; j < pattern.Length; j++)

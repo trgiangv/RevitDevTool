@@ -1,3 +1,4 @@
+using DevTools.Hosting;
 using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Host.Loading;
@@ -14,6 +15,8 @@ namespace DevTools.Testing.Host;
 
 public static class TestingHostingExtensions
 {
+    private const string UnknownHostName = "The host";
+
     extension(IServiceCollection services)
     {
         /// <summary>
@@ -38,18 +41,19 @@ public static class TestingHostingExtensions
 
         public IServiceCollection AddNUnitHostServices()
         {
-            services.TryAddSingleton<NUnitGenerationPolicy>(_ =>
-                new NUnitGenerationPolicy(() =>
-                    RuntimeSource.ResolveBeside(
-                        typeof(TestingHostingExtensions).Assembly,
-                        NUnitGenerationPolicy.RuntimeFolderName,
-                        NUnitGenerationPolicy.RuntimeAssemblyFileName,
-                        NUnitGenerationPolicy.RuntimeSymbolFileName)));
+            services.TryAddSingleton<NUnitGenerationPolicy>();
             AddFrameworkProvider<NUnitGenerationPolicy>(
                 services,
-                (_, policy) => new FrameworkProvider(
-                    policy,
-                    new NUnitRuntimeSessionFactory()));
+                (provider, policy) =>
+                {
+                    var hostName = provider.GetService<IHostAppInfo>()?.Host.ProductName() ?? UnknownHostName;
+                    return new FrameworkProvider(
+                        policy,
+                        new OutputSessionFactory(
+                            policy.FrameworkId,
+                            TestingLogger(provider),
+                            frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, hostName)));
+                });
             return services;
         }
 

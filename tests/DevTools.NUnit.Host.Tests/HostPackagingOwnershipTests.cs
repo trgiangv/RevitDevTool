@@ -20,7 +20,7 @@ public sealed class HostPackagingOwnershipTests
     [TestMethod]
     [DataRow("source/RevitDevTool/RevitDevTool.csproj")]
     [DataRow("source/AcadDevTool/AcadDevTool.csproj")]
-    public void Host_projects_import_shared_nunit_packaging_targets(string relativeProjectPath)
+    public void Host_projects_import_the_layout_assertions_and_no_nunit_packaging(string relativeProjectPath)
     {
         var projectPath = Path.Combine(FindRepoRoot(), relativeProjectPath.Replace('/', Path.DirectorySeparatorChar));
         Assert.IsTrue(File.Exists(projectPath), $"Missing project: {projectPath}");
@@ -30,7 +30,8 @@ public sealed class HostPackagingOwnershipTests
         Assert.DoesNotContain("RestoreNUnitCoreSatellites", projectText, StringComparison.Ordinal);
         Assert.DoesNotContain("nunit-core-satellites", projectText, StringComparison.Ordinal);
         Assert.DoesNotContain("System.Text.Json.dll", projectText, StringComparison.Ordinal);
-        Assert.Contains("NUnitHostPackaging.targets", projectText, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUnitHostPackaging.targets", projectText, StringComparison.Ordinal);
+        Assert.Contains("HostLayout.targets", projectText, StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -51,35 +52,26 @@ public sealed class HostPackagingOwnershipTests
     }
 
     [TestMethod]
-    public void Shared_packaging_targets_own_copy_and_assert_flow()
+    public void Layout_assertions_run_after_the_merge()
     {
         var root = FindRepoRoot();
-        var packagingTargets = Path.Combine(root, "source", "DevTools.NUnit.Runtime", "build", "NUnitHostPackaging.targets");
-        var payloadTargets = Path.Combine(root, "source", "DevTools.NUnit.Runtime", "build", "NUnitRuntimePayload.targets");
+        Assert.IsFalse(File.Exists(Path.Combine(root, "source", "DevTools.NUnit.Runtime", "build", "NUnitHostPackaging.targets")));
+        Assert.IsFalse(File.Exists(Path.Combine(root, "source", "DevTools.NUnit.Runtime", "build", "NUnitRuntimePayload.targets")));
 
-        Assert.IsTrue(File.Exists(packagingTargets));
-        Assert.IsTrue(File.Exists(payloadTargets));
-        Assert.IsFalse(File.Exists(Path.Combine(root, "source", "DevTools.NUnit.Runtime", "build", "NUnitHostMergedAssemblies.props")));
+        var layout = File.ReadAllText(Path.Combine(root, "props", "HostLayout.targets"));
+        Assert.Contains("AfterTargets=\"RepackAddinFiles\"", layout, StringComparison.Ordinal);
+        Assert.Contains("DevTools.Testing.Abstractions.dll must stay loose", layout, StringComparison.Ordinal);
+        Assert.Contains("must stay merged into the add-in", layout, StringComparison.Ordinal);
+    }
 
-        var packagingText = File.ReadAllText(packagingTargets);
-        Assert.Contains("CopyNUnitRuntimeBootstrap", packagingText, StringComparison.Ordinal);
-        Assert.Contains("AssertNUnitRuntimeLayout", packagingText, StringComparison.Ordinal);
-        Assert.Contains("GetNUnitRuntimePayload", packagingText, StringComparison.Ordinal);
-        Assert.Contains("Configuration=$(_RuntimeConfiguration)", packagingText, StringComparison.Ordinal);
-        Assert.DoesNotContain("Configuration=$(Configuration)", packagingText, StringComparison.Ordinal);
-        Assert.Contains("$(TargetDir)NUnitRuntime", packagingText, StringComparison.Ordinal);
-        Assert.DoesNotContain("$(OutputPath)NUnitRuntime", packagingText, StringComparison.Ordinal);
-        Assert.Contains("DevTools.Testing.Abstractions", packagingText, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.NUnit.Core", packagingText, StringComparison.Ordinal);
-        Assert.Contains("DevTools.NUnit.Runner.exe", packagingText, StringComparison.Ordinal);
+    [TestMethod]
+    public void Runtime_merges_its_own_dependencies_on_net48_only_and_keeps_the_framework_out()
+    {
+        var project = File.ReadAllText(Path.Combine(FindRepoRoot(), "source", "DevTools.NUnit.Runtime", "DevTools.NUnit.Runtime.csproj"));
 
-        var payloadText = File.ReadAllText(payloadTargets);
-        Assert.Contains("PrepareNUnitRuntimePayload", payloadText, StringComparison.Ordinal);
-        Assert.Contains("DevTools.AssemblyIsolation.dll", payloadText, StringComparison.Ordinal);
-        Assert.Contains("DevTools.Testing.Abstractions.dll", payloadText, StringComparison.Ordinal);
-        Assert.Contains("'$(TargetDir)' != ''", payloadText, StringComparison.Ordinal);
-        Assert.DoesNotContain("GetFullPath('$(TargetDir)NUnitRuntimePayload", payloadText, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.NUnit.Core", payloadText, StringComparison.Ordinal);
+        Assert.Contains("<ILRepackInternalize>true</ILRepackInternalize>", project, StringComparison.Ordinal);
+        Assert.Contains("<RepackBinariesKeep>nunit.framework.dll;nunit.framework.legacy.dll;", project, StringComparison.Ordinal);
+        Assert.Contains("Include=\"System.Reflection.Metadata\" Condition=\"'$(TargetFramework)' == 'net48'\"", project, StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -119,32 +111,25 @@ public sealed class HostPackagingOwnershipTests
     }
 
     [TestMethod]
-    public void Packed_host_output_has_one_abstractions_dll_and_private_nunit_runtime()
+    public void Packed_host_output_has_one_abstractions_dll_and_no_framework_runtime()
     {
         var outputDir = FindPackedHostOutputDir();
         if (outputDir is null)
         {
             Assert.Inconclusive(
-                "Packed (ILRepack) host output not found. Unpackaged Debug still copies NUnitRuntime; this fact needs a merged host. Build: dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployAddin=false");
+                "Packed (ILRepack) host output not found. This fact needs a merged host. Build: dotnet build source/RevitDevTool/RevitDevTool.csproj -c Debug.Autodesk.2025 -p:DeployAddin=false");
         }
 
         var hostDll = Path.Combine(outputDir!, "RevitDevTool.dll");
         var abstractions = Path.Combine(outputDir, "DevTools.Testing.Abstractions.dll");
         var nunitProvider = Path.Combine(outputDir, "DevTools.Testing.Discovery.dll");
         var nunitCore = Path.Combine(outputDir, "DevTools.NUnit.Core.dll");
-        var runtime = Path.Combine(outputDir, "NUnitRuntime", "DevTools.NUnit.Runtime.dll");
-        var framework = Path.Combine(outputDir, "NUnitRuntime", "nunit.framework.dll");
 
         Assert.IsTrue(File.Exists(hostDll), hostDll);
         Assert.IsTrue(File.Exists(abstractions), abstractions);
-        Assert.IsTrue(File.Exists(runtime), runtime);
-        Assert.IsTrue(File.Exists(framework), framework);
         Assert.IsFalse(File.Exists(nunitCore), nunitCore);
         Assert.IsFalse(File.Exists(nunitProvider), nunitProvider);
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "DevTools.NUnit.Discovery.dll")));
-        Assert.IsFalse(File.Exists(Path.Combine(outputDir, "NUnitRuntime", "DevTools.NUnit.Core.dll")));
-        Assert.IsFalse(File.Exists(Path.Combine(outputDir, "NUnitRuntime", "DevTools.NUnit.Discovery.dll")));
-        Assert.IsFalse(File.Exists(Path.Combine(outputDir, "NUnitRuntime", "DevTools.Testing.Discovery.dll")));
 
         var abstractionsCopies = Directory.GetFiles(
                 outputDir,
@@ -154,16 +139,12 @@ public sealed class HostPackagingOwnershipTests
             abstractionsCopies.Length == 1,
             "Duplicate Testing.Abstractions copies:" + Environment.NewLine + string.Join(Environment.NewLine, abstractionsCopies));
 
-        Assert.IsFalse(Directory.Exists(Path.Combine(outputDir, "MSTestRuntime")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(outputDir, "TUnitRuntime")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "MSTest.TestFramework.dll")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "DevTools.NUnit.Runtime.dll")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "nunit.framework.dll")));
-        Assert.IsFalse(File.Exists(Path.Combine(outputDir, "DevTools.NUnit.Runner.exe")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "DevTools.Testing.Host.dll")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "DevTools.Testing.Transport.dll")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "DevTools.AssemblyIsolation.dll")));
-        Assert.IsFalse(File.Exists(Path.Combine(outputDir, "NUnitRuntime", "DevTools.AssemblyIsolation.dll")));
     }
 
     private static string? FindPackedHostOutputDir()
@@ -194,16 +175,6 @@ public sealed class HostPackagingOwnershipTests
     {
         if (!File.Exists(Path.Combine(directory, "RevitDevTool.dll")))
             return false;
-        if (!File.Exists(Path.Combine(directory, "NUnitRuntime", "DevTools.NUnit.Runtime.dll")))
-            return false;
-
-        // Unpackaged Debug also copies NUnitRuntime. Packed layout internalizes
-        // Testing.Host / Transport / Isolation at the host output root.
-        if (File.Exists(Path.Combine(directory, "DevTools.Testing.Host.dll")))
-            return false;
-        if (File.Exists(Path.Combine(directory, "DevTools.NUnit.Runtime.dll")))
-            return false;
-
-        return true;
+        return !File.Exists(Path.Combine(directory, "DevTools.Testing.Host.dll"));
     }
 }

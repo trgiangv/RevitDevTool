@@ -8,57 +8,45 @@ namespace DevTools.NUnit.Host.Tests;
 public sealed class NUnitGenerationPolicyTests
 {
     [TestMethod]
-    public void Policy_creates_a_neutral_plan_with_the_NUnit_runtime_and_framework()
+    public void Plan_takes_the_runtime_and_framework_from_the_output_only()
     {
         using var workspace = new TempWorkspace();
         var testAssembly = NUnitGenerationTestEnvironment.CreateGenerationOneAssembly(workspace.Root, "plan");
-        var policy = new NUnitGenerationPolicy(() => NUnitGenerationTestEnvironment.CreateRuntimeStub(workspace.Root));
+        var output = Path.GetDirectoryName(testAssembly)!;
 
-        var plan = policy.CreatePlan(testAssembly);
+        var plan = new NUnitGenerationPolicy().CreatePlan(testAssembly);
 
         Assert.AreEqual(TestFrameworkId.NUnit, plan.FrameworkId);
-        Assert.AreEqual(NUnitGenerationPolicy.RuntimeAssemblyFileName, plan.RuntimeAssemblyRelativePath);
+        Assert.AreEqual("DevTools.NUnit.Runtime.dll", plan.RuntimeAssemblyRelativePath);
         Assert.IsTrue(plan.Files.Any(file => string.Equals(
-            file.RelativePath, NUnitGenerationPolicy.FrameworkAssemblyFileName, StringComparison.OrdinalIgnoreCase)));
+            file.RelativePath, NUnitGenerationTestEnvironment.FrameworkFileName, StringComparison.OrdinalIgnoreCase)));
+        foreach (var file in plan.Files)
+            StringAssert.StartsWith(file.SourcePath, output, StringComparison.OrdinalIgnoreCase);
     }
 
     [TestMethod]
-    public void Policy_rejects_missing_or_duplicate_NUnit_framework_assemblies()
+    public void Plan_rejects_a_missing_NUnit_framework_assembly()
     {
         using var workspace = new TempWorkspace();
         var missing = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(workspace.Root, "missing", output =>
-            File.Delete(Path.Combine(output, NUnitGenerationPolicy.FrameworkAssemblyFileName)));
-        var missingHarness = NUnitGenerationTestEnvironment.CreateBuilder(
-            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root);
-        Assert.ThrowsExactly<TestingGenerationBuildException>(() => missingHarness.Build(missing));
+            File.Delete(Path.Combine(output, NUnitGenerationTestEnvironment.FrameworkFileName)));
+        var harness = NUnitGenerationTestEnvironment.CreateBuilder(NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot());
 
-        var duplicate = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(workspace.Root, "duplicate", output =>
-        {
-            var extra = Path.Combine(output, "extra");
-            Directory.CreateDirectory(extra);
-            File.Copy(Path.Combine(output, NUnitGenerationPolicy.FrameworkAssemblyFileName),
-                Path.Combine(extra, NUnitGenerationPolicy.FrameworkAssemblyFileName));
-        });
-        var duplicateHarness = NUnitGenerationTestEnvironment.CreateBuilder(
-            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root);
-        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() => duplicateHarness.Build(duplicate));
-        Assert.Contains("found 2", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.ThrowsExactly<TestingGenerationBuildException>(() => harness.Build(missing));
     }
 
     [TestMethod]
-    public void Policy_pins_the_supported_NUnit_file_version()
+    public void Output_without_a_manifest_stops_with_the_update_sentence()
     {
-        var frameworkPath = Path.Combine(NUnitGenerationTestEnvironment.FixtureOutputDirectory,
-            NUnitGenerationPolicy.FrameworkAssemblyFileName);
-        ValidatePin(frameworkPath);
+        using var workspace = new TempWorkspace();
+        var testAssembly = NUnitGenerationTestEnvironment.CreateFixtureWorkspace(workspace.Root, "no-manifest", output =>
+            File.Delete(Path.Combine(output, "DevTools.NUnit.Runtime.json")));
 
-        var exception = Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
-            ValidatePin(typeof(NUnitGenerationPolicyTests).Assembly.Location));
-        Assert.Contains("5.0.0.0", exception.Message, StringComparison.Ordinal);
+        var stop = Assert.ThrowsExactly<TestingRuntimeIncompatibleException>(() =>
+            new NUnitGenerationPolicy().CreatePlan(testAssembly));
+
+        Assert.Contains("Update RevitDevTool.TestAdapter to the latest version.", stop.Message, StringComparison.Ordinal);
     }
-
-    private static void ValidatePin(string path) =>
-        NUnitGenerationPolicy.Spec.Pins.Single(pin => pin.FileName == NUnitGenerationPolicy.FrameworkAssemblyFileName).Validate(path, null);
 
     [TestMethod]
     public void Policy_keeps_Microsoft_and_System_dependencies_generation_private()
@@ -73,7 +61,7 @@ public sealed class NUnitGenerationPolicyTests
         });
 
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
-            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
+            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot()).Build(testAssembly);
 
         Assert.IsTrue(manifest.ManagedAssemblies.Any(path => path.EndsWith("Microsoft.Extensions.Logging.Abstractions.dll", StringComparison.OrdinalIgnoreCase)));
         Assert.IsTrue(manifest.ManagedAssemblies.Any(path => path.EndsWith("System.Custom.dll", StringComparison.OrdinalIgnoreCase)));
@@ -88,7 +76,7 @@ public sealed class NUnitGenerationPolicyTests
                 Path.Combine(output, "PrivateTestingContract.dll"), true));
 
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
-            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
+            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot()).Build(testAssembly);
 
         Assert.IsFalse(manifest.ManagedAssemblies.Any(path => path.EndsWith("PrivateTestingContract.dll", StringComparison.OrdinalIgnoreCase)));
     }
@@ -109,7 +97,7 @@ public sealed class NUnitGenerationPolicyTests
         });
 
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
-            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
+            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot()).Build(testAssembly);
 
         Assert.IsFalse(manifest.ManagedAssemblies.Any(path => path.EndsWith(resourceFile, StringComparison.OrdinalIgnoreCase)));
         Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, culture, resourceFile)));
@@ -127,12 +115,12 @@ public sealed class NUnitGenerationPolicyTests
         });
 
         var manifest = NUnitGenerationTestEnvironment.CreateBuilder(
-            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot(), workspace.Root).Build(testAssembly);
+            NUnitGenerationTestEnvironment.CreateIsolatedGenerationsRoot()).Build(testAssembly);
 
         Assert.IsTrue(File.Exists(Path.Combine(manifest.ShadowDirectory, "root.native.dll")));
         Assert.IsFalse(manifest.ManagedAssemblies.Any(path => path.EndsWith("root.native.dll", StringComparison.OrdinalIgnoreCase)));
         Assert.IsFalse(File.Exists(Path.Combine(manifest.ShadowDirectory, "Log", "run.diag")));
-        Assert.IsTrue(NUnitGenerationPolicy.GetFrameworkAssemblyPath(manifest).StartsWith(manifest.ShadowDirectory, StringComparison.OrdinalIgnoreCase));
+        Assert.IsTrue(manifest.ManagedAssemblies.Any(path => path.EndsWith(NUnitGenerationTestEnvironment.FrameworkFileName, StringComparison.OrdinalIgnoreCase)));
     }
 
     private sealed class TempWorkspace : IDisposable

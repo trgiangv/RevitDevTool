@@ -3,8 +3,9 @@
 
     <PropertyGroup>
         <!-- Defaults live here (0019). A csproj may set ILRepackable, ILRepackInternalize=true,
-             RepackBinariesExcludes (omit from merge; Internalize also deletes them), and
-             RepackBinariesKeep (omit from merge and leave beside the output). Do not restate
+             RepackBinariesExcludes (omit from merge; Internalize also deletes them),
+             RepackBinariesKeep (omit from merge and leave beside the output), and
+             ILRepackKeepSymbols=true (Release keeps the merged PDB). Do not restate
              Union / ILLink / Parallel / Internalize=false. -->
         <ILRepackable Condition="'$(ILRepackable)' == ''">false</ILRepackable>
         <ILRepackInternalize Condition="'$(ILRepackInternalize)' == ''">false</ILRepackInternalize>
@@ -78,8 +79,12 @@
               IgnoreStandardErrorWarningFormat="true"
               StandardOutputImportance="Low"
               Condition="$(Configuration.Contains('Debug'))"/>
-        <!-- Release omits PDB and Win32 resources from the merge. -->
-        <Exec Command="$(_ILRepackCmd) /noRepackRes /ndebug"
+        <!-- Release omits Win32 resources from the merge, and the PDB unless ILRepackKeepSymbols=true. -->
+        <PropertyGroup>
+            <_ILRepackReleaseFlags>/noRepackRes /ndebug</_ILRepackReleaseFlags>
+            <_ILRepackReleaseFlags Condition="'$(ILRepackKeepSymbols)' == 'true'">/noRepackRes</_ILRepackReleaseFlags>
+        </PropertyGroup>
+        <Exec Command="$(_ILRepackCmd) $(_ILRepackReleaseFlags)"
               IgnoreStandardErrorWarningFormat="true"
               StandardOutputImportance="Low"
               Condition="$(Configuration.Contains('Release'))"/>
