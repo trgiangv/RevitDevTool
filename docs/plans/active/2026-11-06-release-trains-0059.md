@@ -99,7 +99,7 @@ Rejected (with reason) — do not propose again:
 
 In scope: everything in 0059 §1–§11 and "What is removed".
 
-Out of scope: the shim move (plan 0060); McpGateway; changes to 0055 ranges;
+Out of scope: the framework runtime move (plan 0060); McpGateway; changes to 0055 ranges;
 `LegacyInnoInstall` cleanup (separate, optional).
 
 ## Approach
@@ -196,8 +196,8 @@ is the smallest train and exercises the whole `release.yml` shape.
 ## Release order (first releases under the new scheme)
 
 1. `daemon` (channel index provider, Q3 version).
-2. `addin` (shims removed per plan 0060, `minUpdaterVersion` = that Daemon).
-3. `nettest` with TestRunner **and** the shims of plan 0060, in one release, so users
+2. `addin` (framework runtimes removed per plan 0060, `minUpdaterVersion` = that Daemon).
+3. `nettest` with TestRunner **and** the framework runtimes of plan 0060, in one release, so users
    change their setup once.
 4. `pytest` (first release from this repo).
 

@@ -156,4 +156,4 @@ here.
 | [0057](0057-command-execution-shared-by-panel-and-mcp.md) | Command Execution has one owner, shared by the panel and `run_command` | Accepted |
 | [0058](0058-mcp-toolsets-shared-by-panel-and-add-tools.md) | MCP toolsets have one owner, shared by the registry panel and `add_tools` | Accepted |
 | [0059](0059-independent-release-trains-and-one-gate-ci.md) | Four independent release trains (daemon, addin, nettest, pytest), signed channel index, version grammar, prerelease flow, one-gate CI | Proposed |
-| [0060](0060-framework-runtime-shims-ship-with-nettest.md) | Framework runtime shims ship with nettest; framework checked by major; add-in and adapter meet only through the `testing.runtime` range | Proposed |
+| [0060](0060-framework-runtime-shims-ship-with-nettest.md) | Framework runtimes ship with nettest; the user's framework needs the same major and no lower than the baseline; add-in and adapter meet only through the `testing.runtime` range | Accepted |
