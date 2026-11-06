@@ -1,5 +1,8 @@
+using DevTools.Testing.Transport;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Reflection;
+using System.Text.RegularExpressions;
 
 namespace DevTools.TestAdapter.Tests;
 
@@ -7,6 +10,13 @@ namespace DevTools.TestAdapter.Tests;
 [DoNotParallelize]
 public sealed class PackageConsumerTests
 {
+    private static readonly string MSTestVersion = Regex.Match(
+        File.ReadAllText(Path.Combine(FindRepositoryRoot(), "global.json")),
+        "\"MSTest\\.Sdk\":\\s*\"([^\"]+)\"").Groups[1].Value;
+
+    private static readonly string NUnitVersion = CentralVersion("NUnit");
+    private static readonly string TUnitVersion = CentralVersion("TUnit");
+
     [TestMethod]
     public void Packed_package_keeps_internal_runtime_closure_private_and_bootstraps_from_a_clean_consumer()
     {
@@ -40,7 +50,7 @@ public sealed class PackageConsumerTests
                   </PropertyGroup>
                   <ItemGroup>
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="NUnit" Version="5.0.0" />
+                    <PackageReference Include="NUnit" Version="{NUnitVersion}" />
                   </ItemGroup>
                 </Project>
                 """);
@@ -85,7 +95,7 @@ public sealed class PackageConsumerTests
                   <ItemGroup>
                     <Compile Remove="ProviderLeak.cs" />
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="NUnit" Version="5.0.0" />
+                    <PackageReference Include="NUnit" Version="{NUnitVersion}" />
                   </ItemGroup>
                 </Project>
                 """);
@@ -112,7 +122,7 @@ public sealed class PackageConsumerTests
                   <ItemGroup>
                     <Compile Include="ProviderLeak.cs" />
                     <PackageReference Include="RevitDevTool.TestAdapter" Version="{packageVersion}" />
-                    <PackageReference Include="NUnit" Version="5.0.0" />
+                    <PackageReference Include="NUnit" Version="{NUnitVersion}" />
                   </ItemGroup>
                 </Project>
                 """);
@@ -177,7 +187,7 @@ public sealed class PackageConsumerTests
             Directory.CreateDirectory(globalPackages);
 
             // Every shipped runtime folder: net48, net8, net10 — both engines.
-            foreach (var tfm in new[] { "net48", "net8.0-windows", "net10.0-windows" })
+            foreach (var (tfm, implicitUsings) in new[] { ("net48", "enable"), ("net8.0-windows", "disable"), ("net10.0-windows", "enable") })
             {
                 var suffix = tfm.Replace('.', '_');
 
@@ -187,8 +197,9 @@ public sealed class PackageConsumerTests
                     $"NUnitDiscovery{suffix}",
                     packageVersion,
                     tfm,
+                    implicitUsings,
                     engine: null,
-                    framework: """<PackageReference Include="NUnit" Version="5.0.0" />""",
+                    framework: $"""<PackageReference Include="NUnit" Version="{NUnitVersion}" />""",
                     test: """
                         using NUnit.Framework;
 
@@ -208,8 +219,9 @@ public sealed class PackageConsumerTests
                     $"TUnitDiscovery{suffix}",
                     packageVersion,
                     tfm,
+                    implicitUsings,
                     engine: "tunit",
-                    framework: """<PackageReference Include="TUnit" Version="1.78.0" />""",
+                    framework: $"""<PackageReference Include="TUnit" Version="{TUnitVersion}" />""",
                     test: """
                         public class DiscoveredTests
                         {
@@ -225,12 +237,13 @@ public sealed class PackageConsumerTests
                     $"MSTestDiscovery{suffix}",
                     packageVersion,
                     tfm,
+                    implicitUsings,
                     engine: "mstest",
-                    framework: """
-                        <PackageReference Include="MSTest.TestFramework" Version="4.5.2">
+                    framework: $"""
+                        <PackageReference Include="MSTest.TestFramework" Version="{MSTestVersion}">
                           <ExcludeAssets>analyzers</ExcludeAssets>
                         </PackageReference>
-                        <PackageReference Include="MSTest.TestAdapter" Version="4.5.2">
+                        <PackageReference Include="MSTest.TestAdapter" Version="{MSTestVersion}">
                           <ExcludeAssets>analyzers</ExcludeAssets>
                         </PackageReference>
                         """,
@@ -259,6 +272,7 @@ public sealed class PackageConsumerTests
         string name,
         string packageVersion,
         string tfm,
+        string implicitUsings,
         string? engine,
         string framework,
         string test,
@@ -272,7 +286,7 @@ public sealed class PackageConsumerTests
               <PropertyGroup>
                 <TargetFramework>{tfm}</TargetFramework>
                 <LangVersion>latest</LangVersion>
-                <ImplicitUsings>enable</ImplicitUsings>
+                <ImplicitUsings>{implicitUsings}</ImplicitUsings>
                 <OutputType>Exe</OutputType>
                 <HostName>Revit</HostName>
                 <HostVersion>2025</HostVersion>
@@ -314,12 +328,168 @@ public sealed class PackageConsumerTests
             File.ReadAllText(Path.Combine(output, $"{name}.testconfig.json")),
             StringComparison.Ordinal);
 
+        AssertFrameworkRuntimeInOutput(output, name, engine ?? "nunit", netFx);
+
         // Discovery is local, so it must succeed without a CAD host.
         var discovery = netFx
             ? RunProcess(Path.Combine(output, $"{name}.exe"), "--list-tests", output, globalPackages)
             : RunProcess("dotnet", $"{name}.dll --list-tests", output, globalPackages);
         Assert.IsTrue(discovery.ExitCode == 0, $"{name} discovery failed ({tfm}):{Environment.NewLine}{discovery.Text}");
         Assert.Contains("Runs_in_host", discovery.Text, StringComparison.Ordinal);
+    }
+
+    private static void AssertFrameworkRuntimeInOutput(string output, string name, string engine, bool netFx)
+    {
+        var (selected, assembly) = engine switch
+        {
+            "tunit" => ("TUnit", "TUnit.Core"),
+            "mstest" => ("MSTest", "MSTest.TestFramework"),
+            _ => ("NUnit", "nunit.framework"),
+        };
+        var runtime = $"DevTools.{selected}.Runtime";
+        foreach (var extension in new[] { ".dll", ".json", ".pdb" })
+            Assert.IsTrue(File.Exists(Path.Combine(output, runtime + extension)), $"{name} should copy {runtime}{extension}.");
+
+        foreach (var other in new[] { "NUnit", "TUnit", "MSTest" }.Where(framework => framework != selected))
+            Assert.IsFalse(File.Exists(Path.Combine(output, $"DevTools.{other}.Runtime.dll")), $"{name} should not copy the {other} runtime.");
+
+        if (!netFx)
+            Assert.DoesNotContain(runtime, File.ReadAllText(Path.Combine(output, $"{name}.deps.json")), StringComparison.Ordinal);
+
+        var manifest = File.ReadAllText(Path.Combine(output, runtime + ".json"));
+        var version = AssemblyName.GetAssemblyName(Path.Combine(output, assembly + ".dll")).Version!;
+        Assert.Contains($"\"framework\": \"{selected}\"", manifest, StringComparison.Ordinal);
+        Assert.Contains($"\"entry\": \"{runtime}.{selected}RuntimeSession\"", manifest, StringComparison.Ordinal);
+        Assert.Contains($"\"contract\": {{ \"current\": {TestingRuntimeContract.Current}, \"min\": {TestingRuntimeContract.Min} }}", manifest, StringComparison.Ordinal);
+        Assert.Contains($"\"assembly\": \"{assembly}\"", manifest, StringComparison.Ordinal);
+        Assert.Contains($"\"version\": \"{version}\"", manifest, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void Packed_package_fails_the_build_for_another_major_or_a_version_below_the_floor()
+    {
+        const string lowerTUnit = "1.72.0";
+        const string otherMajorNUnit = "4.3.2";
+        var root = FindRepositoryRoot();
+        var work = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.BuildCheck", Guid.NewGuid().ToString("N"));
+        var packages = Path.Combine(work, "packages");
+        var globalPackages = Path.Combine(work, "global-packages");
+        Directory.CreateDirectory(packages);
+
+        try
+        {
+            var (nupkg, adapter) = PackAdapter(root, packages);
+            WriteIsolatedNuGetConfig(work, packages);
+
+            var tunitFloor = ReadPackedVersion(nupkg, "TUnit").ToString(3);
+            var nunitFloor = ReadPackedVersion(nupkg, "NUnit");
+
+            foreach (var tfm in new[] { "net48", "net10.0-windows" })
+            {
+                var suffix = tfm.Replace('.', '_');
+                AssertBuildFails(work, globalPackages, $"LowerTUnit{suffix}", tfm, adapter, "tunit", "TUnit", lowerTUnit,
+                    $"TUnit {lowerTUnit} is older than the {tunitFloor} that RevitDevTool.TestAdapter {adapter} was built against. Update TUnit to {tunitFloor} or later.");
+                AssertBuildFails(work, globalPackages, $"OtherMajorNUnit{suffix}", tfm, adapter, "nunit", "NUnit", otherMajorNUnit,
+                    $"NUnit {otherMajorNUnit} is not supported by RevitDevTool.TestAdapter {adapter} (built for NUnit {nunitFloor.Major}.x). Update RevitDevTool.TestAdapter to a version for NUnit {otherMajorNUnit.Split('.')[0]}.");
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(work);
+        }
+    }
+
+    private static Version ReadPackedVersion(string nupkg, string framework)
+    {
+        using var package = ZipFile.OpenRead(nupkg);
+        using var reader = new StreamReader(package.GetEntry($"build/runtime/net48/DevTools.{framework}.Runtime.json")!.Open());
+        return Version.Parse(Regex.Match(reader.ReadToEnd(), "\"version\":\\s*\"([^\"]+)\"").Groups[1].Value);
+    }
+
+    private static void AssertBuildFails(
+        string work,
+        string globalPackages,
+        string name,
+        string tfm,
+        string adapter,
+        string engine,
+        string package,
+        string version,
+        string sentence)
+    {
+        var consumer = Path.Combine(work, name);
+        Directory.CreateDirectory(consumer);
+        File.WriteAllText(Path.Combine(consumer, $"{name}.csproj"), $"""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>{tfm}</TargetFramework>
+                <OutputType>Exe</OutputType>
+                <HostName>Revit</HostName>
+                <HostVersion>2027</HostVersion>
+                {(tfm.StartsWith("net4", StringComparison.Ordinal) ? "<RuntimeIdentifier>win-x64</RuntimeIdentifier>" : "")}
+                <TestingFramework>{engine}</TestingFramework>
+              </PropertyGroup>
+              <ItemGroup>
+                <PackageReference Include="RevitDevTool.TestAdapter" Version="{adapter}" />
+                <PackageReference Include="{package}" Version="{version}" />
+              </ItemGroup>
+            </Project>
+            """);
+        Run("dotnet", $"restore {name}.csproj --configfile ../NuGet.Config", consumer, globalPackages);
+        RunExpectFailure("dotnet", $"build {name}.csproj -c Release --no-restore", consumer, globalPackages, sentence);
+    }
+
+    [TestMethod]
+    public void Packed_package_builds_when_the_framework_runtime_pdb_is_missing()
+    {
+        var root = FindRepositoryRoot();
+        var work = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.MissingPdb", Guid.NewGuid().ToString("N"));
+        var packages = Path.Combine(work, "packages");
+        var globalPackages = Path.Combine(work, "global-packages");
+        var consumer = Path.Combine(work, "consumer");
+        Directory.CreateDirectory(packages);
+        Directory.CreateDirectory(consumer);
+
+        try
+        {
+            var (_, adapter) = PackAdapter(root, packages);
+            WriteIsolatedNuGetConfig(work, packages);
+            File.WriteAllText(Path.Combine(consumer, "NoPdb.csproj"), $"""
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <TargetFramework>net10.0-windows</TargetFramework>
+                    <OutputType>Exe</OutputType>
+                    <HostName>Revit</HostName>
+                    <HostVersion>2027</HostVersion>
+                    <TestingFramework>nunit</TestingFramework>
+                  </PropertyGroup>
+                  <ItemGroup>
+                    <PackageReference Include="RevitDevTool.TestAdapter" Version="{adapter}" />
+                    <PackageReference Include="NUnit" Version="{NUnitVersion}" />
+                  </ItemGroup>
+                </Project>
+                """);
+            File.WriteAllText(Path.Combine(consumer, "global.json"), """
+                {
+                  "sdk": { "rollForward": "latestMinor" },
+                  "test": { "runner": "Microsoft.Testing.Platform" }
+                }
+                """);
+            Run("dotnet", "restore NoPdb.csproj --configfile ../NuGet.Config", consumer, globalPackages);
+            foreach (var pdb in Directory.GetFiles(globalPackages, "DevTools.NUnit.Runtime.pdb", SearchOption.AllDirectories))
+                File.Delete(pdb);
+
+            Run("dotnet", "build NoPdb.csproj -c Release --no-restore", consumer, globalPackages);
+
+            var output = Path.Combine(consumer, "bin", "Release", "net10.0-windows");
+            Assert.IsTrue(File.Exists(Path.Combine(output, "DevTools.NUnit.Runtime.dll")));
+            Assert.IsTrue(File.Exists(Path.Combine(output, "DevTools.NUnit.Runtime.json")));
+            Assert.IsFalse(File.Exists(Path.Combine(output, "DevTools.NUnit.Runtime.pdb")));
+        }
+        finally
+        {
+            TryDeleteDirectory(work);
+        }
     }
 
     [TestMethod]
@@ -416,7 +586,7 @@ public sealed class PackageConsumerTests
                      line.Contains("id=\"Microsoft.Testing.Platform.MSBuild\"", StringComparison.Ordinal)))
         {
             Assert.DoesNotContain("Build,Analyzers", dependency, StringComparison.Ordinal);
-            Assert.Contains("2.5.2", dependency, StringComparison.Ordinal);
+            Assert.Contains(CentralVersion("Microsoft.Testing.Platform.MSBuild"), dependency, StringComparison.Ordinal);
         }
 
         Assert.Contains("build/RevitDevTool.TestAdapter.props", entries, StringComparer.OrdinalIgnoreCase);
@@ -443,6 +613,12 @@ public sealed class PackageConsumerTests
             Assert.Contains($"build/runtime/{tfm}/DevTools.TUnit.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.Contains($"build/runtime/{tfm}/DevTools.MSTest.MTP.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.Contains($"build/runtime/{tfm}/DevTools.Testing.Abstractions.dll", entries, StringComparer.OrdinalIgnoreCase);
+            foreach (var framework in new[] { "NUnit", "TUnit", "MSTest" })
+            {
+                foreach (var extension in new[] { "dll", "json", "pdb" })
+                    Assert.Contains($"build/runtime/{tfm}/DevTools.{framework}.Runtime.{extension}", entries, StringComparer.OrdinalIgnoreCase);
+            }
+
             Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.TestAdapter.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.Ipc.dll", entries, StringComparer.OrdinalIgnoreCase);
             Assert.DoesNotContain($"build/runtime/{tfm}/DevTools.Testing.Transport.dll", entries, StringComparer.OrdinalIgnoreCase);
@@ -456,7 +632,9 @@ public sealed class PackageConsumerTests
             Assert.DoesNotContain($"build/runtime/{tfm}/System.Threading.Tasks.Extensions.dll", entries, StringComparer.OrdinalIgnoreCase);
         }
 
-        Assert.IsFalse(entries.Any(entry => entry.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase)));
+        Assert.IsFalse(entries.Any(entry =>
+            entry.EndsWith(".pdb", StringComparison.OrdinalIgnoreCase)
+            && !Regex.IsMatch(entry, @"^build/runtime/[^/]+/DevTools\.(NUnit|TUnit|MSTest)\.Runtime\.pdb$", RegexOptions.IgnoreCase)));
         Assert.IsFalse(entries.Any(entry => entry.EndsWith("/DevTools.AssemblyIsolation.dll", StringComparison.OrdinalIgnoreCase)));
         Assert.DoesNotContain("DevTools.AssemblyIsolation", nuspecText, StringComparison.Ordinal);
         Assert.IsFalse(entries.Any(entry => entry.Contains("DevTools.NUnit.Core", StringComparison.OrdinalIgnoreCase)));
@@ -495,6 +673,11 @@ public sealed class PackageConsumerTests
             Assert.IsFalse(Directory.Exists(packageDirectory), $"Internal package unexpectedly restored: {packageDirectory}");
         }
     }
+
+    private static string CentralVersion(string package) =>
+        Regex.Match(
+            File.ReadAllText(Path.Combine(FindRepositoryRoot(), "Directory.Packages.props")),
+            $"<PackageVersion Include=\"{Regex.Escape(package)}\" Version=\"([^\"]+)\"").Groups[1].Value;
 
     private static string FindRepositoryRoot()
     {

@@ -7,21 +7,28 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
 {
     private readonly IReadOnlyDictionary<string, IReadOnlyList<Entry>> _entriesBySimpleName;
 
-    public ManifestAssemblySource(IEnumerable<AssemblyCandidate> candidates)
-        : this((candidates ?? throw new ArgumentNullException(nameof(candidates))).Select(candidate =>
-            (AssemblyName.GetAssemblyName(candidate.Path), candidate)))
+    public ManifestAssemblySource(IEnumerable<AssemblyCandidate> candidates, bool bindsAnyVersion = false)
+        : this(
+            (candidates ?? throw new ArgumentNullException(nameof(candidates))).Select(candidate =>
+                (AssemblyName.GetAssemblyName(candidate.Path), candidate)),
+            bindsAnyVersion)
     {
     }
 
-    public ManifestAssemblySource(IEnumerable<(AssemblyName Identity, AssemblyCandidate Candidate)> entries)
+    public ManifestAssemblySource(
+        IEnumerable<(AssemblyName Identity, AssemblyCandidate Candidate)> entries,
+        bool bindsAnyVersion = false)
     {
         ArgumentNullException.ThrowIfNull(entries);
 
+        BindsAnyVersion = bindsAnyVersion;
         _entriesBySimpleName = BuildEntries(entries).ToDictionary(
             static pair => pair.Key,
             static IReadOnlyList<Entry> (pair) => Array.AsReadOnly(pair.Value.ToArray()),
             StringComparer.OrdinalIgnoreCase);
     }
+
+    public bool BindsAnyVersion { get; }
 
     public AssemblyCandidate? Resolve(AssemblyName requested)
     {
@@ -32,12 +39,28 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
             : Resolve(requested, entries);
     }
 
-    private static AssemblyCandidate? Resolve(AssemblyName requested, IReadOnlyList<Entry> entries)
+    internal (AssemblyCandidate Candidate, AssemblyName Identity)? FindRejectedForVersion(AssemblyName requested)
+    {
+        ArgumentNullException.ThrowIfNull(requested);
+
+        if (requested.Name is null || !_entriesBySimpleName.TryGetValue(requested.Name, out var entries))
+            return null;
+
+        var rejected = entries.FirstOrDefault(entry =>
+            AssemblyIdentityMatcher.IsCompatible(requested, entry.Identity, allowVersionDrift: true));
+        return rejected is null ? null : (rejected.Candidate, rejected.Identity);
+    }
+
+    private AssemblyCandidate? Resolve(AssemblyName requested, IReadOnlyList<Entry> entries)
     {
         var exact = entries.FirstOrDefault(entry =>
             AssemblyIdentityMatcher.IsCompatible(requested, entry.Identity));
         if (exact is not null)
             return exact.Candidate;
+
+        if (BindsAnyVersion)
+            return Newest(entries.Where(entry =>
+                AssemblyIdentityMatcher.IsCompatible(requested, entry.Identity, allowVersionDrift: true)))?.Candidate;
 
 #if NETFRAMEWORK
         return ResolveAllowed(requested, entries)?.Candidate;
@@ -51,14 +74,15 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
     /// net48: this source is a NuGet-style redirect closure. Bind a newer
     /// file already listed here; do not scan DefaultDomain.
     /// </summary>
-    private static Entry? ResolveAllowed(AssemblyName requested, IReadOnlyList<Entry> entries)
+    private static Entry? ResolveAllowed(AssemblyName requested, IReadOnlyList<Entry> entries) =>
+        Newest(entries.Where(entry => NetfxClosureBind.AllowsNewer(requested, entry.Identity)));
+#endif
+
+    private static Entry? Newest(IEnumerable<Entry> entries)
     {
         Entry? newest = null;
         foreach (var entry in entries)
         {
-            if (!NetfxClosureBind.AllowsNewer(requested, entry.Identity))
-                continue;
-
             if (IsNewerThanCurrent(entry, newest))
                 newest = entry;
         }
@@ -70,7 +94,6 @@ public sealed class ManifestAssemblySource : IManagedAssemblySource
         current is null
         || candidate.Identity.Version is not null
         && (current.Identity.Version is null || candidate.Identity.Version > current.Identity.Version);
-#endif
 
     private static bool HasSameFullIdentity(AssemblyName first, AssemblyName second) =>
         AssemblyIdentityMatcher.IsCompatible(first, second)

@@ -37,13 +37,12 @@ public sealed class AssemblyBoundaryTests
         Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.Execution.Abstractions", StringComparison.Ordinal)));
         Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.NUnit.Runtime", StringComparison.Ordinal)));
         Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.TUnit.Runtime", StringComparison.Ordinal)));
-        Assert.IsTrue(projectIncludes.Any(value => value.Contains("DevTools.MSTest.Runtime", StringComparison.Ordinal)));
+        Assert.IsFalse(projectIncludes.Any(value => value.Contains("DevTools.MSTest.Runtime", StringComparison.Ordinal)));
         foreach (var element in projectReferences.Where(static element =>
                  {
                      var include = element.Attribute("Include")?.Value ?? string.Empty;
                      return include.Contains("DevTools.NUnit.Runtime", StringComparison.Ordinal)
-                         || include.Contains("DevTools.TUnit.Runtime", StringComparison.Ordinal)
-                         || include.Contains("DevTools.MSTest.Runtime", StringComparison.Ordinal);
+                         || include.Contains("DevTools.TUnit.Runtime", StringComparison.Ordinal);
                  }))
         {
             Assert.AreEqual(

@@ -9,6 +9,7 @@
            TestAdapter.dll; keep Testing.Abstractions.dll so testhost MTP shares
            TestingDiscovery.
         3. PackMtpSiblings — MTP siblings + Abstractions to build/runtime/{tfm}.
+           PackFrameworkRuntimes — always builds the framework runtimes, then runtime + manifest + pdb to build/runtime/{tfm}.
         4. build/*.props|targets (+ build/netfx source shim) — the consumer build order
            lives in those files. The selected sibling is a normal Reference, not a
            runtime plugin.
@@ -43,7 +44,7 @@
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <NoPackageAnalysis>true</NoPackageAnalysis>
-        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackMtpSiblings</TargetsForTfmSpecificContentInPackage>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackMtpSiblings;PackFrameworkRuntimes</TargetsForTfmSpecificContentInPackage>
         <IsTestProject>false</IsTestProject>
         <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
         <DisableTestingPlatformServerCapability>true</DisableTestingPlatformServerCapability>
@@ -110,6 +111,41 @@
                 <PackagePath>$(_MtpPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
             <TfmSpecificPackageFile Include="$(TargetDir)DevTools.Testing.Abstractions.dll">
+                <PackagePath>$(_MtpPackageRuntime)</PackagePath>
+            </TfmSpecificPackageFile>
+        </ItemGroup>
+    </Target>
+    <!-- Framework runtimes packed beside the testhost siblings. -->
+    <ItemGroup>
+        <FrameworkRuntime Include="NUnit;TUnit;MSTest"/>
+    </ItemGroup>
+
+    <Target Name="_ResolveFrameworkRuntimes">
+        <ItemGroup>
+            <_FrameworkRuntime Include="@(FrameworkRuntime)">
+                <Project>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).Runtime\DevTools.%(Identity).Runtime.csproj</Project>
+                <Assets>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).Runtime\obj\project.assets.json</Assets>
+                <OutputBase>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).Runtime\bin\$(Configuration)\$(TargetFramework)\DevTools.%(Identity).Runtime</OutputBase>
+            </_FrameworkRuntime>
+        </ItemGroup>
+    </Target>
+
+    <Target Name="BuildFrameworkRuntimesForPack" DependsOnTargets="_ResolveFrameworkRuntimes">
+        <MSBuild Condition="!Exists('%(_FrameworkRuntime.Assets)')"
+                 Projects="%(_FrameworkRuntime.Project)"
+                 Targets="Restore"
+                 Properties="Configuration=$(Configuration)"
+                 RemoveProperties="TargetFramework"/>
+        <MSBuild Projects="%(_FrameworkRuntime.Project)"
+                 Targets="Build"
+                 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
+    </Target>
+
+    <Target Name="PackFrameworkRuntimes" DependsOnTargets="_ResolveMtpSiblings;BuildFrameworkRuntimesForPack">
+        <Error Condition="!Exists('%(_FrameworkRuntime.OutputBase).dll') Or !Exists('%(_FrameworkRuntime.OutputBase).json') Or !Exists('%(_FrameworkRuntime.OutputBase).pdb')"
+               Text="Pack requires the framework runtime, manifest, and pdb at %(_FrameworkRuntime.OutputBase)."/>
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="@(_FrameworkRuntime->'%(OutputBase).dll');@(_FrameworkRuntime->'%(OutputBase).json');@(_FrameworkRuntime->'%(OutputBase).pdb')">
                 <PackagePath>$(_MtpPackageRuntime)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>

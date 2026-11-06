@@ -1,5 +1,6 @@
 using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Transport;
 using System.Text.Json;
 
@@ -21,6 +22,7 @@ public sealed class RequestHandlerTests
         Assert.AreEqual(TestFrameworkId.NUnit, hello.FrameworkId);
         Assert.AreEqual("Revit", hello.Host);
         Assert.AreEqual(TestingProtocol.Sender, hello.Sender);
+        Assert.AreEqual(TestingProtocol.RuntimeRange, hello.TestingRuntime);
     }
 
     [TestMethod]
@@ -148,6 +150,39 @@ public sealed class RequestHandlerTests
                 CreateRunRequest(),
                 TestingJsonContext.Default.TestRunRequest));
         Assert.IsFalse(run.IsError);
+    }
+
+    [TestMethod]
+    public async Task Runtime_incompatibility_is_protocol_incompatible_and_does_not_poison()
+    {
+        var handler = CreateHandler(out var provider);
+        const string sentence = "NUnit is older than what the adapter needs.";
+        provider.RunException = new TestingRuntimeIncompatibleException(sentence);
+
+        var failed = await Handle(
+            handler,
+            "1",
+            TestingProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                CreateRunRequest(),
+                TestingJsonContext.Default.TestRunRequest));
+
+        Assert.IsTrue(failed.IsError);
+        Assert.AreEqual(TestingErrorCodes.ProtocolIncompatible, failed.ErrorDetail!.Code);
+        Assert.AreEqual(sentence, failed.ErrorMessage);
+        Assert.AreNotEqual(TestCancellationState.Poisoned, handler.CancellationState);
+
+        provider.RunException = null;
+        provider.OnRun = request => new TestRunResponse(request.RunId, request.FrameworkId, "gen", [], TestCancellationState.None, null, null);
+        var next = await Handle(
+            handler,
+            "2",
+            TestingProtocol.Run,
+            JsonSerializer.SerializeToElement(
+                CreateRunRequest(),
+                TestingJsonContext.Default.TestRunRequest));
+
+        Assert.IsFalse(next.IsError);
     }
 
     [TestMethod]

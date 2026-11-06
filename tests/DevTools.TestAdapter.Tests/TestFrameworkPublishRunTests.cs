@@ -239,6 +239,27 @@ public sealed class TestFrameworkPublishRunTests
     }
 
     [TestMethod]
+    public async Task Run_error_node_carries_the_sentence_from_the_runner()
+    {
+        const string sentence = "NUnit is older than what the adapter needs.";
+        var transport = new FakeTestRunnerTransport
+        {
+            RunException = new InvalidOperationException(sentence),
+        };
+        var bus = new CapturingMessageBus();
+        await ExecuteRunAsync(
+            transport,
+            bus,
+            new SelectionAwareDiscoverer([new TestDiscoveredTest("known", "Known", "known")]),
+            PassThroughRunMapper.Instance,
+            filter: null,
+            TestContext.CancellationToken);
+
+        var node = Assert.ContainsSingle(bus.Nodes);
+        Assert.AreEqual(sentence, node.Properties.Single<ErrorTestNodeStateProperty>().Exception!.Message);
+    }
+
+    [TestMethod]
     public async Task Cancelled_request_does_not_start_the_transport()
     {
         var transport = new FakeTestRunnerTransport();

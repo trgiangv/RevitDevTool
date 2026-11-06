@@ -9,6 +9,8 @@
       2. Reference the selected sibling + Abstractions (Private=true copy-local)
       3. WriteDiscoveryRefs   write compile-only reference paths for host-free discovery
       4. GenerateTestConfig   csproj options -> [AssemblyName].testconfig.json
+      5. CheckFrameworkVersion  resolved framework package against the runtime manifest
+      6. CopyFrameworkRuntime      selected framework runtime + manifest + pdb to the output, never a Reference
 
     Nothing here reads the consumer configuration or repo paths. In-repo
     samples restore RevitDevTool.TestAdapter from the local nupkg feed, the
@@ -25,6 +27,12 @@
     <_MtpHookType Condition="'$(TestingFramework)' == 'nunit'">DevTools.NUnit.MTP.NUnitMtpBuilderHook</_MtpHookType>
     <_MtpHookType Condition="'$(TestingFramework)' == 'tunit'">DevTools.TUnit.MTP.TUnitMtpBuilderHook</_MtpHookType>
     <_MtpHookType Condition="'$(TestingFramework)' == 'mstest'">DevTools.MSTest.MTP.MSTestMtpBuilderHook</_MtpHookType>
+    <_FrameworkRuntimeName Condition="'$(TestingFramework)' == 'nunit'">DevTools.NUnit.Runtime</_FrameworkRuntimeName>
+    <_FrameworkRuntimeName Condition="'$(TestingFramework)' == 'tunit'">DevTools.TUnit.Runtime</_FrameworkRuntimeName>
+    <_FrameworkRuntimeName Condition="'$(TestingFramework)' == 'mstest'">DevTools.MSTest.Runtime</_FrameworkRuntimeName>
+    <_FrameworkPackageId Condition="'$(TestingFramework)' == 'nunit'">NUnit</_FrameworkPackageId>
+    <_FrameworkPackageId Condition="'$(TestingFramework)' == 'tunit'">TUnit.Core</_FrameworkPackageId>
+    <_FrameworkPackageId Condition="'$(TestingFramework)' == 'mstest'">MSTest.TestFramework</_FrameworkPackageId>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(_MtpHookType)' != ''">
@@ -248,6 +256,48 @@
           SkipUnchangedFiles="false"/>
     <ItemGroup>
       <FileWrites Include="$(_GeneratedTestConfigPath);$(_MergedTestConfigPath);$(_OutputTestConfigPath)"/>
+    </ItemGroup>
+  </Target>
+
+  <!-- 5. Framework package against the runtime manifest. -->
+  <Target Name="CheckFrameworkVersion"
+          AfterTargets="ResolveAssemblyReferences"
+          Condition="'$(IsTestingPlatformApplication)' == 'true' And '$(DesignTimeBuild)' != 'true' And '$(_FrameworkRuntimeName)' != '' And Exists('$(_PackageRuntimeDir)$(_FrameworkRuntimeName).json')">
+    <ItemGroup>
+      <_FrameworkPackageReference Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == '$(_FrameworkPackageId)'" />
+      <_AdapterPackageReference Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'RevitDevTool.TestAdapter'" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_FrameworkPackageVersion>@(_FrameworkPackageReference->'%(NuGetPackageVersion)'->Distinct())</_FrameworkPackageVersion>
+      <_AdapterPackageVersion>@(_AdapterPackageReference->'%(NuGetPackageVersion)'->Distinct())</_AdapterPackageVersion>
+      <_RuntimeManifestText>$([System.IO.File]::ReadAllText('$(_PackageRuntimeDir)$(_FrameworkRuntimeName).json'))</_RuntimeManifestText>
+      <_RuntimeFrameworkName>$([System.Text.RegularExpressions.Regex]::Match($(_RuntimeManifestText), '"framework":\s*"([^"]+)"').Groups[1].Value)</_RuntimeFrameworkName>
+      <_RuntimeFloor>$([System.Text.RegularExpressions.Regex]::Match($(_RuntimeManifestText), '"version":\s*"([^"]+)"').Groups[1].Value)</_RuntimeFloor>
+      <_RuntimeFloorMajor>$(_RuntimeFloor.Split('.')[0])</_RuntimeFloorMajor>
+      <_RuntimeFloorDisplay>$([System.Text.RegularExpressions.Regex]::Replace('$(_RuntimeFloor)', '^(\d+\.\d+\.\d+)\.0$', '$1'))</_RuntimeFloorDisplay>
+      <_FrameworkPackageMajor Condition="'$(_FrameworkPackageVersion)' != ''">$(_FrameworkPackageVersion.Split('.')[0])</_FrameworkPackageMajor>
+    </PropertyGroup>
+    <Error
+        Condition="'$(_FrameworkPackageVersion)' != '' And '$(_FrameworkPackageMajor)' != '$(_RuntimeFloorMajor)'"
+        Text="$(_RuntimeFrameworkName) $(_FrameworkPackageVersion) is not supported by RevitDevTool.TestAdapter $(_AdapterPackageVersion) (built for $(_RuntimeFrameworkName) $(_RuntimeFloorMajor).x). Update RevitDevTool.TestAdapter to a version for $(_RuntimeFrameworkName) $(_FrameworkPackageMajor)." />
+    <Error
+        Condition="'$(_FrameworkPackageVersion)' != '' And '$(_FrameworkPackageMajor)' == '$(_RuntimeFloorMajor)' And $([MSBuild]::VersionLessThan('$(_FrameworkPackageVersion)', '$(_RuntimeFloor)'))"
+        Text="$(_RuntimeFrameworkName) $(_FrameworkPackageVersion) is older than the $(_RuntimeFloorDisplay) that RevitDevTool.TestAdapter $(_AdapterPackageVersion) was built against. Update $(_RuntimeFrameworkName) to $(_RuntimeFloorDisplay) or later." />
+  </Target>
+
+  <!-- 6. Framework runtime + manifest + pdb to the output. -->
+  <Target Name="CopyFrameworkRuntime"
+          AfterTargets="CopyFilesToOutputDirectory"
+          Condition="'$(IsTestingPlatformApplication)' == 'true' And '$(_FrameworkRuntimeName)' != '' And Exists('$(_PackageRuntimeDir)$(_FrameworkRuntimeName).dll')">
+    <ItemGroup>
+      <_FrameworkRuntimeFile Include="$(_PackageRuntimeDir)$(_FrameworkRuntimeName).dll;$(_PackageRuntimeDir)$(_FrameworkRuntimeName).json" />
+      <_FrameworkRuntimeFile Include="$(_PackageRuntimeDir)$(_FrameworkRuntimeName).pdb" Condition="Exists('$(_PackageRuntimeDir)$(_FrameworkRuntimeName).pdb')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_FrameworkRuntimeFile)"
+          DestinationFolder="$(TargetDir)"
+          SkipUnchangedFiles="true" />
+    <ItemGroup>
+      <FileWrites Include="@(_FrameworkRuntimeFile->'$(TargetDir)%(Filename)%(Extension)')" />
     </ItemGroup>
   </Target>
 </Project>

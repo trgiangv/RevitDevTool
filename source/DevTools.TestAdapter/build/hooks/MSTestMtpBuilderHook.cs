@@ -1,3 +1,4 @@
+using System;
 using DevTools.Testing.Abstractions;
 using Microsoft.Testing.Platform.Builder;
 

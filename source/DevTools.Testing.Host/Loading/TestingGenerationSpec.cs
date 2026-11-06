@@ -60,26 +60,32 @@ internal sealed record TestingGenerationSpec(
             throw new TestingGenerationBuildException($"Published {FrameworkName} runtime is missing: {manifest.RuntimeAssemblyPath}");
 
         foreach (var pin in Pins)
-        {
-            var matches = manifest.ManagedAssemblies
-                .Where(path => TestingGenerationPins.IsNamed(path, pin.FileName))
-                .ToList();
-            if (pin.AllowMany)
-            {
-                if (matches.Count == 0)
-                {
-                    throw new TestingGenerationBuildException(
-                        $"Published {FrameworkName} generation is missing {pin.FileName} {pin.CountLabel}.");
-                }
-            }
-            else if (matches.Count != 1)
-            {
-                throw new TestingGenerationBuildException(
-                    $"Exactly one {pin.FileName} {pin.CountLabel} is required in the published generation; found {matches.Count}.");
-            }
+            ValidatePublishedPin(pin, manifest);
+    }
 
-            foreach (var match in matches)
-                pin.Validate(match, manifest.ShadowDirectory);
+    private void ValidatePublishedPin(GenerationPin pin, TestingGenerationManifest manifest)
+    {
+        var matches = manifest.ManagedAssemblies
+            .Where(path => TestingGenerationPins.IsNamed(path, pin.FileName))
+            .ToList();
+        EnsurePublishedCount(pin, matches.Count);
+
+        foreach (var match in matches)
+            pin.Validate(match, manifest.ShadowDirectory);
+    }
+
+    private void EnsurePublishedCount(GenerationPin pin, int count)
+    {
+        if (pin.AllowMany && count == 0)
+        {
+            throw new TestingGenerationBuildException(
+                $"Published {FrameworkName} generation is missing {pin.FileName} {pin.CountLabel}.");
+        }
+
+        if (!pin.AllowMany && count != 1)
+        {
+            throw new TestingGenerationBuildException(
+                $"Exactly one {pin.FileName} {pin.CountLabel} is required in the published generation; found {count}.");
         }
     }
 
@@ -108,6 +114,12 @@ internal sealed record TestingGenerationSpec(
     {
         if (!RuntimeOwnsDependencyClosure && TestingGenerationFiles.IsSharedTestingContract(sourcePath))
             return;
+
+        if (string.Equals(relativePath, RuntimeAssemblyFileName, StringComparison.OrdinalIgnoreCase))
+        {
+            TestingGenerationFiles.MergeFile(files, sourcePath, relativePath);
+            return;
+        }
 
         TestingGenerationFiles.MergeRuntimeDependency(files, sourcePath, relativePath);
     }

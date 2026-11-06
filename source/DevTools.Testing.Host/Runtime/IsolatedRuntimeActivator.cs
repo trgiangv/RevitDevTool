@@ -14,7 +14,8 @@ internal static class IsolatedRuntimeActivator
         TestingGenerationManifest generation,
         AssemblyIsolationPlan plan,
         string runtimeSessionTypeName,
-        Func<Assembly, object[]> constructorArguments)
+        Func<Assembly, object[]> constructorArguments,
+        Func<Exception, string?>? explainFailure = null)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(plan);
@@ -36,11 +37,14 @@ internal static class IsolatedRuntimeActivator
                 binder: null,
                 args: constructorArguments(testAssembly),
                 culture: null)!;
-            return new IsolatedRuntimeSessionHandle(inner, isolation, generation.ShadowAssemblyPath);
+            return new IsolatedRuntimeSessionHandle(inner, isolation, generation.ShadowAssemblyPath, explainFailure);
         }
-        catch
+        catch (Exception ex)
         {
             isolation.Dispose();
+            if (explainFailure?.Invoke(ex) is { } sentence)
+                throw new TestingRuntimeIncompatibleException(sentence);
+
             throw;
         }
     }

@@ -3,6 +3,7 @@ using DevTools.Telemetry;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
+using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Transport;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
@@ -89,7 +90,8 @@ public sealed class TestingRequestHandler(
             HostVersion: _hostVersion,
             ProcessId: Environment.ProcessId,
             IsBusy: Volatile.Read(ref _isBusy) != 0,
-            Sender: TestingProtocol.Sender);
+            Sender: TestingProtocol.Sender,
+            TestingRuntime: TestingProtocol.RuntimeRange);
 
         return BridgeMessage.Response(
             requestId,
@@ -197,6 +199,11 @@ public sealed class TestingRequestHandler(
         {
             operation.Fail();
             return Invalid(requestId, ex.Message);
+        }
+        catch (TestingRuntimeIncompatibleException ex)
+        {
+            operation.Fail();
+            return TestingProtocol.CreateIncompatibleResponse(requestId, ex.Message);
         }
         catch (Exception ex)
         {

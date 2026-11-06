@@ -61,6 +61,31 @@ public sealed class TestPipeClientTests
             error.Message);
     }
 
+    [TestMethod]
+    public async Task RunAsync_surfaces_the_host_sentence_for_a_protocol_incompatible_run()
+    {
+        const string sentence = "NUnit is older than what the adapter needs.";
+        await using var duplex = new DuplexMemoryStream();
+        using var server = new BridgePipeConnection(duplex.Server);
+        await using var client = TestPipeClient.ConnectForTesting(duplex.Client);
+
+        server.MessageReceived += message =>
+            _ = server.WriteAsync(TestingProtocol.CreateIncompatibleResponse(message.Id!, sentence));
+        server.StartReadLoop();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.RunAsync(
+                new TestRunRequest(
+                    Guid.NewGuid(),
+                    TestFrameworkId.NUnit,
+                    new TestAssemblyReference(@"C:\tests\Sample.dll"),
+                    TestSelection.All),
+                progress: null,
+                TestContext.CancellationToken));
+
+        Assert.AreEqual(sentence, error.Message);
+    }
+
     public TestContext TestContext { get; set; } = null!;
 
     private static async Task ReplyWithHostSenderAsync(BridgePipeConnection server, BridgeMessage message, ProtocolSender? sender)

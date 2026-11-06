@@ -1,0 +1,31 @@
+<Project>
+  <Import Project="$(MSBuildThisFileDirectory)TestingRuntime.props" />
+
+  <Target Name="WriteRuntimeManifest"
+          AfterTargets="Build"
+          Condition="'$(TargetPath)' != '' AND '$(TargetDir)' != ''">
+    <PropertyGroup>
+      <_RuntimeManifestAssemblyPath>$(TargetDir)$(RuntimeManifestAssembly).dll</_RuntimeManifestAssemblyPath>
+      <_RuntimeManifestPath>$(TargetDir)$(TargetName).json</_RuntimeManifestPath>
+    </PropertyGroup>
+
+    <Error Condition="!Exists('$(_RuntimeManifestAssemblyPath)')"
+           Text="Runtime manifest requires $(RuntimeManifestAssembly).dll under '$(TargetDir)'." />
+
+    <GetAssemblyIdentity AssemblyFiles="$(_RuntimeManifestAssemblyPath)">
+      <Output TaskParameter="Assemblies" ItemName="_RuntimeManifestAssemblyIdentity" />
+    </GetAssemblyIdentity>
+    <PropertyGroup>
+      <_RuntimeManifestVersion>@(_RuntimeManifestAssemblyIdentity->'%(Version)')</_RuntimeManifestVersion>
+    </PropertyGroup>
+
+    <WriteLinesToFile File="$(_RuntimeManifestPath)"
+                      Lines="{&#xA;  &quot;framework&quot;: &quot;$(RuntimeManifestFramework)&quot;,&#xA;  &quot;entry&quot;: &quot;$(RuntimeManifestEntry)&quot;,&#xA;  &quot;contract&quot;: { &quot;current&quot;: $(TestingRuntimeContractCurrent), &quot;min&quot;: $(TestingRuntimeContractMin) },&#xA;  &quot;assembly&quot;: &quot;$(RuntimeManifestAssembly)&quot;,&#xA;  &quot;version&quot;: &quot;$(_RuntimeManifestVersion)&quot;&#xA;}"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true"
+                      Encoding="UTF-8" />
+    <ItemGroup>
+      <FileWrites Include="$(_RuntimeManifestPath)" />
+    </ItemGroup>
+  </Target>
+</Project>

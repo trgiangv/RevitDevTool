@@ -8,6 +8,9 @@
     <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
     <OutputType>Library</OutputType>
     <EnableTUnitPolyfills>false</EnableTUnitPolyfills>
+    <RuntimeManifestFramework>TUnit</RuntimeManifestFramework>
+    <RuntimeManifestEntry>DevTools.TUnit.Runtime.TUnitRuntimeSession</RuntimeManifestEntry>
+    <RuntimeManifestAssembly>TUnit.Core</RuntimeManifestAssembly>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,4 +42,5 @@
   </ItemGroup>
 
   <Import Project="build\TUnitRuntimePayload.targets" />
+  <Import Project="..\..\props\RuntimeManifest.targets" />
 </Project>

@@ -158,8 +158,11 @@ public sealed class RunnerCommands(
         }
     }
 
-    private static void EnsureHelloMatches(TestHelloResponse hello, TestRunExecute execute)
+    internal static void EnsureHelloMatches(TestHelloResponse hello, TestRunExecute execute)
     {
+        if (TestingProtocol.RuntimeMismatch(hello, execute.Run.Assembly.Path, execute.Run.FrameworkId) is { } mismatch)
+            throw new InvalidOperationException(mismatch);
+
         if (hello.FrameworkId != execute.Run.FrameworkId)
         {
             throw new InvalidOperationException(

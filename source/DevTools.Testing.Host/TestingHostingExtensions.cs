@@ -7,6 +7,8 @@ using DevTools.Testing.Host.Runtime;
 using DevTools.Testing.Host.TUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.Testing.Host;
 
@@ -45,7 +47,7 @@ public static class TestingHostingExtensions
                         NUnitGenerationPolicy.RuntimeSymbolFileName)));
             AddFrameworkProvider<NUnitGenerationPolicy>(
                 services,
-                policy => new FrameworkProvider(
+                (_, policy) => new FrameworkProvider(
                     policy,
                     new NUnitRuntimeSessionFactory()));
             return services;
@@ -61,7 +63,7 @@ public static class TestingHostingExtensions
                         TUnitGenerationPolicy.RuntimeAssemblyFileName)));
             AddFrameworkProvider<TUnitGenerationPolicy>(
                 services,
-                policy => new FrameworkProvider(
+                (_, policy) => new FrameworkProvider(
                     policy,
                     new ManifestRuntimeSessionFactory(TUnitGenerationPolicy.RuntimeSessionTypeName)));
             return services;
@@ -69,24 +71,22 @@ public static class TestingHostingExtensions
 
         public IServiceCollection AddMsTestHostServices()
         {
-            services.TryAddSingleton<MSTestGenerationPolicy>(_ =>
-                new MSTestGenerationPolicy(() =>
-                    RuntimeSource.ResolveBeside(
-                        typeof(TestingHostingExtensions).Assembly,
-                        MSTestGenerationPolicy.RuntimeFolderName,
-                        MSTestGenerationPolicy.RuntimeAssemblyFileName)));
+            services.TryAddSingleton<MSTestGenerationPolicy>();
             AddFrameworkProvider<MSTestGenerationPolicy>(
                 services,
-                policy => new FrameworkProvider(
+                (provider, policy) => new FrameworkProvider(
                     policy,
-                    new ManifestRuntimeSessionFactory(MSTestGenerationPolicy.RuntimeSessionTypeName)));
+                    new OutputSessionFactory(policy.FrameworkId, TestingLogger(provider))));
             return services;
         }
     }
 
+    private static ILogger TestingLogger(IServiceProvider provider) =>
+        provider.GetService<ILoggerFactory>()?.CreateLogger("DevTools.Testing.Host") ?? NullLogger.Instance;
+
     private static void AddFrameworkProvider<TPolicy>(
         IServiceCollection services,
-        Func<TPolicy, ITestFrameworkProvider> create)
+        Func<IServiceProvider, TPolicy, ITestFrameworkProvider> create)
         where TPolicy : class, ITestingGenerationPolicy
     {
         foreach (var descriptor in services)
@@ -101,7 +101,7 @@ public static class TestingHostingExtensions
 
         var registration = new FrameworkRegistration(
             typeof(TPolicy),
-            provider => create(provider.GetRequiredService<TPolicy>()));
+            provider => create(provider, provider.GetRequiredService<TPolicy>()));
         services.AddSingleton<ITestFrameworkProvider>(registration.Create);
     }
 

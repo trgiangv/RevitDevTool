@@ -71,6 +71,41 @@ public sealed class RunnerCommandsTests : RunnerTests
         Assert.Contains(TestingProtocol.Mismatch(execute)!, stderr.ToString(), StringComparison.Ordinal);
     }
 
+    [TestMethod]
+    public void Hello_from_a_host_without_a_runtime_range_is_rejected_when_the_output_has_a_manifest()
+    {
+        var output = Path.Combine(Path.GetTempPath(), $"runner-runtime-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(output);
+        try
+        {
+            File.WriteAllText(
+                Path.Combine(output, RuntimeManifest.FileName(TestFrameworkId.NUnit)),
+                JsonSerializer.Serialize(
+                    new RuntimeManifest("NUnit", "Entry", TestingProtocol.RuntimeRange, "nunit.framework", "5.0.0.0"),
+                    TestingJsonContext.Default.RuntimeManifest));
+            var execute = new TestRunExecute(
+                TestingProtocol.Sender,
+                new TestHostOptions("Revit", "2026", true, 60, 180),
+                new TestRunRequest(
+                    Guid.NewGuid(),
+                    TestFrameworkId.NUnit,
+                    new TestAssemblyReference(Path.Combine(output, "Consumer.dll")),
+                    TestSelection.All));
+            var hello = new TestHelloResponse(TestFrameworkId.NUnit, "Revit", "2026", 1, false, TestingProtocol.Sender);
+
+            var error = Assert.ThrowsExactly<InvalidOperationException>(() =>
+                RunnerCommands.EnsureHelloMatches(hello, execute));
+
+            Assert.EndsWith(TestingProtocol.UpdateProductMessage, error.Message, StringComparison.Ordinal);
+
+            RunnerCommands.EnsureHelloMatches(hello with { TestingRuntime = TestingProtocol.RuntimeRange }, execute);
+        }
+        finally
+        {
+            Directory.Delete(output, recursive: true);
+        }
+    }
+
     private sealed class ThrowingTestSession : ITestSession
     {
         public int Calls { get; private set; }

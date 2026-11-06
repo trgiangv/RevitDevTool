@@ -110,6 +110,113 @@ public sealed class TestingProtocolRangeTests
         Assert.AreEqual(AppVersion.Current, execute.Sender!.Version);
     }
 
+    [TestMethod]
+    public void Hello_without_a_testing_runtime_range_still_reads()
+    {
+        var hello = JsonSerializer.Deserialize(
+            """{"framework_id":"NUnit","host":"Revit","host_version":"2025","process_id":1,"is_busy":false,"sender":{"version":"4.1.0","protocol":{"current":1,"min":1}}}""",
+            TestingJsonContext.Default.TestHelloResponse);
+
+        Assert.IsNull(hello!.TestingRuntime);
+        Assert.IsNull(TestingProtocol.Mismatch(hello));
+    }
+
+    [TestMethod]
+    public void Hello_round_trips_the_testing_runtime_range()
+    {
+        var json = JsonSerializer.Serialize(Hello(TestingProtocol.RuntimeRange), TestingJsonContext.Default.TestHelloResponse);
+
+        Assert.Contains("\"testing_runtime\":{", json, StringComparison.Ordinal);
+        Assert.AreEqual(
+            TestingProtocol.RuntimeRange,
+            JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestHelloResponse)!.TestingRuntime);
+    }
+
+    [TestMethod]
+    public void Runner_has_nothing_to_say_when_the_output_has_no_manifest()
+    {
+        using var output = new OutputDirectory();
+
+        Assert.IsNull(TestingProtocol.RuntimeMismatch(Hello(range: null), output.TestAssembly, TestFrameworkId.NUnit));
+    }
+
+    [TestMethod]
+    public void Runner_accepts_an_overlapping_host_range()
+    {
+        using var output = new OutputDirectory();
+        output.WriteManifest(TestingProtocol.RuntimeRange);
+
+        Assert.IsNull(TestingProtocol.RuntimeMismatch(Hello(TestingProtocol.RuntimeRange), output.TestAssembly, TestFrameworkId.NUnit));
+    }
+
+    [TestMethod]
+    public void Runner_reads_a_missing_host_range_as_too_old()
+    {
+        using var output = new OutputDirectory();
+        output.WriteManifest(TestingProtocol.RuntimeRange);
+
+        Assert.AreEqual(
+            $"RevitDevTool 4.1.0 is not compatible with RevitDevTool.TestAdapter unknown. {TestingProtocol.UpdateProductMessage}",
+            TestingProtocol.RuntimeMismatch(Hello(range: null), output.TestAssembly, TestFrameworkId.NUnit));
+    }
+
+    [TestMethod]
+    public void Runner_tells_an_older_adapter_to_update_itself()
+    {
+        using var output = new OutputDirectory();
+        output.WriteManifest(new ProtocolRange(1, 1));
+        var host = new ProtocolRange(TestingProtocol.RuntimeRange.Current + 2, TestingProtocol.RuntimeRange.Current + 2);
+
+        Assert.AreEqual(
+            $"RevitDevTool 4.1.0 is not compatible with RevitDevTool.TestAdapter unknown. {TestingProtocol.UpdateAdapterMessage}",
+            TestingProtocol.RuntimeMismatch(Hello(host), output.TestAssembly, TestFrameworkId.NUnit));
+    }
+
+    [TestMethod]
+    public void Manifest_reader_ignores_unknown_members_and_rejects_an_incomplete_file()
+    {
+        using var output = new OutputDirectory();
+        var path = Path.Combine(output.Path, RuntimeManifest.FileName(TestFrameworkId.NUnit));
+
+        File.WriteAllText(path, """{"framework":"NUnit","entry":"E","contract":{"current":1,"min":1},"assembly":"nunit.framework","version":"5.0.0.0","future":true}""");
+        Assert.AreEqual("5.0.0.0", RuntimeManifest.TryRead(output.Path, TestFrameworkId.NUnit)!.Version);
+
+        foreach (var incomplete in new[]
+                 {
+                     """{"framework":"NUnit","contract":{"current":1,"min":1},"assembly":"nunit.framework","version":"5.0.0.0"}""",
+                     """{"framework":"NUnit","entry":"E","assembly":"nunit.framework","version":"5.0.0.0"}""",
+                     """{"framework":"NUnit","entry":"E","contract":{"current":1,"min":1},"version":"5.0.0.0"}""",
+                     """{"framework":"NUnit","entry":"E","contract":{"current":1,"min":1},"assembly":"nunit.framework"}""",
+                     """{"framework":"NUnit","entry":"E","contract":{"current":1,"min":1},"assembly":"nunit.framework","version":"five"}""",
+                     "not json",
+                 })
+        {
+            File.WriteAllText(path, incomplete);
+            Assert.IsNull(RuntimeManifest.TryRead(output.Path, TestFrameworkId.NUnit), incomplete);
+        }
+    }
+
+    private static TestHelloResponse Hello(ProtocolRange? range) =>
+        new(TestFrameworkId.NUnit, "Revit", "2025", 1, false, Sender("4.1.0", 1, 1), range);
+
+    private sealed class OutputDirectory : IDisposable
+    {
+        public OutputDirectory() => Directory.CreateDirectory(Path);
+
+        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"runtime-manifest-{Guid.NewGuid():N}");
+
+        public string TestAssembly => System.IO.Path.Combine(Path, "Consumer.dll");
+
+        public void WriteManifest(ProtocolRange contract) =>
+            File.WriteAllText(
+                System.IO.Path.Combine(Path, RuntimeManifest.FileName(TestFrameworkId.NUnit)),
+                JsonSerializer.Serialize(
+                    new RuntimeManifest("NUnit", "Entry", contract, "nunit.framework", "5.0.0.0"),
+                    TestingJsonContext.Default.RuntimeManifest));
+
+        public void Dispose() => Directory.Delete(Path, recursive: true);
+    }
+
     private static ProtocolSender Sender(string version, int current, int min) => new(version, new ProtocolRange(current, min));
 
     private static TestRunExecute Execute(ProtocolSender? sender) =>

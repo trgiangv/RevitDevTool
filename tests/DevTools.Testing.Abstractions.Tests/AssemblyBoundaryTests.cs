@@ -43,12 +43,17 @@ public sealed class AssemblyBoundaryTests
         var packages = csproj
             .Descendants()
             .Where(static element => element.Name.LocalName == "PackageReference")
+            .Where(static element => !IsPrivateAnalyzer(element))
             .Select(static element => element.Attribute("Include")?.Value)
             .Where(static identity => !string.IsNullOrWhiteSpace(identity))
             .ToArray();
 
         Assert.IsEmpty(packages);
     }
+
+    static bool IsPrivateAnalyzer(XElement package)
+        => package.Attribute("Include")?.Value == "Microsoft.CodeAnalysis.PublicApiAnalyzers"
+            && package.Attribute("PrivateAssets")?.Value == "all";
 
     [TestMethod]
     public void Abstractions_source_does_not_mention_forbidden_implementation_types()

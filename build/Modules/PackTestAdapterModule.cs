@@ -25,18 +25,24 @@ public sealed class PackTestAdapterModule : Module<string>
             Projects.DevTools_TUnit_MTP.FullName,
             Projects.DevTools_MSTest_MTP.FullName
         };
+        var runtimeProjects = new[]
+        {
+            Projects.DevTools_NUnit_Runtime.FullName,
+            Projects.DevTools_TUnit_Runtime.FullName,
+            Projects.DevTools_MSTest_Runtime.FullName
+        };
 
         var version = ReadPackageVersion(adapterProject);
         var outputDir = Path.Combine(context.Git().RootDirectory.Path, "output", "nuget");
         Directory.CreateDirectory(outputDir);
 
         await RestoreAsync(context, adapterProject, cancellationToken);
-        foreach (var project in mtpProjects)
+        foreach (var project in mtpProjects.Concat(runtimeProjects))
         {
             await RestoreAsync(context, project, cancellationToken);
         }
 
-        foreach (var project in mtpProjects)
+        foreach (var project in mtpProjects.Concat(runtimeProjects))
         {
             await context.DotNet().Build(new DotNetBuildOptions
             {

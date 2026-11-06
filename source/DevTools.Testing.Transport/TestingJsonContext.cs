@@ -6,6 +6,7 @@ namespace DevTools.Testing.Transport;
 [JsonSerializable(typeof(TestFrameworkId))]
 [JsonSerializable(typeof(TestHelloRequest))]
 [JsonSerializable(typeof(TestHelloResponse))]
+[JsonSerializable(typeof(RuntimeManifest))]
 [JsonSerializable(typeof(TestCancelRequest))]
 [JsonSerializable(typeof(TestCancelResponse))]
 [JsonSerializable(typeof(TestRunnerStreamMessage))]

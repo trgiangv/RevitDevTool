@@ -87,6 +87,32 @@ public sealed class ProcessTestRunnerClientTests
     }
 
     [TestMethod]
+    public void Run_rethrows_the_sentence_the_runner_wrote_to_stderr()
+    {
+        const string sentence = "NUnit is older than what the adapter needs.";
+        var directory = Path.Combine(Path.GetTempPath(), "DevTools", "TestingTransport", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var runnerPath = Path.Combine(directory, "fake-runner.cmd");
+        File.WriteAllText(runnerPath, $"""
+            @echo off
+            echo {sentence} 1>&2
+            exit /b 2
+            """);
+
+        using var client = new ProcessTestRunnerClient(runnerPath);
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => client.Run(
+            new TestRunRequest(
+                Guid.NewGuid(),
+                TestFrameworkId.NUnit,
+                new TestAssemblyReference(@"C:\tests\Sample.dll"),
+                TestSelection.All),
+            new TestHostOptions("Revit", "2025", false, 60, 180),
+            _ => { }));
+
+        Assert.AreEqual(sentence, error.Message);
+    }
+
+    [TestMethod]
     public void Cancel_after_dispose_does_not_throw()
     {
         var client = new ProcessTestRunnerClient(

@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <TestingRuntimeContractCurrent>1</TestingRuntimeContractCurrent>
+    <TestingRuntimeContractMin>1</TestingRuntimeContractMin>
+  </PropertyGroup>
+</Project>

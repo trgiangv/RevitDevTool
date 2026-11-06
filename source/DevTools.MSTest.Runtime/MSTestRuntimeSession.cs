@@ -64,7 +64,6 @@ public sealed class MSTestRuntimeSession : CancellableRuntimeSession
         ITestEventSink eventSink,
         CancellationToken cancellationToken)
     {
-        MSTestPlatformPolicy.EnsurePinnedVersions();
         // MTP keeps one process-wide metadata hook; the last generation to register wins.
         MSTestAssemblyRegistration.Register(_testAssembly);
 

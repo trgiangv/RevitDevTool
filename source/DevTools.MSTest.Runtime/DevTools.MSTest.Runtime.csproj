@@ -8,11 +8,14 @@
     <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
     <EnableMSTestRunner>false</EnableMSTestRunner>
     <OutputType>Library</OutputType>
+    <RuntimeManifestFramework>MSTest</RuntimeManifestFramework>
+    <RuntimeManifestEntry>DevTools.MSTest.Runtime.MSTestRuntimeSession</RuntimeManifestEntry>
+    <RuntimeManifestAssembly>MSTest.TestFramework</RuntimeManifestAssembly>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="MSTest.TestFramework" Version="4.5.2" />
-    <PackageVersion Include="MSTest.TestAdapter" Version="4.5.2" />
+    <PackageVersion Include="MSTest.TestFramework" Version="$(MSTestSdkVersion)" />
+    <PackageVersion Include="MSTest.TestAdapter" Version="$(MSTestSdkVersion)" />
     <PackageReference Include="MSTest.TestFramework">
       <ExcludeAssets>analyzers</ExcludeAssets>
     </PackageReference>
@@ -45,5 +48,5 @@
     </ItemGroup>
   </Target>
 
-  <Import Project="build\MSTestRuntimePayload.targets" />
+  <Import Project="..\..\props\RuntimeManifest.targets" />
 </Project>

@@ -1,0 +1,365 @@
+#nullable enable
+abstract DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.Execute(DevTools.Testing.Abstractions.Contracts.TestRunRequest! request, DevTools.Testing.Abstractions.Runtime.ITestEventSink! eventSink, System.Threading.CancellationToken cancellationToken) -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+const DevTools.Testing.Abstractions.Config.TestConfig.FileName = "testconfig.json" -> string!
+const DevTools.Testing.Abstractions.Config.TestConfig.Keys.ForceLaunch = "forceLaunch" -> string!
+const DevTools.Testing.Abstractions.Config.TestConfig.Keys.FrameworkId = "frameworkId" -> string!
+const DevTools.Testing.Abstractions.Config.TestConfig.Keys.HostName = "hostName" -> string!
+const DevTools.Testing.Abstractions.Config.TestConfig.Keys.HostVersion = "hostVersion" -> string!
+const DevTools.Testing.Abstractions.Config.TestConfig.Keys.LaunchTimeoutSeconds = "launchTimeoutSeconds" -> string!
+const DevTools.Testing.Abstractions.Config.TestConfig.Keys.PerTestTimeoutSeconds = "perTestTimeoutSeconds" -> string!
+const DevTools.Testing.Abstractions.Config.TestConfig.Keys.RunnerPath = "runnerPath" -> string!
+const DevTools.Testing.Abstractions.Config.TestConfig.SectionName = "devtools" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestEventKinds.Attachment = "attachment" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestEventKinds.Cancellation = "cancellation" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestEventKinds.Case = "case" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestEventKinds.Diagnostic = "diagnostic" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestEventKinds.Output = "output" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestingErrorCodes.InvalidRequest = "testing/invalid_request" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestingErrorCodes.ProtocolIncompatible = "testing/protocol_incompatible" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestingErrorCodes.ProviderFailed = "testing/provider_failed" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestingErrorCodes.SessionPoisoned = "testing/session_poisoned" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestOutcomes.Cancelled = "Cancelled" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestOutcomes.Error = "Error" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestOutcomes.Failed = "Failed" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestOutcomes.Inconclusive = "Inconclusive" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestOutcomes.Passed = "Passed" -> string!
+const DevTools.Testing.Abstractions.Contracts.TestOutcomes.Skipped = "Skipped" -> string!
+const DevTools.Testing.Abstractions.DiscoveryRefs.FileSuffix = ".discovery-refs.txt" -> string!
+DevTools.Testing.Abstractions.Config.TestConfig
+DevTools.Testing.Abstractions.Config.TestConfig.Keys
+DevTools.Testing.Abstractions.Contracts.TestAssemblyReference
+DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestAssemblyReference!
+DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.Deconstruct(out string! Path) -> void
+DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.Equals(DevTools.Testing.Abstractions.Contracts.TestAssemblyReference? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.Path.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.Path.init -> void
+DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.TestAssemblyReference(string! Path) -> void
+DevTools.Testing.Abstractions.Contracts.TestAttachment
+DevTools.Testing.Abstractions.Contracts.TestAttachment.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestAttachment!
+DevTools.Testing.Abstractions.Contracts.TestAttachment.ContentType.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestAttachment.ContentType.init -> void
+DevTools.Testing.Abstractions.Contracts.TestAttachment.Deconstruct(out string! Path, out string? Description, out string? ContentType) -> void
+DevTools.Testing.Abstractions.Contracts.TestAttachment.Description.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestAttachment.Description.init -> void
+DevTools.Testing.Abstractions.Contracts.TestAttachment.Equals(DevTools.Testing.Abstractions.Contracts.TestAttachment? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestAttachment.Path.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestAttachment.Path.init -> void
+DevTools.Testing.Abstractions.Contracts.TestAttachment.TestAttachment(string! Path, string? Description, string? ContentType = null) -> void
+DevTools.Testing.Abstractions.Contracts.TestCancellationState
+DevTools.Testing.Abstractions.Contracts.TestCancellationState.Acknowledged = 2 -> DevTools.Testing.Abstractions.Contracts.TestCancellationState
+DevTools.Testing.Abstractions.Contracts.TestCancellationState.Completed = 3 -> DevTools.Testing.Abstractions.Contracts.TestCancellationState
+DevTools.Testing.Abstractions.Contracts.TestCancellationState.None = 0 -> DevTools.Testing.Abstractions.Contracts.TestCancellationState
+DevTools.Testing.Abstractions.Contracts.TestCancellationState.Poisoned = 4 -> DevTools.Testing.Abstractions.Contracts.TestCancellationState
+DevTools.Testing.Abstractions.Contracts.TestCancellationState.Requested = 1 -> DevTools.Testing.Abstractions.Contracts.TestCancellationState
+DevTools.Testing.Abstractions.Contracts.TestCaseResult
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestCaseResult!
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Attachments.get -> System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestAttachment!>!
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Attachments.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Deconstruct(out string! TestId, out string! DisplayName, out string! Outcome, out double DurationMilliseconds, out string? Message, out string? StackTrace, out string? Output, out DevTools.Testing.Abstractions.Contracts.TestSourceLocation? Source, out System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestTrait!>! Traits, out System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestAttachment!>! Attachments, out string? ParentTestId, out string? FullName, out string? SkipReason) -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.DisplayName.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.DisplayName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.DurationMilliseconds.get -> double
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.DurationMilliseconds.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Equals(DevTools.Testing.Abstractions.Contracts.TestCaseResult? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.FullName.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.FullName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Message.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Message.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Outcome.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Outcome.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Output.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Output.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.ParentTestId.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.ParentTestId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.SkipReason.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.SkipReason.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Source.get -> DevTools.Testing.Abstractions.Contracts.TestSourceLocation?
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Source.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.StackTrace.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.StackTrace.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.TestCaseResult(string! TestId, string! DisplayName, string! Outcome, double DurationMilliseconds, string? Message, string? StackTrace, string? Output, DevTools.Testing.Abstractions.Contracts.TestSourceLocation? Source, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestTrait!>! Traits, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestAttachment!>! Attachments, string? ParentTestId = null, string? FullName = null, string? SkipReason = null) -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.TestId.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.TestId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Traits.get -> System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestTrait!>!
+DevTools.Testing.Abstractions.Contracts.TestCaseResult.Traits.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest!
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Categories.get -> System.Collections.Generic.IReadOnlyList<string!>?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Categories.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.ClassName.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.ClassName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Deconstruct(out string! TestId, out string! DisplayName, out string? FullName, out string? ClassName, out string? MethodName, out DevTools.Testing.Abstractions.Contracts.TestSourceLocation? Source, out string? Namespace, out string? TypeName, out int MethodArity, out System.Collections.Generic.IReadOnlyList<string!>? Categories, out System.Collections.Generic.IReadOnlyList<string!>? ParameterTypeFullNames, out string? ReturnTypeFullName) -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.DisplayName.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.DisplayName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Equals(DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.FullName.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.FullName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.MethodArity.get -> int
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.MethodArity.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.MethodName.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.MethodName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Namespace.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Namespace.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.ParameterTypeFullNames.get -> System.Collections.Generic.IReadOnlyList<string!>?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.ParameterTypeFullNames.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.ReturnTypeFullName.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.ReturnTypeFullName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Source.get -> DevTools.Testing.Abstractions.Contracts.TestSourceLocation?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Source.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.TestDiscoveredTest(string! TestId, string! DisplayName, string? FullName = null, string? ClassName = null, string? MethodName = null, DevTools.Testing.Abstractions.Contracts.TestSourceLocation? Source = null, string? Namespace = null, string? TypeName = null, int MethodArity = 0, System.Collections.Generic.IReadOnlyList<string!>? Categories = null, System.Collections.Generic.IReadOnlyList<string!>? ParameterTypeFullNames = null, string? ReturnTypeFullName = null) -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.TestId.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.TestId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.TypeName.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.TypeName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestEvent
+DevTools.Testing.Abstractions.Contracts.TestEvent.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestEvent!
+DevTools.Testing.Abstractions.Contracts.TestEvent.Attachment.get -> DevTools.Testing.Abstractions.Contracts.TestAttachment?
+DevTools.Testing.Abstractions.Contracts.TestEvent.Attachment.init -> void
+DevTools.Testing.Abstractions.Contracts.TestEvent.CancellationState.get -> DevTools.Testing.Abstractions.Contracts.TestCancellationState
+DevTools.Testing.Abstractions.Contracts.TestEvent.CancellationState.init -> void
+DevTools.Testing.Abstractions.Contracts.TestEvent.Case.get -> DevTools.Testing.Abstractions.Contracts.TestCaseResult?
+DevTools.Testing.Abstractions.Contracts.TestEvent.Case.init -> void
+DevTools.Testing.Abstractions.Contracts.TestEvent.Deconstruct(out System.Guid RunId, out string! Kind, out DevTools.Testing.Abstractions.Contracts.TestCaseResult? Case, out string? Message, out DevTools.Testing.Abstractions.Contracts.TestAttachment? Attachment, out DevTools.Testing.Abstractions.Contracts.TestCancellationState CancellationState) -> void
+DevTools.Testing.Abstractions.Contracts.TestEvent.Equals(DevTools.Testing.Abstractions.Contracts.TestEvent? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestEvent.Kind.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestEvent.Kind.init -> void
+DevTools.Testing.Abstractions.Contracts.TestEvent.Message.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestEvent.Message.init -> void
+DevTools.Testing.Abstractions.Contracts.TestEvent.RunId.get -> System.Guid
+DevTools.Testing.Abstractions.Contracts.TestEvent.RunId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestEvent.TestEvent(System.Guid RunId, string! Kind, DevTools.Testing.Abstractions.Contracts.TestCaseResult? Case, string? Message, DevTools.Testing.Abstractions.Contracts.TestAttachment? Attachment, DevTools.Testing.Abstractions.Contracts.TestCancellationState CancellationState) -> void
+DevTools.Testing.Abstractions.Contracts.TestEventKinds
+DevTools.Testing.Abstractions.Contracts.TestFrameworkId
+DevTools.Testing.Abstractions.Contracts.TestFrameworkId.MSTest = 2 -> DevTools.Testing.Abstractions.Contracts.TestFrameworkId
+DevTools.Testing.Abstractions.Contracts.TestFrameworkId.NUnit = 0 -> DevTools.Testing.Abstractions.Contracts.TestFrameworkId
+DevTools.Testing.Abstractions.Contracts.TestFrameworkId.TUnit = 1 -> DevTools.Testing.Abstractions.Contracts.TestFrameworkId
+DevTools.Testing.Abstractions.Contracts.TestHostOptions
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestHostOptions!
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.DebugParentPid.get -> int?
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.DebugParentPid.init -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.Deconstruct(out string! HostName, out string! HostVersion, out bool ForceLaunch, out int PerTestTimeoutSeconds, out int LaunchTimeoutSeconds, out int? DebugParentPid, out int RequestTimeoutSeconds) -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.EffectiveRequestTimeoutSeconds.get -> int
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.Equals(DevTools.Testing.Abstractions.Contracts.TestHostOptions? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.ForceLaunch.get -> bool
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.ForceLaunch.init -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.HostName.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.HostName.init -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.HostVersion.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.HostVersion.init -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.LaunchTimeoutSeconds.get -> int
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.LaunchTimeoutSeconds.init -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.PerTestTimeoutSeconds.get -> int
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.PerTestTimeoutSeconds.init -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.RequestTimeoutSeconds.get -> int
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.RequestTimeoutSeconds.init -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.TestHostOptions(string! HostName, string! HostVersion, bool ForceLaunch, int PerTestTimeoutSeconds, int LaunchTimeoutSeconds, int? DebugParentPid = null, int RequestTimeoutSeconds = 0) -> void
+DevTools.Testing.Abstractions.Contracts.TestingErrorCodes
+DevTools.Testing.Abstractions.Contracts.TestOutcomes
+DevTools.Testing.Abstractions.Contracts.TestRunRequest
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestRunRequest!
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.Assembly.get -> DevTools.Testing.Abstractions.Contracts.TestAssemblyReference!
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.Assembly.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.Equals(DevTools.Testing.Abstractions.Contracts.TestRunRequest? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.FrameworkId.get -> DevTools.Testing.Abstractions.Contracts.TestFrameworkId
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.FrameworkId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.RunId.get -> System.Guid
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.RunId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.Selection.get -> DevTools.Testing.Abstractions.Contracts.TestSelection!
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.Selection.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunRequest.TestRunRequest(System.Guid RunId, DevTools.Testing.Abstractions.Contracts.TestFrameworkId FrameworkId, DevTools.Testing.Abstractions.Contracts.TestAssemblyReference! Assembly, DevTools.Testing.Abstractions.Contracts.TestSelection! Selection) -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.CancellationState.get -> DevTools.Testing.Abstractions.Contracts.TestCancellationState
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.CancellationState.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.Deconstruct(out System.Guid RunId, out DevTools.Testing.Abstractions.Contracts.TestFrameworkId FrameworkId, out string? GenerationId, out System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>! Results, out DevTools.Testing.Abstractions.Contracts.TestCancellationState CancellationState, out string? DiagnosticCode, out string? DiagnosticMessage) -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.DiagnosticCode.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.DiagnosticCode.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.DiagnosticMessage.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.DiagnosticMessage.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.Equals(DevTools.Testing.Abstractions.Contracts.TestRunResponse? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.FrameworkId.get -> DevTools.Testing.Abstractions.Contracts.TestFrameworkId
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.FrameworkId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.GenerationId.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.GenerationId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.Results.get -> System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>!
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.Results.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.RunId.get -> System.Guid
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.RunId.init -> void
+DevTools.Testing.Abstractions.Contracts.TestRunResponse.TestRunResponse(System.Guid RunId, DevTools.Testing.Abstractions.Contracts.TestFrameworkId FrameworkId, string? GenerationId, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>! Results, DevTools.Testing.Abstractions.Contracts.TestCancellationState CancellationState, string? DiagnosticCode, string? DiagnosticMessage) -> void
+DevTools.Testing.Abstractions.Contracts.TestSelection
+DevTools.Testing.Abstractions.Contracts.TestSelection.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestSelection!
+DevTools.Testing.Abstractions.Contracts.TestSelection.Equals(DevTools.Testing.Abstractions.Contracts.TestSelection? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestSelection.FilterData.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestSelection.FilterData.init -> void
+DevTools.Testing.Abstractions.Contracts.TestSelection.FilterFormat.get -> string?
+DevTools.Testing.Abstractions.Contracts.TestSelection.FilterFormat.init -> void
+DevTools.Testing.Abstractions.Contracts.TestSelection.IsConstrained.get -> bool
+DevTools.Testing.Abstractions.Contracts.TestSelection.Kind.get -> DevTools.Testing.Abstractions.Contracts.TestSelectionKind
+DevTools.Testing.Abstractions.Contracts.TestSelection.Kind.init -> void
+DevTools.Testing.Abstractions.Contracts.TestSelection.Names.get -> System.Collections.Generic.IReadOnlyList<string!>!
+DevTools.Testing.Abstractions.Contracts.TestSelection.Names.init -> void
+DevTools.Testing.Abstractions.Contracts.TestSelection.TestIds.get -> System.Collections.Generic.IReadOnlyList<string!>!
+DevTools.Testing.Abstractions.Contracts.TestSelection.TestIds.init -> void
+DevTools.Testing.Abstractions.Contracts.TestSelection.TestSelection(DevTools.Testing.Abstractions.Contracts.TestSelectionKind kind, System.Collections.Generic.IReadOnlyList<string!>? testIds = null, string? filterFormat = null, string? filterData = null, System.Collections.Generic.IReadOnlyList<string!>? names = null) -> void
+DevTools.Testing.Abstractions.Contracts.TestSelectionKind
+DevTools.Testing.Abstractions.Contracts.TestSelectionKind.All = 0 -> DevTools.Testing.Abstractions.Contracts.TestSelectionKind
+DevTools.Testing.Abstractions.Contracts.TestSelectionKind.FrameworkFilter = 2 -> DevTools.Testing.Abstractions.Contracts.TestSelectionKind
+DevTools.Testing.Abstractions.Contracts.TestSelectionKind.Names = 3 -> DevTools.Testing.Abstractions.Contracts.TestSelectionKind
+DevTools.Testing.Abstractions.Contracts.TestSelectionKind.TestIds = 1 -> DevTools.Testing.Abstractions.Contracts.TestSelectionKind
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestSourceLocation!
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation.Deconstruct(out string! File, out int Line) -> void
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation.Equals(DevTools.Testing.Abstractions.Contracts.TestSourceLocation? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation.File.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation.File.init -> void
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation.Line.get -> int
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation.Line.init -> void
+DevTools.Testing.Abstractions.Contracts.TestSourceLocation.TestSourceLocation(string! File, int Line) -> void
+DevTools.Testing.Abstractions.Contracts.TestTrait
+DevTools.Testing.Abstractions.Contracts.TestTrait.<Clone>$() -> DevTools.Testing.Abstractions.Contracts.TestTrait!
+DevTools.Testing.Abstractions.Contracts.TestTrait.Deconstruct(out string! Name, out string! Value) -> void
+DevTools.Testing.Abstractions.Contracts.TestTrait.Equals(DevTools.Testing.Abstractions.Contracts.TestTrait? other) -> bool
+DevTools.Testing.Abstractions.Contracts.TestTrait.Name.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestTrait.Name.init -> void
+DevTools.Testing.Abstractions.Contracts.TestTrait.TestTrait(string! Name, string! Value) -> void
+DevTools.Testing.Abstractions.Contracts.TestTrait.Value.get -> string!
+DevTools.Testing.Abstractions.Contracts.TestTrait.Value.init -> void
+DevTools.Testing.Abstractions.DiscoveryRefs
+DevTools.Testing.Abstractions.ITestDiscoverer
+DevTools.Testing.Abstractions.ITestDiscoverer.Discover(string! assemblyPath, DevTools.Testing.Abstractions.Contracts.TestSelection! selection) -> System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest!>!
+DevTools.Testing.Abstractions.ITestRunMapper
+DevTools.Testing.Abstractions.ITestRunMapper.FoldResults(DevTools.Testing.Abstractions.Contracts.TestSelection! requested, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest!>! discovered, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>! hostResults) -> System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>!
+DevTools.Testing.Abstractions.ITestRunMapper.ResultsForUnreported(DevTools.Testing.Abstractions.Contracts.TestSelection! requested, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest!>! discovered, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>! hostResults) -> System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>!
+DevTools.Testing.Abstractions.ITestRunMapper.ToRunSelection(DevTools.Testing.Abstractions.Contracts.TestSelection! requested, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest!>! discovered) -> DevTools.Testing.Abstractions.Contracts.TestSelection!
+DevTools.Testing.Abstractions.Loading.DiscoveryAssemblyLoad
+DevTools.Testing.Abstractions.Loading.DiscoveryAssemblyLoad.Assembly.get -> System.Reflection.Assembly!
+DevTools.Testing.Abstractions.Loading.DiscoveryAssemblyLoad.Dispose() -> void
+DevTools.Testing.Abstractions.Providers.ITestFrameworkProvider
+DevTools.Testing.Abstractions.Providers.ITestFrameworkProvider.Cancel(System.Guid runId) -> bool
+DevTools.Testing.Abstractions.Providers.ITestFrameworkProvider.FrameworkId.get -> DevTools.Testing.Abstractions.Contracts.TestFrameworkId
+DevTools.Testing.Abstractions.Providers.ITestFrameworkProvider.Run(DevTools.Testing.Abstractions.Contracts.TestRunRequest! request, DevTools.Testing.Abstractions.Runtime.ITestEventSink! eventSink, System.Threading.CancellationToken cancellationToken) -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.AssemblyPath.get -> string!
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.Cancel(System.Guid runId) -> void
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.CancellableRuntimeSession(string! frameworkName, string! assemblyPath, string! generationId) -> void
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.CreateCancelledResponse(DevTools.Testing.Abstractions.Contracts.TestRunRequest! request) -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.CreateCompletedResponse(DevTools.Testing.Abstractions.Contracts.TestRunRequest! request, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>! results, bool cancelled) -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.CreateEmptyResponse(DevTools.Testing.Abstractions.Contracts.TestRunRequest! request) -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.CreateInvalidSelectionResponse(DevTools.Testing.Abstractions.Contracts.TestRunRequest! request, string! message) -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.Dispose() -> void
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.GenerationId.get -> string!
+DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.Run(DevTools.Testing.Abstractions.Contracts.TestRunRequest! request, DevTools.Testing.Abstractions.Runtime.ITestEventSink! eventSink, System.Threading.CancellationToken cancellationToken) -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+DevTools.Testing.Abstractions.Runtime.InternalMembers
+DevTools.Testing.Abstractions.Runtime.ITestEventSink
+DevTools.Testing.Abstractions.Runtime.ITestEventSink.Publish(DevTools.Testing.Abstractions.Contracts.TestEvent! testingEvent) -> void
+DevTools.Testing.Abstractions.Runtime.ITestingRuntimeSession
+DevTools.Testing.Abstractions.Runtime.ITestingRuntimeSession.Cancel(System.Guid runId) -> void
+DevTools.Testing.Abstractions.Runtime.ITestingRuntimeSession.GenerationId.get -> string!
+DevTools.Testing.Abstractions.Runtime.ITestingRuntimeSession.Run(DevTools.Testing.Abstractions.Contracts.TestRunRequest! request, DevTools.Testing.Abstractions.Runtime.ITestEventSink! eventSink, System.Threading.CancellationToken cancellationToken) -> DevTools.Testing.Abstractions.Contracts.TestRunResponse!
+DevTools.Testing.Abstractions.Runtime.TestingProcessHold
+DevTools.Testing.Abstractions.Runtime.TestRunTraceScope
+DevTools.Testing.Abstractions.Runtime.TestRunTraceScope.CompleteCase(string? caseKey = null) -> string?
+DevTools.Testing.Abstractions.Runtime.TestRunTraceScope.Dispose() -> void
+DevTools.Testing.Abstractions.Runtime.TestRunTraceScope.TestRunTraceScope(System.Func<string?>? caseKey = null) -> void
+DevTools.Testing.Abstractions.Runtime.TestRunTraceScope.WriteThrough(string? text) -> void
+DevTools.Testing.Abstractions.TestingDiscovery
+DevTools.Testing.Abstractions.TestingDiscoveryBridge
+DevTools.Testing.Abstractions.TestingDiscoveryBridge.<Clone>$() -> DevTools.Testing.Abstractions.TestingDiscoveryBridge!
+DevTools.Testing.Abstractions.TestingDiscoveryBridge.Deconstruct(out DevTools.Testing.Abstractions.ITestDiscoverer! Discoverer, out DevTools.Testing.Abstractions.ITestRunMapper! RunMapper) -> void
+DevTools.Testing.Abstractions.TestingDiscoveryBridge.Discoverer.get -> DevTools.Testing.Abstractions.ITestDiscoverer!
+DevTools.Testing.Abstractions.TestingDiscoveryBridge.Discoverer.init -> void
+DevTools.Testing.Abstractions.TestingDiscoveryBridge.Equals(DevTools.Testing.Abstractions.TestingDiscoveryBridge? other) -> bool
+DevTools.Testing.Abstractions.TestingDiscoveryBridge.RunMapper.get -> DevTools.Testing.Abstractions.ITestRunMapper!
+DevTools.Testing.Abstractions.TestingDiscoveryBridge.RunMapper.init -> void
+DevTools.Testing.Abstractions.TestingDiscoveryBridge.TestingDiscoveryBridge(DevTools.Testing.Abstractions.ITestDiscoverer! Discoverer, DevTools.Testing.Abstractions.ITestRunMapper! RunMapper) -> void
+DevTools.Testing.Abstractions.TestingDiscoveryFailedException
+DevTools.Testing.Abstractions.TestingDiscoveryFailedException.TestingDiscoveryFailedException(string! message) -> void
+DevTools.Testing.Abstractions.TestSelectionMatcher
+DevTools.Testing.Abstractions.TestSelectionMatcher.Matches(DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest! test, string? methodName = null, System.Func<string?>? alternateId = null) -> bool
+DevTools.Testing.Abstractions.TestSelectionMatcher.SelectsNothing.get -> bool
+override DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestAttachment.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestAttachment.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestAttachment.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestCaseResult.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestCaseResult.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestCaseResult.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestEvent.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestEvent.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestEvent.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestHostOptions.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestHostOptions.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestHostOptions.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestRunRequest.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestRunRequest.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestRunRequest.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestRunResponse.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestRunResponse.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestRunResponse.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestSelection.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestSelection.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestSelection.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestSourceLocation.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestSourceLocation.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestSourceLocation.ToString() -> string!
+override DevTools.Testing.Abstractions.Contracts.TestTrait.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.Contracts.TestTrait.GetHashCode() -> int
+override DevTools.Testing.Abstractions.Contracts.TestTrait.ToString() -> string!
+override DevTools.Testing.Abstractions.TestingDiscoveryBridge.Equals(object? obj) -> bool
+override DevTools.Testing.Abstractions.TestingDiscoveryBridge.GetHashCode() -> int
+override DevTools.Testing.Abstractions.TestingDiscoveryBridge.ToString() -> string!
+static DevTools.Testing.Abstractions.Config.TestConfig.Keys.Configuration(string! name) -> string!
+static DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.operator !=(DevTools.Testing.Abstractions.Contracts.TestAssemblyReference? left, DevTools.Testing.Abstractions.Contracts.TestAssemblyReference? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestAssemblyReference.operator ==(DevTools.Testing.Abstractions.Contracts.TestAssemblyReference? left, DevTools.Testing.Abstractions.Contracts.TestAssemblyReference? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestAttachment.operator !=(DevTools.Testing.Abstractions.Contracts.TestAttachment? left, DevTools.Testing.Abstractions.Contracts.TestAttachment? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestAttachment.operator ==(DevTools.Testing.Abstractions.Contracts.TestAttachment? left, DevTools.Testing.Abstractions.Contracts.TestAttachment? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestCaseResult.operator !=(DevTools.Testing.Abstractions.Contracts.TestCaseResult? left, DevTools.Testing.Abstractions.Contracts.TestCaseResult? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestCaseResult.operator ==(DevTools.Testing.Abstractions.Contracts.TestCaseResult? left, DevTools.Testing.Abstractions.Contracts.TestCaseResult? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.operator !=(DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest? left, DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest.operator ==(DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest? left, DevTools.Testing.Abstractions.Contracts.TestDiscoveredTest? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestEvent.operator !=(DevTools.Testing.Abstractions.Contracts.TestEvent? left, DevTools.Testing.Abstractions.Contracts.TestEvent? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestEvent.operator ==(DevTools.Testing.Abstractions.Contracts.TestEvent? left, DevTools.Testing.Abstractions.Contracts.TestEvent? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestHostOptions.operator !=(DevTools.Testing.Abstractions.Contracts.TestHostOptions? left, DevTools.Testing.Abstractions.Contracts.TestHostOptions? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestHostOptions.operator ==(DevTools.Testing.Abstractions.Contracts.TestHostOptions? left, DevTools.Testing.Abstractions.Contracts.TestHostOptions? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestRunRequest.operator !=(DevTools.Testing.Abstractions.Contracts.TestRunRequest? left, DevTools.Testing.Abstractions.Contracts.TestRunRequest? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestRunRequest.operator ==(DevTools.Testing.Abstractions.Contracts.TestRunRequest? left, DevTools.Testing.Abstractions.Contracts.TestRunRequest? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestRunResponse.operator !=(DevTools.Testing.Abstractions.Contracts.TestRunResponse? left, DevTools.Testing.Abstractions.Contracts.TestRunResponse? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestRunResponse.operator ==(DevTools.Testing.Abstractions.Contracts.TestRunResponse? left, DevTools.Testing.Abstractions.Contracts.TestRunResponse? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestSelection.All.get -> DevTools.Testing.Abstractions.Contracts.TestSelection!
+static DevTools.Testing.Abstractions.Contracts.TestSelection.FromFrameworkFilter(string! format, string! data) -> DevTools.Testing.Abstractions.Contracts.TestSelection!
+static DevTools.Testing.Abstractions.Contracts.TestSelection.FromNames(System.Collections.Generic.IReadOnlyList<string!>! names) -> DevTools.Testing.Abstractions.Contracts.TestSelection!
+static DevTools.Testing.Abstractions.Contracts.TestSelection.FromTestIds(System.Collections.Generic.IReadOnlyList<string!>? ids) -> DevTools.Testing.Abstractions.Contracts.TestSelection!
+static DevTools.Testing.Abstractions.Contracts.TestSelection.operator !=(DevTools.Testing.Abstractions.Contracts.TestSelection? left, DevTools.Testing.Abstractions.Contracts.TestSelection? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestSelection.operator ==(DevTools.Testing.Abstractions.Contracts.TestSelection? left, DevTools.Testing.Abstractions.Contracts.TestSelection? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestSourceLocation.operator !=(DevTools.Testing.Abstractions.Contracts.TestSourceLocation? left, DevTools.Testing.Abstractions.Contracts.TestSourceLocation? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestSourceLocation.operator ==(DevTools.Testing.Abstractions.Contracts.TestSourceLocation? left, DevTools.Testing.Abstractions.Contracts.TestSourceLocation? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestTrait.operator !=(DevTools.Testing.Abstractions.Contracts.TestTrait? left, DevTools.Testing.Abstractions.Contracts.TestTrait? right) -> bool
+static DevTools.Testing.Abstractions.Contracts.TestTrait.operator ==(DevTools.Testing.Abstractions.Contracts.TestTrait? left, DevTools.Testing.Abstractions.Contracts.TestTrait? right) -> bool
+static DevTools.Testing.Abstractions.DiscoveryRefs.FilePathFor(string! assemblyPath) -> string!
+static DevTools.Testing.Abstractions.DiscoveryRefs.IsTargetingPack(string! path) -> bool
+static DevTools.Testing.Abstractions.DiscoveryRefs.Read(string! assemblyPath) -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+static DevTools.Testing.Abstractions.Loading.DiscoveryAssemblyLoad.Open(string! assemblyPath) -> DevTools.Testing.Abstractions.Loading.DiscoveryAssemblyLoad!
+static DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.PublishResults(System.Guid runId, System.Collections.Generic.IReadOnlyList<DevTools.Testing.Abstractions.Contracts.TestCaseResult!>! results, DevTools.Testing.Abstractions.Runtime.ITestEventSink! eventSink) -> void
+static DevTools.Testing.Abstractions.Runtime.InternalMembers.Constructor(System.Type! owner, params System.Type![]! parameterTypes) -> System.Reflection.ConstructorInfo!
+static DevTools.Testing.Abstractions.Runtime.InternalMembers.Field(System.Type! owner, string! name, bool isStatic = false) -> System.Reflection.FieldInfo!
+static DevTools.Testing.Abstractions.Runtime.InternalMembers.Method(System.Type! owner, string! name, params System.Type![]! parameterTypes) -> System.Reflection.MethodInfo!
+static DevTools.Testing.Abstractions.Runtime.InternalMembers.Property(System.Type! owner, string! name) -> System.Reflection.PropertyInfo!
+static DevTools.Testing.Abstractions.Runtime.InternalMembers.TryField(System.Type! owner, string! name, bool isStatic = false) -> System.Reflection.FieldInfo?
+static DevTools.Testing.Abstractions.Runtime.InternalMembers.TryProperty(System.Type! owner, string! name) -> System.Reflection.PropertyInfo?
+static DevTools.Testing.Abstractions.Runtime.InternalMembers.Type(System.Reflection.Assembly! assembly, string! fullName) -> System.Type!
+static DevTools.Testing.Abstractions.Runtime.TestingProcessHold.GetOrAdd<T>(string! key, System.Func<T!>! create) -> T!
+static DevTools.Testing.Abstractions.Runtime.TestRunTraceScope.Merge(string? frameworkOutput, string? traceOutput) -> string?
+static DevTools.Testing.Abstractions.TestingDiscovery.Current.get -> DevTools.Testing.Abstractions.TestingDiscoveryBridge?
+static DevTools.Testing.Abstractions.TestingDiscovery.Provider.get -> DevTools.Testing.Abstractions.ITestDiscoverer?
+static DevTools.Testing.Abstractions.TestingDiscovery.Register(DevTools.Testing.Abstractions.ITestDiscoverer! discoverer, DevTools.Testing.Abstractions.ITestRunMapper? runMapper = null) -> void
+static DevTools.Testing.Abstractions.TestingDiscovery.RunMapper.get -> DevTools.Testing.Abstractions.ITestRunMapper?
+static DevTools.Testing.Abstractions.TestingDiscoveryBridge.operator !=(DevTools.Testing.Abstractions.TestingDiscoveryBridge? left, DevTools.Testing.Abstractions.TestingDiscoveryBridge? right) -> bool
+static DevTools.Testing.Abstractions.TestingDiscoveryBridge.operator ==(DevTools.Testing.Abstractions.TestingDiscoveryBridge? left, DevTools.Testing.Abstractions.TestingDiscoveryBridge? right) -> bool
+static DevTools.Testing.Abstractions.TestSelectionMatcher.For(DevTools.Testing.Abstractions.Contracts.TestSelection! selection) -> DevTools.Testing.Abstractions.TestSelectionMatcher!
+static readonly DevTools.Testing.Abstractions.Runtime.TestingProcessHold.Gate -> object!
+virtual DevTools.Testing.Abstractions.Runtime.CancellableRuntimeSession.Dispose(bool disposing) -> void

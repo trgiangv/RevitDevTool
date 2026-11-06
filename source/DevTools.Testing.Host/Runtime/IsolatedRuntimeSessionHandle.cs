@@ -2,6 +2,7 @@ using DevTools.AssemblyIsolation;
 using DevTools.AssemblyIsolation.Diagnostics;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
+using DevTools.Testing.Host.Loading;
 
 namespace DevTools.Testing.Host.Runtime;
 
@@ -10,16 +11,19 @@ internal sealed class IsolatedRuntimeSessionHandle : ITestingRuntimeSession, ITe
     private ITestingRuntimeSession? _inner;
     private readonly AssemblyIsolationSession _isolation;
     private readonly string _shadowAssemblyPath;
+    private readonly Func<Exception, string?>? _explainFailure;
     private AssemblyUnloadResult? _unloadResult;
 
     internal IsolatedRuntimeSessionHandle(
         ITestingRuntimeSession inner,
         AssemblyIsolationSession isolation,
-        string shadowAssemblyPath)
+        string shadowAssemblyPath,
+        Func<Exception, string?>? explainFailure = null)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _isolation = isolation ?? throw new ArgumentNullException(nameof(isolation));
         _shadowAssemblyPath = Path.GetFullPath(shadowAssemblyPath);
+        _explainFailure = explainFailure;
         GenerationId = inner.GenerationId;
     }
 
@@ -42,7 +46,14 @@ internal sealed class IsolatedRuntimeSessionHandle : ITestingRuntimeSession, ITe
             };
         }
 
-        return Inner.Run(request, eventSink, cancellationToken);
+        try
+        {
+            return Inner.Run(request, eventSink, cancellationToken);
+        }
+        catch (Exception ex) when (_explainFailure?.Invoke(ex) is { } sentence)
+        {
+            throw new TestingRuntimeIncompatibleException(sentence);
+        }
     }
 
     public void Cancel(Guid runId) => Inner.Cancel(runId);

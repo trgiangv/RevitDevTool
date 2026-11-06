@@ -84,9 +84,13 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         {
             var candidate = source.Resolve(requested);
             if (candidate is null)
+            {
+                PublishVersionRejection(source, requested);
                 continue;
+            }
 
-            if (!TryValidateCandidate(requested, candidate, out var rejection))
+            var bindsAnyVersion = source is ManifestAssemblySource { BindsAnyVersion: true };
+            if (!TryValidateCandidate(requested, candidate, bindsAnyVersion, out var rejection))
             {
                 Publish("managed-candidate-rejected", requested, candidate, rejection!);
                 continue;
@@ -140,7 +144,17 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         return assembly;
     }
 
-    private static bool TryValidateCandidate(AssemblyName requested, AssemblyCandidate candidate, out string? rejection)
+    private void PublishVersionRejection(IManagedAssemblySource source, AssemblyName requested)
+    {
+        if (source is ManifestAssemblySource manifest && manifest.FindRejectedForVersion(requested) is { } rejected)
+            Publish("managed-candidate-rejected", requested, rejected.Candidate, $"Candidate identity '{rejected.Identity.FullName}' is incompatible.");
+    }
+
+    private static bool TryValidateCandidate(
+        AssemblyName requested,
+        AssemblyCandidate candidate,
+        bool bindsAnyVersion,
+        out string? rejection)
     {
         if (!File.Exists(candidate.Path))
         {
@@ -155,7 +169,7 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         }
 
         var candidateIdentity = AssemblyName.GetAssemblyName(candidate.Path);
-        if (!AssemblyIdentityMatcher.IsCompatible(requested, candidateIdentity)
+        if (!AssemblyIdentityMatcher.IsCompatible(requested, candidateIdentity, bindsAnyVersion)
             && !NetfxClosureBind.AllowsNewer(requested, candidateIdentity))
         {
             rejection = $"Candidate identity '{candidateIdentity.FullName}' is incompatible.";

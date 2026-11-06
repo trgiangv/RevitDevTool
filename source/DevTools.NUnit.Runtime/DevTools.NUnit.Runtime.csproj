@@ -5,6 +5,9 @@
         <RootNamespace>DevTools.NUnit.Runtime</RootNamespace>
         <AssemblyName>DevTools.NUnit.Runtime</AssemblyName>
         <IsPackable>false</IsPackable>
+        <RuntimeManifestFramework>NUnit</RuntimeManifestFramework>
+        <RuntimeManifestEntry>DevTools.NUnit.Runtime.NUnitRuntimeSession</RuntimeManifestEntry>
+        <RuntimeManifestAssembly>nunit.framework</RuntimeManifestAssembly>
     </PropertyGroup>
 
     <ItemGroup>
@@ -23,5 +26,6 @@
     </ItemGroup>
 
     <Import Project="build\NUnitRuntimePayload.targets"/>
+    <Import Project="..\..\props\RuntimeManifest.targets"/>
 
 </Project>

@@ -24,21 +24,47 @@ public static class TestingProtocol
 
     public static ProtocolSender Sender { get; } = new(AppVersion.Current, Range);
 
+    public static ProtocolRange RuntimeRange { get; } = new(TestingRuntimeContract.Current, TestingRuntimeContract.Min);
+
     private static readonly ProtocolPeer Runner = RunnerPeer(Sender);
     private static readonly ProtocolPeer Host = HostPeer(Sender);
+    private static readonly ProtocolPeer Addin = ProductPeer(new ProtocolSender(AppVersion.Current, RuntimeRange));
 
     public static string? Mismatch(TestRunExecute execute) =>
-        Mismatch(Runner, new ProtocolPeer("RevitDevTool.TestAdapter", execute.Sender, UpdateAdapterMessage));
+        Mismatch(Runner, AdapterPeer(execute.Sender));
 
     public static string? Mismatch(TestHelloRequest hello) => Mismatch(Host, RunnerPeer(hello.Sender));
 
     public static string? Mismatch(TestHelloResponse hello) => Mismatch(Runner, HostPeer(hello.Sender));
+
+    public static string? RuntimeMismatch(RuntimeManifest manifest, string adapterVersion) =>
+        Mismatch(Addin, AdapterPeer(new ProtocolSender(adapterVersion, manifest.Contract)));
+
+    public static string? RuntimeMismatch(TestHelloResponse hello, string testAssemblyPath, TestFrameworkId frameworkId)
+    {
+        var outputDirectory = Path.GetDirectoryName(Path.GetFullPath(testAssemblyPath))!;
+        if (RuntimeManifest.TryRead(outputDirectory, frameworkId) is not { } manifest)
+            return null;
+
+        var adapter = AdapterPeer(new ProtocolSender(RuntimeManifest.ReadAdapterVersion(outputDirectory), manifest.Contract));
+        var addin = ProductPeer(hello.Sender is null ? null : hello.Sender with { Protocol = hello.TestingRuntime ?? default });
+        return Mismatch(adapter, addin);
+    }
+
+    public static string NoRuntimeManifest(string adapterVersion) =>
+        Addin.ExplainMismatch(AdapterPeer(new ProtocolSender(adapterVersion, default)));
 
     public static BridgeMessage CreateIncompatibleResponse(string requestId, string mismatch) =>
         BridgeMessage.Error(requestId, IncompatibleCode, mismatch);
 
     private static string? Mismatch(ProtocolPeer self, ProtocolPeer other) =>
         self.IsCompatible(other) ? null : self.ExplainMismatch(other);
+
+    private static ProtocolPeer AdapterPeer(ProtocolSender? sender) =>
+        new("RevitDevTool.TestAdapter", sender, UpdateAdapterMessage);
+
+    private static ProtocolPeer ProductPeer(ProtocolSender? sender) =>
+        new("RevitDevTool", sender, UpdateProductMessage);
 
     private static ProtocolPeer RunnerPeer(ProtocolSender? sender) =>
         new("DevTools.TestRunner", sender, UpdateProductMessage);
@@ -55,7 +81,8 @@ public sealed record TestHelloResponse(
     string HostVersion,
     int ProcessId,
     bool IsBusy,
-    ProtocolSender? Sender);
+    ProtocolSender? Sender,
+    ProtocolRange? TestingRuntime = null);
 
 /// <summary>
 /// Adapter → TestRunner execute envelope. Nested <see cref="Run"/> is the
