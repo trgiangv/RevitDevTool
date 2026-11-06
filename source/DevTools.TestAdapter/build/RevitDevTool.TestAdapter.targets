@@ -266,7 +266,11 @@
     <ItemGroup>
       <_FrameworkPackageReference Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == '$(_FrameworkPackageId)'" />
       <_AdapterPackageReference Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'RevitDevTool.TestAdapter'" />
+      <_TUnitEngineReference Include="@(ReferencePath)" Condition="'%(ReferencePath.NuGetPackageId)' == 'TUnit.Engine'" />
     </ItemGroup>
+    <Error
+        Condition="'$(TestingFramework)' == 'tunit' And '@(_TUnitEngineReference)' == ''"
+        Text="RevitDevTool.TestAdapter with TestingFramework=tunit needs the TUnit package. Reference TUnit instead of TUnit.Core." />
     <PropertyGroup>
       <_FrameworkPackageVersion>@(_FrameworkPackageReference->'%(NuGetPackageVersion)'->Distinct())</_FrameworkPackageVersion>
       <_AdapterPackageVersion>@(_AdapterPackageReference->'%(NuGetPackageVersion)'->Distinct())</_AdapterPackageVersion>

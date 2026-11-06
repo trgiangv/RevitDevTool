@@ -4,7 +4,7 @@ Date: 2026-11-06
 
 ## Status
 
-Active. P0, P1, and P2 (MSTest) done; TUnit and NUnit stay on the old path. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
+Active. P0, P1, P2 (MSTest), and P3 (TUnit) done; NUnit stays on the old path. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
 (Accepted). Depends on the `nettest` train of
 [2026-11-06-release-trains-0059](2026-11-06-release-trains-0059.md) for shipping;
 the code work here can start before that plan's P3.
@@ -227,7 +227,7 @@ the user's closure are proved in P2 and P3.
 - [x] Live check of the net48 NUnit async failure (Revit 2024): not reproduced today; recheck in P4 and P6
 - [x] P1 shared infrastructure (machinery only; the current path still ships `*Runtime\`, keeps the equality pins, and no framework has moved)
 - [x] P2 MSTest (the add-in ships no `MSTestRuntime\`; TUnit and NUnit stay on the old path)
-- [ ] P3 TUnit
+- [x] P3 TUnit (the add-in ships no `TUnitRuntime\`; TUnit 1.81.0 ran on Revit 2024 and 2027 with no add-in or adapter change)
 - [ ] P4 NUnit
 - [ ] P5 remove old path + docs
 - [ ] P6 live verification
@@ -343,6 +343,44 @@ the user's closure are proved in P2 and P3.
     `TargetDir`, so existing checkouts need it deleted once. `Contents\2026\MSTestRuntime` is still
     in this machine's bundle because Revit 2026 was not rebuilt and the AutoCAD deploy does not
     clear the folder. Nothing reads it.
+- 2026-11-07 P3 (verified live on Revit 2024 and 2027):
+  - The goal of 0060 holds for TUnit: a copy of the sample built against TUnit 1.81.0, on an
+    adapter built against 1.78.0 and the same add-in, gives 60 passed, 1 skipped, 1 failed
+    (`Intentional_failure_for_demo`) on both years. A test in that copy read the loaded
+    assemblies: `TUnit.Core` and `TUnit.Engine` 1.81.0.0 and MTP 2.5.2.0, from the shadow
+    directory on net48 and from the isolated context on net10.
+  - S12: the runtime has no direct `Microsoft.Bcl.AsyncInterfaces` or `System.Text.Json`
+    reference on net48. It now requests `Microsoft.Bcl.AsyncInterfaces` 9.0.0.0 and no
+    `System.Text.Json`; the user's closure supplies 10.0.0.10.
+  - S6: the check for the `TUnit` package looks for `TUnit.Engine` in `@(ReferencePath)`, because
+    that is what a run needs. A project with `TUnit.Core` and `TUnit.Engine` but not `TUnit` passes.
+  - Outcome 5: a stop now reaches `dotnet test` as `failed <sentence>` with no stack. The runner
+    returns it as a `TestRunResponse` with `ProtocolIncompatible`, and the adapter publishes one
+    error node named by the sentence. Other runner failures keep their detail. MTP's
+    `CloseTestSessionResult.ErrorMessage` was tried first and rejected: `dotnet test` showed
+    `error: 1` and exit code 10, but not the sentence.
+  - A bind failure inside `TestApplication.RunAsync` is not an exit code. Measured outside a host
+    on MTP 2.5.2: an exception from the framework or from a data consumer leaves `RunAsync`
+    unchanged. A real MSTest run with an older `MSTestAdapter.PlatformServices` threw
+    `TypeLoadException` out of `MSTestRuntimeSession.Run`, and `RuntimeBindFailure` explains that
+    message. No MSTest runtime change was needed. Not run on a host.
+  - The TUnit engine path did hide one: `TUnitTestFramework.ExecuteRequestAsync` catches everything
+    and publishes a node named `Unhandled exception - <Type>: <message>`, so the failure read as a
+    test result with a stack. `TUnitEngineBindFailure` now rethrows it after the session closes,
+    when the type is on the 0060 §4 list and the message names `TUnit.` or `Microsoft.Testing.`.
+    It depends on that node name; if TUnit renames it, the failure goes back to being a result.
+    Live on 2027 with `TUnit.Engine` 1.72.0 swapped into the 1.81.0 output: the bind sentence, then
+    a normal run in the same process.
+  - On this machine the installed `%LOCALAPPDATA%\RevitDevTool\current\DevTools.TestRunner.exe`
+    wins over the bundle copy that `dotnet publish` deploys, so a local runner change has no effect
+    until `DEVTOOLS_TESTING_RUNNER_PATH` points at the new exe. The P3 proof set it. An older runner
+    still shows the sentence with the stack, because it sends the stop through stderr.
+  - A second run of the same generation in one Revit process fails the sample's
+    `Repeat_expands_four_executions`: the counter reached 5 because its static value survived the
+    first run. Seen once, and the old path was not run to compare.
+  - Local leftovers: `bin\...\TUnitRuntime` folders were deleted once, for the reason given under P2.
+    `Contents\2025\TUnitRuntime` and `Contents\2026\TUnitRuntime` remain because those years were
+    not rebuilt. Nothing reads them.
 
 ## Validation
 

@@ -110,12 +110,15 @@ internal sealed class TUnitEngineMessageBus(TestRunTraceScope traceScope) : IMes
 
     public Dictionary<string, string?> CapturedByUid { get; } = new(StringComparer.Ordinal);
 
+    public Exception? BindFailure { get; private set; }
+
     public Task PublishAsync(IDataProducer dataProducer, IData data)
     {
         if (data is not TestNodeUpdateMessage update)
             return Task.CompletedTask;
 
         var node = update.TestNode;
+        BindFailure ??= TUnitEngineBindFailure.TryRead(node.DisplayName);
         var uid = node.Uid.Value;
         Nodes[uid] = node;
         if (!TUnitEngineResults.IsTerminal(node))

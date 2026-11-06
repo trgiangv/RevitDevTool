@@ -43,6 +43,39 @@ public sealed class TestFrameworkPublishRunTests
     }
 
     [TestMethod]
+    public async Task Incompatible_response_publishes_one_node_named_by_the_sentence()
+    {
+        const string sentence = "TUnit changed an API.";
+        var discovered = new TestDiscoveredTest("known", "Known", "known");
+        var transport = new FakeTestRunnerTransport
+        {
+            Response = new TestRunResponse(
+                Guid.NewGuid(),
+                TestFrameworkId.NUnit,
+                string.Empty,
+                [],
+                TestCancellationState.None,
+                TestingErrorCodes.ProtocolIncompatible,
+                sentence),
+        };
+        var bus = new CapturingMessageBus();
+
+        await ExecuteRunAsync(
+            transport,
+            bus,
+            new SelectionAwareDiscoverer([discovered]),
+            PassThroughRunMapper.Instance,
+            filter: null,
+            TestContext.CancellationToken);
+
+        var node = bus.Nodes.Single();
+        Assert.AreEqual(sentence, node.DisplayName);
+        var state = node.Properties.Single<ErrorTestNodeStateProperty>();
+        Assert.IsNull(state.Exception);
+        Assert.IsNull(state.Explanation);
+    }
+
+    [TestMethod]
     public async Task Streamed_case_with_unknown_test_id_publishes_no_node()
     {
         var known = new TestDiscoveredTest("known", "Known", "known");

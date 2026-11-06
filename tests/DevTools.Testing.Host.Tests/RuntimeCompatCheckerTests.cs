@@ -195,20 +195,36 @@ public sealed class RuntimeCompatCheckerTests
     }
 
     [TestMethod]
+    public void Type_load_from_the_engine_inside_a_platform_run_is_a_bind_failure()
+    {
+        var failure = new TypeLoadException(
+            "Could not load type 'Microsoft.VisualStudio.TestPlatform.MSTest.TestAdapter.Execution.TestClassInstanceFactoryProvider' from assembly 'MSTestAdapter.PlatformServices'.");
+
+        Assert.IsNotNull(Explain(failure, "MSTest", "MSTest.TestFramework"));
+    }
+
+    [TestMethod]
     public void Current_path_keeps_the_add_in_runtime_over_one_in_the_user_output()
     {
         using var output = new OutputDirectory();
         using var addin = new OutputDirectory();
         var testAssembly = Path.Combine(output.Path, "Consumer.dll");
         WriteAssembly(testAssembly, "Consumer", new Version(1, 0, 0, 0));
-        WriteAssembly(Path.Combine(output.Path, "TUnit.Core.dll"), "TUnit.Core", TUnitGenerationPolicy.ExpectedTUnitAssemblyVersion);
-        WriteAssembly(Path.Combine(output.Path, TUnitGenerationPolicy.RuntimeAssemblyFileName), "DevTools.TUnit.Runtime", new Version(9, 9, 0, 0));
-        File.WriteAllText(Path.Combine(output.Path, RuntimeManifest.FileName(TestFrameworkId.TUnit)), "{}");
-        var addinRuntime = Path.Combine(addin.Path, TUnitGenerationPolicy.RuntimeAssemblyFileName);
-        WriteAssembly(addinRuntime, "DevTools.TUnit.Runtime", new Version(1, 0, 0, 0));
-        var policy = new TUnitGenerationPolicy(() => new RuntimeSource(addinRuntime, null, []));
+        WriteAssembly(Path.Combine(output.Path, "nunit.framework.dll"), "nunit.framework", Built);
+        WriteAssembly(Path.Combine(output.Path, "DevTools.NUnit.Runtime.dll"), "DevTools.NUnit.Runtime", new Version(9, 9, 0, 0));
+        File.WriteAllText(Path.Combine(output.Path, RuntimeManifest.FileName(TestFrameworkId.NUnit)), "{}");
+        var addinRuntime = Path.Combine(addin.Path, "DevTools.NUnit.Runtime.dll");
+        WriteAssembly(addinRuntime, "DevTools.NUnit.Runtime", new Version(1, 0, 0, 0));
+        var spec = new TestingGenerationSpec(
+            TestFrameworkId.NUnit,
+            "NUnit",
+            "nunit.framework.dll",
+            "DevTools.NUnit.Runtime.dll",
+            RuntimeSymbolFileName: null,
+            [],
+            RuntimeOwnsDependencyClosure: false);
 
-        var plan = policy.CreatePlan(testAssembly);
+        var plan = spec.CreatePlan(() => new RuntimeSource(addinRuntime, null, []), testAssembly);
 
         var runtime = plan.Files.Single(file => file.RelativePath == plan.RuntimeAssemblyRelativePath);
         Assert.AreEqual(addinRuntime, runtime.SourcePath);

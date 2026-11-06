@@ -95,6 +95,18 @@ internal static class TestNodeProperties
         };
     }
 
+    public static TestNode CreateStopNode(string sentence)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sentence);
+
+        return new TestNode
+        {
+            Uid = new TestNodeUid("devtools.testadapter.stop"),
+            DisplayName = sentence,
+            Properties = new PropertyBag(new ErrorTestNodeStateProperty()),
+        };
+    }
+
     private static Exception CreateException(TestCaseResult result)
     {
         if (string.IsNullOrWhiteSpace(result.StackTrace))

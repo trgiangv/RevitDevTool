@@ -391,6 +391,8 @@ public sealed class PackageConsumerTests
                     $"TUnit {lowerTUnit} is older than the {tunitFloor} that RevitDevTool.TestAdapter {adapter} was built against. Update TUnit to {tunitFloor} or later.");
                 AssertBuildFails(work, globalPackages, $"OtherMajorNUnit{suffix}", tfm, adapter, "nunit", "NUnit", otherMajorNUnit,
                     $"NUnit {otherMajorNUnit} is not supported by RevitDevTool.TestAdapter {adapter} (built for NUnit {nunitFloor.Major}.x). Update RevitDevTool.TestAdapter to a version for NUnit {otherMajorNUnit.Split('.')[0]}.");
+                AssertBuildFails(work, globalPackages, $"TUnitCoreOnly{suffix}", tfm, adapter, "tunit", "TUnit.Core", TUnitVersion,
+                    "RevitDevTool.TestAdapter with TestingFramework=tunit needs the TUnit package. Reference TUnit instead of TUnit.Core.");
             }
         }
         finally

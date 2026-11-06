@@ -93,7 +93,7 @@ public sealed class RunnerCommandsTests : RunnerTests
                     TestSelection.All));
             var hello = new TestHelloResponse(TestFrameworkId.NUnit, "Revit", "2026", 1, false, TestingProtocol.Sender);
 
-            var error = Assert.ThrowsExactly<InvalidOperationException>(() =>
+            var error = Assert.ThrowsExactly<HostIncompatibleException>(() =>
                 RunnerCommands.EnsureHelloMatches(hello, execute));
 
             Assert.EndsWith(TestingProtocol.UpdateProductMessage, error.Message, StringComparison.Ordinal);

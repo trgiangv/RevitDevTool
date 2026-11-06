@@ -41,6 +41,7 @@ public sealed class RunnerCommands(
 
         if (TestingProtocol.Mismatch(execute) is { } mismatch)
         {
+            WriteStream(new TestRunnerStreamMessage(Response: Incompatible(execute.Run, mismatch)));
             await Console.Error.WriteLineAsync(mismatch).ConfigureAwait(false);
             return RunnerExitCode.CliError;
         }
@@ -95,11 +96,18 @@ public sealed class RunnerCommands(
                                 TimeSpan.FromSeconds(TestHostTiming.HostPipeConnectTimeoutSeconds),
                                 requestCancellationToken)
                             .ConfigureAwait(false);
-                        var hello = await client.HelloAsync(execute.Run.FrameworkId, requestCancellationToken)
-                            .ConfigureAwait(false);
-                        EnsureHelloMatches(hello, execute);
-                        return await client.RunAsync(execute.Run, progress, requestCancellationToken)
-                            .ConfigureAwait(false);
+                        try
+                        {
+                            var hello = await client.HelloAsync(execute.Run.FrameworkId, requestCancellationToken)
+                                .ConfigureAwait(false);
+                            EnsureHelloMatches(hello, execute);
+                            return await client.RunAsync(execute.Run, progress, requestCancellationToken)
+                                .ConfigureAwait(false);
+                        }
+                        catch (HostIncompatibleException stop)
+                        {
+                            return Incompatible(execute.Run, stop.Message);
+                        }
                     },
                     linked.Token)
                 .ConfigureAwait(false);
@@ -125,6 +133,16 @@ public sealed class RunnerCommands(
 
         return HasRunFailure(result.Value!) ? RunnerExitCode.TestFailure : RunnerExitCode.Ok;
     }
+
+    private static TestRunResponse Incompatible(TestRunRequest run, string sentence) =>
+        new(
+            run.RunId,
+            run.FrameworkId,
+            string.Empty,
+            [],
+            TestCancellationState.None,
+            TestingProtocol.IncompatibleCode,
+            sentence);
 
     private static void WriteStream(TestRunnerStreamMessage message) =>
         Console.WriteLine(
@@ -161,7 +179,7 @@ public sealed class RunnerCommands(
     internal static void EnsureHelloMatches(TestHelloResponse hello, TestRunExecute execute)
     {
         if (TestingProtocol.RuntimeMismatch(hello, execute.Run.Assembly.Path, execute.Run.FrameworkId) is { } mismatch)
-            throw new InvalidOperationException(mismatch);
+            throw new HostIncompatibleException(mismatch);
 
         if (hello.FrameworkId != execute.Run.FrameworkId)
         {

@@ -55,17 +55,12 @@ public static class TestingHostingExtensions
 
         public IServiceCollection AddTUnitHostServices()
         {
-            services.TryAddSingleton<TUnitGenerationPolicy>(_ =>
-                new TUnitGenerationPolicy(() =>
-                    RuntimeSource.ResolveBeside(
-                        typeof(TestingHostingExtensions).Assembly,
-                        TUnitGenerationPolicy.RuntimeFolderName,
-                        TUnitGenerationPolicy.RuntimeAssemblyFileName)));
+            services.TryAddSingleton<TUnitGenerationPolicy>();
             AddFrameworkProvider<TUnitGenerationPolicy>(
                 services,
-                (_, policy) => new FrameworkProvider(
+                (provider, policy) => new FrameworkProvider(
                     policy,
-                    new ManifestRuntimeSessionFactory(TUnitGenerationPolicy.RuntimeSessionTypeName)));
+                    new OutputSessionFactory(policy.FrameworkId, TestingLogger(provider))));
             return services;
         }
 

@@ -65,7 +65,7 @@ public sealed class TestPipeClient : IAsyncDisposable
             ?? throw new InvalidOperationException("Empty testing hello response.");
 
         if (TestingProtocol.Mismatch(hello) is { } mismatch)
-            throw new InvalidOperationException(mismatch);
+            throw new HostIncompatibleException(mismatch);
 
         return hello;
     }
@@ -229,7 +229,7 @@ public sealed class TestPipeClient : IAsyncDisposable
             return;
 
         if (response.ErrorDetail?.Code == TestingProtocol.IncompatibleCode)
-            throw new InvalidOperationException(response.ErrorMessage ?? "Testing protocol incompatible.");
+            throw new HostIncompatibleException(response.ErrorMessage ?? "Testing protocol incompatible.");
 
         throw new InvalidOperationException(response.ErrorMessage ?? "Testing request failed.");
     }

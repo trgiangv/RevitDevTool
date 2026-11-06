@@ -36,7 +36,7 @@ public sealed class TestPipeClientTests
         server.MessageReceived += message => _ = ReplyWithHostSenderAsync(server, message, newer);
         server.StartReadLoop();
 
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var error = await Assert.ThrowsAsync<HostIncompatibleException>(() =>
             client.HelloAsync(TestFrameworkId.NUnit, TestContext.CancellationToken));
 
         Assert.Contains("DevTool add-in 9.0.0 is not compatible with DevTools.TestRunner", error.Message, StringComparison.Ordinal);
@@ -53,7 +53,7 @@ public sealed class TestPipeClientTests
         server.MessageReceived += message => _ = ReplyWithHostSenderAsync(server, message, sender: null);
         server.StartReadLoop();
 
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var error = await Assert.ThrowsAsync<HostIncompatibleException>(() =>
             client.HelloAsync(TestFrameworkId.NUnit, TestContext.CancellationToken));
 
         Assert.AreEqual(
@@ -73,7 +73,7 @@ public sealed class TestPipeClientTests
             _ = server.WriteAsync(TestingProtocol.CreateIncompatibleResponse(message.Id!, sentence));
         server.StartReadLoop();
 
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var error = await Assert.ThrowsAsync<HostIncompatibleException>(() =>
             client.RunAsync(
                 new TestRunRequest(
                     Guid.NewGuid(),

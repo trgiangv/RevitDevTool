@@ -266,6 +266,17 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
 
     private async Task PublishCompletedRunAsync(RunPublish publish, TestRunResponse response)
     {
+        if (response.DiagnosticCode == TestingErrorCodes.ProtocolIncompatible)
+        {
+            await publish.Context.MessageBus.PublishAsync(
+                    this,
+                    new TestNodeUpdateMessage(
+                        publish.Request.Session.SessionUid,
+                        TestNodeProperties.CreateStopNode(response.DiagnosticMessage ?? response.DiagnosticCode)))
+                .ConfigureAwait(false);
+            return;
+        }
+
         var published = publish.Bridge.RunMapper.FoldResults(publish.Filter, publish.Cases, response.Results);
         await PublishResultNodesAsync(publish, NotYetPublished(published, publish.StreamedIds))
             .ConfigureAwait(false);

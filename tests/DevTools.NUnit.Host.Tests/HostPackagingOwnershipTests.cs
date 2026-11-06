@@ -83,13 +83,16 @@ public sealed class HostPackagingOwnershipTests
     }
 
     [TestMethod]
-    [DataRow("source/DevTools.TUnit.Runtime/build/TUnitHostPackaging.targets")]
-    public void Runtime_payload_msbuild_uses_debug_or_release_bucket(string relativeTargetsPath)
+    [DataRow("source/RevitDevTool/RevitDevTool.csproj")]
+    [DataRow("source/AcadDevTool/AcadDevTool.csproj")]
+    public void Host_projects_do_not_package_a_tunit_runtime(string relativeProjectPath)
     {
-        var targetsPath = Path.Combine(FindRepoRoot(), relativeTargetsPath.Replace('/', Path.DirectorySeparatorChar));
-        var text = File.ReadAllText(targetsPath);
-        Assert.Contains("Configuration=$(_RuntimeConfiguration)", text, StringComparison.Ordinal);
-        Assert.DoesNotContain("Configuration=$(Configuration)", text, StringComparison.Ordinal);
+        var root = FindRepoRoot();
+        var projectText = File.ReadAllText(Path.Combine(root, relativeProjectPath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.DoesNotContain("TUnit", projectText, StringComparison.Ordinal);
+        Assert.IsFalse(File.Exists(Path.Combine(root, "source", "DevTools.TUnit.Runtime", "build", "TUnitHostPackaging.targets")));
+        Assert.IsFalse(File.Exists(Path.Combine(root, "source", "DevTools.TUnit.Runtime", "build", "TUnitRuntimePayload.targets")));
     }
 
     [TestMethod]
@@ -152,6 +155,7 @@ public sealed class HostPackagingOwnershipTests
             "Duplicate Testing.Abstractions copies:" + Environment.NewLine + string.Join(Environment.NewLine, abstractionsCopies));
 
         Assert.IsFalse(Directory.Exists(Path.Combine(outputDir, "MSTestRuntime")));
+        Assert.IsFalse(Directory.Exists(Path.Combine(outputDir, "TUnitRuntime")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "MSTest.TestFramework.dll")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "DevTools.NUnit.Runtime.dll")));
         Assert.IsFalse(File.Exists(Path.Combine(outputDir, "nunit.framework.dll")));

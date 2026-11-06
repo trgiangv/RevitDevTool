@@ -73,6 +73,9 @@ internal static class TUnitEngineHost
             framework.CloseTestSessionAsync(closeContext).GetAwaiter().GetResult();
         }
 
+        if (messageBus.BindFailure is { } bindFailure)
+            throw bindFailure;
+
         return TUnitEngineResults.Map(messageBus.Nodes.Values, messageBus.CapturedByUid);
     }
 

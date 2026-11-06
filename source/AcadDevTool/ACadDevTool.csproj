@@ -61,7 +61,6 @@
     </ItemGroup>
 
     <Import Project="..\DevTools.NUnit.Runtime\build\NUnitHostPackaging.targets" />
-    <Import Project="..\DevTools.TUnit.Runtime\build\TUnitHostPackaging.targets" />
 
     <!-- Start AutoCad -->
     <PropertyGroup>

@@ -43,20 +43,12 @@ public sealed class AdapterArchitectureTests
             RepositoryRoot, "source", "DevTools.TestAdapter", "build", "RevitDevTool.TestAdapter.props"));
         var hostProject = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "RevitDevTool", "RevitDevTool.csproj"));
-        var packaging = File.ReadAllText(Path.Combine(
-            RepositoryRoot, "source", "DevTools.TUnit.Runtime", "build", "TUnitHostPackaging.targets"));
 
         Assert.DoesNotContain("ILRepackable", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Host", hostProject, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.TUnit.Host", hostProject, StringComparison.Ordinal);
         Assert.DoesNotContain("'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'", hostProject, StringComparison.Ordinal);
-        Assert.Contains("TUnitRuntime\\", packaging, StringComparison.Ordinal);
-        Assert.Contains("TUnit.Core.dll must be deployed under TUnitRuntime", packaging, StringComparison.Ordinal);
-        Assert.Contains("TUnit.Engine.dll must be deployed under TUnitRuntime", packaging, StringComparison.Ordinal);
-        Assert.Contains("Microsoft.Testing.Platform.dll must be deployed under TUnitRuntime", packaging, StringComparison.Ordinal);
-        Assert.DoesNotContain("must not ship Microsoft.Testing.Platform", packaging, StringComparison.Ordinal);
-        Assert.Contains("must not be copied at the add-in root", packaging, StringComparison.Ordinal);
-        Assert.DoesNotContain("'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'", packaging, StringComparison.Ordinal);
+        Assert.DoesNotContain("TUnit", hostProject, StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -125,7 +117,8 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("TUnit.Engine", project, StringComparison.Ordinal);
         Assert.Contains("TUnit.Core", project, StringComparison.Ordinal);
         Assert.DoesNotContain("VersionOverride=\"9.0.0\"", project, StringComparison.Ordinal);
-        Assert.Contains("PackageReference Include=\"System.Text.Json\"", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("PackageReference Include=\"System.Text.Json\"", project, StringComparison.Ordinal);
+        Assert.DoesNotContain("PackageReference Include=\"Microsoft.Bcl.AsyncInterfaces\"", project, StringComparison.Ordinal);
         Assert.DoesNotContain("<PackageReference Include=\"Microsoft.Testing.Platform\"", project, StringComparison.Ordinal);
         Assert.Contains("Sources.TestEntries", catalog, StringComparison.Ordinal);
         Assert.Contains("GetFilterData", catalog, StringComparison.Ordinal);
