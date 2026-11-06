@@ -53,13 +53,13 @@ Installer `build/Modules/*` does **not** pack or publish the test adapter.
 
 | Artifact | Ships | Command / workflow |
 |----------|--------|--------------------|
-| NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.NUnit.MTP.dll` + `DevTools.TUnit.MTP.dll` + `DevTools.MSTest.MTP.dll` | `dotnet run --project build -- adapter` · `PublishTestAdapter.yml` |
-| Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers), NUnit, TUnit, and MSTest Runtime, `DevTools.TestRunner.exe` | `dotnet run --project build -- pack` · `build/Modules/*` · `PublishRelease.yml` |
+| NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.{NUnit,TUnit,MSTest}.MTP.dll` + framework runtimes `DevTools.{NUnit,TUnit,MSTest}.Runtime.dll` with their manifests | `dotnet run --project build -- adapter` · `PublishTestAdapter.yml` |
+| Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers), `DevTools.TestRunner.exe`. No framework and no framework runtime | `dotnet run --project build -- pack` · `build/Modules/*` · `PublishRelease.yml` |
 
 - Bump `<Version>` in `DevTools.TestAdapter.csproj` before `PublishTestAdapter.yml`. Independent of installer GitVersion: compatibility with the product is the testing protocol range, not the package number ([0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)).
 - `TestingProtocol` owns the range (`CurrentVersion`, `MinVersion`). `TestRunExecute` and `testing/hello` (both ways) carry `sender { version, protocol }`; the runner checks the adapter, the host checks the runner, the runner checks the host. A mismatch is one sentence that names the update. Bump the range by 0055 §3.
 - Only TestAdapter is packable. MTP, Runtime, Host, Abstractions, and Transport are `IsPackable=false`.
-- Changing Host/Runtime/Runner needs an installer deploy. Changing testhost discovery or launch options needs a TestAdapter pack.
+- Changing Host or Runner needs an installer deploy. Changing a framework runtime, testhost discovery, or launch options needs a TestAdapter pack and a rebuild of the test project.
 
 ---
 
@@ -71,7 +71,7 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
 ### Nupkg layout
 
 - `lib/{tfm}/DevTools.TestAdapter.dll` — MTP compile surface (Ipc + Transport merged in; net48 also merges STJ BCL).
-- `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.MSTest.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `TestingDiscovery`). Same four files on net48, net8, and net10.
+- `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.MSTest.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `TestingDiscovery`), and each `DevTools.{NUnit,TUnit,MSTest}.Runtime` as `.dll`, `.json`, `.pdb`. Same files on net48, net8, and net10. The targets copy the selected runtime to the output with `Copy`, not `Reference`, so it stays out of the testhost's compile and `deps.json`.
 - Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.5.2 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=none` (NuGet's default `PrivateAssets` would drop build assets from the nuspec) and with **all** assets (`include="All"` in the nuspec) so pack writes a dependency that restores both testhost generation and `Microsoft.Testing.Platform.dll` — an NUnit-only consumer has no other source of the MTP runtime. `RepackBinariesExcludes` keeps those testhost DLLs out of the merged adapter. `DevTools.TestAdapter.Tests` uses `ProjectReference` `PrivateAssets=all` plus a direct Abstractions reference so that graph does not flow into xunit. Other PackageReference / ProjectReference stay `PrivateAssets=all`. Testhost BCL is not packed as files.
 
 ### Pack order (`PackTestAdapterModule`)
@@ -189,7 +189,7 @@ forces `false` for the testhost), `AppendTargetFrameworkToOutputPath=false` unde
 flowchart LR
   Testhost["MTP testhost\nTestAdapter + NUnit.MTP, TUnit.MTP, or MSTest.MTP"]
   Runner["DevTools.TestRunner.exe\nbundle Contents"]
-  Host["Host add-in\nTesting.Host + NUnit, TUnit, or MSTest Runtime"]
+  Host["Host add-in\nTesting.Host + framework runtime from the user's output"]
 
   Testhost -->|"run JSON stdin"| Runner
   Runner -->|"named pipe testing/*"| Host
@@ -334,46 +334,86 @@ options (`hostName`, `forceLaunch`, …). `frameworkId` parses to
 
 ### Host generation
 
-Each provider owns a generation policy (`NUnitGenerationPolicy`,
-`TUnitGenerationPolicy`, `MSTestGenerationPolicy`) that only declares runtime
-folder/DLL names and version pins on an internal `TestingGenerationSpec`.
-That spec is not an `ITestingGenerationPolicy`. Publish prefers
+`OutputGeneration` is the generation policy of every framework, one instance per
+`TestFrameworkId`. It runs `RuntimeCompatChecker.Check` on the user's output, then
+plans a copy of that output, so a stop publishes nothing. Publish prefers
 `Directory.Move` of the staging folder; on net48 that rename often fails with
 `Access to the path is denied` while the tree is still scanned. The store
 retries, then copies files into the shadow directory. Do not treat an
 `IOException` from publish as a poisoned provider failure on the first try.
-`RuntimeSource.ResolveBeside` finds the runtime closure deployed beside the
-add-in; `RequirePresent` checks those files before copy. Generation documents
-live under `Loading/Generation`. Records are `TestingGenerationPlan` and
-`TestingGenerationManifest`. `ITestingGenerationPolicy` is its own contract.
+Generation documents live under `Loading/Generation`. Records are
+`TestingGenerationPlan` and `TestingGenerationManifest`.
+`ITestingGenerationPolicy` is its own contract.
 Build and corruption failures are `TestingGenerationException`.
 `TestingGenerationFiles` is the path and membership surface
-(`IsManagedIdentity`, `ScanOutputDirectory`, `MergeFile`, `MergeRuntimeDependency`,
+(`IsManagedIdentity`, `ScanOutputDirectory`,
 `RequireManagedAssembly`, `GetRelativePath`, `IsVolatileGenerationOutput`).
-`MergeRuntimeDependency` adds a runtime-closure file but never replaces a consumer
-assembly with an older version of the same identity. On net48 the consumer test
-assembly binds its own closure (for example System.Threading.Tasks.Extensions
-4.2.4.0 for `ValueTask`); an older runtime copy in the shadow directory split
-`ValueTask` identity from MSTest PlatformServices and failed discovery with
-UTA007. The session resolver (`NetfxClosureBind`) then binds PlatformServices'
-older request onto the newer copy.
 `RequireManagedAssembly` checks that the file exists and is a managed assembly.
 `IsManagedIdentity` is that check minus satellite resource assemblies. The plan
 still copies every other file into the shadow directory.
 `TestingGenerationPlan.ToManifest` resolves that plan into a published
 `TestingGenerationManifest`. `TestingGenerationPublisher` copies the plan,
 hashes it into the generation id, and publishes the shadow directory.
-Assembly and file version checks live on internal `TestingGenerationPins`
-(`GetNamedAssembly` is the shared framework-dll lookup). Each policy still
-owns its file names and expected versions. NUnit sets
-`RuntimeOwnsDependencyClosure` so its runtime folder keeps the private
-dependency copy and does not replace `nunit.framework.dll`. TUnit's MTP pin
-allows more than one `Microsoft.Testing.Platform.dll`.
-Each framework registers one `FrameworkProvider` on `ITestFrameworkProvider`.
-NUnit passes `NUnitRuntimeSessionFactory`. TUnit and
-MSTest pass `ManifestRuntimeSessionFactory` with the session type name. Each
-provider owns its `TestingGenerationStore`. Do not register those kernel
-types as unkeyed singletons from a provider extension.
+Each framework registers one `FrameworkProvider` on `ITestFrameworkProvider`
+with an `OutputSessionFactory`. Each provider owns its
+`TestingGenerationStore`. Do not register those kernel types as unkeyed
+singletons from a provider extension.
+
+### Framework runtimes
+
+Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md).
+User rules and sentences: [host-testing.md](../../product/host-testing.md#framework-versions).
+
+`DevTools.{NUnit,TUnit,MSTest}.Runtime.dll` ship in the adapter nupkg and reach
+the host through the user's output and the generation copy. The add-in keeps only
+the kernel and `DevTools.Testing.Abstractions`. `props/HostLayout.targets` fails
+the host build when a framework or NUnit runtime lands beside the add-in.
+
+The manifest `DevTools.<Framework>.Runtime.json` sits beside each runtime and is
+read by `RuntimeManifest` in `DevTools.Testing.Transport`, because the runner
+reads it too. `props/RuntimeManifest.targets` writes it at build:
+
+- `framework`, `assembly`: display name and framework assembly.
+- `entry`: the session type to activate.
+- `contract`: the `testing.runtime` range, from `props/TestingRuntime.props`, which
+  also generates `TestingRuntimeContract`.
+- `version`: the `AssemblyVersion` of the framework assembly the runtime was built
+  against, read from the built file. It is the floor; its major is the supported
+  major.
+
+Check order, each stop in one sentence:
+
+1. Build: `CheckFrameworkVersion` in the adapter targets checks the resolved package
+   for another major, a lower version, and a missing `TUnit` package.
+2. `testing/hello`: the runner compares the host's range with the manifest. A host
+   without the field reads as too old.
+3. Generation: `RuntimeCompatChecker.Check` runs manifest present, ranges overlap,
+   same major, not lower.
+4. Activation and run: `OutputSessionFactory` activates `manifest.Entry` on the
+   user's closure with `bindsAnyVersion` and repeats the check. `RuntimeBindFailure`
+   turns a `MissingMemberException`, `TypeLoadException`, `FileNotFoundException`,
+   or `FileLoadException` that names a framework or platform assembly into the bind
+   sentence, and logs the original exception to the host log. The TUnit engine
+   publishes such a failure as a test node, so `TUnitEngineBindFailure` rethrows it.
+
+A stop is `TestingRuntimeIncompatibleException`, returned as `ProtocolIncompatible`,
+not `ProviderFailed`, and it does not poison the session. Rejected bind candidates
+log `managed-candidate-rejected` at Warning.
+
+NUnit static state is per process, so `OutputSessionFactory` takes a function that
+returns the shared framework. `NUnitFrameworkHostShare` loads one copy per process
+and stops on another file version; the plan uses `Share`. TUnit and MSTest stay
+isolated per generation.
+
+A runtime needs nothing outside the user's closure. On .NET the dependencies are in
+the box. On net48, the NUnit runtime ILRepacks and internalizes
+`System.Reflection.Metadata` and its dependencies, and keeps `nunit.framework` and
+`nunit.framework.legacy` out of the merge. TUnit, whose types cross to the
+framework, compiles against the lowest working `Microsoft.Bcl.AsyncInterfaces`.
+
+`DevTools.Testing.Abstractions` is the ABI between add-in and adapter. It changes by
+addition only; `PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt` are checked on
+every build.
 
 ### AutoCAD-family launch
 
@@ -385,24 +425,10 @@ default value is the install dir, subkeys are product codes (`C3D`, `PLNT3D`,
 `HostVersions.AutodeskMinimal`. `HostName` must be that vertical so the runner waits for
 `DevTools_{Plant3D|Civil3D}_*`.
 
-Do not add a shared runtime-descriptor catalog. Policy constants stay on the
-provider type. NUnit/TUnit Host consume the solution `Polyfill` global package
+NUnit/TUnit Host consume the solution `Polyfill` global package
 on every TFM (`PolyUseEmbeddedAttribute` in `Directory.Build.props` so net48
 does not CS0121 against `DevTools.Testing.Host`). TUnit's own polyfills stay off
 (`EnableTUnitPolyfills=false`).
-
-Each provider uses two targets files: `*RuntimePayload.targets` (Runtime owns
-a payload folder) then `*HostPackaging.targets` (add-in copies that folder to
-`NUnitRuntime\` / `TUnitRuntime\` / `MSTestRuntime\`). NUnit payload excludes host-owned
-JSON/Ipc/Isolation/Abstractions. TUnit copies its full private closure
-(CPM STJ). On net48, isolated resolve binds TUnit.Engine's STJ 9 request
-onto that newer payload copy (`NetfxClosureBind`). Host still ILRepacks STJ 10.
-MSTest copies a private 4.5.2 closure plus Microsoft.Testing.Platform 2.5.2.
-The generation fails closed if any
-of `MSTest.TestFramework.dll`, `MSTest.TestAdapter.dll`,
-`MSTestAdapter.PlatformServices.dll`, or `Microsoft.Testing.Platform.dll` is
-missing or a different version. Those assemblies stay under `MSTestRuntime\`
-and must not sit at the add-in root.
 
 ### Test output
 

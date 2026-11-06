@@ -1,11 +1,10 @@
 using DevTools.Hosting;
 using DevTools.Ipc;
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.MSTest;
 using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Host.Runtime;
-using DevTools.Testing.Host.TUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -41,41 +40,35 @@ public static class TestingHostingExtensions
 
         public IServiceCollection AddNUnitHostServices()
         {
-            services.TryAddSingleton<NUnitGenerationPolicy>();
-            AddFrameworkProvider<NUnitGenerationPolicy>(
+            AddFrameworkProvider(
                 services,
-                (provider, policy) =>
+                TestFrameworkId.NUnit,
+                provider =>
                 {
                     var hostName = provider.GetService<IHostAppInfo>()?.Host.ProductName() ?? UnknownHostName;
-                    return new FrameworkProvider(
-                        policy,
-                        new OutputSessionFactory(
-                            policy.FrameworkId,
-                            TestingLogger(provider),
-                            frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, hostName)));
+                    return new OutputSessionFactory(
+                        TestFrameworkId.NUnit,
+                        TestingLogger(provider),
+                        frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, hostName));
                 });
             return services;
         }
 
         public IServiceCollection AddTUnitHostServices()
         {
-            services.TryAddSingleton<TUnitGenerationPolicy>();
-            AddFrameworkProvider<TUnitGenerationPolicy>(
+            AddFrameworkProvider(
                 services,
-                (provider, policy) => new FrameworkProvider(
-                    policy,
-                    new OutputSessionFactory(policy.FrameworkId, TestingLogger(provider))));
+                TestFrameworkId.TUnit,
+                provider => new OutputSessionFactory(TestFrameworkId.TUnit, TestingLogger(provider)));
             return services;
         }
 
         public IServiceCollection AddMsTestHostServices()
         {
-            services.TryAddSingleton<MSTestGenerationPolicy>();
-            AddFrameworkProvider<MSTestGenerationPolicy>(
+            AddFrameworkProvider(
                 services,
-                (provider, policy) => new FrameworkProvider(
-                    policy,
-                    new OutputSessionFactory(policy.FrameworkId, TestingLogger(provider))));
+                TestFrameworkId.MSTest,
+                provider => new OutputSessionFactory(TestFrameworkId.MSTest, TestingLogger(provider)));
             return services;
         }
     }
@@ -83,30 +76,30 @@ public static class TestingHostingExtensions
     private static ILogger TestingLogger(IServiceProvider provider) =>
         provider.GetService<ILoggerFactory>()?.CreateLogger("DevTools.Testing.Host") ?? NullLogger.Instance;
 
-    private static void AddFrameworkProvider<TPolicy>(
+    private static void AddFrameworkProvider(
         IServiceCollection services,
-        Func<IServiceProvider, TPolicy, ITestFrameworkProvider> create)
-        where TPolicy : class, ITestingGenerationPolicy
+        TestFrameworkId frameworkId,
+        Func<IServiceProvider, ITestingRuntimeSessionFactory> createFactory)
     {
         foreach (var descriptor in services)
         {
             if (descriptor.ServiceType == typeof(ITestFrameworkProvider)
                 && descriptor.ImplementationFactory?.Target is FrameworkRegistration existing
-                && existing.PolicyType == typeof(TPolicy))
+                && existing.FrameworkId == frameworkId)
             {
                 return;
             }
         }
 
         var registration = new FrameworkRegistration(
-            typeof(TPolicy),
-            provider => create(provider, provider.GetRequiredService<TPolicy>()));
+            frameworkId,
+            provider => new FrameworkProvider(new OutputGeneration(frameworkId), createFactory(provider)));
         services.AddSingleton<ITestFrameworkProvider>(registration.Create);
     }
 
-    private sealed class FrameworkRegistration(Type policyType, Func<IServiceProvider, ITestFrameworkProvider> create)
+    private sealed class FrameworkRegistration(TestFrameworkId frameworkId, Func<IServiceProvider, ITestFrameworkProvider> create)
     {
-        public Type PolicyType { get; } = policyType;
+        public TestFrameworkId FrameworkId { get; } = frameworkId;
 
         public ITestFrameworkProvider Create(IServiceProvider services) => create(services);
     }

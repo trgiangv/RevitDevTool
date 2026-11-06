@@ -212,7 +212,7 @@ Optional fixtures (`McpToolsetDemo`, `RevitMcpToolSet`, pixi, live `DevToolsMcp_
 
 ### Partial / fragile
 
-- **Packed host output** — `HostPackagingOwnershipTests.Packed_host_output_*` **Skips** unless the layout is actually ILRepacked (unpackaged Debug still copies `NUnitRuntime` and leaves `DevTools.Testing.Host.dll` loose). Build host with ILRepack, or set `DEVTOOLS_PACKED_HOST_OUTPUT`.
+- **Packed host output** — `HostPackagingOwnershipTests.Packed_host_output_*` **Skips** unless the layout is actually ILRepacked (unpackaged Debug leaves `DevTools.Testing.Host.dll` loose). Build host with ILRepack, or set `DEVTOOLS_PACKED_HOST_OUTPUT`.
 
 In-repo testhosts are MTP executables (`tests/Directory.Build.props`). Run
 `dotnet run --project tests/<project>/<project>.csproj` (optional

@@ -2,7 +2,6 @@ using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.Runtime;
-using DevTools.Testing.Host.TUnit;
 using DevTools.Testing.Transport;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -201,33 +200,6 @@ public sealed class RuntimeCompatCheckerTests
             "Could not load type 'Microsoft.VisualStudio.TestPlatform.MSTest.TestAdapter.Execution.TestClassInstanceFactoryProvider' from assembly 'MSTestAdapter.PlatformServices'.");
 
         Assert.IsNotNull(Explain(failure, "MSTest", "MSTest.TestFramework"));
-    }
-
-    [TestMethod]
-    public void Current_path_keeps_the_add_in_runtime_over_one_in_the_user_output()
-    {
-        using var output = new OutputDirectory();
-        using var addin = new OutputDirectory();
-        var testAssembly = Path.Combine(output.Path, "Consumer.dll");
-        WriteAssembly(testAssembly, "Consumer", new Version(1, 0, 0, 0));
-        WriteAssembly(Path.Combine(output.Path, "nunit.framework.dll"), "nunit.framework", Built);
-        WriteAssembly(Path.Combine(output.Path, "DevTools.NUnit.Runtime.dll"), "DevTools.NUnit.Runtime", new Version(9, 9, 0, 0));
-        File.WriteAllText(Path.Combine(output.Path, RuntimeManifest.FileName(TestFrameworkId.NUnit)), "{}");
-        var addinRuntime = Path.Combine(addin.Path, "DevTools.NUnit.Runtime.dll");
-        WriteAssembly(addinRuntime, "DevTools.NUnit.Runtime", new Version(1, 0, 0, 0));
-        var spec = new TestingGenerationSpec(
-            TestFrameworkId.NUnit,
-            "NUnit",
-            "nunit.framework.dll",
-            "DevTools.NUnit.Runtime.dll",
-            RuntimeSymbolFileName: null,
-            [],
-            RuntimeOwnsDependencyClosure: false);
-
-        var plan = spec.CreatePlan(() => new RuntimeSource(addinRuntime, null, []), testAssembly);
-
-        var runtime = plan.Files.Single(file => file.RelativePath == plan.RuntimeAssemblyRelativePath);
-        Assert.AreEqual(addinRuntime, runtime.SourcePath);
     }
 
     private static string? Explain(Exception failure, string framework, string assembly) =>

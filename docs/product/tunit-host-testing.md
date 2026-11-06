@@ -5,7 +5,7 @@ RevitDevTool runs TUnit tests through the same TestRunner and neutral
 it does not launch or activate hosts. Shared MTP contract (launch, reuse,
 cancel, adapter): [host-testing.md](host-testing.md).
 
-Last updated: 2026-09-11
+Last updated: 2026-11-07
 
 ## Supported matrix
 
@@ -13,19 +13,16 @@ TUnit uses the same host year → TFM mapping as the host add-in
 (`docs/agents/build-matrix.md`). Year values used in live proof are
 verification evidence, not an allow-list.
 
-| Host | TFM | TUnit |
-|------|-----|-------|
-| Revit | `net48` / `net8.0-windows` / `net10.0-windows` | 1.78.0 |
-| AutoCAD / Civil 3D | `net48` / `net8.0-windows` / `net10.0-windows` | 1.78.0 |
+| Host | TFM |
+|------|-----|
+| Revit | `net48` / `net8.0-windows` / `net10.0-windows` |
+| AutoCAD / Civil 3D | `net48` / `net8.0-windows` / `net10.0-windows` |
 
 NUnit remains the default framework. Use `TestingFramework=tunit` to opt in.
 
-TUnit **1.78.0** restores with `Microsoft.Testing.Platform` **2.5.2**.
-Generation pins assembly versions only: `TUnit.Core` `1.78.0.0`
-and `Microsoft.Testing.Platform` `2.5.2.0`. Testhost output and the in-host
-`TUnitRuntime\` copy must match those identities. Generation fails closed on a
-different DLL instead of mixing copies. Bump TUnit and MTP together in a
-release.
+The project must reference the `TUnit` package, because a run needs `TUnit.Engine`.
+Which versions are accepted, and the sentences for the others:
+[Framework versions](host-testing.md#framework-versions).
 
 ## Test project
 
@@ -145,12 +142,10 @@ In-host Engine execution clears `SynchronizationContext` so
 `await Task.Delay` / `Task.Yield` on the API thread does not deadlock
 `GetResult()`.
 
-`TUnitRuntime` ships `TUnit.Core`, `TUnit.Engine`, and
-`Microsoft.Testing.Platform` under `TUnitRuntime\`, not at the add-in
-root. Collectible load contexts apply on modern host TFMs. .NET Framework
-years use scoped isolation. Manifest identity stays exact except net48
-`NetfxClosureBind` (newer candidate in the generation manifest or already
-loaded by that session — not a TUnit facade name list).
+`TUnit.Core`, `TUnit.Engine`, and `Microsoft.Testing.Platform` come from the
+test output. Collectible load contexts apply on modern host TFMs. .NET Framework
+years use scoped isolation. The bind rule is in
+[assembly-isolation.md](assembly-isolation.md).
 
 TUnit.Core `Sources.TestEntries` is a process-wide dictionary keyed by `Type`, and
 its module constructor **adds** sources. A rebuild loads a new test assembly
@@ -166,9 +161,9 @@ copy per generation shadow folder while TUnit.Core stays identity-bound.
 
 MSBuild adds `DevTools.TUnit.MTP.dll` as a copy-local testhost reference from
 `build/runtime`. TUnit.MTP compile-links catalog files from `TUnit.Runtime`.
-Changing in-host Engine/Runtime also requires rebuilding/deploying the host
-add-in (`TUnitRuntime\`). On net48, if the host already loaded a matching
-assembly identity, restart the host or use net8+ ALC.
+`DevTools.TUnit.Runtime` ships in the same package, so changing it needs an adapter
+pack and a rebuild of the test project. On net48, if the host already loaded a
+matching assembly identity, restart the host or use net8+ ALC.
 
 ### Test output
 

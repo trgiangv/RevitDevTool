@@ -3,7 +3,7 @@
 `RevitDevTool.TestAdapter` (NuGet) is the only supported test integration. NUnit is
 the default engine. TUnit and MSTest are opt-in (`TestingFramework` `tunit` or
 `mstest`). Product: `docs/product/host-testing.md` ·
-`docs/product/tunit-host-testing.md`. MSTest pin: `docs/decisions/0038-mstest-host-provider.md`.
+`docs/product/tunit-host-testing.md`. Accepted framework versions: `docs/product/host-testing.md#framework-versions`.
 Structure: `docs/architecture/Testing/README.md`.
 Run/author tests: `.agents/skills/revit-test/SKILL.md`.
 Consumer setup: `source/DevTools.TestAdapter/README.md`.
@@ -13,7 +13,8 @@ Consumer setup: `source/DevTools.TestAdapter/README.md`.
 ```text
 test csproj (HostName, HostVersion, NUnit|TUnit|MSTest)
   -> package targets: Reference the selected DevTools.{NUnit|TUnit|MSTest}.MTP.dll
-     + Abstractions, write discovery-refs.txt and [AssemblyName].testconfig.json
+     + Abstractions, copy the framework runtime + manifest to the output,
+     write discovery-refs.txt and [AssemblyName].testconfig.json
   -> generated MTP entry point calls adapter hook + selected sibling hook
   -> discovery: local ExploreTests / TUnit catalog / MSTest --list-tests, no host process
   -> run: TestRunner.exe locates or launches the host, then testing/hello|run|cancel
@@ -48,7 +49,8 @@ dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTe
 
 Host DLL changes: `scripts/build-host.ps1 -HostApp Revit -Year <year>`. Several hosts or years: `docs/agents/build-matrix.md` (Host build script). Runner:
 `dotnet publish source/DevTools.TestRunner -c Release`. Adapter nupkg:
-`dotnet run --project build -- adapter`. Installer pack is
+`dotnet run --project build -- adapter`, also for a framework runtime change, then
+rebuild the test project. Installer pack is
 `dotnet run --project build -- pack`. The adapter pack
 deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
 so the next sample restore cannot keep a previous extraction of the packed version.
@@ -57,8 +59,7 @@ so the next sample restore cannot keep a previous extraction of the packed versi
 
 - Consumer properties: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`,
   `LaunchTimeout`, `TestingFramework` (`nunit` default, `tunit` or `mstest` opt-in).
-  An `mstest` project is `Sdk="MSTest.Sdk"` (or `EnableMSTestRunner=true`) pinned
-  at 4.5.2.
+  An `mstest` project is `Sdk="MSTest.Sdk"` (or `EnableMSTestRunner=true`).
 - Do not set `RuntimeIdentifier` on net8 / net10 test projects. The package sets
   `AppendRuntimeIdentifierToOutputPath=false`. A RID on net8 (Revit 2025)
   nests testhost output under `win-x64`. Samples set `win-x64` only when
@@ -116,9 +117,9 @@ so the next sample restore cannot keep a previous extraction of the packed versi
 - Do not add a Host `TraceListener` or `ILogger` dump of `CaseResult.Output`; Trace/Debug
   already fan out and Console is write-through at case finish
   ([0017](../decisions/0017-nunit-host-test-output-routing.md)).
-- TUnit in-host `MissingMethodException` on `ClientInfoService`: MTP 2.5.2 needs
+- TUnit in-host `MissingMethodException` on `ClientInfoService`: MTP needs
   `IClientInfo` + `IClientCapabilities`; the Runtime registers `TUnitEngineClientInfo` and
-  ships in the installer, so redeploy the host (not the nupkg).
+  ships in the nupkg, so pack the adapter and rebuild the test project (not the host).
 - Visual Studio **Debug** attaches the testhost, then the Runner EnvDTE-attaches that VS
   instance to the host ([0025](../decisions/0025-runner-owned-visual-studio-host-attach.md)).
   Stop Debugging during launch kills only a host this run spawned. Rider / C# Dev Kit:

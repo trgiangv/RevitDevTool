@@ -4,7 +4,7 @@ Date: 2026-10-10
 
 ## Status
 
-Accepted. Landed 2026-10-10
+Accepted. [0060](0060-framework-runtime-shims-ship-with-nettest.md) replaced the exact consumer pins and private runtime closures below. Landed 2026-10-10
 ([plan](../plans/completed/2026-10-10-mtp-2-5-pin.md)). Pins are MSTest
 **4.5.2**, Microsoft.Testing.Platform **2.5.2**, and TUnit **1.78.0**
 (moved from 4.5.1 / 2.5.1 / 1.76.0 on 2026-11-01, see

@@ -15,8 +15,8 @@ without allowing one feature's dependency policy to leak into another.
   subclass `HostAssemblies` and only supply `LoadedByType` / `LoadedByName`. Nothing is
   shared by prefix.
 - `Pin(assembly)` reuses a loaded copy only when the full identity matches.
-  Feature contracts (`nunit.framework`, MCP protocol types,
-  `ITestingRuntimeSession`) stay pinned.
+  Feature contracts (MCP protocol types, `ITestingRuntimeSession`) stay pinned.
+  In-host NUnit shares one host-wide `nunit.framework`.
 - Private managed candidates still require full identity. On net48 a
   `ManifestAssemblySource` is a **redirect closure** (the testhost
   `app.config` role, scoped to one Isolated session): a request may bind a
@@ -31,6 +31,11 @@ without allowing one feature's dependency policy to leak into another.
   identity stay distinct. Compile-ref vs nupkg assembly version (for example
   Tasks.Extensions 4.2.1.0 vs 4.2.4.0) is this closure rule, not a TUnit
   name list.
+  Testing generations alone relax this on both runtimes
+  (`ManifestAssemblySource` with `bindsAnyVersion`): an exact match wins, else a
+  request binds the newest copy in the user's output with the same name, culture,
+  and token, newer or lower. Scripts, commands, and MCP toolsets keep the rules
+  above.
   Directory traversal and reparse-point escapes are rejected, including add-in
   directory resolution.
 - `System.*`, `Microsoft.*`, Autodesk APIs, and UI libraries are not shared by

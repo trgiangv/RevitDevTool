@@ -11,14 +11,14 @@ internal sealed class IsolatedRuntimeSessionHandle : ITestingRuntimeSession, ITe
     private ITestingRuntimeSession? _inner;
     private readonly AssemblyIsolationSession _isolation;
     private readonly string _shadowAssemblyPath;
-    private readonly Func<Exception, string?>? _explainFailure;
+    private readonly Func<Exception, string?> _explainFailure;
     private AssemblyUnloadResult? _unloadResult;
 
     internal IsolatedRuntimeSessionHandle(
         ITestingRuntimeSession inner,
         AssemblyIsolationSession isolation,
         string shadowAssemblyPath,
-        Func<Exception, string?>? explainFailure = null)
+        Func<Exception, string?> explainFailure)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
         _isolation = isolation ?? throw new ArgumentNullException(nameof(isolation));
@@ -50,7 +50,7 @@ internal sealed class IsolatedRuntimeSessionHandle : ITestingRuntimeSession, ITe
         {
             return Inner.Run(request, eventSink, cancellationToken);
         }
-        catch (Exception ex) when (_explainFailure?.Invoke(ex) is { } sentence)
+        catch (Exception ex) when (_explainFailure(ex) is { } sentence)
         {
             throw new TestingRuntimeIncompatibleException(sentence);
         }

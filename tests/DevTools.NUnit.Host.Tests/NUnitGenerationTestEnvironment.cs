@@ -1,3 +1,4 @@
+using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
 using System.Diagnostics;
@@ -58,7 +59,7 @@ internal static class NUnitGenerationTestEnvironment
         CopyDirectory(FixtureOutputDirectory, workspace);
         foreach (var extension in new[] { ".dll", ".json", ".pdb" })
             File.Copy(RuntimeOutputBase + extension, Path.Combine(workspace, RuntimeFileName + extension), overwrite: true);
-        File.Copy(typeof(NUnitGenerationPolicy).Assembly.Location, Path.Combine(workspace, "DevTools.TestAdapter.dll"), overwrite: true);
+        File.Copy(typeof(OutputGeneration).Assembly.Location, Path.Combine(workspace, "DevTools.TestAdapter.dll"), overwrite: true);
         configure?.Invoke(workspace);
         return Path.Combine(workspace, "DevTools.NUnit.Runtime.Fixtures.dll");
     }
@@ -128,7 +129,7 @@ internal static class NUnitGenerationTestEnvironment
     }
 
     public static NUnitGenerationHarness CreateBuilder(string generationsRoot) =>
-        new(new TestingGenerationStore(generationsRoot), new NUnitGenerationPolicy());
+        new(new TestingGenerationStore(generationsRoot), new OutputGeneration(TestFrameworkId.NUnit));
 
     public static string PatchFileVersion(string assemblyPath)
     {
@@ -225,7 +226,7 @@ internal static class NUnitGenerationTestEnvironment
 
 internal sealed class NUnitGenerationHarness(
     TestingGenerationStore store,
-    NUnitGenerationPolicy policy)
+    OutputGeneration policy)
 {
     public TestingGenerationManifest Build(string testAssemblyPath) => store.Build(policy, testAssemblyPath);
 }

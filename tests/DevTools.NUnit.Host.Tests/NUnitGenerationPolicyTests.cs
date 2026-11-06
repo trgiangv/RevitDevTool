@@ -14,7 +14,7 @@ public sealed class NUnitGenerationPolicyTests
         var testAssembly = NUnitGenerationTestEnvironment.CreateGenerationOneAssembly(workspace.Root, "plan");
         var output = Path.GetDirectoryName(testAssembly)!;
 
-        var plan = new NUnitGenerationPolicy().CreatePlan(testAssembly);
+        var plan = new OutputGeneration(TestFrameworkId.NUnit).CreatePlan(testAssembly);
 
         Assert.AreEqual(TestFrameworkId.NUnit, plan.FrameworkId);
         Assert.AreEqual("DevTools.NUnit.Runtime.dll", plan.RuntimeAssemblyRelativePath);
@@ -43,7 +43,7 @@ public sealed class NUnitGenerationPolicyTests
             File.Delete(Path.Combine(output, "DevTools.NUnit.Runtime.json")));
 
         var stop = Assert.ThrowsExactly<TestingRuntimeIncompatibleException>(() =>
-            new NUnitGenerationPolicy().CreatePlan(testAssembly));
+            new OutputGeneration(TestFrameworkId.NUnit).CreatePlan(testAssembly));
 
         Assert.Contains("Update RevitDevTool.TestAdapter to the latest version.", stop.Message, StringComparison.Ordinal);
     }

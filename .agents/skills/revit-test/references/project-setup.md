@@ -22,14 +22,11 @@ Run commands stay in [SKILL.md](../SKILL.md).
 </ItemGroup>
 ```
 
-Pin framework versions — the adapter does not pull NUnit, TUnit, or MSTest:
-
-| Package | Version |
-|---------|---------|
-| `NUnit` | 5.0.0 |
-| `TUnit` | 1.78.0 |
-| `MSTest.Sdk` / `MSTest.TestFramework` | 4.5.2 |
-| `Microsoft.Testing.Platform.MSBuild` | 2.5.2 (transitive from adapter — do not override) |
+The adapter does not pull NUnit, TUnit, or MSTest. Reference the baseline in the
+[adapter README](../../../../source/DevTools.TestAdapter/README.md) or newer in the same
+major. A lower version or another major is an error that names the fix:
+[Framework versions](../../../../docs/product/host-testing.md#framework-versions).
+`Microsoft.Testing.Platform.MSBuild` is transitive from the adapter.
 
 Do not add `Microsoft.Testing.Platform` as a compile package or override MTP.MSBuild.
 

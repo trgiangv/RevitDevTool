@@ -1,6 +1,5 @@
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.TUnit;
 using DevTools.Testing.Transport;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -18,7 +17,7 @@ public sealed class TUnitGenerationPolicyTests
     {
         using var output = new OutputDirectory(new Version(1, 11, 0, 0));
 
-        var plan = new TUnitGenerationPolicy().CreatePlan(output.ConsumerPath);
+        var plan = new OutputGeneration(TestFrameworkId.TUnit).CreatePlan(output.ConsumerPath);
 
         Assert.AreEqual("DevTools.TUnit.Runtime.dll", plan.RuntimeAssemblyRelativePath);
         foreach (var file in plan.Files)
@@ -31,7 +30,7 @@ public sealed class TUnitGenerationPolicyTests
         using var output = new OutputDirectory(new Version(1, 9, 0, 0));
 
         var stop = Assert.ThrowsExactly<TestingRuntimeIncompatibleException>(() =>
-            new TUnitGenerationPolicy().CreatePlan(output.ConsumerPath));
+            new OutputGeneration(TestFrameworkId.TUnit).CreatePlan(output.ConsumerPath));
 
         Assert.AreEqual(
             $"TUnit 1.9.0 is older than the 1.10.0 that RevitDevTool.TestAdapter {RuntimeManifest.ReadAdapterVersion(output.Path)} was built against. Update TUnit to 1.10.0 or later.",
@@ -48,7 +47,7 @@ public sealed class TUnitGenerationPolicyTests
             WriteAssembly(ConsumerPath, "Consumer", new Version(1, 0, 0, 0));
             WriteAssembly(System.IO.Path.Combine(Path, "TUnit.Core.dll"), "TUnit.Core", framework);
             WriteAssembly(System.IO.Path.Combine(Path, "DevTools.TUnit.Runtime.dll"), "DevTools.TUnit.Runtime", new Version(1, 0, 0, 0));
-            File.Copy(typeof(TUnitGenerationPolicy).Assembly.Location, System.IO.Path.Combine(Path, "DevTools.TestAdapter.dll"));
+            File.Copy(typeof(OutputGeneration).Assembly.Location, System.IO.Path.Combine(Path, "DevTools.TestAdapter.dll"));
             File.WriteAllText(
                 System.IO.Path.Combine(Path, RuntimeManifest.FileName(TestFrameworkId.TUnit)),
                 JsonSerializer.Serialize(

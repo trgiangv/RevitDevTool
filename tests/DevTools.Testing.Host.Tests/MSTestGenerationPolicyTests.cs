@@ -2,7 +2,6 @@ using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Providers;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.MSTest;
 using DevTools.Testing.Host.Runtime;
 using DevTools.Testing.Transport;
 using Microsoft.CodeAnalysis;
@@ -26,7 +25,7 @@ public sealed class MSTestGenerationPolicyTests
         using var workspace = new Workspace();
         workspace.WriteOutput();
 
-        var plan = new MSTestGenerationPolicy().CreatePlan(workspace.ConsumerPath);
+        var plan = new OutputGeneration(TestFrameworkId.MSTest).CreatePlan(workspace.ConsumerPath);
 
         var sources = plan.Files.Select(file => Path.GetDirectoryName(file.SourcePath)).Distinct().ToList();
         CollectionAssert.AreEqual(new[] { workspace.Output }, sources);
@@ -251,7 +250,7 @@ public sealed class MSTestGenerationPolicyTests
             new(TestFrameworkId.MSTest, logger ?? NullLogger.Instance);
 
         public TestingRuntimeSessionManager CreateManager(ILogger? logger = null) =>
-            new(new TestingGenerationStore(Generations), new MSTestGenerationPolicy(), CreateFactory(logger));
+            new(new TestingGenerationStore(Generations), new OutputGeneration(TestFrameworkId.MSTest), CreateFactory(logger));
 
         public TestRunRequest Request() =>
             new(Guid.NewGuid(), TestFrameworkId.MSTest, new TestAssemblyReference(ConsumerPath), TestSelection.All);

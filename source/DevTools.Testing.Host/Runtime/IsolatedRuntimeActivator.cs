@@ -15,7 +15,7 @@ internal static class IsolatedRuntimeActivator
         AssemblyIsolationPlan plan,
         string runtimeSessionTypeName,
         Func<Assembly, object[]> constructorArguments,
-        Func<Exception, string?>? explainFailure = null)
+        Func<Exception, string?> explainFailure)
     {
         ArgumentNullException.ThrowIfNull(generation);
         ArgumentNullException.ThrowIfNull(plan);
@@ -42,7 +42,7 @@ internal static class IsolatedRuntimeActivator
         catch (Exception ex)
         {
             isolation.Dispose();
-            if (explainFailure?.Invoke(ex) is { } sentence)
+            if (explainFailure(ex) is { } sentence)
                 throw new TestingRuntimeIncompatibleException(sentence);
 
             throw;

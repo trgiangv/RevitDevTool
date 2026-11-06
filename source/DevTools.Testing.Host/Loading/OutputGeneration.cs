@@ -7,9 +7,11 @@ namespace DevTools.Testing.Host.Loading;
 /// A generation made only of the user's output: the framework runtime the adapter copied
 /// there and the user's framework closure. The compatibility stops run before any copy.
 /// </summary>
-internal static class OutputGeneration
+public sealed class OutputGeneration(TestFrameworkId frameworkId) : ITestingGenerationPolicy
 {
-    public static TestingGenerationPlan CreatePlan(TestFrameworkId frameworkId, string testAssemblyPath)
+    public TestFrameworkId FrameworkId => frameworkId;
+
+    public TestingGenerationPlan CreatePlan(string testAssemblyPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(testAssemblyPath);
         var assemblyPath = Path.GetFullPath(testAssemblyPath);
@@ -29,7 +31,7 @@ internal static class OutputGeneration
             Path.ChangeExtension(RuntimeManifest.FileName(frameworkId), ".dll"));
     }
 
-    public static void ValidatePublished(TestFrameworkId frameworkId, TestingGenerationManifest manifest)
+    public void ValidatePublished(TestingGenerationManifest manifest)
     {
         ArgumentNullException.ThrowIfNull(manifest);
         if (manifest.FrameworkId != frameworkId)

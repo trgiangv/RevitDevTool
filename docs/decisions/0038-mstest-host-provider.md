@@ -4,7 +4,7 @@ Date: 2026-09-28
 
 ## Status
 
-Accepted. Amended 2026-10-10 by
+Accepted. [0060](0060-framework-runtime-shims-ship-with-nettest.md) replaced the exact consumer pin and the private `MSTestRuntime\` closure. Amended 2026-10-10 by
 [0042](0042-mtp-2-5-removable-test-workarounds.md): the pin is MSTest
 **4.5.1**, Microsoft.Testing.Platform **2.5.1**, and TUnit **1.76.0**.
 In-host MSTest cancel uses `TestApplicationOptions.CancellationToken`.

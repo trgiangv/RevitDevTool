@@ -28,7 +28,7 @@ internal static class NUnitRuntimeTestEnvironment
             frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, HostName));
 
     public static NUnitGenerationHarness CreateBuilder(string generationsRoot) =>
-        new(new TestingGenerationStore(generationsRoot), new NUnitGenerationPolicy());
+        new(new TestingGenerationStore(generationsRoot), new OutputGeneration(TestFrameworkId.NUnit));
 
     public static TestingGenerationManifest BuildFixtureGeneration()
     {

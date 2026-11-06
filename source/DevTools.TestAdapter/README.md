@@ -3,17 +3,19 @@
 Microsoft Testing Platform adapter that runs tests inside a CAD/BIM host.
 Requires [RevitDevTool](https://github.com/trgiangv/RevitDevTool).
 
-Supports **NUnit** (default), **TUnit**, and **MSTest**. Pin the framework in
-the test project — the adapter does not pull it. It depends on
-`Microsoft.Testing.Platform.MSBuild`; do not add or override it. The TUnit and
-MSTest versions below are the ones that match that MTP version.
+Supports **NUnit** (default), **TUnit**, and **MSTest**. Reference the framework
+in the test project — the adapter does not pull it. It depends on
+`Microsoft.Testing.Platform.MSBuild`; do not add or override it.
 
-| Package | Version |
-|---------|---------|
+Use the baseline below or newer with the same major. A framework update needs no
+adapter or RevitDevTool update, unless it changed an API the adapter uses. A lower
+version or another major stops the build with one sentence that names the fix.
+
+| Package | Baseline |
+|---------|----------|
 | `NUnit` | 5.0.0 |
 | `TUnit` | 1.78.0 |
 | `MSTest` (`MSTest.Sdk` / `MSTest.TestFramework`) | 4.5.2 |
-| `Microsoft.Testing.Platform.MSBuild` | 2.5.2 |
 
 All three work with every host below. Set `HostName` and `HostVersion` to
 the version you run. Include a compile-only host API package (discovery
@@ -26,6 +28,8 @@ Default engine is NUnit. Set `TestingFramework` to `tunit` or `mstest`.
 Do not use `.runsettings`.
 
 ### NUnit (default)
+
+NUnit is one copy per host process. To run another NUnit version, restart the host.
 
 ```xml
 <PropertyGroup>
@@ -44,6 +48,8 @@ Do not use `.runsettings`.
 ```
 
 ### TUnit
+
+Reference the `TUnit` package, not only `TUnit.Core`.
 
 ```xml
 <PropertyGroup>
@@ -69,9 +75,8 @@ with `<EnableMSTestRunner>true</EnableMSTestRunner>` is the other accepted
 shape. Without that runner, MSTest turns Microsoft.Testing.Platform off and
 the testhost entry point is not generated.
 
-Pin the SDK at 4.5.2, either on the `Sdk` attribute or in `global.json`
-(`msbuild-sdks`). The in-host closure is MSTest.TestFramework 4.5.2 plus
-Microsoft.Testing.Platform 2.5.2. A different MSTest version fails generation.
+Set the SDK version either on the `Sdk` attribute or in `global.json`
+(`msbuild-sdks`).
 
 ```xml
 <Project Sdk="MSTest.Sdk/4.5.2">

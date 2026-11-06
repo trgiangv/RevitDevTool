@@ -12,18 +12,18 @@ NUnit-specific bridge protocol are not part of the supported product on
 ## Test project contract
 
 - Reference `RevitDevTool.TestAdapter` (depends on
-  `Microsoft.Testing.Platform.MSBuild` 2.5.2). Framework package (default NUnit
-  5.0.0) is a local choice, not a package dependency. Package props set
+  `Microsoft.Testing.Platform.MSBuild`). The framework package (default NUnit)
+  is a local choice, not a package dependency: see
+  [Framework versions](#framework-versions). Package props set
   `OutputType=Exe`. Declare `HostName`, `HostVersion`, optional `ForceLaunch`,
   `PerTestTimeout`, `LaunchTimeout`. `ForceLaunch=true` always starts a new host
   (skip reuse). `PerTestTimeout` is the per-test budget after the host is ready; `testing/run`
   pipe wait = budget × test count. `LaunchTimeout` waits for the host pipe after
   process start. `TestingFramework` (`nunit` default, `tunit` or `mstest`
   opt-in) overrides the in-host engine without changing the NuGet. An `mstest`
-  project references MSTest.TestFramework 4.5.2 and uses `Sdk="MSTest.Sdk"`, or
-  `Microsoft.NET.Sdk` with `<EnableMSTestRunner>true</EnableMSTestRunner>` (the
-  build fails with that hint otherwise). The in-host closure is that version
-  plus Microsoft.Testing.Platform 2.5.2, private to `MSTestRuntime\`.
+  project uses `Sdk="MSTest.Sdk"`, or `Microsoft.NET.Sdk` with
+  `<EnableMSTestRunner>true</EnableMSTestRunner>` (the build fails with that
+  hint otherwise).
 - `testconfig.json` is generated from csproj properties; incremental build
   refreshes `[AssemblyName].testconfig.json` (no Rebuild after `HostName`,
   `ForceLaunch`, `PerTestTimeout`, or `LaunchTimeout` changes).
@@ -49,6 +49,38 @@ NUnit-specific bridge protocol are not part of the supported product on
   `net{version}-windows7.0` when present, else nearest lower shipped folder
   (`net9` → `net8.0-windows7.0`). A consumer TFM with no match fails the test
   project build instead of copying nothing.
+
+## Framework versions
+
+The framework in your test output is the copy that runs inside the host. The
+add-in ships no framework and no framework version. The adapter was built against
+one version of each framework: the baseline, listed in the
+[adapter README](../../source/DevTools.TestAdapter/README.md).
+
+- You may use the baseline or any newer version with the same major. A framework
+  update needs no add-in or adapter update, unless it changed an API the adapter
+  uses.
+- A lower version or another major is an error.
+- `TestingFramework=tunit` needs the `TUnit` package; `TUnit.Core` alone is not
+  enough.
+- NUnit is one copy per host process. To run another NUnit version, restart the
+  host.
+
+Each mismatch ends in one sentence, before tests run or as soon as a bind fails.
+The stop does not affect later runs in the same host. `<Host>` is the product
+name of the host, such as Revit or Civil 3D.
+
+| Case | When | Sentence |
+|---|---|---|
+| Another major | Build, run | `<Framework> <found> is not supported by RevitDevTool.TestAdapter <v> (built for <Framework> <major>.x). Update RevitDevTool.TestAdapter to a version for <Framework> <found major>.` |
+| Below the baseline | Build, run | `<Framework> <found> is older than the <baseline> that RevitDevTool.TestAdapter <v> was built against. Update <Framework> to <baseline> or later.` |
+| No `TUnit` package | Build | `RevitDevTool.TestAdapter with TestingFramework=tunit needs the TUnit package. Reference TUnit instead of TUnit.Core.` |
+| Adapter too old for the add-in | Run | `RevitDevTool.TestAdapter <v> is not compatible with RevitDevTool <v>. Update RevitDevTool.TestAdapter to the latest version.` |
+| Add-in and adapter ranges do not overlap | Run | `<A> is not compatible with <B>. <update message of the older side>` ([0055](../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)) |
+| A newer framework changed an API the adapter uses | Run | `<Framework> <found> changed an API that RevitDevTool.TestAdapter <v> uses (built against <baseline>). Update RevitDevTool.TestAdapter, or use <Framework> <baseline>.` |
+| Second NUnit version in one host process | Run | `<Host> has NUnit <loaded> loaded from an earlier run. Restart <Host> to run tests with NUnit <requested>.` |
+
+Decision: [0060](../decisions/0060-framework-runtime-shims-ship-with-nettest.md).
 
 ## Discovery
 
@@ -137,17 +169,17 @@ NUnit-specific bridge protocol are not part of the supported product on
 |---|---|
 | `DevTools.Testing.Abstractions` | Neutral run/result/runtime contracts, plus testhost discovery (`ITestDiscoverer`). MTP compiles against this assembly, not `DevTools.TestAdapter` |
 | `DevTools.Testing.Transport` | `testing/*` JSON, pipe methods, and TestRunner process client |
-| `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, runtime-session lifecycle, and first-party NUnit/TUnit/MSTest providers (closure/version policy, Dynamo-safe NUnit framework sharing, isolated runtime activation, the testhost run mapper's selection → NUnit `filter-xml` or MSTest `--filter-uid`) |
+| `DevTools.Testing.Host` | In-host `testing/*` handler, generation store, runtime-session lifecycle, and first-party NUnit/TUnit/MSTest providers (compatibility checks, Dynamo-safe NUnit framework sharing, isolated runtime activation, the testhost run mapper's selection → NUnit `filter-xml` or MSTest `--filter-uid`) |
 | `DevTools.TestAdapter` | Published `RevitDevTool.TestAdapter`. MTP control plane (command line, host launch request, TestNode publish). References the selected `DevTools.{NUnit\|TUnit\|MSTest}.MTP.dll` as a testhost assembly. Does not parse NUnit names |
 | `DevTools.NUnit.MTP` | Authoritative local discovery (`NUnitTestAssemblyRunner` + `ExploreTests`), metadata `TypeName`, DisplayName suffix, host filter XML, and result fold. Build-selected testhost sibling; not ILRepacked into the adapter |
-| `DevTools.NUnit.Runtime` | Default in-host engine: NUnit execution inside an isolated generation |
+| `DevTools.NUnit.Runtime` | Default in-host engine: NUnit execution inside an isolated generation. Ships in the adapter package |
 | `DevTools.MSTest.MTP` | Testhost discovery via `TestApplication` `--list-tests`. Does not run test bodies. Maps Names to MTP node-uid test ids |
-| `DevTools.MSTest.Runtime` | In-host MSTest 4.5.2 session on the assembly the generation already loaded. `mstest:output:captureTrace` stays off |
+| `DevTools.MSTest.Runtime` | In-host MSTest session on the assembly the generation already loaded. `mstest:output:captureTrace` stays off. Ships in the adapter package |
 | `DevTools.TestRunner.Core` | Framework-neutral host locate/launch/reuse, debugger attach, and `testing/*` pipe client |
 | `DevTools.TestRunner` | Southbound executable: locate/launch the host and send `testing/run`. Framework id is a CLI option from the adapter `devtools` section |
 
-The cross-load-context identity is `DevTools.Testing.Abstractions`. Runtime
-payloads do not carry a provider-specific transport assembly. Supported runtime
+The cross-load-context identity is `DevTools.Testing.Abstractions`. Framework
+runtimes do not carry a provider-specific transport assembly. Supported runtime
 targets are net48, net8, and net10; the former `netstandard2.0` compatibility
 target is removed.
 
@@ -160,7 +192,7 @@ use NUnit attributes because NUnit is the default engine.
 `samples/DevTools.TUnit.Civil3D.SampleTests` opt in with `TestingFramework=tunit`.
 `samples/DevTools.MSTest.SampleTests` and
 `samples/DevTools.MSTest.Civil3D.SampleTests` opt in with
-`TestingFramework=mstest` and MSTest.Sdk 4.5.2.
+`TestingFramework=mstest` and MSTest.Sdk.
 `samples/ricaun.NUnit.SampleTests` is a comparison sample: it links the same
 `HostSmokeTests` and runs them through `ricaun.RevitTest.TestAdapter` (VSTest).
 It is not the product contract — do not use it as the verify path, and do not
@@ -218,11 +250,11 @@ not pack the host bundle.
   ILRepacks the adapter except `DevTools.Testing.Abstractions.dll`, which stays
   beside the test exe (with `DevTools.NUnit.MTP.dll`) so testhost discovery
   shares one `ITestDiscoverer` / `TestingDiscovery` identity. Consumers see
-  only the platform adapter compile surface.
+  only the platform adapter compile surface. The package also carries the
+  framework runtimes and copies the selected one to the test output.
 - **Installer / bundle** — `dotnet run --project build -- pack` / `PublishRelease.yml`. Ships
   `DevTools.TestRunner.exe` and the in-host testing stack
-  (`Testing.Host` with NUnit/TUnit/MSTest providers, `NUnit.Runtime` / `TUnit.Runtime` / `MSTest.Runtime`).
-  Required for live runs;
+  (`Testing.Host` with NUnit/TUnit/MSTest providers). Required for live runs;
   the NuGet does not replace it.
 
 Pack graph and restore constraints:

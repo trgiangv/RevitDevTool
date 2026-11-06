@@ -66,7 +66,7 @@ public static class NetFrameworkGenerationTestEnvironment
     }
 
     public static NetFrameworkGenerationHarness CreateBuilder(string generationsRoot) =>
-        new(new TestingGenerationStore(generationsRoot), new NUnitGenerationPolicy());
+        new(new TestingGenerationStore(generationsRoot), new OutputGeneration(TestFrameworkId.NUnit));
 
     public static string FrameworkPath(TestingGenerationManifest manifest) =>
         Path.Combine(manifest.ShadowDirectory, FrameworkFileName);
@@ -81,7 +81,7 @@ public static class NetFrameworkGenerationTestEnvironment
     {
         foreach (var extension in new[] { ".dll", ".json", ".pdb" })
             File.Copy(RuntimeOutputBase + extension, Path.Combine(workspace, RuntimeFileName + extension), overwrite: true);
-        File.Copy(typeof(NUnitGenerationPolicy).Assembly.Location, Path.Combine(workspace, "DevTools.TestAdapter.dll"), overwrite: true);
+        File.Copy(typeof(OutputGeneration).Assembly.Location, Path.Combine(workspace, "DevTools.TestAdapter.dll"), overwrite: true);
     }
 
     public static string CreateGenerationOneAssembly(string parentDirectory, string folderName) =>
@@ -337,7 +337,7 @@ public static class NetFrameworkGenerationTestEnvironment
 
 public sealed class NetFrameworkGenerationHarness(
     TestingGenerationStore store,
-    NUnitGenerationPolicy policy)
+    OutputGeneration policy)
 {
     public TestingGenerationManifest Build(string testAssemblyPath) => store.Build(policy, testAssemblyPath);
 }

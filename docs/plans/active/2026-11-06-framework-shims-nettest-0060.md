@@ -4,7 +4,7 @@ Date: 2026-11-06
 
 ## Status
 
-Active. P0 to P4 done; all three frameworks run from the user's output. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
+Active. P0 to P5 done; all three frameworks run from the user's output and the old path is gone. P6 is next. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
 (Accepted). Depends on the `nettest` train of
 [2026-11-06-release-trains-0059](2026-11-06-release-trains-0059.md) for shipping;
 the code work here can start before that plan's P3.
@@ -229,7 +229,7 @@ the user's closure are proved in P2 and P3.
 - [x] P2 MSTest (the add-in ships no `MSTestRuntime\`; TUnit and NUnit stay on the old path)
 - [x] P3 TUnit (the add-in ships no `TUnitRuntime\`; TUnit 1.81.0 ran on Revit 2024 and 2027 with no add-in or adapter change)
 - [x] P4 NUnit (the add-in ships no `NUnitRuntime\`; open for the owner: the net48 async request is answered by other add-ins, see Decisions)
-- [ ] P5 remove old path + docs
+- [x] P5 remove old path + docs (compile and unit tests only; live proof is P6)
 - [ ] P6 live verification
 
 ## Decisions
@@ -421,6 +421,16 @@ the user's closure are proved in P2 and P3.
     command until Revit exits, because Revit inherits the handle. `bin\...\NUnitRuntime` was deleted
     for Release 2024, 2025, 2027 only; other configurations and `Contents\2026\NUnitRuntime` remain
     and nothing reads them.
+- 2026-11-07 P5 (compile and unit tests, no host):
+  - The three `*GenerationPolicy` classes differed only in the framework id, so they collapsed
+    into `OutputGeneration(TestFrameworkId)`. Provider registration now dedupes by framework id,
+    and the kept `*GenerationPolicyTests` classes keep their names.
+  - `ManifestRuntimeSessionFactory`, `TestingGenerationFiles.MergeFile`, `ContentEquals`, and
+    `TryGetFileVersion` had no user left and went too. `explainFailure` is now required, because
+    `OutputSessionFactory` is the only caller.
+  - No `*HostPackaging.targets` or `*RuntimePayload.targets` was left to delete.
+  - Baseline numbers live in one place, the table in `source/DevTools.TestAdapter/README.md`,
+    because that page reaches NuGet users. Product and skill pages link to it.
 
 ## Validation
 

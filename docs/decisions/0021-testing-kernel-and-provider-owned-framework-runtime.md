@@ -7,6 +7,7 @@ Date: 2026-08-17
 Accepted. Refines [0020](0020-framework-neutral-mtp-host-testing.md) after an
 independent review of the implemented boundaries. Items 1-6 are the current
 priority. Polyfill/PolySharp work is gated behind review of items 1-6.
+[0060](0060-framework-runtime-shims-ship-with-nettest.md) replaced the part that puts the framework runtime in the add-in payload.
 
 ## Context
 

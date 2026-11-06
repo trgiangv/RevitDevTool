@@ -38,8 +38,10 @@ Do **not** add `NUnit3TestAdapter`, `ricaun.RevitTest.TestAdapter`, or
 
 ## Quick start
 
-Default engine: **NUnit 5.0.0**. TUnit: `TestingFramework=tunit` + pin **TUnit 1.78.0**.
-MSTest: `Sdk="MSTest.Sdk/4.5.2"` + `TestingFramework=mstest`.
+Default engine: **NUnit**. TUnit: `TestingFramework=tunit` + the `TUnit` package.
+MSTest: `Sdk="MSTest.Sdk"` + `TestingFramework=mstest`.
+Any framework version at or above the adapter's baseline in the same major runs;
+see [project-setup.md](references/project-setup.md).
 
 ```xml
 <PropertyGroup>

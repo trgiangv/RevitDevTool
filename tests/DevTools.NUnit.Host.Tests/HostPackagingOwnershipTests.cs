@@ -31,6 +31,7 @@ public sealed class HostPackagingOwnershipTests
         Assert.DoesNotContain("nunit-core-satellites", projectText, StringComparison.Ordinal);
         Assert.DoesNotContain("System.Text.Json.dll", projectText, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitHostPackaging.targets", projectText, StringComparison.Ordinal);
+        Assert.DoesNotContain("DevTools.NUnit.Runtime", projectText, StringComparison.Ordinal);
         Assert.Contains("HostLayout.targets", projectText, StringComparison.Ordinal);
     }
 

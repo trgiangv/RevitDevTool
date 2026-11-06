@@ -1,3 +1,5 @@
+using DevTools.Testing.Abstractions.Contracts;
+using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.NUnit;
 namespace DevTools.NUnit.Host.Tests;
 
@@ -35,7 +37,7 @@ public sealed class HostAssemblyBoundaryTests
             .ToList();
         Assert.IsTrue(hostApiNameHits.Count == 0, string.Join(Environment.NewLine, hostApiNameHits));
 
-        Assert.AreEqual("DevTools.Testing.Host", typeof(NUnitGenerationPolicy).Assembly.GetName().Name);
+        Assert.AreEqual("DevTools.Testing.Host", typeof(OutputGeneration).Assembly.GetName().Name);
     }
 
     [TestMethod]
