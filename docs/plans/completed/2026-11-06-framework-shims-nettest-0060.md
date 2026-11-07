@@ -383,7 +383,7 @@ the user's closure are proved in P2 and P3.
 - 2026-11-07 P4 (verified live on Revit 2024, 2025, 2027):
   - Shape: `OutputSessionFactory` takes an optional function that returns the shared framework.
     When set, the plan uses `Share` and the session gets the fourth argument `true`. The layout
-    assertion moved to `props/HostLayout.targets`, and a stray `nunit.framework.dll` beside the
+    assertion moved to `props/ILRepack.targets` (`AssertHostLayout`), and a stray `nunit.framework.dll` beside the
     add-in fails it. `HostApp.ProductName()` moved from the Daemon to `DevTools.Hosting` so the S7
     sentence uses the same names.
   - Samples, identical on all three years: 71 passed, 2 skipped, and only
@@ -439,7 +439,7 @@ the user's closure are proved in P2 and P3.
     none. The owner had asked for this separately from the plan; it shares commit 86fcc738.
   - Tests that only guarded removed names went, the per-framework plan tests became
     `OutputGenerationTests`, and `DevTools.TUnit.Host.Tests` was deleted because its last test
-    duplicated `RuntimeCompatCheckerTests`. `props/HostLayout.targets` still fails the build only for
+    duplicated `RuntimeCompatCheckerTests`. `props/ILRepack.targets` (`AssertHostLayout`) still fails the build only for
     the NUnit runtime and `nunit.framework`; TUnit and MSTest rely on `Hosts_name_no_test_framework`
     and `Packed_host_output_has_no_framework_runtime`.
 

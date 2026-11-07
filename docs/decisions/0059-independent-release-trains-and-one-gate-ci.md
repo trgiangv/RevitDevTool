@@ -13,6 +13,8 @@ rules of [0046](0046-per-year-release-payloads-and-update-manifest.md), and
 The contract ranges of 0055 (§1–§4, §8–§10) stay: they are what makes
 independent releases safe.
 
+Amended 2026-11-07: §6 adds the `PublicAPI.Unshipped.txt` move at a stable `addin` release ([0060](0060-framework-runtime-shims-ship-with-nettest.md) §8).
+
 ## Context
 
 ### Components and how they ship today
@@ -116,8 +118,9 @@ release updates one file, `channels.json`, signed like the feeds (0051):
   report a missing runtime, after `DevTools.Hosting*` gain that target. A missing
   runtime ends with one sentence: "RevitDevTool.TestAdapter needs the .NET <major>
   runtime or later."
-- Lookup order: `DEVTOOLS_TESTING_RUNNER_PATH`, then the runner in the package.
-  There is no lookup in the Daemon folder.
+- The runner is the one inside the package, named by the `devtools.runnerPath`
+  assembly metadata the package targets write. There is no override and no lookup
+  in the Daemon folder (amended 2026-11-08; the environment variable is gone).
 - The runner leaves the Daemon package now. `MergeSharedRuntime` and the
   `VelopackPublish` branch of the runner project go away. Native AOT is refused:
   `VisualStudioAttach` uses EnvDTE and `[ComImport]` interop.
@@ -171,6 +174,11 @@ The same steps for every train:
 4. `-rc.N` freezes features: a `feat` commit on the train's paths after an `rc` tag
    gets a CI warning.
 5. The stable version needs the edited changelog section.
+
+A stable `addin` release also moves every line of
+`source/DevTools.Testing.Abstractions/PublicAPI.Unshipped.txt` into
+`PublicAPI.Shipped.txt` and leaves `Unshipped` empty. A `*REMOVED*` line is resolved
+there and is allowed only when `MAJOR` rises (0055 §3).
 
 Where the prerelease goes:
 

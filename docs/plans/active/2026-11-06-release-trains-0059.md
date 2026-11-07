@@ -4,7 +4,7 @@ Date: 2026-11-06
 
 ## Status
 
-Active. Nothing implemented yet. Decision: [0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md)
+Active. P3a (TestRunner in the nupkg) implemented 2026-11-07; the rest not started. Decision: [0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md)
 (Proposed). Companion plan: [2026-11-06-framework-shims-nettest-0060](../completed/2026-11-06-framework-shims-nettest-0060.md);
 the first `nettest` release ships both plans together (see Release order).
 
@@ -68,7 +68,7 @@ Agreed with the owner in the 2026-11-05/06 session. Each line says why.
 | L10 | Bump rules: `MAJOR` = contract `Min` rises or a user feature is removed; `MINOR` = feature or `Current` rises; `PATCH` = fixes. | 0055 §3 |
 | L11 | One `release.yml`, `workflow_dispatch`, single input `train`, `run-name: release <train>`. Jobs: `validate` → `build` (no secrets) → `publish` (`environment: <train>`) → `channels` and `verify-install` (daemon/addin only). Environments are named after trains: `daemon`, `addin`, `nettest`, `pytest`, plus `github-pages`. | One place to change; readable runs; per-train secrets |
 | L12 | `ci.yml`: `changes` → `daemon`, `addin`, `nettest`, `pytest`, `docs` (deploys on trunk push), `workflows` (`actionlint`, `zizmor`) → `gate` (`re-actors/alls-green`), the only required check. Warnings, not failures: train paths changed without a version bump; a `!` commit without a major. | Less noise; one required check with path filters |
-| L13 | TestRunner: framework-dependent single-file under `tools/runner/` of the nupkg, `net10.0-windows` + `RollForward=Major`. Lookup: `DEVTOOLS_TESTING_RUNNER_PATH`, then the package. No Daemon-folder lookup. Missing runtime → one sentence. | Every `dotnet test` machine has the SDK (owner confirmed). AOT refused (EnvDTE/`[ComImport]`); self-contained (~70 MB) and own Velopack package refused |
+| L13 | TestRunner: framework-dependent single-file under `tools/runner/` of the nupkg, `net10.0-windows` + `RollForward=Major`. The runner is the package's, named by `devtools.runnerPath` metadata; no override, no Daemon-folder lookup (owner, 2026-11-08). Missing runtime → one sentence. | Every `dotnet test` machine has the SDK (owner confirmed). AOT refused (EnvDTE/`[ComImport]`); self-contained (~70 MB) and own Velopack package refused |
 | L14 | PyTest moves into `source/RevitDevTool.PyTest/` with history; pixi tasks `lint`, `test`, `build`; golden JSON fixtures shared with the C# tests. | Contract drift becomes a CI failure |
 | L15 | Changelog: one Keep a Changelog file per train (`source/DevTools.Daemon/CHANGELOG.md`, `source/RevitDevTool/CHANGELOG.md`, `source/DevTools.TestAdapter/CHANGELOG.md`, `source/RevitDevTool.PyTest/CHANGELOG.md`); root `Changelog.md` becomes an index. Draft from commits with `git-cliff` (via pixi) over the train's paths; a person edits; stable without a section fails; prerelease falls back to the draft. | Commits, not PR labels, are the source here |
 | L16 | `build/` is the one release tool: `dotnet run --project build -- <target> [train]` with targets `ci`, `pack`, `release [--dry-run]`, `publish`, `channels`, `changelog`. Each train declared once (paths, version file, tag pattern, changelog, artifacts); CI path filters, bump warning, and changelog read that declaration. YAML holds triggers, permissions, environments, OIDC steps only. | TUnit/pyRevit pattern already used here |
@@ -137,14 +137,104 @@ is the smallest train and exercises the whole `release.yml` shape.
 - Docs deploy moves here (trunk push, `environment: github-pages`).
 - Owner switches the required check to `ci / gate` (manual, repo settings).
 
-### P3 `release.yml` with `nettest` + TestRunner in the nupkg
+### P3a TestRunner in the nupkg (started 2026-11-07, independent of P1 and P2)
+
+Pulled forward because the first `nettest` release must carry the runner and the
+0060 framework runtimes together, and the 0060 follow-up plan
+([2026-11-07](../completed/2026-11-07-testadapter-build-cleanup-and-compat-hardening.md)) left the
+adapter version bump waiting on it. Samples already consume the adapter as a
+`PackageReference` from the local `output/nuget` feed, so a runner inside the package
+also serves in-repo development.
+
+Expected end state (L13):
+
+- `DevTools.TestRunner.csproj`: `net10.0-windows`, framework-dependent single-file,
+  `RollForward=Major`. The `VelopackPublish` branch and the `DeployDevToolsTestRunner`
+  copy to the bundle `Contents` folder go; the runner is reached only through the
+  package.
+- `DevTools.TestAdapter.csproj`: `dotnet pack` alone yields a complete package. A pack
+  target publishes the runner once (not per TFM) and places the single-file exe at
+  `tools/runner/DevTools.TestRunner.exe`; pack fails with one sentence when the exe
+  is missing.
+- `build/RevitDevTool.TestAdapter.targets`: `devtools.runnerPath` metadata always
+  names the runner inside the package (`$(MSBuildThisFileDirectory)..\tools\runner\...`).
+  The MSBuild property `TestingRunnerPath`, the environment variable, and the
+  `testconfig.json` override are gone (owner, 2026-11-08): the loader reads
+  `runnerPath` from the metadata only. A dev-built runner is tested by packing it
+  (`build -- adapter`) and restoring the samples.
+- `TestingRunnerPaths.ResolveRunnerPath` no longer looks in the Daemon folder
+  (`AppUtils.GetTestRunnerExePath` is removed); an unreachable path is one sentence
+  naming it.
+- Missing .NET runtime: the apphost exits before the runner's own code runs, so
+  `ProcessTestRunnerClient` maps that failure to one sentence, "RevitDevTool.TestAdapter
+  needs the .NET <major> runtime or later." The major comes from the runner's target
+  framework through one build constant, not a literal in a message.
+- `build/`: `PackDaemonModule` publishes the Daemon alone; `MergeSharedRuntime` and
+  the runner publish there go. `CompileTestRunnerModule` goes or shrinks to a compile.
+  `PackTestAdapterModule` keeps restore + pack.
+- `.github/workflows/TestReleaseInstall.yml`: the two runner checks go.
+- `LegacyInnoInstall.Executables` keeps the runner name: it cleans old installs.
+- Tests: `PackageConsumerTests` asserts `tools/runner/DevTools.TestRunner.exe` in the
+  nupkg and `devtools.runnerPath` metadata pointing into the package;
+  `AdapterArchitectureTests` covers the targets default; `RunnerAssemblyBoundaryTests`
+  no longer expects the bundle copy target; a Transport test covers the
+  missing-runtime sentence; a loader test covers the metadata path.
+- Docs, one layer each: `docs/architecture/Testing/README.md` (where the runner lives,
+  lookup order), `docs/product/host-testing.md` (requirement: .NET 10 runtime or
+  later on the machine running `dotnet test`; the environment variable),
+  `docs/agents/host-testing.md` and `docs/agents/verification.md` (dev lookup), the
+  `revit-test` skill project-setup reference. ADR 0059 §3 already states the decision.
+
+Proof: `tests/DevTools.TestAdapter.Tests` (package consumer on three TFMs),
+`tests/DevTools.TestRunner.Tests`, `tests/DevTools.Testing.Transport.Tests`,
+`dotnet build build/`, and one pack through the build module per the build skill.
+A live `dotnet test` on a sample against the packed adapter proves the runner
+launches from the package; it stays open until a host is available.
+
+P3a result, 2026-11-07 (working tree, not yet committed):
+
+| Proof | Result |
+|---|---|
+| `dotnet build build/` | 0 warnings, 0 errors; `PackDaemonModule` compiles without the runner |
+| `tests/DevTools.Testing.Transport.Tests` | 66 / 66 |
+| `tests/DevTools.TestRunner.Tests` | 34 / 34 |
+| `tests/DevTools.Utilities.Tests` | 19 / 19 |
+| `tests/DevTools.TestAdapter.Tests` (packs on three TFMs) | 96 / 96 |
+| `dotnet pack source/DevTools.TestAdapter -c Release` | one `tools/` entry, `tools/runner/DevTools.TestRunner.exe`, 3.3 MB; `--version` exits 0 |
+| `dotnet run --project build -- adapter` | `output/nuget/RevitDevTool.TestAdapter.0.2.0.nupkg`, 55 entries, runner included |
+| Missing runtime | apphost exit `0x80008083` (no .NET) and `0x80008096` (framework missing) both map to the one sentence; codes verified against dotnet/runtime `host-error-codes.md` |
+
+How it landed: `props/TestingRuntime.props` holds the runner's .NET major once; the runner
+csproj and a generated Transport constant read it. `PackRunner` runs through
+`BeforePack` in the outer build, restores and publishes the runner with only
+`Configuration` passed down (other properties would rebuild the shared references into
+the same `bin`/`obj`), and adds the exe as `None Pack`. `TestingRunnerPaths` no longer
+reads the install folder; `AppUtils.GetTestRunnerExePath` is gone.
+`CompileTestRunnerModule` is deleted; `MergeSharedRuntime` is gone from the Daemon pack.
+
+Open after P3a:
+
+- Resolved: `PackTestAdapterModule` passes the csproj `<Version>` as a global `-p:Version` to restore and pack, so the runner reports it; a direct `dotnet pack` without `-p:Version` still yields `1.0.0`, which is fine for tests.
+- Dev machines keep a stale `DevTools.TestRunner.exe` in `%LOCALAPPDATA%\RevitDevTool\current`
+  and the bundle `Contents`; the adapter no longer reads either (proven 2026-11-08:
+  with the package runner missing the adapter stopped instead of falling back).
+- Resolved 2026-11-08: live `dotnet test` for NUnit, TUnit, MSTest on Revit 2024,
+  2025, 2027 against the packed adapter, one process per year; result table in the
+  completed plan `2026-11-07-testadapter-build-cleanup-and-compat-hardening`.
+- `dotnet run --project build -- adapter` deletes the restored package folder in the
+  NuGet cache; a sample run in progress on another shell then fails with the
+  missing-runner sentence until it restores again. Known, by design of the local
+  feed (L9 removes it with `0.0.0` packs).
+- Resolved 2026-11-08: the runner path has no override (environment variable and
+  `testconfig.json` key removed), so the missing-runner sentence has one fix: restore
+  the package again.
+
+### P3b `release.yml` with `nettest`
 
 - `release.yml` skeleton (L11) with only `nettest` enabled.
-- TestRunner single-file into `tools/runner/` (L13); `TestingRunnerPaths` lookup
-  order; one-sentence missing-runtime error; drop the runner and
-  `MergeSharedRuntime` from `PackDaemonModule`; drop the `VelopackPublish` branch
-  in `DevTools.TestRunner.csproj`; drop runner checks in the install test.
 - `nettest` changelog file.
+- A stable `addin` release moves `PublicAPI.Unshipped.txt` into `PublicAPI.Shipped.txt`
+  (0059 §6, added 2026-11-07 by the 0060 follow-up plan).
 - Owner: environment `nettest`; NuGet trusted publishing policy for this repo +
   `release.yml` + environment `nettest`.
 
@@ -219,7 +309,8 @@ Users of shipped versions reinstall `Setup.exe` once (L1).
 - [ ] P0 spikes (Q2 answer recorded in Decisions)
 - [ ] P1 build trains and versions
 - [ ] P2 ci.yml and gate
-- [ ] P3 release.yml + nettest + TestRunner in nupkg
+- [x] P3a TestRunner in nupkg (2026-11-07; compile and unit proof below; live `dotnet test` against Revit still open)
+- [ ] P3b release.yml + nettest
 - [ ] P4 PyTest move + pytest train
 - [ ] P5 channels.json + update engine
 - [ ] P6 daemon and addin trains

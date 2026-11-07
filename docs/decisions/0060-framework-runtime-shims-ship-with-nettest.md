@@ -13,6 +13,9 @@ the framework runtime in the add-in payload, and the exact consumer pins of
 [0038](0038-mstest-host-provider.md) and [0042](0042-mtp-2-5-removable-test-workarounds.md).
 Shipped adapters and add-ins are not carried forward (0059).
 
+Amended 2026-11-07: §3 `version` is the package version, compared with the product
+version of the user's framework assembly; §8 defines `PublicAPI.Shipped.txt` as the last stable `addin` surface ([plan](../plans/completed/2026-11-07-testadapter-build-cleanup-and-compat-hardening.md)).
+
 ## Goal
 
 A framework update with no breaking change needs no add-in update and no adapter
@@ -111,16 +114,21 @@ loads anything:
   "entry": "DevTools.NUnit.Runtime.NUnitRuntimeSession",
   "contract": { "current": 1, "min": 1 },
   "assembly": "nunit.framework",
-  "version": "5.0.0.0"
+  "version": "5.0.0"
 }
 ```
 
-`version` is the `AssemblyVersion` of `assembly` in the closure the framework runtime was built
-against, read from that file by the build, so it is never edited by hand. It is the
-floor, its major is the supported major, and it appears in messages. Assembly
-versions are compared with assembly versions because that is what binding uses:
-file versions of MSTest and MTP do not follow the package, and an NUnit patch may
-keep the assembly version of the previous one.
+`version` is the package version the framework runtime was built against, read by the
+build from the `NuGetPackageVersion` of the `assembly` reference, so it is never edited
+by hand; without that metadata the build writes the assembly version. It is the
+floor, its major is the supported major, and it appears in messages. The host compares
+it with the product version of the user's `assembly` file (`AssemblyInformationalVersion`,
+build metadata after `+` ignored) and falls back to the assembly version when the
+product version does not parse. Versions pad to four parts, and a prerelease label sorts
+below the release with the same numbers. File versions are not used: those of MSTest
+and MTP do not follow the package. The build check (§7) reads the same package version,
+so both checks compare one number. A manifest written before this change holds a
+four-part assembly version, which reads as the same floor.
 
 ### 4. What the host does
 
@@ -204,12 +212,16 @@ on all three TFMs and under `MSTest.Sdk`.
   It puts the capability in a separate type, created in a separate non-inlined method
   after probing for the interface by name.
 - `Microsoft.CodeAnalysis.PublicApiAnalyzers` checks the public surface on every build
-  against `PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt` in the project, so a
-  change shows as a text diff and no assembly is kept in git. An undeclared symbol
-  (RS0016) or a declared one that no longer exists (RS0017) fails the build on all
-  three TFMs. New symbols go in `PublicAPI.Unshipped.txt` and move to
-  `PublicAPI.Shipped.txt` at a release. Known limit: someone can delete a line to
-  pass the check, so a removal is caught in review, not by the tool.
+  against `PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt` in the project, so
+  every change is a declared text diff and no assembly is kept in git. An undeclared
+  symbol (RS0016) or a declared one that is gone (RS0017) fails the build on all three
+  TFMs. `Shipped` is the surface of the last stable `addin` release; until the first
+  one it is the baseline of this ADR. New symbols go in `Unshipped` and move to
+  `Shipped` at a stable `addin` release (0059 §6). A removal is a `*REMOVED*` line in
+  `Unshipped` and a new major. The analyzer does not decide what is breaking, so three
+  changes are review rules: a new member on an existing interface (a shipped framework
+  runtime throws `TypeLoadException` on net48), a changed `entry` constructor, and a
+  changed `AssemblyVersion`.
 - A new capability raises `Current`; a removal raises `Min`, only in a new add-in
   major.
 
