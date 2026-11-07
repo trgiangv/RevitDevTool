@@ -24,6 +24,9 @@ public static class SharedSidecars
         "MaterialDesignThemes.Wpf",
         "MaterialDesignColors",
         "Wpf.Ui",
+        "Telerik",
+        "Syncfusion",
+        "DevExpress",
     ];
 
     public static bool Contains(string? simpleName) =>
