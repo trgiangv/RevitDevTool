@@ -1,4 +1,3 @@
-using DevTools.AssemblyIsolation;
 using System.Reflection;
 
 namespace DevTools.AssemblyIsolation.Metadata;
@@ -56,10 +55,8 @@ public sealed class MetadataAssemblySession : IDisposable
 
             var identity = assemblyName.FullName
                 ?? throw new InvalidOperationException($"Metadata assembly '{normalizedPath}' has no full identity.");
-            if (pathsByIdentity.ContainsKey(identity))
-                continue;
 
-            pathsByIdentity.Add(identity, normalizedPath);
+            pathsByIdentity.TryAdd(identity, normalizedPath);
         }
 
         return pathsByIdentity.Values.ToArray();
