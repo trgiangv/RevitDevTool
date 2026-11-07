@@ -61,6 +61,7 @@ public sealed class NUnitRuntimeSession : CancellableRuntimeSession
         // until the run ends, so the request has to be armed before it. StopRun is a no-op
         // while no run is live, hence the poll below for the worker dispatcher.
         using var stopOnCancel = cancellationToken.Register(TryStopRun);
+        using var foreignContext = _runOnCallingThread ? new ForeignContextScope() : null;
         _runner.RunAsync(listener, filter);
 
         while (!_runner.WaitForCompletion(StopPollMilliseconds))

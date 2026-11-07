@@ -494,3 +494,41 @@ Open, not blocking:
   its static counter survives, and it failed in all 4 executions. First runs are clean.
 - The `generation.retained` diagnostic appeared on some direct runner runs and was not investigated.
 - `bin\...\*Runtime` folders from before this work are still deployed on this machine. Nothing reads them.
+
+### Follow-up: dirty process on Revit 2023 (2026-11-07)
+
+Ran `dotnet test` on both sides, alternating on one Revit 2023 process, with ricaun.RevitTest and the
+`RevitAvalonia` add-in loaded. P6 did not cover this: `RevitAvalonia` is not installed on 2024 or 2027,
+and the 2025 process that was checked had not loaded it. Found two defects:
+
+- **Async NUnit tests hung Revit.** `RevitAvalonia` leaves `AvaloniaSynchronizationContext` on the main
+  thread. NUnit pumps only WinForms, WPF, and its own context, so it blocked the thread the test had to
+  return to. The user saw `Host request timed out after 60s`, and Revit stayed stuck until restarted.
+  Clearing the context in a test's `SetUp` made the same await pass. `ForeignContextScope` now takes such
+  a context off for a run on the calling thread and puts it back after.
+- **The session handed its NUnit to everyone in the AppDomain.** Its net48 resolver answered ricaun's
+  request for `nunit.framework` 3.13.3 with 5.0, and ricaun then ran 0 tests with exit 0. A
+  `ShareWithClosure` assembly now goes only to the session.
+
+Results, 3 rounds per order on one process, `RevitAvalonia` loaded, no hang:
+
+| Order | TestAdapter NUnit | TUnit | MSTest | ricaun |
+|-------|-------------------|-------|--------|--------|
+| ricaun first | 71 passed, 2 failed, 2 skipped | 59, 1, 1 | 35, 0, 2 | 45, 9, 2 every round |
+| TestAdapter first | 71, 2, 2 | 59, 1, 1 | 35, 0, 2 | all 56 fail: `'nunit.framework' version 3.13.3 is not allowed. Use the version 5.0.0.` |
+
+TUnit went to 55, 5, 1 from the second round, which is the open `Repeat_expands_four_executions` item.
+
+Limits and open items:
+
+- Known limit on net48: after a TestAdapter NUnit run, ricaun refuses to run in that process until Revit
+  restarts. ricaun's own `nunit.framework` reference resolves to the 5.0 already in the AppDomain. That
+  this happens through its Costura loader searching by simple name is inferred, not verified. The message
+  is clear, and ricaun's failures are not silent any more.
+- Its 9 failures when run first are not from this work: the sample's generic and parameterized cases do
+  not fit it. `Arithmetic_runs_inside_host` fails on a `Nice3point` `TypeLoadException`, cause not found.
+- Live only on net48. `ForeignContextScope` is also covered by a unit test on net10, where the same test
+  hung without the fix. No host with `RevitAvalonia` loaded was run on .NET.
+- NUnit 2.6.3 ships in Dynamo's folder but was not in the module list of the one process checked. Dynamo
+  was not opened, so a loaded 2.6.3 is not proved. The resolver now ignores other requesters, but that
+  case was not run. One earlier process (30472) with `RevitAvalonia` passed without the fix, unexplained.
