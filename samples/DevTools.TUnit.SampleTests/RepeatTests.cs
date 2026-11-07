@@ -6,6 +6,9 @@ public sealed class RepeatTests
 {
     static int _executions;
 
+    [Before(HookType.Class)]
+    public static void Reset_executions() => _executions = 0;
+
     [Test]
     [Repeat(3)]
     public async Task Repeat_expands_four_executions()
