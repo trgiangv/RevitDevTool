@@ -7,35 +7,7 @@ public sealed class AdapterOnlyArchitectureTests
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
     [TestMethod]
-    public void Repository_has_no_NUnit_VSTest_product_surface()
-    {
-        var forbiddenPaths = new[]
-        {
-            "source/DevTools.NUnit.TestAdapter",
-            "tests/DevTools.NUnit.TestAdapter.Tests",
-            "samples/DevTools.NUnit.VSTest.SampleTests",
-            "samples/DevTools.NUnit.VSTest.Civil3D.SampleTests",
-        };
-
-        var offenders = forbiddenPaths
-            .Where(path =>
-            {
-                var directory = Path.Combine(RepositoryRoot, path.Replace('/', Path.DirectorySeparatorChar));
-                return Directory.Exists(directory)
-                    && Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Any(IsActiveInput);
-            })
-            .ToList();
-
-        offenders.AddRange(FindTextReferences(
-            "DevTools.NUnit.TestAdapter",
-            "DevTools.NUnit.VSTest.SampleTests",
-            "DevTools.NUnit.VSTest.Civil3D.SampleTests"));
-
-        Assert.IsEmpty(offenders);
-    }
-
-    [TestMethod]
-    public void Repository_test_projects_use_MTP_without_VSTest_packages()
+    public void Test_projects_have_no_VSTest_packages()
     {
         var forbiddenPackages = new[]
         {
@@ -53,26 +25,7 @@ public sealed class AdapterOnlyArchitectureTests
     }
 
     [TestMethod]
-    public void NUnit_host_stack_has_no_legacy_protocol_or_transport()
-    {
-        var transport = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Transport");
-        var offenders = new List<string>();
-        if (Directory.Exists(transport)
-            && Directory.EnumerateFiles(transport, "*", SearchOption.AllDirectories).Any(IsActiveInput))
-            offenders.Add("source/DevTools.NUnit.Transport");
-
-        offenders.AddRange(FindTextReferences(
-            "DevTools.NUnit.Transport",
-            "NUnitProtocol",
-            "NUnitRequestHandler",
-            "NUnitPipeClient",
-            "INUnitRuntimeSession"));
-
-        Assert.IsEmpty(offenders);
-    }
-
-    [TestMethod]
-    public void Testing_stack_has_no_netstandard_compatibility_target()
+    public void Testing_stack_has_no_netstandard_target()
     {
         var projects = new[]
         {

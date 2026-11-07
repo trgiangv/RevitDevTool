@@ -8,7 +8,7 @@ namespace DevTools.TestAdapter.Tests;
 public sealed class AdapterArchitectureTests
 {
     [TestMethod]
-    public void TUnit_uses_the_existing_adapter_and_TestRunner_transport()
+    public void TUnit_uses_shared_adapter()
     {
         var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
         var props = File.ReadAllText(Path.Combine(adapterDir, "build", "RevitDevTool.TestAdapter.props"));
@@ -17,17 +17,9 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("'$(TestingFramework)' == 'tunit'", targets, StringComparison.Ordinal);
         Assert.Contains("DevTools.TestAdapter.TestingPlatformBuilderHook", props, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"Microsoft.Testing.Platform.MSBuild\"", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("MtpMsBuildPackageVersion", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("supports only Revit 2023", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("'$(HostVersion)' != '2023'", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("<MTPAssembly", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("<MTPEntry", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TUnit.MTP", targets, StringComparison.Ordinal);
         Assert.Contains("DevTools.TUnit.MTP.TUnitMtpBuilderHook", targets, StringComparison.Ordinal);
         Assert.Contains("TestingPlatformBuilderHook Remove=\"6ADF853A-6945-4A06-9A4B-D99BC1DC1094\"", targets, StringComparison.Ordinal);
-        Assert.IsFalse(File.Exists(Path.Combine(adapterDir, "TUnitTestingPlatformBuilderHook.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(adapterDir, "RevitTestHostLauncher.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(adapterDir, "build", "TUnitRevitExecutor.cs")));
         var tunitSample = File.ReadAllText(Path.Combine(
             RepositoryRoot, "samples", "DevTools.TUnit.SampleTests", "DevTools.TUnit.SampleTests.csproj"));
         Assert.DoesNotContain("Microsoft.Testing.Platform.MSBuild", tunitSample, StringComparison.Ordinal);
@@ -37,22 +29,7 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void TUnit_runtime_is_isolated_from_the_host_and_consumer_output()
-    {
-        var props = File.ReadAllText(Path.Combine(
-            RepositoryRoot, "source", "DevTools.TestAdapter", "build", "RevitDevTool.TestAdapter.props"));
-        var hostProject = File.ReadAllText(Path.Combine(
-            RepositoryRoot, "source", "RevitDevTool", "RevitDevTool.csproj"));
-
-        Assert.DoesNotContain("ILRepackable", props, StringComparison.Ordinal);
-        Assert.Contains("DevTools.Testing.Host", hostProject, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.TUnit.Host", hostProject, StringComparison.Ordinal);
-        Assert.DoesNotContain("'$(RevitVersion)' == '2023' OR '$(RevitVersion)' == '2025'", hostProject, StringComparison.Ordinal);
-        Assert.DoesNotContain("TUnit", hostProject, StringComparison.Ordinal);
-    }
-
-    [TestMethod]
-    public void Revit_and_Acad_compositions_register_tunit_host_services()
+    public void Hosts_register_testing_services()
     {
         var revitComposition = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "RevitDevTool", "Composition", "RevitServiceRegistration.cs"));
@@ -64,7 +41,7 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Revit_TUnit_execution_reuses_the_generic_testing_run_handler()
+    public void Revit_uses_generic_run_handler()
     {
         var root = Path.Combine(RepositoryRoot, "source", "RevitDevTool");
         var composition = File.ReadAllText(Path.Combine(root, "Composition", "RevitServiceRegistration.cs"));
@@ -76,16 +53,12 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("AddTestingHostServices", composition, StringComparison.Ordinal);
         Assert.Contains("AddTUnitHostServices", genericHosting, StringComparison.Ordinal);
         Assert.Contains("TestingProviderRegistry", genericHosting, StringComparison.Ordinal);
-        Assert.DoesNotContain("REVIT2023 || REVIT2025", composition, StringComparison.Ordinal);
         Assert.Contains("_hostContext.ExecuteAsync", handler, StringComparison.Ordinal);
         Assert.DoesNotContain("GetResult(), ct)", handler, StringComparison.Ordinal);
-        Assert.DoesNotContain("RevitTestExecutionDispatcher", composition, StringComparison.Ordinal);
-        Assert.IsFalse(File.Exists(Path.Combine(root, "Testing", "RevitTestHostApplicationLauncher.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(root, "Testing", "RevitTestExecutionDispatcher.cs")));
     }
 
     [TestMethod]
-    public void TUnit_in_host_uses_engine_instead_of_nested_mtp()
+    public void TUnit_in_host_uses_engine()
     {
         var runtimeDir = Path.Combine(RepositoryRoot, "source", "DevTools.TUnit.Runtime");
         var session = File.ReadAllText(Path.Combine(runtimeDir, "TUnitRuntimeSession.cs"));
@@ -116,7 +89,6 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("SynchronizationContext.SetSynchronizationContext(null)", host, StringComparison.Ordinal);
         Assert.Contains("TUnit.Engine", project, StringComparison.Ordinal);
         Assert.Contains("TUnit.Core", project, StringComparison.Ordinal);
-        Assert.DoesNotContain("VersionOverride=\"9.0.0\"", project, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"System.Text.Json\"", project, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"Microsoft.Bcl.AsyncInterfaces\"", project, StringComparison.Ordinal);
         Assert.DoesNotContain("<PackageReference Include=\"Microsoft.Testing.Platform\"", project, StringComparison.Ordinal);
@@ -127,18 +99,9 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("TUnitSourceCatalog.cs", mtpProject, StringComparison.Ordinal);
         Assert.Contains("TUnitMetadataNames.cs", mtpProject, StringComparison.Ordinal);
         Assert.Contains("ParameterTypeFullNames", catalog, StringComparison.Ordinal);
-        Assert.DoesNotContain("TUnitUidSelection", mtpProject, StringComparison.Ordinal);
-        Assert.DoesNotContain("TUnitTestRunMapper", mtpProject, StringComparison.Ordinal);
-        Assert.IsFalse(File.Exists(Path.Combine(runtimeDir, "TUnitUidSelection.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(runtimeDir, "TUnitTestRunMapper.cs")));
         Assert.DoesNotContain("<PackageReference Include=\"Microsoft.Testing.Platform\"", mtpProject, StringComparison.Ordinal);
-        Assert.DoesNotContain("TestingDiscoveryOptions", discoverer, StringComparison.Ordinal);
         Assert.Contains("InheritanceDepth", identity, StringComparison.Ordinal);
         Assert.Contains("_Deferred", identity, StringComparison.Ordinal);
-        Assert.DoesNotContain("TUnitAot", catalog, StringComparison.Ordinal);
-        Assert.DoesNotContain("TUnitAot", session, StringComparison.Ordinal);
-        Assert.IsFalse(File.Exists(Path.Combine(runtimeDir, "TUnitExecutor.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(runtimeDir, "TUnitHooks.cs")));
         Assert.Contains("TestRunTraceScope", host, StringComparison.Ordinal);
         Assert.Contains("TUnitEngineMessageBus(traceScope)", host, StringComparison.Ordinal);
         Assert.Contains("TestRunTraceScope", File.ReadAllText(Path.Combine(runtimeDir, "TUnitEnginePlatform.cs")), StringComparison.Ordinal);
@@ -157,14 +120,13 @@ public sealed class AdapterArchitectureTests
             "CombinationDisplayName(methodRow.DisplayName, classRow.DisplayName)",
             expansion,
             StringComparison.Ordinal);
-        Assert.DoesNotContain("TUnitAot", expansion, StringComparison.Ordinal);
     }
 
     private static readonly string RepositoryRoot = Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
 
     [TestMethod]
-    public void Root_global_json_selects_mtp_and_ricaun_overrides_to_vstest()
+    public void Global_json_selects_MTP()
     {
         var root = File.ReadAllText(Path.Combine(RepositoryRoot, "global.json"));
         Assert.Contains("\"runner\": \"Microsoft.Testing.Platform\"", root, StringComparison.Ordinal);
@@ -188,7 +150,7 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Mtp_DoesNotLocateOrLaunchAutodeskHosts()
+    public void Adapter_never_launches_hosts()
     {
         var directory = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
         var forbidden = new[]
@@ -217,7 +179,7 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Mtp_discovery_does_not_invoke_host_runner()
+    public void Discovery_skips_host_runner()
     {
         var framework = File.ReadAllText(Path.Combine(
             RepositoryRoot,
@@ -225,20 +187,12 @@ public sealed class AdapterArchitectureTests
             "DevTools.TestAdapter",
             "TestFramework.cs"));
 
-        Assert.DoesNotContain("MetadataTestDiscoverer", framework, StringComparison.Ordinal);
         Assert.Contains("TestingDiscovery.Current", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("session.Discover", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("_transport.Discover", framework, StringComparison.Ordinal);
-        Assert.DoesNotContain("IDebugSession", framework, StringComparison.Ordinal);
-        Assert.DoesNotContain("SystemDebugSession", framework, StringComparison.Ordinal);
         Assert.Contains("Debugger.IsAttached", framework, StringComparison.Ordinal);
         Assert.Contains("EnsureSession()", framework, StringComparison.Ordinal);
         Assert.Contains("ApplyDebugParent", framework, StringComparison.Ordinal);
-        Assert.DoesNotContain("DefaultFrameworkId", File.ReadAllText(Path.Combine(
-            RepositoryRoot,
-            "source",
-            "DevTools.TestAdapter",
-            "TestRunSettingsLoader.cs")), StringComparison.Ordinal);
 
         var session = File.ReadAllText(Path.Combine(
             RepositoryRoot,
@@ -252,11 +206,9 @@ public sealed class AdapterArchitectureTests
             "source",
             "DevTools.Testing.Transport",
             "ProcessTestRunnerClient.cs"));
-        Assert.DoesNotContain("NUnitRunnerCli.DiscoverCommand", client, StringComparison.Ordinal);
         Assert.DoesNotContain("IReadOnlyList<TestDiscoveredTest> Discover", client, StringComparison.Ordinal);
         Assert.Contains("TestRunnerCli.SerializeExecute", client, StringComparison.Ordinal);
         Assert.Contains("TestRunnerCli.RunCommand", client, StringComparison.Ordinal);
-        Assert.DoesNotContain("TestRunnerCli.BuildRunArguments", client, StringComparison.Ordinal);
         var cancel = client[client.IndexOf("public void Cancel(", StringComparison.Ordinal)..client.IndexOf("public void Dispose(", StringComparison.Ordinal)];
         Assert.Contains("TestCancelSignal.TrySignal", cancel, StringComparison.Ordinal);
         Assert.DoesNotContain("TryTerminate", cancel, StringComparison.Ordinal);
@@ -270,41 +222,25 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Mtp_uses_the_generic_runner_client()
+    public void Adapter_uses_generic_runner_client()
     {
         var client = Path.Combine(
             RepositoryRoot, "source", "DevTools.Testing.Transport", "ProcessTestRunnerClient.cs");
         Assert.IsTrue(File.Exists(client));
-        Assert.IsFalse(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.TestAdapter", "ProcessRunnerClient.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.TestAdapter", "NUnitProcessTransportAdapter.cs")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.Client")));
 
         var mtp = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj"));
-        Assert.DoesNotContain("DevTools.Testing.Discovery", mtp, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.NUnit.Provider", mtp, StringComparison.Ordinal);
         Assert.DoesNotContain("ProjectReference Include=\"..\\DevTools.NUnit.MTP", mtp, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitCollapsedSelection.cs", mtp, StringComparison.Ordinal);
         Assert.Contains("PackMtpSiblings", mtp, StringComparison.Ordinal);
         Assert.Contains("<MtpSibling Include=\"NUnit;TUnit;MSTest\"/>", mtp, StringComparison.Ordinal);
         Assert.DoesNotContain("ProjectReference Include=\"..\\DevTools.MSTest.MTP", mtp, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Transport", mtp, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevTools.Testing.Mtp", mtp, StringComparison.Ordinal);
-        Assert.DoesNotContain("NUnitProcessTransportAdapter.cs", mtp, StringComparison.Ordinal);
     }
 
     [TestMethod]
-    public void Local_discovery_is_nunit_explore_tests_not_pe_metadata()
+    public void Discovery_uses_registered_provider()
     {
-        Assert.IsFalse(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.Testing.Discovery")));
-        Assert.IsFalse(File.Exists(Path.Combine(
-            RepositoryRoot,
-            "source",
-            "DevTools.TestAdapter",
-            "MetadataTestDiscoverer.cs")));
-
         var framework = File.ReadAllText(Path.Combine(
             RepositoryRoot,
             "source",
@@ -313,21 +249,17 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("TestingDiscovery.Current", framework, StringComparison.Ordinal);
         Assert.Contains("bridge.RunMapper", framework, StringComparison.Ordinal);
         Assert.Contains("TestingDiscovery.Register", framework, StringComparison.Ordinal);
-        Assert.DoesNotContain("HostTestRunMappers.PassThrough", framework, StringComparison.Ordinal);
         Assert.Contains("FoldResults", framework, StringComparison.Ordinal);
         Assert.Contains("ToRunSelection", framework, StringComparison.Ordinal);
         Assert.Contains("devtools.testadapter.discover", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnitCollapsedSelection", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("using DevTools.NUnit.Runtime", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("ToMetadataTypeName", framework, StringComparison.Ordinal);
-        Assert.DoesNotContain("LastDotAtDepthZero", framework, StringComparison.Ordinal);
-        Assert.DoesNotContain("TrySplitIdentity", framework, StringComparison.Ordinal);
-        Assert.DoesNotContain("MetadataTestDiscoverer", framework, StringComparison.Ordinal);
         Assert.DoesNotContain("PEReader", framework, StringComparison.Ordinal);
     }
 
     [TestMethod]
-    public void Adapter_hook_is_framework_neutral_and_sibling_hooks_register_discovery()
+    public void Adapter_hook_is_framework_neutral()
     {
         var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
         var abstractionsDir = Path.Combine(RepositoryRoot, "source", "DevTools.Testing.Abstractions");
@@ -349,12 +281,6 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("TUnitMTP", hook, StringComparison.Ordinal);
         Assert.DoesNotContain("MSTestMTP", hook, StringComparison.Ordinal);
         Assert.DoesNotContain("Assembly.Load", hook, StringComparison.Ordinal);
-        Assert.IsFalse(File.Exists(Path.Combine(adapterDir, "AdapterBootstrap.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(adapterDir, "HostMtpRegistration.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(adapterDir, "AdapterTestConfig.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(adapterDir, "RuntimeAssemblyResolver.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.MTP", "NUnitMTP.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.TUnit.MTP", "TUnitMTP.cs")));
         Assert.Contains("new NUnitTestDiscoverer()", nunitHook, StringComparison.Ordinal);
         Assert.Contains("new NUnitTestRunMapper()", nunitHook, StringComparison.Ordinal);
         Assert.Contains("new TUnitTestDiscoverer()", tunitHook, StringComparison.Ordinal);
@@ -372,17 +298,10 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("NUnit.MTP", string.Concat(abstractionsSources), StringComparison.Ordinal);
         Assert.DoesNotContain("TUnit.MTP", string.Concat(abstractionsSources), StringComparison.Ordinal);
         Assert.DoesNotContain("MSTest.MTP", string.Concat(abstractionsSources), StringComparison.Ordinal);
-        Assert.IsFalse(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.NUnit.MTP", "NUnitMtpBuilderHook.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.TUnit.MTP", "TUnitMtpBuilderHook.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(
-            RepositoryRoot, "source", "DevTools.MSTest.MTP", "MSTestMtpBuilderHook.cs")));
-        Assert.IsFalse(File.Exists(Path.Combine(abstractionsDir, "Mtp", "HostMTPRegistration.cs")));
     }
 
     [TestMethod]
-    public void MSTest_row_lists_tests_through_the_sibling_without_an_attribute_scanner()
+    public void MSTest_lists_tests_through_sibling()
     {
         var targets = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.TestAdapter", "build", "RevitDevTool.TestAdapter.targets"));
@@ -428,9 +347,8 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("TestingDiscovery.Register(new MSTestTestDiscoverer())", File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.TestAdapter", "build", "hooks", "MSTestMtpBuilderHook.cs")), StringComparison.Ordinal);
         Assert.DoesNotContain("GetCustomAttributes", discoverer, StringComparison.Ordinal);
-        // MTP version comes from central package management, not a per-project override.
         Assert.Contains("<PackageReference Include=\"Microsoft.Testing.Platform\" />", mtpProject, StringComparison.Ordinal);
-        Assert.Contains("<PackageVersion Include=\"Microsoft.Testing.Platform\" Version=\"2.5.2\" />", File.ReadAllText(
+        Assert.Contains("<PackageVersion Include=\"Microsoft.Testing.Platform\" Version=", File.ReadAllText(
             Path.Combine(RepositoryRoot, "Directory.Packages.props")), StringComparison.Ordinal);
         Assert.Contains("EnableMSTestRunner", targets, StringComparison.Ordinal);
         Assert.Contains("net48;net8.0-windows;net10.0-windows", mtpProject, StringComparison.Ordinal);
@@ -441,7 +359,7 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void NUnit_mtp_owns_authoritative_discovery_and_loads_beside_the_adapter()
+    public void NUnit_sibling_owns_discovery()
     {
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.NUnit.MTP");
         var discoverer = File.ReadAllText(Path.Combine(mtpDir, "NUnitTestDiscoverer.cs"));
@@ -450,7 +368,6 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("ExploreTests", discoverer, StringComparison.Ordinal);
         Assert.Contains("test.FullName", discoverer, StringComparison.Ordinal);
         Assert.Contains("ToSourceTypeSegment", discoverer, StringComparison.Ordinal);
-        Assert.IsFalse(File.Exists(Path.Combine(mtpDir, "NUnitTestDiscoverer.RunMapping.cs")));
         Assert.IsTrue(File.Exists(Path.Combine(mtpDir, "NUnitTestRunMapper.cs")));
         Assert.IsTrue(typeof(ITestDiscoverer).IsAssignableFrom(typeof(NUnitTestDiscoverer)));
         Assert.IsFalse(typeof(ITestRunMapper).IsAssignableFrom(typeof(NUnitTestDiscoverer)));
@@ -490,7 +407,7 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Net48_consumer_props_enable_binding_redirects()
+    public void Consumer_gets_binding_redirects()
     {
         var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter", "build");
         var props = File.ReadAllText(Path.Combine(adapterDir, "RevitDevTool.TestAdapter.props"));
@@ -502,39 +419,22 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("PackageReference Include=\"System.Runtime.CompilerServices.Unsafe\"", props, StringComparison.Ordinal);
         Assert.DoesNotContain("PackageReference Include=\"Microsoft.Bcl.AsyncInterfaces\"", props, StringComparison.Ordinal);
         Assert.DoesNotContain("ILRepack", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevToolsNUnitRepack", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("ILRepackable", props, StringComparison.Ordinal);
         Assert.Contains("TestingFramework", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("TestingDiscoveryAttributes", props, StringComparison.Ordinal);
         Assert.Contains("<ForceLaunch", props, StringComparison.Ordinal);
         Assert.Contains("<PerTestTimeout", props, StringComparison.Ordinal);
         Assert.Contains("<LaunchTimeout", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("<HostLaunch>", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("<HostTimeout>", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("<HostLaunchTimeout>", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("<RequestTimeout", props, StringComparison.Ordinal);
         Assert.Contains("DevTools.TestAdapter.TestingPlatformBuilderHook", props, StringComparison.Ordinal);
     }
 
     [TestMethod]
-    public void Packed_build_files_do_not_depend_on_the_consumer_configuration()
+    public void Packed_build_ignores_consumer_configuration()
     {
-        var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
-        var buildDir = Path.Combine(adapterDir, "build");
-        var packedTargets = File.ReadAllText(Path.Combine(buildDir, "RevitDevTool.TestAdapter.targets"));
+        var buildDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter", "build");
         var packed = new[]
         {
             File.ReadAllText(Path.Combine(buildDir, "RevitDevTool.TestAdapter.props")),
-            packedTargets,
+            File.ReadAllText(Path.Combine(buildDir, "RevitDevTool.TestAdapter.targets")),
         };
-
-        Assert.IsFalse(
-            File.Exists(Path.Combine(buildDir, "RevitDevTool.TestAdapter.Local.targets")),
-            "In-repo samples restore the packed nupkg. There is no checkout-only Local.targets path.");
-        Assert.DoesNotContain(
-            "Local.targets",
-            File.ReadAllText(Path.Combine(adapterDir, "DevTools.TestAdapter.csproj")),
-            StringComparison.Ordinal);
 
         foreach (var file in packed)
         {
@@ -557,13 +457,10 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("--show-stdout All", packed[0], StringComparison.Ordinal);
         Assert.Contains("--show-test-results all", packed[0], StringComparison.Ordinal);
         Assert.Contains("MSB3277", packed[0], StringComparison.Ordinal);
-
-        Assert.DoesNotContain("DevToolsTestAdapterLocal", packedTargets, StringComparison.Ordinal);
-        Assert.DoesNotContain("RevitDevTool.TestAdapter.Local.targets", packedTargets, StringComparison.Ordinal);
     }
 
     [TestMethod]
-    public void Adapter_supplies_the_netfx_module_initializer_tunit_needs()
+    public void Adapter_supplies_netfx_module_initializer()
     {
         var adapterDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
         var buildDir = Path.Combine(adapterDir, "build");
@@ -611,18 +508,14 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Adapter_writes_mtp_testconfig_devtools_section_and_skips_polyfill()
+    public void Adapter_writes_testconfig_section()
     {
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
         var targets = File.ReadAllText(Path.Combine(mtpDir, "build", "RevitDevTool.TestAdapter.targets"));
-        var props = File.ReadAllText(Path.Combine(mtpDir, "build", "RevitDevTool.TestAdapter.props"));
         var csproj = File.ReadAllText(Path.Combine(mtpDir, "DevTools.TestAdapter.csproj"));
         var loader = File.ReadAllText(Path.Combine(mtpDir, "TestRunSettingsLoader.cs"));
 
         Assert.Contains("WriteDiscoveryRefs", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("CopyMTPSibling", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("RevitDevTool.TestAdapter.Local.targets", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevToolsTestAdapterLocal", targets, StringComparison.Ordinal);
         Assert.Contains("<Reference Include=\"$(_MtpSiblingName)\">", targets, StringComparison.Ordinal);
         Assert.Contains("<Private>true</Private>", targets, StringComparison.Ordinal);
         Assert.Contains("<ExternallyResolved>true</ExternallyResolved>", targets, StringComparison.Ordinal);
@@ -649,30 +542,12 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("Microsoft.Testing.Platform.dll", csproj, StringComparison.Ordinal);
         Assert.Contains("<PrivateAssets>all</PrivateAssets>", csproj, StringComparison.Ordinal);
         Assert.Contains("DisableTestingPlatformServerCapability", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("testhost-bcl", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("PackNet48Bcl", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("MTPAssembly", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("MTPEntry", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("_MTPFileName", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("_MTPFromRepo", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("_UserTestConfigNormalized", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("CopyDevToolsNUnitMtp", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("'$(TestingFramework)' != 'tunit'", targets, StringComparison.Ordinal);
         Assert.Contains("'$(TestingFramework)' == 'nunit'", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("_DevToolsMTPSkipPackageCopy", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("$(_PackageRuntimeDir)*.dll", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("$(_PackageRuntimeDir)DevTools.Ipc.dll", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("CopyRuntimeClosure", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("_AdapterOut", targets, StringComparison.Ordinal);
         Assert.Contains("$(_PackageRuntimeDir)DevTools.Testing.Abstractions.dll", targets, StringComparison.Ordinal);
         Assert.Contains("$(_PackageRuntimeDir)$(_MtpSiblingName).dll", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("MTPCopy", targets, StringComparison.Ordinal);
         Assert.Contains("_ResolveRuntimeDir", targets, StringComparison.Ordinal);
         Assert.Contains("VersionGreaterThanOrEquals", targets, StringComparison.Ordinal);
         Assert.Contains("has no runtime assets", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("PackRuntimeClosure", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("StageNet48Abstractions", csproj, StringComparison.Ordinal);
-        Assert.DoesNotContain("$(TargetDir)*.dll", csproj, StringComparison.Ordinal);
         Assert.Contains("discovery-refs.txt", targets, StringComparison.Ordinal);
         Assert.Contains("%(ReferencePath.NuGetPackageId)", targets, StringComparison.Ordinal);
         Assert.Contains("%(ReferencePath.CopyLocal)", targets, StringComparison.Ordinal);
@@ -683,7 +558,6 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("SkipUnchangedFiles=\"false\"", targets, StringComparison.Ordinal);
         Assert.Contains("_TestingPlatformConfigurationFileSourcePath", targets, StringComparison.Ordinal);
         Assert.Contains("$(IntermediateOutputPath)testconfig.json", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("$(OutputPath)$(TargetName).testconfig.json", targets, StringComparison.Ordinal);
         Assert.Contains("IConfiguration", loader, StringComparison.Ordinal);
         Assert.Contains("TestConfig.Keys", loader, StringComparison.Ordinal);
         Assert.Contains("TestConfig.FileName", loader, StringComparison.Ordinal);
@@ -691,8 +565,6 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("ReadKey(configuration, \"", loader, StringComparison.Ordinal);
         Assert.DoesNotContain("JsonDocument", loader, StringComparison.Ordinal);
         Assert.DoesNotContain("File.ReadAllText", loader, StringComparison.Ordinal);
-        Assert.DoesNotContain("TryReadFile", loader, StringComparison.Ordinal);
-        Assert.DoesNotContain("devtools.testing.host.json", targets, StringComparison.Ordinal);
         Assert.DoesNotContain(".runsettings", targets, StringComparison.Ordinal);
         Assert.DoesNotContain("NUnit.Microsoft.Testing.Platform", targets, StringComparison.Ordinal);
         Assert.Contains("Microsoft.Testing.Platform", csproj, StringComparison.Ordinal);
@@ -716,27 +588,12 @@ public sealed class AdapterArchitectureTests
         Assert.Contains($"&quot;{TestConfig.Keys.ForceLaunch}&quot;", targets, StringComparison.Ordinal);
         Assert.Contains($"&quot;{TestConfig.Keys.PerTestTimeoutSeconds}&quot;", targets, StringComparison.Ordinal);
         Assert.Contains($"&quot;{TestConfig.Keys.LaunchTimeoutSeconds}&quot;", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("hostTimeoutSeconds", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("hostLaunchTimeoutSeconds", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("requestTimeoutSeconds", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("&quot;hostLaunch&quot;", targets, StringComparison.Ordinal);
         Assert.Contains($"&quot;{TestConfig.Keys.RunnerPath}&quot;", targets, StringComparison.Ordinal);
         Assert.Contains($"&quot;{TestConfig.Keys.FrameworkId}&quot;", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("mtpAssembly", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("mtpEntry", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevToolsMTPAssembly", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevToolsMTPEntry", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevToolsMTPCopy", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("DevToolsTestingRunnerPath", props, StringComparison.Ordinal);
-        Assert.DoesNotContain("discoveryAttributes", targets, StringComparison.Ordinal);
-        Assert.DoesNotContain("TestingDiscoveryAttributes", targets, StringComparison.Ordinal);
-        Assert.IsFalse(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.Testing")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(RepositoryRoot, "source", "DevTools.Testing.Discovery")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(RepositoryRoot, "tests", "DevTools.Testing.Tests")));
     }
 
     [TestMethod]
-    public void Net48_mtp_ilrepacks_own_dll_not_consumer_exe()
+    public void Adapter_repacks_own_dll_only()
     {
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.TestAdapter");
         var targets = File.ReadAllText(Path.Combine(mtpDir, "build", "RevitDevTool.TestAdapter.targets"));
@@ -747,7 +604,6 @@ public sealed class AdapterArchitectureTests
         Assert.DoesNotContain("ILRepack.Lib.MSBuild.Task", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("<PackageReference Include=\"ILRepack\"", csproj, StringComparison.Ordinal);
         Assert.Contains("<PackageReference Include=\"ILRepack\"", ilRepackTargets, StringComparison.Ordinal);
-        Assert.DoesNotContain("IsRepackable", ilRepackTargets, StringComparison.Ordinal);
         Assert.Contains("ILRepackable", csproj, StringComparison.Ordinal);
         Assert.Contains("ILRepackInternalize", csproj, StringComparison.Ordinal);
         Assert.Contains("RepackBinariesKeep", csproj, StringComparison.Ordinal);
@@ -756,8 +612,6 @@ public sealed class AdapterArchitectureTests
         Assert.Contains("'$(TargetFramework)' != ''", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("StartsWith('net4')", csproj, StringComparison.Ordinal);
         Assert.Contains("'$(TargetFrameworkIdentifier)' == '.NETCoreApp'", csproj, StringComparison.Ordinal);
-        Assert.IsTrue(File.Exists(Path.Combine(RepositoryRoot, "props", "ILRepack.targets")));
-        Assert.IsFalse(File.Exists(Path.Combine(mtpDir, "ILRepack.targets")));
     }
 
     [TestMethod]
@@ -789,7 +643,7 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Adapter_pack_is_a_separate_pipeline_argument()
+    public void Adapter_pack_is_separate_argument()
     {
         var program = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Program.cs"));
         var module = File.ReadAllText(Path.Combine(

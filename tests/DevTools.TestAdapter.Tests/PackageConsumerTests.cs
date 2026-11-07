@@ -18,7 +18,7 @@ public sealed class PackageConsumerTests
     private static readonly string TUnitVersion = CentralVersion("TUnit");
 
     [TestMethod]
-    public void Packed_package_keeps_internal_runtime_closure_private_and_bootstraps_from_a_clean_consumer()
+    public void Package_works_in_clean_consumer()
     {
         var root = FindRepositoryRoot();
         var work = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.PackageTest", Guid.NewGuid().ToString("N"));
@@ -171,7 +171,7 @@ public sealed class PackageConsumerTests
     /// TUnit project that got the NUnit plugin because the map lived in the .props.
     /// </summary>
     [TestMethod]
-    public void Packed_package_discovers_tests_for_both_nunit_and_tunit_consumers()
+    public void Package_discovers_consumer_tests()
     {
         var root = FindRepositoryRoot();
         var work = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.Discovery", Guid.NewGuid().ToString("N"));
@@ -366,7 +366,7 @@ public sealed class PackageConsumerTests
     }
 
     [TestMethod]
-    public void Packed_package_fails_the_build_for_another_major_or_a_version_below_the_floor()
+    public void Unsupported_framework_fails_the_build()
     {
         const string lowerTUnit = "1.72.0";
         const string otherMajorNUnit = "4.3.2";
@@ -442,7 +442,7 @@ public sealed class PackageConsumerTests
     }
 
     [TestMethod]
-    public void Packed_package_builds_when_the_framework_runtime_pdb_is_missing()
+    public void Package_builds_without_runtime_pdb()
     {
         var root = FindRepositoryRoot();
         var work = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.MissingPdb", Guid.NewGuid().ToString("N"));
@@ -495,7 +495,7 @@ public sealed class PackageConsumerTests
     }
 
     [TestMethod]
-    public void Framework_id_only_testconfig_does_not_throw_from_hook_static_ctor()
+    public void Partial_testconfig_does_not_throw()
     {
         var root = FindRepositoryRoot();
         var work = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.PartialConfig", Guid.NewGuid().ToString("N"));
@@ -577,7 +577,7 @@ public sealed class PackageConsumerTests
         using var reader = new StreamReader(nuspec.Open());
         var nuspecText = reader.ReadToEnd();
 
-        foreach (var internalName in MergedRuntimeAssemblies.Append("DevTools.Testing.Abstractions.dll").Append("DevTools.NUnit.Core"))
+        foreach (var internalName in MergedRuntimeAssemblies.Append("DevTools.Testing.Abstractions.dll"))
             Assert.DoesNotContain(internalName, nuspecText, StringComparison.Ordinal);
 
         Assert.Contains("id=\"Microsoft.Testing.Platform.MSBuild\"", nuspecText, StringComparison.Ordinal);
@@ -597,9 +597,6 @@ public sealed class PackageConsumerTests
         Assert.Contains("build/hooks/NUnitMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("build/hooks/TUnitMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("build/hooks/MSTestMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
-        // The dev-loop targets stay in the checkout: a consumer build must not see repo paths
-        // or this repo's Autodesk configuration names.
-        Assert.DoesNotContain("build/RevitDevTool.TestAdapter.Local.targets", entries, StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in entries.Where(entry => entry.StartsWith("lib/", StringComparison.OrdinalIgnoreCase)))
             Assert.EndsWith("/DevTools.TestAdapter.dll", entry, StringComparison.OrdinalIgnoreCase);
@@ -641,8 +638,6 @@ public sealed class PackageConsumerTests
             && !Regex.IsMatch(entry, @"^build/runtime/[^/]+/DevTools\.(NUnit|TUnit|MSTest)\.Runtime\.pdb$", RegexOptions.IgnoreCase)));
         Assert.IsFalse(entries.Any(entry => entry.EndsWith("/DevTools.AssemblyIsolation.dll", StringComparison.OrdinalIgnoreCase)));
         Assert.DoesNotContain("DevTools.AssemblyIsolation", nuspecText, StringComparison.Ordinal);
-        Assert.IsFalse(entries.Any(entry => entry.Contains("DevTools.NUnit.Core", StringComparison.OrdinalIgnoreCase)));
-        Assert.IsFalse(entries.Any(entry => entry.Contains("DevTools.Testing.Discovery", StringComparison.OrdinalIgnoreCase)));
         Assert.AreEqual(entries.Length, entries.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 

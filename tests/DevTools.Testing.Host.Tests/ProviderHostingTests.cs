@@ -10,7 +10,7 @@ namespace DevTools.Testing.Host.Tests;
 public sealed class ProviderHostingTests
 {
     [TestMethod]
-    public void Provider_descriptor_count_is_independent_of_registration_order()
+    public void Provider_count_ignores_registration_order()
     {
         var nunitFirst = CountProviderDescriptors(services =>
         {
@@ -35,7 +35,7 @@ public sealed class ProviderHostingTests
     }
 
     [TestMethod]
-    public void Acad_style_registration_resolves_both_providers()
+    public void Host_registration_resolves_every_provider()
     {
         var services = new ServiceCollection();
         services.AddTestingHostServices();
@@ -49,21 +49,7 @@ public sealed class ProviderHostingTests
     }
 
     [TestMethod]
-    public void Revit_style_registration_resolves_both_providers()
-    {
-        var services = new ServiceCollection();
-        services.AddTestingHostServices();
-
-        using var provider = services.BuildServiceProvider();
-        var registry = provider.GetRequiredService<TestingProviderRegistry>();
-
-        Assert.AreEqual(TestFrameworkId.NUnit, registry.GetRequired(TestFrameworkId.NUnit).FrameworkId);
-        Assert.AreEqual(TestFrameworkId.TUnit, registry.GetRequired(TestFrameworkId.TUnit).FrameworkId);
-        Assert.AreEqual(TestFrameworkId.MSTest, registry.GetRequired(TestFrameworkId.MSTest).FrameworkId);
-    }
-
-    [TestMethod]
-    public void Provider_registration_does_not_expose_unkeyed_kernel_singletons()
+    public void Registration_hides_kernel_singletons()
     {
         var services = new ServiceCollection();
         services.AddNUnitHostServices();

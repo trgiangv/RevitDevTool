@@ -10,7 +10,6 @@
         <InternalsVisibleTo Include="DevTools.Testing.Host.Tests"/>
         <InternalsVisibleTo Include="DevTools.NUnit.Host.Tests"/>
         <InternalsVisibleTo Include="DevTools.NUnit.Host.NetFramework.Tests"/>
-        <InternalsVisibleTo Include="DevTools.TUnit.Host.Tests"/>
         <InternalsVisibleTo Include="NetFrameworkGenerationProbe"/>
         <ProjectReference Include="..\DevTools.Testing.Abstractions\DevTools.Testing.Abstractions.csproj"/>
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj"/>

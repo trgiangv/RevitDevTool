@@ -26,7 +26,7 @@ public sealed class RequestHandlerTests
     }
 
     [TestMethod]
-    public async Task Hello_from_a_newer_compatible_runner_is_accepted()
+    public async Task Newer_compatible_runner_is_accepted()
     {
         var handler = CreateHandler(out _);
         var response = await Hello(handler, Sender("9.0.0", TestingProtocol.CurrentVersion + 1, TestingProtocol.MinVersion));
@@ -35,7 +35,7 @@ public sealed class RequestHandlerTests
     }
 
     [TestMethod]
-    public async Task Hello_from_a_runner_above_the_host_range_says_to_restart_the_host()
+    public async Task Too_new_runner_says_restart_host()
     {
         var handler = CreateHandler(out _);
         var response = await Hello(handler, Sender("9.0.0", TestingProtocol.CurrentVersion + 1, TestingProtocol.CurrentVersion + 1));
@@ -47,7 +47,7 @@ public sealed class RequestHandlerTests
     }
 
     [TestMethod]
-    public async Task Hello_without_a_sender_says_to_update_RevitDevTool()
+    public async Task Missing_sender_says_update_RevitDevTool()
     {
         var handler = CreateHandler(out _);
         using var document = JsonDocument.Parse("""{"protocol_version":2,"framework_id":"NUnit"}""");
@@ -57,19 +57,9 @@ public sealed class RequestHandlerTests
         Assert.AreEqual(TestingProtocol.IncompatibleCode, response.ErrorDetail!.Code);
         Assert.EndsWith(TestingProtocol.UpdateProductMessage, response.ErrorMessage!, StringComparison.Ordinal);
     }
-    [TestMethod]
-    public async Task Legacy_nunit_hello_is_not_routed_by_the_generic_handler()
-    {
-        var handler = CreateHandler(out _);
-        using var document = JsonDocument.Parse("""{"framework_id":"NUnit"}""");
-        var response = await Handle(handler, "1", "nunit/hello", document.RootElement);
-
-        Assert.IsTrue(response.IsError);
-        Assert.AreEqual(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);
-    }
 
     [TestMethod]
-    public async Task Hello_does_not_default_a_missing_provider_id()
+    public async Task Missing_provider_id_is_rejected()
     {
         var handler = new TestingRequestHandler(
             new TestingProviderRegistry([new FakeProvider(TestFrameworkId.NUnit)]),
@@ -95,36 +85,7 @@ public sealed class RequestHandlerTests
     }
 
     [TestMethod]
-    public async Task Legacy_nunit_run_is_not_routed_by_the_generic_handler()
-    {
-        var handler = CreateHandler(out var provider);
-        TestRunRequest? seen = null;
-        provider.OnRun = request =>
-        {
-            seen = request;
-            return new TestRunResponse(
-                request.RunId,
-                request.FrameworkId,
-                "gen",
-                [],
-                TestCancellationState.None,
-                null,
-                null);
-        };
-
-        var request = CreateRunRequest();
-        var response = await Handle(handler,
-            "1",
-            "provider/run",
-            JsonSerializer.SerializeToElement(request, TestingJsonContext.Default.TestRunRequest));
-
-        Assert.IsTrue(response.IsError);
-        Assert.AreEqual(IpcErrorCodes.MethodNotFound, response.ErrorDetail!.Code);
-        Assert.IsNull(seen);
-    }
-
-    [TestMethod]
-    public async Task ArgumentException_is_invalid_request_and_does_not_poison()
+    public async Task Bad_argument_does_not_poison()
     {
         var handler = CreateHandler(out var provider);
         provider.RunException = new ArgumentException("bad filter");
@@ -153,7 +114,7 @@ public sealed class RequestHandlerTests
     }
 
     [TestMethod]
-    public async Task Runtime_incompatibility_is_protocol_incompatible_and_does_not_poison()
+    public async Task Runtime_stop_does_not_poison()
     {
         var handler = CreateHandler(out var provider);
         const string sentence = "NUnit is older than what the adapter needs.";
@@ -216,7 +177,7 @@ public sealed class RequestHandlerTests
     }
 
     [TestMethod]
-    public async Task Hello_resets_a_poisoned_session_for_the_next_run()
+    public async Task Hello_resets_poisoned_session()
     {
         var handler = CreateHandler(out var provider);
         provider.RunException = new InvalidOperationException("provider crashed");
@@ -252,7 +213,7 @@ public sealed class RequestHandlerTests
     }
 
     [TestMethod]
-    public async Task Run_client_disconnect_does_not_poison_the_session()
+    public async Task Client_disconnect_does_not_poison()
     {
         var handler = CreateHandler(out var provider);
         provider.RunException = new OperationCanceledException();

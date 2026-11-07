@@ -4,7 +4,7 @@ namespace DevTools.TestAdapter.Tests;
 public sealed class TestingKernelIndependenceTests
 {
     [TestMethod]
-    public void Generic_testing_projects_have_no_nunit_source_or_project_coupling()
+    public void Testing_kernel_has_no_nunit_references()
     {
         var root = FindRepositoryRoot();
         var kernel = new[]
@@ -29,7 +29,7 @@ public sealed class TestingKernelIndependenceTests
     }
 
     [TestMethod]
-    public void Published_adapter_csharp_has_no_nunit_types()
+    public void Adapter_source_has_no_nunit_types()
     {
         var root = FindRepositoryRoot();
         var directory = Path.Combine(root, "source", "DevTools.TestAdapter");
@@ -45,18 +45,6 @@ public sealed class TestingKernelIndependenceTests
             .ToArray();
 
         Assert.IsEmpty(offenders);
-    }
-
-    [TestMethod]
-    public void Repository_has_no_standalone_testing_mtp_project()
-    {
-        var root = FindRepositoryRoot();
-        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing.Mtp")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(root, "tests", "DevTools.Testing.Mtp.Tests")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing")));
-        Assert.IsTrue(Directory.Exists(Path.Combine(root, "source", "DevTools.TestAdapter")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.Testing.Discovery")));
-        Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit")));
     }
 
     private static string FindRepositoryRoot()

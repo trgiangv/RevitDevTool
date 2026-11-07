@@ -108,7 +108,7 @@ The two packed files must stay free of consumer build settings: no
 `<RuntimeIdentifier>`, no `ProjectReference`. The package does set
 `AppendRuntimeIdentifierToOutputPath=false` so a leftover consumer RID
 does not nest testhost output under `win-x64`.
-`Packed_build_files_do_not_depend_on_the_consumer_configuration`
+`Packed_build_ignores_consumer_configuration`
 (TestAdapter.Tests) enforces that, and `AssertPackageClosure` asserts the nupkg
 ships `build/RevitDevTool.TestAdapter.props|targets`, the net4x source shim
 `build/netfx/ModuleInitializerAttribute.cs`, and `build/hooks/*MtpBuilderHook.cs`.

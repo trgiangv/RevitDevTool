@@ -117,7 +117,7 @@ public sealed class NUnitRuntimeSessionOutputTests
     }
 
     [TestMethod]
-    public void Run_with_the_run_nothing_filter_runs_nothing()
+    public void Run_nothing_filter_runs_nothing()
     {
         using var session = FixtureTestHarness.CreateSession();
         var response = session.Run(
@@ -129,7 +129,7 @@ public sealed class NUnitRuntimeSessionOutputTests
     }
 
     [TestMethod]
-    public void Run_reports_the_source_location_of_an_async_test()
+    public void Async_test_has_source_location()
     {
         using var session = FixtureTestHarness.CreateSession();
         var response = session.Run(

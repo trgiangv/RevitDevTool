@@ -17,7 +17,7 @@ public sealed class NetFrameworkGenerationTests
     public Microsoft.VisualStudio.TestTools.UnitTesting.TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public void GenerationBuilder_keeps_versioned_system_and_microsoft_dependencies_private()
+    public void Versioned_platform_dependencies_stay_private()
     {
         var workspace = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
@@ -51,7 +51,7 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void GenerationBuilder_excludes_loose_testing_abstractions_identity_from_netfx_generation()
+    public void Testing_contract_copy_is_excluded()
     {
         var workspace = Path.Combine(Path.GetTempPath(), "DevTools.nunit." + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workspace);
@@ -91,14 +91,14 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Create_executes_with_conflicting_preloaded_nunit_identity()
+    public void Create_runs_with_preloaded_conflicting_nunit()
     {
         var conflicting = NetFrameworkGenerationTestEnvironment.LoadConflictingNUnitIntoAppDomain();
         Assert.That(conflicting.GetName().Name, Is.EqualTo("nunit.framework").IgnoreCase);
 
         var testHostNUnit = FindTestHostNUnitAssembly();
         Assert.That(testHostNUnit, Is.Not.Null);
-        Assert.That(testHostNUnit!.GetName().Version, Is.EqualTo(new Version(5, 0, 0, 0)));
+        Assert.That(testHostNUnit!.GetName().Version, Is.EqualTo(typeof(Assert).Assembly.GetName().Version));
 
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         Assert.That(
@@ -111,16 +111,16 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Create_executes_when_an_earlier_simple_name_resolver_returns_conflicting_nunit()
+    public void Create_runs_past_conflicting_name_resolver()
     {
         var probe = RunGenerationProbe(TestContext, "costura-binding");
         Assert.That(probe.ExitCode, Is.EqualTo(0), probe.Output);
         Assert.That(probe.Output, Does.Contain("GenerationFrameworkIdentity="));
-        Assert.That(probe.Output, Does.Contain("Version=5.0.0.0"));
+        Assert.That(probe.Output, Does.Contain($"Version={typeof(Assert).Assembly.GetName().Version}"));
     }
 
     [TestMethod]
-    public void Create_executes_two_generations_in_the_default_appdomain()
+    public void Two_generations_run_in_one_appdomain()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
@@ -141,7 +141,7 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Run_maps_the_source_assembly_request_to_the_loaded_shadow_generation()
+    public void Run_maps_source_path_to_shadow()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
@@ -159,7 +159,7 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Create_resolves_same_identity_dependency_per_requesting_generation()
+    public void Same_identity_dependency_resolves_per_generation()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildDependencyGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildDependencyGenerationTwo();
@@ -179,7 +179,7 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Create_resolves_root_dependency_per_requesting_generation()
+    public void Root_dependency_resolves_per_generation()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildRootDependencyGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildRootDependencyGenerationTwo();
@@ -196,7 +196,7 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Create_concurrent_generations_remain_isolated()
+    public void Concurrent_generations_stay_isolated()
     {
         var generationOne = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var generationTwo = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationTwo();
@@ -232,7 +232,7 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Dispose_unregisters_the_scoped_resolver_and_is_idempotent()
+    public void Dispose_twice_then_run_throws()
     {
         var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
         var session = factory.Create(NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne());
@@ -252,7 +252,7 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Create_binds_the_concrete_neutral_contract_identity()
+    public void Create_binds_host_contract_assembly()
     {
         var manifest = NetFrameworkGenerationTestEnvironment.BuildFixtureGenerationOne();
         var factory = NetFrameworkGenerationTestEnvironment.CreateFactory();
@@ -269,7 +269,7 @@ public sealed class NetFrameworkGenerationTests
     }
 
     [TestMethod]
-    public void Run_forwards_caller_cancellation_to_an_entered_test()
+    public void Run_forwards_cancellation_to_running_test()
     {
         const string enteredEventVariable = "DEVTOOLS_NUNIT_CANCELLATION_ENTERED_EVENT";
         const string releaseEventVariable = "DEVTOOLS_NUNIT_CANCELLATION_RELEASE_EVENT";

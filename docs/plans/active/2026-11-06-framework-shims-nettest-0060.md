@@ -423,8 +423,7 @@ the user's closure are proved in P2 and P3.
     and nothing reads them.
 - 2026-11-07 P5 (compile and unit tests, no host):
   - The three `*GenerationPolicy` classes differed only in the framework id, so they collapsed
-    into `OutputGeneration(TestFrameworkId)`. Provider registration now dedupes by framework id,
-    and the kept `*GenerationPolicyTests` classes keep their names.
+    into `OutputGeneration(TestFrameworkId)`. Provider registration now dedupes by framework id.
   - `ManifestRuntimeSessionFactory`, `TestingGenerationFiles.MergeFile`, `ContentEquals`, and
     `TryGetFileVersion` had no user left and went too. `explainFailure` is now required, because
     `OutputSessionFactory` is the only caller.

@@ -4,7 +4,7 @@ using System.Reflection;
 namespace DevTools.Testing.Abstractions.Runtime;
 
 /// <summary>
-/// The one place that reaches into a pinned framework's non-public members (MTP, TUnit
+/// The one place that reaches into the user's framework's non-public members (MTP, TUnit
 /// engine, NUnit). Every lookup is cached, so a run pays for reflection once per
 /// process, and every miss names the member and the assembly version, so a framework
 /// bump fails with one actionable message instead of a null reference deep in a run.

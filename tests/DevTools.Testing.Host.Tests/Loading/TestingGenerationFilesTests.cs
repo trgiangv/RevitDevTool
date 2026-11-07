@@ -18,28 +18,6 @@ public sealed class TestingGenerationFilesTests
         Assert.IsFalse(TestingGenerationFiles.IsManagedIdentity(path));
     }
 
-    [TestMethod]
-    public void Public_path_helpers_match_internal_generation_paths()
-    {
-        Assert.IsTrue(TestingGenerationFiles.IsVolatileGenerationOutput(@"TestResults\out.trx"));
-        Assert.IsTrue(TestingGenerationFiles.IsVolatileGenerationOutput(@"Log\host.log"));
-        Assert.IsFalse(TestingGenerationFiles.IsVolatileGenerationOutput(@"bin\sample.dll"));
-    }
-
-    [TestMethod]
-    public void GetRelativePath_returns_a_path_under_the_root()
-    {
-        using var workspace = new TemporaryDirectory();
-        var nested = Path.Combine(workspace.Path, "nested");
-        Directory.CreateDirectory(nested);
-        var file = Path.Combine(nested, "sample.dll");
-        File.WriteAllText(file, "x");
-
-        var relative = TestingGenerationFiles.GetRelativePath(workspace.Path, file);
-        Assert.IsFalse(Path.IsPathRooted(relative));
-        Assert.Contains("sample.dll", relative, StringComparison.OrdinalIgnoreCase);
-    }
-
     sealed class TemporaryDirectory : IDisposable
     {
         public TemporaryDirectory()

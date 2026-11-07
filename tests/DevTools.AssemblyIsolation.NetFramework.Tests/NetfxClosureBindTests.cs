@@ -245,7 +245,7 @@ public sealed class NetfxClosureBindTests
     }
 
     [TestMethod]
-    public void Session_answers_a_shared_assembly_only_when_it_shares_with_its_closure()
+    public void Shared_assembly_binds_only_with_closure()
     {
         using var directory = new TemporaryDirectory();
         var library = UniqueLibraryName();

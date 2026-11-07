@@ -13,27 +13,14 @@ using System.Text.Json;
 namespace DevTools.Testing.Host.Tests;
 
 [TestClass]
-public sealed class MSTestGenerationPolicyTests
+public sealed class OutputRunTests
 {
     private const string FrameworkNamespace = "Microsoft.VisualStudio.TestTools.UnitTesting";
     private static readonly Version Floor = new(4, 5, 0, 0);
     private static readonly Version Newer = new(4, 6, 0, 0);
 
     [TestMethod]
-    public void Plan_takes_the_runtime_and_framework_from_the_output_only()
-    {
-        using var workspace = new Workspace();
-        workspace.WriteOutput();
-
-        var plan = new OutputGeneration(TestFrameworkId.MSTest).CreatePlan(workspace.ConsumerPath);
-
-        var sources = plan.Files.Select(file => Path.GetDirectoryName(file.SourcePath)).Distinct().ToList();
-        CollectionAssert.AreEqual(new[] { workspace.Output }, sources);
-        Assert.AreEqual("DevTools.MSTest.Runtime.dll", plan.RuntimeAssemblyRelativePath);
-    }
-
-    [TestMethod]
-    public void Run_binds_a_newer_user_framework_to_the_runtime_and_activates_the_manifest_entry()
+    public void Run_binds_newer_user_framework()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput(found: Newer);
@@ -45,7 +32,7 @@ public sealed class MSTestGenerationPolicyTests
     }
 
     [TestMethod]
-    public void No_manifest_stops_before_anything_is_published()
+    public void No_manifest_publishes_nothing()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput();
@@ -60,7 +47,7 @@ public sealed class MSTestGenerationPolicyTests
     }
 
     [TestMethod]
-    public void Framework_below_the_floor_stops_before_anything_is_published()
+    public void Old_framework_publishes_nothing()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput(found: new Version(Floor.Major, Floor.Minor - 1, 0, 0));
@@ -74,7 +61,7 @@ public sealed class MSTestGenerationPolicyTests
     }
 
     [TestMethod]
-    public void Bind_failure_during_activation_is_the_one_sentence_stop()
+    public void Activation_bind_failure_stops_with_sentence()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput(found: Newer, constructorBody: "Gone();", frameworkHasGone: false);
@@ -87,7 +74,7 @@ public sealed class MSTestGenerationPolicyTests
     }
 
     [TestMethod]
-    public void Bind_failure_during_a_run_is_the_one_sentence_stop()
+    public void Run_bind_failure_stops_with_sentence()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput(found: Newer, runBody: "Gone();", frameworkHasGone: false);
@@ -100,7 +87,7 @@ public sealed class MSTestGenerationPolicyTests
     }
 
     [TestMethod]
-    public void Other_failures_during_a_run_keep_their_type()
+    public void Other_run_failures_keep_type()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput(runBody: "throw new System.InvalidOperationException(\"MSTest.TestFramework failed.\");");
@@ -111,7 +98,7 @@ public sealed class MSTestGenerationPolicyTests
     }
 
     [TestMethod]
-    public async Task A_stop_is_ProtocolIncompatible_and_the_next_run_works()
+    public async Task Stop_does_not_block_next_run()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput();
@@ -135,7 +122,7 @@ public sealed class MSTestGenerationPolicyTests
     }
 
     [TestMethod]
-    public void The_isolation_plan_reports_to_the_logger()
+    public void Isolation_plan_reaches_logger()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput(found: Newer);
@@ -150,7 +137,7 @@ public sealed class MSTestGenerationPolicyTests
     }
 
     [TestMethod]
-    public void Runtime_built_on_the_shipped_abstractions_runs_on_the_current_abstractions()
+    public void Runtime_on_shipped_abstractions_still_runs()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput(abstractionsReference: workspace.EmitShippedAbstractions());
@@ -186,7 +173,7 @@ public sealed class MSTestGenerationPolicyTests
 
     private sealed class Workspace : IDisposable
     {
-        private readonly string _root = Path.Combine(Path.GetTempPath(), $"mstest-generation-{Guid.NewGuid():N}");
+        private readonly string _root = Path.Combine(Path.GetTempPath(), $"output-run-{Guid.NewGuid():N}");
 
         public Workspace()
         {
@@ -230,7 +217,7 @@ public sealed class MSTestGenerationPolicyTests
                 Path.Combine(Output, "DevTools.MSTest.Runtime.dll"),
                 "DevTools.MSTest.Runtime",
                 "1.0.0.0",
-                RuntimeSource(constructorBody, runBody ?? string.Empty),
+                SessionSource(constructorBody, runBody ?? string.Empty),
                 reference,
                 abstractionsReference ?? typeof(ITestingRuntimeSession).Assembly.Location);
 
@@ -292,7 +279,7 @@ public sealed class MSTestGenerationPolicyTests
               }
               """;
 
-        private static string RuntimeSource(string constructorBody, string runBody) =>
+        private static string SessionSource(string constructorBody, string runBody) =>
             $$"""
               using DevTools.Testing.Abstractions.Contracts;
               using DevTools.Testing.Abstractions.Runtime;

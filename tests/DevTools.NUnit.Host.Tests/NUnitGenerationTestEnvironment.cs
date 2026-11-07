@@ -8,8 +8,6 @@ namespace DevTools.NUnit.Host.Tests;
 
 internal static class NUnitGenerationTestEnvironment
 {
-    private const string GenerationOneMarker = "generation-one";
-    private const string GenerationTwoMarker = "generation-two";
     private const string RuntimeFileName = "DevTools.NUnit.Runtime";
 
     public const string FrameworkFileName = "nunit.framework.dll";
@@ -67,67 +65,6 @@ internal static class NUnitGenerationTestEnvironment
     public static string CreateGenerationOneAssembly(string parentDirectory, string folderName) =>
         CreateFixtureWorkspace(parentDirectory, folderName);
 
-    public static string CreateGenerationTwoAssembly(string parentDirectory, string folderName)
-    {
-        var assemblyPath = CreateFixtureWorkspace(parentDirectory, folderName);
-        PatchGenerationMarker(assemblyPath, GenerationTwoMarker);
-        return assemblyPath;
-    }
-
-    public static string BuildFixtureGeneration(
-        string parentDirectory,
-        string folderName,
-        string generationMarker)
-    {
-        var outputDirectory = Path.Combine(parentDirectory, folderName);
-        Directory.CreateDirectory(outputDirectory);
-
-        var projectPath = Path.Combine(
-            RepositoryRoot,
-            "tests",
-            "DevTools.NUnit.Runtime.Fixtures",
-            "DevTools.NUnit.Runtime.Fixtures.csproj");
-        var startInfo = new ProcessStartInfo("dotnet")
-        {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        startInfo.ArgumentList.Add("build");
-        startInfo.ArgumentList.Add(projectPath);
-        startInfo.ArgumentList.Add("-c");
-        startInfo.ArgumentList.Add("Debug");
-        startInfo.ArgumentList.Add("-f");
-        startInfo.ArgumentList.Add("net10.0-windows");
-        startInfo.ArgumentList.Add("--no-restore");
-        startInfo.ArgumentList.Add($"-p:OutputPath={outputDirectory}");
-        startInfo.ArgumentList.Add("-p:AppendTargetFrameworkToOutputPath=false");
-        startInfo.ArgumentList.Add($"-p:GenerationMarker={generationMarker}");
-
-        using var process = Process.Start(startInfo)
-            ?? throw new InvalidOperationException("Failed to start dotnet build for the NUnit fixture.");
-        var standardOutput = process.StandardOutput.ReadToEndAsync();
-        var standardError = process.StandardError.ReadToEndAsync();
-
-        if (!process.WaitForExit((int)TimeSpan.FromSeconds(60).TotalMilliseconds))
-        {
-            process.Kill(entireProcessTree: true);
-            throw new TimeoutException("Timed out rebuilding the NUnit fixture generation.");
-        }
-
-        var output = standardOutput.GetAwaiter().GetResult();
-        var error = standardError.GetAwaiter().GetResult();
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidOperationException(
-                $"NUnit fixture generation build failed with exit code {process.ExitCode}.{Environment.NewLine}" +
-                output + Environment.NewLine + error);
-        }
-
-        return Path.Combine(outputDirectory, "DevTools.NUnit.Runtime.Fixtures.dll");
-    }
-
     public static NUnitGenerationHarness CreateBuilder(string generationsRoot) =>
         new(new TestingGenerationStore(generationsRoot), new OutputGeneration(TestFrameworkId.NUnit));
 
@@ -140,25 +77,6 @@ internal static class NUnitGenerationTestEnvironment
         ReplaceAll(bytes, Encoding.Unicode.GetBytes(original), Encoding.Unicode.GetBytes(patched));
         File.WriteAllBytes(assemblyPath, bytes);
         return patched;
-    }
-
-    public static void PatchGenerationMarker(string assemblyPath, string marker)
-    {
-        var original = Encoding.Unicode.GetBytes(GenerationOneMarker);
-        var replacement = Encoding.Unicode.GetBytes(marker);
-        if (replacement.Length != original.Length)
-        {
-            throw new InvalidOperationException(
-                "Generation marker replacements must preserve encoded byte length.");
-        }
-
-        var bytes = File.ReadAllBytes(assemblyPath);
-        var index = IndexOf(bytes, original);
-        if (index < 0)
-            throw new InvalidOperationException($"Could not locate {GenerationOneMarker} in {assemblyPath}.");
-
-        Array.Copy(replacement, 0, bytes, index, replacement.Length);
-        File.WriteAllBytes(assemblyPath, bytes);
     }
 
     private static void ReplaceAll(byte[] buffer, byte[] pattern, byte[] replacement)
