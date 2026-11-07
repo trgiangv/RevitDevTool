@@ -10,6 +10,18 @@
         <RepositoryUrl>https://github.com/trgiangv/RevitDevTool</RepositoryUrl>
     </PropertyGroup>
 
+    <!-- Debug / Release Detection -->
+    <PropertyGroup Condition="'$(Configuration)' != 'Debug' AND $(Configuration.Contains('Debug'))">
+        <DebugSymbols>true</DebugSymbols>
+        <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)' != 'Release' AND $(Configuration.Contains('Release'))">
+        <Optimize>true</Optimize>
+        <DebugType>portable</DebugType>
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" ExcludeAssets="runtime" />
         <Using Include="JetBrains.Annotations" />

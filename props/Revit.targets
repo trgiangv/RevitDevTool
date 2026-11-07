@@ -1,25 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
-
     <!-- ============================================== -->
-    <!-- 1. Debug / Release Detection                   -->
-    <!-- ============================================== -->
-
-    <PropertyGroup Condition="'$(Configuration)' != 'Debug' AND $(Configuration.Contains('Debug'))">
-        <DebugSymbols>true</DebugSymbols>
-        <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
-    </PropertyGroup>
-
-    <PropertyGroup
-            Condition="'$(Configuration)' != 'Release' AND $(Configuration.Contains('Release'))">
-        <Optimize>true</Optimize>
-        <DebugType>portable</DebugType>
-        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
-    </PropertyGroup>
-
-    <!-- ============================================== -->
-    <!-- 2. Deploy Bundle / Addin                       -->
+    <!-- 1. Deploy Bundle / Addin                       -->
     <!-- ============================================== -->
 
     <PropertyGroup>
@@ -103,7 +86,7 @@
     </Target>
 
     <!-- ============================================== -->
-    <!-- 3. Define Constants                            -->
+    <!-- 2. Define Constants                            -->
     <!-- ============================================== -->
     <!--
         Builds REVIT, REVIT{year}, and REVIT{year}_OR_GREATER from

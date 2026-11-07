@@ -59,8 +59,6 @@
         <Using Include="ZLogger.Providers" />
     </ItemGroup>
 
-    <Import Project="..\..\props\HostLayout.targets" />
-
     <!-- Start AutoCad -->
     <PropertyGroup>
         <StartAction>Program</StartAction>

@@ -111,4 +111,15 @@
                    Condition="'$(ILRepackInternalize)' == 'true' and Exists('%(Identity)')"/>
     </Target>
 
+    <Target Name="AssertHostLayout"
+            AfterTargets="RepackAddinFiles"
+            Condition="'$(ILRepackable)' == 'true' AND ('$(UseRevit)' == 'true' OR '$(UseAutoCad)' == 'true') AND '$(TargetDir)' != ''">
+        <Error Condition="!Exists('$(TargetDir)DevTools.Testing.Abstractions.dll')"
+               Text="DevTools.Testing.Abstractions.dll must stay loose beside the add-in."/>
+        <Error Condition="Exists('$(TargetDir)DevTools.NUnit.Runtime.dll') OR Exists('$(TargetDir)DevTools.TUnit.Runtime.dll') OR Exists('$(TargetDir)DevTools.MSTest.Runtime.dll') OR Exists('$(TargetDir)nunit.framework.dll') OR Exists('$(TargetDir)TUnit.Core.dll') OR Exists('$(TargetDir)TUnit.Engine.dll') OR Exists('$(TargetDir)MSTest.TestFramework.dll') OR Exists('$(TargetDir)Microsoft.Testing.Platform.dll')"
+               Text="No framework runtime (DevTools.NUnit/TUnit/MSTest.Runtime) or framework (nunit.framework, TUnit.Core, TUnit.Engine, MSTest.TestFramework, Microsoft.Testing.Platform) ships with the add-in."/>
+        <Error Condition="Exists('$(TargetDir)DevTools.Ipc.dll') OR Exists('$(TargetDir)System.Text.Json.dll') OR Exists('$(TargetDir)System.Text.Encodings.Web.dll') OR Exists('$(TargetDir)System.IO.Pipelines.dll') OR Exists('$(TargetDir)Microsoft.Bcl.AsyncInterfaces.dll') OR Exists('$(TargetDir)DevTools.AssemblyIsolation.dll') OR Exists('$(TargetDir)DevTools.Testing.Host.dll') OR Exists('$(TargetDir)DevTools.Testing.Transport.dll')"
+               Text="Host JSON/IPC/Isolation/Testing.Host/Transport must stay merged into the add-in."/>
+    </Target>
+
 </Project>

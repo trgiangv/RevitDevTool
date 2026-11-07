@@ -62,8 +62,6 @@
         <Using Include="DevTools.Execution.Abstractions" />
     </ItemGroup>
 
-    <Import Project="..\..\props\HostLayout.targets" />
-
     <!-- Start Revit -->
     <PropertyGroup>
         <StartAction>Program</StartAction>

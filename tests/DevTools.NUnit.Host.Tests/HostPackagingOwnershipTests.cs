@@ -23,14 +23,6 @@ public sealed class HostPackagingOwnershipTests
     [TestMethod]
     [DataRow("source/RevitDevTool/RevitDevTool.csproj")]
     [DataRow("source/AcadDevTool/AcadDevTool.csproj")]
-    public void Hosts_import_layout_checks(string relativeProjectPath)
-    {
-        Assert.Contains("HostLayout.targets", ReadProject(relativeProjectPath), StringComparison.Ordinal);
-    }
-
-    [TestMethod]
-    [DataRow("source/RevitDevTool/RevitDevTool.csproj")]
-    [DataRow("source/AcadDevTool/AcadDevTool.csproj")]
     public void Hosts_name_no_test_framework(string relativeProjectPath)
     {
         var projectText = ReadProject(relativeProjectPath);
@@ -58,9 +50,11 @@ public sealed class HostPackagingOwnershipTests
     [TestMethod]
     public void Layout_checks_run_after_merge()
     {
-        var layout = File.ReadAllText(Path.Combine(FindRepoRoot(), "props", "HostLayout.targets"));
+        var layout = File.ReadAllText(Path.Combine(FindRepoRoot(), "props", "ILRepack.targets"));
 
+        Assert.Contains("<Target Name=\"AssertHostLayout\"", layout, StringComparison.Ordinal);
         Assert.Contains("AfterTargets=\"RepackAddinFiles\"", layout, StringComparison.Ordinal);
+        Assert.Contains("('$(UseRevit)' == 'true' OR '$(UseAutoCad)' == 'true')", layout, StringComparison.Ordinal);
         Assert.Contains("DevTools.Testing.Abstractions.dll must stay loose", layout, StringComparison.Ordinal);
         Assert.Contains("must stay merged into the add-in", layout, StringComparison.Ordinal);
     }
