@@ -272,6 +272,30 @@ public sealed class NetfxClosureBindTests
         }
     }
 
+    [TestMethod]
+    public void Closure_share_is_not_given_to_others()
+    {
+        using var directory = new TemporaryDirectory();
+        var library = UniqueLibraryName();
+        var entryPath = WriteEntryCompiledAgainstLibrary(directory.Path, library, "1.0.0.0", "2.0.0.0");
+        var shared = Assembly.Load(File.ReadAllBytes(Path.Combine(directory.Path, library + ".dll")));
+        var foreign = Assembly.Load(File.ReadAllBytes(entryPath));
+        using var session = AssemblyIsolationSession.Create(
+            AssemblyIsolationPlan.Create(entryPath)
+                .WithKind(AssemblyIsolationKind.Isolated)
+                .WithDistinctFileIdentity()
+                .ShareWithClosure(shared));
+
+        var error = Assert.ThrowsExactly<TargetInvocationException>(() => Value(foreign));
+        Assert.IsInstanceOfType<FileNotFoundException>(error.InnerException);
+        Assert.AreEqual("2.0.0.0", Value(session.LoadEntryAssembly()));
+
+        static object? Value(Assembly assembly) =>
+            assembly.GetType("Fixture.Entry", throwOnError: true)!
+                .GetMethod("Value", BindingFlags.Public | BindingFlags.Static)!
+                .Invoke(null, null);
+    }
+
     static string UniqueLibraryName() => $"VersionedLibrary{Guid.NewGuid():N}";
 
     static string WriteEntryCompiledAgainstLibrary(string directory, string library, string compiledAgainst, string listed)

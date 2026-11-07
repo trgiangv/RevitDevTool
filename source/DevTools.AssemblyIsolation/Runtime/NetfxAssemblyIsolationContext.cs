@@ -71,10 +71,11 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
             return null;
 
         var requested = new AssemblyName(args.Name);
-        if (_plan.TryShare(requested, out var parent))
+        var serves = ShouldServe(args.RequestingAssembly);
+        if ((serves || !_plan.SharesWithClosure(requested)) && _plan.TryShare(requested, out var parent))
             return parent;
 
-        if (!ShouldServe(args.RequestingAssembly))
+        if (!serves)
             return null;
 
         if (NetfxClosureBind.TryFindLoaded(requested, SessionLoaded(), out var loaded))

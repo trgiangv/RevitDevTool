@@ -72,8 +72,8 @@ public sealed class AssemblyIsolationPlan
     public AssemblyIsolationPlan Share(Assembly assembly) => AddShare(assembly, allowVersionDrift: true);
 
     /// <summary>
-    /// <see cref="Share"/>, and the session answers what this assembly requests. For a shared
-    /// assembly that has no copy of its dependencies but the session's.
+    /// <see cref="Share"/> between this assembly and the session only: the session answers what
+    /// this assembly requests, and on .NET Framework it is never handed to anyone else in the domain.
     /// </summary>
     public AssemblyIsolationPlan ShareWithClosure(Assembly assembly) =>
         AddShare(assembly, allowVersionDrift: true, usesClosure: true);
@@ -120,6 +120,11 @@ public sealed class AssemblyIsolationPlan
         assembly = shared.Assembly;
         return true;
     }
+
+    internal bool SharesWithClosure(AssemblyName requested) =>
+        requested.Name is not null
+        && _shares.TryGetValue(requested.Name, out var shared)
+        && shared.UsesClosure;
 
     internal bool UsesClosure(Assembly assembly)
     {
