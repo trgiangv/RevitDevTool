@@ -116,6 +116,34 @@ public sealed class NUnitRuntimeSessionOutputTests
         }
     }
 
+    [TestMethod]
+    public void Run_with_the_run_nothing_filter_runs_nothing()
+    {
+        using var session = FixtureTestHarness.CreateSession();
+        var response = session.Run(
+            CreateFullSemanticsRequest(NUnitFilterFactory.RunNothingXml),
+            new RecordingSink(),
+            TestContext.CancellationToken);
+
+        Assert.IsEmpty(response.Results);
+    }
+
+    [TestMethod]
+    public void Run_reports_the_source_location_of_an_async_test()
+    {
+        using var session = FixtureTestHarness.CreateSession();
+        var response = session.Run(
+            CreateFullSemanticsRequest(
+                "<filter><test>DevTools.NUnit.Runtime.Fixtures.FullSemanticsFixture.AsyncTest_Completes</test></filter>"),
+            new RecordingSink(),
+            TestContext.CancellationToken);
+
+        var source = response.Results.Single().Source;
+        Assert.IsNotNull(source);
+        Assert.EndsWith("FullSemanticsFixture.cs", source.File, StringComparison.Ordinal);
+        Assert.IsGreaterThan(0, source.Line);
+    }
+
     private static TestRunRequest CreateRequest(string? filter) => new(
         Guid.NewGuid(),
         TestFrameworkId.NUnit,

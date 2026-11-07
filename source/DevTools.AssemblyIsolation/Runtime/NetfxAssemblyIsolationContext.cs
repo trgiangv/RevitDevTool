@@ -108,7 +108,8 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
         if (Volatile.Read(ref _activeLoads) > 0)
             return true;
 
-        return requestingAssembly is not null && _ownedAssemblies.Contains(requestingAssembly);
+        return requestingAssembly is not null
+            && (_ownedAssemblies.Contains(requestingAssembly) || _plan.UsesClosure(requestingAssembly));
     }
 
     private Assembly LoadManaged(string path)

@@ -244,6 +244,34 @@ public sealed class NetfxClosureBindTests
             && diagnostic.Message.Contains(libraryPath)));
     }
 
+    [TestMethod]
+    public void Session_answers_a_shared_assembly_only_when_it_shares_with_its_closure()
+    {
+        using var directory = new TemporaryDirectory();
+        var library = UniqueLibraryName();
+        var entryPath = WriteEntryCompiledAgainstLibrary(directory.Path, library, "1.0.0.0", "1.0.0.0");
+        var libraryPath = Path.Combine(directory.Path, library + ".dll");
+        var shared = Assembly.Load(File.ReadAllBytes(entryPath));
+        var value = shared.GetType("Fixture.Entry", throwOnError: true)!
+            .GetMethod("Value", BindingFlags.Public | BindingFlags.Static)!;
+
+        AssemblyIsolationPlan Plan() => AssemblyIsolationPlan.Create(entryPath)
+            .WithKind(AssemblyIsolationKind.Isolated)
+            .WithDistinctFileIdentity()
+            .AddManagedSource(new ManifestAssemblySource([new AssemblyCandidate(libraryPath, directory.Path)]));
+
+        using (AssemblyIsolationSession.Create(Plan().Share(shared)))
+        {
+            var error = Assert.ThrowsExactly<TargetInvocationException>(() => value.Invoke(null, null));
+            Assert.IsInstanceOfType<FileNotFoundException>(error.InnerException);
+        }
+
+        using (AssemblyIsolationSession.Create(Plan().ShareWithClosure(shared)))
+        {
+            Assert.AreEqual("1.0.0.0", value.Invoke(null, null));
+        }
+    }
+
     static string UniqueLibraryName() => $"VersionedLibrary{Guid.NewGuid():N}";
 
     static string WriteEntryCompiledAgainstLibrary(string directory, string library, string compiledAgainst, string listed)

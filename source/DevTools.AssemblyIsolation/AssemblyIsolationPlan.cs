@@ -72,6 +72,13 @@ public sealed class AssemblyIsolationPlan
     public AssemblyIsolationPlan Share(Assembly assembly) => AddShare(assembly, allowVersionDrift: true);
 
     /// <summary>
+    /// <see cref="Share"/>, and the session answers what this assembly requests. For a shared
+    /// assembly that has no copy of its dependencies but the session's.
+    /// </summary>
+    public AssemblyIsolationPlan ShareWithClosure(Assembly assembly) =>
+        AddShare(assembly, allowVersionDrift: true, usesClosure: true);
+
+    /// <summary>
     /// Reuse this loaded assembly only when the full identity matches.
     /// </summary>
     public AssemblyIsolationPlan Pin(Assembly assembly) => AddShare(assembly, allowVersionDrift: false);
@@ -114,13 +121,24 @@ public sealed class AssemblyIsolationPlan
         return true;
     }
 
-    private AssemblyIsolationPlan AddShare(Assembly assembly, bool allowVersionDrift)
+    internal bool UsesClosure(Assembly assembly)
+    {
+        foreach (var shared in _sharedAssemblies)
+        {
+            if (shared.UsesClosure && ReferenceEquals(shared.Assembly, assembly))
+                return true;
+        }
+
+        return false;
+    }
+
+    private AssemblyIsolationPlan AddShare(Assembly assembly, bool allowVersionDrift, bool usesClosure = false)
     {
         ArgumentNullException.ThrowIfNull(assembly);
 
         return Clone(shareAssemblies: ReadOnly(AppendShare(
             _sharedAssemblies,
-            new SharedAssembly(assembly, allowVersionDrift))));
+            new SharedAssembly(assembly, allowVersionDrift, usesClosure))));
     }
 
     private AssemblyIsolationPlan Clone(
@@ -157,7 +175,8 @@ public sealed class AssemblyIsolationPlan
                 continue;
 
             if (ReferenceEquals(item.Assembly, next.Assembly)
-                && item.AllowVersionDrift == next.AllowVersionDrift)
+                && item.AllowVersionDrift == next.AllowVersionDrift
+                && item.UsesClosure == next.UsesClosure)
                 return existing;
 
             throw new AssemblyMismatchException(next.Identity, item.Identity);
@@ -171,13 +190,14 @@ public sealed class AssemblyIsolationPlan
 
     private readonly struct SharedAssembly
     {
-        public SharedAssembly(Assembly assembly, bool allowVersionDrift)
+        public SharedAssembly(Assembly assembly, bool allowVersionDrift, bool usesClosure)
         {
             Assembly = assembly ?? throw new ArgumentNullException(nameof(assembly));
             Identity = assembly.GetName();
             SimpleName = Identity.Name
                 ?? throw new ArgumentException("The assembly must have a simple name.", nameof(assembly));
             AllowVersionDrift = allowVersionDrift;
+            UsesClosure = usesClosure;
         }
 
         public Assembly Assembly { get; }
@@ -187,5 +207,7 @@ public sealed class AssemblyIsolationPlan
         public string SimpleName { get; }
 
         public bool AllowVersionDrift { get; }
+
+        public bool UsesClosure { get; }
     }
 }

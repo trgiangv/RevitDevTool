@@ -11,7 +11,7 @@ internal static class NUnitFilterFactory
     public const string XmlFilterFormat = "filter-xml";
 
     /// <summary>Filter that matches no test. An empty selection runs nothing, never everything.</summary>
-    public const string RunNothingXml = "<filter><not><test>*</test></not></filter>";
+    public const string RunNothingXml = "<filter><not><test re=\"1\">.*</test></not></filter>";
 
     private const string UnsupportedFilterMessage =
         "Filter must be empty or NUnit framework filter XML consumed by TestFilter.FromXml.";

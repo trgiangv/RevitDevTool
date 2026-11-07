@@ -63,7 +63,7 @@ internal sealed class OutputSessionFactory(
                 generation.ManagedAssemblies.Select(path => new AssemblyCandidate(path, Path.GetFullPath(generation.ShadowDirectory))),
                 bindsAnyVersion: true));
 
-        return shared is null ? plan : plan.Share(shared);
+        return shared is null ? plan : plan.ShareWithClosure(shared);
     }
 
     private sealed class LoggerDiagnosticSink(ILogger logger) : IAssemblyIsolationDiagnosticSink

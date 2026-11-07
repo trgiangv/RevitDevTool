@@ -148,21 +148,7 @@ internal sealed class NUnitLocationProvider
         using var pdbProvider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
 
         var methodHandle = (MethodDefinitionHandle)MetadataTokens.Handle(methodInfo.MetadataToken);
-        var pdbMetadata = pdbProvider.GetMetadataReader();
-        var debugInfo = pdbMetadata.GetMethodDebugInformation(methodHandle);
-
-        foreach (var point in debugInfo.GetSequencePoints())
-        {
-            if (point.StartLine == SequencePoint.HiddenLine)
-                continue;
-
-            var document = pdbMetadata.GetDocument(point.Document);
-            filePath = NormalizeSourcePath(pdbMetadata.GetString(document.Name));
-            lineNumber = point.StartLine;
-            return !string.IsNullOrWhiteSpace(filePath);
-        }
-
-        return false;
+        return TryReadFirstPoint(pdbProvider.GetMetadataReader(), methodHandle, out filePath, out lineNumber);
     }
 
     private bool TryReadSequencePoint(string className, string methodName, out string? filePath, out int lineNumber)
@@ -180,13 +166,41 @@ internal sealed class NUnitLocationProvider
         using var pdbProvider = MetadataReaderProvider.FromPortablePdbStream(pdbStream);
 
         var peMetadata = peReader.GetMetadataReader();
-        var pdbMetadata = pdbProvider.GetMetadataReader();
-
         if (!TryFindMethodHandle(peMetadata, className, methodName, out var methodHandle))
             return false;
 
-        var debugInfo = pdbMetadata.GetMethodDebugInformation(methodHandle);
-        foreach (var point in debugInfo.GetSequencePoints())
+        return TryReadFirstPoint(pdbProvider.GetMetadataReader(), methodHandle, out filePath, out lineNumber);
+    }
+
+    /// <summary>An async or iterator method has no sequence points of its own; they sit on its state machine.</summary>
+    private bool TryReadFirstPoint(
+        MetadataReader pdbMetadata,
+        MethodDefinitionHandle method,
+        out string? filePath,
+        out int lineNumber)
+    {
+        if (TryReadPoints(pdbMetadata, method, out filePath, out lineNumber))
+            return true;
+
+        foreach (var handle in pdbMetadata.MethodDebugInformation)
+        {
+            if (pdbMetadata.GetMethodDebugInformation(handle).GetStateMachineKickoffMethod() == method)
+                return TryReadPoints(pdbMetadata, handle.ToDefinitionHandle(), out filePath, out lineNumber);
+        }
+
+        return false;
+    }
+
+    private bool TryReadPoints(
+        MetadataReader pdbMetadata,
+        MethodDefinitionHandle method,
+        out string? filePath,
+        out int lineNumber)
+    {
+        filePath = null;
+        lineNumber = 0;
+
+        foreach (var point in pdbMetadata.GetMethodDebugInformation(method).GetSequencePoints())
         {
             if (point.StartLine == SequencePoint.HiddenLine)
                 continue;
