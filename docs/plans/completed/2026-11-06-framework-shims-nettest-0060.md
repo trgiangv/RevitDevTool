@@ -4,10 +4,9 @@ Date: 2026-11-06
 
 ## Status
 
-Active. P0 to P5 done; all three frameworks run from the user's output and the old path is gone. P6 is next. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
-(Accepted). Depends on the `nettest` train of
-[2026-11-06-release-trains-0059](2026-11-06-release-trains-0059.md) for shipping;
-the code work here can start before that plan's P3.
+Completed 2026-11-07. All three frameworks run from the user's output, the old path is gone, and P6 passed on the final code. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
+(Accepted). Shipping depends on the `nettest` train of
+[2026-11-06-release-trains-0059](../active/2026-11-06-release-trains-0059.md).
 
 Visual of the agreed design (owner's private artifact):
 https://claude.ai/artifact/Snj9TnxPnrRfTwKTTnrVF2
@@ -230,7 +229,7 @@ the user's closure are proved in P2 and P3.
 - [x] P3 TUnit (the add-in ships no `TUnitRuntime\`; TUnit 1.81.0 ran on Revit 2024 and 2027 with no add-in or adapter change)
 - [x] P4 NUnit (the add-in ships no `NUnitRuntime\`; open for the owner: the net48 async request is answered by other add-ins, see Decisions)
 - [x] P5 remove old path + docs (compile and unit tests only; live proof is P6)
-- [ ] P6 live verification
+- [x] P6 live verification (see Result)
 
 ## Decisions
 
@@ -430,6 +429,19 @@ the user's closure are proved in P2 and P3.
   - No `*HostPackaging.targets` or `*RuntimePayload.targets` was left to delete.
   - Baseline numbers live in one place, the table in `source/DevTools.TestAdapter/README.md`,
     because that page reaches NuGet users. Product and skill pages link to it.
+- 2026-11-07 After P5, before P6 (owner: fix all of it, trim stale tests):
+  - The net48 async request is fixed: `AssemblyIsolationPlan.ShareWithClosure` lets the session answer
+    what the shared `nunit.framework` requests. C# script and command plans keep `Share`, so they do
+    not change.
+  - `NUnitLocationProvider` finds an async test's sequence points on its state machine through the
+    pdb's kickoff method.
+  - `RunNothingXml` matched every test, so an empty selection ran the whole assembly. It now matches
+    none. The owner had asked for this separately from the plan; it shares commit 86fcc738.
+  - Tests that only guarded removed names went, the per-framework plan tests became
+    `OutputGenerationTests`, and `DevTools.TUnit.Host.Tests` was deleted because its last test
+    duplicated `RuntimeCompatCheckerTests`. `props/HostLayout.targets` still fails the build only for
+    the NUnit runtime and `nunit.framework`; TUnit and MSTest rely on `Hosts_name_no_test_framework`
+    and `Packed_host_output_has_no_framework_runtime`.
 
 ## Validation
 
@@ -444,4 +456,41 @@ the user's closure are proved in P2 and P3.
 
 ## Result
 
-Not started.
+P6 ran on commit `ccb13a1b` on 2026-11-07. Add-in and runner versions were read from the hosts, and
+each run used the deployed bundle runner through `DEVTOOLS_TESTING_RUNNER_PATH`.
+
+| Check | Hosts | Result |
+|-------|-------|--------|
+| Samples: NUnit, TUnit, MSTest | Revit 2024, 2025, 2027 | Same on all three: NUnit 71 passed, 2 failed, 2 skipped; TUnit 59, 1, 1; MSTest 35, 0, 2. The failures are the deliberate `Intentional_failure_for_demo` and `Wall_type_id_is_valid` |
+| Samples: NUnit, TUnit, MSTest | Civil 3D 2026 | NUnit 2 passed, 1 deliberate failure; TUnit 2 passed; MSTest 2 passed. First host run for NUnit and TUnit here |
+| TUnit 1.81.0 on the 1.78.0 adapter | Revit 2024, 2027 | 60 passed, 1 deliberate failure, 1 skipped; a test read `TUnit.Core` 1.81.0.0 as loaded |
+| Build stops | NUnit 4.3.2, TUnit 1.72.0, NUnit with a raised floor, `TUnit.Core` without `TUnit` | Exit 1 with the exact sentence |
+| No manifest, then a normal run in that process | Revit 2024, 2025, 2027, each framework | Exact sentence, then the sample results above |
+| Second NUnit, restart, reverse stop | Revit 2024, 2025, 2027, Civil 3D 2026 | Exact sentences with the host's name, normal runs in between |
+| NUnit source location | Revit 2024, 2025, 2027 | 75 results, none missing; `Async_delay_then_pass` at `LifecycleTests.cs:19` |
+| net48 async | Fresh Revit 2024, two generations | 9 of 9 on each. `nunit.framework`'s request is answered by the kernel from the shadow directory, ahead of PnIDModeler, Speckle, and pythonnet |
+
+Limits of this proof:
+
+- Not on a clean machine. A run with only our resolvers left in the chain passed 9 of 9 on two
+  generations, but other add-ins had already loaded their copies, and those resolvers were active until
+  the test assembly loaded.
+- The NUnit floor stop raised the floor in an isolated package folder, and the second-NUnit stop used a
+  copy with patched file version strings, because no real NUnit below or above 5.0.0 exists.
+- Not run on the final code: bind-failure and range-mismatch sentences (last proved live in P2 and P3,
+  and covered by unit tests), the manifest stop on Civil 3D, a newer framework on net8, major mismatch
+  for TUnit and MSTest, below-floor for MSTest, and plain AutoCAD.
+
+Open, not blocking:
+
+- From the second generation on net48, the shared `nunit.framework` stays bound to the first
+  generation's `System.Threading.Tasks.Extensions` while the test binds the current one, so they use
+  different `ValueTask` types. `ValueTask` cases still pass. Why was not established.
+- The retired generation's resolver stays in the `AssemblyResolve` chain on net48, behind the current
+  one.
+- With a null requester the kernel returns null. Each such request traced came from the probe's own
+  replay, but not all were traced.
+- Running a TUnit generation again in one process fails `Repeat_expands_four_executions` in the sample:
+  its static counter survives, and it failed in all 4 executions. First runs are clean.
+- The `generation.retained` diagnostic appeared on some direct runner runs and was not investigated.
+- `bin\...\*Runtime` folders from before this work are still deployed on this machine. Nothing reads them.

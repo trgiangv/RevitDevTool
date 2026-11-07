@@ -280,6 +280,6 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Progress, measurements, and live verification: [the plan](../plans/active/2026-11-06-framework-shims-nettest-0060.md).
+- Progress, measurements, and live verification: [the plan](../plans/completed/2026-11-06-framework-shims-nettest-0060.md).
 - Update `docs/product/host-testing.md` and `docs/architecture/` testing pages when
   the first framework lands.

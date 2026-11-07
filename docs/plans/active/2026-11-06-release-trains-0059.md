@@ -5,7 +5,7 @@ Date: 2026-11-06
 ## Status
 
 Active. Nothing implemented yet. Decision: [0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md)
-(Proposed). Companion plan: [2026-11-06-framework-shims-nettest-0060](2026-11-06-framework-shims-nettest-0060.md);
+(Proposed). Companion plan: [2026-11-06-framework-shims-nettest-0060](../completed/2026-11-06-framework-shims-nettest-0060.md);
 the first `nettest` release ships both plans together (see Release order).
 
 Visual of the agreed flow (owner's private artifact):

@@ -34,12 +34,12 @@ Rename an active plan when its ADR number or workstream id changed.
 | Plan | Decision |
 |------|----------|
 | [2026-11-06-release-trains-0059.md](active/2026-11-06-release-trains-0059.md) | [0059](../decisions/0059-independent-release-trains-and-one-gate-ci.md) four release trains, `channels.json`, one-gate CI |
-| [2026-11-06-framework-shims-nettest-0060.md](active/2026-11-06-framework-shims-nettest-0060.md) | [0060](../decisions/0060-framework-runtime-shims-ship-with-nettest.md) framework runtimes in the nettest nupkg, major-only check |
 
 ## Recently Completed
 
 | Plan | Completed |
 |------|-----------|
+| [2026-11-06-framework-shims-nettest-0060.md](completed/2026-11-06-framework-shims-nettest-0060.md) | 2026-11-07 (framework runtimes run from the user's output, floor and major check; live on Revit 2024, 2025, 2027 and Civil 3D 2026; [0060](../decisions/0060-framework-runtime-shims-ship-with-nettest.md)) |
 | [2026-09-28-mstest-host-provider.md](completed/2026-09-28-mstest-host-provider.md) | 2026-10-20 (provider in tree; live Revit two-generation check closed without a host log; [0038](../decisions/0038-mstest-host-provider.md)) |
 | [2026-09-04-mcp-test-project-split.md](completed/2026-09-04-mcp-test-project-split.md) | 2026-10-20 (god project gone; module-scoped MCP tests) |
 | [2026-10-10-mtp-2-5-pin.md](completed/2026-10-10-mtp-2-5-pin.md) | 2026-10-10 (MSTest 4.5.1, MTP 2.5.1, TUnit 1.73.19, public MSTest cancel; [0042](../decisions/0042-mtp-2-5-removable-test-workarounds.md)) |
