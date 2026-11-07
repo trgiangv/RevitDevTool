@@ -21,7 +21,6 @@ if (args.Length == 0)
     builder.Services.AddModule<CompileBaseModule>();
     builder.Services.AddModule<CompileExpandModule>();
     builder.Services.AddModule<CompileDaemonModule>();
-    builder.Services.AddModule<CompileTestRunnerModule>();
 }
 
 if (args.Contains("test"))

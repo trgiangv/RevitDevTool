@@ -6,6 +6,8 @@ using DevTools.Testing.Transport;
 using Microsoft.Testing.Platform.Configurations;
 using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Requests;
+using System.Reflection;
+using System.Reflection.Emit;
 
 namespace DevTools.TestAdapter.Tests;
 
@@ -284,6 +286,97 @@ public sealed class TestRunSettingsLoaderTests
             () => TestRunSettingsLoader.Load(new StubConfiguration(new Dictionary<string, string?>())));
         Assert.Contains(TestConfig.FileName, ex.Message, StringComparison.Ordinal);
         Assert.Contains(TestConfig.SectionName, ex.Message, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void Load_reads_assembly_metadata()
+    {
+        var assembly = MetadataAssembly(new Dictionary<string, string>
+        {
+            [TestConfig.Keys.HostName] = "Revit",
+            [TestConfig.Keys.HostVersion] = "2025",
+            [TestConfig.Keys.ForceLaunch] = "true",
+            [TestConfig.Keys.PerTestTimeoutSeconds] = "45",
+            [TestConfig.Keys.LaunchTimeoutSeconds] = "200",
+            [TestConfig.Keys.FrameworkId] = "tunit",
+        });
+
+        var options = TestRunSettingsLoader.Load(new StubConfiguration(new Dictionary<string, string?>()), assembly);
+
+        Assert.AreEqual("Revit", options.Host.HostName);
+        Assert.AreEqual("2025", options.Host.HostVersion);
+        Assert.IsTrue(options.Host.ForceLaunch);
+        Assert.AreEqual(45, options.Host.PerTestTimeoutSeconds);
+        Assert.AreEqual(200, options.Host.LaunchTimeoutSeconds);
+        Assert.AreEqual(TestFrameworkId.TUnit, options.FrameworkId);
+    }
+
+    [TestMethod]
+    public void Configuration_key_beats_metadata()
+    {
+        var assembly = MetadataAssembly(new Dictionary<string, string>
+        {
+            [TestConfig.Keys.HostName] = "Revit",
+            [TestConfig.Keys.HostVersion] = "2025",
+            [TestConfig.Keys.PerTestTimeoutSeconds] = "60",
+            [TestConfig.Keys.LaunchTimeoutSeconds] = "180",
+            [TestConfig.Keys.FrameworkId] = "nunit",
+        });
+        IConfiguration configuration = new StubConfiguration(new Dictionary<string, string?>
+        {
+            [TestConfig.Keys.Configuration(TestConfig.Keys.HostVersion)] = "2026",
+        });
+
+        var options = TestRunSettingsLoader.Load(configuration, assembly);
+
+        Assert.AreEqual("Revit", options.Host.HostName);
+        Assert.AreEqual("2026", options.Host.HostVersion);
+        Assert.AreEqual(TestFrameworkId.NUnit, options.FrameworkId);
+    }
+
+    [TestMethod]
+    public void Load_reads_runner_path_metadata()
+    {
+        var assembly = MetadataAssembly(RunnerMetadata(@"C:\packages\tools\runner\DevTools.TestRunner.exe"));
+
+        var options = TestRunSettingsLoader.Load(new StubConfiguration(new Dictionary<string, string?>()), assembly);
+
+        Assert.AreEqual(@"C:\packages\tools\runner\DevTools.TestRunner.exe", options.RunnerPath);
+    }
+
+    [TestMethod]
+    public void Runner_path_ignores_configuration()
+    {
+        var assembly = MetadataAssembly(RunnerMetadata(@"C:\packages\tools\runner\DevTools.TestRunner.exe"));
+        var configuration = new StubConfiguration(new Dictionary<string, string?>
+        {
+            [TestConfig.Keys.Configuration(TestConfig.Keys.RunnerPath)] = @"C:\dev\DevTools.TestRunner.exe",
+        });
+
+        var options = TestRunSettingsLoader.Load(configuration, assembly);
+
+        Assert.AreEqual(@"C:\packages\tools\runner\DevTools.TestRunner.exe", options.RunnerPath);
+    }
+
+    private static Dictionary<string, string> RunnerMetadata(string runnerPath) => new()
+    {
+        [TestConfig.Keys.HostName] = "Revit",
+        [TestConfig.Keys.HostVersion] = "2025",
+        [TestConfig.Keys.PerTestTimeoutSeconds] = "60",
+        [TestConfig.Keys.LaunchTimeoutSeconds] = "180",
+        [TestConfig.Keys.FrameworkId] = "nunit",
+        [TestConfig.Keys.RunnerPath] = runnerPath,
+    };
+
+    private static Assembly MetadataAssembly(IReadOnlyDictionary<string, string> values)
+    {
+        var constructor = typeof(AssemblyMetadataAttribute).GetConstructor([typeof(string), typeof(string)])!;
+        return AssemblyBuilder.DefineDynamicAssembly(
+            new AssemblyName("DevToolsMetadata" + Guid.NewGuid().ToString("N")),
+            AssemblyBuilderAccess.Run,
+            values.Select(pair => new CustomAttributeBuilder(
+                constructor,
+                [TestConfig.SectionName + "." + pair.Key, pair.Value])));
     }
 }
 

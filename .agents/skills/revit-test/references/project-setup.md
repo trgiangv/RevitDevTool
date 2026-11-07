@@ -41,7 +41,6 @@ Do not add `Microsoft.Testing.Platform` as a compile package or override MTP.MSB
 | `LaunchTimeout` | Seconds to wait for a launched host pipe |
 | `TestingFramework` | Default `nunit`. Set `tunit` or `mstest` |
 | `NetFxModuleInitializer` | net48 TUnit only. Default on. Set `false` if another polyfill already defines `[ModuleInitializer]` |
-| `TestingRunnerPath` | Override when `DevTools.TestRunner.exe` is not in the default bundle path |
 
 ### Host API package (compile-only)
 
@@ -57,9 +56,10 @@ Common choices (pick one that matches your repo):
 
 ### testconfig.json
 
-Build generates `[AssemblyName].testconfig.json` from csproj properties.
-Author a sibling `testconfig.json` only for `platformOptions`; the `devtools`
-section is merged from the csproj. Do not use `.runsettings`.
+The build writes the csproj properties into the test assembly as `devtools.*`
+assembly metadata; no `testconfig.json` is generated. Author a sibling
+`testconfig.json` for `platformOptions`. A `devtools` key in it overrides that one
+csproj value; other keys still come from the csproj. Do not use `.runsettings`.
 
 ### Target frameworks
 
@@ -109,13 +109,14 @@ a net48 TUnit project (`<GlobalPackageReference Remove="Polyfill" />`). NUnit
 and MSTest do not need it; net48 TUnit gets `[ModuleInitializer]` from the
 adapter package.
 
-## Runner install
+## Runner
 
-The adapter finds the runner with `AppUtils.GetTestRunnerExePath()`: first the
-Velopack install (`%LOCALAPPDATA%/RevitDevTool/current/DevTools.TestRunner.exe`),
-then the dev deploy (`%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.TestRunner.exe`).
+`DevTools.TestRunner.exe` ships inside the package at `tools/runner/`; the build
+writes that path into the test assembly as `devtools.runnerPath`, and the adapter
+runs only that copy; no environment variable or `testconfig.json` key overrides it.
+A missing file fails with one sentence naming the path and asking for a restore.
 
-Override with MSBuild `TestingRunnerPath` or `DEVTOOLS_TESTING_RUNNER_PATH`.
-Missing file → `"RevitDevTool is not installed"`.
+The runner is framework-dependent: the machine running `dotnet test` needs the
+.NET 10 runtime or later, else `"RevitDevTool.TestAdapter needs the .NET 10 runtime or later."`.
 
-Install from [RevitDevTool releases](https://github.com/trgiangv/RevitDevTool).
+The host add-in still comes from [RevitDevTool releases](https://github.com/trgiangv/RevitDevTool).

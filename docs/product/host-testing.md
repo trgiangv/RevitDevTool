@@ -24,12 +24,17 @@ NUnit-specific bridge protocol are not part of the supported product on
   project uses `Sdk="MSTest.Sdk"`, or `Microsoft.NET.Sdk` with
   `<EnableMSTestRunner>true</EnableMSTestRunner>` (the build fails with that
   hint otherwise).
-- `testconfig.json` is generated from csproj properties; incremental build
-  refreshes `[AssemblyName].testconfig.json` (no Rebuild after `HostName`,
-  `ForceLaunch`, `PerTestTimeout`, or `LaunchTimeout` changes).
-  `Microsoft.Testing.Platform.MSBuild` copies the same file. Adapter reads
-  `devtools` via MTP `IConfiguration` (same as `mstest` / `xUnit`). Author
-  `testconfig.json` beside the csproj for `platformOptions`; no `.runsettings`.
+- The csproj properties are compiled into the test assembly as `devtools.*`
+  assembly metadata; an incremental build picks up a changed `HostName`,
+  `ForceLaunch`, `PerTestTimeout`, or `LaunchTimeout` (no Rebuild). A
+  `devtools` key in a `testconfig.json` beside the csproj overrides the csproj
+  value for that key; author that file for `platformOptions` too. No
+  `.runsettings`.
+- The machine that runs `dotnet test` needs the .NET 10 runtime or later: the
+  package's `DevTools.TestRunner.exe` (under `tools/runner`) is framework-dependent
+  and rolls forward to newer majors. Without it a run fails with
+  "RevitDevTool.TestAdapter needs the .NET 10 runtime or later." A run always
+  uses the package's runner; nothing overrides it.
 - `dotnet test` needs `"test": { "runner": "Microsoft.Testing.Platform" }` in
   `global.json`. Put that runner on the **repo root** when every `dotnet test`
   project in the tree is MTP, or when the only VSTest leftover is isolated with
@@ -251,11 +256,12 @@ not pack the host bundle.
   beside the test exe (with `DevTools.NUnit.MTP.dll`) so testhost discovery
   shares one `ITestDiscoverer` / `TestingDiscovery` identity. Consumers see
   only the platform adapter compile surface. The package also carries the
-  framework runtimes and copies the selected one to the test output.
+  framework runtimes and copies the selected one to the test output, and
+  `tools/runner/DevTools.TestRunner.exe`, which the test run starts in place.
 - **Installer / bundle** — `dotnet run --project build -- pack` / `PublishRelease.yml`. Ships
-  `DevTools.TestRunner.exe` and the in-host testing stack
-  (`Testing.Host` with NUnit/TUnit/MSTest providers). Required for live runs;
-  the NuGet does not replace it.
+  the in-host testing stack (`Testing.Host` with NUnit/TUnit/MSTest providers).
+  Required for live runs; the NuGet does not replace it. It no longer ships the
+  runner.
 
 Pack graph and restore constraints:
 [architecture/Testing](../architecture/Testing/README.md). Platform-only

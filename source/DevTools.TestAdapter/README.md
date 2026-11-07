@@ -1,7 +1,7 @@
 # RevitDevTool.TestAdapter
 
 Microsoft Testing Platform adapter that runs tests inside a CAD/BIM host.
-Requires [RevitDevTool](https://github.com/trgiangv/RevitDevTool).
+Requires [RevitDevTool](https://github.com/trgiangv/RevitDevTool) and the .NET 10 runtime or later
 
 Supports **NUnit** (default), **TUnit**, and **MSTest**. Reference the framework
 in the test project — the adapter does not pull it. It depends on

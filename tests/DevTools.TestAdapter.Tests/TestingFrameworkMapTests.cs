@@ -28,7 +28,7 @@ public sealed class TestingFrameworkMapTests
 
         try
         {
-            var start = new ProcessStartInfo("dotnet", "msbuild Unknown.proj -t:_ResolveRuntimeDir -nologo")
+            var start = new ProcessStartInfo("dotnet", "msbuild Unknown.proj -t:CheckTestProject -nologo")
             {
                 WorkingDirectory = work,
                 RedirectStandardOutput = true,

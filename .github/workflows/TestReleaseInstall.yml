@@ -35,7 +35,6 @@ jobs:
           Start-Process setup\RevitDevTool-Setup.exe -ArgumentList '--silent' -Wait
           $app = Join-Path $env:LOCALAPPDATA 'RevitDevTool\current'
           if (-not (Test-Path (Join-Path $app 'DevTools.Daemon.exe'))) { throw "Velopack did not install the Daemon in $app." }
-          if (-not (Test-Path (Join-Path $app 'DevTools.TestRunner.exe'))) { throw "Velopack did not install the TestRunner in $app." }
           "APP=$app" >> $env:GITHUB_ENV
 
       - name: Install payloads with --select
@@ -67,13 +66,10 @@ jobs:
           }
           if (Test-Path (Join-Path $bundle 'Contents\DevTools.Daemon.exe')) { throw 'The bundle must not contain the Daemon.' }
 
-      - name: Start the TestRunner and the MCP server
+      - name: Start the MCP server
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $runner = Start-Process (Join-Path $env:APP 'DevTools.TestRunner.exe') -ArgumentList '--version' -Wait -PassThru -RedirectStandardOutput runner.txt
-          if ($runner.ExitCode -ne 0) { throw "TestRunner --version exited with $($runner.ExitCode)." }
-
           New-Item empty.txt -ItemType File -Force | Out-Null
           $mcp = Start-Process (Join-Path $env:APP 'DevTools.Daemon.exe') -ArgumentList '--stdio' -PassThru -RedirectStandardInput empty.txt -RedirectStandardOutput mcp.out.txt -RedirectStandardError mcp.err.txt
           if (-not $mcp.WaitForExit(60000)) { $mcp.Kill(); throw 'DevTools.Daemon.exe --stdio did not stop when its input ended.' }

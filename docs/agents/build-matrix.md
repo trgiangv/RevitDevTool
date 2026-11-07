@@ -32,11 +32,11 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 - Focused host compile and deploy: [`scripts/build-host.ps1`](#host-build-script).
 
 - Installer / bundle: `dotnet run --project build -- pack` (`build/Modules/*`, `PublishRelease.yml`).
-- TestAdapter NuGet: `dotnet run --project build -- adapter` runs `PackTestAdapterModule` (restore, build the three MTP projects, pack). That module has no dependency on compile, GitVersion, Daemon, TestRunner, or the installer. nuget.org push stays `PublishTestAdapter.yml`. See `docs/architecture/Testing/README.md`.
-- Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon and DevTools.TestRunner.
+- TestAdapter NuGet: `dotnet run --project build -- adapter` runs `PackTestAdapterModule` (restore, pack; the csproj builds the MTP projects and framework runtimes and publishes the TestRunner into `tools/runner`). That module has no dependency on compile, GitVersion, Daemon, or the installer. nuget.org push stays `PublishTestAdapter.yml`. See `docs/architecture/Testing/README.md`.
+- Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon. The TestRunner ships only in the TestAdapter package.
 - Years stay sequential. Shared projects are solution-mapped to `Debug`/`Release`, so later years reuse `bin/<Debug|Release>/<tfm>`.
 - NUnit, TUnit, and MSTest host packaging builds those runtime projects with `Debug` or `Release`, not `*.Autodesk.YYYY`.
-- `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. Daemon and TestRunner publish after the base module (`BuildProjectReferences=false`, so they do not rebuild shared projects) and overlap the expand module. Bundle creation still waits for every year and both publishes.
+- `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. The Daemon publishes after the base module (`BuildProjectReferences=false`, so it does not rebuild shared projects) and overlaps the expand module. Bundle creation still waits for every year and the publish.
 - `pack` (including `pack publish`) sets `DeployAddin=false` and `PublishAddin=true`. `Revit.targets` and `AutoCad.targets` both read those two properties; each project imports only one of those files. The bundle zip is packed from `bin/**/publish`, so that command does not copy into `%AppData%\Autodesk\ApplicationPlugins\RevitDevTool.bundle`. A solution build of both hosts into that one folder races `RemoveDir` on `Contents\<year>` (`MSB3231`). A pipeline run without `pack` still deploys. Local host deploy stays `scripts/build-host.ps1`.
 
 ## DevTools.Daemon
@@ -63,30 +63,21 @@ dotnet publish source/DevTools.Daemon -c Release
 
 ### Pipeline Integration
 
-| Command | Daemon / Runner behavior |
+| Command | Daemon behavior |
 |---------|-----------------|
-| `dotnet run --project build` (no args) | `PublishDaemonModule` + `PublishTestRunnerModule` publish + deploy to AppData Contents |
-| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs both exes into bundle zip; `PackDaemonModule` publishes the Daemon self-contained and packs it with Velopack into `output/` |
+| `dotnet run --project build` (no args) | `CompileDaemonModule` publishes + deploys to AppData Contents |
+| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs the bundle zip; `PackDaemonModule` publishes the Daemon self-contained and packs it with Velopack into `output/` |
 | `dotnet publish source/DevTools.Daemon -c Release` | Direct Daemon publish + deploy (csproj target) |
-| `dotnet publish source/DevTools.TestRunner -c Release` | Direct Runner publish + deploy (csproj target) |
 
 ## DevTools.TestRunner
 
-`DevTools.TestRunner` is the host-test CLI (`DevTools.TestRunner.exe`). It locates/reuses Revit or AutoCAD pipes and is installed beside Daemon under bundle `Contents\`.
-
-### Publish & Deploy
-
-The csproj has a `DeployDevToolsTestRunner` MSBuild target (`AfterTargets="Publish"`) that kills a running Runner process (file lock) and copies the single-file exe to `%AppData%\Autodesk\ApplicationPlugins\RevitDevTool.bundle\Contents\`.
-
-```bash
-dotnet publish source/DevTools.TestRunner -c Release
-```
+`DevTools.TestRunner` is the host-test CLI (`DevTools.TestRunner.exe`). It locates/reuses Revit or AutoCAD pipes. It ships only inside `RevitDevTool.TestAdapter` at `tools/runner/` (the csproj `PackRunner` target publishes it during `dotnet pack`); no command deploys it to the bundle or the Velopack folder.
 
 ### Build Characteristics
 
-- Target: `net10.0-windows` / `win-x64`
-- Self-contained single-file
-- Properties: `PublishSingleFile=true`, `SelfContained=true`
+- Target: `net10.0-windows` / `win-x64` (major in `props/TestingRuntime.props`)
+- Framework-dependent single-file, `RollForward=Major`
+- Properties: `PublishSingleFile=true`, `SelfContained=false`
 
 ## Host build script
 

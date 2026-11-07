@@ -136,9 +136,15 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
     private static void WriteStdin(Process process, string stdin)
     {
         var stdinBytes = Encoding.UTF8.GetBytes(stdin);
-        process.StandardInput.BaseStream.Write(stdinBytes, 0, stdinBytes.Length);
-        process.StandardInput.BaseStream.Flush();
-        process.StandardInput.Close();
+        try
+        {
+            process.StandardInput.BaseStream.Write(stdinBytes, 0, stdinBytes.Length);
+            process.StandardInput.BaseStream.Flush();
+            process.StandardInput.Close();
+        }
+        catch (IOException)
+        {
+        }
     }
 
     private static void WaitForRunnerExit(
@@ -187,11 +193,21 @@ public sealed class ProcessTestRunnerClient : ITestRunnerTransport
         if (parsed.Response is not null)
             return parsed.Response;
 
-        var details = string.IsNullOrWhiteSpace(stderrOutput)
-            ? $"TestRunner process exited with code {process.ExitCode}."
-            : stderrOutput.Trim();
-        throw new InvalidOperationException(details);
+        throw new InvalidOperationException(DescribeFailure(process.ExitCode, stderrOutput));
     }
+
+    private static string DescribeFailure(int exitCode, string stderrOutput)
+    {
+        if (exitCode is FrameworkMissingFailure or CoreHostLibMissingFailure)
+            return $"RevitDevTool.TestAdapter needs the .NET {TestRunnerRuntime.Major} runtime or later.";
+
+        return string.IsNullOrWhiteSpace(stderrOutput)
+            ? $"TestRunner process exited with code {exitCode}."
+            : stderrOutput.Trim();
+    }
+
+    private const int FrameworkMissingFailure = unchecked((int)0x80008096);
+    private const int CoreHostLibMissingFailure = unchecked((int)0x80008083);
 
     private static void EnsureSameRun(TestRunResponse response, Guid runId)
     {

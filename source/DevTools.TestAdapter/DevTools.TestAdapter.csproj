@@ -4,15 +4,16 @@
       Architecture: docs/architecture/Testing/README.md
 
       Pack order, per TFM (net48; net8.0-windows; net10.0-windows):
-        1. BuildMtpSiblingsForPack — build the NUnit / TUnit / MSTest testhost siblings (MtpSibling items).
-        2. ILRepack — merge copy-local (Transport, Ipc, net48 STJ BCL) into
+        1. ILRepack — merge copy-local (Transport, Ipc, net48 STJ BCL) into
            TestAdapter.dll; keep Testing.Abstractions.dll so testhost MTP shares
            TestingDiscovery.
-        3. PackMtpSiblings — MTP siblings + Abstractions to build/runtime/{tfm}.
-           PackFrameworkRuntimes — always builds the framework runtimes, then runtime + manifest + pdb to build/runtime/{tfm}.
-        4. build/*.props|targets (+ build/netfx source shim) — the consumer build order
+        2. PackRuntime — restore and build the NUnit / TUnit / MSTest testhost siblings
+           and framework runtimes (TestFramework items), then siblings + Abstractions +
+           runtime + manifest + pdb to build/runtime/{tfm}.
+        3. build/*.props|targets (+ build/netfx source shim) — the consumer build order
            lives in those files. The selected sibling is a normal Reference, not a
            runtime plugin.
+        4. PackRunner (once, outer build) — publish DevTools.TestRunner to tools/runner.
 
       Constraints:
         - Do not flatten obj/bin: the three TFMs would collide (CS2012 / MSB3713).
@@ -44,7 +45,8 @@
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <NoPackageAnalysis>true</NoPackageAnalysis>
-        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackMtpSiblings;PackFrameworkRuntimes</TargetsForTfmSpecificContentInPackage>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackRuntime</TargetsForTfmSpecificContentInPackage>
+        <BeforePack>$(BeforePack);PackRunner</BeforePack>
         <IsTestProject>false</IsTestProject>
         <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
         <DisableTestingPlatformServerCapability>true</DisableTestingPlatformServerCapability>
@@ -69,87 +71,80 @@
         <None Include="..\DevTools.UI\Resources\icons\DevTools-32-Light.png" Pack="true" PackagePath="\"/>
     </ItemGroup>
 
-    <!-- Testhost siblings packed beside the adapter: one row per TestingFramework. -->
+    <!-- One row per framework: the testhost sibling DevTools.<F>.MTP and the framework
+         runtime DevTools.<F>.Runtime (+ manifest + pdb) go to build/runtime/{tfm}. -->
     <ItemGroup>
-        <MtpSibling Include="NUnit;TUnit;MSTest"/>
+        <TestFramework Include="NUnit;TUnit;MSTest"/>
     </ItemGroup>
 
-    <Target Name="_ResolveMtpSiblings">
+    <Target Name="_ResolvePackProjects">
         <PropertyGroup>
-            <_MtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_MtpPackageRuntime>
-            <_MtpPackageRuntime Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_MtpPackageRuntime>
+            <_PackRuntimeDir Condition="'$(TargetFrameworkIdentifier)' == '.NETCoreApp'">build/runtime/net$(TargetFrameworkVersion.Substring(1))-windows7.0</_PackRuntimeDir>
+            <_PackRuntimeDir Condition="'$(TargetFrameworkIdentifier)' != '.NETCoreApp'">build/runtime/net48</_PackRuntimeDir>
         </PropertyGroup>
         <ItemGroup>
-            <_MtpSibling Include="@(MtpSibling)">
-                <Project>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).MTP\DevTools.%(Identity).MTP.csproj</Project>
-                <Dll>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.%(Identity).MTP.dll</Dll>
-            </_MtpSibling>
+            <_PackProject Include="$(MSBuildThisFileDirectory)..\DevTools.%(TestFramework.Identity).MTP\DevTools.%(TestFramework.Identity).MTP.csproj">
+                <PackOutput>$(MSBuildThisFileDirectory)..\DevTools.%(TestFramework.Identity).MTP\bin\$(Configuration)\$(TargetFramework)\DevTools.%(TestFramework.Identity).MTP</PackOutput>
+                <IsRuntime>false</IsRuntime>
+            </_PackProject>
+            <_PackProject Include="$(MSBuildThisFileDirectory)..\DevTools.%(TestFramework.Identity).Runtime\DevTools.%(TestFramework.Identity).Runtime.csproj">
+                <PackOutput>$(MSBuildThisFileDirectory)..\DevTools.%(TestFramework.Identity).Runtime\bin\$(Configuration)\$(TargetFramework)\DevTools.%(TestFramework.Identity).Runtime</PackOutput>
+                <IsRuntime>true</IsRuntime>
+            </_PackProject>
         </ItemGroup>
     </Target>
 
-    <!-- 1. testhost siblings: restore/build any whose TFM DLL is missing -->
-    <Target Name="BuildMtpSiblingsForPack" DependsOnTargets="_ResolveMtpSiblings">
-        <MSBuild Condition="!Exists('%(_MtpSibling.Dll)')"
-                 Projects="%(_MtpSibling.Project)"
+    <Target Name="BuildPackProjects" DependsOnTargets="_ResolvePackProjects">
+        <MSBuild Projects="@(_PackProject)"
                  Targets="Restore"
                  Properties="Configuration=$(Configuration)"
                  RemoveProperties="TargetFramework"/>
-        <MSBuild Condition="!Exists('%(_MtpSibling.Dll)')"
-                 Projects="%(_MtpSibling.Project)"
+        <MSBuild Projects="@(_PackProject)"
                  Targets="Build"
                  Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
     </Target>
 
-    <!-- 3. testhost siblings + shared Abstractions into build/runtime/{tfm} -->
-    <Target Name="PackMtpSiblings" DependsOnTargets="BuildMtpSiblingsForPack">
-        <Error Condition="!Exists('%(_MtpSibling.Dll)')"
-               Text="Pack requires DevTools.%(_MtpSibling.Identity).MTP.dll at %(_MtpSibling.Dll)."/>
+    <Target Name="PackRuntime" DependsOnTargets="BuildPackProjects">
+        <Error Condition="!Exists('%(_PackProject.PackOutput).dll')"
+               Text="Pack requires %(_PackProject.PackOutput).dll."/>
+        <Error Condition="'%(_PackProject.IsRuntime)' == 'true' And (!Exists('%(_PackProject.PackOutput).json') Or !Exists('%(_PackProject.PackOutput).pdb'))"
+               Text="Pack requires the manifest and pdb beside %(_PackProject.PackOutput).dll."/>
         <Error Condition="!Exists('$(TargetDir)DevTools.Testing.Abstractions.dll')"
                Text="Pack requires DevTools.Testing.Abstractions.dll beside the adapter so testhost MTP shares TestingDiscovery."/>
         <ItemGroup>
-            <TfmSpecificPackageFile Include="@(_MtpSibling->'%(Dll)')">
-                <PackagePath>$(_MtpPackageRuntime)</PackagePath>
+            <TfmSpecificPackageFile Include="@(_PackProject->'%(PackOutput).dll');$(TargetDir)DevTools.Testing.Abstractions.dll">
+                <PackagePath>$(_PackRuntimeDir)</PackagePath>
             </TfmSpecificPackageFile>
-            <TfmSpecificPackageFile Include="$(TargetDir)DevTools.Testing.Abstractions.dll">
-                <PackagePath>$(_MtpPackageRuntime)</PackagePath>
+            <TfmSpecificPackageFile Include="%(_PackProject.PackOutput).json;%(_PackProject.PackOutput).pdb" Condition="'%(_PackProject.IsRuntime)' == 'true'">
+                <PackagePath>$(_PackRuntimeDir)</PackagePath>
             </TfmSpecificPackageFile>
         </ItemGroup>
     </Target>
-    <!-- Framework runtimes packed beside the testhost siblings. -->
-    <ItemGroup>
-        <FrameworkRuntime Include="NUnit;TUnit;MSTest"/>
-    </ItemGroup>
+    <!-- Once per pack (outer build): publish the framework-dependent single-file runner
+         and ship it at tools/runner. The consumer targets point devtools.runnerPath there. -->
+    <Import Project="..\..\props\TestingRuntime.props"/>
 
-    <Target Name="_ResolveFrameworkRuntimes">
-        <ItemGroup>
-            <_FrameworkRuntime Include="@(FrameworkRuntime)">
-                <Project>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).Runtime\DevTools.%(Identity).Runtime.csproj</Project>
-                <Assets>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).Runtime\obj\project.assets.json</Assets>
-                <OutputBase>$(MSBuildThisFileDirectory)..\DevTools.%(Identity).Runtime\bin\$(Configuration)\$(TargetFramework)\DevTools.%(Identity).Runtime</OutputBase>
-            </_FrameworkRuntime>
-        </ItemGroup>
-    </Target>
+    <PropertyGroup>
+        <_RunnerProject>$(MSBuildThisFileDirectory)..\DevTools.TestRunner\DevTools.TestRunner.csproj</_RunnerProject>
+        <_RunnerExe>$(MSBuildThisFileDirectory)..\DevTools.TestRunner\bin\$(Configuration)\$(TestRunnerTargetFramework)\win-x64\publish\DevTools.TestRunner.exe</_RunnerExe>
+    </PropertyGroup>
 
-    <Target Name="BuildFrameworkRuntimesForPack" DependsOnTargets="_ResolveFrameworkRuntimes">
-        <MSBuild Condition="!Exists('%(_FrameworkRuntime.Assets)')"
-                 Projects="%(_FrameworkRuntime.Project)"
+    <Target Name="PackRunner">
+        <MSBuild Projects="$(_RunnerProject)"
                  Targets="Restore"
+                 Properties="Configuration=$(Configuration);MSBuildRestoreSessionId=$([System.Guid]::NewGuid())"
+                 RemoveProperties="TargetFramework"/>
+        <MSBuild Projects="$(_RunnerProject)"
+                 Targets="Publish"
                  Properties="Configuration=$(Configuration)"
                  RemoveProperties="TargetFramework"/>
-        <MSBuild Projects="%(_FrameworkRuntime.Project)"
-                 Targets="Build"
-                 Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)"/>
-    </Target>
-
-    <Target Name="PackFrameworkRuntimes" DependsOnTargets="_ResolveMtpSiblings;BuildFrameworkRuntimesForPack">
-        <Error Condition="!Exists('%(_FrameworkRuntime.OutputBase).dll') Or !Exists('%(_FrameworkRuntime.OutputBase).json') Or !Exists('%(_FrameworkRuntime.OutputBase).pdb')"
-               Text="Pack requires the framework runtime, manifest, and pdb at %(_FrameworkRuntime.OutputBase)."/>
+        <Error Condition="!Exists('$(_RunnerExe)')"
+               Text="Pack requires the published TestRunner at $(_RunnerExe)."/>
         <ItemGroup>
-            <TfmSpecificPackageFile Include="@(_FrameworkRuntime->'%(OutputBase).dll');@(_FrameworkRuntime->'%(OutputBase).json');@(_FrameworkRuntime->'%(OutputBase).pdb')">
-                <PackagePath>$(_MtpPackageRuntime)</PackagePath>
-            </TfmSpecificPackageFile>
+            <None Include="$(_RunnerExe)" Pack="true" PackagePath="tools\runner\"/>
         </ItemGroup>
     </Target>
+
     <!-- Compile: MTP (testhost hook). STJ/BCL copy-local comes from Transport/Ipc on net48. -->
     <ItemGroup>
         <PackageReference Include="Microsoft.Testing.Platform">

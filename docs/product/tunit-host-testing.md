@@ -83,8 +83,8 @@ Testhost discovery is host-free. `DevTools.TUnit.MTP` compile-links
 initialization — same pattern as NUnit `ExploreTests`; API DLLs are not
 copied next to the exe.
 
-Adapter load: `TestingFramework=tunit` writes `devtools.frameworkId` into
-`testconfig.json`. The testhost hook loads **only** `DevTools.TUnit.MTP.dll`.
+Adapter load: `TestingFramework=tunit` writes the `devtools.frameworkId`
+assembly metadata into the test assembly. The testhost hook loads **only** `DevTools.TUnit.MTP.dll`.
 `maximum-parallel-tests` is **not** a `testconfig.json` / `TestConfig`
 key. Wiring: [`docs/architecture/Testing/README.md`](../architecture/Testing/README.md).
 

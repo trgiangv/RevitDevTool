@@ -20,14 +20,19 @@
     <Target Name="GenerateTestingRuntimeContract" BeforeTargets="BeforeCompile">
         <PropertyGroup>
             <_TestingRuntimeContractPath>$(IntermediateOutputPath)TestingRuntimeContract.g.cs</_TestingRuntimeContractPath>
+            <_TestRunnerRuntimePath>$(IntermediateOutputPath)TestRunnerRuntime.g.cs</_TestRunnerRuntimePath>
         </PropertyGroup>
         <WriteLinesToFile File="$(_TestingRuntimeContractPath)"
                           Lines="namespace DevTools.Testing.Transport%3B&#xA;&#xA;public static class TestingRuntimeContract&#xA;{&#xA;    public const int Current = $(TestingRuntimeContractCurrent)%3B&#xA;    public const int Min = $(TestingRuntimeContractMin)%3B&#xA;}"
                           Overwrite="true"
                           WriteOnlyWhenDifferent="true"/>
+        <WriteLinesToFile File="$(_TestRunnerRuntimePath)"
+                          Lines="namespace DevTools.Testing.Transport%3B&#xA;&#xA;public static class TestRunnerRuntime&#xA;{&#xA;    public const int Major = $(TestRunnerRuntimeMajor)%3B&#xA;}"
+                          Overwrite="true"
+                          WriteOnlyWhenDifferent="true"/>
         <ItemGroup>
-            <Compile Include="$(_TestingRuntimeContractPath)"/>
-            <FileWrites Include="$(_TestingRuntimeContractPath)"/>
+            <Compile Include="$(_TestingRuntimeContractPath);$(_TestRunnerRuntimePath)"/>
+            <FileWrites Include="$(_TestingRuntimeContractPath);$(_TestRunnerRuntimePath)"/>
         </ItemGroup>
     </Target>
 </Project>

@@ -7,7 +7,7 @@ namespace Build.Modules;
 /// <summary>
 ///     Builds the first release configuration. Shared projects are mapped to
 ///     <c>Release</c>, so this produces <c>bin/Release/&lt;tfm&gt;</c> once.
-///     Daemon and TestRunner publish after this module, while
+///     The Daemon publishes after this module, while
 ///     <see cref="CompileExpandModule"/> is still compiling later years.
 /// </summary>
 [DependsOn<ResolveVersionModule>]

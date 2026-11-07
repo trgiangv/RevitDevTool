@@ -90,11 +90,24 @@ public sealed class RunnerAssemblyBoundaryTests
     }
 
     [TestMethod]
-    public void Installed_runner_keeps_TestRunner_exe_identity()
+    public void Runner_is_framework_dependent_single_file()
     {
         var root = FindRepositoryRoot();
         var csproj = File.ReadAllText(Path.Combine(root, "source", "DevTools.TestRunner", "DevTools.TestRunner.csproj"));
-        Assert.Contains("DevTools.TestRunner.exe", csproj, StringComparison.Ordinal);
+        Assert.Contains("<SelfContained>false</SelfContained>", csproj, StringComparison.Ordinal);
+        Assert.Contains("<PublishSingleFile>true</PublishSingleFile>", csproj, StringComparison.Ordinal);
+        Assert.Contains("<RollForward>Major</RollForward>", csproj, StringComparison.Ordinal);
+        Assert.Contains("<TargetFramework>$(TestRunnerTargetFramework)</TargetFramework>", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("VelopackPublish", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("DeployDevToolsTestRunner", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("ApplicationPlugins", csproj, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void Runner_keeps_TestRunner_identity()
+    {
+        var root = FindRepositoryRoot();
+        var csproj = File.ReadAllText(Path.Combine(root, "source", "DevTools.TestRunner", "DevTools.TestRunner.csproj"));
         Assert.Contains("<AssemblyName>DevTools.TestRunner</AssemblyName>", csproj, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools.NUnit.Runner.csproj", csproj, StringComparison.Ordinal);
         Assert.IsFalse(Directory.Exists(Path.Combine(root, "source", "DevTools.TestRunner", "NUnit")));

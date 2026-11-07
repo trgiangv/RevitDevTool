@@ -1,7 +1,6 @@
 using DevTools.Testing.Transport;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace DevTools.TestAdapter.Tests;
@@ -319,14 +318,22 @@ public sealed class PackageConsumerTests
         Assert.IsTrue(
             File.Exists(Path.Combine(output, expectedMtpAssembly)),
             $"{name} should copy {expectedMtpAssembly} ({tfm}).");
+        var assemblyInfo = File.ReadAllText(Directory
+            .GetFiles(Path.Combine(consumer, "obj", "Release"), $"{name}.AssemblyInfo.cs", SearchOption.AllDirectories)
+            .Single());
         Assert.Contains(
-            $"\"frameworkId\": \"{(engine ?? "nunit")}\"",
-            File.ReadAllText(Path.Combine(output, $"{name}.testconfig.json")),
+            $"AssemblyMetadata(\"devtools.frameworkId\", \"{(engine ?? "nunit")}\")",
+            assemblyInfo,
             StringComparison.Ordinal);
-        Assert.DoesNotContain(
-            "mtpAssembly",
-            File.ReadAllText(Path.Combine(output, $"{name}.testconfig.json")),
-            StringComparison.Ordinal);
+        Assert.Contains("AssemblyMetadata(\"devtools.hostName\", \"Revit\")", assemblyInfo, StringComparison.Ordinal);
+        var packagedRunner = Path.Combine(globalPackages, "revitdevtool.testadapter", packageVersion, "tools", "runner", "DevTools.TestRunner.exe");
+        Assert.IsTrue(File.Exists(packagedRunner), $"{name} should restore {packagedRunner}.");
+        var runnerMetadata = Regex.Match(
+                Regex.Replace(assemblyInfo, "\"\\s*\\+\\s*\"", string.Empty),
+                "AssemblyMetadata\\(\"devtools\\.runnerPath\", \\(?\"([^\"]+)\"")
+            .Groups[1].Value.Replace("\\\\", "\\");
+        Assert.AreEqual(packagedRunner, runnerMetadata, ignoreCase: true);
+        Assert.IsFalse(File.Exists(Path.Combine(output, $"{name}.testconfig.json")), $"{name} should not get a generated testconfig.json.");
 
         AssertFrameworkRuntimeInOutput(output, name, engine ?? "nunit", netFx);
 
@@ -340,11 +347,11 @@ public sealed class PackageConsumerTests
 
     private static void AssertFrameworkRuntimeInOutput(string output, string name, string engine, bool netFx)
     {
-        var (selected, assembly) = engine switch
+        var (selected, assembly, packageVersion) = engine switch
         {
-            "tunit" => ("TUnit", "TUnit.Core"),
-            "mstest" => ("MSTest", "MSTest.TestFramework"),
-            _ => ("NUnit", "nunit.framework"),
+            "tunit" => ("TUnit", "TUnit.Core", TUnitVersion),
+            "mstest" => ("MSTest", "MSTest.TestFramework", MSTestVersion),
+            _ => ("NUnit", "nunit.framework", NUnitVersion),
         };
         var runtime = $"DevTools.{selected}.Runtime";
         foreach (var extension in new[] { ".dll", ".json", ".pdb" })
@@ -357,12 +364,11 @@ public sealed class PackageConsumerTests
             Assert.DoesNotContain(runtime, File.ReadAllText(Path.Combine(output, $"{name}.deps.json")), StringComparison.Ordinal);
 
         var manifest = File.ReadAllText(Path.Combine(output, runtime + ".json"));
-        var version = AssemblyName.GetAssemblyName(Path.Combine(output, assembly + ".dll")).Version!;
         Assert.Contains($"\"framework\": \"{selected}\"", manifest, StringComparison.Ordinal);
         Assert.Contains($"\"entry\": \"{runtime}.{selected}RuntimeSession\"", manifest, StringComparison.Ordinal);
         Assert.Contains($"\"contract\": {{ \"current\": {TestingRuntimeContract.Current}, \"min\": {TestingRuntimeContract.Min} }}", manifest, StringComparison.Ordinal);
         Assert.Contains($"\"assembly\": \"{assembly}\"", manifest, StringComparison.Ordinal);
-        Assert.Contains($"\"version\": \"{version}\"", manifest, StringComparison.Ordinal);
+        Assert.Contains($"\"version\": \"{packageVersion}\"", manifest, StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -559,11 +565,6 @@ public sealed class PackageConsumerTests
 
     private static (string Nupkg, string Version) PackAdapter(string root, string packages)
     {
-        // Pack copies MTP from bin/Release; build siblings first so the nupkg
-        // is not a stale Debug leftover. Same order as PackTestAdapterModule.
-        Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.NUnit.MTP", "DevTools.NUnit.MTP.csproj")}\" -c Release");
-        Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.TUnit.MTP", "DevTools.TUnit.MTP.csproj")}\" -c Release");
-        Run("dotnet", $"build \"{Path.Combine(root, "source", "DevTools.MSTest.MTP", "DevTools.MSTest.MTP.csproj")}\" -c Release");
         Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
         var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
         return (nupkg, Path.GetFileNameWithoutExtension(nupkg)["RevitDevTool.TestAdapter.".Length..]);
@@ -597,6 +598,8 @@ public sealed class PackageConsumerTests
         Assert.Contains("build/hooks/NUnitMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("build/hooks/TUnitMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
         Assert.Contains("build/hooks/MSTestMtpBuilderHook.cs", entries, StringComparer.OrdinalIgnoreCase);
+        Assert.ContainsSingle(entries.Where(entry => entry.StartsWith("tools/", StringComparison.OrdinalIgnoreCase)));
+        Assert.Contains("tools/runner/DevTools.TestRunner.exe", entries, StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in entries.Where(entry => entry.StartsWith("lib/", StringComparison.OrdinalIgnoreCase)))
             Assert.EndsWith("/DevTools.TestAdapter.dll", entry, StringComparison.OrdinalIgnoreCase);

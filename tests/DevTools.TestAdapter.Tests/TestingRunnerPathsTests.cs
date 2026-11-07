@@ -44,4 +44,23 @@ public sealed class TestingRunnerPathsTests
         var resolved = TestingRunnerPaths.ResolveRunnerPath(path);
         Assert.AreEqual(Path.GetFullPath(path), resolved);
     }
+
+    [TestMethod]
+    public void Missing_runner_names_the_path()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "DevTools.TestRunner.exe");
+
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => TestingRunnerPaths.ResolveRunnerPath(path));
+
+        Assert.Contains(path, error.Message, StringComparison.Ordinal);
+        Assert.Contains("Restore the RevitDevTool.TestAdapter package", error.Message, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void Blank_runner_path_asks_restore()
+    {
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => TestingRunnerPaths.ResolveRunnerPath(null));
+
+        Assert.Contains("Restore the RevitDevTool.TestAdapter package", error.Message, StringComparison.Ordinal);
+    }
 }

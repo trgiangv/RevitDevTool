@@ -53,13 +53,13 @@ Installer `build/Modules/*` does **not** pack or publish the test adapter.
 
 | Artifact | Ships | Command / workflow |
 |----------|--------|--------------------|
-| NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.{NUnit,TUnit,MSTest}.MTP.dll` + framework runtimes `DevTools.{NUnit,TUnit,MSTest}.Runtime.dll` with their manifests | `dotnet run --project build -- adapter` · `PublishTestAdapter.yml` |
-| Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers), `DevTools.TestRunner.exe`. No framework and no framework runtime | `dotnet run --project build -- pack` · `build/Modules/*` · `PublishRelease.yml` |
+| NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.{NUnit,TUnit,MSTest}.MTP.dll` + framework runtimes `DevTools.{NUnit,TUnit,MSTest}.Runtime.dll` with their manifests + `tools/runner/DevTools.TestRunner.exe` | `dotnet run --project build -- adapter` · `PublishTestAdapter.yml` |
+| Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers). No runner, no framework, and no framework runtime | `dotnet run --project build -- pack` · `build/Modules/*` · `PublishRelease.yml` |
 
-- Bump `<Version>` in `DevTools.TestAdapter.csproj` before `PublishTestAdapter.yml`. Independent of installer GitVersion: compatibility with the product is the testing protocol range, not the package number ([0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)).
+- Bump `<Version>` in `DevTools.TestAdapter.csproj` before `PublishTestAdapter.yml`; `PackTestAdapterModule` passes it as `-p:Version` so every assembly in the package, the TestRunner included, carries it. Independent of installer GitVersion: compatibility with the product is the testing protocol range, not the package number ([0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)).
 - `TestingProtocol` owns the range (`CurrentVersion`, `MinVersion`). `TestRunExecute` and `testing/hello` (both ways) carry `sender { version, protocol }`; the runner checks the adapter, the host checks the runner, the runner checks the host. A mismatch is one sentence that names the update. Bump the range by 0055 §3.
 - Only TestAdapter is packable. MTP, Runtime, Host, Abstractions, and Transport are `IsPackable=false`.
-- Changing Host or Runner needs an installer deploy. Changing a framework runtime, testhost discovery, or launch options needs a TestAdapter pack and a rebuild of the test project.
+- Changing Host needs an installer deploy. Changing the Runner, a framework runtime, testhost discovery, or launch options needs a TestAdapter pack and a restore + rebuild of the test project.
 
 ---
 
@@ -72,6 +72,7 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
 
 - `lib/{tfm}/DevTools.TestAdapter.dll` — MTP compile surface (Ipc + Transport merged in; net48 also merges STJ BCL).
 - `build/runtime/{tfm}/` — `DevTools.NUnit.MTP.dll`, `DevTools.TUnit.MTP.dll`, `DevTools.MSTest.MTP.dll`, `DevTools.Testing.Abstractions.dll` (shared `TestingDiscovery`), and each `DevTools.{NUnit,TUnit,MSTest}.Runtime` as `.dll`, `.json`, `.pdb`. Same files on net48, net8, and net10. The targets copy the selected runtime to the output with `Copy`, not `Reference`, so it stays out of the testhost's compile and `deps.json`.
+- `tools/runner/DevTools.TestRunner.exe` — the runner, published once per pack (`PackRunner`, outer build) as a framework-dependent single-file `win-x64` exe with `RollForward=Major`. Its target framework major lives in `props/TestingRuntime.props`; Transport generates `TestRunnerRuntime.Major` from it.
 - Testhost 3rd-party BCL comes from `Microsoft.Testing.Platform.MSBuild` 2.5.2 plus net48 binding redirects, not from this nupkg. The adapter csproj references it with `PrivateAssets=none` (NuGet's default `PrivateAssets` would drop build assets from the nuspec) and with **all** assets (`include="All"` in the nuspec) so pack writes a dependency that restores both testhost generation and `Microsoft.Testing.Platform.dll` — an NUnit-only consumer has no other source of the MTP runtime. `RepackBinariesExcludes` keeps those testhost DLLs out of the merged adapter. `DevTools.TestAdapter.Tests` uses `ProjectReference` `PrivateAssets=all` plus a direct Abstractions reference so that graph does not flow into xunit. Other PackageReference / ProjectReference stay `PrivateAssets=all`. Testhost BCL is not packed as files.
 
 ### Pack order (`PackTestAdapterModule`)
@@ -84,10 +85,11 @@ Consumer copy/layout lives in `build/RevitDevTool.TestAdapter.targets`.
      lib/{tfm}            ILRepacked adapter
      build/runtime/{tfm}  MTP siblings + Abstractions (existing DLLs, per TFM)
      build/*.props|targets consumer build files
+     tools/runner         restore + publish DevTools.TestRunner once (BeforePack)
 ```
 
 Not in this graph: `Testing.Host` as a testhost project, `NUnit.Runtime` /
-`TUnit.Runtime` / `MSTest.Runtime` as packed nupkg contents, `DevTools.TestRunner`.
+`TUnit.Runtime` / `MSTest.Runtime` as packed nupkg contents.
 TUnit runtime sources are Compile-linked into `TUnit.MTP`. `MtpNodeResults` (owned by `MSTest.Runtime`) is linked into `TUnit.Runtime` as the shared MTP node to result core. MSTest discovery
 stays in `MSTest.MTP` and does not compile-link the in-host session.
 
@@ -95,11 +97,20 @@ stays in `MSTest.MTP` and does not compile-link the in-host session.
 
 ```text
 0. TestingFramework -> sibling name / hook type   (must stay in targets)
-1. _ResolveRuntimeDir                           pick build/runtime/{tfm}
-2. Reference Private=true ExternallyResolved=true   selected MTP + Abstractions
-3. WriteDiscoveryRefs  AfterTargets=Build       $(TargetName).discovery-refs.txt
-4. GenerateTestConfig  BeforeTargets=BeforeBuild  -> $(AssemblyName).testconfig.json
+1. build/runtime/{tfm}: net48, else .NET 10+, else .NET 8+
+   Reference Private=true ExternallyResolved=true   selected MTP + Abstractions
+2. CheckTestProject      BeforeTargets=ResolveAssemblyReferences
+                         runtime folder, TestingFramework, MSTest runner, HostName, HostVersion
+3. AssemblyMetadata      devtools.<key> items -> [assembly: AssemblyMetadata] in the testhost
+4. WriteDiscoveryRefs    AfterTargets=Build       $(TargetName).discovery-refs.txt
+5. CheckFrameworkVersion framework package against the runtime manifest
+                         (warning when the framework did not come from its package)
+6. CopyFrameworkRuntime  selected framework runtime + manifest + pdb to the output
 ```
+
+net48 binding redirects come from the SDK defaults (`AutoGenerateBindingRedirects`,
+`GenerateBindingRedirectsOutputType` for the Exe the props force); the package adds no
+target for them.
 
 ### Package independence
 
@@ -188,7 +199,7 @@ forces `false` for the testhost), `AppendTargetFrameworkToOutputPath=false` unde
 ```mermaid
 flowchart LR
   Testhost["MTP testhost\nTestAdapter + NUnit.MTP, TUnit.MTP, or MSTest.MTP"]
-  Runner["DevTools.TestRunner.exe\nbundle Contents"]
+  Runner["DevTools.TestRunner.exe\npackage tools/runner"]
   Host["Host add-in\nTesting.Host + framework runtime from the user's output"]
 
   Testhost -->|"run JSON stdin"| Runner
@@ -200,6 +211,14 @@ The adapter launches `DevTools.TestRunner run` and writes one
 options + `TestRunRequest`). Nested `RunId` is the same id the host
 receives on `testing/run`. TestRunner is an adapter/IDE process, not a
 human CLI.
+
+Runner lookup: the `devtools.runnerPath` assembly metadata only, which the package
+targets always write as the exe under the restored package's `tools/runner`. No
+environment variable, `testconfig.json` key, or install-folder lookup overrides it. A path
+that does not exist fails with one sentence naming it and asking for a package restore. When the machine lacks the
+runner's .NET major, the apphost exits with `0x80008096` (framework missing) or
+`0x80008083` (no .NET found) before runner code runs; `ProcessTestRunnerClient`
+turns both into "RevitDevTool.TestAdapter needs the .NET <major> runtime or later."
 
 `TestSelection` is a closed union: `All`, `TestIds`, `FrameworkFilter`,
 `Names`. Empty `TestIds` means run nothing, not run the assembly.
@@ -277,7 +296,7 @@ DevTools.MSTest.MTP.MSTestMtpBuilderHook.AddExtensions             // when Testi
 
 | Property / item | Role |
 |-----------------|------|
-| `TestingFramework` | Written as `devtools.frameworkId`. Props default `nunit`. Parsed to `TestFrameworkId` via `Enum.Parse` (ignoreCase). Map in **targets** (`nunit` → `DevTools.NUnit.MTP` / `NUnitMtpBuilderHook`; `tunit` → `DevTools.TUnit.MTP` / `TUnitMtpBuilderHook`; `mstest` → `DevTools.MSTest.MTP` / `MSTestMtpBuilderHook`). |
+| `TestingFramework` | Written as assembly metadata `devtools.frameworkId`. Props default `nunit`. Parsed to `TestFrameworkId` via `Enum.Parse` (ignoreCase). Map in **targets** (`nunit` → `DevTools.NUnit.MTP` / `NUnitMtpBuilderHook`; `tunit` → `DevTools.TUnit.MTP` / `TUnitMtpBuilderHook`; `mstest` → `DevTools.MSTest.MTP` / `MSTestMtpBuilderHook`). |
 | `<Reference Private="true" ExternallyResolved="true">` | Selected sibling + `DevTools.Testing.Abstractions`. Copy-local without net48 RAR walking sibling AssemblyRefs. Not a NuGet `PackageReference`, so NUnit/TUnit do not enter the consumer graph. |
 | `TestingPlatformBuilderHook` (`b7e4c1a9-…`) | Compile-time call into the selected sibling. GUID is a stable MSBuild identity. |
 | Adapter hook (`51ad4b4c-…`) | Registers `TestFramework`. Stays framework-neutral. |
@@ -294,9 +313,12 @@ with `Enum.Parse` (ignoreCase). Unknown `TestingFramework` is a build
 `<Error>`. Empty `frameworkId` on run publishes
 a `devtools.testadapter.run` error node (no `nunit` default).
 
-A user-authored `testconfig.json` with a `devtools` section must already
-contain `frameworkId` or the merge errors. `mtpAssembly` / `mtpEntry` are not
-part of the contract. See [0024](../../decisions/0024-testing-core-open-closed-providers.md).
+Host options reach `TestRunSettingsLoader` per key in this order: environment
+variable, MTP `IConfiguration` `devtools:<key>` (a user-authored `testconfig.json`),
+then the entry assembly's `AssemblyMetadataAttribute` `devtools.<key>`. A user
+`devtools` key wins over the csproj value; there is no merge step and no build
+error for a partial section. `mtpAssembly` / `mtpEntry` are not part of the
+contract. See [0024](../../decisions/0024-testing-core-open-closed-providers.md).
 
 The sibling builder hook registers testhost discovery and run-mapping.
 NUnit uses two types (`NUnitTestDiscoverer`, `NUnitTestRunMapper`).
@@ -366,20 +388,22 @@ User rules and sentences: [host-testing.md](../../product/host-testing.md#framew
 
 `DevTools.{NUnit,TUnit,MSTest}.Runtime.dll` ship in the adapter nupkg and reach
 the host through the user's output and the generation copy. The add-in keeps only
-the kernel and `DevTools.Testing.Abstractions`. `props/HostLayout.targets` fails
-the host build when a framework or NUnit runtime lands beside the add-in.
+the kernel and `DevTools.Testing.Abstractions`. `AssertHostLayout` in
+`props/ILRepack.targets` fails the host build when a framework or NUnit runtime lands beside the add-in.
 
 The manifest `DevTools.<Framework>.Runtime.json` sits beside each runtime and is
 read by `RuntimeManifest` in `DevTools.Testing.Transport`, because the runner
-reads it too. `props/RuntimeManifest.targets` writes it at build:
+reads it too. `props/TestingRuntime.targets` writes it at build:
 
 - `framework`, `assembly`: display name and framework assembly.
 - `entry`: the session type to activate.
 - `contract`: the `testing.runtime` range, from `props/TestingRuntime.props`, which
   also generates `TestingRuntimeContract`.
-- `version`: the `AssemblyVersion` of the framework assembly the runtime was built
-  against, read from the built file. It is the floor; its major is the supported
-  major.
+- `version`: the package version the runtime was built against, from the
+  `NuGetPackageVersion` of the framework reference (assembly version when that is
+  empty). It is the floor; its major is the supported major. The host reads it with
+  `FrameworkVersion` and compares it with the product version of the user's framework
+  assembly, falling back to the assembly version; a prerelease sorts below its release.
 
 Check order, each stop in one sentence:
 
@@ -394,7 +418,9 @@ Check order, each stop in one sentence:
    turns a `MissingMemberException`, `TypeLoadException`, `FileNotFoundException`,
    or `FileLoadException` that names a framework or platform assembly into the bind
    sentence, and logs the original exception to the host log. The TUnit engine
-   publishes such a failure as a test node, so `TUnitEngineBindFailure` rethrows it.
+   publishes such a failure as a test node; `TUnitEngineBindFailure` reads the node's
+   `ErrorTestNodeStateProperty`, unwraps `TUnitFailedException.WrappedException`, and
+   the engine host rethrows the original exception with its stack.
 
 A stop is `TestingRuntimeIncompatibleException`, returned as `ProtocolIncompatible`,
 not `ProviderFailed`, and it does not poison the session. Rejected bind candidates
@@ -411,9 +437,7 @@ the box. On net48, the NUnit runtime ILRepacks and internalizes
 `nunit.framework.legacy` out of the merge. TUnit, whose types cross to the
 framework, compiles against the lowest working `Microsoft.Bcl.AsyncInterfaces`.
 
-`DevTools.Testing.Abstractions` is the ABI between add-in and adapter. It changes by
-addition only; `PublicAPI.Shipped.txt` and `PublicAPI.Unshipped.txt` are checked on
-every build.
+`DevTools.Testing.Abstractions` is the add-in/adapter ABI: add-only, checked on every build against `PublicAPI.Shipped.txt` (last stable `addin` surface) and `PublicAPI.Unshipped.txt` ([0060 §8](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)).
 
 ### AutoCAD-family launch
 

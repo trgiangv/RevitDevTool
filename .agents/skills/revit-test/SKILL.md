@@ -16,7 +16,8 @@ Copy this folder to `~/.cursor/skills/revit-test/`, `~/.agents/skills/revit-test
 or `.agents/skills/revit-test/` in the repo.
 
 **Prerequisites:** [RevitDevTool](https://github.com/trgiangv/RevitDevTool) installed
-on the machine (provides `DevTools.TestRunner` and the host add-in).
+on the machine (provides the host add-in) and the .NET 10 runtime or later (the
+package's `DevTools.TestRunner` is framework-dependent).
 
 ```text
 dotnet test → MTP testhost (discover locally, no host)
@@ -109,7 +110,8 @@ do not use it for assets or reports. Details: [test-patterns.md](references/test
 | No passed stdout under `dotnet test` | Add `--output Detailed` |
 | `[Explicit]` never runs | Select with `--filter MethodName` |
 | Exit 8, zero tests | Wrong filter syntax, or cwd `global.json` still has VSTest |
-| `"RevitDevTool is not installed"` | Install RevitDevTool or set `TestingRunnerPath` |
+| `"did not find the TestRunner at '…'"` | Restore the RevitDevTool.TestAdapter package again |
+| `"needs the .NET 10 runtime or later"` | Install the .NET 10 runtime or later on the `dotnet test` machine |
 | Timeout | Raise `PerTestTimeout` (60s is smoke-only) |
 | Stale host state (net48) | Restart the host process |
 

@@ -113,6 +113,31 @@ public sealed class ProcessTestRunnerClientTests
     }
 
     [TestMethod]
+    public void Missing_runtime_names_the_major()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "DevTools", "TestingTransport", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        var runnerPath = Path.Combine(directory, "fake-runner.cmd");
+        File.WriteAllText(runnerPath, $"""
+            @echo off
+            echo You must install or update .NET to run this application. 1>&2
+            exit /b {unchecked((int)0x80008096)}
+            """);
+
+        using var client = new ProcessTestRunnerClient(runnerPath);
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => client.Run(
+            new TestRunRequest(
+                Guid.NewGuid(),
+                TestFrameworkId.NUnit,
+                new TestAssemblyReference(@"C:\tests\Sample.dll"),
+                TestSelection.All),
+            new TestHostOptions("Revit", "2025", false, 60, 180),
+            _ => { }));
+
+        Assert.AreEqual($"RevitDevTool.TestAdapter needs the .NET {TestRunnerRuntime.Major} runtime or later.", error.Message);
+    }
+
+    [TestMethod]
     public void Cancel_after_dispose_does_not_throw()
     {
         var client = new ProcessTestRunnerClient(

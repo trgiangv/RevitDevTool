@@ -8,6 +8,14 @@ Accepted. Refines [0021](0021-testing-kernel-and-provider-owned-framework-runtim
 after an independent review of the implemented kernel versus NUnit and TUnit
 providers. Does not replace 0021’s testhost / in-host split.
 
+**Amendment 2026-11-07 (host options).** The package targets write the host
+options as `AssemblyMetadata` items `devtools.<key>` for each `TestConfig.Keys`
+value; the adapter reads them from the entry assembly. A `devtools` key in a
+user-authored `testconfig.json` is an optional override read through MTP
+`IConfiguration`, and wins per key. `GenerateTestConfig` and `MergeTestConfig`
+are gone, so a partial `devtools` section is no longer a build error. Plan:
+[`2026-11-07-testadapter-build-cleanup-and-compat-hardening`](../plans/completed/2026-11-07-testadapter-build-cleanup-and-compat-hardening.md).
+
 **Amendment 2026-09-10.** Testhost siblings are no longer runtime plugins.
 MSBuild selects one packed DLL as a `<Reference Private="true"
 ExternallyResolved="true">` (copy-local; net48 RAR does not walk sibling

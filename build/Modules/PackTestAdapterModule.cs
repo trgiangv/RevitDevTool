@@ -10,8 +10,11 @@ namespace Build.Modules;
 
 /// <summary>
 ///     Pack RevitDevTool.TestAdapter into output/nuget.
-///     Version comes from DevTools.TestAdapter.csproj. Does not push to nuget.org,
-///     and does not wait on host compile, GitVersion, Daemon, TestRunner, or the installer.
+///     Version comes from DevTools.TestAdapter.csproj and is passed to restore and pack
+///     as a global property, so every assembly in the package carries it. The csproj's PackRuntime target
+///     restores and builds the testhost siblings and framework runtimes itself, and its
+///     PackRunner target publishes the TestRunner into the package. Does not push to
+///     nuget.org, and does not wait on host compile, GitVersion, Daemon, or the installer.
 /// </summary>
 [UsedImplicitly]
 public sealed class PackTestAdapterModule : Module<string>
@@ -19,45 +22,23 @@ public sealed class PackTestAdapterModule : Module<string>
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var adapterProject = Projects.DevTools_TestAdapter.FullName;
-        var mtpProjects = new[]
-        {
-            Projects.DevTools_NUnit_MTP.FullName,
-            Projects.DevTools_TUnit_MTP.FullName,
-            Projects.DevTools_MSTest_MTP.FullName
-        };
-        var runtimeProjects = new[]
-        {
-            Projects.DevTools_NUnit_Runtime.FullName,
-            Projects.DevTools_TUnit_Runtime.FullName,
-            Projects.DevTools_MSTest_Runtime.FullName
-        };
-
         var version = ReadPackageVersion(adapterProject);
         var outputDir = Path.Combine(context.Git().RootDirectory.Path, "output", "nuget");
         Directory.CreateDirectory(outputDir);
 
-        await RestoreAsync(context, adapterProject, cancellationToken);
-        foreach (var project in mtpProjects.Concat(runtimeProjects))
+        await context.DotNet().Restore(new DotNetRestoreOptions
         {
-            await RestoreAsync(context, project, cancellationToken);
-        }
-
-        foreach (var project in mtpProjects.Concat(runtimeProjects))
-        {
-            await context.DotNet().Build(new DotNetBuildOptions
-            {
-                ProjectSolution = project,
-                Configuration = "Release",
-                NoRestore = true
-            }, cancellationToken: cancellationToken);
-        }
+            ProjectSolution = adapterProject,
+            Properties = [("Version", version)]
+        }, cancellationToken: cancellationToken);
 
         await context.DotNet().Pack(new DotNetPackOptions
         {
             ProjectSolution = adapterProject,
             Configuration = "Release",
             NoRestore = true,
-            Output = outputDir
+            Output = outputDir,
+            Properties = [("Version", version)]
         }, cancellationToken: cancellationToken);
 
         var package = Path.Combine(outputDir, $"RevitDevTool.TestAdapter.{version}.nupkg");
@@ -68,14 +49,6 @@ public sealed class PackTestAdapterModule : Module<string>
 
         RemoveLastExtraction(version);
         return package;
-    }
-
-    private static Task<ModularPipelines.Models.CommandResult> RestoreAsync(IModuleContext context, string project, CancellationToken cancellationToken)
-    {
-        return context.DotNet().Restore(new DotNetRestoreOptions
-        {
-            ProjectSolution = project
-        }, cancellationToken: cancellationToken);
     }
 
     private static string ReadPackageVersion(string projectPath)

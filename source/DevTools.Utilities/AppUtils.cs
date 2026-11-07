@@ -32,18 +32,13 @@ public static class AppUtils
     ///     The Daemon of the Velopack install. If there is no install, the dev deploy in the bundle <c>Contents</c>.
     ///     It is the real executable, not the Velopack stub, because MCP clients need its stdin and stdout.
     /// </summary>
-    public static string GetDaemonExePath() => FindApp(DaemonExe);
-
-    public static string GetTestRunnerExePath() => FindApp(TestRunnerExe);
+    public static string GetDaemonExePath()
+    {
+        var installed = Path.Combine(GetInstalledAppPath(), DaemonExe);
+        return File.Exists(installed) ? installed : Path.Combine(GetBundleContentsPath(), DaemonExe);
+    }
 
     private const string DaemonExe = "DevTools.Daemon.exe";
-    private const string TestRunnerExe = "DevTools.TestRunner.exe";
-
-    private static string FindApp(string fileName)
-    {
-        var installed = Path.Combine(GetInstalledAppPath(), fileName);
-        return File.Exists(installed) ? installed : Path.Combine(GetBundleContentsPath(), fileName);
-    }
 
     public static bool IsValidPath(string? path)
     {

@@ -2,5 +2,7 @@
   <PropertyGroup>
     <TestingRuntimeContractCurrent>1</TestingRuntimeContractCurrent>
     <TestingRuntimeContractMin>1</TestingRuntimeContractMin>
+    <TestRunnerRuntimeMajor>10</TestRunnerRuntimeMajor>
+    <TestRunnerTargetFramework>net$(TestRunnerRuntimeMajor).0-windows</TestRunnerTargetFramework>
   </PropertyGroup>
 </Project>

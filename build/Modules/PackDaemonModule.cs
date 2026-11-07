@@ -9,13 +9,12 @@ using ModularPipelines.Git.Extensions;
 using ModularPipelines.Modules;
 using ModularPipelines.Options;
 using Sourcy.DotNet;
-using System.Security.Cryptography;
 
 namespace Build.Modules;
 
 /// <summary>
-///     Publish DevTools.Daemon and DevTools.TestRunner self-contained into one folder with one shared .NET runtime,
-///     and pack it with Velopack (<c>vpk</c> from the repo tool manifest).
+///     Publish DevTools.Daemon self-contained and pack it with Velopack (<c>vpk</c> from the repo tool manifest).
+///     The TestRunner ships in RevitDevTool.TestAdapter, not here.
 ///     Output goes straight to <c>output</c>: <c>RevitDevTool-Setup.exe</c>, full and delta packages, the release feed.
 /// </summary>
 /// <remarks>
@@ -26,7 +25,6 @@ namespace Build.Modules;
 /// <seealso href="../../docs/decisions/0053-velopack-for-daemon-distribution.md">0053</seealso>
 [DependsOn<ResolveVersionModule>]
 [DependsOn<CompileDaemonModule>]
-[DependsOn<CompileTestRunnerModule>]
 [UsedImplicitly]
 public sealed class PackDaemonModule(
     IOptions<BuildOptions> buildOptions,
@@ -49,11 +47,7 @@ public sealed class PackDaemonModule(
         if (Directory.Exists(publishPath)) Directory.Delete(publishPath, recursive: true);
         DeleteVelopackArtifacts(outputPath);
 
-        var runnerPath = publishPath + "-runner";
-        if (Directory.Exists(runnerPath)) Directory.Delete(runnerPath, recursive: true);
         await PublishAsync(context, Projects.DevTools_Daemon.FullName, publishPath, versioning, cancellationToken);
-        await PublishAsync(context, Projects.DevTools_TestRunner.FullName, runnerPath, versioning, cancellationToken);
-        MergeSharedRuntime(runnerPath, publishPath);
 
         await RunVpkAsync(context, root.Path, ["tool", "restore"], throwOnError: true, cancellationToken);
 
@@ -102,38 +96,6 @@ public sealed class PackDaemonModule(
                 ("BuildProjectReferences", "false")
             ]
         }, cancellationToken: cancellationToken);
-    }
-
-    /// <summary>
-    ///     Copies the self-contained TestRunner into the Daemon folder, so both apps use one .NET runtime.
-    ///     A file that both apps publish must be byte-identical, else one app would load the wrong version.
-    /// </summary>
-    private static void MergeSharedRuntime(string source, string target)
-    {
-        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
-        {
-            var destination = Path.Combine(target, Path.GetRelativePath(source, file));
-            if (File.Exists(destination))
-            {
-                if (!HaveSameContent(file, destination))
-                    throw new InvalidOperationException($"DevTools.Daemon and DevTools.TestRunner publish different '{Path.GetRelativePath(source, file)}'.");
-                continue;
-            }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(file, destination);
-        }
-
-        Directory.Delete(source, recursive: true);
-    }
-
-    private static bool HaveSameContent(string left, string right)
-    {
-        if (new FileInfo(left).Length != new FileInfo(right).Length) return false;
-
-        using var leftStream = File.OpenRead(left);
-        using var rightStream = File.OpenRead(right);
-        return SHA256.HashData(leftStream).AsSpan().SequenceEqual(SHA256.HashData(rightStream));
     }
 
     /// <summary>

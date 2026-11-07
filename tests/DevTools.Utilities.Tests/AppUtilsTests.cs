@@ -38,15 +38,12 @@ public sealed class AppUtilsTests
     }
 
     [TestMethod]
-    public void GetDaemonExePath_and_GetTestRunnerExePath_prefer_the_installed_app_then_bundle_contents()
+    public void GetDaemonExePath_prefers_the_installed_app_then_bundle_contents()
     {
         var contents = AppUtils.GetBundleContentsPath();
-        var installed = AppUtils.GetInstalledAppPath();
-        var daemon = Path.Combine(installed, "DevTools.Daemon.exe");
-        var runner = Path.Combine(installed, "DevTools.TestRunner.exe");
+        var daemon = Path.Combine(AppUtils.GetInstalledAppPath(), "DevTools.Daemon.exe");
 
         Assert.AreEqual(File.Exists(daemon) ? daemon : Path.Combine(contents, "DevTools.Daemon.exe"), AppUtils.GetDaemonExePath());
-        Assert.AreEqual(File.Exists(runner) ? runner : Path.Combine(contents, "DevTools.TestRunner.exe"), AppUtils.GetTestRunnerExePath());
     }
 
     [TestMethod]

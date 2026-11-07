@@ -14,16 +14,16 @@ Consumer setup: `source/DevTools.TestAdapter/README.md`.
 test csproj (HostName, HostVersion, NUnit|TUnit|MSTest)
   -> package targets: Reference the selected DevTools.{NUnit|TUnit|MSTest}.MTP.dll
      + Abstractions, copy the framework runtime + manifest to the output,
-     write discovery-refs.txt and [AssemblyName].testconfig.json
+     write discovery-refs.txt, compile [assembly: AssemblyMetadata("devtools.*")]
   -> generated MTP entry point calls adapter hook + selected sibling hook
   -> discovery: local ExploreTests / TUnit catalog / MSTest --list-tests, no host process
   -> run: TestRunner.exe locates or launches the host, then testing/hello|run|cancel
 ```
 
-Adapter writes `devtools.frameworkId` to `testconfig.json`. Missing
-`frameworkId` on a hand-written `devtools` section is a build Error. Sibling
-selection is MSBuild (`TestingFramework` → one `Reference` + builder hook),
-not runtime plugin keys.
+Host options, `devtools.frameworkId` included, are assembly metadata in the test
+assembly. A hand-written `testconfig.json` `devtools` key overrides one key and
+needs no other keys. Sibling selection is MSBuild (`TestingFramework` → one
+`Reference` + builder hook), not runtime plugin keys.
 
 ## Verify
 
@@ -47,10 +47,12 @@ dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTe
 dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTests.csproj -c Debug.Autodesk.2024 --filter Writes_output --output Detailed -v q
 ```
 
-Host DLL changes: `scripts/build-host.ps1 -HostApp Revit -Year <year>`. Several hosts or years: `docs/agents/build-matrix.md` (Host build script). Runner:
-`dotnet publish source/DevTools.TestRunner -c Release`. Adapter nupkg:
-`dotnet run --project build -- adapter`, also for a framework runtime change, then
-rebuild the test project. Installer pack is
+Host DLL changes: `scripts/build-host.ps1 -HostApp Revit -Year <year>`. Several hosts or years: `docs/agents/build-matrix.md` (Host build script). Adapter nupkg:
+`dotnet run --project build -- adapter`, also for a runner or framework runtime change, then
+rebuild the test project. The pack publishes `DevTools.TestRunner` into the package
+(`tools/runner`), and samples run that copy from the restored package; nothing is
+deployed to the bundle `Contents` or the Velopack folder. A runner build is tried only
+through this pack; there is no runner-path override. Installer pack is
 `dotnet run --project build -- pack`. The adapter pack
 deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
 so the next sample restore cannot keep a previous extraction of the packed version.
@@ -104,8 +106,10 @@ so the next sample restore cannot keep a previous extraction of the packed versi
   over the same `HostSmokeTests`; its explorer tree is not a DevTools discovery bug.
   `Intentional_failure_for_demo` is an expected `Assert.Fail`.
 - net48 "could not be discovered" = testhost failed to bind `Unsafe` 6.0. That BCL comes
-  from the adapter's `Microsoft.Testing.Platform.MSBuild` graph plus
-  `AutoGenerateBindingRedirects`; the nupkg ships no loose 3rd-party DLLs.
+  from the adapter's `Microsoft.Testing.Platform.MSBuild` graph plus the binding
+  redirects the SDK default `AutoGenerateBindingRedirects=true` writes; the nupkg
+  ships no loose 3rd-party DLLs and adds no redirect target. A net48 test project
+  must not set `AutoGenerateBindingRedirects=false`.
 - net48 has no load context: if the host already loaded an assembly with the same identity,
   in-host tests bind that copy, not the generation snapshot. Restart the host after
   deploying, or use net8+.
