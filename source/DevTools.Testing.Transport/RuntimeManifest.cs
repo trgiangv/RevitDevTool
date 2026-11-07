@@ -20,7 +20,7 @@ public sealed record RuntimeManifest(
     public static string Display(System.Version version) =>
         version.Revision == 0 ? version.ToString(3) : version.ToString();
 
-    public string DisplayFloor() => Display(System.Version.Parse(Version));
+    public string DisplayFloor() => FrameworkVersion.Parse(Version).ToString();
 
     public static RuntimeManifest? TryRead(string outputDirectory, TestFrameworkId frameworkId)
     {
@@ -56,5 +56,5 @@ public sealed record RuntimeManifest(
         && !string.IsNullOrWhiteSpace(Assembly)
         && Contract.Min > 0
         && Contract.Current >= Contract.Min
-        && System.Version.TryParse(Version, out _);
+        && FrameworkVersion.TryParse(Version, out _);
 }

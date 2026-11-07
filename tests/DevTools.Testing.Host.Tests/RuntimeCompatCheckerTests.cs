@@ -3,6 +3,8 @@ using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Host.Runtime;
 using DevTools.Testing.Transport;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text.Json;
@@ -100,20 +102,57 @@ public sealed class RuntimeCompatCheckerTests
         output.WriteManifest();
 
         output.WriteFramework(Built);
-        Assert.AreEqual(Built.ToString(), RuntimeCompatChecker.Check(TestFrameworkId.NUnit, output.Path).Version);
+        Assert.AreEqual(Built.ToString(3), RuntimeCompatChecker.Check(TestFrameworkId.NUnit, output.Path).Version);
 
         output.WriteFramework(new Version(Built.Major, Built.Minor + 1, 0, 0));
+        Assert.AreEqual(Built.ToString(3), RuntimeCompatChecker.Check(TestFrameworkId.NUnit, output.Path).Version);
+    }
+
+    [TestMethod]
+    public void Four_part_manifest_floor_still_passes()
+    {
+        using var output = new OutputDirectory();
+        output.WriteManifest(version: Built.ToString());
+        output.WriteFramework(Built);
+
         Assert.AreEqual(Built.ToString(), RuntimeCompatChecker.Check(TestFrameworkId.NUnit, output.Path).Version);
     }
 
     [TestMethod]
-    public void Missing_framework_is_not_a_compatibility_stop()
+    public void Product_version_wins_over_assembly_version()
+    {
+        using var output = new OutputDirectory();
+        output.WriteManifest();
+        var product = new Version(Built.Major, Built.Minor, 2);
+        output.WriteFramework(new Version(Built.Major, 0, 0, 0), $"{product}+abc123");
+
+        Assert.AreEqual(product.ToString(), RuntimeCompatChecker.ReadFrameworkVersion(output.ReadManifest(), output.Path).ToString());
+        Assert.AreEqual(Built.ToString(3), RuntimeCompatChecker.Check(TestFrameworkId.NUnit, output.Path).Version);
+    }
+
+    [TestMethod]
+    public void Prerelease_is_below_its_release_floor()
+    {
+        using var output = new OutputDirectory();
+        var floor = new Version(Built.Major, 0, 0);
+        var prerelease = $"{floor}-beta.1";
+        output.WriteManifest(version: floor.ToString());
+        output.WriteFramework(new Version(Built.Major, 0, 0, 0), prerelease);
+
+        Assert.AreEqual(
+            $"NUnit {prerelease} is older than the {floor} that RevitDevTool.TestAdapter {output.AdapterVersion} was built against. Update NUnit to {floor} or later.",
+            Check(output));
+    }
+
+    [TestMethod]
+    public void Missing_framework_names_the_package()
     {
         using var output = new OutputDirectory();
         output.WriteManifest();
 
-        Assert.ThrowsExactly<TestingGenerationBuildException>(() =>
-            RuntimeCompatChecker.Check(TestFrameworkId.NUnit, output.Path));
+        Assert.AreEqual(
+            "nunit.framework.dll was not found beside the NUnit test assembly. Reference the NUnit package in the test project.",
+            Check(output));
     }
 
     [TestMethod]
@@ -126,7 +165,7 @@ public sealed class RuntimeCompatCheckerTests
             RuntimeBindFailure.TryExplain(
                 new MissingMethodException("Method not found: 'Void NUnit.Framework.Internal.Foo.Bar()'."),
                 Manifest("NUnit", "nunit.framework"),
-                found,
+                FrameworkVersion.From(found),
                 "1.2.3"));
     }
 
@@ -203,10 +242,10 @@ public sealed class RuntimeCompatCheckerTests
     }
 
     private static string? Explain(Exception failure, string framework, string assembly) =>
-        RuntimeBindFailure.TryExplain(failure, Manifest(framework, assembly), new Version(1, 0, 0, 0), "1.2.3");
+        RuntimeBindFailure.TryExplain(failure, Manifest(framework, assembly), FrameworkVersion.Parse("1.0.0"), "1.2.3");
 
     private static RuntimeManifest Manifest(string framework, string assembly) =>
-        new(framework, "Entry.Type", TestingProtocol.RuntimeRange, assembly, Built.ToString());
+        new(framework, "Entry.Type", TestingProtocol.RuntimeRange, assembly, Built.ToString(3));
 
     private static string Check(OutputDirectory output) =>
         Assert.ThrowsExactly<TestingRuntimeIncompatibleException>(() =>
@@ -217,6 +256,20 @@ public sealed class RuntimeCompatCheckerTests
         var builder = new PersistedAssemblyBuilder(new AssemblyName(name) { Version = version }, typeof(object).Assembly);
         builder.DefineDynamicModule(name).DefineType("Marker", TypeAttributes.Public).CreateType();
         builder.Save(path);
+    }
+
+    private static void WriteAssembly(string path, string name, Version version, string productVersion)
+    {
+        var source = $"[assembly: System.Reflection.AssemblyVersion(\"{version}\")][assembly: System.Reflection.AssemblyInformationalVersion(\"{productVersion}\")]";
+        var compilation = CSharpCompilation.Create(
+            name,
+            [CSharpSyntaxTree.ParseText(source)],
+            [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        using var resources = compilation.CreateDefaultWin32Resources(true, true, null, null);
+        using var stream = File.Create(path);
+        var result = compilation.Emit(stream, win32Resources: resources);
+        Assert.IsTrue(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
     }
 
     private sealed class OutputDirectory : IDisposable
@@ -245,11 +298,17 @@ public sealed class RuntimeCompatCheckerTests
                         "DevTools.NUnit.Runtime.NUnitRuntimeSession",
                         contract ?? TestingProtocol.RuntimeRange,
                         "nunit.framework",
-                        version ?? Built.ToString()),
+                        version ?? Built.ToString(3)),
                     TestingJsonContext.Default.RuntimeManifest));
 
         public void WriteFramework(Version version) =>
             WriteAssembly(System.IO.Path.Combine(Path, "nunit.framework.dll"), "nunit.framework", version);
+
+        public void WriteFramework(Version version, string productVersion) =>
+            WriteAssembly(System.IO.Path.Combine(Path, "nunit.framework.dll"), "nunit.framework", version, productVersion);
+
+        public RuntimeManifest ReadManifest() =>
+            RuntimeManifest.TryRead(Path, TestFrameworkId.NUnit) ?? throw new InvalidOperationException("No manifest.");
 
         public void Dispose()
         {

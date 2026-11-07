@@ -118,7 +118,7 @@ internal sealed class TUnitEngineMessageBus(TestRunTraceScope traceScope) : IMes
             return Task.CompletedTask;
 
         var node = update.TestNode;
-        BindFailure ??= TUnitEngineBindFailure.TryRead(node.DisplayName);
+        BindFailure ??= TUnitEngineBindFailure.TryRead(node);
         var uid = node.Uid.Value;
         Nodes[uid] = node;
         if (!TUnitEngineResults.IsTerminal(node))

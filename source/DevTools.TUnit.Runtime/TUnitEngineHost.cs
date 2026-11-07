@@ -4,6 +4,7 @@ using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Extensions.TestFramework;
 using Microsoft.Testing.Platform.Requests;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using ReflectionAssembly = System.Reflection.Assembly;
 using SessionUid = Microsoft.Testing.Platform.TestHost.SessionUid;
 
@@ -74,7 +75,7 @@ internal static class TUnitEngineHost
         }
 
         if (messageBus.BindFailure is { } bindFailure)
-            throw bindFailure;
+            ExceptionDispatchInfo.Capture(bindFailure).Throw();
 
         return TUnitEngineResults.Map(messageBus.Nodes.Values, messageBus.CapturedByUid);
     }

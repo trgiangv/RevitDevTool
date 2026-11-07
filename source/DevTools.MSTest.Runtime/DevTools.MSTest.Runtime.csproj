@@ -48,5 +48,5 @@
     </ItemGroup>
   </Target>
 
-  <Import Project="..\..\props\RuntimeManifest.targets" />
+  <Import Project="..\..\props\TestingRuntime.targets" />
 </Project>

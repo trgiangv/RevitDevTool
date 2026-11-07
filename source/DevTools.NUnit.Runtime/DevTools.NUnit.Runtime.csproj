@@ -32,6 +32,6 @@
         <InternalsVisibleTo Include="DevTools.NUnit.Runtime.Tests"/>
     </ItemGroup>
 
-    <Import Project="..\..\props\RuntimeManifest.targets"/>
+    <Import Project="..\..\props\TestingRuntime.targets"/>
 
 </Project>

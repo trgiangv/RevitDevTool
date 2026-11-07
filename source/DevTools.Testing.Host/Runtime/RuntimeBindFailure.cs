@@ -9,7 +9,7 @@ internal static class RuntimeBindFailure
     private const string AdapterName = "RevitDevTool.TestAdapter";
     private const string PlatformNames = @"Microsoft\.Testing\.|Microsoft\.VisualStudio\.TestTools\.";
 
-    public static string? TryExplain(Exception exception, RuntimeManifest manifest, Version found, string adapterVersion)
+    public static string? TryExplain(Exception exception, RuntimeManifest manifest, FrameworkVersion found, string adapterVersion)
     {
         ArgumentNullException.ThrowIfNull(exception);
         ArgumentNullException.ThrowIfNull(manifest);
@@ -19,7 +19,7 @@ internal static class RuntimeBindFailure
         if (!IsBindFailure(failure) || !NamesFrameworkOrPlatform(failure, manifest))
             return null;
 
-        return $"{manifest.Framework} {RuntimeManifest.Display(found)} changed an API that {AdapterName} {adapterVersion} uses (built against {manifest.DisplayFloor()}). " +
+        return $"{manifest.Framework} {found} changed an API that {AdapterName} {adapterVersion} uses (built against {manifest.DisplayFloor()}). " +
                $"Update {AdapterName}, or use {manifest.Framework} {manifest.DisplayFloor()}.";
     }
 

@@ -15,8 +15,13 @@
     <GetAssemblyIdentity AssemblyFiles="$(_RuntimeManifestAssemblyPath)">
       <Output TaskParameter="Assemblies" ItemName="_RuntimeManifestAssemblyIdentity" />
     </GetAssemblyIdentity>
+    <ItemGroup>
+      <_RuntimeManifestReference Include="@(ReferencePath)"
+                                 Condition="'%(Filename)' == '$(RuntimeManifestAssembly)'" />
+    </ItemGroup>
     <PropertyGroup>
-      <_RuntimeManifestVersion>@(_RuntimeManifestAssemblyIdentity->'%(Version)')</_RuntimeManifestVersion>
+      <_RuntimeManifestVersion>@(_RuntimeManifestReference->'%(NuGetPackageVersion)'->Distinct())</_RuntimeManifestVersion>
+      <_RuntimeManifestVersion Condition="'$(_RuntimeManifestVersion)' == ''">@(_RuntimeManifestAssemblyIdentity->'%(Version)')</_RuntimeManifestVersion>
     </PropertyGroup>
 
     <WriteLinesToFile File="$(_RuntimeManifestPath)"

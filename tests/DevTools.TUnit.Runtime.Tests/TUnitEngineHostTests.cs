@@ -1,4 +1,6 @@
+using Microsoft.Testing.Platform.Extensions.Messages;
 using Microsoft.Testing.Platform.Services;
+using TUnit.Engine.Exceptions;
 
 namespace DevTools.TUnit.Runtime.Tests;
 
@@ -17,25 +19,52 @@ public sealed class TUnitEngineHostTests
         Assert.IsFalse(info.Capabilities.IsStateful);
     }
 
+    private const string FrameworkMember = "Method not found: 'TUnit.Core.TestContext TUnit.Core.Services.IContextProvider.CreateTestContext()'.";
+
     [TestMethod]
-    public void Engine_unhandled_node_for_a_framework_member_is_a_bind_failure()
+    public void Framework_member_error_is_a_bind_failure()
     {
-        const string message = "Method not found: 'TUnit.Core.TestContext TUnit.Core.Services.IContextProvider.CreateTestContext()'.";
+        var original = new MissingMethodException(FrameworkMember);
 
-        var failure = TUnitEngineBindFailure.TryRead($"Unhandled exception - MissingMethodException: {message}");
-
-        Assert.IsInstanceOfType<MissingMethodException>(failure);
-        Assert.AreEqual(message, failure.Message);
+        Assert.AreSame(original, TUnitEngineBindFailure.TryRead(ErrorNode(original)));
     }
 
     [TestMethod]
-    [DataRow("Unhandled exception - InvalidOperationException: TUnit.Core failed.")]
-    [DataRow("Unhandled exception - MissingMethodException: Method not found: 'UserCode.Helper.Run()'.")]
-    [DataRow("Some_test (Method not found: 'TUnit.Core.Gone')")]
-    public void Other_nodes_stay_results(string displayName)
+    public void Wrapped_error_returns_the_original()
     {
-        Assert.IsNull(TUnitEngineBindFailure.TryRead(displayName));
+        var original = new TypeLoadException("Could not load type 'X' from assembly 'Microsoft.Testing.Platform'.");
+
+        Assert.AreSame(original, TUnitEngineBindFailure.TryRead(ErrorNode(new TestFailedException(new TestFailedException(original)))));
     }
+
+    [TestMethod]
+    public void Other_errors_stay_results()
+    {
+        Assert.IsNull(TUnitEngineBindFailure.TryRead(ErrorNode(new InvalidOperationException("TUnit.Core failed."))));
+        Assert.IsNull(TUnitEngineBindFailure.TryRead(ErrorNode(new MissingMethodException("Method not found: 'UserCode.Helper.Run()'."))));
+        Assert.IsNull(TUnitEngineBindFailure.TryRead(ErrorNode(new TestFailedException(new InvalidOperationException(FrameworkMember)))));
+    }
+
+    [TestMethod]
+    public void Node_without_error_stays_result()
+    {
+        var node = new TestNode
+        {
+            Uid = new TestNodeUid("passed"),
+            DisplayName = $"Unhandled exception - MissingMethodException: {FrameworkMember}",
+            Properties = new PropertyBag(PassedTestNodeStateProperty.CachedInstance),
+        };
+
+        Assert.IsNull(TUnitEngineBindFailure.TryRead(node));
+    }
+
+    private static TestNode ErrorNode(Exception exception) =>
+        new()
+        {
+            Uid = new TestNodeUid("unhandled"),
+            DisplayName = $"Unhandled exception - {exception.GetType().Name}: {exception.Message}",
+            Properties = new PropertyBag(new ErrorTestNodeStateProperty(exception)),
+        };
 
     [TestMethod]
     public void Engine_bindings_resolve_against_the_pinned_tunit_engine()
