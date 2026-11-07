@@ -72,15 +72,25 @@ internal sealed class NetfxAssemblyIsolationContext : IDisposable
 
         var requested = new AssemblyName(args.Name);
         var serves = ShouldServe(args.RequestingAssembly);
-        if ((serves || !_plan.SharesWithClosure(requested)) && _plan.TryShare(requested, out var parent))
-            return parent;
+        var shared = ShareWithParent(requested, serves);
+        if (shared is not null)
+            return shared;
 
         if (!serves)
             return null;
 
-        if (NetfxClosureBind.TryFindLoaded(requested, SessionLoaded(), out var loaded))
-            return Own(loaded);
+        return NetfxClosureBind.TryFindLoaded(requested, SessionLoaded(), out var loaded)
+            ? Own(loaded)
+            : ResolveManaged(requested);
+    }
 
+    private Assembly? ShareWithParent(AssemblyName requested, bool serves)
+        => (serves || !_plan.SharesWithClosure(requested)) && _plan.TryShare(requested, out var parent)
+            ? parent
+            : null;
+
+    private Assembly? ResolveManaged(AssemblyName requested)
+    {
         foreach (var source in _plan.ManagedSources)
         {
             var candidate = source.Resolve(requested);
