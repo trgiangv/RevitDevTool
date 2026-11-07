@@ -1,4 +1,3 @@
-using DevTools.Ipc;
 using System.Text.Json.Serialization;
 
 namespace DevTools.Execution.External.Testing;

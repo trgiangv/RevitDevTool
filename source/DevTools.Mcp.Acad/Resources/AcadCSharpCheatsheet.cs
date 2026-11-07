@@ -1,8 +1,6 @@
-using DevTools.Mcp;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Providers;
 using ModelContextProtocol.Protocol;
-using System.IO;
 using System.Reflection;
 
 namespace DevTools.Mcp.Acad.Resources;

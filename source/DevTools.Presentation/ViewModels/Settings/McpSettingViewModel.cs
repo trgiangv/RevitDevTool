@@ -1,4 +1,3 @@
-using DevTools.Mcp;
 using DevTools.Presentation.Services;
 using System.Collections.ObjectModel;
 using System.Windows.Threading;

@@ -1,7 +1,6 @@
 using DevTools.Mcp.Bridging;
 using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Hosting;
-using DevTools.Mcp.Isolation;
 using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;

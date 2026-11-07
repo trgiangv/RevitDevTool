@@ -1,5 +1,4 @@
 using DevTools.Hosting;
-using DevTools.Mcp;
 using DevTools.Mcp.Adapter.Tests.Harness;
 using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Hosting;

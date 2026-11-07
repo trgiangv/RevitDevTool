@@ -1,5 +1,4 @@
 using Autodesk.AutoCAD.ApplicationServices;
-using DevTools.Mcp;
 using DevTools.Mcp.Core.Protocol;
 using DevTools.Mcp.Core.Utils;
 using DevTools.Mcp.Providers;
@@ -7,7 +6,6 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Drawing.Imaging;
-using System.IO;
 using AcApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
 namespace DevTools.Mcp.Acad.Tools;

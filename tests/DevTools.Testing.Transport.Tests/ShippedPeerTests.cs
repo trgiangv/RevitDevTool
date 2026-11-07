@@ -1,4 +1,3 @@
-using DevTools.Testing.Abstractions.Contracts;
 using System.Text.Json;
 
 namespace DevTools.Testing.Transport.Tests;

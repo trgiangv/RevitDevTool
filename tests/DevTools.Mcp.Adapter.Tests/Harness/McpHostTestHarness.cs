@@ -1,7 +1,3 @@
-using DevTools.Execution.Abstractions;
-using DevTools.Mcp;
-using DevTools.Mcp.Core.Catalog;
-using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Hosting;
 using DevTools.Settings;
 using DevTools.Settings.Configs;

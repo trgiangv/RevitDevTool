@@ -1,8 +1,5 @@
-using DevTools.Execution.Abstractions;
 using DevTools.Hosting;
 using DevTools.Mcp.Adapter.Tests.Harness;
-using DevTools.Mcp.Core.Catalog;
-using DevTools.Mcp.Core.Models;
 using DevTools.Mcp.Core.Sessions;
 using DevTools.Mcp.Hosting;
 using DevTools.Mcp.Isolation;

@@ -1,7 +1,6 @@
 using DevTools.Testing.Abstractions.Contracts;
 using DevTools.Testing.Abstractions.Runtime;
 using DevTools.Testing.Host.Loading;
-using DevTools.Testing.Host.NUnit;
 using DevTools.Testing.Host.Runtime;
 using NUnit.Framework;
 using System.Diagnostics;

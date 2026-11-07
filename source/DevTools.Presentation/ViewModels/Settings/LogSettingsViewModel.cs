@@ -1,7 +1,6 @@
 using CommunityToolkit.Mvvm.Messaging;
 using DevTools.Logging;
 using DevTools.Logging.Options;
-using DevTools.Presentation;
 using DevTools.Presentation.Interfaces;
 using DevTools.Presentation.ViewModels.Messages;
 using DevTools.Settings;

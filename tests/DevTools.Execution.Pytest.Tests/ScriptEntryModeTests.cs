@@ -1,5 +1,4 @@
 using DevTools.Execution.Abstractions;
-using DevTools.Execution.Providers;
 
 namespace DevTools.Execution.Tests;
 

@@ -1,6 +1,5 @@
 using DevTools.Daemon.Control;
 using DevTools.Daemon.Mcp.Processes;
-using DevTools.Ipc;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using System.Net.WebSockets;

@@ -1,6 +1,5 @@
 using AcadDevTool.Adapters;
 using AcadDevTool.Composition;
-using AcadDevTool.Settings;
 using DevTools.Execution.Providers.Python;
 using DevTools.UI;
 using DevTools.UI.Theme;

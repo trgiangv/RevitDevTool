@@ -6,7 +6,6 @@ using Microsoft.Extensions.Hosting;
 using RevitDevTool.Composition;
 using RevitDevTool.Core;
 using RevitDevTool.Logging.Linkify;
-using RevitDevTool.Settings;
 
 namespace RevitDevTool;
 

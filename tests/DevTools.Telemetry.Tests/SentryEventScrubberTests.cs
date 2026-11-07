@@ -1,4 +1,3 @@
-using Sentry;
 using Sentry.Protocol;
 
 namespace DevTools.Telemetry.Tests;
