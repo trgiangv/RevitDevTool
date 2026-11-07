@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Security.Cryptography;
+using ZLogger;
 
 namespace DevTools.Update.Releases;
 
@@ -65,8 +66,7 @@ public sealed class ReleaseReader(HttpClient http, ReleaseSignature signature, I
             catch (Exception ex) when (attempt < Attempts && !cancellationToken.IsCancellationRequested && IsTransient(ex))
             {
                 var delay = RetryDelay * Math.Pow(2, attempt - 1);
-                logger?.LogWarning("The download of {Uri} failed ({Error}). Attempt {Attempt} of {Attempts} starts in {Delay}",
-                    uri.GetLeftPart(UriPartial.Path), ex.Message, attempt + 1, Attempts, delay);
+                logger?.ZLogWarning($"The download of {uri.GetLeftPart(UriPartial.Path)} failed ({ex.Message}). Attempt {attempt + 1} of {Attempts} starts in {delay}");
                 await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
         }

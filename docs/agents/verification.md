@@ -37,7 +37,7 @@ Host API matrix (all years): `build-matrix.md`.
 | MCP tests | `dotnet run --project tests/DevTools.Mcp.<Module>.Tests/DevTools.Mcp.<Module>.Tests.csproj` (Core, Catalog, Adapter, Client, Server) |
 | Python parser (this repo) | `scripts/test-pyserver.ps1` |
 | Installer / bundle | `dotnet run --project build -- pack` |
-| TestAdapter NuGet | `dotnet run --project build -- adapter` (writes `output/nuget`, deletes the extracted global-packages copy of that version) |
+| TestAdapter NuGet | `dotnet run --project build -- adapter` (writes `output/nuget` with the runner at `tools/runner/DevTools.TestRunner.exe`, deletes the extracted global-packages copy of that version). Runner changes need this pack; there is no runner-path override |
 | TestAdapter consumer surface (net48 / net8 / net10 build + host-free discovery) | `scripts/test-adapter-matrix.ps1` |
 | Daemon publish | `dotnet publish source/DevTools.Daemon -c Release` |
 
@@ -68,6 +68,11 @@ under test — do not guess paths.
 changed **Settings → Logging**; Daemon always uses `logs\` (`Logging:File`). Match **PID** in the
 filename when several sessions are open. AutoClean deletes `log_*` only — `crash_*`
 stays until you delete it.
+
+Assembly-isolation bind lines (`Testing assembly isolation`, command and script
+isolation diagnostics) and MCP catalog addition counts exist only in Debug host
+builds; a Release install logs only rejections. To see them for a Release install,
+deploy that year in Debug: `scripts/build-host.ps1 -HostApp Revit -Year 2025 -Mode Debug`.
 
 ```powershell
 # Add-in failed during OnStartup / ApplicationInitialized

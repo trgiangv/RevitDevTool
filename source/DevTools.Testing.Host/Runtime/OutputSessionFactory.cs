@@ -7,6 +7,7 @@ using DevTools.Testing.Host.Loading;
 using DevTools.Testing.Transport;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
+using ZLogger;
 
 namespace DevTools.Testing.Host.Runtime;
 
@@ -41,7 +42,7 @@ internal sealed class OutputSessionFactory(
             {
                 var sentence = RuntimeBindFailure.TryExplain(failure, manifest, found, adapterVersion);
                 if (sentence is not null)
-                    logger.LogWarning(failure, "{Framework} runtime bind failure: {Sentence}", manifest.Framework, sentence);
+                    logger.ZLogWarning(failure, $"{manifest.Framework} runtime bind failure: {sentence}");
 
                 return sentence;
             });
@@ -68,11 +69,16 @@ internal sealed class OutputSessionFactory(
 
     private sealed class LoggerDiagnosticSink(ILogger logger) : IAssemblyIsolationDiagnosticSink
     {
-        public void Publish(AssemblyIsolationDiagnostic diagnostic) =>
-            logger.Log(
-                diagnostic.Code.EndsWith("-rejected", StringComparison.Ordinal) ? LogLevel.Warning : LogLevel.Debug,
-                "Testing assembly isolation '{Code}': {Message}",
-                diagnostic.Code,
-                diagnostic.Message);
+        public void Publish(AssemblyIsolationDiagnostic diagnostic)
+        {
+            if (diagnostic.IsRejection)
+            {
+                logger.ZLogWarning($"Testing assembly isolation '{diagnostic.Code}': {diagnostic.Message}");
+                return;
+            }
+#if DEBUG
+            logger.ZLogDebug($"Testing assembly isolation '{diagnostic.Code}': {diagnostic.Message}");
+#endif
+        }
     }
 }

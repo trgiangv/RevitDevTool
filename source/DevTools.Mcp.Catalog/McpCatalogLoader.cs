@@ -2,6 +2,7 @@ using DevTools.Execution.Abstractions;
 using DevTools.Mcp.Core.Catalog;
 using DevTools.Mcp.Core.Models;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using ZLogger;
 
 namespace DevTools.Mcp;
@@ -65,6 +66,7 @@ public sealed class McpCatalogLoader(IEnumerable<IRegistryProvider> providers, I
         }
     }
 
+    [Conditional("DEBUG")]
     private void LogProviderAdditions(string providerName, RegistryCatalog catalog)
     {
         var addedTools = CountUnknown(catalog.Tools, tool => tool.Id, _knownToolIds);
@@ -96,6 +98,7 @@ public sealed class McpCatalogLoader(IEnumerable<IRegistryProvider> providers, I
         ReplaceKnownIds(_knownResourceIds, loaded.Resources.Select(resource => resource.Id));
     }
 
+    [Conditional("DEBUG")]
     private void LogStoreAdditions(RegistryCatalog loaded)
     {
         var newToolCount = CountUnknown(loaded.Tools, tool => tool.Id, _knownToolIds);

@@ -44,6 +44,9 @@ public sealed class McpAssemblyContext(string assemblyPath, ILogger? logger = nu
     {
         public void Publish(AssemblyIsolationDiagnostic diagnostic)
         {
+#if !DEBUG
+            if (!diagnostic.IsRejection) return;
+#endif
             logger?.ZLogDebug($"[McpAssemblyContext] [{diagnostic.Code}] {diagnostic.Message}");
         }
     }

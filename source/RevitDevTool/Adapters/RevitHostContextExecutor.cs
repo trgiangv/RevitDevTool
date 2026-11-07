@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
 using RevitDevTool.Core.Execution;
+using ZLogger;
 namespace RevitDevTool.Adapters;
 
 public sealed class RevitHostContextExecutor(
@@ -36,11 +37,11 @@ public sealed class RevitHostContextExecutor(
         {
             var summary = executionGuard.RollbackSummary;
             ExecutionGuardContext.RollbackSummary = summary;
-            logger.LogWarning("[ExecutionGuard] {RollbackSummary}", summary);
+            logger.ZLogWarning($"[ExecutionGuard] {summary}");
         }
 
         var logSummary = executionGuard.LastLogSummary;
         if (!string.IsNullOrEmpty(logSummary))
-            logger.LogDebug("[ExecutionGuard] {Summary}", logSummary);
+            logger.ZLogDebug($"[ExecutionGuard] {logSummary}");
     }
 }

@@ -14,6 +14,7 @@
         <PackageReference Include="Microsoft.Extensions.Hosting"/>
         <PackageReference Include="Octokit"/>
         <PackageReference Include="Velopack"/>
+        <PackageReference Include="ZLogger"/>
     </ItemGroup>
 
     <ItemGroup>

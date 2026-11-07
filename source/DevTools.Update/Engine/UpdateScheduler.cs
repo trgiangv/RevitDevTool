@@ -3,6 +3,7 @@ using DevTools.Update.Releases;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using ZLogger;
 
 namespace DevTools.Update.Engine;
 
@@ -37,13 +38,12 @@ public sealed class UpdateScheduler(UpdateEngine engine, IOptions<UpdateEngineOp
                 var result = await engine.CheckAsync(trigger, stoppingToken).ConfigureAwait(false);
                 failures = 0;
                 delay = Jitter(interval, Random.Shared.NextDouble());
-                logger.LogInformation("The {Trigger} update check ended with {Status} ({Version}). The next check is in {Delay}",
-                    trigger, result.Status, result.Version, delay);
+                logger.ZLogInformation($"The {trigger} update check ended with {result.Status} ({result.Version}). The next check is in {delay}");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 delay = Backoff(interval, ++failures, (ex as UpdateThrottledException)?.RetryAfter);
-                logger.LogWarning(ex, "The update check failed. The next check is in {Delay}", delay);
+                logger.ZLogWarning(ex, $"The update check failed. The next check is in {delay}");
             }
         }
     }

@@ -94,8 +94,13 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger, HostAss
 
     private sealed class CommandIsolationDiagnosticSink(ILogger logger) : IAssemblyIsolationDiagnosticSink
     {
-        public void Publish(AssemblyIsolationDiagnostic diagnostic) => logger.ZLogDebug(
-            $"[AcadCommandRunner] Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
+        public void Publish(AssemblyIsolationDiagnostic diagnostic)
+        {
+#if !DEBUG
+            if (!diagnostic.IsRejection) return;
+#endif
+            logger.ZLogDebug($"[AcadCommandRunner] Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
+        }
     }
 
     private static (string TypeName, string MethodName) SplitFullClassName(string fullClassName)

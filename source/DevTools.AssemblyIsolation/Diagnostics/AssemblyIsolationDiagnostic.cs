@@ -18,4 +18,6 @@ public sealed class AssemblyIsolationDiagnostic
     public string Message { get; }
 
     public AssemblyName? RequestedAssembly { get; }
+
+    public bool IsRejection => Code.EndsWith("-rejected", StringComparison.Ordinal);
 }

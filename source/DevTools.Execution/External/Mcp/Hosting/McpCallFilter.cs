@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using ZLogger;
 
 namespace DevTools.Execution.External.Mcp.Hosting;
 
@@ -47,7 +48,7 @@ internal sealed class McpCallFilter(
             catch (Exception ex)
             {
                 operation.Fail(isBuiltIn ? ex : TelemetryReporter.MarkExternal(ex));
-                logger.LogError(ex, "Tool '{ToolName}' failed", toolName);
+                logger.ZLogError(ex, $"Tool '{toolName}' failed");
                 executionTracker.Complete(scope, ExecutionState.Failed, ex.Message);
                 return ToToolError(ex);
             }

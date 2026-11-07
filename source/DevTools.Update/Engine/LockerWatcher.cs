@@ -1,6 +1,7 @@
 using DevTools.Update.Apply;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using ZLogger;
 
 namespace DevTools.Update.Engine;
 
@@ -21,7 +22,7 @@ internal sealed class LockerWatcher(Func<Task> retry, ILogger logger)
             }
 
             Task.Run(() => RetryAfterExitAsync(locker.ProcessId, cancellationToken), cancellationToken)
-                .ContinueWith(task => logger.LogWarning(task.Exception, "A pending payload could not be applied"), TaskContinuationOptions.OnlyOnFaulted);
+                .ContinueWith(task => logger.ZLogWarning(task.Exception, $"A pending payload could not be applied"), TaskContinuationOptions.OnlyOnFaulted);
         }
     }
 

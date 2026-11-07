@@ -122,7 +122,7 @@ public sealed class OutputRunTests
     }
 
     [TestMethod]
-    public void Isolation_plan_reaches_logger()
+    public void Bind_lines_only_in_debug()
     {
         using var workspace = new Workspace();
         workspace.WriteOutput(found: Newer);
@@ -131,9 +131,14 @@ public sealed class OutputRunTests
 
         manager.Run(workspace.Request(), NullTestEventSink.Instance);
 
-        Assert.IsTrue(logger.Messages.Any(message =>
+        var bound = logger.Messages.Any(message =>
             message.Contains("managed-candidate-selected", StringComparison.Ordinal)
-            && message.Contains("MSTest.TestFramework", StringComparison.Ordinal)));
+            && message.Contains("MSTest.TestFramework", StringComparison.Ordinal));
+#if DEBUG
+        Assert.IsTrue(bound);
+#else
+        Assert.IsFalse(bound);
+#endif
     }
 
     [TestMethod]
@@ -229,7 +234,7 @@ public sealed class OutputRunTests
                         "Fixture.Session",
                         TestingProtocol.RuntimeRange,
                         "MSTest.TestFramework",
-                        Floor.ToString()),
+                        Floor.ToString(3)),
                     TestingJsonContext.Default.RuntimeManifest));
         }
 

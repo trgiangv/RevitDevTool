@@ -312,7 +312,12 @@ public sealed class CSharpCompiler(
 
     private sealed class ScriptIsolationDiagnosticSink(ILogger logger) : IAssemblyIsolationDiagnosticSink
     {
-        public void Publish(AssemblyIsolationDiagnostic diagnostic) => logger.ZLogDebug(
-            $"[CSharpCompiler] Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
+        public void Publish(AssemblyIsolationDiagnostic diagnostic)
+        {
+#if !DEBUG
+            if (!diagnostic.IsRejection) return;
+#endif
+            logger.ZLogDebug($"[CSharpCompiler] Assembly isolation diagnostic '{diagnostic.Code}': {diagnostic.Message}");
+        }
     }
 }

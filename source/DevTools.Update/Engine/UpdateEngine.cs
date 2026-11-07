@@ -4,6 +4,7 @@ using DevTools.Update.Autodesk;
 using DevTools.Update.Installations;
 using DevTools.Update.Releases;
 using Microsoft.Extensions.Logging;
+using ZLogger;
 
 namespace DevTools.Update.Engine;
 
@@ -222,7 +223,7 @@ public sealed class UpdateEngine(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "The Daemon update to {Version} failed. The payload update continues", release.Version);
+            logger.ZLogWarning(ex, $"The Daemon update to {release.Version} failed. The payload update continues");
             return null;
         }
     }
@@ -237,7 +238,7 @@ public sealed class UpdateEngine(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.LogError(ex, "The update of {HostVersion} to {Version} failed", payload.HostVersion, release.Version);
+                logger.ZLogError(ex, $"The update of {payload.HostVersion} to {release.Version} failed");
                 notifier.Notify(new UpdateNotice(UpdateNoticeKind.Failed, "Update failed",
                     $"{release.Version} is not installed. The current version stays in use.", release.Version));
             }
