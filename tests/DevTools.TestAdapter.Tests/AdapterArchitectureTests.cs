@@ -685,15 +685,15 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Adapter_pack_is_separate_argument()
+    public void Adapter_pack_is_nettest_train()
     {
-        var program = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Program.cs"));
+        var cli = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Cli.cs"));
         var module = File.ReadAllText(Path.Combine(
             RepositoryRoot, "build", "Modules", "PackTestAdapterModule.cs"));
 
-        Assert.Contains("args.Contains(\"adapter\")", program, StringComparison.Ordinal);
-        Assert.Contains("AddModule<PackTestAdapterModule>()", program, StringComparison.Ordinal);
-        Assert.DoesNotContain("DependsOn", module, StringComparison.Ordinal);
+        Assert.Contains("train == Train.NetTest", cli, StringComparison.Ordinal);
+        Assert.Contains("AddModule<PackTestAdapterModule>()", cli, StringComparison.Ordinal);
+        Assert.DoesNotContain("DependsOn<Compile", module, StringComparison.Ordinal);
         Assert.DoesNotContain("powershell", module, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Projects.DevTools_TestAdapter", module, StringComparison.Ordinal);
         Assert.DoesNotContain("DevTools_NUnit_MTP", module, StringComparison.Ordinal);
@@ -704,13 +704,12 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Pack_passes_csproj_version()
+    public void Pack_passes_train_version()
     {
         var module = File.ReadAllText(Path.Combine(
             RepositoryRoot, "build", "Modules", "PackTestAdapterModule.cs"));
 
-        Assert.Contains("ReadPackageVersion(adapterProject)", module, StringComparison.Ordinal);
+        Assert.Contains("var version = run.Version.Version;", module, StringComparison.Ordinal);
         Assert.AreEqual(2, module.Split("Properties = [(\"Version\", version)]").Length - 1);
-        Assert.DoesNotContain("GitVersion()", module, StringComparison.Ordinal);
     }
 }

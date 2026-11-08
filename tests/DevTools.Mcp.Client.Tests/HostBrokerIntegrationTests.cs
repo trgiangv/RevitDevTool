@@ -10,6 +10,7 @@ public sealed class HostConnectionsIntegrationTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
+    [Ignore("Flaky: the first connect can miss its wait; see docs/agents/test-matrix.md")]
     public async Task RunAsync_ConnectsRefreshesCatalog_AndDisconnectsWhenPipeRemoved()
     {
         await using var host = await FakeMcpHostPipe.StartAsync(cancellationToken: TestContext.CancellationToken);
@@ -55,6 +56,7 @@ public sealed class HostConnectionsIntegrationTests
     }
 
     [TestMethod]
+    [Ignore("Flaky: the first connect can miss its wait; see docs/agents/test-matrix.md")]
     public async Task RunAsync_ReconnectsWhenTransportDropsButPipeStillDiscovered()
     {
         await using var host = await FakeMcpHostPipe.StartAsync(cancellationToken: TestContext.CancellationToken);

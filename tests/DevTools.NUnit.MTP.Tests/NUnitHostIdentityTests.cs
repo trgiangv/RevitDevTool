@@ -59,7 +59,7 @@ public sealed class NUnitHostIdentityTests
 
             Assert.AreEqual(TestSelectionKind.FrameworkFilter, host.Kind);
             Assert.AreEqual("filter-xml", host.FilterFormat);
-            Assert.AreEqual("<filter><not><test>*</test></not></filter>", host.FilterData);
+            Assert.AreEqual("<filter><not><test re=\"1\">.*</test></not></filter>", host.FilterData);
         }
     }
 

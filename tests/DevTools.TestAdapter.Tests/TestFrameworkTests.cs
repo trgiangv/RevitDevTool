@@ -248,7 +248,6 @@ public sealed class TestRunSettingsLoaderTests
             [TestConfig.Keys.Configuration(TestConfig.Keys.ForceLaunch)] = "true",
             [TestConfig.Keys.Configuration(TestConfig.Keys.PerTestTimeoutSeconds)] = "90",
             [TestConfig.Keys.Configuration(TestConfig.Keys.LaunchTimeoutSeconds)] = "240",
-            [TestConfig.Keys.Configuration(TestConfig.Keys.RunnerPath)] = @"C:\Runner.exe",
             [TestConfig.Keys.Configuration(TestConfig.Keys.FrameworkId)] = "nunit",
         });
 
@@ -260,7 +259,6 @@ public sealed class TestRunSettingsLoaderTests
         Assert.AreEqual(90, options.Host.PerTestTimeoutSeconds);
         Assert.AreEqual(240, options.Host.LaunchTimeoutSeconds);
         Assert.AreEqual(TestFrameworkId.NUnit, options.FrameworkId);
-        Assert.AreEqual(@"C:\Runner.exe", options.RunnerPath);
     }
 
     [TestMethod]

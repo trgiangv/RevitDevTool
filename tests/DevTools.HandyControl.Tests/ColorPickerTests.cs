@@ -16,16 +16,16 @@ namespace DevTools.HandyControl.Tests;
 public sealed class ColorPickerTests
 {
     [TestMethod]
-    public void GenericDictionaryLoads()
+    public void ColorPickerDictionaryLoads()
     {
         WpfSta.Invoke(() =>
         {
             var dictionary = new ResourceDictionary
             {
-                Source = new Uri("/DevTools.UI;component/Themes/Generic.xaml", UriKind.Relative),
+                Source = new Uri("/DevTools.UI;component/Controls/ColorPicker/ColorPicker.xaml", UriKind.Relative),
             };
 
-            Assert.IsTrue(dictionary.MergedDictionaries.Count > 0);
+            Assert.IsTrue(dictionary.Count > 0);
         });
     }
 
