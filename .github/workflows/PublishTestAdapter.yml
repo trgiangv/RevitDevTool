@@ -27,10 +27,10 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Cache packages
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-test-adapter-${{ hashFiles('source/DevTools.TestAdapter/**/*.csproj', 'source/DevTools.NUnit.MTP/**/*.csproj', 'source/DevTools.Testing.Abstractions/**/*.csproj', 'source/DevTools.Testing.Transport/**/*.csproj', 'source/DevTools.Ipc/**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props') }}
@@ -50,7 +50,7 @@ jobs:
           dotnet run --project build -- adapter
 
       - name: Upload nupkg
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: RevitDevTool.TestAdapter.${{ steps.pack.outputs.version }}
           path: output/nuget/RevitDevTool.TestAdapter.${{ steps.pack.outputs.version }}.nupkg
