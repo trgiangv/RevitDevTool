@@ -32,15 +32,10 @@ public sealed class DesktopComponentTests
     [TestMethod]
     public void ThemeHelper_IsLight_Auto_ReadsRegistry()
     {
-        _ = ThemeHelper.IsLight(AppTheme.Auto);
-    }
+        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+        var expected = key?.GetValue("AppsUseLightTheme") is int value && value != 0;
 
-    [TestMethod]
-    public void ThemeHelper_Apply_NoOpsWhenApplicationNotRunning()
-    {
-        ThemeHelper.Apply(AppTheme.Light);
-        ThemeHelper.Apply(AppTheme.Dark);
-        ThemeHelper.Apply(AppTheme.Auto);
+        Assert.AreEqual(expected, ThemeHelper.IsLight(AppTheme.Auto));
     }
 
     [TestMethod]
@@ -186,14 +181,21 @@ public sealed class DesktopComponentTests
     [TestMethod]
     public async Task DiscoveryHostedService_StartsAndStops()
     {
+        var running = CancellationToken.None;
         var discovery = new Mock<IHostConnections>();
         discovery.Setup(d => d.RunAsync(It.IsAny<CancellationToken>()))
-            .Returns<CancellationToken>(ct => Task.Delay(Timeout.Infinite, ct));
+            .Returns<CancellationToken>(ct =>
+            {
+                running = ct;
+                return Task.Delay(Timeout.Infinite, ct);
+            });
 
         var service = new DiscoveryHostedService(discovery.Object);
         using var cts = new CancellationTokenSource();
         await service.StartAsync(cts.Token);
         await cts.CancelAsync();
         await service.StopAsync(CancellationToken.None);
+
+        Assert.IsTrue(running.IsCancellationRequested);
     }
 }

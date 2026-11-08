@@ -10,10 +10,16 @@ public static class AppUtils
         return rootPath;
     }
 
+    public const string DataDirectoryVariable = "REVITDEVTOOL_DATA_DIR";
+
+    /// <summary>
+    ///     <c>%AppData%\RevitDevTool</c>, or the folder in <see cref="DataDirectoryVariable"/> when it is set.
+    /// </summary>
     public static string GetApplicationDataPath()
     {
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var rootPath = Path.Combine(appData, "RevitDevTool");
+        var rootPath = Environment.GetEnvironmentVariable(DataDirectoryVariable) is { Length: > 0 } custom
+            ? custom
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RevitDevTool");
         Directory.CreateDirectory(rootPath);
         return rootPath;
     }

@@ -63,11 +63,18 @@ public sealed class LoggerTraceListenerTests
     public void LoggerTraceListener_callback_exceptions_are_swallowed()
     {
         using var factory = LoggerFactory.Create(static builder => builder.AddZLoggerConsole());
+        var called = false;
         var listener = new LoggerTraceListener(
             factory.CreateLogger("trace"),
             new TraceListenerOptions(),
-            _ => throw new InvalidOperationException("boom"));
+            _ =>
+            {
+                called = true;
+                throw new InvalidOperationException("boom");
+            });
         listener.Write("hello");
+
+        Assert.IsTrue(called);
     }
 
     [TestMethod]

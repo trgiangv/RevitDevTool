@@ -41,7 +41,7 @@ public sealed class FSharpExecutionTests
     }
 
     [TestMethod]
-    public async Task FSharpExecutor_EvaluatesScriptAndDisposesSession()
+    public async Task FSharpExecutor_ScriptWithoutCommand_ReturnsNothing()
     {
         var directory = ExecutionTestHelpers.CreateTempDirectory("fsharp-executor");
         var scriptPath = Path.Combine(directory, "sample_script.fsx");
@@ -53,7 +53,8 @@ public sealed class FSharpExecutionTests
         try
         {
             var output = executor.CreateSessionAndEvaluate(scriptPath, [], bridge);
-            (output.Session as IDisposable)?.Dispose();
+            Assert.IsNull(output.Command);
+            Assert.IsNull(output.Session);
         }
         finally
         {

@@ -15,6 +15,8 @@ namespace DevTools.Daemon.Tests;
 [TestClass]
 public sealed class TunnelComponentTests
 {
+    public TestContext TestContext { get; set; } = null!;
+
     [TestMethod]
     [DataRow("wss://gateway.example/tunnel", "https://gateway.example")]
     [DataRow("https://gateway.example/tunnel", "https://gateway.example")]
@@ -40,8 +42,9 @@ public sealed class TunnelComponentTests
         var options = McpServerFactory.CreateOptions(
             engine.ToolCollection, engine.PromptCollection, host.Services);
 
+        using var server = new RejectingServer();
         var client = new TunnelClient(
-            new Uri("ws://127.0.0.1:9/tunnel"),
+            new Uri($"ws://127.0.0.1:{server.Port}/tunnel"),
             () => Task.FromResult<string?>("token"),
             options,
             scanner.Object,
@@ -49,13 +52,21 @@ public sealed class TunnelComponentTests
             host.Services,
             NullLoggerFactory.Instance.CreateLogger("TunnelClient"));
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        TunnelStatus? lastStatus = null;
-        client.StatusChanged += (_, args) => lastStatus = args.Status;
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(5));
+        var statuses = new List<TunnelStatus>();
+        client.StatusChanged += (_, args) =>
+        {
+            statuses.Add(args.Status);
+            if (args.Status == TunnelStatus.Reconnecting)
+                cts.Cancel();
+        };
 
         await client.RunAsync(cts.Token);
 
-        Assert.IsTrue(lastStatus is TunnelStatus.Connecting or TunnelStatus.Reconnecting or TunnelStatus.Disconnected);
+        CollectionAssert.AreEqual(
+            new[] { TunnelStatus.Connecting, TunnelStatus.Reconnecting, TunnelStatus.Disconnected },
+            statuses);
         await client.DisposeAsync();
     }
 
@@ -104,7 +115,7 @@ public sealed class TunnelComponentTests
     }
 
     [TestMethod]
-    public async Task WebSocketWriteStream_FlushesMultipleLines()
+    public async Task WebSocketWriteStream_SendsOneMessagePerLine()
     {
         var port = GetFreeTcpPort();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -113,8 +124,14 @@ public sealed class TunnelComponentTests
         using var ws = new ClientWebSocket();
         await ws.ConnectAsync(new Uri($"ws://127.0.0.1:{port}/"), cts.Token);
         var writeStream = new WebSocketWriteStream(ws, NullLoggerFactory.Instance.CreateLogger("ws"));
-        await writeStream.WriteAsync(Encoding.UTF8.GetBytes("{\"a\":1}\n{\"b\":2}\n"), cts.Token);
+        await writeStream.WriteAsync(Encoding.UTF8.GetBytes("{\"a\":1}\r\n{\"b\":2}"), cts.Token);
         await writeStream.FlushAsync(cts.Token);
+
+        var buffer = new byte[256];
+        var first = await ws.ReceiveAsync(buffer, cts.Token);
+        Assert.AreEqual("{\"a\":1}", Encoding.UTF8.GetString(buffer, 0, first.Count));
+        var second = await ws.ReceiveAsync(buffer, cts.Token);
+        Assert.AreEqual("{\"b\":2}", Encoding.UTF8.GetString(buffer, 0, second.Count));
 
         await cts.CancelAsync();
         try { await serverTask; } catch (OperationCanceledException) { }
@@ -142,10 +159,18 @@ public sealed class TunnelComponentTests
             host.Services,
             NullLogger<TunnelClient>.Instance);
 
+        var connected = false;
+        client.StatusChanged += (_, args) =>
+        {
+            if (args.Status != TunnelStatus.Connected) return;
+            connected = true;
+            cts.Cancel();
+        };
+
         await client.RunAsync(cts.Token);
         await client.DisposeAsync();
 
-        await cts.CancelAsync();
+        Assert.IsTrue(connected, "The tunnel did not reach Connected.");
         try { await serverTask; } catch (OperationCanceledException) { }
     }
 

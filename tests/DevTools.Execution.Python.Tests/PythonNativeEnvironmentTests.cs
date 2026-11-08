@@ -1,4 +1,6 @@
 using DevTools.Execution.Providers.Python;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace DevTools.Execution.Tests;
 
@@ -183,9 +185,14 @@ public sealed class PythonNativeEnvironmentTests
     [TestMethod]
     public void LoadStableAbiForwarder_NoopsWhenMissing()
     {
-        PythonNativeEnvironment.LoadStableAbiForwarder(string.Empty);
+        var logger = new Mock<ILogger>();
+
+        PythonNativeEnvironment.LoadStableAbiForwarder(string.Empty, logger.Object);
         PythonNativeEnvironment.LoadStableAbiForwarder(
-            Path.Combine(Path.GetTempPath(), "rdt-no-python3-" + Guid.NewGuid().ToString("N")));
+            Path.Combine(Path.GetTempPath(), "rdt-no-python3-" + Guid.NewGuid().ToString("N")),
+            logger.Object);
+
+        Assert.IsEmpty(logger.Invocations);
     }
 
     [TestMethod]
@@ -222,16 +229,23 @@ public sealed class PythonNativeEnvironmentTests
     }
 
     [TestMethod]
-    public void PrepareProcess_WithLibraryBin_DoesNotThrow()
+    public void PrepareProcess_PrependsLibraryBinToPath()
     {
         var home = CreateFakeHome(withDlls: true, withLibraryBin: true);
+        var path = Environment.GetEnvironmentVariable("PATH");
         try
         {
             File.WriteAllBytes(Path.Combine(home, "Library", "bin", "libcrypto-3-x64.dll"), [1]);
             PythonNativeEnvironment.PrepareProcess(home);
+
+            Assert.StartsWith(
+                Path.GetFullPath(Path.Combine(home, "Library", "bin")) + ";",
+                Environment.GetEnvironmentVariable("PATH")!,
+                StringComparison.OrdinalIgnoreCase);
         }
         finally
         {
+            Environment.SetEnvironmentVariable("PATH", path);
             Directory.Delete(home, recursive: true);
         }
     }

@@ -6,6 +6,10 @@
         <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     </PropertyGroup>
 
+    <ItemGroup Condition="$([System.String]::Copy('$(MSBuildProjectName)').EndsWith('.Tests'))">
+        <Compile Include="$(MSBuildThisFileDirectory)TestDataDirectory.cs" Link="TestDataDirectory.cs" />
+    </ItemGroup>
+
     <PropertyGroup Condition="'$(UseMicrosoftCodeCoverage)' == 'true'">
         <TestingExtensionsProfile>Default</TestingExtensionsProfile>
         <EnableMicrosoftTestingExtensionsCodeCoverage>true</EnableMicrosoftTestingExtensionsCodeCoverage>

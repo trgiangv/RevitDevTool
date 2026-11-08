@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Threading.Channels;
 
 namespace DevTools.Daemon.Tests;
 
@@ -39,10 +40,13 @@ public sealed class DaemonHostIntegrationTests
             host = AppHostBuilder.CreateDesktop();
             _ = host.Services.GetRequiredService<TrayMenu>();
         });
+        var lifetime = host!.Services.GetRequiredService<IHostApplicationLifetime>();
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-        await host!.StartAsync(cts.Token);
+        await host.StartAsync(cts.Token);
+        Assert.IsTrue(lifetime.ApplicationStarted.IsCancellationRequested);
         await cts.CancelAsync();
         await host.StopAsync(CancellationToken.None);
+        Assert.IsTrue(lifetime.ApplicationStopped.IsCancellationRequested);
         host.Dispose();
     }
 
@@ -60,36 +64,36 @@ public sealed class DaemonHostIntegrationTests
             host.Services,
             NullLogger<TunnelHostedService>.Instance);
 
+        var statuses = Channel.CreateUnbounded<TunnelStatus>();
+        gateway.StatusChanged += (_, args) => statuses.Writer.TryWrite(args.Status);
+
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
         await gateway.StartAsync(cts.Token);
+        await WaitForStatusAsync(statuses.Reader, TunnelStatus.Connecting);
 
         auth.Raise(a => a.StateChanged += null!, new object(), new AuthStateArgs(false));
-        auth.Setup(a => a.IsAuthenticated).Returns(true);
-        auth.Setup(a => a.AccessToken).Returns("token");
+        await WaitForStatusAsync(statuses.Reader, TunnelStatus.Disconnected);
+
         auth.Raise(a => a.StateChanged += null!, new object(), new AuthStateArgs(true));
+        await WaitForStatusAsync(statuses.Reader, TunnelStatus.Connecting);
 
         await gateway.StopAsync(CancellationToken.None);
+        Assert.AreEqual(TunnelStatus.Disconnected, gateway.Status);
     }
 
-    [TestMethod]
-    public async Task StdioHostedService_StopsWhenInputEnds()
+    private async Task WaitForStatusAsync(ChannelReader<TunnelStatus> statuses, TunnelStatus expected)
     {
-        using var host = AppHostBuilder.CreateStdioHost(["--stdio"]);
-        var originalIn = Console.In;
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
         try
         {
-            var input = new MemoryStream();
-            Console.SetIn(new StreamReader(input));
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            var runTask = host.RunAsync(cts.Token);
-            input.Close();
-            await Task.WhenAny(runTask, Task.Delay(TimeSpan.FromSeconds(5), TestContext.CancellationToken));
-            await cts.CancelAsync();
-            try { await runTask; } catch (OperationCanceledException) { }
+            while (await statuses.ReadAsync(timeout.Token) != expected)
+            {
+            }
         }
-        finally
+        catch (OperationCanceledException) when (!TestContext.CancellationToken.IsCancellationRequested)
         {
-            Console.SetIn(originalIn);
+            Assert.Fail($"The tunnel never reported {expected}.");
         }
     }
 }

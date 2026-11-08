@@ -202,17 +202,18 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     [TestMethod]
     public void ShellViewModel_LoadAvatar_InvalidUrl_ClearsImage()
     {
+        using var server = new RejectingServer();
         RunOnUi(() =>
         {
             var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
-            auth.Setup(a => a.AvatarUrl).Returns("http://127.0.0.1:9/avatar.png");
+            auth.Setup(a => a.AvatarUrl).Returns($"http://127.0.0.1:{server.Port}/avatar.png");
             var state = CreateShellViewModel(auth.Object);
             Assert.IsNull(state.Overview.AvatarImage);
         });
     }
 
     [TestMethod]
-    public void TrayMenu_ShowMainWindow_DoesNotThrow()
+    public void TrayMenu_ShowMainWindow_ShowsWindow()
     {
         RunOnUi(() =>
         {
@@ -220,6 +221,9 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
             var window = new MainWindow(state);
             var tray = new TrayMenu(state, window);
             tray.ShowMainWindow();
+
+            Assert.IsTrue(window.IsVisible);
+            Assert.AreSame(window, Application.Current.MainWindow);
         });
     }
 

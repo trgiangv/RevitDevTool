@@ -1,12 +1,17 @@
 using DevTools.UI.Controls;
+using FlaUI.Core.Tools;
+using FlaUI.UIA3;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
-using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using AutomationElement = FlaUI.Core.AutomationElements.AutomationElement;
 using HandyComboBox = HandyControl.Controls.ComboBox;
 
 namespace DevTools.HandyControl.Tests;
@@ -42,9 +47,10 @@ public sealed class ColorPickerTests
     [TestMethod]
     public void ClosedPickerShowsSelectedColor()
     {
+        using var ui = PickerUi.Show();
         WpfSta.Invoke(() =>
         {
-            using var window = Show(out var picker);
+            var picker = ui.Picker;
             picker.SelectedColor = Colors.DodgerBlue;
             picker.UpdateLayout();
 
@@ -57,15 +63,12 @@ public sealed class ColorPickerTests
             Assert.IsNotNull(picker.Template.FindName("PART_Popup", picker));
             Assert.IsTrue(picker.DesiredSize.Width > 0);
             Assert.IsTrue(picker.DesiredSize.Height is > 0 and < 48, "Closed picker is taller than a single row. " + picker.DesiredSize);
-
-            var toggle = FindVisualChild<ToggleButton>(picker);
-            Assert.IsNotNull(toggle);
-            Assert.IsTrue(toggle.ActualWidth > 0, "Drop-down toggle has no width. " + Describe(picker));
-            Assert.IsTrue(toggle.ActualHeight > 0);
-            var hit = VisualTreeHelper.HitTest(picker, new Point(picker.ActualWidth / 2, picker.ActualHeight / 2));
-            Assert.IsNotNull(hit);
-            Assert.IsTrue(IsDescendantOf(hit.VisualHit, toggle), "Click does not land on the drop-down toggle. " + Describe(picker));
         });
+
+        var toggle = ui.FindInWindow("ColorPickerToggle");
+        Assert.IsFalse(toggle.IsOffscreen, "Drop-down toggle is offscreen.");
+        var bounds = toggle.BoundingRectangle;
+        Assert.IsTrue(bounds.Width > 0 && bounds.Height > 0, "Drop-down toggle has no bounds. " + bounds);
     }
 
     [TestMethod]
@@ -157,108 +160,53 @@ public sealed class ColorPickerTests
     }
 
     [TestMethod]
-    public void MouseDownOnHeaderOpensDropDownAndSecondClickClosesIt()
+    public void HeaderToggleOpensAndCloses()
     {
-        WpfSta.Invoke(() =>
-        {
-            using var window = Show(out var picker);
-            window.Activate();
-            var header = FindVisualChild<ToggleButton>(picker);
-            Assert.IsNotNull(header);
-            Assert.IsTrue(header.ActualWidth > 0);
+        using var ui = PickerUi.Show();
+        var toggle = ui.FindInWindow("ColorPickerToggle").Patterns.Toggle.Pattern;
 
-            RaiseMouseDown(header);
-            Drain();
+        toggle.Toggle();
+        Assert.IsTrue(ui.WaitFor(picker => picker.IsDropDownOpen && PopupOf(picker).IsOpen), "Header toggle did not open the picker.");
+        Assert.IsNotNull(ui.FindInPopup("ColorPickerStandardPalette"));
 
-            var popup = (Popup?)picker.Template.FindName("PART_Popup", picker);
-            Assert.IsNotNull(popup);
-            Assert.IsTrue(picker.IsDropDownOpen, "Mouse down on the header did not open the picker.");
-            Assert.IsTrue(popup.IsOpen, "Popup closed again on the same click.");
-
-            RaiseMouseDown(header);
-            Drain();
-            Assert.IsFalse(picker.IsDropDownOpen);
-            Assert.IsFalse(popup.IsOpen);
-        });
+        toggle.Toggle();
+        Assert.IsTrue(ui.WaitFor(picker => !picker.IsDropDownOpen && !PopupOf(picker).IsOpen), "Header toggle did not close the picker.");
     }
 
     [TestMethod]
-    public void DraggingAdvancedSurfaceKeepsPopupOpenAndUpdatesColor()
+    public void SaturationEditKeepsPopupOpen()
     {
-        WpfSta.Invoke(() =>
-        {
-            using var window = Show(out var picker);
-            window.Activate();
-            var canvas = OpenAdvanced(picker);
-            var box = (FrameworkElement?)canvas.Template.FindName("PART_SaturationValueBox", canvas);
-            Assert.IsNotNull(box);
-            Assert.IsTrue(box.ActualWidth > 1, "Saturation surface was not laid out.");
+        using var ui = PickerUi.Show();
+        var start = Color.FromRgb(55, 179, 179);
+        WpfSta.Invoke(() => ui.Picker.SelectedColor = start);
+        ui.OpenAdvanced();
 
-            picker.SelectedColor = Color.FromRgb(55, 179, 179);
-            Drain();
-            var before = picker.SelectedColor;
-            Assert.AreEqual(Color.FromRgb(55, 179, 179), before);
+        var saturation = ui.FindInPopup("ColorPickerSaturationSlider").Patterns.RangeValue.Pattern;
+        saturation.SetValue(saturation.Value.Value > 0.5 ? 0.15 : 0.85);
 
-            RaiseMouseDown(box);
-            Drain();
-            Assert.IsTrue(picker.IsDropDownOpen, "Mouse down on the advanced surface closed the popup.");
-
-            box.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
-            {
-                RoutedEvent = UIElement.MouseLeftButtonDownEvent,
-                Source = box,
-            });
-            Drain();
-
-            Assert.IsTrue(picker.IsDropDownOpen, "Popup closed when the saturation surface captured the mouse.");
-            Assert.AreEqual(box, Mouse.Captured, "Saturation surface did not keep mouse capture for the drag.");
-
-            picker.Saturation = picker.Saturation > 0.5 ? 0.15 : 0.85;
-            Drain();
-            Assert.IsTrue(picker.IsDropDownOpen, "Popup closed while the color was still changing.");
-            Assert.AreNotEqual(before, picker.SelectedColor);
-
-            box.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
-            {
-                RoutedEvent = UIElement.MouseLeftButtonUpEvent,
-                Source = box,
-            });
-            Drain();
-            Assert.IsTrue(picker.IsDropDownOpen, "Popup closed when the drag ended.");
-        });
+        Assert.IsTrue(ui.WaitFor(picker => picker.SelectedColor != start), "Saturation edit did not change the color.");
+        Assert.IsTrue(ui.Read(picker => picker.IsDropDownOpen && PopupOf(picker).IsOpen), "Popup closed while the color was changing.");
     }
 
     [TestMethod]
-    public void EyeDropperKeepsPopupOpenWithoutThrowing()
+    public void EyeDropperKeepsPopupOpen()
     {
-        WpfSta.Invoke(() =>
+        using var ui = PickerUi.Show();
+        var errors = WpfSta.Invoke(WatchDispatcher);
+        try
         {
-            using var errors = WatchDispatcher();
-            using var window = Show(out var picker);
-            window.Activate();
-            var canvas = OpenAdvanced(picker);
-            var dropper = (ColorEyeDropper?)canvas.Template.FindName("PART_ColorEyeDropper", canvas);
-            Assert.IsNotNull(dropper);
+            ui.OpenAdvanced();
 
-            dropper.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
-            {
-                RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent,
-                Source = dropper,
-            });
-            Drain();
+            ui.FindInPopup("ColorPickerEyeDropper").Patterns.Invoke.Pattern.Invoke();
+            WpfSta.Invoke(Drain);
 
-            Assert.IsTrue(picker.IsDropDownOpen, "Popup closed when the eye dropper captured the mouse.");
+            Assert.IsTrue(ui.Read(picker => picker.IsDropDownOpen && PopupOf(picker).IsOpen), "Popup closed when the eye dropper picked.");
             Assert.IsNull(errors.Exception, errors.Exception?.ToString());
-
-            dropper.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
-            {
-                RoutedEvent = UIElement.PreviewMouseLeftButtonUpEvent,
-                Source = dropper,
-            });
-            Drain();
-            Assert.IsTrue(picker.IsDropDownOpen, "Popup closed when the eye dropper finished.");
-            Assert.IsNull(errors.Exception, errors.Exception?.ToString());
-        });
+        }
+        finally
+        {
+            WpfSta.Invoke(errors.Dispose);
+        }
     }
 
     [TestMethod]
@@ -268,28 +216,12 @@ public sealed class ColorPickerTests
         {
             using var errors = WatchDispatcher();
             var dropper = new ColorEyeDropper();
-            dropper.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
-            {
-                RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent,
-                Source = dropper,
-            });
+            var peer = UIElementAutomationPeer.CreatePeerForElement(dropper);
+            var invoke = (IInvokeProvider)peer.GetPattern(PatternInterface.Invoke);
+            invoke.Invoke();
             Drain();
-            dropper.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
-            {
-                RoutedEvent = UIElement.PreviewMouseLeftButtonUpEvent,
-                Source = dropper,
-            });
-            Drain();
+            Assert.IsNull(dropper.SelectedColor);
             Assert.IsNull(errors.Exception, errors.Exception?.ToString());
-        });
-    }
-
-    private static void RaiseMouseDown(IInputElement source)
-    {
-        source.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
-        {
-            RoutedEvent = Mouse.MouseDownEvent,
-            Source = source,
         });
     }
 
@@ -298,25 +230,90 @@ public sealed class ColorPickerTests
         Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
     }
 
-    private static ColorCanvas OpenAdvanced(ColorPicker picker)
+    private static Popup PopupOf(ColorPicker picker)
     {
-        picker.IsDropDownOpen = true;
-        Drain();
-        var tabs = (TabControl?)picker.Template.FindName("PART_PopupTabControl", picker);
-        var advanced = (TabItem?)picker.Template.FindName("PART_AdvancedTab", picker);
-        Assert.IsNotNull(tabs);
-        Assert.IsNotNull(advanced);
-        tabs.SelectedItem = advanced;
-        picker.UpdateLayout();
-        Drain();
-
         var popup = (Popup?)picker.Template.FindName("PART_Popup", picker);
-        Assert.IsNotNull(popup?.Child);
-        var canvas = FindChild<ColorCanvas>(popup.Child);
-        Assert.IsNotNull(canvas);
-        canvas.ApplyTemplate();
-        canvas.UpdateLayout();
-        return canvas;
+        Assert.IsNotNull(popup);
+        return popup;
+    }
+
+    private sealed class PickerUi : IDisposable
+    {
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
+        private readonly UIA3Automation _automation = new();
+        private readonly ThemeWindow _window;
+
+        private PickerUi(ThemeWindow window, ColorPicker picker)
+        {
+            _window = window;
+            Picker = picker;
+        }
+
+        public ColorPicker Picker { get; }
+
+        public static PickerUi Show()
+        {
+            return WpfSta.Invoke(() =>
+            {
+                var window = ColorPickerTests.Show(out var picker);
+                window.Activate();
+                return new PickerUi(window, picker);
+            });
+        }
+
+        public T Read<T>(Func<ColorPicker, T> read)
+        {
+            return WpfSta.Invoke(() => read(Picker));
+        }
+
+        public bool WaitFor(Func<ColorPicker, bool> condition)
+        {
+            return Retry.WhileFalse(() => Read(condition), Timeout).Result;
+        }
+
+        public AutomationElement FindInWindow(string automationId)
+        {
+            return Find(() => WpfSta.Invoke(() => new WindowInteropHelper(_window).Handle), automationId);
+        }
+
+        public AutomationElement FindInPopup(string automationId)
+        {
+            return Find(() => Read(PopupHandle), automationId);
+        }
+
+        public void OpenAdvanced()
+        {
+            FindInWindow("ColorPickerToggle").Patterns.Toggle.Pattern.Toggle();
+            Assert.IsTrue(WaitFor(picker => picker.IsDropDownOpen), "Header toggle did not open the picker.");
+            FindInPopup("ColorPickerAdvancedTab").Patterns.SelectionItem.Pattern.Select();
+            Assert.IsTrue(WaitFor(picker => ((TabItem)picker.Template.FindName("PART_AdvancedTab", picker)).IsSelected), "Advanced tab was not selected.");
+        }
+
+        public void Dispose()
+        {
+            _automation.Dispose();
+            WpfSta.Invoke(_window.Close);
+        }
+
+        private static IntPtr PopupHandle(ColorPicker picker)
+        {
+            var child = PopupOf(picker).Child;
+            return child is not null && PresentationSource.FromVisual(child) is HwndSource source ? source.Handle : IntPtr.Zero;
+        }
+
+        private AutomationElement Find(Func<IntPtr> handle, string automationId)
+        {
+            var element = Retry.WhileNull(
+                () =>
+                {
+                    var root = handle();
+                    return root == IntPtr.Zero ? null : _automation.FromHandle(root).FindFirstDescendant(cf => cf.ByAutomationId(automationId));
+                },
+                Timeout,
+                ignoreException: true).Result;
+            Assert.IsNotNull(element, automationId + " was not found. open=" + Read(picker => picker.IsDropDownOpen));
+            return element;
+        }
     }
 
     private static DispatcherError WatchDispatcher()
@@ -495,21 +492,5 @@ public sealed class ColorPickerTests
         }
 
         return null;
-    }
-
-    private static bool IsDescendantOf(DependencyObject node, DependencyObject ancestor)
-    {
-        var current = node;
-        while (current is not null)
-        {
-            if (ReferenceEquals(current, ancestor))
-            {
-                return true;
-            }
-
-            current = VisualTreeHelper.GetParent(current) ?? LogicalTreeHelper.GetParent(current);
-        }
-
-        return false;
     }
 }

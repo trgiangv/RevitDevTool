@@ -15,15 +15,21 @@ public sealed class DevToolsPipeServerTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public async Task StartAsync_StopAsync_and_Dispose_complete_cleanly()
+    public async Task Stop_closes_the_pipe()
     {
         using var cts = CreateTimeoutCts(TestContext.CancellationToken);
         var hostInfo = CreateUniqueHostInfo();
+        var pipeName = HostPipeName.FormatTest(hostInfo.Host.ToString(), hostInfo.VersionNumber, Environment.ProcessId);
         var server = CreateServer(hostInfo, new InstanceRequestHandler(hostInfo));
 
         await server.StartAsync(cts.Token);
+        while (!File.Exists(@"\\.\pipe\" + pipeName))
+            await Task.Delay(20, cts.Token);
         await server.StopAsync(cts.Token);
         server.Dispose();
+
+        using var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut);
+        Assert.ThrowsExactly<TimeoutException>(() => client.Connect(100));
     }
 
     [TestMethod]

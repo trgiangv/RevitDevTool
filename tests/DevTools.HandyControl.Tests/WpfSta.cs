@@ -54,12 +54,22 @@ internal static class WpfSta
 
     public static void Invoke(Action action)
     {
+        Invoke(() =>
+        {
+            action();
+            return true;
+        });
+    }
+
+    public static T Invoke<T>(Func<T> func)
+    {
         Exception? error = null;
+        var result = default(T);
         Dispatcher.Invoke(() =>
         {
             try
             {
-                action();
+                result = func();
             }
             catch (Exception ex)
             {
@@ -71,5 +81,7 @@ internal static class WpfSta
         {
             ExceptionDispatchInfo.Capture(error).Throw();
         }
+
+        return result!;
     }
 }

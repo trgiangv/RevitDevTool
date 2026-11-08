@@ -21,13 +21,6 @@ public sealed class BuiltInSourceTests
     }
 
     [TestMethod]
-    public void ClearCaches_DoesNotThrow()
-    {
-        var backend = CreateBackend();
-        backend.ClearCaches();
-    }
-
-    [TestMethod]
     public async Task InvokeToolAsync_UnknownTool_ReturnsFailure()
     {
         var backend = CreateBackend();

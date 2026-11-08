@@ -55,15 +55,6 @@ public sealed class NugetPackageStoreTests
     }
 
     [TestMethod]
-    public async Task UpdateAsync_ResolvesKnownPackage()
-    {
-        var store = CreateStore();
-        var package = new Package(Marketplace.NuGet, "Newtonsoft.Json", null, null);
-
-        await store.UpdateAsync(package, TestContext.CancellationToken);
-    }
-
-    [TestMethod]
     public async Task RemoveAsync_DeletesVersionedPackageFolder()
     {
         var suffix = Guid.NewGuid().ToString("N");
@@ -86,6 +77,9 @@ public sealed class NugetPackageStoreTests
         var package = new Package(Marketplace.NuGet, "Newtonsoft.Json", "13.0.3", "13.0.3");
 
         await store.RepairAsync(package, TestContext.CancellationToken);
+
+        Assert.IsTrue(store.List().Any(p =>
+            string.Equals(p.PackageId, "Newtonsoft.Json", StringComparison.OrdinalIgnoreCase) && p.Version == "13.0.3"));
     }
 
     [TestMethod]

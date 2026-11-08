@@ -4,10 +4,10 @@ namespace DevTools.Utilities.Tests;
 public sealed class AppUtilsTests
 {
     [TestMethod]
-    public void GetApplicationDataPath_ends_with_RevitDevTool()
+    public void Data_path_follows_the_variable()
     {
         var path = AppUtils.GetApplicationDataPath();
-        Assert.EndsWith("RevitDevTool", path, StringComparison.OrdinalIgnoreCase);
+        Assert.AreEqual(Environment.GetEnvironmentVariable(AppUtils.DataDirectoryVariable), path);
         Assert.IsTrue(Directory.Exists(path));
     }
 

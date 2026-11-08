@@ -42,11 +42,4 @@ public sealed class NotifyListenerTests
             NotifyListener.TraceReceived -= Handler;
         }
     }
-
-    [TestMethod]
-    public void NotifyLoggerProvider_dispose_is_noop()
-    {
-        using var provider = new NotifyLoggerProvider();
-        provider.Dispose();
-    }
 }

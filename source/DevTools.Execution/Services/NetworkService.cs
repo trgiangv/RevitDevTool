@@ -59,13 +59,16 @@ public static class NetworkService
     /// Returns <c>null</c> on non-success status codes.
     /// Caller is responsible for disposing the returned document.
     /// </summary>
-    public static async Task<JsonDocument?> GetJsonDocumentAsync(string url, CancellationToken cancellationToken = default)
+    public static async Task<JsonDocument?> GetJsonDocumentAsync(
+        string url,
+        CancellationToken cancellationToken = default,
+        HttpClient? http = null)
     {
         return await WithRetryAsync(async () =>
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            using var response = await Http.GetAsync(url, cancellationToken).ConfigureAwait(false);
+            using var response = await (http ?? Http).GetAsync(url, cancellationToken).ConfigureAwait(false);
 
             if (!response.IsSuccessStatusCode)
                 return null;

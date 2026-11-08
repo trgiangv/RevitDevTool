@@ -1,11 +1,15 @@
 using DevTools.Execution.Models;
 using DevTools.Execution.Providers.FSharp;
 using Microsoft.Extensions.Logging;
+using System.Net.Http;
 using ZLogger;
 
 namespace DevTools.Execution.Services;
 
-public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<PackageVersionChecker> logger)
+public sealed class PackageVersionChecker(
+    NugetManager nugetManager,
+    ILogger<PackageVersionChecker> logger,
+    HttpClient? http = null)
 {
     public async Task<IReadOnlyList<Package>> AttachLatestVersionsAsync(
         IReadOnlyList<Package> packages,
@@ -74,7 +78,7 @@ public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<Pac
         try
         {
             var url = $"https://pypi.org/pypi/{packageId}/json";
-            using var doc = await NetworkService.GetJsonDocumentAsync(url, cancellationToken).ConfigureAwait(false);
+            using var doc = await NetworkService.GetJsonDocumentAsync(url, cancellationToken, http).ConfigureAwait(false);
             if (doc == null) return null;
 
             return doc.RootElement.TryGetProperty("info", out var info) &&
@@ -94,7 +98,7 @@ public sealed class PackageVersionChecker(NugetManager nugetManager, ILogger<Pac
         try
         {
             var url = $"https://api.anaconda.org/package/conda-forge/{packageId}";
-            using var doc = await NetworkService.GetJsonDocumentAsync(url, cancellationToken).ConfigureAwait(false);
+            using var doc = await NetworkService.GetJsonDocumentAsync(url, cancellationToken, http).ConfigureAwait(false);
             if (doc == null) return null;
 
             return doc.RootElement.TryGetProperty("latest_version", out var latest)

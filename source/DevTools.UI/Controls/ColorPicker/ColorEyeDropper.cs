@@ -1,5 +1,6 @@
 using HandyControl.Tools;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -96,7 +97,14 @@ public class ColorEyeDropper : Button
         }
 
         Cursor = Cursors.Arrow;
-        if (TryGetScreenPoint(e.GetPosition(this), out var screen))
+        Pick(e.GetPosition(this));
+    }
+
+    protected override AutomationPeer OnCreateAutomationPeer() => new ColorEyeDropperAutomationPeer(this);
+
+    internal void Pick(Point relative)
+    {
+        if (TryGetScreenPoint(relative, out var screen))
         {
             SetCurrentValue(SelectedColorProperty, EyeDropperHelper.GetPixelColor(screen));
         }

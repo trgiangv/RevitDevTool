@@ -9,8 +9,10 @@ namespace DevTools.Daemon.Mcp.Processes;
 public sealed class HostConnections(
     IMcpPipeScanner pipeScanner,
     ILogger<HostConnections> logger,
-    ILoggerFactory loggerFactory) : IHostConnections, IAsyncDisposable
+    ILoggerFactory loggerFactory,
+    TimeSpan? discoveryInterval = null) : IHostConnections, IAsyncDisposable
 {
+    private readonly TimeSpan _discoveryInterval = discoveryInterval ?? TimeSpan.FromSeconds(2);
     private readonly ConcurrentDictionary<string, ProcessSession> _sessions = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _publishedPipes = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _knownPipes = new(StringComparer.OrdinalIgnoreCase);
@@ -41,7 +43,7 @@ public sealed class HostConnections(
 
             try
             {
-                await Task.Delay(2000, ct).ConfigureAwait(false);
+                await Task.Delay(_discoveryInterval, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {

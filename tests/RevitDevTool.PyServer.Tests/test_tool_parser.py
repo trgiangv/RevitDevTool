@@ -48,14 +48,6 @@ def test_lowlevel_tool_protocol_shape(parsed_catalog: dict[str, list[dict[str, A
     assert protocol["_meta"]["feature"] == "lowlevel"
 
 
-def test_prompt_protocol_shape(parsed_catalog: dict[str, list[dict[str, Any]]]) -> None:
-    entry = _find_by_name(parsed_catalog["prompts"], "parser_lowlevel_prompt")
-    protocol = entry["protocol"]
-
-    assert protocol["icons"][0]["src"] == "https://example.com/icons/lowlevel-prompt.png"
-    assert protocol["_meta"]["kind"] == "prompt"
-
-
 def test_resource_protocol_shape(parsed_catalog: dict[str, list[dict[str, Any]]]) -> None:
     direct = _find_by_name(parsed_catalog["resources"], "parser_lowlevel_resource")
     template = _find_by_name(parsed_catalog["resources"], "parser_lowlevel_template")

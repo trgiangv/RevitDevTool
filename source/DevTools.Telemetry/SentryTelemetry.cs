@@ -1,4 +1,5 @@
 using DevTools.Hosting;
+using Sentry.Extensibility;
 using System.Collections.Concurrent;
 
 namespace DevTools.Telemetry;
@@ -19,7 +20,13 @@ public sealed class SentryTelemetry : ITelemetry
     {
     }
 
-    internal SentryTelemetry(IHostAppInfo hostApp, string version, string dsn, string? environment = null, string? userId = null)
+    internal SentryTelemetry(
+        IHostAppInfo hostApp,
+        string version,
+        string dsn,
+        string? environment = null,
+        string? userId = null,
+        ITransport? transport = null)
     {
         ArgumentNullException.ThrowIfNull(hostApp);
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
@@ -32,6 +39,7 @@ public sealed class SentryTelemetry : ITelemetry
         _sdkHandle = SentrySdk.Init(o =>
         {
             o.Dsn = dsn;
+            o.Transport = transport;
             o.Release = release;
             if (environment is not null)
             {

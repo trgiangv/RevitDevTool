@@ -24,11 +24,23 @@ public sealed class PackageServiceTests
     [TestMethod]
     public async Task RemovePackageAsync_ProtectedPackage_IsNoOp()
     {
+        var packageId = $"DevTools.Protected.{Guid.NewGuid():N}";
+        var packageDir = Path.Combine(AppUtils.GetApplicationDataPath(), "nuget", packageId);
+        Directory.CreateDirectory(packageDir);
+
         await using var provider = ExecutionTestHelpers.BuildExecutionServiceProvider();
         var service = provider.GetRequiredService<IPackageService>();
-        var package = new Package(Marketplace.NuGet, "protected", "1.0", "1.0") { IsProtected = true };
+        var package = new Package(Marketplace.NuGet, packageId, null, null) { IsProtected = true };
 
-        await service.RemovePackageAsync(package, TestContext.CancellationToken);
+        try
+        {
+            await service.RemovePackageAsync(package, TestContext.CancellationToken);
+            Assert.IsTrue(Directory.Exists(packageDir));
+        }
+        finally
+        {
+            Directory.Delete(packageDir, recursive: true);
+        }
     }
 
     [TestMethod]
@@ -44,12 +56,17 @@ public sealed class PackageServiceTests
     }
 
     [TestMethod]
-    public async Task RemoveAllAsync_NuGet_ClearsCacheWhenEmpty()
+    public async Task RemoveAllAsync_NuGet_DeletesCachedPackages()
     {
+        var packageDir = Path.Combine(AppUtils.GetApplicationDataPath(), "nuget", $"DevTools.RemoveAll.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(packageDir);
+
         await using var provider = ExecutionTestHelpers.BuildExecutionServiceProvider();
         var service = provider.GetRequiredService<IPackageService>();
 
         await service.RemoveAllAsync(Marketplace.NuGet, TestContext.CancellationToken);
+
+        Assert.IsFalse(Directory.Exists(packageDir));
     }
 
     [TestMethod]
@@ -76,16 +93,5 @@ public sealed class PackageServiceTests
             if (Directory.Exists(packageDir))
                 Directory.Delete(packageDir, recursive: true);
         }
-    }
-
-    [TestMethod]
-    public async Task RepairAsync_NuGetPackage_DoesNotThrow()
-    {
-        await using var provider = ExecutionTestHelpers.BuildExecutionServiceProvider();
-        var service = provider.GetRequiredService<IPackageService>();
-
-        await service.RepairAsync(
-            new Package(Marketplace.NuGet, "Newtonsoft.Json", "13.0.3", "13.0.3"),
-            TestContext.CancellationToken);
     }
 }

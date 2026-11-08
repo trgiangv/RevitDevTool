@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using System.IO;
 using ZLogger;
 
 namespace DevTools.Daemon.Mcp.Hosting;
@@ -10,7 +11,8 @@ internal sealed class StdioHostedService(
     IHostApplicationLifetime lifetime,
     ILoggerFactory loggerFactory,
     IServiceProvider appServices,
-    ILogger<StdioHostedService> logger) : BackgroundService
+    ILogger<StdioHostedService> logger,
+    Stream? input = null) : BackgroundService
 {
     private const string TransportName = "StdioDirect";
 
@@ -18,7 +20,7 @@ internal sealed class StdioHostedService(
     {
         try
         {
-            var stdin = Console.OpenStandardInput();
+            var stdin = input ?? Console.OpenStandardInput();
             var stdout = Console.OpenStandardOutput();
 
             var options = McpServerFactory.CreateOptions(

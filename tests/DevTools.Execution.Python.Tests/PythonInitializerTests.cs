@@ -45,10 +45,16 @@ public sealed class PythonInitializerTests
     }
 
     [TestMethod]
-    public async Task ShutdownAsync_WhenNotInitialized_DoesNotThrow()
+    public async Task ShutdownAsync_WhenNotInitialized_IsNoOp()
     {
+        if (PythonEngine.IsInitialized)
+            Assert.Inconclusive("Python is already initialized in this process.");
+
         var initializer = ExecutionTestHelpers.CreatePythonInitializer();
         await initializer.ShutdownAsync();
+
+        Assert.IsFalse(initializer.IsInitialized);
+        Assert.IsFalse(PythonEngine.IsInitialized);
     }
 
     [TestMethod]
