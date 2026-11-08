@@ -1,8 +1,8 @@
 # Project setup
 
-Consumer `csproj` + `global.json` for
+Consumer `csproj` and `global.json` for
 [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter).
-Run commands stay in [SKILL.md](../SKILL.md).
+Run commands are in [SKILL.md](../SKILL.md).
 
 ## Required csproj
 
@@ -24,11 +24,11 @@ Run commands stay in [SKILL.md](../SKILL.md).
 
 The adapter does not pull NUnit, TUnit, or MSTest. Reference the baseline in the
 [adapter README](../../../../source/DevTools.TestAdapter/README.md) or newer in the same
-major. A lower version or another major is an error that names the fix:
-[Framework versions](../../../../docs/product/host-testing.md#framework-versions).
-`Microsoft.Testing.Platform.MSBuild` is transitive from the adapter.
-
-Do not add `Microsoft.Testing.Platform` as a compile package or override MTP.MSBuild.
+major. A lower version or another major is an error that names the fix
+([Framework versions](../../../../docs/product/host-testing.md#framework-versions)).
+`Microsoft.Testing.Platform.MSBuild` comes transitively from the adapter, so leave
+`Microsoft.Testing.Platform` out of the compile packages and keep the adapter's
+MTP.MSBuild version.
 
 ### Host properties
 
@@ -36,18 +36,17 @@ Do not add `Microsoft.Testing.Platform` as a compile package or override MTP.MSB
 |----------|------|
 | `HostName` | `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`, `AcadElec`, `AcadMep`, `AcadMap3D` |
 | `HostVersion` | Year, e.g. `2025` |
-| `ForceLaunch` | `false` = reuse matching host, start if none. `true` = always start new |
-| `PerTestTimeout` | Per-test budget (seconds). Pipe wait ≈ this × tests in the run |
-| `LaunchTimeout` | Seconds to wait for a launched host pipe |
+| `ForceLaunch` | `false` reuses a matching host and starts one if none. `true` always starts a new one |
+| `PerTestTimeout` | Per-test budget in seconds. The pipe wait is about this times the tests in the run |
+| `LaunchTimeout` | Seconds to wait for a launched host's pipe |
 | `TestingFramework` | Default `nunit`. Set `tunit` or `mstest` |
 | `NetFxModuleInitializer` | net48 TUnit only. Default on. Set `false` if another polyfill already defines `[ModuleInitializer]` |
 
 ### Host API package (compile-only)
 
-Include a compile-only host API package matching `HostVersion` so discovery can
-resolve Autodesk types. Do **not** copy host API DLLs into the test output.
-
-Common choices (pick one that matches your repo):
+Reference a compile-only host API package matching `HostVersion` so discovery can
+resolve Autodesk types. The host supplies the real DLLs at run time, so keep them
+out of the test output.
 
 | Host | Example package |
 |------|-----------------|
@@ -59,14 +58,14 @@ Common choices (pick one that matches your repo):
 The build writes the csproj properties into the test assembly as `devtools.*`
 assembly metadata; no `testconfig.json` is generated. Author a sibling
 `testconfig.json` for `platformOptions`. A `devtools` key in it overrides that one
-csproj value; other keys still come from the csproj. Do not use `.runsettings`.
+csproj value; other keys still come from the csproj. `.runsettings` is not read.
 
 ### Target frameworks
 
-Do not set `<RuntimeIdentifier>` on net8 / net10 test projects (nested
-`win-x64` output confuses Test Explorer). The package flattens RID output when
-a RID is still present. On net48 only, a project may set `win-x64` when the SDK
-requires it for x64 (`NETSDK1047`).
+Leave `<RuntimeIdentifier>` unset on net8 and net10 test projects: nested
+`win-x64` output confuses Test Explorer. The package flattens RID output when a
+RID is present anyway. On net48 a project may set `win-x64` when the SDK requires
+it for x64 (`NETSDK1047`).
 
 ## global.json
 
@@ -84,34 +83,27 @@ requires it for x64 (`NETSDK1047`).
 }
 ```
 
-Nearest `global.json` **replaces** the whole file (not a merge). Choice is by
-**current directory**, not `--project`.
+The nearest `global.json` replaces the whole file (no merge), and it is chosen
+by the current directory, not by `--project`.
 
 | Repo layout | Where to put MTP |
 |-------------|------------------|
 | All `dotnet test` projects are MTP | Root `global.json` |
-| One leftover VSTest project | Root MTP + nested `global.json` with `"runner": "VSTest"` (include `sdk`); `cd` there before testing it |
-| Many VSTest projects remain | MTP `global.json` next to each MTP test project only |
+| One leftover VSTest project | Root MTP plus a nested `global.json` with `"runner": "VSTest"` (include `sdk`); `cd` there before testing it |
+| Many VSTest projects remain | An MTP `global.json` next to each MTP test project |
 
 Use a .NET 10 SDK. Match `-c` to configurations that set `HostVersion` and
 `TargetFramework` for your host year.
 
-## Conflicting packages
+## Polyfill on net48 TUnit
 
-Do not add a second test adapter to the same project:
-
-- `NUnit3TestAdapter`
-- `ricaun.RevitTest.TestAdapter`
-- `Microsoft.Testing.Extensions.VSTestBridge`
-
-If the repo has `<GlobalPackageReference Include="Polyfill" />`, remove it on
-a net48 TUnit project (`<GlobalPackageReference Remove="Polyfill" />`). NUnit
-and MSTest do not need it; net48 TUnit gets `[ModuleInitializer]` from the
-adapter package.
+If the repo has `<GlobalPackageReference Include="Polyfill" />`, remove it on a
+net48 TUnit project (`<GlobalPackageReference Remove="Polyfill" />`); the adapter
+package supplies `[ModuleInitializer]`. NUnit and MSTest do not need this.
 
 ## Runner
 
-`DevTools.TestRunner.exe` ships inside the package at `tools/runner/`; the build
+`DevTools.TestRunner.exe` ships inside the package at `tools/runner/`. The build
 writes that path into the test assembly as `devtools.runnerPath`, and the adapter
 runs only that copy; no environment variable or `testconfig.json` key overrides it.
 A missing file fails with one sentence naming the path and asking for a restore.
@@ -119,4 +111,4 @@ A missing file fails with one sentence naming the path and asking for a restore.
 The runner is framework-dependent: the machine running `dotnet test` needs the
 .NET 10 runtime or later, else `"RevitDevTool.TestAdapter needs the .NET 10 runtime or later."`.
 
-The host add-in still comes from [RevitDevTool releases](https://github.com/trgiangv/RevitDevTool).
+The host add-in comes from [RevitDevTool releases](https://github.com/trgiangv/RevitDevTool).

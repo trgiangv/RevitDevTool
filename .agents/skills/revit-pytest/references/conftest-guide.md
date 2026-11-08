@@ -1,6 +1,6 @@
 # Conftest
 
-PEP 723 `# /// script` is **CPython `tests/run` only**. Do not put it on `test_*_ipy.py`.
+PEP 723 `# /// script` applies to CPython `tests/run` only, so keep it off `test_*_ipy.py` files (IronPython has no PEP 723 install).
 
 ```python
 # /// script

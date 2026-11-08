@@ -8,7 +8,7 @@ using RevitMcpToolSet.Utilities;
 namespace RevitMcpToolSet.Resources;
 
 [McpServerResourceType]
-[Description("Parameterized element and schedule preview resources for invoke_dynamic batch reads.")]
+[Description("Parameterized element and schedule preview resources read through code_mode ReadAsync.")]
 public static class ElementResources
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };

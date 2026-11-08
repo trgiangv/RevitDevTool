@@ -43,9 +43,9 @@ Do **not** invent a private MCP package version — pin centrally in `Directory.
 
 ## Resource Templates
 
-Parameterized reads for one element or schedule without a dedicated tool. Discovered via
-`search_dynamic` with `kinds=["resource_template"]`; resolved with `invoke_dynamic` and
-template arguments (or batched in `reads[]` alongside fixed resources).
+Parameterized reads for one element or schedule without a dedicated tool. In a `code_mode`
+program, find them with `SearchAsync(query, primitiveType: "resource_template")` and read
+them with `ReadAsync(<URI template>, <arguments>, processId)`. Several reads can share one program.
 
 | URI template | MIME | Purpose |
 |--------------|------|---------|
@@ -54,18 +54,15 @@ template arguments (or batched in `reads[]` alongside fixed resources).
 
 **Chaining example** (after `revit_find_elements` returns IDs):
 
+```csharp
+var hits = await SearchAsync("element", primitiveType: "resource_template");
+var element = await ReadAsync("revit://element/{elementId}", new Dictionary<string, object> { ["elementId"] = 12345 }, pid);
+var selection = await ReadAsync("revit://model/selection", null, pid);
+return new { element, selection };
 ```
-1. search_dynamic(query="element", kinds=["resource_template"])
-   → capabilityId for revit://element/{elementId}
-2. invoke_dynamic(capabilityId=<element_template_id>, arguments={elementId: 12345})
-   → JSON element summary
-3. invoke_dynamic(reads=[
-     { capabilityId: <capabilities_id> },
-     { capabilityId: <selection_id> },
-     { capabilityId: <element_template_id>, arguments: { elementId: 12345 } }
-   ])
-   → batch: toolset scope + engineer selection + element detail in one round-trip
-```
+
+One `code_mode` program returns the template hit, the element summary, and the
+engineer's selection in a single round-trip.
 
 Use fixed `revit://model/*` resources for unparameterized snapshots (levels, selection, types).
 Use templates when you already have element or schedule IDs from a tool result.

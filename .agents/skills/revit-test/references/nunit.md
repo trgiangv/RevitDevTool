@@ -51,13 +51,12 @@ public void Runs_inside_host()
 public void Refresh_WritesTheCurrentModel() { }
 ```
 
-Without `--filter`, Explicit tests are **Skipped**. VSTest `Name=` /
-`FullyQualifiedName~` do not unlock them — use `--filter MethodName`.
+Without `--filter`, Explicit tests are Skipped. Select one with `--filter MethodName`.
 
 ## Lifecycle
 
 `[SetUp]`, `[TearDown]`, `[OneTimeSetUp]`, `[SetUpFixture]` run on each host run.
-Static fields on **net48** survive across `dotnet test` on the same host PID —
+Static fields on net48 survive across `dotnet test` on the same host PID;
 restart the host if state is dirty.
 
 ## Assert / output

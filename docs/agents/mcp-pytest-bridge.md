@@ -9,11 +9,11 @@ Deep sources: `docs/architecture/MCP/README.md`, `docs/architecture/Execution/py
 | `DevToolsMcp_{Host}_{Version}_{PID}` | `McpPipeServer` | MCP SDK (NDJSON) |
 | `DevTools_{Host}_{Version}_{PID}` | `DevToolsPipeServer` | pytest + control (`BridgeMessage`) |
 
-Never mix NDJSON and `BridgeMessage` on one pipe.
+Each pipe carries one framing: NDJSON or `BridgeMessage`, never both.
 
 ## MCP
 
-Daemon (`--stdio` or Gateway) exposes infrastructure tools plus `search_dynamic` / `invoke_dynamic`. Host tools are indexed in `ProcessCatalogs` (not on daemon `tools/list`). In-host built-ins: `execute_csharp_code`, `execute_python_code`, `open_document`, `navigate_history`. See [MCP/tools.md](../architecture/MCP/tools.md).
+Daemon (`--stdio` or Gateway) exposes four tools: `list_processes`, `launch_host`, `read_file_info`, and `code_mode`. Host tools and resources are indexed in `ProcessCatalogs` (not on daemon `tools/list`) and are reached from a `code_mode` C# program through `SearchAsync`, `DescribeAsync`, `InvokeAsync`, and `ReadAsync`. In-host built-ins: `execute_csharp_code`, `execute_python_code`, `open_document`, `navigate_history`, `view_screenshot`, `run_command`, `add_tools`. See [MCP/tools.md](../architecture/MCP/tools.md) and [mcp-integration-test.md](mcp-integration-test.md#calling-the-host-from-code_mode).
 
 Paths: `DevTools.Ipc`, `DevTools.Mcp.*`, `DevTools.Daemon`, `DevTools.Execution/External/`.
 
@@ -29,4 +29,4 @@ Paths: `DevTools.Ipc`, `DevTools.Mcp.*`, `DevTools.Daemon`, `DevTools.Execution/
 
 - MCP: `dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.csproj`; parsers: `tests/DevTools.Mcp.Catalog.Tests` (build `samples/McpToolsetDemo` first, or tests Skip).
 - Pytest wire: sync contracts ↔ `models.py` and the golden fixtures; `pixi run test` in `source/RevitDevTool.PyTest`; focused Execution tests (`GoldenWireTests`, `PytestRunRequestParseTests`, `PytestProtocolTests`, `DevToolsPipeServerTests`, handlers).
-- Remaining live/opt-in and Coverlet/testhost limits: `test-matrix.md` **Current gaps**. In-host `PytestRunner.py` is not headless CI.
+- Live, opt-in, and testhost limits: [test-matrix.md](test-matrix.md#current-gaps). In-host `PytestRunner.py` is not in headless CI.

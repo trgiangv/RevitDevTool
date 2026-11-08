@@ -4,7 +4,7 @@
 
 - Solution: `RevitDevTool.slnx`.
 - Build pipeline: `build/Program.cs` and `build/Modules/*`.
-- Required SDK: .NET `10.0.0` from `global.json`.
+- Required SDK: `global.json`.
 
 ## Supported Host Configurations
 
@@ -30,7 +30,6 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 ## Commands
 
 - Focused host compile and deploy: [`scripts/build-host.ps1`](#host-build-script).
-
 - `build/` takes `<target> <product>`; run `dotnet run --project build` for the list. Products: `daemon`, `addin`, `nettest`, `pytest`. Releases: [release.md](release.md).
 - Add-in bundle: `dotnet run --project build -- pack addin` into `output/addin`.
 - Daemon: `dotnet run --project build -- pack daemon` into `output/daemon` (Velopack).
@@ -107,13 +106,7 @@ scripts/build-host.ps1 -HostApp Revit -Year 2025 -Mode Debug
 scripts/build-host.ps1 -HostApp Revit,AutoCAD -Year 2025,2026
 ```
 
-A direct `dotnet build` on a **`UseRevit` / `UseAutoCad`** project without compile-only `-p:Deploy*=false` still deploys and will fail if that host year is running. Use `build-host.ps1`, or pass the compile-only props. `Clean` removes the whole AppData `RevitDevTool.bundle`.
-
-NOT needed when:
-- Building shared `DevTools.*` (no deploy targets imported), or
-- Building a host project with `-p:DeployAddin=false -p:ILRepackable=false` (compile-only)
-
-Do not cargo-cult those `-p` flags onto every `dotnet build`. See `.agents/skills/build/SKILL.md`.
+A direct `dotnet build` on a `UseRevit` / `UseAutoCad` project still deploys, and fails if that host year is running. Use `build-host.ps1`, or pass the compile-only props from `.agents/skills/build/SKILL.md` (shared `DevTools.*` need neither). `Clean` removes the whole AppData `RevitDevTool.bundle`.
 
 ## ILRepack
 
@@ -139,17 +132,10 @@ warnings (MSBuild reports `0 Warning(s)`); `RepackAddinFiles` logs them at low
 importance, so the default build shows only `Repacking <dll>`. Re-read them with
 `dotnet build -v detailed`.
 
-## Compatibility Rule
+## Compatibility
 
-Any shared `DevTools.*` change can affect all target frameworks. Polyfill covers
-missing BCL APIs on every TFM (`ThrowIfNull` via `PolyArgumentExceptions`). After
-edits, compile via `.agents/skills/build/SKILL.md` (multi-TFM `Debug`, or Autodesk
-2022/2025/2027 for host API projects). Avoid newer BCL APIs only when compile
-fails and no Polyfill/helper exists.
-
-## Agent compile verify
-
-Agents run `dotnet build` on touched projects per the **build** skill: shared
-libraries without deploy props; host `UseRevit`/`UseAutoCad` projects with
-deploy/ILRepack off for compile-only proof. Spot-check `2022` / `2025` / `2027`
-for host API projects when TFM-sensitive. Full command reference: `verification.md`.
+Any shared `DevTools.*` change can affect every target framework. Polyfill covers
+missing BCL APIs on every TFM (`ThrowIfNull` via `PolyArgumentExceptions`). Compile
+with `.agents/skills/build/SKILL.md` (multi-TFM `Debug`, or Autodesk 2022, 2025, and
+2027 for host API projects). Avoid a newer BCL API only when the compile fails and
+no Polyfill or helper exists.

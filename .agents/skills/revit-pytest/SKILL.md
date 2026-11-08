@@ -1,9 +1,10 @@
 ---
 name: revit-pytest
 description: >
-  Create and run CAD/BIM API tests using pytest via RevitDevTool Named Pipe bridge.
-  Use when writing pytest for Revit/AutoCAD/Civil3D, fixtures, conftest PEP 723,
-  host_name/host_version/force_launch, or "how do I test Revit API with python/pytest".
+  Write and run pytest tests that execute inside Revit, AutoCAD, or Civil 3D through
+  the RevitDevTool named-pipe bridge. Use for host API tests in Python: fixtures,
+  conftest PEP 723 dependencies, IronPython unittest files, and the
+  host_name / host_version / force_launch settings.
 ---
 
 # Host API Testing with pytest
@@ -43,7 +44,7 @@ launch_timeout = "180"
 
 ## CPython (`test_*.py` → `tests/run`)
 
-Host imports **inside** the test or fixture. `__revit__` via fixtures. PEP 723 `# /// script` on `conftest.py` is installed by the host before run.
+Import host APIs inside the test or fixture. `__revit__` via fixtures. PEP 723 `# /// script` on `conftest.py` is installed by the host before run.
 
 ```python
 def test_active_view(revit_doc):

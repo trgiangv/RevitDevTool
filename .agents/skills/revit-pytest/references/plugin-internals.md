@@ -85,10 +85,9 @@ On launch, `StartupDialogResolver` clicks "Always Load" / "Load Once". It does n
 
 ## Troubleshooting
 
-**Could not connect** — host running with add-in; `ls //./pipe/` matches `DevTools_Revit_…`; `--host-pipe=DevTools_Revit_2025_<pid>`; `--host-version` matches the instance.
-
-**Suite already running** — another pytest holds the mutex. Kill it or wait.
-
-**Timeout** — `uv run pytest --per-test-timeout=120`
-
-**PEP 723 packages missing** — `# /// script` on CPython `conftest.py` / `test_*.py`, not on `test_*_ipy.py`.
+| Symptom | Fix |
+|---------|-----|
+| Could not connect | Check the host runs with the add-in; `ls //./pipe/` matches `DevTools_Revit_…`; pass `--host-pipe=DevTools_Revit_2025_<pid>`; `--host-version` matches the instance |
+| Suite already running | Another pytest holds the mutex. Stop it or wait |
+| Timeout | `uv run pytest --per-test-timeout=120` |
+| PEP 723 packages missing | Put `# /// script` on CPython `conftest.py` / `test_*.py`, not on `test_*_ipy.py` |

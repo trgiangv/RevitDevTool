@@ -31,7 +31,7 @@ def register_toolset_prompts(mcp: McpRegistry) -> None:
             "mep": '1. `revit_list_types(kind="mep_system")` → 2. read `revit://toolset/patterns/mep` → 3. place segments → 4. `revit_list_mep_systems`',
             "documentation": "1. `revit_list_views` → 2. `revit_create_view` → 3. `revit_create_sheet` → 4. `revit_place_on_sheet` → 5. `revit_export_pdf`",
             "export": "1. `revit_get_status` → 2. read `revit://toolset/patterns/export` → 3. `revit_find_elements` → 4. export tool",
-            "visualization": "1. `revit_find_elements` → 2. `revit_color_by_parameter` → 3. `revit_highlight_elements` → 4. `revit://view/screenshot`",
+            "visualization": "1. `revit_find_elements` → 2. `revit_color_by_parameter` → 3. `revit_highlight_elements` → 4. `view_screenshot`",
         }.get(
             resolved,
             "1. `revit_get_model_summary` → 2. `revit_find_elements` → 3. `revit_read_parameters`",
@@ -39,7 +39,7 @@ def register_toolset_prompts(mcp: McpRegistry) -> None:
         return (
             f"## Workflow for: {task}\n\n**Domain:** {resolved}\n\n### Pre-flight\n"
             "1. `revit_get_status`\n"
-            "2. Batch `invoke_dynamic(reads=[capabilities, model/context, model/selection])`\n"
+            "2. In one `code_mode` program, `ReadAsync` capabilities, model/context and model/selection\n"
             f"3. Read `revit://toolset/patterns/{resolved}`\n\n### Steps\n{steps}\n\n"
             "### Verification\n1. Re-query with `revit_find_elements`\n2. On failure: `revit_undo_recovery` + `undo_changes`"
         )

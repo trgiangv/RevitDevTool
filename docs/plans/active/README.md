@@ -30,6 +30,11 @@ facades: [0031](../../decisions/0031-daemon-json-source-gen.md) —
 [plan completed](../completed/2026-09-03-stj-facade-0028.md). Remaining
 `object?` on invoke/batch DTOs is 0031 follow-up, not an active plan.
 
+## Test flow cleanup (closed)
+
+Stable, fast local tests, a test data folder outside `%AppData%`, and format-lint once
+per task: [completed](../completed/2026-11-08-test-flow-cleanup.md). CI wiring is separate.
+
 ## Test gaps (closed)
 
 Headless-automatable gaps closed:
