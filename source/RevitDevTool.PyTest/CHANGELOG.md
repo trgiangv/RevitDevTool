@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [0.6.1]
 
+### Added
+
+- Python 3.14 support; development and CI run on 3.14, the Python inside the host.
+
 ### Changed
 
 - Moved into the RevitDevTool repository; no behavior change.

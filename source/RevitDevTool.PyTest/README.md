@@ -163,7 +163,7 @@ def revit_auto_rollback(revit_transaction_service):
 
 ## Developing this package
 
-The source lives in [`source/RevitDevTool.PyTest`](https://github.com/trgiangv/RevitDevTool/tree/develop/source/RevitDevTool.PyTest) of the RevitDevTool repository. Dev tasks use [pixi](https://pixi.sh), from that folder:
+The source lives in [`source/RevitDevTool.PyTest`](https://github.com/trgiangv/RevitDevTool/tree/develop/source/RevitDevTool.PyTest) of the RevitDevTool repository. `pyproject.toml` is both the package and the [pixi](https://pixi.sh) workspace (`[tool.pixi.*]`); the full flow is in [Develop the pytest client](https://trgiangv.github.io/RevitDevTool/docs/testing/pytest-development). Dev tasks, from that folder:
 
 ```powershell
 pixi run lint                                  # ruff check + format check

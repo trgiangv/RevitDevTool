@@ -50,6 +50,7 @@ const sidebars: SidebarsConfig = {
         ] },
         { type: 'category', label: 'Python Test', collapsed: true, className: 'sidebar-icon sidebar-icon--python', items: [
           { type: 'doc', id: 'testing/pytest', className: 'sidebar-icon sidebar-icon--pytest' },
+          { type: 'doc', id: 'testing/pytest-development', className: 'sidebar-icon sidebar-icon--pytest' },
           { type: 'doc', id: 'testing/unittest', className: 'sidebar-icon sidebar-icon--unittest' },
         ] },
       ],
