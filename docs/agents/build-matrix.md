@@ -124,10 +124,10 @@ driver adds the `ILRepack` PackageReference when that flag is true. Policy for
 `RepackBinariesKeep` for `DevTools.Testing.Abstractions.dll`); consumers of
 `RevitDevTool.TestAdapter` do not.
 
-Scintilla5.NET 7 natives stay under `runtimes/win-x64/native/` (not output root).
-`DevTools.Logging` has a direct `Scintilla5.NET` PackageReference so
-`build/scintilla5.net.targets` copies them (needed on net48). `Common.props`
-then drops `win-x86` / `win-arm64` on every TFM after `CopyFilesToOutputDirectory`.
+Scintilla natives stay under `runtimes/win-x64/native/` and
+`runtimes/win-arm64/native/` (not output root). `ZLogger.Scintilla` deploys them on
+every TFM, net48 included, and leaves out `win-x86`; set `ScintillaNativeRuntimes`
+to change the list. No direct `Scintilla5.NET` reference is needed.
 
 ### Merge log
 

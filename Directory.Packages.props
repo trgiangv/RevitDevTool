@@ -38,9 +38,8 @@
         <!--Telemetry-->
         <PackageVersion Include="Sentry" Version="6.12.1" />
         <!--Logging-->
-        <PackageVersion Include="ZLogger" Version="2.5.10" />
-        <PackageVersion Include="ZLogger.Scintilla" Version="0.0.9" />
-        <PackageVersion Include="Scintilla5.NET" Version="7.0.0" />
+        <PackageVersion Include="ZLogger" Version="2.6.1" />
+        <PackageVersion Include="ZLogger.Scintilla" Version="0.1.0" />
         <!--Utilities-->
         <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
         <GlobalPackageReference Include="Polyfill" Version="11.4.5" />
@@ -55,7 +54,7 @@
         <PackageVersion Include="Octokit" Version="14.0.0" />
         <!--Console-->
         <PackageVersion Include="CliWrap" Version="3.10.5" />
-        <PackageVersion Include="ConsoleAppFramework" Version="5.7.13" />
+        <PackageVersion Include="ConsoleAppFramework" Version="5.8.1" />
         <!--UI-->
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
@@ -70,15 +69,15 @@
         <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
         <PackageVersion Include="Microsoft.VisualStudio.Interop" Version="17.14.40260" />
         <!--FileIO-->
-        <PackageVersion Include="OpenMcdf" Version="3.3.0" />
+        <PackageVersion Include="OpenMcdf" Version="3.4.0" />
         <!--AutoCad-->
-        <PackageVersion Include="ACadSharp" Version="3.8.0" />
+        <PackageVersion Include="ACadSharp" Version="3.8.35" />
         <PackageVersion Include="ricaun.AutoCAD.UI" Version="0.5.0" />
         <!--Tests-->
         <PackageVersion Include="NUnit" Version="5.0.0" />
-        <PackageVersion Include="TUnit" Version="1.78.0" />
-        <PackageVersion Include="TUnit.Core" Version="1.78.0" />
-        <PackageVersion Include="TUnit.Engine" Version="1.78.0" />
+        <PackageVersion Include="TUnit" Version="1.81.10" />
+        <PackageVersion Include="TUnit.Core" Version="1.81.10" />
+        <PackageVersion Include="TUnit.Engine" Version="1.81.10" />
         <PackageVersion Include="Microsoft.Testing.Platform" Version="2.5.2" />
         <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.5.2" />
         <PackageVersion Include="RevitDevTool.TestAdapter" Version="0.2.0" />

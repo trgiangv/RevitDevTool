@@ -37,9 +37,9 @@ a foreign copy stays a sidecar.
 not change `/union` semantics and is not a substitute for this policy.
 
 Unmanaged Scintilla/Lexilla satellites are copied under
-`runtimes/win-x64/native/` (`DevTools.Logging` direct `Scintilla5.NET` reference
-plus `KeepScintillaWinX64Native` in `props/Common.props`). They are not
-copy-local at output root, so they are not ILRepack inputs.
+`runtimes/win-x64/native/` and `runtimes/win-arm64/native/` by `ZLogger.Scintilla`
+(its `ScintillaNativeRuntimes` build property). They are not copy-local at output
+root, so they are not ILRepack inputs.
 
 MCP follows that same input rule, split by who loads the assembly. .NET
 toolsets ship their own MCP SDK (decision 7, S1). Catalog loads them in a

@@ -68,7 +68,7 @@ public sealed class LoggingAssemblyBoundaryTests
             "DevTools.Presentation.csproj"));
 
         Assert.Contains("ZLogger.Scintilla", csproj, StringComparison.Ordinal);
-        Assert.Contains("Scintilla5.NET", csproj, StringComparison.Ordinal);
+        Assert.DoesNotContain("Scintilla5.NET", csproj, StringComparison.Ordinal);
     }
 
     [TestMethod]
