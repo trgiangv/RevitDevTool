@@ -1,10 +1,10 @@
-using Build.Trains;
+using Build.Products;
 using System.Text.RegularExpressions;
 
 namespace Build.Releases;
 
 public sealed record ReleaseInput(
-    Train Train,
+    Product Product,
     string Version,
     string? Previous,
     string? Changelog,
@@ -19,47 +19,47 @@ public static partial class ReleaseRules
 
     public static IReadOnlyList<string> Refusals(ReleaseInput input)
     {
-        var train = input.Train;
+        var product = input.Product;
         if (input.Version.StartsWith("0.0.0", StringComparison.Ordinal))
         {
-            return [$"Version {input.Version} is for local and CI builds only; set the release version in {train.VersionFile}."];
+            return [$"Version {input.Version} is for local and CI builds only; set the release version in {product.VersionFile}."];
         }
 
-        var version = ReleaseVersion.Parse(input.Version, train.Grammar);
+        var version = ReleaseVersion.Parse(input.Version, product.Grammar);
         if (version is null)
         {
-            return [$"Version '{input.Version}' does not match {ReleaseVersion.Describe(train.Grammar)}; fix it in {train.VersionFile}."];
+            return [$"Version '{input.Version}' does not match {ReleaseVersion.Describe(product.Grammar)}; fix it in {product.VersionFile}."];
         }
 
         var refusals = new List<string>();
-        var previous = input.Previous is null ? null : ReleaseVersion.Parse(input.Previous, train.Grammar);
+        var previous = input.Previous is null ? null : ReleaseVersion.Parse(input.Previous, product.Grammar);
         if (previous is not null && version.IsPrerelease && previous.IsPrerelease && version.Core == previous.Core && version.Label < previous.Label)
         {
-            refusals.Add($"Version {input.Version} goes back from {previous.Label.ToString()!.ToLowerInvariant()} to {version.Label.ToString()!.ToLowerInvariant()}; keep the label or raise the version in {train.VersionFile}.");
+            refusals.Add($"Version {input.Version} goes back from {previous.Label.ToString()!.ToLowerInvariant()} to {version.Label.ToString()!.ToLowerInvariant()}; keep the label or raise the version in {product.VersionFile}.");
         }
         else if (previous is not null && version.CompareTo(previous) <= 0)
         {
-            refusals.Add($"Version {input.Version} is not greater than the latest tag {train.Tag(input.Previous!)}; raise it in {train.VersionFile}.");
+            refusals.Add($"Version {input.Version} is not greater than the latest tag {product.Tag(input.Previous!)}; raise it in {product.VersionFile}.");
         }
 
         if (!version.IsPrerelease && !HasSection(input.Changelog, input.Version))
         {
-            refusals.Add($"Stable version {input.Version} needs a '## [{input.Version}]' section in {train.Changelog}.");
+            refusals.Add($"Stable version {input.Version} needs a '## [{input.Version}]' section in {product.Changelog}.");
         }
 
-        var minUpdater = input.MinUpdaterVersion is null ? null : ReleaseVersion.Parse(input.MinUpdaterVersion, train.Grammar);
-        if (train == Train.Addin && minUpdater is not null && !HasDaemonFor(minUpdater, version.IsPrerelease, input.DaemonReleases ?? []))
+        var minUpdater = input.MinUpdaterVersion is null ? null : ReleaseVersion.Parse(input.MinUpdaterVersion, product.Grammar);
+        if (product == Product.Addin && minUpdater is not null && !HasDaemonFor(minUpdater, version.IsPrerelease, input.DaemonReleases ?? []))
         {
             refusals.Add(version.IsPrerelease
                 ? $"Add-in {input.Version} needs a daemon release at or above {MinUpdaterProperty} {input.MinUpdaterVersion}; release daemon first."
                 : $"Stable add-in {input.Version} needs a stable daemon release at or above {MinUpdaterProperty} {input.MinUpdaterVersion}; release daemon first.");
         }
 
-        if (train == Train.Addin && !version.IsPrerelease)
+        if (product == Product.Addin && !version.IsPrerelease)
         {
             if (minUpdater is null || minUpdater.IsPrerelease)
             {
-                refusals.Add($"Stable add-in {input.Version} needs a stable {MinUpdaterProperty} in {train.VersionFile}, not '{input.MinUpdaterVersion}'.");
+                refusals.Add($"Stable add-in {input.Version} needs a stable {MinUpdaterProperty} in {product.VersionFile}, not '{input.MinUpdaterVersion}'.");
             }
 
             if (input.UnshippedApi?.Any(IsApiLine) == true)
@@ -84,7 +84,7 @@ public static partial class ReleaseRules
 
     private static bool HasDaemonFor(ReleaseVersion minUpdater, bool prerelease, IReadOnlyList<string> daemonReleases) =>
         daemonReleases
-            .Select(release => ReleaseVersion.Parse(release, Train.Daemon.Grammar))
+            .Select(release => ReleaseVersion.Parse(release, Product.Daemon.Grammar))
             .Any(daemon => daemon is not null && daemon.CompareTo(minUpdater) >= 0 && (prerelease || !daemon.IsPrerelease));
 
     private static bool IsApiLine(string line) =>

@@ -1,7 +1,7 @@
 using Build.Options;
 using Build.Pipeline;
 using Build.Releases;
-using Build.Trains;
+using Build.Products;
 using DevTools.Update.Releases;
 using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
@@ -34,7 +34,7 @@ public sealed class GenerateUpdateManifestModule(
             Channel = version.IsPrerelease ? "prerelease" : "stable",
             PublishedAt = DateTimeOffset.UtcNow,
             NotesUrl = $"{bundleOptions.Value.VendorUrl?.TrimEnd('/')}/releases/tag/{version.Tag}",
-            MinUpdaterVersion = VersionFile.ReadProperty(run.Root, run.Train.VersionFile, ReleaseRules.MinUpdaterProperty),
+            MinUpdaterVersion = VersionFile.ReadProperty(run.Root, run.Product.VersionFile, ReleaseRules.MinUpdaterProperty),
             IpcCompat = updateOptions.Value.IpcCompat,
             Payloads = payloadsResult.ValueOrDefault!
         };

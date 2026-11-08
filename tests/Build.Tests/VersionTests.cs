@@ -75,7 +75,7 @@ public sealed class VersionTests
     {
         string[] tags = ["daemon/v9.0.0", "3.0.0", "v0.6.0", "addin/vnext", "addin/v4.0.0-beta.8"];
 
-        Assert.AreEqual("4.0.0-beta.8", TrainVersion.PickPrevious(Train.Addin, tags));
+        Assert.AreEqual("4.0.0-beta.8", ProductVersion.PickPrevious(Product.Addin, tags));
     }
 
     [TestMethod]
@@ -83,13 +83,13 @@ public sealed class VersionTests
     {
         string[] tags = ["addin/v4.0.0-beta.10", "addin/v4.0.0-beta.9", "addin/v4.0.0-alpha.20"];
 
-        Assert.AreEqual("4.0.0-beta.10", TrainVersion.PickPrevious(Train.Addin, tags));
+        Assert.AreEqual("4.0.0-beta.10", ProductVersion.PickPrevious(Product.Addin, tags));
     }
 
     [TestMethod]
     public void Previous_is_none_without_tags()
     {
-        Assert.IsNull(TrainVersion.PickPrevious(Train.NetTest, ["daemon/v4.0.0-beta.8", "0.2.0"]));
+        Assert.IsNull(ProductVersion.PickPrevious(Product.NetTest, ["daemon/v4.0.0-beta.8", "0.2.0"]));
     }
 
     [TestMethod]
@@ -97,31 +97,31 @@ public sealed class VersionTests
     {
         string[] tags = ["daemon/v4.0.0", "daemon/v4.1.0-beta.1", "daemon/v4.1.0-beta.2", "daemon/v4.1.0-beta.3"];
 
-        Assert.AreEqual("4.1.0-beta.2", TrainVersion.PickSameChannel(Train.Daemon, tags, "4.1.0-beta.3"));
-        Assert.AreEqual("4.0.0", TrainVersion.PickSameChannel(Train.Daemon, tags, "4.0.1"));
+        Assert.AreEqual("4.1.0-beta.2", ProductVersion.PickSameChannel(Product.Daemon, tags, "4.1.0-beta.3"));
+        Assert.AreEqual("4.0.0", ProductVersion.PickSameChannel(Product.Daemon, tags, "4.0.1"));
     }
 
     [TestMethod]
     public void First_in_channel_has_no_base()
     {
-        Assert.IsNull(TrainVersion.PickSameChannel(Train.Daemon, ["daemon/v4.0.0-beta.9"], "4.0.0"));
+        Assert.IsNull(ProductVersion.PickSameChannel(Product.Daemon, ["daemon/v4.0.0-beta.9"], "4.0.0"));
     }
 
     [TestMethod]
     [DataRow("daemon", "4.0.0", true)]
     [DataRow("daemon", "4.0.0-beta.8", false)]
     [DataRow("addin", "4.0.0", false)]
-    public void Latest_only_for_stable_daemon(string train, string version, bool latest)
+    public void Latest_only_for_stable_daemon(string product, string version, bool latest)
     {
         var parsed = ReleaseVersion.Parse(version, VersionGrammar.SemVer)!;
 
-        Assert.AreEqual(latest, new TrainVersion(Train.Find(train)!, version, parsed.IsPrerelease, null).IsLatest);
+        Assert.AreEqual(latest, new ProductVersion(Product.Find(product)!, version, parsed.IsPrerelease, null).IsLatest);
     }
 
     [TestMethod]
     public void Ci_version_uses_run_number()
     {
-        Assert.AreEqual("0.0.0-ci.42", TrainVersion.NonRelease(Train.Daemon, "42", DateTimeOffset.UnixEpoch));
+        Assert.AreEqual("0.0.0-ci.42", ProductVersion.NonRelease(Product.Daemon, "42", DateTimeOffset.UnixEpoch));
     }
 
     [TestMethod]
@@ -129,13 +129,13 @@ public sealed class VersionTests
     {
         var now = new DateTimeOffset(2026, 11, 8, 9, 30, 5, TimeSpan.FromHours(7));
 
-        Assert.AreEqual("0.0.0-local.20261108023005", TrainVersion.NonRelease(Train.NetTest, null, now));
+        Assert.AreEqual("0.0.0-local.20261108023005", ProductVersion.NonRelease(Product.NetTest, null, now));
     }
 
     [TestMethod]
     public void Pytest_version_is_dev()
     {
-        Assert.AreEqual("0.0.0.dev42", TrainVersion.NonRelease(Train.PyTest, "42", DateTimeOffset.UnixEpoch));
+        Assert.AreEqual("0.0.0.dev42", ProductVersion.NonRelease(Product.PyTest, "42", DateTimeOffset.UnixEpoch));
     }
 
     [TestMethod]

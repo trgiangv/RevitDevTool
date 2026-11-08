@@ -5,8 +5,8 @@ Date: 2026-10-25
 ## Status
 
 Active, narrowed 2026-11-08: the release pipeline, release discovery, versions, and
-the real release proof moved to [2026-11-06-release-trains-0059](2026-11-06-release-trains-0059.md)
-([0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md) replaces 0054 and
+the real release proof moved to [2026-11-06-product-releases-0059](2026-11-06-product-releases-0059.md)
+([0059](../../decisions/0059-independent-product-releases-and-one-gate-ci.md) replaces 0054 and
 the discovery of 0048). This plan keeps the engine features left in Phase 2: start
 guard + downgrade (0052), Windows toasts, Skip and Rollback in the UI. Text below that
 names `Compile.yml`, `PublishRelease.yml`, GitVersion, the TestRunner in the Daemon

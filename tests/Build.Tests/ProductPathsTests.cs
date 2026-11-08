@@ -1,14 +1,14 @@
 namespace Build.Tests;
 
 [TestClass]
-public sealed class TrainPathsTests
+public sealed class ProductPathsTests
 {
     private string _root = null!;
 
     [TestInitialize]
     public void CreateFixture()
     {
-        _root = Path.Combine(Path.GetTempPath(), $"train-paths-{Guid.NewGuid():N}");
+        _root = Path.Combine(Path.GetTempPath(), $"product-paths-{Guid.NewGuid():N}");
         Project("source/App/App.csproj", @"..\Lib\Lib.csproj");
         Project("source/Lib/Lib.csproj", @"..\Core\Core.csproj");
         Project("source/Core/Core.csproj");
@@ -25,19 +25,19 @@ public sealed class TrainPathsTests
     {
         CollectionAssert.AreEqual(
             new[] { "source/App/App.csproj", "source/Core/Core.csproj", "source/Lib/Lib.csproj" },
-            TrainPaths.Closure(_root, ["source/App/App.csproj"]).ToArray());
+            ProductPaths.Closure(_root, ["source/App/App.csproj"]).ToArray());
     }
 
     [TestMethod]
     public void Tests_follow_the_closure()
     {
-        CollectionAssert.AreEqual(new[] { "tests/Lib.Tests/Lib.Tests.csproj" }, TrainPaths.TestProjects(_root, Fixture).ToArray());
+        CollectionAssert.AreEqual(new[] { "tests/Lib.Tests/Lib.Tests.csproj" }, ProductPaths.TestProjects(_root, Fixture).ToArray());
     }
 
     [TestMethod]
     public void Paths_cover_closure_and_tests()
     {
-        var paths = TrainPaths.Compute(_root, Fixture);
+        var paths = ProductPaths.Compute(_root, Fixture);
 
         CollectionAssert.IsSubsetOf(
             new[] { "source/App/**", "source/Core/**", "source/Lib/**", "tests/Lib.Tests/**", "Directory.Packages.props", "build/**" },
@@ -51,14 +51,14 @@ public sealed class TrainPathsTests
     {
         Project("source/Broken/Broken.csproj", @"..\Gone\Gone.csproj");
 
-        var error = Assert.ThrowsExactly<InvalidOperationException>(() => TrainPaths.Closure(_root, ["source/Broken/Broken.csproj"]));
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => ProductPaths.Closure(_root, ["source/Broken/Broken.csproj"]));
         Assert.Contains("source/Gone/Gone.csproj is missing", error.Message);
     }
 
     [TestMethod]
     public void Rendered_file_has_every_key()
     {
-        var keys = TrainPaths.Render(RepositoryRoot)
+        var keys = ProductPaths.Render(RepositoryRoot)
             .Split('\n')
             .Where(line => line.EndsWith(':'))
             .ToArray();
@@ -69,7 +69,7 @@ public sealed class TrainPathsTests
     [TestMethod]
     public void Committed_paths_file_is_current()
     {
-        Assert.IsTrue(TrainPaths.IsCurrent(RepositoryRoot), "Run 'dotnet run --project build -- paths' and commit .github/train-paths.yml.");
+        Assert.IsTrue(ProductPaths.IsCurrent(RepositoryRoot), "Run 'dotnet run --project build -- paths' and commit .github/product-paths.yml.");
     }
 
     [TestMethod]
@@ -77,13 +77,13 @@ public sealed class TrainPathsTests
     [DataRow("tests/*", "tests/Directory.Build.props", true)]
     [DataRow("tests/*", "tests/X.Tests/A.cs", false)]
     [DataRow("global.json", "global.json", true)]
-    [DataRow("source/AddinVersion.props", "source/AddinVersion.props.bak", false)]
+    [DataRow("props/AddinVersion.props", "props/AddinVersion.props.bak", false)]
     public void Glob_matches_like_paths_filter(string pattern, string path, bool match)
     {
         Assert.AreEqual(match, PathGlob.IsMatch(pattern, path));
     }
 
-    private Train Fixture => Train.Daemon with
+    private Product Fixture => Product.Daemon with
     {
         Roots = ["source/App/App.csproj"],
         VersionFile = "source/App/App.csproj",

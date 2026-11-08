@@ -5,8 +5,8 @@ namespace Build.Tests;
 [TestClass]
 public sealed class ReleaseAssetsTests
 {
-    private static readonly TrainVersion DaemonBeta = new(Train.Daemon, "4.0.0-beta.9", true, null);
-    private static readonly TrainVersion AddinStable = new(Train.Addin, "4.0.0", false, null);
+    private static readonly ProductVersion DaemonBeta = new(Product.Daemon, "4.0.0-beta.9", true, null);
+    private static readonly ProductVersion AddinStable = new(Product.Addin, "4.0.0", false, null);
 
     [TestMethod]
     public void Daemon_feeds_go_last()
@@ -44,7 +44,7 @@ public sealed class ReleaseAssetsTests
     [DataRow(false, "releases.win.json")]
     public void Daemon_feed_follows_channel(bool prerelease, string feed)
     {
-        Assert.AreEqual(feed, ReleaseAssets.FeedName(new TrainVersion(Train.Daemon, "4.0.0", prerelease, null)));
+        Assert.AreEqual(feed, ReleaseAssets.FeedName(new ProductVersion(Product.Daemon, "4.0.0", prerelease, null)));
     }
 
     [TestMethod]
@@ -69,9 +69,9 @@ public sealed class ReleaseAssetsTests
     [TestMethod]
     [DataRow("daemon", "RevitDevTool Daemon 4.0.0")]
     [DataRow("addin", "RevitDevTool add-in 4.0.0")]
-    public void Release_title_names_train(string train, string title)
+    public void Release_title_names_train(string product, string title)
     {
-        Assert.AreEqual(title, Publish.Title(new TrainVersion(Train.Find(train)!, "4.0.0", false, null)));
+        Assert.AreEqual(title, Publish.Title(new ProductVersion(Product.Find(product)!, "4.0.0", false, null)));
     }
 
     private static VelopackAssetFeed Feed(params (string Version, string Type)[] assets) =>

@@ -18,7 +18,7 @@ namespace Build.Modules;
 ///     Create the Autodesk .bundle package: the payload folders and <c>PackageContents.xml</c>.
 /// </summary>
 [DependsOn<CompileExpandModule>]
-[DependsOn<TestTrainModule>(Optional = true)]
+[DependsOn<TestProductModule>(Optional = true)]
 [UsedImplicitly]
 public sealed partial class CreateBundleModule(BuildRun run) : Module<string>
 {

@@ -4,8 +4,8 @@ Date: 2026-10-25
 
 ## Status
 
-**Superseded 2026-11-08** by [0059](0059-independent-release-trains-and-one-gate-ci.md)
-(four release trains, `channels.json`, one-gate CI). Kept as history.
+**Superseded 2026-11-08** by [0059](0059-independent-product-releases-and-one-gate-ci.md)
+(four products, `channels.json`, one-gate CI). Kept as history.
 
 Proposed 2026-10-25. Builds on the auto-update set
 ([0046](0046-per-year-release-payloads-and-update-manifest.md)–[0053](0053-velopack-for-daemon-distribution.md)).

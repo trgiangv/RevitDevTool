@@ -5,8 +5,8 @@ Date: 2026-11-06
 ## Status
 
 **Accepted 2026-11-06**, amended the same day with the measurements from the
-plan's P0. Builds on [0059](0059-independent-release-trains-and-one-gate-ci.md)
-(trains) and [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md)
+plan's P0. Builds on [0059](0059-independent-product-releases-and-one-gate-ci.md)
+(products) and [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md)
 (contract ranges). It replaces the part of
 [0021](0021-testing-kernel-and-provider-owned-framework-runtime.md) that puts
 the framework runtime in the add-in payload, and the exact consumer pins of
@@ -283,7 +283,7 @@ Tradeoffs:
 
 - A framework minor that changes an internal the framework runtime uses fails at run time, with
   a clear sentence, until the user steps back or a new adapter ships.
-- `Testing.Abstractions` and the `entry` constructors are a cross-train ABI with
+- `Testing.Abstractions` and the `entry` constructors are a cross-product ABI with
   add-only rules.
 - Two NUnit versions in one Revit session need a restart.
 - Moving a pin raises the floor, so it can force users to update their framework.

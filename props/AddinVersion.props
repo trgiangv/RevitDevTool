@@ -3,7 +3,7 @@
         <Version>4.0.0-beta.8</Version>
         <MinUpdaterVersion>4.0.0-beta.8</MinUpdaterVersion>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(TrainVersion)' != ''">
-        <Version>$(TrainVersion)</Version>
+    <PropertyGroup Condition="'$(AddinVersion)' != ''">
+        <Version>$(AddinVersion)</Version>
     </PropertyGroup>
 </Project>

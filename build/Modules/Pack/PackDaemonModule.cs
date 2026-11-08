@@ -2,7 +2,7 @@ using Build.Options;
 using Build.Pipeline;
 using Build.Releases;
 using Build.Tools;
-using Build.Trains;
+using Build.Products;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
@@ -25,8 +25,8 @@ namespace Build.Modules;
 ///     names this version and one delta base. A local <c>pack</c> keeps the folder, so the next local pack builds a delta.
 /// </remarks>
 /// <seealso href="../../docs/decisions/0053-velopack-for-daemon-distribution.md">0053</seealso>
-[DependsOn<CompileTrainModule>]
-[DependsOn<TestTrainModule>(Optional = true)]
+[DependsOn<CompileProductModule>]
+[DependsOn<TestProductModule>(Optional = true)]
 [UsedImplicitly]
 public sealed class PackDaemonModule(
     BuildRun run,
@@ -115,18 +115,18 @@ public sealed class PackDaemonModule(
 
     /// <summary>
     ///     No previous release in the channel means no delta. <c>vpk download github</c> is not used: it reads the repository's latest
-    ///     release, which can belong to another train.
+    ///     release, which can belong to another product.
     /// </summary>
     private void DownloadDeltaBase(IModuleContext context, string outputPath, string channel)
     {
-        var previous = TrainVersion.PickSameChannel(run.Train, Git.Tags(run.Root, run.Train), run.Version.Version);
+        var previous = ProductVersion.PickSameChannel(run.Product, Git.Tags(run.Root, run.Product), run.Version.Version);
         if (previous is null)
         {
             context.Logger.LogInformation("No earlier {Channel} release; this release has no delta package", channel);
             return;
         }
 
-        Gh.Download(run.Root, run.Train.Tag(previous), outputPath, $"releases.{channel}.json", "*-full.nupkg");
+        Gh.Download(run.Root, run.Product.Tag(previous), outputPath, $"releases.{channel}.json", "*-full.nupkg");
     }
 
     /// <summary>

@@ -100,7 +100,7 @@ Requires the .NET SDK pinned in `global.json`. Configurations run from `Debug.Au
 ## Changelogs
 
 - [Daemon](source/DevTools.Daemon/CHANGELOG.md)
-- [Add-in](source/RevitDevTool/CHANGELOG.md)
+- [Add-in](CHANGELOG.md)
 - [Test adapter (`RevitDevTool.TestAdapter`)](source/DevTools.TestAdapter/CHANGELOG.md)
 - [PyTest plugin](source/RevitDevTool.PyTest/CHANGELOG.md)
 

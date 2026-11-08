@@ -25,7 +25,7 @@
         - Do not add PackageReference for STJ/Unsafe/Bcl: net48 takes them from
           Transport/Ipc, net8/net10 use the in-box copies, and the testhost gets its
           BCL from the MTP.MSBuild graph plus net48 binding redirects.
-        - Version is the nettest train version; bump it in the release PR (build/Trains/Train.cs).
+        - Version is the nettest product version; bump it in the release PR (build/Products/Product.cs).
     -->
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>

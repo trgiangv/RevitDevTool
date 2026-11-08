@@ -80,9 +80,9 @@ here.
   that never ends host processes, and `auto` (default)/`notify`/`off` modes with
   toasts. Not shipped.
   [0054](0054-release-automation-channels-and-4-0-cutover.md) is **Superseded** by 0059.
-  [0059](0059-independent-release-trains-and-one-gate-ci.md) is **Accepted** (2026-11-08):
-  four trains (`daemon`, `addin`, `nettest`, `pytest`), each with its own version file,
-  tag `<train>/vX.Y.Z`, changelog, and one `release.yml` run; the Daemon finds updates
+  [0059](0059-independent-product-releases-and-one-gate-ci.md) is **Accepted** (2026-11-08):
+  four products (`daemon`, `addin`, `nettest`, `pytest`), each with its own version file,
+  tag `<product>/vX.Y.Z`, changelog, and one `release.yml` run; the Daemon finds updates
   through a signed `channels.json`; PyTest lives in this repo; `ci.yml` has one
   required check, `gate`; releases are cut from `develop`.
   [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) is **Accepted**:
@@ -158,5 +158,5 @@ here.
 | [0056](0056-mcp-run-command.md) | MCP `run_command` runs a built entry point by exact path and name | Accepted — landed 2026-11-03; partly superseded by 0057 |
 | [0057](0057-command-execution-shared-by-panel-and-mcp.md) | Command Execution has one owner, shared by the panel and `run_command` | Accepted |
 | [0058](0058-mcp-toolsets-shared-by-panel-and-add-tools.md) | MCP toolsets have one owner, shared by the registry panel and `add_tools` | Accepted |
-| [0059](0059-independent-release-trains-and-one-gate-ci.md) | Four independent release trains (daemon, addin, nettest, pytest), signed channel index, version grammar, prerelease flow, one-gate CI | Accepted |
+| [0059](0059-independent-product-releases-and-one-gate-ci.md) | Four independently released products (daemon, addin, nettest, pytest), signed channel index, version grammar, prerelease flow, one-gate CI | Accepted |
 | [0060](0060-framework-runtime-shims-ship-with-nettest.md) | Framework runtimes ship with nettest; the user's framework needs the same major and no lower than the baseline; add-in and adapter meet only through the `testing.runtime` range | Accepted |

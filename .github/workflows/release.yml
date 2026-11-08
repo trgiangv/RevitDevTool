@@ -1,12 +1,12 @@
 name: release
 
-run-name: release ${{ inputs.train }}
+run-name: release ${{ inputs.product }}
 
 on:
   workflow_dispatch:
     inputs:
-      train:
-        description: Train to release
+      product:
+        description: Product to release
         type: choice
         options: [daemon, addin, nettest, pytest]
         required: true
@@ -14,7 +14,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: release-${{ inputs.train }}
+  group: release-${{ inputs.product }}
   cancel-in-progress: false
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
       prerelease: ${{ steps.plan.outputs.prerelease }}
       latest: ${{ steps.plan.outputs.latest }}
     env:
-      TRAIN: ${{ inputs.train }}
+      PRODUCT: ${{ inputs.product }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -48,7 +48,7 @@ jobs:
       - name: Validate the release
         id: plan
         run: |
-          dotnet run --project build -- release $env:TRAIN --dry-run
+          dotnet run --project build -- release $env:PRODUCT --dry-run
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   build:
@@ -57,7 +57,7 @@ jobs:
     permissions:
       contents: read
     env:
-      TRAIN: ${{ inputs.train }}
+      PRODUCT: ${{ inputs.product }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -82,21 +82,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          dotnet run --project build -- release $env:TRAIN
+          dotnet run --project build -- release $env:PRODUCT
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: release-${{ inputs.train }}
+          name: release-${{ inputs.product }}
           path: |
-            output/${{ inputs.train }}/*.nupkg
-            output/${{ inputs.train }}/*.whl
-            output/${{ inputs.train }}/*.tar.gz
-            output/${{ inputs.train }}/*.exe
-            output/${{ inputs.train }}/*.zip
-            output/${{ inputs.train }}/*.json
-            output/${{ inputs.train }}/notes.md
+            output/${{ inputs.product }}/*.nupkg
+            output/${{ inputs.product }}/*.whl
+            output/${{ inputs.product }}/*.tar.gz
+            output/${{ inputs.product }}/*.exe
+            output/${{ inputs.product }}/*.zip
+            output/${{ inputs.product }}/*.json
+            output/${{ inputs.product }}/notes.md
           if-no-files-found: error
           retention-days: 7
 
@@ -104,7 +104,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: diagnostics-release-${{ inputs.train }}
+          name: diagnostics-release-${{ inputs.product }}
           path: |
             **/log_*.diag
             **/hangdump*
@@ -114,15 +114,15 @@ jobs:
 
   publish:
     needs: [validate, build]
-    if: inputs.train != 'pytest'
+    if: inputs.product != 'pytest'
     runs-on: windows-2025
-    environment: ${{ inputs.train }}
+    environment: ${{ inputs.product }}
     permissions:
       contents: write
       id-token: write
       attestations: write
     env:
-      TRAIN: ${{ inputs.train }}
+      PRODUCT: ${{ inputs.product }}
     steps:
       - name: Checkout
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -134,20 +134,20 @@ jobs:
       - name: Download release artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: release-${{ inputs.train }}
-          path: output/${{ inputs.train }}
+          name: release-${{ inputs.product }}
+          path: output/${{ inputs.product }}
 
       - name: Attest provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
-            output/${{ inputs.train }}/*.nupkg
-            output/${{ inputs.train }}/*.exe
-            output/${{ inputs.train }}/*.zip
+            output/${{ inputs.product }}/*.nupkg
+            output/${{ inputs.product }}/*.exe
+            output/${{ inputs.product }}/*.zip
 
       - name: Log in to NuGet
         id: login
-        if: inputs.train == 'nettest'
+        if: inputs.product == 'nettest'
         uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         with:
           user: ${{ vars.NUGET_USER }}
@@ -158,21 +158,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           Update__SigningKey: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
-          dotnet run --project build -- publish $env:TRAIN
+          dotnet run --project build -- publish $env:PRODUCT
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   channels:
     needs: [validate, publish]
-    if: inputs.train == 'daemon' || inputs.train == 'addin'
+    if: inputs.product == 'daemon' || inputs.product == 'addin'
     runs-on: windows-2025
-    environment: ${{ inputs.train }}
+    environment: ${{ inputs.product }}
     concurrency:
       group: channels
       cancel-in-progress: false
     permissions:
       contents: write
     env:
-      TRAIN: ${{ inputs.train }}
+      PRODUCT: ${{ inputs.product }}
       VERSION: ${{ needs.validate.outputs.version }}
     steps:
       - name: Checkout
@@ -186,7 +186,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           Update__SigningKey: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
-          dotnet run --project build -- channels $env:TRAIN --version $env:VERSION
+          dotnet run --project build -- channels $env:PRODUCT --version $env:VERSION
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   verify-install:
@@ -197,7 +197,7 @@ jobs:
       contents: read
       issues: write
     env:
-      TRAIN: ${{ inputs.train }}
+      PRODUCT: ${{ inputs.product }}
       VERSION: ${{ needs.validate.outputs.version }}
       PRERELEASE: ${{ needs.validate.outputs.prerelease }}
       GH_TOKEN: ${{ github.token }}
@@ -210,7 +210,7 @@ jobs:
           Invoke-WebRequest "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/releases/download/channels/channels.json" -OutFile channels.json
           $index = Get-Content channels.json -Raw | ConvertFrom-Json
           $channel = if ($env:PRERELEASE -eq 'true') { $index.prerelease } else { $index.stable }
-          if ($channel.$env:TRAIN.version -ne $env:VERSION) { throw "channels.json names $env:TRAIN '$($channel.$env:TRAIN.version)', not $env:VERSION." }
+          if ($channel.$env:PRODUCT.version -ne $env:VERSION) { throw "channels.json names $env:PRODUCT '$($channel.$env:PRODUCT.version)', not $env:VERSION." }
           "setup=$($channel.daemon.feed)RevitDevTool-Setup.exe" >> $env:GITHUB_OUTPUT
           "addin=$($channel.addin.version)" >> $env:GITHUB_OUTPUT
 
@@ -272,12 +272,12 @@ jobs:
         shell: pwsh
         run: |
           gh issue create -R $env:GITHUB_REPOSITORY --label bug `
-            --title "Release install test failed: $env:TRAIN $env:VERSION" `
-            --body "The install test of $env:TRAIN $env:VERSION failed: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            --title "Release install test failed: $env:PRODUCT $env:VERSION" `
+            --body "The install test of $env:PRODUCT $env:VERSION failed: $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
 
   publish-pytest:
     needs: [validate, build]
-    if: inputs.train == 'pytest'
+    if: inputs.product == 'pytest'
     runs-on: ubuntu-latest
     environment: pytest
     permissions:

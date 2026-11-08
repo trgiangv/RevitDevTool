@@ -12,7 +12,7 @@ internal static class SolutionCompile
     /// <summary>
     ///     The bundle zip is built from <c>bin/**/publish</c>, so an artifact build keeps <c>PublishAddin</c>.
     ///     Both hosts would otherwise deploy into the same bundle and <c>RemoveDir</c> races the other
-    ///     project's copy (<c>MSB3231</c>). <c>TrainVersion</c> is read only by <c>source/AddinVersion.props</c>.
+    ///     project's copy (<c>MSB3231</c>). <c>AddinVersion</c> is read only by <c>props/AddinVersion.props</c>.
     /// </summary>
     public static Task RunAsync(IModuleContext context, BuildRun run, string configuration, CancellationToken cancellationToken)
     {
@@ -20,7 +20,7 @@ internal static class SolutionCompile
         if (run.BuildsArtifacts)
         {
             properties.Add(new KeyValue("PublishAddin", "true"));
-            properties.Add(new KeyValue("TrainVersion", run.Version.Version));
+            properties.Add(new KeyValue("AddinVersion", run.Version.Version));
         }
 
         return context.DotNet().Build(new DotNetBuildOptions

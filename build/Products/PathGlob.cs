@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Build.Trains;
+namespace Build.Products;
 
 public static class PathGlob
 {

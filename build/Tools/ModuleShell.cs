@@ -24,7 +24,7 @@ internal static class ModuleShell
         }
         catch (Win32Exception)
         {
-            throw new InvalidOperationException("pixi is not on PATH; install it from https://pixi.sh to build the pytest train.");
+            throw new InvalidOperationException("pixi is not on PATH; install it from https://pixi.sh to build the pytest product.");
         }
     }
 

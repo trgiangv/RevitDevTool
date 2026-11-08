@@ -1,27 +1,26 @@
-using Build.Trains;
+using Build.Products;
 
 namespace Build.Cli;
 
 /// <summary>
-///     <c>dotnet run --project build -- &lt;target&gt; [train] [options]</c>. Each option belongs to one target.
+///     <c>dotnet run --project build -- &lt;target&gt; [product] [options]</c>. Each option belongs to one target.
 /// </summary>
-public sealed record BuildCommand(string Target, Train? Train, bool Check = false, bool DryRun = false, string? Base = null, string? Version = null)
+public sealed record BuildCommand(string Target, Product? Product, bool Check = false, bool DryRun = false, string? Base = null, string? Version = null)
 {
     public const string Usage = """
-        Usage: dotnet run --project build -- <target> [train] [options]
+        Usage: dotnet run --project build -- <target> [product] [options]
 
         Targets:
-          paths [--check]               write or check .github/train-paths.yml
-          ci <train> [--base <sha>]     compile and test the train, then print the bump warnings
-          pack <train>                  artifacts at a 0.0.0 version into output/<train>
-          release <train> [--dry-run]   validate the release; without --dry-run also test and build it
-          changelog <train>             rewrite the Unreleased block of the train changelog with git-cliff
-          publish <daemon|addin|nettest>
-                                        sign and push the built release of the train and create its GitHub Release
+          paths [--check]                 write or check .github/product-paths.yml
+          ci <product> [--base <sha>]     compile and test the product, then print the bump warnings
+          pack <product>                  artifacts at a 0.0.0 version into output/<product>
+          release <product> [--dry-run]   validate the release; without --dry-run also test and build it
+          changelog <product>             rewrite the Unreleased block of the product changelog with git-cliff
+          publish <daemon|addin|nettest>  sign and push the built release and create its GitHub Release
           channels <daemon|addin> --version <v>
-                                        move the train in channels.json, sign it, upload it to the channels release
+                                          move the product in channels.json, sign it, upload it to the channels release
 
-        Trains: daemon, addin, nettest, pytest
+        Products: daemon, addin, nettest, pytest
         """;
 
     public static BuildCommand? Parse(IReadOnlyList<string> args)
@@ -48,8 +47,8 @@ public sealed record BuildCommand(string Target, Train? Train, bool Check = fals
                     command = command with { Version = value };
                     index++;
                     break;
-                case var (name, _) when command.Train is null && Train.Find(name) is { } train:
-                    command = command with { Train = train };
+                case var (name, _) when command.Product is null && Product.Find(name) is { } product:
+                    command = command with { Product = product };
                     break;
                 default:
                     return null;
@@ -61,9 +60,9 @@ public sealed record BuildCommand(string Target, Train? Train, bool Check = fals
 
     private bool IsComplete => Target switch
     {
-        "paths" => Train is null,
-        "ci" or "pack" or "release" or "publish" or "changelog" => Train is not null,
-        "channels" => Train is not null && Version is not null,
+        "paths" => Product is null,
+        "ci" or "pack" or "release" or "publish" or "changelog" => Product is not null,
+        "channels" => Product is not null && Version is not null,
         _ => false
     };
 }

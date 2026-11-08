@@ -1,37 +1,37 @@
 using Build.Tools;
-using Build.Trains;
+using Build.Products;
 using System.Text;
 
 namespace Build.Releases;
 
-public sealed record ReleasePlan(TrainVersion Version, string Notes, IReadOnlyList<string> Artifacts, IReadOnlyList<string> Refusals, IReadOnlyList<string> Warnings)
+public sealed record ReleasePlan(ProductVersion Version, string Notes, IReadOnlyList<string> Artifacts, IReadOnlyList<string> Refusals, IReadOnlyList<string> Warnings)
 {
-    public static ReleasePlan Create(string root, Train train)
+    public static ReleasePlan Create(string root, Product product)
     {
-        var version = VersionFile.Read(root, train.VersionFile);
-        var previous = TrainVersion.PickPrevious(train, Git.Tags(root, train));
-        var changelog = ReadOptional(root, train.Changelog);
+        var version = VersionFile.Read(root, product.VersionFile);
+        var previous = ProductVersion.PickPrevious(product, Git.Tags(root, product));
+        var changelog = ReadOptional(root, product.Changelog);
         var input = new ReleaseInput(
-            train,
+            product,
             version,
             previous,
             changelog,
-            train == Train.Addin ? VersionFile.ReadProperty(root, train.VersionFile, ReleaseRules.MinUpdaterProperty) : null,
-            train == Train.Addin ? ReadOptional(root, ReleaseRules.UnshippedApiFile)?.Split('\n') : null,
-            train == Train.Addin ? Git.Tags(root, Train.Daemon).Select(tag => tag[Train.Daemon.TagPrefix.Length..]).ToArray() : null);
+            product == Product.Addin ? VersionFile.ReadProperty(root, product.VersionFile, ReleaseRules.MinUpdaterProperty) : null,
+            product == Product.Addin ? ReadOptional(root, ReleaseRules.UnshippedApiFile)?.Split('\n') : null,
+            product == Product.Addin ? Git.Tags(root, Product.Daemon).Select(tag => tag[Product.Daemon.TagPrefix.Length..]).ToArray() : null);
 
-        var parsed = ReleaseVersion.Parse(version, train.Grammar);
-        var trainVersion = new TrainVersion(train, version, parsed?.IsPrerelease ?? false, previous);
+        var parsed = ReleaseVersion.Parse(version, product.Grammar);
+        var productVersion = new ProductVersion(product, version, parsed?.IsPrerelease ?? false, previous);
         var notes = ReleaseRules.HasSection(changelog, version)
-            ? $"{train.Changelog} ## [{version}]"
-            : $"draft from commits since {trainVersion.PreviousTag ?? "the first commit"}";
+            ? $"{product.Changelog} ## [{version}]"
+            : $"draft from commits since {productVersion.PreviousTag ?? "the first commit"}";
 
         return new ReleasePlan(
-            trainVersion,
+            productVersion,
             notes,
-            train.Artifacts.Select(artifact => string.Format(artifact, version)).ToArray(),
+            product.Artifacts.Select(artifact => string.Format(artifact, version)).ToArray(),
             ReleaseRules.Refusals(input),
-            ContractWarnings(root, trainVersion, parsed));
+            ContractWarnings(root, productVersion, parsed));
     }
 
     public string Render()
@@ -58,7 +58,7 @@ public sealed record ReleasePlan(TrainVersion Version, string Notes, IReadOnlyLi
 
         if (Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY") is { Length: > 0 } summary)
         {
-            var builder = new StringBuilder($"### release {Version.Train.Name}\n\n| Field | Value |\n|---|---|\n");
+            var builder = new StringBuilder($"### release {Version.Product.Name}\n\n| Field | Value |\n|---|---|\n");
             foreach (var line in Render().Split('\n', StringSplitOptions.RemoveEmptyEntries))
             {
                 var separator = line.IndexOf(": ", StringComparison.Ordinal);
@@ -69,14 +69,14 @@ public sealed record ReleasePlan(TrainVersion Version, string Notes, IReadOnlyLi
         }
     }
 
-    private static IReadOnlyList<string> ContractWarnings(string root, TrainVersion version, ReleaseVersion? parsed)
+    private static IReadOnlyList<string> ContractWarnings(string root, ProductVersion version, ReleaseVersion? parsed)
     {
         if (version.PreviousTag is null || parsed is null) return [];
 
-        var previous = ReleaseVersion.Parse(version.Previous!, version.Train.Grammar)!;
+        var previous = ReleaseVersion.Parse(version.Previous!, version.Product.Grammar)!;
         if (parsed.RaisesMajorFrom(previous)) return [];
 
-        var paths = TrainPaths.Compute(root, version.Train);
+        var paths = ProductPaths.Compute(root, version.Product);
         var contracts = Git.Lines(root, "diff", "--name-only", version.PreviousTag, "HEAD")
             .Where(path => PathGlob.IsMatchAny(paths, path) && File.Exists(Path.Combine(root, path)))
             .Where(path => ReleaseRules.IsContract(path, File.ReadAllText(Path.Combine(root, path))))

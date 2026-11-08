@@ -92,9 +92,9 @@ and `-Year` values it builds; leave other running versions untouched.
 | Add-in payloads, `update-manifest.json`, bundle zip in `output/addin` | `dotnet run --project build -- pack addin` |
 | Velopack `RevitDevTool-Setup.exe` + nupkg + `releases.*.json` in `output/daemon` | `dotnet run --project build -- pack daemon` |
 | TestAdapter NuGet in `output/nettest` | `dotnet run --project build -- pack nettest` |
-| Compile + host-free tests of one train, as CI runs them | `dotnet run --project build -- ci <daemon\|addin\|nettest>` |
+| Compile + host-free tests of one product, as CI runs them | `dotnet run --project build -- ci <daemon\|addin\|nettest>` |
 
-`dotnet run --project build` with no target prints the targets and trains (ADR 0059 §10).
+`dotnet run --project build` with no target prints the targets and products (ADR 0059 §10).
 Every pack is `0.0.0-local.<UTC stamp>`, so it never collides with a published or an
 earlier local package. The repo `NuGet.config` maps `RevitDevTool.TestAdapter` to
 `output/nettest`, and the samples float on `0.0.0-local.*`, so the next sample build

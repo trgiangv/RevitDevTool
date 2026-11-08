@@ -1,7 +1,7 @@
 using Build.Pipeline;
 using Build.Releases;
 using Build.Tools;
-using Build.Trains;
+using Build.Products;
 using Sourcy.DotNet;
 using System.Diagnostics.CodeAnalysis;
 
@@ -27,12 +27,12 @@ public static class Targets
             return command.Target switch
             {
                 "paths" => Paths(root, command.Check),
-                "ci" => await CiAsync(root, command.Train!, command.Base),
-                "pack" => await PackAsync(root, command.Train!),
-                "release" => await ReleaseAsync(root, command.Train!, command.DryRun),
-                "changelog" => Changelog(root, command.Train!),
-                "publish" => Done(Publish.Run(root, command.Train!)),
-                _ => Done(await Channels.RunAsync(root, command.Train!, command.Version!))
+                "ci" => await CiAsync(root, command.Product!, command.Base),
+                "pack" => await PackAsync(root, command.Product!),
+                "release" => await ReleaseAsync(root, command.Product!, command.DryRun),
+                "changelog" => Changelog(root, command.Product!),
+                "publish" => Done(Publish.Run(root, command.Product!)),
+                _ => Done(await Channels.RunAsync(root, command.Product!, command.Version!))
             };
         }
         catch (InvalidOperationException exception)
@@ -45,40 +45,40 @@ public static class Targets
     {
         if (!check)
         {
-            TrainPaths.Write(root);
-            return Done($"Wrote {TrainPaths.FilterFile}.");
+            ProductPaths.Write(root);
+            return Done($"Wrote {ProductPaths.FilterFile}.");
         }
 
-        return TrainPaths.IsCurrent(root)
-            ? Done($"{TrainPaths.FilterFile} is current.")
-            : Fail($"{TrainPaths.FilterFile} is stale; run 'dotnet run --project build -- paths' and commit it.");
+        return ProductPaths.IsCurrent(root)
+            ? Done($"{ProductPaths.FilterFile} is current.")
+            : Fail($"{ProductPaths.FilterFile} is stale; run 'dotnet run --project build -- paths' and commit it.");
     }
 
-    private static async Task<int> CiAsync(string root, Train train, string? baseSha)
+    private static async Task<int> CiAsync(string root, Product product, string? baseSha)
     {
         if (Paths(root, check: true) != 0) return 1;
 
-        Warn(BumpWarnings.Collect(root, train, baseSha));
-        var version = new TrainVersion(train, VersionFile.Read(root, train.VersionFile), false, null);
-        await TrainPipeline.RunAsync(new BuildRun(root, train, BuildTarget.Ci, version));
+        Warn(BumpWarnings.Collect(root, product, baseSha));
+        var version = new ProductVersion(product, VersionFile.Read(root, product.VersionFile), false, null);
+        await ProductPipeline.RunAsync(new BuildRun(root, product, BuildTarget.Ci, version));
         return 0;
     }
 
-    private static async Task<int> PackAsync(string root, Train train)
+    private static async Task<int> PackAsync(string root, Product product)
     {
-        var number = TrainVersion.NonRelease(train, Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER"), DateTimeOffset.UtcNow);
-        var version = new TrainVersion(train, number, true, TrainVersion.PickPrevious(train, Git.Tags(root, train)));
-        Console.WriteLine($"Packing {train.Name} {number}.");
-        await TrainPipeline.RunAsync(new BuildRun(root, train, BuildTarget.Pack, version));
+        var number = ProductVersion.NonRelease(product, Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER"), DateTimeOffset.UtcNow);
+        var version = new ProductVersion(product, number, true, ProductVersion.PickPrevious(product, Git.Tags(root, product)));
+        Console.WriteLine($"Packing {product.Name} {number}.");
+        await ProductPipeline.RunAsync(new BuildRun(root, product, BuildTarget.Pack, version));
         return 0;
     }
 
     /// <summary>
     ///     Validates, then tests and builds the artifacts at the file version and writes <c>notes.md</c> for the publish job.
     /// </summary>
-    private static async Task<int> ReleaseAsync(string root, Train train, bool dryRun)
+    private static async Task<int> ReleaseAsync(string root, Product product, bool dryRun)
     {
-        var plan = ReleasePlan.Create(root, train);
+        var plan = ReleasePlan.Create(root, product);
         Console.Write(plan.Render());
         Warn(plan.Warnings);
         if (plan.Refusals.Count > 0) return Fail(string.Join(Environment.NewLine, plan.Refusals));
@@ -86,17 +86,17 @@ public static class Targets
         plan.WriteGitHubFiles();
         if (dryRun) return 0;
 
-        var run = new BuildRun(root, train, BuildTarget.Release, plan.Version);
-        await TrainPipeline.RunAsync(run);
-        if (train == Train.Daemon || train == Train.Addin) ReleaseAssets.Verify(plan.Version, run.Output, signed: false);
-        await File.WriteAllTextAsync(Path.Combine(run.Output, "notes.md"), ChangelogNotes.ForRelease(root, train, plan.Version.Version) + "\n");
+        var run = new BuildRun(root, product, BuildTarget.Release, plan.Version);
+        await ProductPipeline.RunAsync(run);
+        if (product == Product.Daemon || product == Product.Addin) ReleaseAssets.Verify(plan.Version, run.Output, signed: false);
+        await File.WriteAllTextAsync(Path.Combine(run.Output, "notes.md"), ChangelogNotes.ForRelease(root, product, plan.Version.Version) + "\n");
         return 0;
     }
 
-    private static int Changelog(string root, Train train)
+    private static int Changelog(string root, Product product)
     {
-        ChangelogNotes.Update(root, train);
-        return Done($"Updated the Unreleased block of {train.Changelog}.");
+        ChangelogNotes.Update(root, product);
+        return Done($"Updated the Unreleased block of {product.Changelog}.");
     }
 
     private static void Warn(IEnumerable<string> warnings)

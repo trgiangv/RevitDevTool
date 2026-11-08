@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="..\AddinVersion.props" />
+    <Import Project="..\..\props\AddinVersion.props" />
 
     <PropertyGroup>
         <UseAutoCad>true</UseAutoCad>

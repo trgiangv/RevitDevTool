@@ -1,12 +1,12 @@
 using Build.Tools;
-using Build.Trains;
+using Build.Products;
 namespace Build.Releases;
 
 public sealed record Commit(string Message, IReadOnlyList<string> Files);
 
 public static class BumpWarnings
 {
-    public static IReadOnlyList<string> Collect(string root, Train train, string? baseSha)
+    public static IReadOnlyList<string> Collect(string root, Product product, string? baseSha)
     {
         if (string.IsNullOrWhiteSpace(baseSha) || baseSha.All(character => character == '0')) return [];
         if (!Git.Succeeds(root, "cat-file", "-e", $"{baseSha}^{{commit}}"))
@@ -14,30 +14,30 @@ public static class BumpWarnings
             return [$"Base {baseSha} is not in this clone; fetch the full history to get the bump warnings."];
         }
 
-        var paths = TrainPaths.Compute(root, train);
+        var paths = ProductPaths.Compute(root, product);
         var changed = Git.Lines(root, "diff", "--name-only", baseSha, "HEAD");
         var commits = Commits(root, $"{baseSha}..HEAD");
-        var version = ReleaseVersion.Parse(VersionFile.Read(root, train.VersionFile), train.Grammar);
-        var tags = Git.Tags(root, train);
-        var previous = TrainVersion.PickPrevious(train, tags);
+        var version = ReleaseVersion.Parse(VersionFile.Read(root, product.VersionFile), product.Grammar);
+        var tags = Git.Tags(root, product);
+        var previous = ProductVersion.PickPrevious(product, tags);
 
         var warnings = new List<string>();
-        if (changed.Any(path => PathGlob.IsMatchAny(paths, path)) && !changed.Contains(train.VersionFile, StringComparer.Ordinal))
+        if (changed.Any(path => PathGlob.IsMatchAny(paths, path)) && !changed.Contains(product.VersionFile, StringComparer.Ordinal))
         {
-            warnings.Add($"Train {train.Name} changed but {train.VersionFile} did not; bump it before the next {train.Name} release.");
+            warnings.Add($"Product {product.Name} changed but {product.VersionFile} did not; bump it before the next {product.Name} release.");
         }
 
         if (previous is not null && version is not null &&
-            !version.RaisesMajorFrom(ReleaseVersion.Parse(previous, train.Grammar)!) &&
+            !version.RaisesMajorFrom(ReleaseVersion.Parse(previous, product.Grammar)!) &&
             Touching(commits, paths).Any(commit => ReleaseRules.IsBreaking(commit.Message)))
         {
-            warnings.Add($"A breaking commit touches {train.Name} but {version.Major}.{version.Minor}.{version.Patch} does not raise {(version.Major == 0 ? "MINOR" : "MAJOR")} over {previous}.");
+            warnings.Add($"A breaking commit touches {product.Name} but {version.Major}.{version.Minor}.{version.Patch} does not raise {(version.Major == 0 ? "MINOR" : "MAJOR")} over {previous}.");
         }
 
-        var rcTag = version is null ? null : RcTag(train, tags, version);
+        var rcTag = version is null ? null : RcTag(product, tags, version);
         if (rcTag is not null && Touching(Commits(root, $"{rcTag}..HEAD"), paths).Any(commit => ReleaseRules.IsFeature(commit.Message)))
         {
-            warnings.Add($"A feat commit touches {train.Name} after {rcTag}; features are frozen once rc is tagged.");
+            warnings.Add($"A feat commit touches {product.Name} after {rcTag}; features are frozen once rc is tagged.");
         }
 
         return warnings;
@@ -58,8 +58,8 @@ public static class BumpWarnings
     private static IReadOnlyList<Commit> Commits(string root, string range) =>
         Parse(Git.Run(root, "log", "--name-only", "--format=%x1e%B%x1f", range));
 
-    private static string? RcTag(Train train, IEnumerable<string> tags, ReleaseVersion version) =>
-        tags.Select(tag => (Tag: tag, Version: ReleaseVersion.Parse(tag[train.TagPrefix.Length..], train.Grammar)))
+    private static string? RcTag(Product product, IEnumerable<string> tags, ReleaseVersion version) =>
+        tags.Select(tag => (Tag: tag, Version: ReleaseVersion.Parse(tag[product.TagPrefix.Length..], product.Grammar)))
             .Where(item => item.Version is { Label: ReleaseLabel.Rc } rc && rc.Core == version.Core)
             .OrderBy(item => item.Version)
             .Select(item => item.Tag)

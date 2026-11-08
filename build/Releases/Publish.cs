@@ -1,10 +1,10 @@
 using Build.Tools;
-using Build.Trains;
+using Build.Products;
 
 namespace Build.Releases;
 
 /// <summary>
-///     <c>publish &lt;train&gt;</c> after the build job: pushes what <c>output/&lt;train&gt;</c> holds and creates the GitHub Release.
+///     <c>publish &lt;product&gt;</c> after the build job: pushes what <c>output/&lt;product&gt;</c> holds and creates the GitHub Release.
 ///     <c>nettest</c> pushes the nupkg to nuget.org; <c>daemon</c> and <c>addin</c> sign their feed and upload payloads before feeds.
 /// </summary>
 public static class Publish
@@ -13,26 +13,26 @@ public static class Publish
     private const string NuGetSource = "https://api.nuget.org/v3/index.json";
     private const string AdapterPackageId = "RevitDevTool.TestAdapter";
 
-    public static string Title(TrainVersion version) => version.Train.Name switch
+    public static string Title(ProductVersion version) => version.Product.Name switch
     {
         "daemon" => $"RevitDevTool Daemon {version.Version}",
         "addin" => $"RevitDevTool add-in {version.Version}",
         _ => $"{AdapterPackageId} {version.Version}"
     };
 
-    public static string Run(string root, Train train)
+    public static string Run(string root, Product product)
     {
-        if (train == Train.PyTest) throw new InvalidOperationException("The pytest train publishes to PyPI from release.yml; there is no publish target for it.");
+        if (product == Product.PyTest) throw new InvalidOperationException("The pytest product publishes to PyPI from release.yml; there is no publish target for it.");
 
-        var version = TrainVersion.FromFile(root, train);
-        var output = train.Output(root);
+        var version = ProductVersion.FromFile(root, product);
+        var output = product.Output(root);
         var notes = Path.Combine(output, "notes.md");
         if (!File.Exists(notes)) throw new InvalidOperationException($"Expected '{notes}' from the build job; download its artifact into {output}.");
 
-        return train == Train.NetTest ? NuGet(root, version, output, notes) : Assets(root, version, output, notes);
+        return product == Product.NetTest ? NuGet(root, version, output, notes) : Assets(root, version, output, notes);
     }
 
-    private static string NuGet(string root, TrainVersion version, string output, string notes)
+    private static string NuGet(string root, ProductVersion version, string output, string notes)
     {
         var package = Path.Combine(output, $"{AdapterPackageId}.{version.Version}.nupkg");
         if (!File.Exists(package)) throw new InvalidOperationException($"Expected '{package}' from the build job.");
@@ -50,7 +50,7 @@ public static class Publish
     /// <summary>
     ///     A draft first, payloads, then feeds and their signatures, then published; a failure deletes the draft and its tag.
     /// </summary>
-    private static string Assets(string root, TrainVersion version, string output, string notes)
+    private static string Assets(string root, ProductVersion version, string output, string notes)
     {
         Signing.SignFile(Path.Combine(output, ReleaseAssets.FeedName(version)), Signing.Key());
         ReleaseAssets.Verify(version, output, signed: true);
@@ -77,7 +77,7 @@ public static class Publish
         return $"Published {Title(version)} as {version.Tag} with {payloads.Count} payloads and {feeds.Count} feed files.";
     }
 
-    private static List<string> CreateArguments(string root, TrainVersion version, string notes)
+    private static List<string> CreateArguments(string root, ProductVersion version, string notes)
     {
         List<string> arguments =
         [

@@ -1,4 +1,4 @@
-using Build.Trains;
+using Build.Products;
 using DevTools.Update;
 using DevTools.Update.Engine;
 using DevTools.Update.Releases;
@@ -20,14 +20,14 @@ public static class ReleaseAssets
 
     public static string VelopackChannel(bool prerelease) => prerelease ? DaemonUpdater.PrereleaseChannel : DaemonUpdater.StableChannel;
 
-    public static string FeedName(TrainVersion version) => version.Train == Train.Addin
+    public static string FeedName(ProductVersion version) => version.Product == Product.Addin
         ? UpdateManifest.FileName
         : $"releases.{VelopackChannel(version.IsPrerelease)}.json";
 
     /// <summary>
     ///     Payloads first, then the feeds, then their signatures, so a client never reads a feed that names a missing asset.
     /// </summary>
-    public static (IReadOnlyList<string> Payloads, IReadOnlyList<string> Feeds) Split(TrainVersion version, IEnumerable<string> names)
+    public static (IReadOnlyList<string> Payloads, IReadOnlyList<string> Feeds) Split(ProductVersion version, IEnumerable<string> names)
     {
         var all = names.ToArray();
         var payloads = all.Where(name => IsPayload(version, name)).Order(StringComparer.Ordinal).ToArray();
@@ -41,7 +41,7 @@ public static class ReleaseAssets
     /// <summary>
     ///     Reads the signed feed, checks its signature when <paramref name="signed"/>, and checks every file it names for this version.
     /// </summary>
-    public static void Verify(TrainVersion version, string output, bool signed)
+    public static void Verify(ProductVersion version, string output, bool signed)
     {
         var signature = new ReleaseSignature(ShippedPublicKey());
         if (signed && !signature.IsRequired)
@@ -57,7 +57,7 @@ public static class ReleaseAssets
             signature.Verify(Path.GetFileName(feedPath), data, File.ReadAllBytes(sigPath));
         }
 
-        if (version.Train == Train.Addin)
+        if (version.Product == Product.Addin)
         {
             var manifest = UpdateManifest.FromJson(data);
             Check(manifest.Version == version.Version, $"The manifest version {manifest.Version} is not {version.Version}.");
@@ -90,18 +90,18 @@ public static class ReleaseAssets
         return null;
     }
 
-    private static bool IsPayload(TrainVersion version, string name)
+    private static bool IsPayload(ProductVersion version, string name)
     {
         var prefix = $"RevitDevTool-{version.Version}-";
-        return version.Train == Train.Addin
+        return version.Product == Product.Addin
             ? name == BundleName || (name.StartsWith(prefix, StringComparison.Ordinal) && name.EndsWith(".zip", StringComparison.Ordinal))
             : name == SetupName || (name.StartsWith(prefix, StringComparison.Ordinal) && name.EndsWith(".nupkg", StringComparison.Ordinal));
     }
 
-    private static bool IsFeed(TrainVersion version, string name)
+    private static bool IsFeed(ProductVersion version, string name)
     {
         var json = name.EndsWith(ReleaseSignature.Extension, StringComparison.Ordinal) ? name[..^ReleaseSignature.Extension.Length] : name;
-        return version.Train == Train.Addin
+        return version.Product == Product.Addin
             ? json == UpdateManifest.FileName
             : (json.StartsWith("releases.", StringComparison.Ordinal) || json.StartsWith("assets.", StringComparison.Ordinal)) && json.EndsWith(".json", StringComparison.Ordinal);
     }

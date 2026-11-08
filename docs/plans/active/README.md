@@ -6,12 +6,12 @@ parallel duplicate plans for the same workstream, and move a plan to
 `../completed/` only after the result is verified.
 
 
-## Release trains and CI (active)
+## Product releases and CI (active)
 
-Four trains (`daemon`, `addin`, `nettest`, `pytest`), signed `channels.json`, one
+Four products (`daemon`, `addin`, `nettest`, `pytest`), signed `channels.json`, one
 `release.yml`, `ci.yml` with one `gate`, PyTest in this repo
-([0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md)):
-[2026-11-06-release-trains-0059](2026-11-06-release-trains-0059.md). It also owns the
+([0059](../../decisions/0059-independent-product-releases-and-one-gate-ci.md)):
+[2026-11-06-product-releases-0059](2026-11-06-product-releases-0059.md). It also owns the
 release proof of the auto-update work.
 
 ## Auto-update engine (active, narrowed)

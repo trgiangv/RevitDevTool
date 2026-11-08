@@ -1,4 +1,4 @@
-using Build.Trains;
+using Build.Products;
 
 namespace Build.Tools;
 
@@ -11,7 +11,7 @@ public static class Git
     public static IReadOnlyList<string> Lines(string root, params string[] arguments) =>
         Run(root, arguments).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-    public static IReadOnlyList<string> Tags(string root, Train train) => Lines(root, "tag", "--list", $"{train.TagPrefix}*");
+    public static IReadOnlyList<string> Tags(string root, Product product) => Lines(root, "tag", "--list", $"{product.TagPrefix}*");
 
     public static string Head(string root) => Run(root, "rev-parse", "HEAD").Trim();
 }

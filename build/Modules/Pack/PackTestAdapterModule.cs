@@ -9,13 +9,13 @@ using Sourcy.DotNet;
 namespace Build.Modules;
 
 /// <summary>
-///     Pack RevitDevTool.TestAdapter into <c>output/nettest</c> at the train version, passed to restore and pack
+///     Pack RevitDevTool.TestAdapter into <c>output/nettest</c> at the product version, passed to restore and pack
 ///     as a global property so every assembly in the package carries it. The csproj's PackRuntime target
 ///     restores and builds the testhost siblings and framework runtimes itself, and its PackRunner target
 ///     publishes the TestRunner into the package. A <c>0.0.0-local</c> version is new on every pack,
 ///     so a consumer restore never reuses an older extraction.
 /// </summary>
-[DependsOn<TestTrainModule>(Optional = true)]
+[DependsOn<TestProductModule>(Optional = true)]
 [UsedImplicitly]
 public sealed class PackTestAdapterModule(BuildRun run) : Module<string>
 {

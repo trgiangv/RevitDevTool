@@ -1,18 +1,18 @@
 # Release Runbook
 
-One shape for every train (ADR `docs/decisions/0059-independent-release-trains-and-one-gate-ci.md`,
-plan `docs/plans/active/2026-11-06-release-trains-0059.md`). All four trains are enabled in `release.yml`.
+One shape for every product (ADR `docs/decisions/0059-independent-product-releases-and-one-gate-ci.md`,
+plan `docs/plans/active/2026-11-06-product-releases-0059.md`). All four products are enabled in `release.yml`.
 
 | Step | Who | How |
 |------|-----|-----|
-| 1. Bump PR | by hand | Raise the version in the train's version file, write the `## [X.Y.Z]` section in its `CHANGELOG.md`, move pins in docs that name the version |
-| 2. Check | automatic | `ci / gate` on the PR; `dotnet run --project build -- release <train> --dry-run` locally prints version, tag, notes source, artifacts, or one sentence naming the fix |
-| 3. Run | by hand | Actions, workflow `release`, input `train`, from `develop` (or `release/<train>/X.Y` for a hotfix) |
-| 4. Validate | automatic | `release <train> --dry-run` on the chosen commit; stops with the refusal sentence |
-| 5. Build | automatic | `release <train>`: tests, then the artifacts and `notes.md`, no secrets, uploaded as `release-<train>` |
-| 6. Approve | by hand | Reviewer approves environment `<train>` (twice for `daemon`/`addin`: `publish`, then `channels`) |
-| 7. Publish | automatic | Attest provenance, then `publish <train>` (`nettest` logs in to NuGet by OIDC first) |
-| 8. Channels | automatic | `daemon`/`addin` only: `channels <train> --version <v>` moves the train in the signed `channels.json` |
+| 1. Bump PR | by hand | Raise the version in the product's version file, write the `## [X.Y.Z]` section in its `CHANGELOG.md`, move pins in docs that name the version |
+| 2. Check | automatic | `ci / gate` on the PR; `dotnet run --project build -- release <product> --dry-run` locally prints version, tag, notes source, artifacts, or one sentence naming the fix |
+| 3. Run | by hand | Actions, workflow `release`, input `product`, from `develop` (or `release/<product>/X.Y` for a hotfix) |
+| 4. Validate | automatic | `release <product> --dry-run` on the chosen commit; stops with the refusal sentence |
+| 5. Build | automatic | `release <product>`: tests, then the artifacts and `notes.md`, no secrets, uploaded as `release-<product>` |
+| 6. Approve | by hand | Reviewer approves environment `<product>` (twice for `daemon`/`addin`: `publish`, then `channels`) |
+| 7. Publish | automatic | Attest provenance, then `publish <product>` (`nettest` logs in to NuGet by OIDC first) |
+| 8. Channels | automatic | `daemon`/`addin` only: `channels <product> --version <v>` moves the product in the signed `channels.json` |
 | 9. Install check | automatic | `daemon`/`addin` only: `verify-install` installs the channel's Setup on a clean runner; opens an issue on failure |
 
 ## daemon and addin
@@ -23,7 +23,7 @@ plan `docs/plans/active/2026-11-06-release-trains-0059.md`). All four trains are
 - `release addin` refuses until a `daemon/v*` tag at or above `MinUpdaterVersion` exists; a stable add-in needs a stable one.
 - `publish <daemon|addin>` is the only step besides `channels` that reads `Update__SigningKey`. It signs the feed
   (`releases.<channel>.json` or `update-manifest.json`), checks it with the public key in the Daemon `appsettings.json`,
-  then creates the GitHub Release `<train>/v<v>`: draft, payloads, feeds and signatures last, then published. A failure
+  then creates the GitHub Release `<product>/v<v>`: draft, payloads, feeds and signatures last, then published. A failure
   deletes the draft and its tag. Only a stable `daemon` is marked latest.
 - Assets: `daemon` = `RevitDevTool-Setup.exe`, `RevitDevTool-<v>-*full.nupkg`, `RevitDevTool-<v>-*delta.nupkg` (when an
   earlier release of the channel exists), `releases.<channel>.json` + `.sig`, `assets.<channel>.json`.
@@ -41,10 +41,10 @@ plan `docs/plans/active/2026-11-06-release-trains-0059.md`). All four trains are
 - `publish nettest` pushes `output/nettest/RevitDevTool.TestAdapter.<v>.nupkg` with `--skip-duplicate`, then
   creates the GitHub Release `nettest/v<v>` with `gh` unless it exists. It is never marked latest;
   a prerelease version sets `--prerelease`.
-- Rerun after a failure: run `release` again with the same train. A version the registry holds is skipped,
+- Rerun after a failure: run `release` again with the same product. A version the registry holds is skipped,
   an existing release is kept.
 
-## Order across trains
+## Order across products
 
 Provider first: `daemon`, then `addin`, then `nettest` and `pytest`. The first `nettest` publish waits for the first
 `addin` release.
@@ -63,4 +63,4 @@ Provider first: `daemon`, then `addin`, then `nettest` and `pytest`. The first `
 
 ## Not yet written
 
-Hotfix steps from `release/<train>/X.Y`.
+Hotfix steps from `release/<product>/X.Y`.

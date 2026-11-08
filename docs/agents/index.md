@@ -16,7 +16,7 @@ Build/deploy traps: `.agents/skills/build/SKILL.md`.
 | Execution / MCP / host pipe / logging | Matching `docs/agents/*.md` + `docs/architecture/<Module>/` + `docs/product/` | `DevTools.*`, hosts |
 | Revit API + live execute | `revit-developer` skill, `architecture/MCP/workflows.md` | MCP + rvtdocs-mcp |
 | Multi-session work | `docs/plans/active/` | — |
-| Release a train | `release.md` | `build/`, `.github/workflows/release.yml` |
+| Release a product | `release.md` | `build/`, `.github/workflows/release.yml` |
 | Policy | `docs/decisions/` | — |
 
 Domain skills: `.agents/skills/*/SKILL.md` — read the one that matches.

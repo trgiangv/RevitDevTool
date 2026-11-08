@@ -8,7 +8,7 @@ Date: 2026-10-25
 ([0046](0046-per-year-release-payloads-and-update-manifest.md)–[0053](0053-velopack-for-daemon-distribution.md)).
 
 Release discovery (reading the GitHub release list) is replaced by the signed
-`channels.json` of [0059](0059-independent-release-trains-and-one-gate-ci.md) §2.
+`channels.json` of [0059](0059-independent-product-releases-and-one-gate-ci.md) §2.
 
 ## Context
 

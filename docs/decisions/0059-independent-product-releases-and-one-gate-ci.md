@@ -1,4 +1,4 @@
-# 0059 Four Independent Release Trains and One-Gate CI
+# 0059 Four Independent Release Products and One-Gate CI
 
 Date: 2026-11-05
 
@@ -16,11 +16,11 @@ independent releases safe.
 Amended 2026-11-07: §6 adds the `PublicAPI.Unshipped.txt` move at a stable `addin` release ([0060](0060-framework-runtime-shims-ship-with-nettest.md) §8).
 
 Amended 2026-11-08, at acceptance: §1 lists the framework runtimes in `nettest` and
-which train owns each testing piece (0060 §1); §5 adds the `0.x` rule and the
+which product owns each testing piece (0060 §1); §5 adds the `0.x` rule and the
 framework floor and major rules (0060 §9); §11 names `develop` as the trunk. Later the
 same day, from the implementation plan: §5 local version form and no solution-wide
 version, §6 the bump PR moves `PublicAPI`, §7 which job holds no secret. Then, by
-the owner: a clean cut inside the repo too; the first train releases are the
+the owner: a clean cut inside the repo too; the first product releases are the
 baseline (§5 refusal, "What is removed").
 
 ## Context
@@ -65,31 +65,31 @@ Read from `gh run list` and `.github/workflows/` on 2026-11-05:
 
 ## Decision
 
-### 1. Four trains, one shape
+### 1. Four products, one shape
 
-| Train | Contains | Version file | Tag | Registry or feed |
+| Product | Contains | Version file | Tag | Registry or feed |
 |-------|----------|--------------|-----|------------------|
 | `daemon` | Daemon, update engine, `RevitDevTool-Setup.exe` | `<Version>` in `source/DevTools.Daemon/DevTools.Daemon.csproj` | `daemon/vX.Y.Z` | Velopack feed, `channels.json` |
-| `addin` | Revit and AutoCAD add-ins, one payload per year, offline bundle | `<Version>` in `source/AddinVersion.props` (imported by the host projects) | `addin/vX.Y.Z` | `update-manifest.json`, `channels.json` |
+| `addin` | Revit and AutoCAD add-ins, one payload per year, offline bundle | `<Version>` in `props/AddinVersion.props` (imported by the host projects) | `addin/vX.Y.Z` | `update-manifest.json`, `channels.json` |
 | `nettest` | NuGet `RevitDevTool.TestAdapter`: adapter, MTP providers, framework runtimes and their manifests (0060), TestRunner | `<Version>` in `source/DevTools.TestAdapter/DevTools.TestAdapter.csproj` | `nettest/vX.Y.Z` | nuget.org |
 | `pytest` | PyPI `revitdevtool_pytest` | `version` in `source/RevitDevTool.PyTest/pyproject.toml` | `pytest/vX.Y.Z` | PyPI |
 
-Every train has the same life: a version file bumped in a PR, a CI job, one
+Every product has the same life: a version file bumped in a PR, a CI job, one
 release run, a GitHub Release with its notes, a tag, and a changelog file. The
-release tooling knows no special train.
+release tooling knows no special product.
 
-- Each train releases only when its own code changed. Shared `DevTools.*` code
-  belongs to every train that builds it, and its change is a reason to release
-  each of them, not a train of its own.
+- Each product releases only when its own code changed. Shared `DevTools.*` code
+  belongs to every product that builds it, and its change is a reason to release
+  each of them, not a product of its own.
 - Testing pieces follow 0060 §1: the kernel (`DevTools.Testing.Host`) is `addin`;
   the framework runtimes, MTP providers, adapter, and runner are `nettest`;
   `DevTools.Testing.Abstractions`, `DevTools.Testing.Transport`, and
   `props/TestingRuntime.props` are shared by both.
-- Compatibility between trains is decided by the 0055 contract ranges. The one
-  version rule across trains is `minUpdaterVersion` in the add-in manifest: the
+- Compatibility between products is decided by the 0055 contract ranges. The one
+  version rule across products is `minUpdaterVersion` in the add-in manifest: the
   oldest Daemon that can install the payload (0052).
-- A stable release never requires a prerelease of another train.
-- "NetTest" names the train. The NuGet id stays `RevitDevTool.TestAdapter`.
+- A stable release never requires a prerelease of another product.
+- "NetTest" names the product. The NuGet id stays `RevitDevTool.TestAdapter`.
 
 ### 2. Discovery through a signed channel index
 
@@ -148,12 +148,12 @@ release updates one file, `channels.json`, signed like the feeds (0051):
 
 ### 5. Version format
 
-| Train | Grammar | Examples |
+| Product | Grammar | Examples |
 |-------|---------|----------|
 | `daemon`, `addin`, `nettest` | SemVer 2.0: `MAJOR.MINOR.PATCH[-LABEL.N]`, `LABEL` ∈ `alpha`, `beta`, `rc` | `4.1.0-beta.2`, `4.1.0`, `0.4.0-rc.1` |
 | `pytest` | PEP 440 subset: `MAJOR.MINOR.PATCH[{a\|b\|rc}N]` | `0.8.0b1`, `0.8.0` |
 
-- The tag is `<train>/v` plus the registry string as is: `addin/v4.1.0-rc.1`,
+- The tag is `<product>/v` plus the registry string as is: `addin/v4.1.0-rc.1`,
   `pytest/v0.8.0b1`. Labels map one to one: `alpha` = `a`, `beta` = `b`, `rc` = `rc`.
 - `daemon` and `addin` both start at `4.0.0` and then move on their own.
 - `+<sha>` appears only in `InformationalVersion`.
@@ -162,8 +162,8 @@ release updates one file, `channels.json`, signed like the feeds (0051):
   stamp keeps local packs apart), `0.0.0.dev<run>` for `pytest`. `publish` refuses
   `0.0.0`. A local pack cannot collide with a published or an earlier local package, so
   the NuGet cache workaround in `PackTestAdapterModule` goes away.
-- No version is passed to the whole solution: each train's entry projects read its
-  version file, and the product version a process reports is its own train's.
+- No version is passed to the whole solution: each product's entry projects read its
+  version file, and the product version a process reports is its own product's.
 - **GitVersion is dropped.** The version file is the only source.
 
 | Part | When |
@@ -177,20 +177,20 @@ release updates one file, `channels.json`, signed like the feeds (0051):
 - `nettest` only: raising a framework floor (0060 §9) raises `MINOR`; dropping a
   supported framework major raises `MAJOR`.
 
-`release <train>` refuses a version that does not match the grammar, is not
-greater than the train's latest `<train>/v*` tag, goes back a label, is stable
-without a changelog section, or is stable and needs a prerelease of another train.
+`release <product>` refuses a version that does not match the grammar, is not
+greater than the product's latest `<product>/v*` tag, goes back a label, is stable
+without a changelog section, or is stable and needs a prerelease of another product.
 It warns when a contract `Min` changed since the last tag and `MAJOR` did not.
 
 ### 6. Prerelease flow
 
-The same steps for every train:
+The same steps for every product:
 
 1. Set the prerelease version in the version file, with the changelog, in a PR.
-2. Run `release.yml` for the train. Notes come from the edited section, or from the
-   generated draft since the train's previous tag.
+2. Run `release.yml` for the product. Notes come from the edited section, or from the
+   generated draft since the product's previous tag.
 3. Repeat for more betas. Between prereleases a contract `Min` may rise (0055 §3).
-4. `-rc.N` freezes features: a `feat` commit on the train's paths after an `rc` tag
+4. `-rc.N` freezes features: a `feat` commit on the product's paths after an `rc` tag
    gets a CI warning.
 5. The stable version needs the edited changelog section.
 
@@ -202,37 +202,37 @@ there and is allowed only when `MAJOR` rises (0055 §3).
 
 Where the prerelease goes:
 
-| Train | Prerelease reaches | Opt-in |
+| Product | Prerelease reaches | Opt-in |
 |-------|--------------------|--------|
 | `daemon`, `addin` | `channels.json` → `prerelease` | The install's channel (0054 UI) |
 | `nettest` | nuget.org prerelease (from `-beta.N`) | `--prerelease` or an explicit version |
 | `pytest` | PyPI prerelease (from `bN`) | `pip --pre`, or the pixi and uv prerelease setting |
 
-**Order across trains.** A provider ships before its consumers: `daemon` when the
+**Order across products.** A provider ships before its consumers: `daemon` when the
 add-in needs a newer `minUpdaterVersion`, then `addin`, then `nettest` and
 `pytest`. The newer host explains a mismatch to an older client (0055 §10).
 
-**Hotfix while a prerelease is open.** Create `release/<train>/X.Y` from the
+**Hotfix while a prerelease is open.** Create `release/<product>/X.Y` from the
 stable tag, fix, release from that branch, and cherry-pick to trunk. The stable
 fix stays below the open prerelease, so both channels keep their order.
 
 ### 7. One release workflow
 
-`release.yml`, started by `workflow_dispatch` with one input: `train`.
-`run-name: release ${{ inputs.train }}` makes every run readable.
+`release.yml`, started by `workflow_dispatch` with one input: `product`.
+`run-name: release ${{ inputs.product }}` makes every run readable.
 
 | Job | Runs for | Does |
 |-----|----------|------|
-| `validate` | all | `dotnet run --project build -- release <train> --dry-run`: version rules (§5), changelog section, what will ship |
-| `build` | all | Tests of the train, then the train's artifacts. No secrets. Uploads the artifact |
-| `publish` | all, `environment: <train>` | `daemon`, `addin`: sign feeds, draft, upload payloads then feeds, publish. `nettest`: `NuGet/login` (OIDC) and push. `pytest`: `pypa/gh-action-pypi-publish` (OIDC). Skips a version the registry already has. GitHub Release and tag. Provenance attestation |
+| `validate` | all | `dotnet run --project build -- release <product> --dry-run`: version rules (§5), changelog section, what will ship |
+| `build` | all | Tests of the product, then the product's artifacts. No secrets. Uploads the artifact |
+| `publish` | all, `environment: <product>` | `daemon`, `addin`: sign feeds, draft, upload payloads then feeds, publish. `nettest`: `NuGet/login` (OIDC) and push. `pytest`: `pypa/gh-action-pypi-publish` (OIDC). Skips a version the registry already has. GitHub Release and tag. Provenance attestation |
 | `channels` | `daemon`, `addin` | Rewrite and sign `channels.json`, replace it in the `channels` release |
 | `verify-install` | `daemon`, `addin` | Clean runner: install `Setup.exe` from `channels.json`, `--select`, check `installation.json`; issue on failure |
 
 - One run per release. Follow-up work is a `needs:` job.
 - The job that compiles and tests holds no secret; `publish` runs only the publish
-  step of the same commit, in the train's protected environment. Each environment holds
-  only its train's secrets: the signing key in `daemon` and `addin`, nothing stored in
+  step of the same commit, in the product's protected environment. Each environment holds
+  only its product's secrets: the signing key in `daemon` and `addin`, nothing stored in
   `nettest` and `pytest` (OIDC).
 - The Velopack delta is built against the previous `daemon/v*` release, downloaded
   by tag. A release holds only the delta from the version before it, so the Daemon's
@@ -247,59 +247,59 @@ fix stays below the open prerelease, so both channels keep their order.
 
 | Job | Paths | Does |
 |-----|-------|------|
-| `changes` | all | Path filter from the train declarations in `build/` |
-| `daemon` | Daemon train paths | Compile, host-free tests; on trunk push also `Setup.exe` smoke pack |
-| `addin` | Add-in train paths | Compile every year configuration, host-free tests; on trunk push also payload smoke pack |
-| `nettest` | NetTest train paths | Adapter and runner tests, pack `0.0.0-ci` nupkg |
-| `pytest` | PyTest train paths and golden fixtures | pixi lint, test, build `0.0.0.dev` wheel, golden contract |
+| `changes` | all | Path filter from the product declarations in `build/` |
+| `daemon` | Daemon product paths | Compile, host-free tests; on trunk push also `Setup.exe` smoke pack |
+| `addin` | Add-in product paths | Compile every year configuration, host-free tests; on trunk push also payload smoke pack |
+| `nettest` | NetTest product paths | Adapter and runner tests, pack `0.0.0-ci` nupkg |
+| `pytest` | PyTest product paths and golden fixtures | pixi lint, test, build `0.0.0.dev` wheel, golden contract |
 | `docs` | `docs/**` | Typecheck and build; on trunk push deploy to Pages (`environment: github-pages`) |
 | `workflows` | `.github/**` | `actionlint`, `zizmor` |
 | `gate` | always | `re-actors/alls-green`. **The only required check** |
 
-- A PR that changes a train's paths without changing its version file gets a
+- A PR that changes a product's paths without changing its version file gets a
   warning, not a failure.
-- A `!` commit in a train whose next version is not a new major gets a warning.
+- A `!` commit in a product whose next version is not a new major gets a warning.
 - `permissions: {}` at workflow level, granted per job. Actions pinned by SHA.
   Dependabot groups updates per ecosystem, weekly.
 
 ### 9. Changelog
 
-| Train | File |
+| Product | File |
 |-------|------|
 | `daemon` | `source/DevTools.Daemon/CHANGELOG.md` |
-| `addin` | `source/RevitDevTool/CHANGELOG.md` |
+| `addin` | `CHANGELOG.md` |
 | `nettest` | `source/DevTools.TestAdapter/CHANGELOG.md` |
 | `pytest` | `source/RevitDevTool.PyTest/CHANGELOG.md` |
 
 All use Keep a Changelog. The root `Changelog.md` is deleted; the root README links
 the four.
 
-1. **Draft.** `changelog <train>` runs `git-cliff` (installed with pixi) over the
-   train's paths since its last tag and writes `## [Unreleased]`. A commit goes to
-   every train whose paths it touches. The commit type picks the section.
+1. **Draft.** `changelog <product>` runs `git-cliff` (installed with pixi) over the
+   product's paths since its last tag and writes `## [Unreleased]`. A commit goes to
+   every product whose paths it touches. The commit type picks the section.
    `chore`, `ci`, `test`, and `docs` commits are left out.
-2. **Edit.** A person rewrites the draft for that train's user and renames
+2. **Edit.** A person rewrites the draft for that product's user and renames
    `Unreleased` to the version in the bump PR.
 3. **Read.** The release reads the version's section. Stable without one fails.
    A prerelease without one uses the draft.
-4. **Publish.** The GitHub Release body for every train, plus
+4. **Publish.** The GitHub Release body for every product, plus
    `PackageReleaseNotes` (`nettest`) and `project.urls.Changelog` (`pytest`).
 
 ### 10. `build/` is the one release tool
 
-`dotnet run --project build -- <target> [train]`. YAML holds triggers,
+`dotnet run --project build -- <target> [product]`. YAML holds triggers,
 permissions, environments, and OIDC steps.
 
 | Target | Does |
 |--------|------|
-| `ci <train>` | Compile and host-free tests of the train |
-| `pack <train>` | Artifacts with a `0.0.0` version |
-| `release <train> [--dry-run]` | Validate, test, build release artifacts |
-| `publish <train>` | Upload, GitHub Release, tag |
+| `ci <product>` | Compile and host-free tests of the product |
+| `pack <product>` | Artifacts with a `0.0.0` version |
+| `release <product> [--dry-run]` | Validate, test, build release artifacts |
+| `publish <product>` | Upload, GitHub Release, tag |
 | `channels` | Write and sign `channels.json` |
-| `changelog <train>` | Write the `Unreleased` draft |
+| `changelog <product>` | Write the `Unreleased` draft |
 
-- Each train is declared once in `build/`: paths, version file, tag pattern,
+- Each product is declared once in `build/`: paths, version file, tag pattern,
   changelog file, artifacts. CI path filters, the bump warning, and the changelog
   all read that declaration.
 - `pytest` keeps its toolchain in pixi; `build/` calls the pixi tasks.
@@ -309,7 +309,7 @@ permissions, environments, and OIDC steps.
 
 Releases are cut from `develop`, the default branch. `main`, which only marked
 releases, and the "fast-forward develop" step are retired: a release is marked by
-its `<train>/v*` tag. `release/<train>/X.Y` branches exist only
+its `<product>/v*` tag. `release/<product>/X.Y` branches exist only
 for hotfixes (§6).
 
 ### What is removed
@@ -322,9 +322,9 @@ the Daemon package and the lookup in the Daemon folder; `Compile.yml`,
 `RevitDevTool.PyTest` repo; the 3.0.0 Inno Setup cleanup in the Daemon; the root
 `Changelog.md`.
 
-The first release of each train is the baseline. Releases, tags, and registry
-versions from before the trains are history: the release tool reads only
-`<train>/v*` tags, and nothing in the repo keeps an old path working beside the
+The first release of each product is the baseline. Releases, tags, and registry
+versions from before the products are history: the release tool reads only
+`<product>/v*` tags, and nothing in the repo keeps an old path working beside the
 new one.
 
 ## Alternatives Considered
@@ -336,11 +336,11 @@ new one.
    Without that constraint it is a harder version of §1: change detection by path,
    assets pointing at older releases, and two version notions in one release.
 3. **No GitHub Release for NetTest and PyTest.** Needed only while the Daemon read
-   the release list. With `channels.json`, every train gets visible notes.
+   the release list. With `channels.json`, every product gets visible notes.
 4. **`channels.json` on GitHub Pages.** Works, but ties update publishing to the
    docs deploy. The rolling `channels` release keeps it in the release run.
-5. **Four release workflows.** Same jobs four times. One workflow with a `train`
-   input and per-train environments reads the same and changes in one place.
+5. **Four release workflows.** Same jobs four times. One workflow with a `product`
+   input and per-product environments reads the same and changes in one place.
 6. **Changesets or release-please.** Release PRs and per-package changelogs, but
    Changesets needs Node, and both add a second version mechanism beside the
    version files.
@@ -348,8 +348,8 @@ new one.
    Native AOT.** 70 MB per version; a second feed and install folder; EnvDTE and
    COM interop do not run under AOT.
 8. **GitHub generated notes from PR labels.** Most commits are direct pushes, and
-   the notes do not split by train.
-9. **Keep GitVersion.** It needs a tag prefix and branch config per train, and its
+   the notes do not split by product.
+9. **Keep GitVersion.** It needs a tag prefix and branch config per product, and its
    CI versions look like real prereleases. The version file plus `0.0.0` builds is
    simpler.
 10. **SemVer in the PyTest version file, converted at build time.** The file, the
@@ -359,11 +359,11 @@ new one.
 
 Positive:
 
-- A change releases only the trains it touches. Users download only what changed.
-- All four trains follow one runbook and one workflow.
+- A change releases only the products it touches. Users download only what changed.
+- All four products follow one runbook and one workflow.
 - The Daemon finds updates with one signed request, not the REST API.
 - One required check; docs-only and workflow-only changes skip .NET.
-- CI runs host-free tests for every train, and every release tests before it
+- CI runs host-free tests for every product, and every release tests before it
   publishes.
 - The pytest contract is checked on both sides in the same PR.
 
@@ -380,8 +380,8 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Plan in `docs/plans/active/`: train declarations in `build/` and `0.0.0`
+- Plan in `docs/plans/active/`: product declarations in `build/` and `0.0.0`
   builds; `ci.yml` and `gate`; `release.yml` for `nettest` (smallest); PyTest move
   and `pytest`; `channels.json` and the update engine; `daemon` and `addin`;
   changelog targets; delete the old workflows.
-- Update `docs/agents/` build and test-matrix pages once `ci <train>` exists.
+- Update `docs/agents/` build and test-matrix pages once `ci <product>` exists.

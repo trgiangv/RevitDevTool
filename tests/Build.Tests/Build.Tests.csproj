@@ -12,7 +12,7 @@
 
     <ItemGroup>
         <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting"/>
-        <Using Include="Build.Trains"/>
+        <Using Include="Build.Products"/>
         <Using Include="Build.Releases"/>
     </ItemGroup>
 

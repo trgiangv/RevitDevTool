@@ -307,7 +307,7 @@ public sealed class AdapterArchitectureTests
             RepositoryRoot, "source", "DevTools.TestAdapter", "build", "RevitDevTool.TestAdapter.targets"));
         var adapter = File.ReadAllText(Path.Combine(
             RepositoryRoot, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj"));
-        var pack = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Modules", "PackTestAdapterModule.cs"));
+        var pack = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Modules", "Pack", "PackTestAdapterModule.cs"));
         var mtpDir = Path.Combine(RepositoryRoot, "source", "DevTools.MSTest.MTP");
         var discoverer = File.ReadAllText(Path.Combine(mtpDir, "MSTestTestDiscoverer.cs"));
         var listing = File.ReadAllText(Path.Combine(mtpDir, "MSTestListing.cs"));
@@ -685,14 +685,13 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Adapter_pack_is_nettest_train()
+    public void Adapter_pack_is_nettest_product()
     {
-        var cli = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Cli.cs"));
+        var pipeline = File.ReadAllText(Path.Combine(RepositoryRoot, "build", "Pipeline", "ProductPipeline.cs"));
         var module = File.ReadAllText(Path.Combine(
-            RepositoryRoot, "build", "Modules", "PackTestAdapterModule.cs"));
+            RepositoryRoot, "build", "Modules", "Pack", "PackTestAdapterModule.cs"));
 
-        Assert.Contains("train == Train.NetTest", cli, StringComparison.Ordinal);
-        Assert.Contains("AddModule<PackTestAdapterModule>()", cli, StringComparison.Ordinal);
+        Assert.Contains("product == Product.NetTest) services.AddModule<PackTestAdapterModule>()", pipeline, StringComparison.Ordinal);
         Assert.DoesNotContain("DependsOn<Compile", module, StringComparison.Ordinal);
         Assert.DoesNotContain("powershell", module, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Projects.DevTools_TestAdapter", module, StringComparison.Ordinal);
@@ -704,10 +703,10 @@ public sealed class AdapterArchitectureTests
     }
 
     [TestMethod]
-    public void Pack_passes_train_version()
+    public void Pack_passes_product_version()
     {
         var module = File.ReadAllText(Path.Combine(
-            RepositoryRoot, "build", "Modules", "PackTestAdapterModule.cs"));
+            RepositoryRoot, "build", "Modules", "Pack", "PackTestAdapterModule.cs"));
 
         Assert.Contains("var version = run.Version.Version;", module, StringComparison.Ordinal);
         Assert.AreEqual(2, module.Split("Properties = [(\"Version\", version)]").Length - 1);

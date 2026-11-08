@@ -32,7 +32,7 @@ Read the **minimum** layer for the task. Do not duplicate docs into chat.
 | pytest host tests | `.agents/skills/revit-pytest/SKILL.md` |
 | Platform / IPC / packaging edit | `.agents/skills/platform-change/SKILL.md` |
 | Formatting and lint hooks | `docs/agents/formatting-linting.md` |
-| Release a train | `docs/agents/release.md` |
+| Release a product | `docs/agents/release.md` |
 
 ## Verify before done
 

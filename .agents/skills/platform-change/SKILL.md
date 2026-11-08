@@ -21,7 +21,7 @@ description: >
 - Logging: `StartupTrace` is pre-DI crash dump (`crash_{app}_{ver}_{pid}.log`); `FileLogProcessor` is rolling `log_*`. Do not mix prefixes. AutoClean must not delete `crash_*`.
 - MCP/IPC: keep wire contracts in sync (`BridgeMessage`, `PytestContracts`, MCP pipe names).
 - Pytest bridge: treat discover and run as separate flows; do not “fix” stale path gaps with unrelated edits.
-- Packaging is **one tool, four trains** (ADR 0059): `dotnet run --project build -- pack <daemon|addin|nettest>`. Each train declares its roots, version file, and tag in `build/Trains/Train.cs`; `.github/train-paths.yml` is generated from it (`build -- paths`). The adapter nupkg is `pack nettest` (`PackTestAdapterModule`, no compile dependency, no PowerShell). ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
+- Packaging is **one tool, four products** (ADR 0059): `dotnet run --project build -- pack <daemon|addin|nettest>`. Each product declares its roots, version file, and tag in `build/Products/Product.cs`; `.github/product-paths.yml` is generated from it (`build -- paths`). The adapter nupkg is `pack nettest` (`PackTestAdapterModule`, no compile dependency, no PowerShell). ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
 - TestAdapter pack/release constraints: `docs/architecture/Testing/README.md`. Do not add a TestAdapter → MTP `ProjectReference`. Host/Runtime/Runner ship in the installer, not the nupkg.
 - net48: rely on Polyfill + hook/multi-TFM compile; do not speculative-polyfill.
   `PolyArgumentExceptions` is on globally — prefer `ArgumentNullException.ThrowIfNull`

@@ -47,6 +47,6 @@ public sealed class ChangelogNotesTests
     [TestMethod]
     public void Includes_project_folders()
     {
-        CollectionAssert.AreEqual(new[] { "source/DevTools.Daemon/**" }, ChangelogNotes.IncludePaths(Train.Daemon).ToArray());
+        CollectionAssert.AreEqual(new[] { "source/DevTools.Daemon/**" }, ChangelogNotes.IncludePaths(Product.Daemon).ToArray());
     }
 }

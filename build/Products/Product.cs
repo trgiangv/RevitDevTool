@@ -1,4 +1,4 @@
-namespace Build.Trains;
+namespace Build.Products;
 
 public enum VersionGrammar
 {
@@ -6,7 +6,7 @@ public enum VersionGrammar
     Pep440
 }
 
-public sealed record Train(
+public sealed record Product(
     string Name,
     string[] Roots,
     string[] ExtraPaths,
@@ -15,7 +15,7 @@ public sealed record Train(
     VersionGrammar Grammar,
     string[] Artifacts)
 {
-    public static Train Daemon { get; } = new(
+    public static Product Daemon { get; } = new(
         "daemon",
         ["source/DevTools.Daemon/DevTools.Daemon.csproj"],
         [],
@@ -24,16 +24,16 @@ public sealed record Train(
         VersionGrammar.SemVer,
         ["RevitDevTool-Setup.exe", "RevitDevTool-{0}-*full.nupkg", "RevitDevTool-{0}-*delta.nupkg", "releases.<channel>.json", "assets.<channel>.json"]);
 
-    public static Train Addin { get; } = new(
+    public static Product Addin { get; } = new(
         "addin",
         ["source/RevitDevTool/RevitDevTool.csproj", "source/AcadDevTool/ACadDevTool.csproj"],
         ["props/PackageContents.xml", "source/RevitDevTool.PyTest/tests/golden/**"],
-        "source/AddinVersion.props",
-        "source/RevitDevTool/CHANGELOG.md",
+        "props/AddinVersion.props",
+        "CHANGELOG.md",
         VersionGrammar.SemVer,
         ["RevitDevTool-{0}-<year>.zip", "update-manifest.json", "RevitDevTool.bundle.zip"]);
 
-    public static Train NetTest { get; } = new(
+    public static Product NetTest { get; } = new(
         "nettest",
         [
             "source/DevTools.TestAdapter/DevTools.TestAdapter.csproj",
@@ -51,7 +51,7 @@ public sealed record Train(
         VersionGrammar.SemVer,
         ["RevitDevTool.TestAdapter.{0}.nupkg"]);
 
-    public static Train PyTest { get; } = new(
+    public static Product PyTest { get; } = new(
         "pytest",
         [],
         ["source/RevitDevTool.PyTest/**"],
@@ -60,7 +60,7 @@ public sealed record Train(
         VersionGrammar.Pep440,
         ["revitdevtool_pytest-{0}-py3-none-any.whl", "revitdevtool_pytest-{0}.tar.gz"]);
 
-    public static IReadOnlyList<Train> All { get; } = [Daemon, Addin, NetTest, PyTest];
+    public static IReadOnlyList<Product> All { get; } = [Daemon, Addin, NetTest, PyTest];
 
     public string TagPrefix => $"{Name}/v";
 
@@ -70,6 +70,6 @@ public sealed record Train(
 
     public string Output(string root) => Path.Combine(root, "output", Name);
 
-    public static Train? Find(string name) =>
-        All.FirstOrDefault(train => string.Equals(train.Name, name, StringComparison.Ordinal));
+    public static Product? Find(string name) =>
+        All.FirstOrDefault(product => string.Equals(product.Name, name, StringComparison.Ordinal));
 }

@@ -10,7 +10,7 @@ public sealed class ChannelsTests
     [TestMethod]
     public void First_stable_fills_both_sides()
     {
-        var index = Channels.Advance(new ChannelIndex(), Train.Daemon, "4.0.0", Downloads);
+        var index = Channels.Advance(new ChannelIndex(), Product.Daemon, "4.0.0", Downloads);
 
         Assert.AreEqual("4.0.0", index.Stable.Daemon!.Version);
         Assert.AreEqual("4.0.0", index.Prerelease.Daemon!.Version);
@@ -55,7 +55,7 @@ public sealed class ChannelsTests
             Prerelease = new Channel { Addin = new AddinEntry("4.1.0-rc.1", new Uri(Downloads, "addin/v4.1.0-rc.1/update-manifest.json")) }
         };
 
-        var index = Channels.Advance(stale, Train.Daemon, "4.1.0", Downloads);
+        var index = Channels.Advance(stale, Product.Daemon, "4.1.0", Downloads);
 
         Assert.AreEqual("4.1.0", index.Prerelease.Addin!.Version);
         Assert.AreEqual("4.1.0", index.Prerelease.Daemon!.Version);
@@ -64,13 +64,13 @@ public sealed class ChannelsTests
     [TestMethod]
     public void Refuses_nettest_train()
     {
-        Assert.ThrowsExactly<InvalidOperationException>(() => Channels.Advance(new ChannelIndex(), Train.NetTest, "0.3.0", Downloads));
+        Assert.ThrowsExactly<InvalidOperationException>(() => Channels.Advance(new ChannelIndex(), Product.NetTest, "0.3.0", Downloads));
     }
 
     [TestMethod]
     public void Refuses_non_release_version()
     {
-        Assert.ThrowsExactly<InvalidOperationException>(() => Channels.Advance(new ChannelIndex(), Train.Addin, "0.0.0-ci.5", Downloads));
+        Assert.ThrowsExactly<InvalidOperationException>(() => Channels.Advance(new ChannelIndex(), Product.Addin, "0.0.0-ci.5", Downloads));
     }
 
     [TestMethod]
@@ -93,6 +93,6 @@ public sealed class ChannelsTests
         Assert.AreEqual(new Uri("https://github.com/trgiangv/RevitDevTool/releases/download/"), Channels.Downloads);
     }
 
-    private static ChannelIndex Advance(params (string Train, string Version)[] releases) =>
-        releases.Aggregate(new ChannelIndex(), (index, release) => Channels.Advance(index, Train.Find(release.Train)!, release.Version, Downloads));
+    private static ChannelIndex Advance(params (string Product, string Version)[] releases) =>
+        releases.Aggregate(new ChannelIndex(), (index, release) => Channels.Advance(index, Product.Find(release.Product)!, release.Version, Downloads));
 }

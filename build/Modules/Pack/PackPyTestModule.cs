@@ -1,6 +1,6 @@
 using Build.Pipeline;
 using Build.Tools;
-using Build.Trains;
+using Build.Products;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
 using ModularPipelines.Modules;
@@ -9,7 +9,7 @@ namespace Build.Modules;
 
 /// <summary>
 ///     Builds the wheel and sdist into <c>output/pytest</c> from a temp copy of the package whose
-///     <c>pyproject.toml</c> carries the train version, so the working tree keeps its version line.
+///     <c>pyproject.toml</c> carries the product version, so the working tree keeps its version line.
 /// </summary>
 [DependsOn<TestPyTestModule>(Optional = true)]
 [UsedImplicitly]
@@ -39,7 +39,7 @@ public sealed class PackPyTestModule(BuildRun run) : Module<string[]>
             Directory.Delete(staging, recursive: true);
         }
 
-        var artifacts = run.Train.Artifacts.Select(artifact => Path.Combine(outputDir, string.Format(artifact, version))).ToArray();
+        var artifacts = run.Product.Artifacts.Select(artifact => Path.Combine(outputDir, string.Format(artifact, version))).ToArray();
         var missing = artifacts.Where(artifact => !File.Exists(artifact)).ToArray();
         if (missing.Length > 0)
         {

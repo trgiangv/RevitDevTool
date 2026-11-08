@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace Build.Trains;
+namespace Build.Products;
 
 public static partial class VersionFile
 {
@@ -35,7 +35,7 @@ public static partial class VersionFile
     private static string Existing(string root, string path)
     {
         var full = Path.Combine(root, path);
-        return File.Exists(full) ? full : throw new InvalidOperationException($"{path} is missing; the train cannot read its version.");
+        return File.Exists(full) ? full : throw new InvalidOperationException($"{path} is missing; the product cannot read its version.");
     }
 
     [GeneratedRegex("""^version\s*=\s*"([^"]+)"[ \t]*(?=\r?$)""", RegexOptions.Multiline)]

@@ -1,6 +1,6 @@
 using Build.Modules;
 using Build.Options;
-using Build.Trains;
+using Build.Products;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ModularPipelines;
@@ -12,7 +12,7 @@ namespace Build.Pipeline;
 ///     The modules of one run. <c>ci</c> compiles and tests, <c>pack</c> compiles and packs, <c>release</c> does all three.
 ///     The <c>nettest</c> pack builds its own projects, and <c>pytest</c> has no .NET compile.
 /// </summary>
-public static class TrainPipeline
+public static class ProductPipeline
 {
     public static async Task RunAsync(BuildRun run)
     {
@@ -31,17 +31,17 @@ public static class TrainPipeline
 
     private static void AddModules(IServiceCollection services, BuildRun run)
     {
-        var train = run.Train;
-        if (train.IsDotNet && (run.RunsTests || train != Train.NetTest)) AddCompile(services, train);
-        if (run.RunsTests) AddTests(services, train);
-        if (run.BuildsArtifacts) AddPack(services, train);
+        var product = run.Product;
+        if (product.IsDotNet && (run.RunsTests || product != Product.NetTest)) AddCompile(services, product);
+        if (run.RunsTests) AddTests(services, product);
+        if (run.BuildsArtifacts) AddPack(services, product);
     }
 
-    private static void AddCompile(IServiceCollection services, Train train)
+    private static void AddCompile(IServiceCollection services, Product product)
     {
-        if (train != Train.Addin)
+        if (product != Product.Addin)
         {
-            services.AddModule<CompileTrainModule>();
+            services.AddModule<CompileProductModule>();
             return;
         }
 
@@ -50,18 +50,18 @@ public static class TrainPipeline
         services.AddModule<CompileExpandModule>();
     }
 
-    private static void AddTests(IServiceCollection services, Train train)
+    private static void AddTests(IServiceCollection services, Product product)
     {
-        if (train == Train.PyTest) services.AddModule<TestPyTestModule>();
-        else services.AddModule<TestTrainModule>();
+        if (product == Product.PyTest) services.AddModule<TestPyTestModule>();
+        else services.AddModule<TestProductModule>();
     }
 
-    private static void AddPack(IServiceCollection services, Train train)
+    private static void AddPack(IServiceCollection services, Product product)
     {
-        if (train == Train.Daemon) services.AddModule<PackDaemonModule>();
-        if (train == Train.NetTest) services.AddModule<PackTestAdapterModule>();
-        if (train == Train.PyTest) services.AddModule<PackPyTestModule>();
-        if (train != Train.Addin) return;
+        if (product == Product.Daemon) services.AddModule<PackDaemonModule>();
+        if (product == Product.NetTest) services.AddModule<PackTestAdapterModule>();
+        if (product == Product.PyTest) services.AddModule<PackPyTestModule>();
+        if (product != Product.Addin) return;
 
         services.AddModule<CreateBundleModule>();
         services.AddModule<PackPayloadsModule>();

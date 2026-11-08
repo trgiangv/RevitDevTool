@@ -31,11 +31,11 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 
 - Focused host compile and deploy: [`scripts/build-host.ps1`](#host-build-script).
 
-- `build/` takes `<target> <train>`; run `dotnet run --project build` for the list. Trains: `daemon`, `addin`, `nettest`, `pytest`. Releases: [release.md](release.md).
+- `build/` takes `<target> <product>`; run `dotnet run --project build` for the list. Products: `daemon`, `addin`, `nettest`, `pytest`. Releases: [release.md](release.md).
 - Add-in bundle: `dotnet run --project build -- pack addin` into `output/addin`.
 - Daemon: `dotnet run --project build -- pack daemon` into `output/daemon` (Velopack).
 - TestAdapter NuGet: `dotnet run --project build -- pack nettest` runs `PackTestAdapterModule` (restore, pack; the csproj builds the MTP projects and framework runtimes and publishes the TestRunner into `tools/runner`). See `docs/architecture/Testing/README.md`.
-- `ci <train>` compiles and runs the train's tests, as `ci.yml` does. The TestRunner ships only in the TestAdapter package.
+- `ci <product>` compiles and runs the product's tests, as `ci.yml` does. The TestRunner ships only in the TestAdapter package.
 - Years stay sequential. Shared projects are solution-mapped to `Debug`/`Release`, so later years reuse `bin/<Debug|Release>/<tfm>`.
 - NUnit, TUnit, and MSTest host packaging builds those runtime projects with `Debug` or `Release`, not `*.Autodesk.YYYY`.
 - `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. The Daemon publishes after the base module (`BuildProjectReferences=false`, so it does not rebuild shared projects) and overlaps the expand module. Bundle creation still waits for every year and the publish.
@@ -67,7 +67,7 @@ dotnet publish source/DevTools.Daemon -c Release
 
 | Command | Daemon behavior |
 |---------|-----------------|
-| `dotnet run --project build -- ci daemon` | `CompileTrainModule` builds the Daemon, then its tests run |
+| `dotnet run --project build -- ci daemon` | `CompileProductModule` builds the Daemon, then its tests run |
 | `dotnet run --project build -- pack daemon` | `PackDaemonModule` publishes the Daemon self-contained and packs it with Velopack into `output/daemon` |
 | `dotnet publish source/DevTools.Daemon -c Release` | Direct Daemon publish + deploy (csproj target) |
 

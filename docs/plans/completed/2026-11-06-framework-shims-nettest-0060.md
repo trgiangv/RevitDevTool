@@ -6,7 +6,7 @@ Date: 2026-11-06
 
 Completed 2026-11-07. All three frameworks run from the user's output, the old path is gone, and P6 passed on the final code. Decision: [0060](../../decisions/0060-framework-runtime-shims-ship-with-nettest.md)
 (Accepted). Shipping depends on the `nettest` train of
-[2026-11-06-release-trains-0059](../active/2026-11-06-release-trains-0059.md).
+[2026-11-06-product-releases-0059](../active/2026-11-06-product-releases-0059.md).
 
 Visual of the agreed design (owner's private artifact):
 https://claude.ai/artifact/Snj9TnxPnrRfTwKTTnrVF2
