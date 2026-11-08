@@ -68,6 +68,8 @@ public sealed record Train(
 
     public bool IsDotNet => Roots.Length > 0;
 
+    public string Output(string root) => Path.Combine(root, "output", Name);
+
     public static Train? Find(string name) =>
         All.FirstOrDefault(train => string.Equals(train.Name, name, StringComparison.Ordinal));
 }

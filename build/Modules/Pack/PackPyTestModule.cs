@@ -1,3 +1,5 @@
+using Build.Pipeline;
+using Build.Tools;
 using Build.Trains;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
@@ -18,7 +20,7 @@ public sealed class PackPyTestModule(BuildRun run) : Module<string[]>
     protected override async Task<string[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var version = run.Version.Version;
-        var source = Path.Combine(run.Root, PixiCli.Project);
+        var source = Path.Combine(run.Root, ModuleShell.PyTestProject);
         var outputDir = Directory.CreateDirectory(run.Output).FullName;
         foreach (var stale in Directory.GetFiles(outputDir)) File.Delete(stale);
 
@@ -30,7 +32,7 @@ public sealed class PackPyTestModule(BuildRun run) : Module<string[]>
             var pyproject = Path.Combine(staging, "pyproject.toml");
             await File.WriteAllTextAsync(pyproject, VersionFile.WithTomlVersion(await File.ReadAllTextAsync(pyproject, cancellationToken), version), cancellationToken);
 
-            await PixiCli.RunAsync(context, run.Root, ["build", "--outdir", outputDir, staging], cancellationToken);
+            await ModuleShell.PixiAsync(context, run.Root, ["build", "--outdir", outputDir, staging], cancellationToken);
         }
         finally
         {

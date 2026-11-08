@@ -8,6 +8,17 @@ public sealed record TrainVersion(Train Train, string Version, bool IsPrerelease
 
     public bool IsLatest => Train == Train.Daemon && !IsPrerelease;
 
+    /// <summary>
+    ///     The release version in the train's version file; a <c>0.0.0</c> or malformed version is refused.
+    /// </summary>
+    public static TrainVersion FromFile(string root, Train train)
+    {
+        var text = VersionFile.Read(root, train.VersionFile);
+        return !text.StartsWith("0.0.0", StringComparison.Ordinal) && ReleaseVersion.Parse(text, train.Grammar) is { } parsed
+            ? new TrainVersion(train, text, parsed.IsPrerelease, null)
+            : throw new InvalidOperationException($"Version '{text}' is not a release version; set it in {train.VersionFile}.");
+    }
+
     public static string NonRelease(Train train, string? runNumber, DateTimeOffset now)
     {
         var stamp = now.UtcDateTime.ToString("yyyyMMddHHmmss");

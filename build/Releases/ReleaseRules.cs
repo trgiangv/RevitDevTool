@@ -1,6 +1,7 @@
+using Build.Trains;
 using System.Text.RegularExpressions;
 
-namespace Build.Trains;
+namespace Build.Releases;
 
 public sealed record ReleaseInput(
     Train Train,

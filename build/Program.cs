@@ -1,3 +1,1 @@
-using Build;
-
-return await Cli.RunAsync(args);
+return await Build.Cli.Targets.RunAsync(args);

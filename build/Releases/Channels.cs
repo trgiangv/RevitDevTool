@@ -1,7 +1,9 @@
+using Build.Tools;
+using Build.Trains;
 using DevTools.Update;
 using DevTools.Update.Releases;
 
-namespace Build.Trains;
+namespace Build.Releases;
 
 /// <summary>
 ///     <c>build -- channels &lt;train&gt; --version &lt;v&gt;</c>: moves the train's entries in <c>channels.json</c>, signs it,
@@ -58,8 +60,8 @@ public static class Channels
         var output = Directory.CreateDirectory(Path.Combine(root, "output", ReleaseTag)).FullName;
         var jsonPath = Path.Combine(output, ChannelIndex.FileName);
         var sigPath = jsonPath + ReleaseSignature.Extension;
-        var exists = Command.Succeeds("gh", root, "release", "view", ReleaseTag);
-        if (exists) Command.Run("gh", root, "release", "download", ReleaseTag, "--pattern", ChannelIndex.FileName, "--dir", output, "--clobber");
+        var exists = Gh.ReleaseExists(root, ReleaseTag);
+        if (exists) Gh.Download(root, ReleaseTag, output, ChannelIndex.FileName);
 
         var current = exists && File.Exists(jsonPath) ? ChannelIndex.FromJson(await File.ReadAllBytesAsync(jsonPath)) : new ChannelIndex();
         var next = Advance(current, train, version, Downloads);
@@ -70,9 +72,9 @@ public static class Channels
         await File.WriteAllTextAsync(sigPath, Signing.Sign(json, signingKey));
 
         if (!exists)
-            Command.Run("gh", root, "release", "create", ReleaseTag, "--title", "Update channels", "--notes", $"The signed {ChannelIndex.FileName} the Daemon reads.", "--latest=false");
-        Command.Run("gh", root, "release", "upload", ReleaseTag, jsonPath, "--clobber");
-        Command.Run("gh", root, "release", "upload", ReleaseTag, sigPath, "--clobber");
+            Gh.Run(root, "release", "create", ReleaseTag, "--title", "Update channels", "--notes", $"The signed {ChannelIndex.FileName} the Daemon reads.", "--latest=false");
+        Gh.Upload(root, ReleaseTag, jsonPath);
+        Gh.Upload(root, ReleaseTag, sigPath);
 
         return $"{ChannelIndex.FileName} names {train.Name} {version}.";
     }

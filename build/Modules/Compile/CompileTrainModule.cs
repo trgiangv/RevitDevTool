@@ -1,3 +1,5 @@
+using Build.Pipeline;
+using Build.Tools;
 using ModularPipelines.Context;
 using ModularPipelines.Modules;
 
@@ -11,7 +13,7 @@ public sealed class CompileTrainModule(BuildRun run) : Module
         foreach (var root in run.Train.Roots)
         {
             await context.SubModule(Path.GetFileNameWithoutExtension(root), async () =>
-                await DotNetCli.RunAsync(context, run.Root, ["build", root, "-c", "Release"], cancellationToken));
+                await ModuleShell.DotNetAsync(context, run.Root, ["build", root, "-c", "Release"], cancellationToken));
         }
     }
 }

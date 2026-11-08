@@ -71,7 +71,7 @@ public sealed class ReleaseAssetsTests
     [DataRow("addin", "RevitDevTool add-in 4.0.0")]
     public void Release_title_names_train(string train, string title)
     {
-        Assert.AreEqual(title, GitHubPublish.Title(new TrainVersion(Train.Find(train)!, "4.0.0", false, null)));
+        Assert.AreEqual(title, Publish.Title(new TrainVersion(Train.Find(train)!, "4.0.0", false, null)));
     }
 
     private static VelopackAssetFeed Feed(params (string Version, string Type)[] assets) =>

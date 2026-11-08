@@ -38,6 +38,6 @@ public static partial class VersionFile
         return File.Exists(full) ? full : throw new InvalidOperationException($"{path} is missing; the train cannot read its version.");
     }
 
-    [GeneratedRegex("""^version\s*=\s*"([^"]+)"[ \t]*(?=\r?$)""",RegexOptions.Multiline)]
+    [GeneratedRegex("""^version\s*=\s*"([^"]+)"[ \t]*(?=\r?$)""", RegexOptions.Multiline)]
     private static partial Regex TomlVersionRegex();
 }

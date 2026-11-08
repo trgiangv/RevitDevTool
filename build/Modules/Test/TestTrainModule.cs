@@ -1,3 +1,5 @@
+using Build.Pipeline;
+using Build.Tools;
 using Build.Trains;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
@@ -28,10 +30,10 @@ public sealed class TestTrainModule(BuildRun run) : Module
             await context.SubModule(name, async () =>
             {
                 string[] build = ["build", project, "-c", configuration, "-p:DeployAddin=false"];
-                await DotNetCli.RunAsync(context, run.Root, needsHostYear ? [.. build, "-m:1"] : build, cancellationToken);
+                await ModuleShell.DotNetAsync(context, run.Root, needsHostYear ? [.. build, "-m:1"] : build, cancellationToken);
                 foreach (var framework in TrainPaths.TargetFrameworks(run.Root, project))
                 {
-                    var result = await DotNetCli.RunAsync(context, run.Root, ["run", "--project", project, "-c", configuration, "-f", framework, "--no-build"], cancellationToken, throwOnError: false);
+                    var result = await ModuleShell.DotNetAsync(context, run.Root, ["run", "--project", project, "-c", configuration, "-f", framework, "--no-build"], cancellationToken, throwOnError: false);
                     if (result.ExitCode != 0) failed.Add($"{name} ({framework})");
                 }
             });

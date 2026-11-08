@@ -1,4 +1,7 @@
 using Build.Options;
+using Build.Pipeline;
+using Build.Releases;
+using Build.Tools;
 using Build.Trains;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -7,7 +10,6 @@ using ModularPipelines.Context;
 using ModularPipelines.DotNet.Extensions;
 using ModularPipelines.DotNet.Options;
 using ModularPipelines.Modules;
-using ModularPipelines.Options;
 using Sourcy.DotNet;
 
 namespace Build.Modules;
@@ -55,10 +57,10 @@ public sealed class PackDaemonModule(
 
         await PublishAsync(context, Projects.DevTools_Daemon.FullName, publishPath, version, cancellationToken);
 
-        await RunVpkAsync(context, run.Root, ["tool", "restore"], cancellationToken);
+        await ModuleShell.DotNetAsync(context, run.Root, ["tool", "restore"], cancellationToken);
 
         var icon = Path.Combine(daemonFolder, "..", "DevTools.UI", "Resources", "icons", "DevTools-32-Dark.ico");
-        await RunVpkAsync(context, run.Root,
+        await ModuleShell.DotNetAsync(context, run.Root,
         [
             "vpk", "pack",
             "--packId", packId,
@@ -124,8 +126,7 @@ public sealed class PackDaemonModule(
             return;
         }
 
-        Command.Run("gh", run.Root, "release", "download", run.Train.Tag(previous),
-            "--pattern", $"releases.{channel}.json", "--pattern", "*-full.nupkg", "--dir", outputPath, "--clobber");
+        Gh.Download(run.Root, run.Train.Tag(previous), outputPath, $"releases.{channel}.json", "*-full.nupkg");
     }
 
     /// <summary>
@@ -150,20 +151,5 @@ public sealed class PackDaemonModule(
         var target = Path.Combine(outputPath, ReleaseAssets.SetupName);
         File.Move(setup, target, overwrite: true);
         return target;
-    }
-
-    private static Task<ModularPipelines.Models.CommandResult> RunVpkAsync(IModuleContext context, string workingDirectory, IEnumerable<string> arguments, CancellationToken cancellationToken)
-    {
-        return context.Shell.Command.ExecuteCommandLineTool(
-            new GenericCommandLineToolOptions("dotnet")
-            {
-                Arguments = arguments.ToArray()
-            },
-            new CommandExecutionOptions
-            {
-                WorkingDirectory = workingDirectory,
-                ThrowOnNonZeroExitCode = true
-            },
-            cancellationToken: cancellationToken);
     }
 }

@@ -1,3 +1,4 @@
+using Build.Trains;
 using DevTools.Update;
 using DevTools.Update.Engine;
 using DevTools.Update.Releases;
@@ -7,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Velopack;
 
-namespace Build.Trains;
+namespace Build.Releases;
 
 /// <summary>
 ///     The GitHub Release assets of a <c>daemon</c> or <c>addin</c> release, and the check that reads them the way a client does (0054).

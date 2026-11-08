@@ -1,9 +1,10 @@
 using Build.Options;
+using Build.Pipeline;
 using DevTools.Update.Releases;
 using Microsoft.Extensions.Configuration;
 using System.Security.Cryptography;
 
-namespace Build.Trains;
+namespace Build.Releases;
 
 /// <summary>
 ///     Signs update feeds with ECDSA P-256 / SHA-256. Each <c>&lt;feed&gt;.sig</c> holds the base64 IEEE P1363 signature (0051).

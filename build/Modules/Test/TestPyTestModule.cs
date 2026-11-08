@@ -1,3 +1,5 @@
+using Build.Pipeline;
+using Build.Tools;
 using ModularPipelines.Context;
 using ModularPipelines.Modules;
 
@@ -11,7 +13,7 @@ public sealed class TestPyTestModule(BuildRun run) : Module
 {
     protected override async Task ExecuteModuleAsync(IModuleContext context, CancellationToken cancellationToken)
     {
-        await PixiCli.RunAsync(context, run.Root, ["lint"], cancellationToken);
-        await PixiCli.RunAsync(context, run.Root, ["test"], cancellationToken);
+        await ModuleShell.PixiAsync(context, run.Root, ["lint"], cancellationToken);
+        await ModuleShell.PixiAsync(context, run.Root, ["test"], cancellationToken);
     }
 }

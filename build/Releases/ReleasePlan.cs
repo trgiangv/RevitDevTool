@@ -1,6 +1,8 @@
+using Build.Tools;
+using Build.Trains;
 using System.Text;
 
-namespace Build.Trains;
+namespace Build.Releases;
 
 public sealed record ReleasePlan(TrainVersion Version, string Notes, IReadOnlyList<string> Artifacts, IReadOnlyList<string> Refusals, IReadOnlyList<string> Warnings)
 {

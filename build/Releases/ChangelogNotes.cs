@@ -1,48 +1,27 @@
-using System.Diagnostics;
-using System.Text;
+using Build.Tools;
+using Build.Trains;
 using System.Text.RegularExpressions;
 
-namespace Build.Trains;
+namespace Build.Releases;
 
+/// <summary>
+///     Per-train changelog: the git-cliff draft of unreleased commits, and the <c>## [version]</c> section a release uses as notes.
+/// </summary>
 public static partial class ChangelogNotes
 {
     public const string UnreleasedHeading = "## [Unreleased]";
 
     private const string Title = "# Changelog";
 
-    public static string Draft(string root, Train train)
-    {
-        var arguments = new List<string>
-        {
+    public static string Draft(string root, Train train) =>
+        Shell.Run(root, "pixi",
+        [
             "run", "-e", "release", "git-cliff",
             "--config", "cliff.toml",
             "--tag-pattern", $"^{Regex.Escape(train.TagPrefix)}",
-            "--unreleased", "--strip", "all"
-        };
-        foreach (var path in IncludePaths(train))
-        {
-            arguments.Add("--include-path");
-            arguments.Add(path);
-        }
-
-        var info = new ProcessStartInfo("pixi")
-        {
-            WorkingDirectory = root,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            UseShellExecute = false
-        };
-        foreach (var argument in arguments) info.ArgumentList.Add(argument);
-
-        using var process = Process.Start(info) ?? throw new InvalidOperationException("pixi could not start; install pixi and put it on PATH.");
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
-        process.WaitForExit();
-        return process.ExitCode == 0
-            ? output.Result.Trim()
-            : throw new InvalidOperationException($"git-cliff failed: {error.Result.Trim()}");
-    }
+            "--unreleased", "--strip", "all",
+            .. IncludePaths(train).SelectMany(path => new[] { "--include-path", path })
+        ]).Trim();
 
     public static IReadOnlyList<string> IncludePaths(Train train) =>
         train.IsDotNet

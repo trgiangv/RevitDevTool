@@ -1,4 +1,6 @@
 using Build.Options;
+using Build.Pipeline;
+using Build.Releases;
 using Build.Trains;
 using DevTools.Update.Releases;
 using Microsoft.Extensions.Options;
