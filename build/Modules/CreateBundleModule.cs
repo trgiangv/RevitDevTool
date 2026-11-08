@@ -1,5 +1,3 @@
-using Build.Options;
-using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
 using ModularPipelines.FileSystem;
@@ -18,10 +16,10 @@ namespace Build.Modules;
 /// <summary>
 ///     Create the Autodesk .bundle package: the payload folders and <c>PackageContents.xml</c>.
 /// </summary>
-[DependsOn<ResolveVersionModule>]
 [DependsOn<CompileExpandModule>]
+[DependsOn<TestTrainModule>(Optional = true)]
 [UsedImplicitly]
-public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptions) : Module<string>
+public sealed partial class CreateBundleModule(BuildRun run) : Module<string>
 {
     private const string AdskBundleContentsFolder = "Contents";
     private const string AdskAppVersionAttribute = "AppVersion";
@@ -31,9 +29,6 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
 
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
-        var versioningResult = await context.GetModule<ResolveVersionModule>();
-        var versioning = versioningResult.ValueOrDefault!;
-
         var revitTarget = new File(Projects.RevitDevTool.FullName);
         var acadTarget = new File(Projects.ACadDevTool.FullName);
 
@@ -42,7 +37,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
 
         revitPublishDirs.ShouldNotBeEmpty("No Revit content were found to create a bundle");
 
-        var outputFolder = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory);
+        var outputFolder = new Folder(Directory.CreateDirectory(run.Output).FullName);
         var staleBundle = Path.Combine(outputFolder.Path, $"{revitTarget.NameWithoutExtension}.bundle");
         if (Directory.Exists(staleBundle))
         {
@@ -55,7 +50,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
 
         PackFiles(revitPublishDirs, contentFolder);
         PackFiles(acadPublishDirs, contentFolder);
-        CopyManifest(context, manifestFile, versioning);
+        CopyManifest(context, manifestFile, run.Version.Version);
 
         var outputFile = outputFolder.GetFile($"{bundleFolder.Name}.zip");
         if (outputFile.Exists)
@@ -122,7 +117,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
     }
 
 
-    private static void CopyManifest(IModuleContext context, File manifestFile, ResolveVersioningResult versioning)
+    private static void CopyManifest(IModuleContext context, File manifestFile, string version)
     {
         var propsDir = context.Git().RootDirectory.GetFolder("props");
         var sourceManifest = propsDir.GetFile(ManifestFile);
@@ -131,7 +126,7 @@ public sealed partial class CreateBundleModule(IOptions<BuildOptions> buildOptio
         xml.Load(sourceManifest.Path);
 
         var root = xml.DocumentElement!;
-        root.SetAttribute(AdskAppVersionAttribute, versioning.Version);
+        root.SetAttribute(AdskAppVersionAttribute, version);
 
         xml.Save(manifestFile.Path);
     }

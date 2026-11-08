@@ -1,0 +1,12 @@
+<Project>
+    <Import Project="..\Directory.Packages.props" />
+
+    <PropertyGroup>
+        <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
+        <RestoreForce>true</RestoreForce>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageVersion Include="RevitDevTool.TestAdapter" Version="0.0.0-local.*" />
+    </ItemGroup>
+</Project>

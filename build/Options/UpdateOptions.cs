@@ -19,19 +19,8 @@ public sealed record UpdateOptions
     public int IpcCompat { get; init; } = 1;
 
     /// <summary>
-    ///     Daemon version that years of this release need. Defaults to the release version.
+    ///     PEM-encoded ECDSA P-256 private key that signs the update feeds and <c>channels.json</c>.
     /// </summary>
-    public string? MinUpdaterVersion { get; init; }
-
-    /// <summary>
-    ///     PEM-encoded ECDSA P-256 private key that signs the update feeds.
-    /// </summary>
-    /// <remarks>Set from the <c>Update__SigningKey</c> secret. Signing is skipped when empty.</remarks>
+    /// <remarks>Set from the <c>Update__SigningKey</c> environment variable; only <c>publish</c> and <c>channels</c> read it.</remarks>
     public string? SigningKey { get; init; }
-
-    /// <summary>
-    ///     Marks a release build: fail when <see cref="SigningKey"/> is empty, require a newer version, and build a delta.
-    ///     <c>PublishRelease.yml</c> sets it.
-    /// </summary>
-    public bool RequireSignature { get; init; }
 }

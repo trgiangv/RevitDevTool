@@ -13,7 +13,10 @@ namespace Build.Modules;
 [UsedImplicitly]
 public sealed class ResolveConfigsModule : Module<string[]>
 {
-    protected override async Task<string[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
+    protected override async Task<string[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken) =>
+        await ReleaseConfigurationsAsync(cancellationToken);
+
+    public static async Task<string[]> ReleaseConfigurationsAsync(CancellationToken cancellationToken)
     {
         var solutionModel = await LoadSolutionModelAsync(cancellationToken);
         var configurations = solutionModel.BuildTypes

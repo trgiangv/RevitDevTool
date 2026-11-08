@@ -40,7 +40,7 @@ NUnit is one copy per host process. To run another NUnit version, restart the ho
   <LaunchTimeout>180</LaunchTimeout>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.3.0" />
   <PackageReference Include="NUnit" Version="5.0.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
@@ -61,7 +61,7 @@ Reference the `TUnit` package, not only `TUnit.Core`.
   <TestingFramework>tunit</TestingFramework>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
+  <PackageReference Include="RevitDevTool.TestAdapter" Version="0.3.0" />
   <PackageReference Include="TUnit" Version="1.78.0" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
@@ -89,7 +89,7 @@ Set the SDK version either on the `Sdk` attribute or in `global.json`
     <TestingFramework>mstest</TestingFramework>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
+    <PackageReference Include="RevitDevTool.TestAdapter" Version="0.3.0" />
     <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
       IncludeAssets="build; compile" PrivateAssets="All" />
   </ItemGroup>

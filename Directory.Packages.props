@@ -51,7 +51,6 @@
         <PackageVersion Include="Duende.IdentityModel.OidcClient" Version="7.1.1" />
         <!--Update-->
         <PackageVersion Include="Velopack" Version="1.2.161" />
-        <PackageVersion Include="Octokit" Version="14.0.0" />
         <!--Console-->
         <PackageVersion Include="CliWrap" Version="3.10.5" />
         <PackageVersion Include="ConsoleAppFramework" Version="5.8.1" />
@@ -65,7 +64,6 @@
         <PackageVersion Include="ModularPipelines" Version="3.2.8" />
         <PackageVersion Include="ModularPipelines.Git" Version="3.2.8" />
         <PackageVersion Include="ModularPipelines.DotNet" Version="3.2.8" />
-        <PackageVersion Include="ModularPipelines.GitHub" Version="3.2.8" />
         <PackageVersion Include="Microsoft.VisualStudio.SolutionPersistence" Version="1.0.52" />
         <PackageVersion Include="Microsoft.VisualStudio.Interop" Version="17.14.40260" />
         <!--FileIO-->
@@ -80,7 +78,6 @@
         <PackageVersion Include="TUnit.Engine" Version="1.81.10" />
         <PackageVersion Include="Microsoft.Testing.Platform" Version="2.5.2" />
         <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.5.2" />
-        <PackageVersion Include="RevitDevTool.TestAdapter" Version="0.2.0" />
         <PackageVersion Include="Microsoft.CodeAnalysis.PublicApiAnalyzers" Version="5.6.0" />
         <PackageVersion Include="Moq" Version="4.21.0" />
         <PackageVersion Include="Bogus" Version="35.6.5" />

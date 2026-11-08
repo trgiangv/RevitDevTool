@@ -4,9 +4,42 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     labels:
       - dependencies
     groups:
       actions:
+        patterns:
+          - '*'
+
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    labels:
+      - dependencies
+    ignore:
+      - dependency-name: 'Microsoft.Testing.*'
+      - dependency-name: 'MSTest*'
+      - dependency-name: 'NUnit*'
+      - dependency-name: 'TUnit*'
+    groups:
+      nuget:
+        patterns:
+          - '*'
+
+  - package-ecosystem: bun
+    directory: /docs
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    labels:
+      - dependencies
+    groups:
+      docs:
         patterns:
           - '*'

@@ -1,10 +1,7 @@
-using Build.Options;
 using DevTools.Update.Autodesk;
 using DevTools.Update.Releases;
-using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
 using ModularPipelines.Context;
-using ModularPipelines.Git.Extensions;
 using ModularPipelines.Modules;
 using Shouldly;
 using System.IO.Compression;
@@ -16,18 +13,16 @@ namespace Build.Modules;
 ///     Zips each payload folder <c>Contents\&lt;host version&gt;</c> into <c>RevitDevTool-&lt;version&gt;-&lt;host version&gt;.zip</c>.
 ///     The platforms of a payload are the template components that have their module file in the bundle.
 /// </summary>
-[DependsOn<ResolveVersionModule>]
 [DependsOn<CreateBundleModule>]
 [UsedImplicitly]
-public sealed class PackPayloadsModule(IOptions<BuildOptions> buildOptions) : Module<ManifestPayload[]>
+public sealed class PackPayloadsModule(BuildRun run) : Module<ManifestPayload[]>
 {
     protected override async Task<ManifestPayload[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
-        var versioningResult = await context.GetModule<ResolveVersionModule>();
         var bundleResult = await context.GetModule<CreateBundleModule>();
-        var version = versioningResult.ValueOrDefault!.Version;
+        var version = run.Version.Version;
         var bundle = new AutodeskBundle(bundleResult.ValueOrDefault!);
-        var outputPath = context.Git().RootDirectory.GetFolder(buildOptions.Value.OutputDirectory).Path;
+        var outputPath = run.Output;
 
         foreach (var stale in Directory.GetFiles(outputPath, "RevitDevTool-*-*.zip")) File.Delete(stale);
 

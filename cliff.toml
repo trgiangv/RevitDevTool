@@ -1,0 +1,27 @@
+[changelog]
+header = ""
+body = """
+{% if version %}## [{{ version | trim_start_matches(pat="v") }}] - {{ timestamp | date(format="%Y-%m-%d") }}{% else %}## [Unreleased]{% endif %}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}- {% if commit.breaking %}Breaking: {% endif %}{{ commit.message | split(pat="\n") | first | upper_first }}
+{% endfor %}{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = true
+filter_commits = true
+sort_commits = "newest"
+commit_parsers = [
+  { message = "^Merge", skip = true },
+  { message = "^feat", group = "<!-- 0 -->Added" },
+  { message = "^fix", group = "<!-- 2 -->Fixed" },
+  { message = "^(perf|refactor)", group = "<!-- 1 -->Changed" },
+  { message = "^(chore|ci|test|docs|build|style)", skip = true },
+  { body = ".*", skip = true },
+]

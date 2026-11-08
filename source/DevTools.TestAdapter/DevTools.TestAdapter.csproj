@@ -25,7 +25,7 @@
         - Do not add PackageReference for STJ/Unsafe/Bcl: net48 takes them from
           Transport/Ipc, net8/net10 use the in-box copies, and the testhost gets its
           BCL from the MTP.MSBuild graph plus net48 binding redirects.
-        - Bump Version before PublishTestAdapter.yml; it is independent of installer GitVersion.
+        - Version is the nettest train version; bump it in the release PR (build/Trains/Train.cs).
     -->
     <PropertyGroup>
         <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
@@ -33,7 +33,7 @@
         <RootNamespace>DevTools.TestAdapter</RootNamespace>
         <AssemblyName>DevTools.TestAdapter</AssemblyName>
         <PackageId>RevitDevTool.TestAdapter</PackageId>
-        <Version>0.2.0</Version>
+        <Version>0.3.0</Version>
         <IsPackable>true</IsPackable>
         <DevelopmentDependency>true</DevelopmentDependency>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -41,6 +41,7 @@
         <Description>Microsoft Testing Platform adapter that allows running NUnit, TUnit, or MSTest tests inside Autodesk hosts. Requires RevitDevTool (https://github.com/trgiangv/RevitDevTool).</Description>
         <PackageTags>testing;revit;autocad;adapter</PackageTags>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageReleaseNotes>https://github.com/trgiangv/RevitDevTool/blob/develop/source/DevTools.TestAdapter/CHANGELOG.md</PackageReleaseNotes>
         <PackageIcon>DevTools-32-Light.png</PackageIcon>
         <EnableDynamicLoading>false</EnableDynamicLoading>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>

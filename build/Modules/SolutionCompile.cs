@@ -9,29 +9,17 @@ namespace Build.Modules;
 internal static class SolutionCompile
 {
     /// <summary>
-    /// <c>pack</c> sets this false. The bundle zip is built from
-    /// <c>bin/**/publish</c>, so that command keeps <c>PublishAddin</c> and
-    /// skips the AppData copy. Both hosts otherwise deploy into the same bundle
-    /// and <c>RemoveDir</c> races the other project's copy (<c>MSB3231</c>).
+    ///     The bundle zip is built from <c>bin/**/publish</c>, so an artifact build keeps <c>PublishAddin</c>.
+    ///     Both hosts would otherwise deploy into the same bundle and <c>RemoveDir</c> races the other
+    ///     project's copy (<c>MSB3231</c>). <c>TrainVersion</c> is read only by <c>source/AddinVersion.props</c>.
     /// </summary>
-    public static bool DeployAddin { get; set; } = true;
-
-    public static Task RunAsync(
-        IModuleContext context,
-        ResolveVersioningResult versioning,
-        string configuration,
-        CancellationToken cancellationToken)
+    public static Task RunAsync(IModuleContext context, BuildRun run, string configuration, CancellationToken cancellationToken)
     {
-        var properties = new List<KeyValue>
+        var properties = new List<KeyValue> { new("DeployAddin", "false") };
+        if (run.BuildsArtifacts)
         {
-            new("VersionPrefix", versioning.VersionPrefix),
-            new("VersionSuffix", versioning.VersionSuffix!)
-        };
-
-        if (!DeployAddin)
-        {
-            properties.Add(new KeyValue("DeployAddin", "false"));
             properties.Add(new KeyValue("PublishAddin", "true"));
+            properties.Add(new KeyValue("TrainVersion", run.Version.Version));
         }
 
         return context.DotNet().Build(new DotNetBuildOptions

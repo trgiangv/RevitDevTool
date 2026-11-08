@@ -24,6 +24,7 @@ public class Application : IExternalApplication
     public Result OnStartup(UIControlledApplication application)
     {
         _application = application;
+        AppVersion.UseAddin(typeof(Application).Assembly);
         var controlled = application.ControlledApplication;
         var logsDirectory = Path.Combine(AppUtils.GetContentRootPath(controlled.VersionNumber), "Logs");
         var startup = StartupTrace.Begin(

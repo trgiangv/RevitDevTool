@@ -27,3 +27,9 @@ manifold3d = "==3.5.4"
 python-fcl = "==0.7.0.11"
 pydevd = "==3.5.0"
 mcp = "==2.3.0"
+
+[feature.release.dependencies]
+git-cliff = "=2.14.2"
+
+[environments]
+release = { features = ["release"], no-default-feature = true }

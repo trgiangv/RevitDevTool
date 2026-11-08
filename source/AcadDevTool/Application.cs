@@ -23,6 +23,7 @@ public class Application : IExtensionApplication
 
     public void Initialize()
     {
+        AppVersion.UseAddin(typeof(Application).Assembly);
         if (ComponentManager.Ribbon is { } ribbon)
         {
             Start(ribbon);

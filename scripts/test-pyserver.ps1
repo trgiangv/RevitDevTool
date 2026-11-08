@@ -4,7 +4,7 @@
 .DESCRIPTION
     Uses pixi from the repo-root pixi.toml. Default target:
     tests/RevitDevTool.PyServer.Tests. This is not the live-host pytest
-    plugin in the RevitDevTool.PyTest repo.
+    plugin in source/RevitDevTool.PyTest.
 .PARAMETER Path
     Relative path to the test directory from the repo root.
 .EXAMPLE
