@@ -20,7 +20,7 @@ internal static class ModuleShell
         var project = Path.Combine(root, PyTestProject);
         try
         {
-            return await RunAsync(context, "pixi", project, ["run", "--manifest-path", Path.Combine(project, "pixi.toml"), .. arguments], cancellationToken, throwOnError: true);
+            return await RunAsync(context, "pixi", project, ["run", "--manifest-path", Path.Combine(project, "pyproject.toml"), .. arguments], cancellationToken, throwOnError: true);
         }
         catch (Win32Exception)
         {

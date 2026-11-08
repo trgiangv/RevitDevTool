@@ -22,6 +22,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Testing",
 ]
 dependencies = ["pytest>=9.1.1,<10", "pywin32>=312"]
@@ -43,3 +44,22 @@ target-version = "py310"
 
 [tool.ruff.lint]
 ignore = ["UP032", "UP009", "FLY002"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[tool.pixi.dependencies]
+python = "3.14.*"
+ruff = "*"
+python-build = "*"
+hatchling = "*"
+
+[tool.pixi.pypi-dependencies]
+revitdevtool_pytest = { path = ".", editable = true }
+
+[tool.pixi.tasks]
+lint = "ruff check src tests/plugin tests/golden && ruff format --check src tests/plugin tests/golden"
+test = "pytest tests/plugin tests/golden"
+build = "python -m build --no-isolation"
+live = "pytest -c tests/live.ini --rootdir ."

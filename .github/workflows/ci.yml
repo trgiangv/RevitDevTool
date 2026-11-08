@@ -75,7 +75,7 @@ jobs:
         if: matrix.product == 'pytest'
         uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
-          manifest-path: source/RevitDevTool.PyTest/pixi.toml
+          manifest-path: source/RevitDevTool.PyTest/pyproject.toml
 
       - name: Compile and test
         run: |
