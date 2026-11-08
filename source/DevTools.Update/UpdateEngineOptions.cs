@@ -8,15 +8,9 @@ public sealed class UpdateEngineOptions
     public const string SectionName = "Update";
 
     /// <summary>
-    ///     GitHub <c>owner/name</c> of the release provider.
+    ///     The signed <c>channels.json</c>, the asset of the rolling <c>channels</c> GitHub Release (0059 §2).
     /// </summary>
-    public string Repository { get; set; } = "trgiangv/RevitDevTool";
-
-    /// <summary>
-    ///     Optional GitHub token (<c>Update__GitHubToken</c>). CI runners share IP addresses, so the 60 requests each hour
-    ///     without a token are not enough there.
-    /// </summary>
-    public string? GitHubToken { get; set; }
+    public Uri ChannelIndexUrl { get; set; } = new("https://github.com/trgiangv/RevitDevTool/releases/download/channels/channels.json");
 
     /// <summary>
     ///     PEM ECDSA P-256 public key for the <c>.sig</c> files (0051). If it is empty, the engine accepts feeds without a signature.

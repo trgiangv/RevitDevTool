@@ -9,13 +9,14 @@ using ZLogger;
 namespace DevTools.Update.Engine;
 
 /// <summary>
-///     Runs the update cycle. First Velopack updates the Daemon, then the engine updates the payload folders (0048–0052).
+///     Runs the update cycle. The channel index names one <c>daemon</c> and one <c>addin</c> release per channel (0059 §2):
+///     Velopack updates the Daemon from the first, the engine updates the payload folders from the second (0048–0052).
 ///     It does not stop host processes.
 /// </summary>
 public sealed class UpdateEngine(
     AutodeskBundle bundle,
     InstallationStore store,
-    IReleaseProvider provider,
+    IChannelIndexSource channels,
     ReleaseReader reader,
     PayloadInstaller installer,
     DaemonUpdater daemon,
@@ -28,7 +29,7 @@ public sealed class UpdateEngine(
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly CancellationTokenSource _lifetime = new();
     private LockerWatcher? _lockers;
-    private string? _offeredVersion;
+    private string? _offered;
     private UpdatePolicy? _chosenPolicy;
 
     public InstallationStore Store => store;
@@ -62,13 +63,13 @@ public sealed class UpdateEngine(
 
     /// <summary>
     ///     Gets the rows for the Updates tab (0047): the template components that are in the <c>update-manifest.json</c>
-    ///     of the release. The list is empty if no release has a manifest.
+    ///     of the channel's <c>addin</c> release. The list is empty if the channel has no <c>addin</c> release.
     /// </summary>
     public async Task<IReadOnlyList<TargetOption>> GetTargetsAsync(CancellationToken cancellationToken)
     {
         var installation = store.Load();
         var release = await FindSetupReleaseAsync(installation, cancellationToken).ConfigureAwait(false);
-        if (release is not { HasManifest: true }) return [];
+        if (release is null) return [];
 
         var hosts = DetectHosts();
         var selected = installation?.Targets.ToHashSet() ?? DefaultSelection(hosts.Keys.ToHashSet());
@@ -77,8 +78,7 @@ public sealed class UpdateEngine(
             .SelectMany(payload => payload.Platforms.Select(platform => new AddinTarget(platform, payload.HostVersion)))
             .ToHashSet();
 
-        var newest = await provider.GetLatestAsync((installation?.Policy ?? Policy).IsPrerelease, cancellationToken).ConfigureAwait(false);
-        var latest = Versions.Max([manifest.Version, newest is { HasManifest: true } ? newest.Version : null])!;
+        var latest = manifest.Version;
         var installed = installation?.Targets.ToHashSet() ?? [];
         return PackageContents.TemplateComponents()
             .Where(component => released.Contains(component.Target))
@@ -94,8 +94,14 @@ public sealed class UpdateEngine(
     }
 
     /// <summary>
-    ///     Installs or changes the host selection (first run, Updates tab, <c>--select</c>). The payloads come from the release
-    ///     of the Daemon version, or from <paramref name="offlineBundle"/> (<c>RevitDevTool.bundle.zip</c>).
+    ///     The newest Daemon version of the install's channel, or null when the channel has no <c>daemon</c> release.
+    /// </summary>
+    public async Task<string?> GetLatestDaemonAsync(CancellationToken cancellationToken) =>
+        (await PickAsync((store.Load()?.Policy ?? Policy).IsPrerelease, cancellationToken).ConfigureAwait(false)).Daemon?.Version;
+
+    /// <summary>
+    ///     Installs or changes the host selection (first run, Updates tab, <c>--select</c>). The payloads come from the
+    ///     <c>addin</c> release of the install's channel, or from <paramref name="offlineBundle"/> (<c>RevitDevTool.bundle.zip</c>).
     /// </summary>
     public async Task<SelectionResult> ApplySelectionAsync(IReadOnlyList<AddinTarget> selection, UpdatePolicy? policy, string? offlineBundle,
         IProgress<PayloadProgress>? progress, CancellationToken cancellationToken)
@@ -166,25 +172,32 @@ public sealed class UpdateEngine(
         RetryPending(installation);
         ReportNewTargets(installation);
 
-        var release = await provider.GetLatestAsync(installation.Policy.IsPrerelease, cancellationToken).ConfigureAwait(false);
-        if (release is not { HasManifest: true }) return new UpdateCycleResult(UpdateCycleStatus.NoRelease);
+        var (daemonRelease, addinRelease) = await PickAsync(installation.Policy.IsPrerelease, cancellationToken).ConfigureAwait(false);
+        if (daemonRelease is null && addinRelease is null) return new UpdateCycleResult(UpdateCycleStatus.NoRelease);
 
-        var manifest = await reader.ReadManifestAsync(release, cancellationToken).ConfigureAwait(false);
-        var skipped = manifest.Version == installation.Policy.SkippedVersion && trigger != UpdateTrigger.UserApproved;
-        var outdated = skipped ? [] : OutdatedPayloads(installation, manifest);
+        var manifest = addinRelease is null ? null : await reader.ReadManifestAsync(addinRelease, cancellationToken).ConfigureAwait(false);
+        var skipped = manifest is not null && manifest.Version == installation.Policy.SkippedVersion && trigger != UpdateTrigger.UserApproved;
+        var outdated = manifest is null || skipped ? [] : OutdatedPayloads(installation, manifest);
+        var newerDaemon = daemonRelease is not null && daemon.InstalledVersion is { } installed && Versions.IsNewer(daemonRelease.Version, installed)
+            ? daemonRelease
+            : null;
         if (installation.Policy.Mode != UpdateMode.Auto && trigger != UpdateTrigger.UserApproved)
-            return Offer(manifest, outdated, !skipped && daemon.InstalledVersion is { } installed && Versions.IsNewer(manifest.Version, installed), trigger);
+            return Offer(manifest, outdated, newerDaemon, trigger);
 
-        var daemonTarget = await PrepareDaemonAsync(release, cancellationToken).ConfigureAwait(false);
-        var batch = new PayloadBatch(manifest.Version);
-        if (!RequiresNewerUpdater(manifest)) await UpdatePayloadsAsync(installation, release, outdated, batch, cancellationToken).ConfigureAwait(false);
+        var daemonTarget = newerDaemon is null ? null : await PrepareDaemonAsync(newerDaemon, cancellationToken).ConfigureAwait(false);
+        var batch = new PayloadBatch(manifest?.Version ?? "");
+        if (manifest is not null && !RequiresNewerUpdater(manifest))
+            await UpdatePayloadsAsync(installation, addinRelease!, outdated, batch, cancellationToken).ConfigureAwait(false);
 
-        Report(batch, manifest.NotesUrl);
+        Report(batch, manifest?.NotesUrl);
         SwapUpdater(installation, daemonTarget, trigger);
 
         var status = batch.Changed || daemonTarget is not null ? UpdateCycleStatus.Updated : UpdateCycleStatus.UpToDate;
-        return new UpdateCycleResult(status, manifest.Version, batch.Applied, batch.PendingHostVersions);
+        return new UpdateCycleResult(status, manifest?.Version, batch.Applied, batch.PendingHostVersions);
     }
+
+    private async Task<(Release? Daemon, Release? Addin)> PickAsync(bool prerelease, CancellationToken cancellationToken) =>
+        (await channels.GetAsync(cancellationToken).ConfigureAwait(false)).Pick(prerelease);
 
     private static ManifestPayload[] OutdatedPayloads(Installation installation, UpdateManifest manifest) => installation.SelectedHostVersions()
         .Select(manifest.FindPayload)
@@ -192,14 +205,23 @@ public sealed class UpdateEngine(
         .Where(payload => Versions.IsNewer(manifest.Version, installation.InstalledVersion(payload.HostVersion)))
         .ToArray();
 
-    private UpdateCycleResult Offer(UpdateManifest manifest, ManifestPayload[] outdated, bool daemonOutdated, UpdateTrigger trigger)
+    /// <summary>
+    ///     Notify mode: offers the add-in and the Daemon separately, each when it is newer than the installed one.
+    /// </summary>
+    private UpdateCycleResult Offer(UpdateManifest? manifest, ManifestPayload[] outdated, Release? newerDaemon, UpdateTrigger trigger)
     {
-        if (outdated.Length == 0 && !daemonOutdated) return new UpdateCycleResult(UpdateCycleStatus.UpToDate, manifest.Version);
-        if (_offeredVersion == manifest.Version && trigger == UpdateTrigger.Scheduled) return new UpdateCycleResult(UpdateCycleStatus.Notified, manifest.Version);
+        var addinVersion = outdated.Length > 0 ? manifest!.Version : null;
+        if (addinVersion is null && newerDaemon is null) return new UpdateCycleResult(UpdateCycleStatus.UpToDate, manifest?.Version);
 
-        _offeredVersion = manifest.Version;
-        notifier.Notify(new UpdateNotice(UpdateNoticeKind.Available, "Update available", $"{manifest.Version} is available.", manifest.Version, manifest.NotesUrl));
-        return new UpdateCycleResult(UpdateCycleStatus.Notified, manifest.Version);
+        var offered = $"{addinVersion}|{newerDaemon?.Version}";
+        if (_offered == offered && trigger == UpdateTrigger.Scheduled) return new UpdateCycleResult(UpdateCycleStatus.Notified, manifest?.Version);
+
+        _offered = offered;
+        if (addinVersion is not null)
+            notifier.Notify(new UpdateNotice(UpdateNoticeKind.Available, "Update available", $"{addinVersion} is available.", addinVersion, manifest!.NotesUrl));
+        if (newerDaemon is not null)
+            notifier.Notify(new UpdateNotice(UpdateNoticeKind.Available, "Daemon update available", $"DevTools Daemon {newerDaemon.Version} is available.", newerDaemon.Version));
+        return new UpdateCycleResult(UpdateCycleStatus.Notified, manifest?.Version);
     }
 
     /// <summary>
@@ -404,17 +426,9 @@ public sealed class UpdateEngine(
         installer.CleanStaging(installation.Payloads.Select(payload => payload.PendingVersion).OfType<string>());
 
     private async Task<Release> SetupReleaseAsync(Installation? installation, CancellationToken cancellationToken) =>
-        await FindSetupReleaseAsync(installation, cancellationToken).ConfigureAwait(false) is { HasManifest: true } release
-            ? release
-            : throw new InvalidOperationException("No release with update data is available.");
+        await FindSetupReleaseAsync(installation, cancellationToken).ConfigureAwait(false)
+        ?? throw new InvalidOperationException("No release with update data is available.");
 
-    private async Task<Release?> FindSetupReleaseAsync(Installation? installation, CancellationToken cancellationToken)
-    {
-        var release = daemon.InstalledVersion is { } version
-            ? await provider.GetAsync(version, cancellationToken).ConfigureAwait(false)
-            : null;
-        return release is { HasManifest: true }
-            ? release
-            : await provider.GetLatestAsync((installation?.Policy ?? Policy).IsPrerelease, cancellationToken).ConfigureAwait(false);
-    }
+    private async Task<Release?> FindSetupReleaseAsync(Installation? installation, CancellationToken cancellationToken) =>
+        (await PickAsync((installation?.Policy ?? Policy).IsPrerelease, cancellationToken).ConfigureAwait(false)).Addin;
 }

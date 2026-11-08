@@ -1,5 +1,4 @@
 using DevTools.Update.Installations;
-using DevTools.Update.Releases;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -42,7 +41,7 @@ public sealed class UpdateScheduler(UpdateEngine engine, IOptions<UpdateEngineOp
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                delay = Backoff(interval, ++failures, (ex as UpdateThrottledException)?.RetryAfter);
+                delay = Backoff(interval, ++failures);
                 logger.ZLogWarning(ex, $"The update check failed. The next check is in {delay}");
             }
         }
@@ -50,10 +49,9 @@ public sealed class UpdateScheduler(UpdateEngine engine, IOptions<UpdateEngineOp
 
     internal static TimeSpan Jitter(TimeSpan interval, double sample) => interval * (0.8 + 0.4 * sample);
 
-    internal static TimeSpan Backoff(TimeSpan interval, int failures, TimeSpan? retryAfter = null)
+    internal static TimeSpan Backoff(TimeSpan interval, int failures)
     {
         var next = interval * Math.Pow(2, Math.Min(failures, 10));
-        if (retryAfter > next) next = retryAfter.Value;
         return next > MaxBackoff ? MaxBackoff : next;
     }
 

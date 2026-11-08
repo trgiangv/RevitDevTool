@@ -15,17 +15,16 @@ public static class UpdateServiceCollectionExtensions
     /// <summary>
     ///     Registers the update engine and its scheduler. The host registers <see cref="IUpdateNotifier"/> and
     ///     the <c>IHostPathResolver</c> implementations. Use it in tray mode only (0048).
-    ///     To use a private deploy server, register an <see cref="IReleaseProvider"/> before this call.
     /// </summary>
     public static IServiceCollection AddUpdateEngine(this IServiceCollection services)
     {
         services.AddOptions<UpdateEngineOptions>();
         services.TryAddSingleton<IUpdateNotifier, NullUpdateNotifier>();
         services.TryAddSingleton<IFolderLock, RestartManagerFolderLock>();
-        services.TryAddSingleton<IReleaseProvider>(sp => new CachedReleaseProvider(
-            new GitHubReleaseProvider(Options(sp).Repository, Options(sp).GitHubToken), TimeProvider.System));
         services.AddSingleton(sp => new AutodeskBundle(Options(sp).BundlePath ?? AutodeskBundle.DefaultRoot));
         services.AddSingleton(sp => new ReleaseReader(new HttpClient(), new ReleaseSignature(Options(sp).PublicKey), sp.GetService<ILogger<ReleaseReader>>()));
+        services.AddSingleton<IChannelIndexSource>(sp => new CachedChannelIndexSource(
+            new ChannelIndexSource(sp.GetRequiredService<ReleaseReader>(), Options(sp).ChannelIndexUrl), TimeProvider.System));
         services.AddSingleton<InstallationStore>();
         services.AddSingleton<PayloadInstaller>();
         services.AddSingleton<DaemonUpdater>();

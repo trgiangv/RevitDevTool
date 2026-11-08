@@ -29,10 +29,7 @@ internal static class Program
             .Run();
 
         if (VelopackLocator.IsCurrentSet && VelopackLocator.Current.CurrentlyInstalledVersion is not null)
-        {
-            LegacyInnoInstall.Remove(new AutodeskBundle(AutodeskBundle.DefaultRoot));
             StartupRegistration.Refresh();
-        }
 
         if (args.Contains(AppConstants.SelectArg, StringComparer.OrdinalIgnoreCase))
             return RunSelectAsync(args).GetAwaiter().GetResult();

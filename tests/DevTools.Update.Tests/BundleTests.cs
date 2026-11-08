@@ -107,9 +107,9 @@ public sealed class BundleTests
     public async Task Staging_refuses_a_zip_that_does_not_match_the_manifest()
     {
         using var temp = new TempBundle();
-        var releases = new FakeReleases();
-        var release = releases.Publish("3.1.0", null, ("2024", ["Revit"], "new"));
-        releases.Replace(release, "RevitDevTool-3.1.0-2024.zip", FakeReleases.PayloadZip("changed"));
+        var releases = new FakeChannels();
+        var release = releases.PublishAddin("3.1.0", ("2024", ["Revit"], "new"));
+        releases.Add(release.Asset("RevitDevTool-3.1.0-2024.zip"), FakeChannels.PayloadZip("changed"));
         var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(null));
         var installer = new PayloadInstaller(temp.Bundle, new FakeFolderLock(), reader);
         var manifest = await reader.ReadManifestAsync(release, CancellationToken.None);
@@ -152,7 +152,7 @@ public sealed class BundleTests
     }
 
     private static PayloadInstaller Installer(TempBundle temp, IFolderLock folderLock) =>
-        new(temp.Bundle, folderLock, new ReleaseReader(new HttpClient(new FakeReleases()), new ReleaseSignature(null)));
+        new(temp.Bundle, folderLock, new ReleaseReader(new HttpClient(new FakeChannels()), new ReleaseSignature(null)));
 
     private static string Stage(TempBundle temp, string marker)
     {

@@ -19,7 +19,7 @@ public sealed class UpdateEngineTests
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         using var harness = new Harness(key);
-        harness.Releases.Publish("3.1.0", key, ("2024", ["AutoCAD*", "Revit"], "2024-new"), ("2025", ["Revit"], "2025-new"));
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["AutoCAD*", "Revit"], "2024-new"), ("2025", ["Revit"], "2025-new"));
         harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
         harness.Temp.WritePayload("2025", "2025-old", "RevitDevTool.addin");
         harness.FolderLock.Lock(harness.Temp.Bundle.PayloadPath("2025"));
@@ -51,7 +51,7 @@ public sealed class UpdateEngineTests
     public async Task Notify_mode_offers_and_changes_nothing_until_the_user_approves()
     {
         using var harness = new Harness(null);
-        harness.Releases.Publish("3.1.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["Revit"], "2024-new"));
         harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
         harness.Store.Save(new Installation
         {
@@ -72,7 +72,7 @@ public sealed class UpdateEngineTests
     public async Task Skipped_version_is_ignored_and_off_mode_does_not_check_on_schedule()
     {
         using var harness = new Harness(null);
-        harness.Releases.Publish("3.1.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["Revit"], "2024-new"));
         harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
         harness.Store.Save(new Installation
         {
@@ -85,16 +85,16 @@ public sealed class UpdateEngineTests
         Assert.AreEqual("2024-old", harness.Temp.Marker("2024"));
 
         harness.Store.Update(installation => installation.Policy.Mode = UpdateMode.Off);
-        var requests = harness.Releases.Requests;
+        var requests = harness.Channels.IndexRequests;
         Assert.AreEqual(UpdateCycleStatus.Disabled, (await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None)).Status);
-        Assert.AreEqual(requests, harness.Releases.Requests);
+        Assert.AreEqual(requests, harness.Channels.IndexRequests);
     }
 
     [TestMethod]
     public async Task First_selection_installs_the_payloads_of_the_selected_targets()
     {
         using var harness = new Harness(null, (HostApp.Revit, "2024"), (HostApp.AutoCad, "2026"));
-        harness.Releases.Publish("3.1.0", null, ("2024", ["AutoCAD*", "Revit"], "2024-new"), ("2026", ["AutoCAD*", "Revit"], "2026-new"));
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["AutoCAD*", "Revit"], "2024-new"), ("2026", ["AutoCAD*", "Revit"], "2026-new"));
 
         var options = await harness.Engine.GetTargetsAsync(CancellationToken.None);
         Assert.HasCount(4, options);
@@ -111,7 +111,7 @@ public sealed class UpdateEngineTests
         Assert.IsTrue(reports.Any(report => report is { HostVersion: "2026", Stage: PayloadStage.Installing, Percent: null }));
         Assert.AreEqual("3.1.0 is installed.", harness.Notifier.Notices.Single(notice => notice.Kind == UpdateNoticeKind.Applied).Message);
 
-        Assert.AreEqual(2, harness.Releases.PayloadDownloads);
+        Assert.AreEqual(2, harness.Channels.PayloadDownloads);
         Assert.IsFalse(Directory.Exists(harness.Temp.Bundle.StagingPath("3.1.0")));
         var modules = XDocument.Load(harness.Temp.Bundle.PackageContentsPath).Root!.Elements("Components")
             .Select(component => component.Element("ComponentEntry")!.Attribute("ModuleName")!.Value).ToArray();
@@ -126,7 +126,7 @@ public sealed class UpdateEngineTests
         await harness.Engine.ApplySelectionAsync([new AddinTarget("Revit", "2024"), new AddinTarget("AutoCAD*", "2024"), new AddinTarget("AutoCAD*", "2026")], null, null,
             new SynchronousProgress<PayloadProgress>(reports.Add), CancellationToken.None);
         Assert.IsEmpty(reports);
-        Assert.AreEqual(2, harness.Releases.PayloadDownloads);
+        Assert.AreEqual(2, harness.Channels.PayloadDownloads);
         Assert.HasCount(3, XDocument.Load(harness.Temp.Bundle.PackageContentsPath).Root!.Elements("Components"));
     }
 
@@ -134,7 +134,7 @@ public sealed class UpdateEngineTests
     public async Task AutoCad_based_products_select_the_AutoCad_component()
     {
         using var harness = new Harness(null, (HostApp.Civil3D, "2026"), (HostApp.Plant3D, "2027"));
-        harness.Releases.Publish("4.0.0", null, ("2026", ["AutoCAD*", "Revit"], "a"), ("2027", ["AutoCAD*", "Revit"], "b"));
+        harness.Channels.PublishAddin("4.0.0", ("2026", ["AutoCAD*", "Revit"], "a"), ("2027", ["AutoCAD*", "Revit"], "b"));
 
         var options = await harness.Engine.GetTargetsAsync(CancellationToken.None);
 
@@ -149,7 +149,7 @@ public sealed class UpdateEngineTests
     public async Task New_target_on_the_computer_is_reported_one_time()
     {
         using var harness = new Harness(null, (HostApp.Revit, "2027"));
-        harness.Releases.Publish("3.0.0", null);
+        harness.Channels.PublishAddin("3.0.0");
         harness.Store.Save(new Installation { Targets = [new AddinTarget("Revit", "2024")] });
 
         await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
@@ -161,10 +161,9 @@ public sealed class UpdateEngineTests
     }
 
     [TestMethod]
-    public async Task Release_without_a_manifest_gives_no_targets_and_no_update()
+    public async Task Empty_index_gives_no_update()
     {
         using var harness = new Harness(null);
-        harness.Releases.PublishWithoutManifest("3.0.0");
         harness.Store.Save(new Installation { Targets = [new AddinTarget("Revit", "2024")] });
 
         Assert.IsEmpty(await harness.Engine.GetTargetsAsync(CancellationToken.None));
@@ -172,11 +171,12 @@ public sealed class UpdateEngineTests
     }
 
     [TestMethod]
-    public async Task Prerelease_install_selects_its_own_release_and_keeps_the_prerelease_channel()
+    public async Task First_run_uses_channel_addin()
     {
-        using var harness = new Harness(null, daemon: reader => new InstalledDaemon(reader, "4.0.0-beta.1", UpdatePolicy.PrereleaseChannel));
-        harness.Releases.Publish("4.0.0-beta.1", null, ("2025", ["Revit"], "beta"));
-        harness.Releases.Publish("3.9.0", null, ("2025", ["Revit"], "other"));
+        using var harness = new Harness(null, daemon: reader => new InstalledDaemon(reader, "4.0.0-beta.2", UpdatePolicy.PrereleaseChannel));
+        harness.Channels.PublishAddin("4.0.0-beta.1", ("2025", ["Revit"], "beta"));
+        harness.Channels.PublishAddin("3.9.0", ("2025", ["Revit"], "other"));
+        harness.Channels.PublishDaemon("4.0.0-beta.2");
 
         var result = await harness.Engine.ApplySelectionAsync([new AddinTarget("Revit", "2025")], null, null, null, CancellationToken.None);
 
@@ -189,8 +189,8 @@ public sealed class UpdateEngineTests
     public async Task Daemon_without_a_release_uses_the_latest_release_of_the_chosen_channel()
     {
         using var harness = new Harness(null, daemon: reader => new InstalledDaemon(reader, "4.0.0-alpha.480", UpdatePolicy.StableChannel));
-        harness.Releases.PublishWithoutManifest("3.0.0");
-        harness.Releases.Publish("4.0.0-beta.1", null, ("2025", ["Revit"], "beta"));
+        harness.Channels.PublishDaemon("3.0.0");
+        harness.Channels.PublishAddin("4.0.0-beta.1", ("2025", ["Revit"], "beta"));
 
         Assert.IsEmpty(await harness.Engine.GetTargetsAsync(CancellationToken.None));
 
@@ -208,7 +208,7 @@ public sealed class UpdateEngineTests
     public async Task First_selection_defaults_to_the_payloads_an_earlier_install_left_on_disk()
     {
         using var harness = new Harness(null, (HostApp.Revit, "2026"));
-        harness.Releases.Publish("4.0.0", null, ("2024", ["AutoCAD*", "Revit"], "a"), ("2026", ["AutoCAD*", "Revit"], "b"));
+        harness.Channels.PublishAddin("4.0.0", ("2024", ["AutoCAD*", "Revit"], "a"), ("2026", ["AutoCAD*", "Revit"], "b"));
         harness.Temp.WritePayload("2024", "inno", "RevitDevTool.addin");
 
         var selected = (await harness.Engine.GetTargetsAsync(CancellationToken.None)).Where(option => option.Selected).Select(option => option.Component.Target).ToArray();
@@ -220,8 +220,8 @@ public sealed class UpdateEngineTests
     public async Task Prerelease_option_updates_to_the_newest_release_of_both_channels()
     {
         using var harness = new Harness(null);
-        harness.Releases.Publish("4.0.0", null, ("2024", ["Revit"], "stable"));
-        harness.Releases.Publish("4.1.0-beta.1", null, ("2024", ["Revit"], "beta"));
+        harness.Channels.PublishAddin("4.0.0", ("2024", ["Revit"], "stable"));
+        harness.Channels.PublishAddin("4.1.0-beta.1", ("2024", ["Revit"], "beta"));
         harness.Temp.WritePayload("2024", "old", "RevitDevTool.addin");
         harness.Store.Save(new Installation
         {
@@ -242,7 +242,8 @@ public sealed class UpdateEngineTests
     {
         UpdatableDaemon? daemon = null;
         using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
-        harness.Releases.Publish("3.1.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Channels.PublishDaemon("3.1.0");
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["Revit"], "2024-new"));
         harness.Store.Save(new Installation { Targets = [new AddinTarget("Revit", "2024")] });
 
         await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
@@ -256,7 +257,8 @@ public sealed class UpdateEngineTests
     {
         UpdatableDaemon? daemon = null;
         using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
-        harness.Releases.Publish("4.0.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Channels.PublishDaemon("4.0.0");
+        harness.Channels.PublishAddin("4.0.0", ("2024", ["Revit"], "2024-new"));
         harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
         harness.FolderLock.Lock(harness.Temp.Bundle.PayloadPath("2024"));
         harness.Store.Save(new Installation
@@ -282,7 +284,8 @@ public sealed class UpdateEngineTests
     {
         UpdatableDaemon? daemon = null;
         using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
-        harness.Releases.Publish("4.0.0", null, ("2025", ["Revit"], "2025-new"));
+        harness.Channels.PublishDaemon("4.0.0");
+        harness.Channels.PublishAddin("4.0.0", ("2025", ["Revit"], "2025-new"));
         harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
         harness.Store.Save(new Installation
         {
@@ -300,7 +303,8 @@ public sealed class UpdateEngineTests
     {
         UpdatableDaemon? daemon = null;
         using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
-        harness.Releases.Publish("3.1.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Channels.PublishDaemon("3.1.0");
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["Revit"], "2024-new"));
         harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
         harness.FolderLock.Lock(harness.Temp.Bundle.PayloadPath("2024"));
         harness.Store.Save(new Installation
@@ -318,7 +322,7 @@ public sealed class UpdateEngineTests
     public async Task Scheduler_runs_the_cycle_after_the_startup_delay()
     {
         using var harness = new Harness(null);
-        harness.Releases.Publish("3.1.0", null, ("2024", ["Revit"], "2024-new"));
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["Revit"], "2024-new"));
         harness.Temp.WritePayload("2024", "2024-old", "RevitDevTool.addin");
         harness.Store.Save(new Installation
         {
@@ -336,6 +340,143 @@ public sealed class UpdateEngineTests
         Assert.AreEqual("2024-new", harness.Temp.Marker("2024"));
     }
 
+    [TestMethod]
+    public async Task Stable_install_ignores_prerelease()
+    {
+        UpdatableDaemon? daemon = null;
+        using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
+        harness.Channels.PublishAddin("3.1.0-beta.1", ("2024", ["Revit"], "beta"));
+        harness.Channels.PublishDaemon("3.1.0-beta.1");
+        harness.Temp.WritePayload("2024", "old", "RevitDevTool.addin");
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        Assert.AreEqual(UpdateCycleStatus.NoRelease, (await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None)).Status);
+        Assert.AreEqual("old", harness.Temp.Marker("2024"));
+        Assert.IsEmpty(daemon!.Prepared);
+    }
+
+    [TestMethod]
+    public async Task Prerelease_install_takes_newer_stable()
+    {
+        UpdatableDaemon? daemon = null;
+        using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
+        harness.Channels.PublishAddin("3.1.0-beta.1", ("2024", ["Revit"], "beta"));
+        harness.Channels.PublishDaemon("3.1.0-beta.1");
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["Revit"], "stable"));
+        harness.Channels.PublishDaemon("3.1.0");
+        harness.Temp.WritePayload("2024", "old", "RevitDevTool.addin");
+        harness.Store.Save(new Installation
+        {
+            Policy = { Channel = UpdatePolicy.PrereleaseChannel },
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        Assert.AreEqual("3.1.0", (await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None)).Version);
+        Assert.AreEqual("stable", harness.Temp.Marker("2024"));
+        CollectionAssert.AreEqual(new[] { "3.1.0" }, daemon!.Prepared);
+    }
+
+    [TestMethod]
+    public async Task Daemon_only_change_skips_payloads()
+    {
+        UpdatableDaemon? daemon = null;
+        using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
+        harness.Channels.PublishAddin("3.0.0", ("2024", ["Revit"], "same"));
+        harness.Channels.PublishDaemon("3.0.1");
+        harness.Temp.WritePayload("2024", "installed", "RevitDevTool.addin");
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        Assert.AreEqual(UpdateCycleStatus.Updated, (await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None)).Status);
+        Assert.AreEqual(0, harness.Channels.PayloadDownloads);
+        CollectionAssert.AreEqual(new[] { "3.0.1" }, daemon!.Prepared);
+    }
+
+    [TestMethod]
+    public async Task Addin_only_change_keeps_Daemon()
+    {
+        UpdatableDaemon? daemon = null;
+        using var harness = new Harness(null, reader => daemon = new UpdatableDaemon(reader));
+        harness.Channels.PublishDaemon("3.0.0");
+        harness.Channels.PublishAddin("3.0.1", ("2024", ["Revit"], "new"));
+        harness.Temp.WritePayload("2024", "old", "RevitDevTool.addin");
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
+
+        Assert.AreEqual("new", harness.Temp.Marker("2024"));
+        Assert.IsEmpty(daemon!.Prepared);
+        Assert.IsEmpty(daemon.Restarts);
+    }
+
+    [TestMethod]
+    public async Task Notify_mode_offers_parts_separately()
+    {
+        using var harness = new Harness(null, reader => new UpdatableDaemon(reader));
+        harness.Channels.PublishDaemon("3.0.1");
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["Revit"], "new"));
+        harness.Store.Save(new Installation
+        {
+            Policy = { Mode = UpdateMode.Notify },
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { "3.1.0", "3.0.1" }, harness.Notifier.Notices.Select(notice => notice.Version).ToArray());
+        Assert.IsTrue(harness.Notifier.Notices.All(notice => notice.Kind == UpdateNoticeKind.Available));
+    }
+
+    [TestMethod]
+    public async Task Bad_index_signature_changes_nothing()
+    {
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var other = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        using var harness = new Harness(key, new FakeChannels(other), null);
+        harness.Channels.PublishAddin("3.1.0", ("2024", ["Revit"], "new"));
+        harness.Temp.WritePayload("2024", "old", "RevitDevTool.addin");
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "3.0.0" }]
+        });
+
+        await Assert.ThrowsExactlyAsync<UpdateIntegrityException>(() => harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None));
+        Assert.AreEqual("old", harness.Temp.Marker("2024"));
+        Assert.AreEqual(0, harness.Channels.PayloadDownloads);
+    }
+
+    [TestMethod]
+    public async Task Newer_min_updater_holds_payloads()
+    {
+        using var harness = new Harness(null, reader => new InstalledDaemon(reader, "4.0.0", UpdatePolicy.StableChannel));
+        harness.Channels.MinUpdaterVersion = "4.1.0";
+        harness.Channels.PublishAddin("4.1.0", ("2024", ["Revit"], "new"));
+        harness.Temp.WritePayload("2024", "old", "RevitDevTool.addin");
+        harness.Store.Save(new Installation
+        {
+            Targets = [new AddinTarget("Revit", "2024")],
+            Payloads = [new InstalledPayload { HostVersion = "2024", Version = "4.0.0" }]
+        });
+
+        Assert.AreEqual(UpdateCycleStatus.UpToDate, (await harness.Engine.CheckAsync(UpdateTrigger.Scheduled, CancellationToken.None)).Status);
+        Assert.AreEqual("old", harness.Temp.Marker("2024"));
+        Assert.AreEqual(0, harness.Channels.PayloadDownloads);
+    }
+
     private sealed class Harness : IDisposable
     {
         public Harness(ECDsa? key, params (HostApp App, string Version)[] installed) : this(key, null, installed)
@@ -343,13 +484,19 @@ public sealed class UpdateEngineTests
         }
 
         public Harness(ECDsa? key, Func<ReleaseReader, DaemonUpdater>? daemon, params (HostApp App, string Version)[] installed)
+            : this(key, new FakeChannels(key), daemon, installed)
         {
+        }
+
+        public Harness(ECDsa? key, FakeChannels channels, Func<ReleaseReader, DaemonUpdater>? daemon, params (HostApp App, string Version)[] installed)
+        {
+            Channels = channels;
             Store = new InstallationStore(Temp.Bundle);
-            var reader = new ReleaseReader(new HttpClient(Releases), new ReleaseSignature(key?.ExportSubjectPublicKeyInfoPem()));
+            var reader = new ReleaseReader(new HttpClient(Channels), new ReleaseSignature(key?.ExportSubjectPublicKeyInfoPem()));
             Engine = new UpdateEngine(
                 Temp.Bundle,
                 Store,
-                Releases,
+                new ChannelIndexSource(reader, FakeChannels.IndexUrl),
                 reader,
                 new PayloadInstaller(Temp.Bundle, FolderLock, reader),
                 daemon?.Invoke(reader) ?? new DaemonUpdater(reader),
@@ -359,7 +506,7 @@ public sealed class UpdateEngineTests
         }
 
         public TempBundle Temp { get; } = new();
-        public FakeReleases Releases { get; } = new();
+        public FakeChannels Channels { get; }
         public FakeFolderLock FolderLock { get; } = new();
         public RecordingNotifier Notifier { get; } = new();
         public InstallationStore Store { get; }

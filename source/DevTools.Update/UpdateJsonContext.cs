@@ -9,5 +9,6 @@ namespace DevTools.Update;
     UseStringEnumConverter = true,
     WriteIndented = true)]
 [JsonSerializable(typeof(UpdateManifest))]
+[JsonSerializable(typeof(ChannelIndex))]
 [JsonSerializable(typeof(Installations.Installation))]
 internal sealed partial class UpdateJsonContext : JsonSerializerContext;

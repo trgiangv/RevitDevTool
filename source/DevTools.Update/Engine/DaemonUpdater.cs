@@ -13,6 +13,7 @@ namespace DevTools.Update.Engine;
 public class DaemonUpdater(ReleaseReader reader)
 {
     public const string PrereleaseChannel = "prerelease";
+    public const string StableChannel = "win";
 
     private UpdateManager? _manager;
     private UpdateInfo? _pending;
@@ -31,13 +32,13 @@ public class DaemonUpdater(ReleaseReader reader)
         IsInstalled && VelopackLocator.Current.Channel == PrereleaseChannel ? UpdatePolicy.PrereleaseChannel : UpdatePolicy.StableChannel;
 
     /// <summary>
-    ///     Reads the Velopack feed of the release, in the channel of that release, so the user can move between channels. If an update is available, downloads it and returns its version.
+    ///     Reads the Velopack feed of the <c>daemon</c> release, in the channel of that release, so the user can move between channels. If an update is available, downloads it and returns its version.
     /// </summary>
     public virtual async Task<string?> PrepareAsync(Release release, CancellationToken cancellationToken)
     {
         if (!IsInstalled) return null;
 
-        var options = new UpdateOptions { ExplicitChannel = release.Prerelease ? PrereleaseChannel : null };
+        var options = new UpdateOptions { ExplicitChannel = release.Prerelease ? PrereleaseChannel : StableChannel };
         var manager = new UpdateManager(new VelopackReleaseSource(reader, release), options);
         var info = await manager.CheckForUpdatesAsync().ConfigureAwait(false);
         if (info is null) return null;

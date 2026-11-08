@@ -51,51 +51,81 @@ internal sealed class FakeFolderLock : IFolderLock
 }
 
 /// <summary>
-///     An in-memory release provider and the HTTP server for its assets.
+///     The rolling <c>channels</c> release and the <c>daemon</c>/<c>addin</c> release folders, served from memory.
+///     Each publish moves the index the way <c>build -- channels</c> does. The key signs the index and the manifests.
 /// </summary>
-internal sealed class FakeReleases : HttpMessageHandler, IReleaseProvider
+internal sealed class FakeChannels : HttpMessageHandler
 {
+    public static readonly Uri IndexUrl = new("https://releases.example.test/channels/channels.json");
+    private static readonly Uri Downloads = new("https://releases.example.test/");
+
+    private readonly ECDsa? _key;
     private readonly Dictionary<Uri, byte[]> _files = [];
-    private readonly List<Release> _releases = [];
 
-    public int Requests { get; private set; }
-
-    public Release Publish(string version, ECDsa? key, params (string HostVersion, string[] Platforms, string Marker)[] payloads)
+    public FakeChannels(ECDsa? key = null)
     {
-        var assets = new Dictionary<string, Uri>(StringComparer.Ordinal);
+        _key = key;
+        ServeIndex(Index.ToJson());
+    }
+
+    public ChannelIndex Index { get; private set; } = new();
+
+    public int IndexRequests => _indexRequests;
+
+    private int _indexRequests;
+
+    public string? MinUpdaterVersion { get; set; }
+
+    public Release PublishAddin(string version, params (string HostVersion, string[] Platforms, string Marker)[] payloads)
+    {
+        var release = new Release(version, version.Contains('-', StringComparison.Ordinal), new Uri(Downloads, $"addin/v{version}/"));
         var entries = payloads.Select(payload =>
         {
             var asset = $"RevitDevTool-{version}-{payload.HostVersion}.zip";
             var zip = PayloadZip(payload.Marker);
-            Add(assets, version, asset, zip);
+            _files[release.Asset(asset)] = zip;
             return new ManifestPayload { HostVersion = payload.HostVersion, Platforms = payload.Platforms, Asset = asset, Sha256 = Convert.ToHexStringLower(SHA256.HashData(zip)), Size = zip.Length };
         }).ToArray();
 
-        var manifest = new UpdateManifest { Schema = UpdateManifest.SupportedSchema, Version = version, Channel = "stable", Payloads = entries }.ToJson();
-        Add(assets, version, UpdateManifest.FileName, manifest);
-        if (key is not null) Add(assets, version, UpdateManifest.FileName + ReleaseSignature.Extension, Encoding.ASCII.GetBytes(Convert.ToBase64String(key.SignData(manifest, HashAlgorithmName.SHA256))));
-
-        var release = new Release(version, version.Contains('-', StringComparison.Ordinal), assets);
-        _releases.Add(release);
+        var manifest = new UpdateManifest
+        {
+            Schema = UpdateManifest.SupportedSchema, Version = version, Channel = "stable", MinUpdaterVersion = MinUpdaterVersion, Payloads = entries
+        };
+        AddSigned(release.Asset(UpdateManifest.FileName), manifest.ToJson());
+        Move(version, channel => channel.Addin?.Version, channel => channel with { Addin = new AddinEntry(version, release.Asset(UpdateManifest.FileName)) });
         return release;
     }
 
-    public void PublishWithoutManifest(string version)
+    public Release PublishDaemon(string version)
     {
-        var assets = new Dictionary<string, Uri>(StringComparer.Ordinal);
-        Add(assets, version, "RevitDevTool-Setup.exe", [0]);
-        _releases.Add(new Release(version, false, assets));
+        var release = new Release(version, version.Contains('-', StringComparison.Ordinal), new Uri(Downloads, $"daemon/v{version}/"));
+        _files[release.Asset("RevitDevTool-Setup.exe")] = [0];
+        Move(version, channel => channel.Daemon?.Version, channel => channel with { Daemon = new DaemonEntry(version, release.BaseUrl) });
+        return release;
     }
 
-    public void Replace(Release release, string asset, byte[] content) => _files[release.Asset(asset)] = content;
+    public void ServeIndex(byte[] json) => AddSigned(IndexUrl, json);
 
-    public Task<Release?> GetLatestAsync(bool prerelease, CancellationToken cancellationToken)
+    public void Add(Uri uri, byte[] content) => _files[uri] = content;
+
+    private void Move(string version, Func<Channel, string?> current, Func<Channel, Channel> set)
     {
-        Requests++;
-        return Task.FromResult(_releases.LastOrDefault(release => prerelease || !release.Prerelease));
+        var stable = !version.Contains('-', StringComparison.Ordinal);
+        var lift = !stable || current(Index.Prerelease) is not { } open || Versions.IsNewer(version, open);
+        Index = Index with
+        {
+            Stable = stable ? set(Index.Stable) : Index.Stable,
+            Prerelease = lift ? set(Index.Prerelease) : Index.Prerelease
+        };
+        ServeIndex(Index.ToJson());
     }
 
-    public Task<Release?> GetAsync(string version, CancellationToken cancellationToken) => Task.FromResult(_releases.Find(release => release.Version == version));
+    private void AddSigned(Uri uri, byte[] content)
+    {
+        _files[uri] = content;
+        if (_key is not null)
+            _files[new Uri(uri.AbsoluteUri + ReleaseSignature.Extension)] = Encoding.ASCII.GetBytes(Convert.ToBase64String(_key.SignData(content, HashAlgorithmName.SHA256)));
+    }
 
     public static byte[] PayloadZip(string marker, params string[] entryNames)
     {
@@ -128,6 +158,7 @@ internal sealed class FakeReleases : HttpMessageHandler, IReleaseProvider
     {
         Interlocked.Increment(ref _fileRequests);
         if (request.RequestUri!.AbsolutePath.EndsWith(".zip", StringComparison.Ordinal)) Interlocked.Increment(ref _payloadDownloads);
+        if (request.RequestUri == IndexUrl) Interlocked.Increment(ref _indexRequests);
         if (!_files.TryGetValue(request.RequestUri, out var content)) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 
         HttpContent body = DroppedResponses-- > 0 ? new StreamContent(new DroppedStream()) : new ByteArrayContent(content);
@@ -142,13 +173,6 @@ internal sealed class FakeReleases : HttpMessageHandler, IReleaseProvider
 
         public override int Read(byte[] buffer, int offset, int count) =>
             throw new IOException("An existing connection was forcibly closed by the remote host.");
-    }
-
-    private void Add(Dictionary<string, Uri> assets, string version, string name, byte[] content)
-    {
-        var uri = new Uri($"https://releases.example.test/{version}/{name}");
-        assets[name] = uri;
-        _files[uri] = content;
     }
 }
 
@@ -188,9 +212,16 @@ internal sealed class InstalledDaemon(ReleaseReader reader, string version, stri
 internal sealed class UpdatableDaemon(ReleaseReader reader) : DaemonUpdater(reader)
 {
     public List<bool> Restarts { get; } = [];
+    public List<string> Prepared { get; } = [];
     public override string? InstalledVersion => "3.0.0";
     public override string InstalledChannel => Installations.UpdatePolicy.StableChannel;
-    public override Task<string?> PrepareAsync(Release release, CancellationToken cancellationToken) => Task.FromResult<string?>(release.Version);
+
+    public override Task<string?> PrepareAsync(Release release, CancellationToken cancellationToken)
+    {
+        Prepared.Add(release.Version);
+        return Task.FromResult<string?>(release.Version);
+    }
+
     public override IReadOnlyList<int> GetBlockingProcesses() => [];
     public override void ApplyOnExit(bool showUpdates) => Restarts.Add(showUpdates);
 }

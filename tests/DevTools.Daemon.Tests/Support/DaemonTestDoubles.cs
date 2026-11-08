@@ -113,7 +113,7 @@ internal static class DaemonTestDoubles
         var engine = new UpdateEngine(
             bundle,
             new InstallationStore(bundle),
-            Mock.Of<IReleaseProvider>(),
+            Mock.Of<IChannelIndexSource>(source => source.GetAsync(It.IsAny<CancellationToken>()) == Task.FromResult(new ChannelIndex())),
             reader,
             new PayloadInstaller(bundle, Mock.Of<IFolderLock>(), reader),
             new DaemonUpdater(reader),

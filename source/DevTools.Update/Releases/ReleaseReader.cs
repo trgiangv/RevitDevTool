@@ -15,13 +15,20 @@ public sealed class ReleaseReader(HttpClient http, ReleaseSignature signature, I
 
     public TimeSpan RetryDelay { get; init; } = TimeSpan.FromSeconds(2);
 
-    public async Task<byte[]> ReadSignedAsync(Release release, string assetName, CancellationToken cancellationToken)
+    public Task<byte[]> ReadSignedAsync(Release release, string assetName, CancellationToken cancellationToken) =>
+        ReadSignedAsync(release.Asset(assetName), cancellationToken);
+
+    /// <summary>
+    ///     Reads <paramref name="uri"/> and, when a public key is set, verifies it with <c>&lt;uri&gt;.sig</c>. A missing file is an integrity error.
+    /// </summary>
+    public async Task<byte[]> ReadSignedAsync(Uri uri, CancellationToken cancellationToken)
     {
-        var data = await ReadAsync(release.Asset(assetName), cancellationToken).ConfigureAwait(false);
+        var name = Uri.UnescapeDataString(uri.Segments[^1]);
+        var data = await ReadExistingAsync(uri, cancellationToken).ConfigureAwait(false);
         if (signature.IsRequired)
         {
-            var sig = await ReadAsync(release.Asset(assetName + ReleaseSignature.Extension), cancellationToken).ConfigureAwait(false);
-            signature.Verify(assetName, data, sig);
+            var sig = await ReadExistingAsync(new Uri(uri.AbsoluteUri + ReleaseSignature.Extension), cancellationToken).ConfigureAwait(false);
+            signature.Verify(name, data, sig);
         }
 
         return data;
@@ -52,8 +59,17 @@ public sealed class ReleaseReader(HttpClient http, ReleaseSignature signature, I
             return Convert.ToHexStringLower(await SHA256.HashDataAsync(written, cancellationToken).ConfigureAwait(false));
         }, cancellationToken);
 
-    private Task<byte[]> ReadAsync(Uri uri, CancellationToken cancellationToken) =>
-        RetryAsync(uri, () => http.GetByteArrayAsync(uri, cancellationToken), cancellationToken);
+    private async Task<byte[]> ReadExistingAsync(Uri uri, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await RetryAsync(uri, () => http.GetByteArrayAsync(uri, cancellationToken), cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            throw new UpdateIntegrityException($"{uri.GetLeftPart(UriPartial.Path)} does not exist.");
+        }
+    }
 
     private async Task<T> RetryAsync<T>(Uri uri, Func<Task<T>> operation, CancellationToken cancellationToken)
     {

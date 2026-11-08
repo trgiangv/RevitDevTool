@@ -5,13 +5,15 @@ using DevTools.Update.Apply;
 using DevTools.Update.Autodesk;
 using DevTools.Update.Engine;
 using DevTools.Update.Installations;
+using DevTools.Utilities;
 using System.Collections.ObjectModel;
 // ReSharper disable UnusedParameterInPartialMethod
 
 namespace DevTools.Daemon.Desktop.Updates;
 
 /// <summary>
-///     Updates tab of the main window. It shows the host selection (0047) and the update mode (0050).
+///     Updates tab of the main window. It shows the host selection with the add-in version per host version (0047),
+///     the Daemon version, and the update mode (0050).
 /// </summary>
 public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableObject
 {
@@ -39,6 +41,9 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
 
     [ObservableProperty]
     public partial string Status { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string Daemon { get; set; } = $"DevTools Daemon {AppVersion.Current}";
 
     private const string SelectPrompt = "Select the hosts, then select Install.";
 
@@ -116,6 +121,9 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
             row.IsSelected = option.Selected && row.CanSelect;
             Rows.Add(row);
         }
+
+        var latest = await engine.GetLatestDaemonAsync(CancellationToken.None).ConfigureAwait(true);
+        Daemon = latest is null ? $"DevTools Daemon {AppVersion.Current}" : $"DevTools Daemon {AppVersion.Current}, latest {latest}";
     }
 
     private bool IsIdle() => !IsBusy;
