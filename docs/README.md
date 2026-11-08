@@ -31,9 +31,8 @@ when deeper detail is needed.
 
 ### GitHub Pages
 
-CI workflow [`.github/workflows/Docs.yml`](../.github/workflows/Docs.yml) builds
-on PRs and deploys to GitHub Pages on push to `develop` / `main` (and
-`workflow_dispatch`).
+The `docs` job of [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) builds
+on PRs that touch `docs/**` and deploys to GitHub Pages on push to `develop`.
 
 One-time repo setting: **Settings → Pages → Source = GitHub Actions**.
 Site URL: https://trgiangv.github.io/RevitDevTool/

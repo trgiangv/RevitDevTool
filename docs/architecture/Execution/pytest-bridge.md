@@ -2,7 +2,7 @@
 
 Local pytest collects. The host runs tests over `DevTools_{Host}_{Version}_{PID}` (`BridgeMessage`). Not `DevToolsMcp_*`.
 
-Client plugin: sibling `RevitDevTool.PyTest`. How to write tests: `.agents/skills/revit-pytest/SKILL.md`.
+Client plugin: `source/RevitDevTool.PyTest`. How to write tests: `.agents/skills/revit-pytest/SKILL.md`.
 
 ## Files
 

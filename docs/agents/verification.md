@@ -36,8 +36,10 @@ Host API matrix (all years): `build-matrix.md`.
 | Execution tests | `dotnet run --project tests/DevTools.Execution.<Scope>.Tests/DevTools.Execution.<Scope>.Tests.csproj` (CSharp, FSharp, Python, IronPython, Pytest, Mcp, Services). Coverage: `-- --coverage --coverage-output-format cobertura --coverage-settings coverage.xml` |
 | MCP tests | `dotnet run --project tests/DevTools.Mcp.<Module>.Tests/DevTools.Mcp.<Module>.Tests.csproj` (Core, Catalog, Adapter, Client, Server) |
 | Python parser (this repo) | `scripts/test-pyserver.ps1` |
-| Installer / bundle | `dotnet run --project build -- pack` |
-| TestAdapter NuGet | `dotnet run --project build -- adapter` (writes `output/nuget` with the runner at `tools/runner/DevTools.TestRunner.exe`, deletes the extracted global-packages copy of that version). Runner changes need this pack; there is no runner-path override |
+| A train as CI runs it | `dotnet run --project build -- ci <daemon\|addin\|nettest\|pytest>` |
+| Add-in bundle / Daemon installer | `dotnet run --project build -- pack addin` / `pack daemon` |
+| TestAdapter NuGet | `dotnet run --project build -- pack nettest` (writes a `0.0.0-local.<stamp>` nupkg to `output/nettest` with the runner at `tools/runner/DevTools.TestRunner.exe`). Runner changes need this pack; there is no runner-path override |
+| Release check | `dotnet run --project build -- release <train> --dry-run`; steps in [release.md](release.md) |
 | TestAdapter consumer surface (net48 / net8 / net10 build + host-free discovery) | `scripts/test-adapter-matrix.ps1` |
 | Daemon publish | `dotnet publish source/DevTools.Daemon -c Release` |
 

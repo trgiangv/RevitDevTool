@@ -21,7 +21,7 @@ may include Tekla, Bentley, or other .NET-capable platforms.
 - .NET SDK `10.0.0` via `global.json`.
 - Autodesk configs `Debug|Release.Autodesk.2022`–`2027` (2022–2024 → net48;
   2025–2026 → net8.0-windows; 2027 → net10.0-windows).
-- Client pytest always via `uv run pytest` in sibling `RevitDevTool.PyTest`.
+- Client pytest lives in `source/RevitDevTool.PyTest`; live runs via `pixi run live` there.
 
 ## Related
 

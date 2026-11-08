@@ -53,10 +53,10 @@ Installer `build/Modules/*` does **not** pack or publish the test adapter.
 
 | Artifact | Ships | Command / workflow |
 |----------|--------|--------------------|
-| NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.{NUnit,TUnit,MSTest}.MTP.dll` + framework runtimes `DevTools.{NUnit,TUnit,MSTest}.Runtime.dll` with their manifests + `tools/runner/DevTools.TestRunner.exe` | `dotnet run --project build -- adapter` · `PublishTestAdapter.yml` |
-| Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers). No runner, no framework, and no framework runtime | `dotnet run --project build -- pack` · `build/Modules/*` · `PublishRelease.yml` |
+| NuGet `RevitDevTool.TestAdapter` | Adapter + private `build/runtime` closure + `DevTools.{NUnit,TUnit,MSTest}.MTP.dll` + framework runtimes `DevTools.{NUnit,TUnit,MSTest}.Runtime.dll` with their manifests + `tools/runner/DevTools.TestRunner.exe` | `dotnet run --project build -- pack nettest` · `release.yml` train `nettest` |
+| Host installer / bundle | Add-in, `Testing.Host` (NUnit + TUnit + MSTest providers). No runner, no framework, and no framework runtime | `dotnet run --project build -- pack addin` · `build/Modules/*` · `release.yml` train `addin` |
 
-- Bump `<Version>` in `DevTools.TestAdapter.csproj` before `PublishTestAdapter.yml`; `PackTestAdapterModule` passes it as `-p:Version` so every assembly in the package, the TestRunner included, carries it. Independent of installer GitVersion: compatibility with the product is the testing protocol range, not the package number ([0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)).
+- `<Version>` in `DevTools.TestAdapter.csproj` is the `nettest` train version ([0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md), [release.md](../../agents/release.md)); `PackTestAdapterModule` passes it as `-p:Version` so every assembly in the package, the TestRunner included, carries it. Local and CI packs use `0.0.0-local.*` / `0.0.0-ci.*`. Compatibility with the product is the testing protocol range, not the package number ([0055](../../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)).
 - `TestingProtocol` owns the range (`CurrentVersion`, `MinVersion`). `TestRunExecute` and `testing/hello` (both ways) carry `sender { version, protocol }`; the runner checks the adapter, the host checks the runner, the runner checks the host. A mismatch is one sentence that names the update. Bump the range by 0055 §3.
 - Only TestAdapter is packable. MTP, Runtime, Host, Abstractions, and Transport are `IsPackable=false`.
 - Changing Host needs an installer deploy. Changing the Runner, a framework runtime, testhost discovery, or launch options needs a TestAdapter pack and a restore + rebuild of the test project.
@@ -126,9 +126,9 @@ ships `build/RevitDevTool.TestAdapter.props|targets`, the net4x source shim
 
 In-repo samples are NuGet consumers, not a second MSBuild path. They
 `PackageReference` `RevitDevTool.TestAdapter`. Repo `NuGet.config` maps that id
-to `output/nuget`. `dotnet run --project build -- adapter` writes the nupkg there and
-deletes the extracted global-packages copy of the same version so restore
-cannot keep a previous extraction of the packed version. There is no
+to `output/nettest`. `dotnet run --project build -- pack nettest` writes a new
+`0.0.0-local.<stamp>` nupkg there each time; `samples/Directory.Packages.props`
+floats on `0.0.0-local.*` with `RestoreForce=true`, so the next restore takes it. There is no
 `Local.targets` / sibling-`bin` HintPath
 loop: discovery and run must go through the packed `build/runtime` layout.
 
@@ -154,7 +154,7 @@ off when a `PackageReference`/`GlobalPackageReference` named `Polyfill` or anoth
 In-repo samples `PackageReference` the local nupkg. NUnit/TUnit samples do not
 add `Microsoft.Testing.Platform` themselves; they get testhost generation from
 `RevitDevTool.TestAdapter` → `Microsoft.Testing.Platform.MSBuild`. Pack then
-restore: `dotnet run --project build -- adapter` then `dotnet restore` / `dotnet test`
+restore: `dotnet run --project build -- pack nettest` then `dotnet restore` / `dotnet test`
 on `samples/DevTools.*.SampleTests`. `scripts/test-adapter-matrix.ps1` packs
 first, then restore+build+`--list-tests` on net48 / net8 / net10.
 `PackageConsumerTests` still packs into an isolated feed. Both paths cover
@@ -173,7 +173,7 @@ forces `false` for the testhost), `AppendTargetFrameworkToOutputPath=false` unde
   CS0433 on net48.
 - Restore TestAdapter alone does not write `NUnit.MTP/obj/project.assets.json`
   (`NETSDK1004`).
-- Repo `NuGet.config` maps `RevitDevTool.TestAdapter` to `output/nuget` and `*`
+- Repo `NuGet.config` maps `RevitDevTool.TestAdapter` to `output/nettest` and `*`
   to nuget.org so CPM restore is not NU1507 on machines that also have a
   second feed, and samples cannot silently pick nuget.org for this id.
 - Pack runs per TestAdapter TFM in parallel. An inner MTP Restore inherits

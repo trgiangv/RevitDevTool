@@ -15,18 +15,20 @@ flowchart LR
     Host --> Report[Local report]
 ```
 
-From **RevitDevTool.PyTest** — `uv run pytest` only. Pipe is `DevTools_{Host}_{Version}_{PID}`, not `DevToolsMcp_*`.
+In this repo the package lives in `source/RevitDevTool.PyTest`; run its live suite with `pixi run live` from that folder (settings in `tests/live.ini`). In a consumer project, `uv run pytest`. Pipe is `DevTools_{Host}_{Version}_{PID}`, not `DevToolsMcp_*`.
 
 ```powershell
-cd c:\Users\truon\source\repos\RevitDevTool.PyTest
-uv run pytest -v
-uv run pytest tests/Revit/<file>.py::test_name -v
-uv run pytest --host-version=2025 -v
-uv run pytest --host autocad --host-version=2026 -v
-uv run pytest tests/Revit_Ipy -v --host-version=2025
+cd source/RevitDevTool.PyTest
+pixi run live -v
+pixi run live tests/Revit/<file>.py::test_name -v
+pixi run live --host-version=2025 -v
+pixi run live --host autocad --host-version=2026 -v
+pixi run live tests/Revit_Ipy -v --host-version=2025
 ```
 
 ## Config
+
+Consumer `pyproject.toml` (this repo's live suite uses the same keys in `tests/live.ini`):
 
 ```toml
 [tool.pytest.ini_options]
@@ -68,7 +70,7 @@ class ActiveViewTests(unittest.TestCase):
 |---------|-----|
 | Host API at module top | Inside the test / method |
 | `__revit__` in CPython with no fixture | `revit_uiapp` / `revit_doc` |
-| System Python / bare `pytest` | `uv run pytest` from PyTest repo |
+| System Python / bare `pytest` | `pixi run live` here, `uv run pytest` in a consumer project |
 | `force_launch` without version | Set `host_version` |
 | Connect `DevToolsMcp_*` | Pytest pipe is `DevTools_*` |
 | PEP 723 / fixtures on `test_*_ipy.py` | CPython only |

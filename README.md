@@ -97,6 +97,13 @@ dotnet build RevitDevTool.slnx -c "Debug.Autodesk.2025"
 
 Requires the .NET SDK pinned in `global.json`. Configurations run from `Debug.Autodesk.2022` to `Release.Autodesk.2027`. More: [Build From Source](https://trgiangv.github.io/RevitDevTool/docs/getting-started/Build-From-Source/).
 
+## Changelogs
+
+- [Daemon](source/DevTools.Daemon/CHANGELOG.md)
+- [Add-in](source/RevitDevTool/CHANGELOG.md)
+- [Test adapter (`RevitDevTool.TestAdapter`)](source/DevTools.TestAdapter/CHANGELOG.md)
+- [PyTest plugin](source/RevitDevTool.PyTest/CHANGELOG.md)
+
 ## Get help
 
 - [Documentation](https://trgiangv.github.io/RevitDevTool/)

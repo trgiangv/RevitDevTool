@@ -89,14 +89,17 @@ and `-Year` values it builds; leave other running versions untouched.
 
 | Artifact | Command |
 |----------|---------|
-| Release assets in `output/`: bundle zip, year zips, `update-manifest.json`, Velopack `RevitDevTool-Setup.exe` + nupkg + `releases.*.json` | `dotnet run --project build -- pack`. Plan: `docs/plans/active/2026-10-25-auto-update.md` |
-| TestAdapter NuGet | `dotnet run --project build -- adapter` |
+| Add-in payloads, `update-manifest.json`, bundle zip in `output/addin` | `dotnet run --project build -- pack addin` |
+| Velopack `RevitDevTool-Setup.exe` + nupkg + `releases.*.json` in `output/daemon` | `dotnet run --project build -- pack daemon` |
+| TestAdapter NuGet in `output/nettest` | `dotnet run --project build -- pack nettest` |
+| Compile + host-free tests of one train, as CI runs them | `dotnet run --project build -- ci <daemon\|addin\|nettest>` |
 
-Pack writes `output/nuget` (repo `NuGet.config` maps `RevitDevTool.TestAdapter`
-there) and deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
-so a consumer restore cannot pick up the previous extraction of the same version.
-Consumer-side proof (restore from that nupkg + `--list-tests` on net48 / net8 /
-net10) is in `docs/agents/host-testing.md`.
+`dotnet run --project build` with no target prints the targets and trains (ADR 0059 §10).
+Every pack is `0.0.0-local.<UTC stamp>`, so it never collides with a published or an
+earlier local package. The repo `NuGet.config` maps `RevitDevTool.TestAdapter` to
+`output/nettest`, and the samples float on `0.0.0-local.*`, so the next sample build
+restores the newest pack. Consumer-side proof (restore from that nupkg + `--list-tests`
+on net48 / net8 / net10) is in `docs/agents/host-testing.md`.
 
 ## When proof is enough
 

@@ -22,6 +22,9 @@ Standalone HandyControl WPF tray application that composes the external MCP serv
 | `--show-updates` | Velopack starts the Daemon again after an update that the user started (Check for updates, Update, Restart now). Opens the Updates tab. A scheduled update starts it again with `--background`. |
 
 The first run of an install with no host selection opens the Updates tab in all modes.
+The tab shows two versions, the Daemon and the add-in, each against the release that the
+signed `channels.json` names for the install's channel (stable or prerelease); the two
+update separately ([0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md) §7).
 
 Stdio and desktop processes are fully independent — no IPC between them. Both discover host pipes via their own `DiscoveryHostedService`.
 

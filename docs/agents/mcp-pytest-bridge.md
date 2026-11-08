@@ -21,12 +21,12 @@ Paths: `DevTools.Ipc`, `DevTools.Mcp.*`, `DevTools.Daemon`, `DevTools.Execution/
 
 - `tests/run` → `PytestRunner.py` (PEP 723 via the active provider — uv sidecar when the host owns CPython).
 - `ipytests/run` → `IpyTestDriver.py` (unittest, no pixi).
-- Contracts: `PytestContracts.cs` ↔ sibling `RevitDevTool.PyTest` `models.py`.
-- Versions ([0055](../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)): `instance/info` reports `productVersion` and `protocols.pytest { current, min }` (`PytestProtocol`); the client checks it after connecting. Each `tests/run` / `ipytests/run` carries `sender { version, protocol }`; the host rejects a missing or non-overlapping one with one sentence. Bump `PytestProtocol` and the client `PROTOCOL_*` together.
+- Client: `source/RevitDevTool.PyTest` (`pytest` train). Contracts: `PytestContracts.cs` ↔ `models.py`, held together by the golden fixtures in `source/RevitDevTool.PyTest/tests/golden/` (`GoldenWireTests` in C#, `test_golden.py` in Python); a wire change edits the fixtures and both sides in one PR. Known difference: a missing `engine` reads as `""` in C# and `None` in Python; the fixtures set it.
+- Versions ([0055](../decisions/0055-product-version-wire-contracts-and-satellite-compatibility.md)): `instance/info` reports `productVersion` and `protocols.pytest { current, min }` (`PytestProtocol`); the client checks it after connecting. Each `tests/run` / `ipytests/run` carries `sender { version, protocol }`; the host rejects a missing or non-overlapping one with one sentence. Bump `PytestProtocol` and `constants.py` `PROTOCOL_*` in the same PR.
 - Write/run tests: `.agents/skills/revit-pytest/SKILL.md`.
 
 ## Change checklist
 
 - MCP: `dotnet run --project tests/DevTools.Mcp.Server.Tests/DevTools.Mcp.Server.Tests.csproj`; parsers: `tests/DevTools.Mcp.Catalog.Tests` (build `samples/McpToolsetDemo` first, or tests Skip).
-- Pytest wire: sync contracts ↔ `models.py`; focused Execution tests (`PytestRunRequestParseTests`, `PytestProtocolTests`, `DevToolsPipeServerTests`, handlers).
+- Pytest wire: sync contracts ↔ `models.py` and the golden fixtures; `pixi run test` in `source/RevitDevTool.PyTest`; focused Execution tests (`GoldenWireTests`, `PytestRunRequestParseTests`, `PytestProtocolTests`, `DevToolsPipeServerTests`, handlers).
 - Remaining live/opt-in and Coverlet/testhost limits: `test-matrix.md` **Current gaps**. In-host `PytestRunner.py` is not headless CI.

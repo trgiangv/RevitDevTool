@@ -21,7 +21,7 @@ description: >
 - Logging: `StartupTrace` is pre-DI crash dump (`crash_{app}_{ver}_{pid}.log`); `FileLogProcessor` is rolling `log_*`. Do not mix prefixes. AutoClean must not delete `crash_*`.
 - MCP/IPC: keep wire contracts in sync (`BridgeMessage`, `PytestContracts`, MCP pipe names).
 - Pytest bridge: treat discover and run as separate flows; do not “fix” stale path gaps with unrelated edits.
-- Packaging is **two pipelines**. Installer/bundle (`dotnet run --project build -- pack`, `publish`, `PublishRelease.yml`) does not pack the adapter. Adapter nupkg is `dotnet run --project build -- adapter` (`PackTestAdapterModule`, no `DependsOn`, no PowerShell). nuget.org push stays `PublishTestAdapter.yml`. ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
+- Packaging is **one tool, four trains** (ADR 0059): `dotnet run --project build -- pack <daemon|addin|nettest>`. Each train declares its roots, version file, and tag in `build/Trains/Train.cs`; `.github/train-paths.yml` is generated from it (`build -- paths`). The adapter nupkg is `pack nettest` (`PackTestAdapterModule`, no compile dependency, no PowerShell). ILRepack + Polyfill policy is `docs/decisions/0019-ilrepack-and-polyfill-isolated-alc.md`.
 - TestAdapter pack/release constraints: `docs/architecture/Testing/README.md`. Do not add a TestAdapter → MTP `ProjectReference`. Host/Runtime/Runner ship in the installer, not the nupkg.
 - net48: rely on Polyfill + hook/multi-TFM compile; do not speculative-polyfill.
   `PolyArgumentExceptions` is on globally — prefer `ArgumentNullException.ThrowIfNull`
@@ -33,6 +33,6 @@ description: >
 - Before deploy, stop only the exact host year being tested, for example
   `scripts/build-host.ps1 -HostApp Revit -Year 2025` (it stops only that host year, then builds).
   Never stop all Revit versions.
-- Adapter pack/publish: `dotnet run --project build -- adapter`. Installer/bundle: `dotnet run --project build -- pack`.
+- Adapter pack: `dotnet run --project build -- pack nettest`. Add-in bundle: `pack addin`. Daemon installer: `pack daemon`.
 - Add a focused test when contracts/discovery/dispatch change; otherwise document host blockers.
 - Update the one matching doc layer (`docs/product/`, `docs/architecture/<Module>/`, `docs/agents/`, or `docs/decisions/`) — not multiple layers by default. Testing pack/release structure lives in `docs/architecture/Testing/`.

@@ -98,6 +98,6 @@ Use `AutoCad` / `autocad` for plain AutoCAD, and the product-specific value when
 | [pytest](/docs/testing/pytest) | CPython pytest setup, configuration, fixtures, PEP 723, `--host` table |
 | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) | Microsoft Testing Platform project setup, pinned framework packages, CLI and debugger |
 
-**Samples:** [RevitDevTool.PyTest](https://github.com/trgiangv/RevitDevTool.PyTest) (Python) · [DevTools.NUnit.SampleTests](https://github.com/trgiangv/RevitDevTool/tree/main/samples/DevTools.NUnit.SampleTests), [DevTools.TUnit.SampleTests](https://github.com/trgiangv/RevitDevTool/tree/main/samples/DevTools.TUnit.SampleTests), [DevTools.MSTest.SampleTests](https://github.com/trgiangv/RevitDevTool/tree/main/samples/DevTools.MSTest.SampleTests) (.NET)
+**Samples:** [RevitDevTool.PyTest](https://github.com/trgiangv/RevitDevTool/tree/develop/source/RevitDevTool.PyTest) (Python) · [DevTools.NUnit.SampleTests](https://github.com/trgiangv/RevitDevTool/tree/main/samples/DevTools.NUnit.SampleTests), [DevTools.TUnit.SampleTests](https://github.com/trgiangv/RevitDevTool/tree/main/samples/DevTools.TUnit.SampleTests), [DevTools.MSTest.SampleTests](https://github.com/trgiangv/RevitDevTool/tree/main/samples/DevTools.MSTest.SampleTests) (.NET)
 
 **Troubleshooting:** [Troubleshooting](/docs/getting-started/Troubleshooting) · bridge connection issues · [Known Limitations](/docs/getting-started/Known-Limitations) (IronPython split, sequential runs)

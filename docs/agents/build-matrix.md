@@ -31,9 +31,11 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 
 - Focused host compile and deploy: [`scripts/build-host.ps1`](#host-build-script).
 
-- Installer / bundle: `dotnet run --project build -- pack` (`build/Modules/*`, `PublishRelease.yml`).
-- TestAdapter NuGet: `dotnet run --project build -- adapter` runs `PackTestAdapterModule` (restore, pack; the csproj builds the MTP projects and framework runtimes and publishes the TestRunner into `tools/runner`). That module has no dependency on compile, GitVersion, Daemon, or the installer. nuget.org push stays `PublishTestAdapter.yml`. See `docs/architecture/Testing/README.md`.
-- Build pipeline with no args: `dotnet run --project build` compiles all release configurations + publishes DevTools.Daemon. The TestRunner ships only in the TestAdapter package.
+- `build/` takes `<target> <train>`; run `dotnet run --project build` for the list. Trains: `daemon`, `addin`, `nettest`, `pytest`. Releases: [release.md](release.md).
+- Add-in bundle: `dotnet run --project build -- pack addin` into `output/addin`.
+- Daemon: `dotnet run --project build -- pack daemon` into `output/daemon` (Velopack).
+- TestAdapter NuGet: `dotnet run --project build -- pack nettest` runs `PackTestAdapterModule` (restore, pack; the csproj builds the MTP projects and framework runtimes and publishes the TestRunner into `tools/runner`). See `docs/architecture/Testing/README.md`.
+- `ci <train>` compiles and runs the train's tests, as `ci.yml` does. The TestRunner ships only in the TestAdapter package.
 - Years stay sequential. Shared projects are solution-mapped to `Debug`/`Release`, so later years reuse `bin/<Debug|Release>/<tfm>`.
 - NUnit, TUnit, and MSTest host packaging builds those runtime projects with `Debug` or `Release`, not `*.Autodesk.YYYY`.
 - `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. The Daemon publishes after the base module (`BuildProjectReferences=false`, so it does not rebuild shared projects) and overlaps the expand module. Bundle creation still waits for every year and the publish.
@@ -65,8 +67,8 @@ dotnet publish source/DevTools.Daemon -c Release
 
 | Command | Daemon behavior |
 |---------|-----------------|
-| `dotnet run --project build` (no args) | `CompileDaemonModule` publishes + deploys to AppData Contents |
-| `dotnet run --project build -- pack` | Same + `CreateBundleModule` packs the bundle zip; `PackDaemonModule` publishes the Daemon self-contained and packs it with Velopack into `output/` |
+| `dotnet run --project build -- ci daemon` | `CompileTrainModule` builds the Daemon, then its tests run |
+| `dotnet run --project build -- pack daemon` | `PackDaemonModule` publishes the Daemon self-contained and packs it with Velopack into `output/daemon` |
 | `dotnet publish source/DevTools.Daemon -c Release` | Direct Daemon publish + deploy (csproj target) |
 
 ## DevTools.TestRunner

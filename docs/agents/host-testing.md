@@ -35,8 +35,8 @@ dotnet run --project tests/DevTools.NUnit.MTP.Tests/DevTools.NUnit.MTP.Tests.csp
 # TestRunner.Tests is MSTest.Sdk 4.4 (MTP testhost), not xunit
 dotnet run --project tests/DevTools.TestRunner.Tests/DevTools.TestRunner.Tests.csproj
 
-# 2. pack to output/nuget + drop stale global-packages extraction (default)
-dotnet run --project build -- adapter
+# 2. pack a 0.0.0-local.<stamp> nupkg to output/nettest (samples float on it)
+dotnet run --project build -- pack nettest
 
 # 3. package surface (restore from that nupkg + host-free discovery), net48 / net8 / net10
 scripts/test-adapter-matrix.ps1
@@ -48,14 +48,14 @@ dotnet test --project samples/DevTools.NUnit.SampleTests/DevTools.NUnit.SampleTe
 ```
 
 Host DLL changes: `scripts/build-host.ps1 -HostApp Revit -Year <year>`. Several hosts or years: `docs/agents/build-matrix.md` (Host build script). Adapter nupkg:
-`dotnet run --project build -- adapter`, also for a runner or framework runtime change, then
+`dotnet run --project build -- pack nettest`, also for a runner or framework runtime change, then
 rebuild the test project. The pack publishes `DevTools.TestRunner` into the package
 (`tools/runner`), and samples run that copy from the restored package; nothing is
 deployed to the bundle `Contents` or the Velopack folder. A runner build is tried only
 through this pack; there is no runner-path override. Installer pack is
-`dotnet run --project build -- pack`. The adapter pack
-deletes `%USERPROFILE%\.nuget\packages\revitdevtool.testadapter\<version>`
-so the next sample restore cannot keep a previous extraction of the packed version.
+`dotnet run --project build -- pack addin`. Each adapter pack has a new
+`0.0.0-local.<stamp>` version and samples restore with `RestoreForce=true`, so no
+stale extraction is reused.
 
 ## Rules
 
@@ -73,7 +73,7 @@ so the next sample restore cannot keep a previous extraction of the packed versi
   existing type (see `docs/product/tunit-host-testing.md`).
 - The packaged `build/*.props|targets` must not read `$(Configuration)`, repo paths, or
   `ProjectReference`. In-repo samples restore `RevitDevTool.TestAdapter` from
-  `output/nuget` (same nupkg an end user gets). There is no checkout-only
+  `output/nettest` (same nupkg an end user gets). There is no checkout-only
   `Local.targets` path.
 - `--filter` is the method-name option (NUnit `<name re="1">` regex). `--filter-uid` is
   the TestNode uid (`ITest.FullName`; `TestName`/`SetName` is `Class.Method("DisplayName")`).
