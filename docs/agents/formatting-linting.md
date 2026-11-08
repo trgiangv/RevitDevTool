@@ -8,7 +8,7 @@ Enum members are exempt. Vendored code is excluded from the rule: `libs/.editorc
 
 ## Solution-wide runs
 
-The hooks format only changed files. When running the tools by hand across the solution, exclude vendored code:
+`scripts/format-lint.ps1` formats only changed files. When running the tools by hand across the solution, exclude vendored code:
 
 ```powershell
 dotnet format whitespace RevitDevTool.slnx --verify-no-changes --exclude libs/ --no-restore
@@ -23,19 +23,18 @@ To format files when saving, open **Settings | Tools | Actions on Save**, enable
 
 For diagnostics, use Rider's inspections and the .NET SDK code analyzers during MSBuild. `Directory.Build.props` enables the SDK analyzers at analysis level 10.0 in Default mode, including for `net48`, and enforces configured code-style rules during build. Keep `.editorconfig` as the source of formatting, naming, and analyzer severity rules.
 
-## Codex and Claude Code
+## Agents
 
-The repo hooks run `scripts/format-lint-hook.ps1` after each successful edit/write. It handles only changed `.cs` and `.xaml` files under `source/`, `tests/`, and `build/` (never `bin`/`obj`). C# files get `dotnet format whitespace` and `dotnet format style` (warning severity and above) on the nearest project, then a `--verify-no-changes` style pass; anything left that the formatter cannot fix, such as an `IDE1006` naming violation, makes the hook exit 2 so the agent receives the diagnostics. XAML files use the pinned local XamlStyler tool. The hook does not build; compile proof stays with `.agents/skills/build/SKILL.md`.
-
-Style rules without a severity in `.editorconfig` (for example `dotnet_style_qualification_for_field = false`) are silent, so the hook neither fixes nor reports them.
-
-The script can also be run manually; without `-Paths` it reads the hook event JSON from standard input:
+Agents run `scripts/format-lint.ps1` once, after the task's edits are finished. There is no per-edit hook: `dotnet format` reloads the project on every call, so formatting after each edit cost about 25 s per C# edit, while one run at the end covers all of them.
 
 ```powershell
-pwsh -File scripts/format-lint-hook.ps1 -Paths source/DevTools.Utilities/SomeFile.cs
-pwsh -File scripts/format-lint-hook.ps1 -All
+pwsh -File scripts/format-lint.ps1
+pwsh -File scripts/format-lint.ps1 -Paths source/DevTools.Utilities/SomeFile.cs
+pwsh -File scripts/format-lint.ps1 -All
 ```
 
-`-All` formats every `.cs`/`.xaml` under the four folders through `RevitDevTool.slnx` (about 7 minutes). Host projects (`UseRevit`/`UseAutoCad`) only load under an Autodesk configuration and some net48 test projects only load under the default one, so it restores and formats twice: `Debug.Autodesk.2025`, then the default configuration (this leaves `obj/` restored for normal builds). For a single host-project file the hook also uses `Debug.Autodesk.2025` and restores first, so it takes longer (about 40 s).
+Without arguments it takes the changed and untracked `.cs` and `.xaml` files from `git status` under `source/`, `tests/`, and `build/` (never `bin`/`obj`). C# files are grouped by their nearest project; each project gets one `dotnet format whitespace`, one `dotnet format style` (warning severity and above), and one `--verify-no-changes` style pass. Anything the formatter cannot fix, such as an `IDE1006` naming violation, is listed and the script exits 1. XAML files use the pinned local XamlStyler tool. The script does not build; compile proof stays with `.agents/skills/build/SKILL.md`.
 
-Both hooks find the script relative to this repository. Codex may ask to trust the repo-local hook configuration before executing it; review the command in `/hooks` when prompted.
+Style rules without a severity in `.editorconfig` (for example `dotnet_style_qualification_for_field = false`) are silent, so the script neither fixes nor reports them.
+
+Host projects (`UseRevit`/`UseAutoCad`) load only under an Autodesk configuration, so their files are formatted under `Debug.Autodesk.2025` after a restore, which is slower. `-All` formats every `.cs`/`.xaml` under those folders through `RevitDevTool.slnx` (about 7 minutes): some net48 test projects load only under the default configuration, so it restores and formats twice, `Debug.Autodesk.2025` then the default (this leaves `obj/` restored for normal builds).
