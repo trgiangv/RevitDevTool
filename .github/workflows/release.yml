@@ -20,7 +20,7 @@ concurrency:
 jobs:
   validate:
     if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/release/')
-    runs-on: windows-2025
+    runs-on: windows-latest
     permissions:
       contents: read
     outputs:
@@ -32,14 +32,14 @@ jobs:
       PRODUCT: ${{ inputs.product }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           submodules: recursive
           persist-credentials: false
 
       - name: Cache packages
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props', 'dotnet-tools.json') }}
@@ -53,21 +53,21 @@ jobs:
 
   build:
     needs: validate
-    runs-on: windows-2025
+    runs-on: windows-latest
     permissions:
       contents: read
     env:
       PRODUCT: ${{ inputs.product }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           submodules: recursive
           persist-credentials: false
 
       - name: Cache packages
-        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props', 'dotnet-tools.json') }}
@@ -86,7 +86,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload release artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-${{ inputs.product }}
           path: |
@@ -102,7 +102,7 @@ jobs:
 
       - name: Upload diagnostics
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: diagnostics-release-${{ inputs.product }}
           path: |
@@ -115,7 +115,7 @@ jobs:
   publish:
     needs: [validate, build]
     if: inputs.product != 'pytest'
-    runs-on: windows-2025
+    runs-on: windows-latest
     environment: ${{ inputs.product }}
     permissions:
       contents: write
@@ -125,7 +125,7 @@ jobs:
       PRODUCT: ${{ inputs.product }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           submodules: recursive
@@ -164,7 +164,7 @@ jobs:
   channels:
     needs: [validate, publish]
     if: inputs.product == 'daemon' || inputs.product == 'addin'
-    runs-on: windows-2025
+    runs-on: windows-latest
     environment: ${{ inputs.product }}
     concurrency:
       group: channels
@@ -176,7 +176,7 @@ jobs:
       VERSION: ${{ needs.validate.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           submodules: recursive
           persist-credentials: false
@@ -191,7 +191,7 @@ jobs:
 
   verify-install:
     needs: [validate, channels]
-    runs-on: windows-2025
+    runs-on: windows-latest
     timeout-minutes: 30
     permissions:
       contents: read

@@ -78,7 +78,7 @@ public sealed record ReleasePlan(ProductVersion Version, string Notes, IReadOnly
 
         var paths = ProductPaths.Compute(root, version.Product);
         var contracts = Git.Lines(root, "diff", "--name-only", version.PreviousTag, "HEAD")
-            .Where(path => PathGlob.IsMatchAny(paths, path) && File.Exists(Path.Combine(root, path)))
+            .Where(path => ProductPaths.Matches(paths, path) && File.Exists(Path.Combine(root, path)))
             .Where(path => ReleaseRules.IsContract(path, File.ReadAllText(Path.Combine(root, path))))
             .ToArray();
 

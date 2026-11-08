@@ -25,13 +25,13 @@ public sealed class ProductPathsTests
     {
         CollectionAssert.AreEqual(
             new[] { "source/App/App.csproj", "source/Core/Core.csproj", "source/Lib/Lib.csproj" },
-            ProductPaths.Closure(_root, ["source/App/App.csproj"]).ToArray());
+            ProjectGraph.Closure(_root, ["source/App/App.csproj"]).ToArray());
     }
 
     [TestMethod]
     public void Tests_follow_the_closure()
     {
-        CollectionAssert.AreEqual(new[] { "tests/Lib.Tests/Lib.Tests.csproj" }, ProductPaths.TestProjects(_root, Fixture).ToArray());
+        CollectionAssert.AreEqual(new[] { "tests/Lib.Tests/Lib.Tests.csproj" }, ProjectGraph.TestProjects(_root, Fixture).ToArray());
     }
 
     [TestMethod]
@@ -51,7 +51,7 @@ public sealed class ProductPathsTests
     {
         Project("source/Broken/Broken.csproj", @"..\Gone\Gone.csproj");
 
-        var error = Assert.ThrowsExactly<InvalidOperationException>(() => ProductPaths.Closure(_root, ["source/Broken/Broken.csproj"]));
+        var error = Assert.ThrowsExactly<InvalidOperationException>(() => ProjectGraph.Closure(_root, ["source/Broken/Broken.csproj"]));
         Assert.Contains("source/Gone/Gone.csproj is missing", error.Message);
     }
 
@@ -80,7 +80,7 @@ public sealed class ProductPathsTests
     [DataRow("props/AddinVersion.props", "props/AddinVersion.props.bak", false)]
     public void Glob_matches_like_paths_filter(string pattern, string path, bool match)
     {
-        Assert.AreEqual(match, PathGlob.IsMatch(pattern, path));
+        Assert.AreEqual(match, ProductPaths.Matches([pattern], path));
     }
 
     private Product Fixture => Product.Daemon with

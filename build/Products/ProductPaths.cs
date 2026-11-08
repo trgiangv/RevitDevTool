@@ -1,13 +1,17 @@
 using System.Text;
-using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace Build.Products;
 
+/// <summary>
+///     The paths that belong to a product: its version file, changelog, extra paths, the folders of its project closure and its
+///     tests, and the shared .NET inputs. <c>ci.yml</c> reads them from <see cref="FilterFile"/>; bump and contract checks match them.
+/// </summary>
 public static class ProductPaths
 {
     public const string FilterFile = ".github/product-paths.yml";
 
-    public static IReadOnlyList<string> DotNetInputs { get; } =
+    private static readonly string[] DotNetInputs =
     [
         ".editorconfig",
         "Directory.Build.props",
@@ -23,7 +27,7 @@ public static class ProductPaths
         FilterFile
     ];
 
-    public static IReadOnlyList<(string Key, string[] Paths)> OtherFilters { get; } =
+    private static readonly (string Key, string[] Paths)[] OtherFilters =
     [
         ("docs", ["docs/**"]),
         ("workflows", [".github/**"])
@@ -33,135 +37,44 @@ public static class ProductPaths
     {
         var paths = new SortedSet<string>(StringComparer.Ordinal) { product.VersionFile, product.Changelog };
         paths.UnionWith(product.ExtraPaths);
-        if (!product.IsDotNet) return WithoutCovered(paths);
-
-        var closure = Closure(root, product.Roots);
-        var projects = new HashSet<string>(closure, StringComparer.Ordinal);
-        foreach (var test in TestProjects(root, closure))
+        if (product.IsDotNet)
         {
-            projects.UnionWith(Closure(root, [test]).Where(project => project.StartsWith("tests/", StringComparison.Ordinal)));
+            var closure = ProjectGraph.Closure(root, product.Roots);
+            var tests = ProjectGraph.TestProjects(root, closure)
+                .SelectMany(test => ProjectGraph.Closure(root, [test]))
+                .Where(project => project.StartsWith("tests/", StringComparison.Ordinal));
+            paths.UnionWith(closure.Concat(tests).Select(project => project[..project.LastIndexOf('/')] + "/**"));
+            paths.UnionWith(DotNetInputs);
         }
 
-        paths.UnionWith(projects.Select(project => Folder(project) + "/**"));
-        paths.UnionWith(DotNetInputs);
-        return WithoutCovered(paths);
+        var folders = paths.Where(path => path.EndsWith("/**", StringComparison.Ordinal)).Select(path => path[..^2]).ToArray();
+        return paths.Where(path => !folders.Any(folder => path.StartsWith(folder, StringComparison.Ordinal) && path != folder + "**")).ToArray();
     }
 
-    private static string[] WithoutCovered(IEnumerable<string> paths)
-    {
-        var all = paths.ToArray();
-        var folders = all.Where(path => path.EndsWith("/**", StringComparison.Ordinal)).Select(path => path[..^2]).ToArray();
-        return all.Where(path => !folders.Any(folder => path.StartsWith(folder, StringComparison.Ordinal) && path != folder + "**")).ToArray();
-    }
-
-    public static IReadOnlyList<string> TestProjects(string root, Product product) => TestProjects(root, Closure(root, product.Roots));
-
-    public static IReadOnlyList<string> Closure(string root, IEnumerable<string> projects)
-    {
-        var seen = new SortedSet<string>(StringComparer.Ordinal);
-        var pending = new Stack<string>(projects.Select(Normalize));
-        while (pending.Count > 0)
-        {
-            var project = pending.Pop();
-            if (!seen.Add(project)) continue;
-
-            var path = Path.Combine(root, project);
-            if (!File.Exists(path)) throw new InvalidOperationException($"{project} is missing; fix the product roots or the ProjectReference that names it.");
-
-            foreach (var reference in References(path))
-            {
-                pending.Push(Canonical(root, Path.GetFullPath(Path.Combine(Path.GetDirectoryName(path)!, reference))));
-            }
-        }
-
-        return seen.ToArray();
-    }
-
-    public static bool NeedsHostYear(string root, string project) =>
-        Closure(root, [project]).Any(item => XDocument.Load(Path.Combine(root, item))
-            .Descendants()
-            .Any(element => element.Name.LocalName is "UseRevit" or "UseAutoCad" && element.Value.Trim() == "true"));
-
-    public static IReadOnlyList<string> TargetFrameworks(string root, string project) =>
-        XDocument.Load(Path.Combine(root, project))
-            .Descendants()
-            .Where(element => element.Name.LocalName is "TargetFramework" or "TargetFrameworks")
-            .Select(element => element.Value)
-            .FirstOrDefault(value => !string.IsNullOrWhiteSpace(value))?
-            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-        ?? throw new InvalidOperationException($"{project} declares no TargetFramework; add one.");
+    public static bool Matches(IEnumerable<string> patterns, string path) =>
+        patterns.Any(pattern => Regex.IsMatch(path, "^" + Regex.Escape(pattern)
+            .Replace(@"\*\*", "\u0001", StringComparison.Ordinal)
+            .Replace(@"\*", "[^/]*", StringComparison.Ordinal)
+            .Replace("\u0001", ".*", StringComparison.Ordinal) + "$"));
 
     public static string Render(string root)
     {
-        var builder = new StringBuilder();
-        builder.Append("# Generated by `dotnet run --project build -- paths`. Do not edit.\n");
-        foreach (var product in Product.All)
+        var builder = new StringBuilder("# Generated by `dotnet run --project build -- paths`. Do not edit.\n");
+        var filters = Product.All.Select(product => (product.Name, Compute(root, product))).Concat(OtherFilters.Select(filter => (filter.Key, (IReadOnlyList<string>)filter.Paths)));
+        foreach (var (key, paths) in filters)
         {
-            Append(builder, product.Name, Compute(root, product));
-        }
-
-        foreach (var (key, paths) in OtherFilters)
-        {
-            Append(builder, key, paths);
+            builder.Append(key).Append(":\n");
+            foreach (var path in paths) builder.Append("  - '").Append(path).Append("'\n");
         }
 
         return builder.ToString();
     }
 
-    public static bool IsCurrent(string root) =>
-        File.Exists(Path.Combine(root, FilterFile)) &&
-        File.ReadAllText(Path.Combine(root, FilterFile)).ReplaceLineEndings("\n") == Render(root);
+    public static bool IsCurrent(string root)
+    {
+        var path = Path.Combine(root, FilterFile);
+        return File.Exists(path) && File.ReadAllText(path).ReplaceLineEndings("\n") == Render(root);
+    }
 
     public static void Write(string root) => File.WriteAllText(Path.Combine(root, FilterFile), Render(root));
-
-    private static IReadOnlyList<string> TestProjects(string root, IReadOnlyCollection<string> closure)
-    {
-        var tests = Path.Combine(root, "tests");
-        if (!Directory.Exists(tests)) return [];
-
-        return Directory.GetDirectories(tests)
-            .Select(folder => Path.Combine(folder, Path.GetFileName(folder) + ".csproj"))
-            .Where(project => File.Exists(project) && Path.GetFileNameWithoutExtension(project).EndsWith(".Tests", StringComparison.Ordinal))
-            .Select(project => Normalize(Path.GetRelativePath(root, project)))
-            .Where(project => References(Path.Combine(root, project))
-                .Select(reference => Canonical(root, Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Path.Combine(root, project))!, reference))))
-                .Any(reference => closure.Contains(reference) || reference.StartsWith("build/", StringComparison.Ordinal)))
-            .Order(StringComparer.Ordinal)
-            .ToArray();
-    }
-
-    private static IEnumerable<string> References(string project) =>
-        XDocument.Load(project)
-            .Descendants()
-            .Where(element => element.Name.LocalName == "ProjectReference")
-            .Select(element => element.Attribute("Include")?.Value)
-            .OfType<string>()
-            .Select(include => include.Replace('\\', Path.DirectorySeparatorChar));
-
-    private static string Canonical(string root, string full)
-    {
-        var current = Path.GetFullPath(root);
-        foreach (var part in Path.GetRelativePath(current, full).Split(Path.DirectorySeparatorChar))
-        {
-            var entry = Directory.Exists(current)
-                ? Directory.EnumerateFileSystemEntries(current).FirstOrDefault(item => string.Equals(Path.GetFileName(item), part, StringComparison.OrdinalIgnoreCase))
-                : null;
-            current = entry ?? Path.Combine(current, part);
-        }
-
-        return Normalize(Path.GetRelativePath(root, current));
-    }
-
-    private static string Folder(string project) => Path.GetDirectoryName(project)!.Replace('\\', '/');
-
-    private static string Normalize(string path) => path.Replace('\\', '/');
-
-    private static void Append(StringBuilder builder, string key, IEnumerable<string> paths)
-    {
-        builder.Append(key).Append(":\n");
-        foreach (var path in paths)
-        {
-            builder.Append("  - '").Append(path).Append("'\n");
-        }
-    }
 }

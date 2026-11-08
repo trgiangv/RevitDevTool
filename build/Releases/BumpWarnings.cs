@@ -22,7 +22,7 @@ public static class BumpWarnings
         var previous = ProductVersion.PickPrevious(product, tags);
 
         var warnings = new List<string>();
-        if (changed.Any(path => PathGlob.IsMatchAny(paths, path)) && !changed.Contains(product.VersionFile, StringComparer.Ordinal))
+        if (changed.Any(path => ProductPaths.Matches(paths, path)) && !changed.Contains(product.VersionFile, StringComparer.Ordinal))
         {
             warnings.Add($"Product {product.Name} changed but {product.VersionFile} did not; bump it before the next {product.Name} release.");
         }
@@ -44,7 +44,7 @@ public static class BumpWarnings
     }
 
     public static IEnumerable<Commit> Touching(IEnumerable<Commit> commits, IReadOnlyList<string> paths) =>
-        commits.Where(commit => commit.Files.Any(file => PathGlob.IsMatchAny(paths, file)));
+        commits.Where(commit => commit.Files.Any(file => ProductPaths.Matches(paths, file)));
 
     public static IReadOnlyList<Commit> Parse(string log) =>
         log.Split('\u001e', StringSplitOptions.RemoveEmptyEntries)
