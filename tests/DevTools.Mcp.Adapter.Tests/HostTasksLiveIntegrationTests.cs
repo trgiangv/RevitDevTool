@@ -67,11 +67,27 @@ public sealed class HostTasksLiveIntegrationTests
         foreach (var pipe in Directory.GetFiles(@"\\.\pipe\"))
         {
             var name = Path.GetFileName(pipe);
-            if (name.StartsWith("DevToolsMcp_Revit_", StringComparison.OrdinalIgnoreCase))
+            if (name.StartsWith("DevToolsMcp_Revit_", StringComparison.OrdinalIgnoreCase) && IsRevitProcess(name))
                 return name;
         }
 
         return null;
+    }
+
+    private static bool IsRevitProcess(string pipeName)
+    {
+        if (!int.TryParse(pipeName.Substring(pipeName.LastIndexOf('_') + 1), out var pid))
+            return false;
+
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById(pid);
+            return string.Equals(process.ProcessName, "Revit", StringComparison.OrdinalIgnoreCase);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     private static string Text(CallToolResult result) =>

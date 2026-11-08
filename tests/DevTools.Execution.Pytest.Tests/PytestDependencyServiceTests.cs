@@ -17,13 +17,17 @@ public sealed class PytestDependencyServiceTests
     [TestMethod]
     public async Task PrepareRunAsync_InitializesPythonWhenNeeded()
     {
-        var service = new PytestDependencyService(ExecutionTestHelpers.CreatePythonInitializer());
+        var initializer = ExecutionTestHelpers.CreatePythonInitializer();
+        var service = new PytestDependencyService(initializer);
         var workspace = ExecutionTestHelpers.CreateTempDirectory("pytest-deps-init");
         try
         {
             var request = new PytestRunRequest(workspace, workspace, ["tests/sample.py::test_x"], []);
 
             await service.PrepareRunAsync(request, TestContext.CancellationToken);
+
+            Assert.IsTrue(initializer.IsInitialized);
+            Assert.IsNotNull(initializer.Provider);
         }
         finally
         {

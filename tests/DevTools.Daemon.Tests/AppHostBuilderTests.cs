@@ -2,6 +2,7 @@ using DevTools.Daemon.Mcp.Hosting;
 using DevTools.Daemon.Mcp.Processes;
 using DevTools.FileMetadata.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
@@ -76,6 +77,19 @@ public sealed class AppHostBuilderTests
         await cts.CancelAsync();
         try { await serverTask; } catch { /* ignored */ }
         await host.StopAsync(TestContext.CancellationToken);
+    }
+
+    [TestMethod]
+    public async Task Stdio_stops_when_input_ends()
+    {
+        using var host = AppHostBuilder.CreateStdioHostForTests();
+        var lifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+        using var service = ActivatorUtilities.CreateInstance<StdioHostedService>(host.Services, Stream.Null);
+
+        await service.StartAsync(TestContext.CancellationToken);
+        await service.ExecuteTask!.WaitAsync(TimeSpan.FromSeconds(10), TestContext.CancellationToken);
+
+        Assert.IsTrue(lifetime.ApplicationStopping.IsCancellationRequested);
     }
 
     [TestMethod]

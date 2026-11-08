@@ -57,6 +57,7 @@ public sealed class NamedPipeIntegrationTests
         Assert.AreNotEqual(true, result.IsError);
         Assert.Contains("pong", result.Content.OfType<TextContentBlock>().Select(block => block.Text));
 
+        clientPipe.Dispose();
         await client.DisposeAsync();
         await cts.CancelAsync();
         try { await serverTask; } catch { /* ignored */ }
@@ -132,6 +133,7 @@ public sealed class NamedPipeIntegrationTests
 
         await notificationReceived.Task.WaitAsync(TimeSpan.FromSeconds(5), cts.Token);
 
+        clientPipe.Dispose();
         await client.DisposeAsync();
         await cts.CancelAsync();
         try { await serverTask; } catch { /* ignored */ }

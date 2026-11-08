@@ -59,12 +59,17 @@ public sealed class AuthBrowserTests
     }
 
     [TestMethod]
-    public async Task InvokeAsync_InvalidPrefix_ReturnsUnknownError()
+    public async Task InvokeAsync_PortInUse_ReturnsUnknownError()
     {
-        var browser = new AuthBrowser(new AuthOptions { LoopbackPort = 1 }, static _ => { });
-        var result = await browser.InvokeAsync(
-            new BrowserOptions("about:blank", "http://127.0.0.1:1/callback"),
-            TestContext.CancellationToken);
+        var options = new AuthOptions { LoopbackPort = GetFreePort() };
+        using var holder = new System.Net.HttpListener();
+        holder.Prefixes.Add(options.UriPrefix);
+        holder.Start();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(5));
+
+        var browser = new AuthBrowser(options, static _ => { });
+        var result = await browser.InvokeAsync(new BrowserOptions("about:blank", options.RedirectUri), cts.Token);
 
         Assert.AreEqual(BrowserResultType.UnknownError, result.ResultType);
         Assert.IsFalse(string.IsNullOrWhiteSpace(result.Error));

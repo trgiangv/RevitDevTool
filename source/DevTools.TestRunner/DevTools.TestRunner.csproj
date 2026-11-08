@@ -44,8 +44,8 @@
         <ProjectReference Include="..\DevTools.Testing.Transport\DevTools.Testing.Transport.csproj" SetTargetFramework="TargetFramework=$(TestRunnerTargetFramework)"/>
         <ProjectReference Include="..\DevTools.Ipc\DevTools.Ipc.csproj" SetTargetFramework="TargetFramework=$(TestRunnerTargetFramework)"/>
         <ProjectReference Include="..\DevTools.Hosting\DevTools.Hosting.csproj" SetTargetFramework="TargetFramework=$(TestRunnerTargetFramework)"/>
-        <ProjectReference Include="..\DevTools.Hosting.Revit\DevTools.Hosting.Revit.csproj" SetTargetFramework="TargetFramework=$(TestRunnerTargetFramework)"/>
-        <ProjectReference Include="..\DevTools.Hosting.Acad\DevTools.Hosting.Acad.csproj" SetTargetFramework="TargetFramework=$(TestRunnerTargetFramework)"/>
+        <ProjectReference Include="..\DevTools.Hosting.Revit\DevTools.Hosting.Revit.csproj"/>
+        <ProjectReference Include="..\DevTools.Hosting.Acad\DevTools.Hosting.Acad.csproj"/>
     </ItemGroup>
 
     <ItemGroup>

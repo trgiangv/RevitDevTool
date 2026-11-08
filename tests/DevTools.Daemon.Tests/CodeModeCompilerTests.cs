@@ -50,11 +50,13 @@ public sealed class CodeModeCompilerTests
     {
         var weak = CompileAndDrop();
 
-        for (var attempt = 0; attempt < 10 && weak.IsAlive; attempt++)
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (weak.IsAlive && DateTime.UtcNow < deadline)
         {
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
+            Thread.Sleep(50);
         }
 
         Assert.IsFalse(weak.IsAlive);

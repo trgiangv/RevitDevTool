@@ -12,10 +12,39 @@ public sealed class NetworkServiceTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public void Configure_SetsUserAgentForHost()
+    public async Task Configure_SetsUserAgentForHost()
     {
-        NetworkService.Configure(HostApp.Revit);
-        NetworkService.Configure(HostApp.AutoCad);
+        var port = GetFreeTcpPort();
+        using var listener = new HttpListener();
+        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+        listener.Start();
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        _ = Task.Run(async () =>
+        {
+            while (listener.IsListening && !cts.Token.IsCancellationRequested)
+            {
+                var context = await listener.GetContextAsync().WaitAsync(cts.Token);
+                var bytes = Encoding.UTF8.GetBytes(context.Request.UserAgent ?? string.Empty);
+                context.Response.ContentLength64 = bytes.Length;
+                await context.Response.OutputStream.WriteAsync(bytes, cts.Token);
+                context.Response.Close();
+            }
+        }, cts.Token);
+
+        try
+        {
+            NetworkService.Configure(HostApp.Revit);
+            NetworkService.Configure(HostApp.AutoCad);
+            var userAgent = await NetworkService.GetStringAsync($"http://127.0.0.1:{port}/ua", TestContext.CancellationToken);
+            Assert.AreEqual($"DevTools/{HostApp.AutoCad}", userAgent);
+        }
+        finally
+        {
+            listener.Stop();
+            listener.Close();
+            cts.Cancel();
+        }
     }
 
     [TestMethod]

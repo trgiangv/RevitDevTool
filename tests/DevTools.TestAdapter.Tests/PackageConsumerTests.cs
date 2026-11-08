@@ -563,10 +563,22 @@ public sealed class PackageConsumerTests
         }
     }
 
+    private static readonly string PackedFolder = Path.Combine(Path.GetTempPath(), "RevitDevTool.TestAdapter.Pack", Guid.NewGuid().ToString("N"));
+    private static string? _packedNupkg;
+
+    [ClassCleanup]
+    public static void DeletePackedAdapter() => TryDeleteDirectory(PackedFolder);
+
     private static (string Nupkg, string Version) PackAdapter(string root, string packages)
     {
-        Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{packages}\"");
-        var nupkg = Directory.GetFiles(packages, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
+        if (_packedNupkg is null)
+        {
+            Run("dotnet", $"pack \"{Path.Combine(root, "source", "DevTools.TestAdapter", "DevTools.TestAdapter.csproj")}\" -c Release -o \"{PackedFolder}\"");
+            _packedNupkg = Directory.GetFiles(PackedFolder, "RevitDevTool.TestAdapter.*.nupkg", SearchOption.TopDirectoryOnly).Single();
+        }
+
+        var nupkg = Path.Combine(packages, Path.GetFileName(_packedNupkg));
+        File.Copy(_packedNupkg, nupkg, overwrite: true);
         return (nupkg, Path.GetFileNameWithoutExtension(nupkg)["RevitDevTool.TestAdapter.".Length..]);
     }
 

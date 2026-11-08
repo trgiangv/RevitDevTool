@@ -33,7 +33,8 @@ public sealed class DevToolsPipeServerDisconnectTests
         clientPipe.Dispose();
 
         await Task.Delay(500, cts.Token);
-        await server.StopAsync(cts.Token);
+        var stop = server.StopAsync(cts.Token);
+        Assert.AreSame(stop, await Task.WhenAny(stop, Task.Delay(TimeSpan.FromSeconds(5), cts.Token)));
     }
 
     private sealed class StubHostAppInfo(string version) : IHostAppInfo

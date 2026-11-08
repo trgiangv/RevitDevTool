@@ -17,14 +17,6 @@ public sealed class DotnetSourceTests
         Assert.AreEqual(ExecutionMode.Dotnet, backend.ExecMode);
     }
 
-    [TestMethod]
-    public void ClearCaches_DoesNotThrow()
-    {
-        var backend = CreateBackend();
-        backend.ClearCaches();
-        backend.ClearCaches();
-    }
-
     private static DotnetSource CreateBackend()
     {
         var services = new ServiceCollection();

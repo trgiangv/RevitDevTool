@@ -764,7 +764,7 @@
             <BuildType Solution="Release.Autodesk.2027|*" Project="Release" />
             <Build Project="false" />
         </Project>
-        <Project Path="Tests/DevTools.Telemetry.Tests/DevTools.Telemetry.Tests.csproj">
+        <Project Path="tests/DevTools.Telemetry.Tests/DevTools.Telemetry.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2024|*" Project="Debug" />

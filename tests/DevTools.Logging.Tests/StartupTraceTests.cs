@@ -63,5 +63,8 @@ public sealed class StartupTraceTests : IDisposable
         File.WriteAllText(blocked, "x");
         using var trace = StartupTrace.Begin("Revit", "26.0", 1, blocked);
         trace.Fail(new InvalidOperationException("x"));
+
+        Assert.HasCount(1, Directory.GetFiles(_dir));
+        Assert.AreEqual("x", File.ReadAllText(blocked));
     }
 }

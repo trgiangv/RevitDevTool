@@ -16,7 +16,7 @@ public sealed class StartupDialogResolverIntegrationTests
             buttonText: "OK");
 
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
-        cts.CancelAfter(TimeSpan.FromSeconds(3));
+        cts.CancelAfter(TimeSpan.FromSeconds(1));
 
         var result = await StartupDialogResolver.RunAsync(
             Process.GetCurrentProcess().Id,
@@ -28,7 +28,7 @@ public sealed class StartupDialogResolverIntegrationTests
                 PreferredButtonKeywords = ["OK"],
                 BlockedButtonKeywords = ["Cancel"],
                 PollInterval = TimeSpan.FromMilliseconds(50),
-                ClickTimeout = TimeSpan.FromSeconds(1),
+                ClickTimeout = TimeSpan.FromMilliseconds(250),
             },
             cts.Token);
 
@@ -56,14 +56,60 @@ public sealed class StartupDialogResolverIntegrationTests
             IntPtr instance,
             IntPtr param);
 
+        [DllImport("user32.dll")]
+        private static extern int GetMessage(out Msg msg, IntPtr hwnd, uint min, uint max);
+
+        [DllImport("user32.dll")]
+        private static extern bool TranslateMessage(ref Msg msg);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr DispatchMessage(ref Msg msg);
+
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool DestroyWindow(IntPtr hwnd);
+        private static extern bool PostThreadMessage(uint threadId, uint msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("kernel32.dll")]
+        private static extern uint GetCurrentThreadId();
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr GetModuleHandle(string? lpModuleName);
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct Msg
+        {
+            public IntPtr Hwnd;
+            public uint Message;
+            public IntPtr WParam;
+            public IntPtr LParam;
+            public uint Time;
+            public int X;
+            public int Y;
+        }
+
         public static IDisposable Create(string title, string buttonText)
+        {
+            uint threadId = 0;
+            using var ready = new ManualResetEventSlim();
+            var thread = new Thread(() =>
+            {
+                threadId = GetCurrentThreadId();
+                CreateWindows(title, buttonText);
+                ready.Set();
+                while (GetMessage(out var msg, IntPtr.Zero, 0, 0) > 0)
+                {
+                    TranslateMessage(ref msg);
+                    DispatchMessage(ref msg);
+                }
+            })
+            { IsBackground = true };
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
+            ready.Wait();
+            return new Handle(threadId, thread);
+        }
+
+        private static void CreateWindows(string title, string buttonText)
         {
             var instance = GetModuleHandle(null);
             var dialog = CreateWindowEx(
@@ -95,16 +141,16 @@ public sealed class StartupDialogResolverIntegrationTests
                 instance,
                 IntPtr.Zero);
             Assert.AreNotEqual(IntPtr.Zero, button);
-
-            return new Handle(dialog);
         }
 
-        private sealed class Handle(IntPtr hwnd) : IDisposable
+        private sealed class Handle(uint threadId, Thread thread) : IDisposable
         {
+            private const uint WmQuit = 0x0012;
+
             public void Dispose()
             {
-                if (hwnd != IntPtr.Zero)
-                    DestroyWindow(hwnd);
+                PostThreadMessage(threadId, WmQuit, IntPtr.Zero, IntPtr.Zero);
+                thread.Join();
             }
         }
     }

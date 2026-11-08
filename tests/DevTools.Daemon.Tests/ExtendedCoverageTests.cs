@@ -1,12 +1,7 @@
 using DevTools.Daemon.Auth;
 using DevTools.Daemon.Control;
-using DevTools.Daemon.Desktop.ViewModels;
-using DevTools.Daemon.Desktop.Views;
-using DevTools.Daemon.Tests.Support;
-using DevTools.Daemon.Tunnel;
 using DevTools.Utilities;
 using Duende.IdentityModel.OidcClient.Browser;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using System.Net;
@@ -133,65 +128,6 @@ public sealed class ExtendedCoverageTests
         finally
         {
             Console.SetIn(originalIn);
-        }
-    }
-
-    [TestMethod]
-    public async Task TunnelClient_ConnectsAndReconnectsUntilCancelled()
-    {
-        using var host = AppHostBuilder.CreateStdioHostForTests();
-        var engine = host.Services.GetRequiredService<DevTools.Daemon.Mcp.Hosting.McpEngine>();
-        var scanner = DaemonTestDoubles.CreatePipeScanner();
-        var options = DevTools.Daemon.Mcp.Hosting.McpServerFactory.CreateOptions(
-            engine.ToolCollection, engine.PromptCollection, host.Services);
-
-        var client = new TunnelClient(
-            new Uri("ws://127.0.0.1:9/tunnel"),
-            () => Task.FromResult<string?>("token"),
-            options,
-            scanner.Object,
-            NullLoggerFactory.Instance,
-            host.Services,
-            NullLogger<TunnelClient>.Instance);
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        await client.RunAsync(cts.Token);
-        await client.DisposeAsync();
-    }
-
-    [DoNotParallelize]
-    [TestClass]
-    public sealed class DesktopUiCoverage : WpfApplicationTestBase
-    {
-        [TestMethod]
-        public void MainWindow_TabsAndViews_BuildContent()
-        {
-            RunOnUi(() =>
-            {
-                var auth = DaemonTestDoubles.CreateAuthService(authenticated: true);
-                auth.Setup(a => a.AvatarUrl).Returns("https://example.com/avatar.png");
-                var state = CreateShellViewModel(auth.Object);
-                var window = new MainWindow(state);
-                window.Show();
-
-                state.SelectedTabIndex = 0;
-                state.SelectedTabIndex = 1;
-                state.SelectedTabIndex = 2;
-                state.Settings.ReloadAutoStart();
-
-                _ = new OverviewView { DataContext = state };
-                _ = new HostsView { DataContext = state };
-                _ = new SettingsView { DataContext = state };
-            });
-        }
-
-        private static ShellViewModel CreateShellViewModel(IAuthService auth)
-        {
-            var broker = DaemonTestDoubles.CreateHostConnections().Object;
-            var scanner = DaemonTestDoubles.CreatePipeScanner().Object;
-            var store = DaemonTestDoubles.CreateUserSettingsStore();
-            var tunnel = DaemonTestDoubles.CreateTunnelStatus(TunnelStatus.Connected).Object;
-            return new ShellViewModel(auth, broker, scanner, DaemonTestDoubles.CreateUpdates(), store, tunnel);
         }
     }
 

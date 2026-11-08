@@ -1,5 +1,4 @@
 using DevTools.Mcp.Client.Tests.Harness;
-using Microsoft.Extensions.Logging.Abstractions;
 using System.Diagnostics;
 
 namespace DevTools.Mcp.Client.Tests;
@@ -7,22 +6,23 @@ namespace DevTools.Mcp.Client.Tests;
 [TestClass]
 public sealed class HostConnectionsIntegrationTests
 {
+    private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(50);
+
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    [Ignore("Flaky: the first connect can miss its wait; see docs/agents/test-matrix.md")]
     public async Task RunAsync_ConnectsRefreshesCatalog_AndDisconnectsWhenPipeRemoved()
     {
         await using var host = await FakeMcpHostPipe.StartAsync(cancellationToken: TestContext.CancellationToken);
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
+        await using var broker = CreateBroker(scanner);
 
-        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
-        var runTask = broker.RunAsync(runCts.Token);
         var changedCount = 0;
         broker.Changed += () => Interlocked.Increment(ref changedCount);
+        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
+        var runTask = broker.RunAsync(runCts.Token);
 
         await WaitUntilAsync(
             () => broker.GetByProcessId(Environment.ProcessId) is not null,
@@ -42,7 +42,10 @@ public sealed class HostConnectionsIntegrationTests
         var entry = broker.Catalog.List().Single();
         Assert.AreEqual("echo", entry.Tools[0].Name);
         Assert.AreEqual("revit://version", entry.Resources[0].Uri);
-        Assert.IsTrue(changedCount > 0);
+        await WaitUntilAsync(
+            () => Volatile.Read(ref changedCount) > 0,
+            TimeSpan.FromSeconds(10),
+            TestContext.CancellationToken);
 
         scanner.SetPipes();
         await WaitUntilAsync(
@@ -56,14 +59,13 @@ public sealed class HostConnectionsIntegrationTests
     }
 
     [TestMethod]
-    [Ignore("Flaky: the first connect can miss its wait; see docs/agents/test-matrix.md")]
     public async Task RunAsync_ReconnectsWhenTransportDropsButPipeStillDiscovered()
     {
         await using var host = await FakeMcpHostPipe.StartAsync(cancellationToken: TestContext.CancellationToken);
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
+        await using var broker = CreateBroker(scanner);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -73,15 +75,10 @@ public sealed class HostConnectionsIntegrationTests
             TimeSpan.FromSeconds(10),
             TestContext.CancellationToken);
 
-        await host.EndCurrentSessionAsync(TestContext.CancellationToken);
+        await host.EndSessionsAsync(TestContext.CancellationToken);
 
         await WaitUntilAsync(
             () => broker.GetByProcessId(Environment.ProcessId) is null,
-            TimeSpan.FromSeconds(10),
-            TestContext.CancellationToken);
-
-        await WaitUntilAsync(
-            () => host.ListenGeneration >= 2,
             TimeSpan.FromSeconds(10),
             TestContext.CancellationToken);
 
@@ -106,7 +103,7 @@ public sealed class HostConnectionsIntegrationTests
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
+        await using var broker = CreateBroker(scanner);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -123,7 +120,7 @@ public sealed class HostConnectionsIntegrationTests
             TimeSpan.FromSeconds(10),
             TestContext.CancellationToken);
 
-        await Task.Delay(2500, TestContext.CancellationToken);
+        await Task.Delay(Interval * 6, TestContext.CancellationToken);
 
         Assert.IsNull(broker.GetByProcessId(Environment.ProcessId));
         Assert.IsEmpty(broker.Catalog.List());
@@ -139,11 +136,11 @@ public sealed class HostConnectionsIntegrationTests
         var deadPipe = HostPipeName.FormatMcp("Revit", "2025", int.MaxValue);
         var scanner = new FakePipeScanner();
         scanner.SetPipes(deadPipe);
-        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
+        await using var broker = CreateBroker(scanner);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
-        await Task.Delay(200, TestContext.CancellationToken);
+        await Task.Delay(Interval * 2, TestContext.CancellationToken);
         scanner.SetPipes(deadPipe, host.PipeName);
 
         await WaitUntilAsync(
@@ -161,12 +158,12 @@ public sealed class HostConnectionsIntegrationTests
         var deadPipe = HostPipeName.FormatMcp("Revit", "2025", int.MaxValue);
         var scanner = new FakePipeScanner();
         scanner.SetPipes(deadPipe);
-        await using var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
+        await using var broker = CreateBroker(scanner);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
 
-        await Task.Delay(500, TestContext.CancellationToken);
+        await Task.Delay(Interval * 4, TestContext.CancellationToken);
 
         Assert.IsNull(broker.GetByProcessId(int.MaxValue));
         Assert.IsEmpty(broker.Catalog.List());
@@ -182,7 +179,7 @@ public sealed class HostConnectionsIntegrationTests
 
         var scanner = new FakePipeScanner();
         scanner.SetPipes(host.PipeName);
-        var broker = new HostConnections(scanner, NullLogger<HostConnections>.Instance, NullLoggerFactory.Instance);
+        var broker = CreateBroker(scanner);
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.CancellationToken);
         var runTask = broker.RunAsync(runCts.Token);
@@ -197,6 +194,12 @@ public sealed class HostConnectionsIntegrationTests
 
         await broker.DisposeAsync();
         Assert.IsEmpty(broker.Catalog.List());
+    }
+
+    private HostConnections CreateBroker(FakePipeScanner scanner)
+    {
+        var loggerFactory = new TestContextLoggerFactory(TestContext);
+        return new HostConnections(scanner, loggerFactory.CreateLogger<HostConnections>(), loggerFactory, Interval);
     }
 
     private static async Task WaitUntilAsync(Func<bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)

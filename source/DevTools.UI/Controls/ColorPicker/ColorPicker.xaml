@@ -446,6 +446,7 @@
                                     </Grid.RowDefinitions>
                                     <ContentPresenter VerticalAlignment="Center" Content="{TemplateBinding LabelRedChannel}" />
                                     <Slider Grid.Column="1"
+                                            AutomationProperties.AutomationId="ColorPickerRedSlider"
                                             AutomationProperties.Name="{Binding LabelRedChannel, RelativeSource={RelativeSource TemplatedParent}}"
                                             Background="{Binding SelectedColor, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:ColorChannelGradientBrushConverter.Instance}, ConverterParameter={x:Static controls:ColorChannel.R}}"
                                             Style="{StaticResource ColorPicker.ByteSlider}"
@@ -462,6 +463,7 @@
                                                       Content="{TemplateBinding LabelGreenChannel}" />
                                     <Slider Grid.Row="1"
                                             Grid.Column="1"
+                                            AutomationProperties.AutomationId="ColorPickerGreenSlider"
                                             AutomationProperties.Name="{Binding LabelGreenChannel, RelativeSource={RelativeSource TemplatedParent}}"
                                             Background="{Binding SelectedColor, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:ColorChannelGradientBrushConverter.Instance}, ConverterParameter={x:Static controls:ColorChannel.G}}"
                                             Style="{StaticResource ColorPicker.ByteSlider}"
@@ -479,6 +481,7 @@
                                                       Content="{TemplateBinding LabelBlueChannel}" />
                                     <Slider Grid.Row="2"
                                             Grid.Column="1"
+                                            AutomationProperties.AutomationId="ColorPickerBlueSlider"
                                             AutomationProperties.Name="{Binding LabelBlueChannel, RelativeSource={RelativeSource TemplatedParent}}"
                                             Background="{Binding SelectedColor, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:ColorChannelGradientBrushConverter.Instance}, ConverterParameter={x:Static controls:ColorChannel.B}}"
                                             Style="{StaticResource ColorPicker.ByteSlider}"
@@ -505,6 +508,7 @@
                                     </Grid.RowDefinitions>
                                     <ContentPresenter VerticalAlignment="Center" Content="{TemplateBinding LabelHueChannel}" />
                                     <Slider Grid.Column="1"
+                                            AutomationProperties.AutomationId="ColorPickerHueSlider"
                                             Style="{StaticResource ColorPicker.HueSlider}"
                                             Value="{Binding Hue, RelativeSource={RelativeSource TemplatedParent}}" />
                                     <hc:NumericUpDown Grid.Column="2"
@@ -519,6 +523,7 @@
                                                       Content="{TemplateBinding LabelSaturationChannel}" />
                                     <Slider Grid.Row="1"
                                             Grid.Column="1"
+                                            AutomationProperties.AutomationId="ColorPickerSaturationSlider"
                                             Background="{Binding SelectedHsvColor, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:HsvChannelGradientBrushConverter.Instance}, ConverterParameter={x:Static controls:HsvChannel.S}}"
                                             Style="{StaticResource ColorPicker.UnitSlider}"
                                             Value="{Binding Saturation, RelativeSource={RelativeSource TemplatedParent}}" />
@@ -536,6 +541,7 @@
                                                       Content="{TemplateBinding LabelValueChannel}" />
                                     <Slider Grid.Row="2"
                                             Grid.Column="1"
+                                            AutomationProperties.AutomationId="ColorPickerValueSlider"
                                             Background="{Binding SelectedHsvColor, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:HsvChannelGradientBrushConverter.Instance}, ConverterParameter={x:Static controls:HsvChannel.V}}"
                                             Style="{StaticResource ColorPicker.UnitSlider}"
                                             Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}}" />
@@ -557,6 +563,7 @@
                                     </Grid.ColumnDefinitions>
                                     <ContentPresenter VerticalAlignment="Center" Content="{TemplateBinding LabelAlphaChannel}" />
                                     <Slider Grid.Column="1"
+                                            AutomationProperties.AutomationId="ColorPickerAlphaSlider"
                                             Background="{Binding SelectedColor, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:ColorChannelGradientBrushConverter.Instance}, ConverterParameter={x:Static controls:ColorChannel.A}}"
                                             Style="{StaticResource ColorPicker.ByteSlider}"
                                             Value="{Binding A, RelativeSource={RelativeSource TemplatedParent}}" />
@@ -590,6 +597,7 @@
                                                                   Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
                             <controls:ColorEyeDropper x:Name="PART_ColorEyeDropper"
                                                       Grid.Column="2"
+                                                      AutomationProperties.AutomationId="ColorPickerEyeDropper"
                                                       SelectedColor="{Binding SelectedColor, RelativeSource={RelativeSource TemplatedParent}}"
                                                       Visibility="{TemplateBinding IsEyeDropperVisible,
                                                                                    Converter={StaticResource ColorPicker.BooleanToVisibility}}" />
@@ -685,6 +693,7 @@
                                               Grid.ColumnSpan="2"
                                               HorizontalAlignment="Stretch"
                                               VerticalAlignment="Stretch"
+                                              AutomationProperties.AutomationId="ColorPickerToggle"
                                               Background="Transparent"
                                               BorderThickness="0"
                                               Focusable="False"
@@ -717,9 +726,11 @@
                                     CornerRadius="{DynamicResource DefaultCornerRadius}"
                                     Effect="{DynamicResource EffectShadow2}">
                                 <TabControl x:Name="PART_PopupTabControl"
+                                            AutomationProperties.AutomationId="ColorPickerTabs"
                                             ItemContainerStyle="{TemplateBinding TabItemStyle}"
                                             Style="{TemplateBinding TabControlStyle}">
                                     <TabItem x:Name="PART_ColorPalettesTab"
+                                             AutomationProperties.AutomationId="ColorPickerPalettesTab"
                                              Header="{TemplateBinding ColorPalettesTabHeader}"
                                              HeaderTemplate="{TemplateBinding ColorPalettesTabHeaderTemplate}"
                                              Visibility="{TemplateBinding IsColorPalettesTabVisible,
@@ -727,6 +738,7 @@
                                         <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
                                             <StackPanel Margin="4">
                                                 <controls:ColorPalette x:Name="PART_ColorPaletteStandard"
+                                                                       AutomationProperties.AutomationId="ColorPickerStandardPalette"
                                                                        ColorHelper="{TemplateBinding ColorHelper}"
                                                                        ColorNamesDictionary="{TemplateBinding ColorNamesDictionary}"
                                                                        Header="{TemplateBinding StandardColorPaletteHeader}"
@@ -780,6 +792,7 @@
                                         </ScrollViewer>
                                     </TabItem>
                                     <TabItem x:Name="PART_AdvancedTab"
+                                             AutomationProperties.AutomationId="ColorPickerAdvancedTab"
                                              Header="{TemplateBinding AdvancedTabHeader}"
                                              HeaderTemplate="{TemplateBinding AdvancedTabHeaderTemplate}"
                                              Visibility="{TemplateBinding IsAdvancedTabVisible,

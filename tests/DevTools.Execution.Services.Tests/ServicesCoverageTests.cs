@@ -18,78 +18,76 @@ public sealed class ServicesCoverageTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
-    public async Task PackageVersionChecker_AttachLatestVersions_PyPiAndConda_FetchLatest()
+    public async Task PyPi_and_conda_versions_parsed()
     {
-        var checker = new PackageVersionChecker(
-            new NugetManager(NullLogger<NugetManager>.Instance),
-            NullLogger<PackageVersionChecker>.Instance);
-
-        var packages = new List<Package>
+        var handler = new CannedJsonHandler(new Dictionary<string, string>
         {
-            new(Marketplace.PyPi, "requests", "2.0.0", "2.0.0"),
-            new(Marketplace.CondaForge, "numpy", "1.0.0", "1.0.0"),
-        };
-
-        var result = await checker.AttachLatestVersionsAsync(packages, TestContext.CancellationToken);
-
-        Assert.AreEqual(2, result.Count);
-        Assert.IsFalse(string.IsNullOrWhiteSpace(result[0].LatestVersion));
-        Assert.IsFalse(string.IsNullOrWhiteSpace(result[1].LatestVersion));
-    }
-
-    [TestMethod]
-    public async Task PackageVersionChecker_AttachLatestVersions_UnknownMarketplace_LeavesLatestNull()
-    {
-        var checker = new PackageVersionChecker(
-            new NugetManager(NullLogger<NugetManager>.Instance),
-            NullLogger<PackageVersionChecker>.Instance);
-        var packages = new List<Package> { new(Marketplace.NuGet, "  Newtonsoft.Json  ", "13.0.1", "13.0.1") };
-
-        var result = await checker.AttachLatestVersionsAsync(packages, TestContext.CancellationToken);
-
-        Assert.AreEqual(1, result.Count);
-        Assert.IsFalse(string.IsNullOrWhiteSpace(result[0].LatestVersion));
-    }
-
-    [TestMethod]
-    public async Task PackageVersionChecker_AttachLatestVersions_CondaPackage_FetchesLatest()
-    {
-        var checker = new PackageVersionChecker(
-            new NugetManager(NullLogger<NugetManager>.Instance),
-            NullLogger<PackageVersionChecker>.Instance);
+            ["https://pypi.org/pypi/requests-toolbelt/json"] =
+                """{"info":{"name":"requests-toolbelt","version":"1.0.0","summary":"x"},"releases":{"0.9.1":[],"1.0.0":[]}}""",
+            ["https://api.anaconda.org/package/conda-forge/numpy"] =
+                """{"name":"numpy","owner":"conda-forge","latest_version":"2.1.3","versions":["2.1.2","2.1.3"]}"""
+        });
+        var checker = CreateChecker(handler);
 
         var result = await checker.AttachLatestVersionsAsync(
-            [new Package(Marketplace.CondaForge, "pip", "24.0", "24.0")],
+            [
+                new Package(Marketplace.PyPi, " Requests_Toolbelt ", "1.0.0", "1.0.0"),
+                new Package(Marketplace.CondaForge, "numpy", "2.0.0", "2.0.0")
+            ],
             TestContext.CancellationToken);
 
-        Assert.AreEqual(1, result.Count);
-        Assert.IsFalse(string.IsNullOrWhiteSpace(result[0].LatestVersion));
+        Assert.AreEqual("1.0.0", result[0].LatestVersion);
+        Assert.IsTrue(result[0].IsLatest);
+        Assert.AreEqual("2.1.3", result[1].LatestVersion);
+        Assert.IsFalse(result[1].IsLatest);
     }
 
     [TestMethod]
-    public async Task PackageVersionChecker_AttachLatestVersions_EmptyList_ReturnsEmpty()
+    public async Task Missing_package_leaves_latest_null()
     {
-        var checker = new PackageVersionChecker(
-            new NugetManager(NullLogger<NugetManager>.Instance),
-            NullLogger<PackageVersionChecker>.Instance);
+        var checker = CreateChecker(new CannedJsonHandler([]));
+
+        var result = await checker.AttachLatestVersionsAsync(
+            [
+                new Package(Marketplace.PyPi, "nope", "1.0", "1.0"),
+                new Package(Marketplace.CondaForge, "nope", "1.0", "1.0")
+            ],
+            TestContext.CancellationToken);
+
+        Assert.IsNull(result[0].LatestVersion);
+        Assert.IsNull(result[1].LatestVersion);
+        Assert.IsFalse(result[0].IsLatest);
+    }
+
+    [TestMethod]
+    public async Task Same_package_fetched_once()
+    {
+        var handler = new CannedJsonHandler(new Dictionary<string, string>
+        {
+            ["https://pypi.org/pypi/six/json"] = """{"info":{"version":"1.17.0"}}"""
+        });
+        var checker = CreateChecker(handler);
+
+        var result = await checker.AttachLatestVersionsAsync(
+            [
+                new Package(Marketplace.PyPi, "six", "1.16.0", "1.16.0"),
+                new Package(Marketplace.PyPi, "SIX", "1.17.0", "1.17.0")
+            ],
+            TestContext.CancellationToken);
+
+        Assert.AreEqual(1, handler.RequestCount);
+        Assert.AreEqual("1.17.0", result[0].LatestVersion);
+        Assert.IsTrue(result[1].IsLatest);
+    }
+
+    [TestMethod]
+    public async Task Empty_package_list_returns_empty()
+    {
+        var checker = CreateChecker(new CannedJsonHandler([]));
 
         var result = await checker.AttachLatestVersionsAsync([], TestContext.CancellationToken);
 
         Assert.IsEmpty(result);
-    }
-
-    [TestMethod]
-    public async Task PackageVersionChecker_AttachLatestVersions_NuGetPackage_FetchesLatest()
-    {
-        var checker = new PackageVersionChecker(
-            new NugetManager(NullLogger<NugetManager>.Instance),
-            NullLogger<PackageVersionChecker>.Instance);
-        var packages = new List<Package> { new(Marketplace.NuGet, "Newtonsoft.Json", "13.0.1", "13.0.1") };
-
-        var result = await checker.AttachLatestVersionsAsync(packages, TestContext.CancellationToken);
-
-        Assert.AreEqual(1, result.Count);
-        Assert.IsFalse(string.IsNullOrWhiteSpace(result[0].LatestVersion));
     }
 
     [TestMethod]
@@ -254,13 +252,6 @@ public sealed class ServicesCoverageTests
     }
 
     [TestMethod]
-    public void NetworkService_Configure_UpdatesUserAgent()
-    {
-        NetworkService.Configure(HostApp.Revit);
-        NetworkService.Configure(HostApp.AutoCad);
-    }
-
-    [TestMethod]
     public async Task NetworkService_GetStringAsync_DownloadsFromLocalServer()
     {
         var port = GetFreeTcpPort();
@@ -335,6 +326,27 @@ public sealed class ServicesCoverageTests
         ExecutionGuardContext.Mode = ExecutionGuardMode.Suppress;
         Assert.AreEqual(ExecutionGuardMode.Suppress, ExecutionGuardContext.Mode);
         ExecutionGuardContext.Mode = ExecutionGuardMode.Passthrough;
+    }
+
+    private static PackageVersionChecker CreateChecker(HttpMessageHandler handler) =>
+        new(
+            new NugetManager(NullLogger<NugetManager>.Instance),
+            NullLogger<PackageVersionChecker>.Instance,
+            new HttpClient(handler));
+
+    private sealed class CannedJsonHandler(Dictionary<string, string> responses) : HttpMessageHandler
+    {
+        private int _requestCount;
+
+        public int RequestCount => Volatile.Read(ref _requestCount);
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _requestCount);
+            return Task.FromResult(responses.TryGetValue(request.RequestUri!.ToString(), out var json)
+                ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(json) }
+                : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
     }
 
     private static int GetFreeTcpPort()

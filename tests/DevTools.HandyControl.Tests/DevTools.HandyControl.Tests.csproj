@@ -17,6 +17,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="FlaUI.UIA3" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.UI\DevTools.UI.csproj" />
     </ItemGroup>
 

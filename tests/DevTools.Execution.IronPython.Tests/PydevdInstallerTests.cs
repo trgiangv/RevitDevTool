@@ -6,8 +6,6 @@ namespace DevTools.Execution.Tests;
 [TestClass]
 public sealed class PydevdInstallerTests
 {
-    public TestContext TestContext { get; set; } = null!;
-
     [TestMethod]
     public void ExtractRoot_IsAppDataPydevdLayout()
     {
@@ -24,36 +22,12 @@ public sealed class PydevdInstallerTests
     }
 
     [TestMethod]
-    public void VersionMarker_MatchesWhenInstalled()
+    public void Install_writes_version_marker()
     {
-        if (!PydevdInstaller.IsInstalled())
-            Assert.Inconclusive("pydevd 2.8.0 extract is not on disk.");
-
-        Assert.IsTrue(File.Exists(PydevdInstaller.PydevdPyPath));
-        Assert.AreEqual(
-            PydevdInstaller.Version,
-            File.ReadAllText(PydevdInstaller.VersionMarkerPath).Trim());
-    }
-
-    [TestMethod]
-    public async Task EnsureInstalled_SkipsWhenNetworkThrows()
-    {
-        if (PydevdInstaller.IsInstalled())
-        {
-            Assert.IsTrue(File.Exists(PydevdInstaller.PydevdPyPath));
-            return;
-        }
-
-        try
-        {
-            await PydevdInstaller.EnsureInstalledAsync(cancellationToken: TestContext.CancellationToken);
-        }
-        catch (Exception ex)
-        {
-            Assert.Inconclusive($"pydevd download failed: {ex.Message}");
-        }
+        Pydevd.EnsureInstalled();
 
         Assert.IsTrue(PydevdInstaller.IsInstalled());
+        Assert.IsTrue(File.Exists(PydevdInstaller.PydevdPyPath));
         Assert.AreEqual(
             PydevdInstaller.Version,
             File.ReadAllText(PydevdInstaller.VersionMarkerPath).Trim());

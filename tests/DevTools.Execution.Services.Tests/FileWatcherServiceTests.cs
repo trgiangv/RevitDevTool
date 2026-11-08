@@ -15,17 +15,8 @@ public sealed class FileWatcherServiceTests
     [DataRow("   ")]
     public void Watch_EmptyOrWhitespacePath_IsNoOp(string path)
     {
-        var root = CreateTempRoot();
         using var service = new FileWatcherService();
-
-        try
-        {
-            service.Watch(path, ["*.csx"]);
-        }
-        finally
-        {
-            DeleteTempRoot(root);
-        }
+        service.Watch(path, ["*.csx"]);
     }
 
     [TestMethod]

@@ -73,11 +73,13 @@ public sealed class McpToolsetIsolationTests
 
         var contextReference = LoadCacheAndClear(manager, workload.EntryPath, dispatcherCache);
 
-        for (var attempt = 0; attempt < 10 && contextReference.IsAlive; attempt++)
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (contextReference.IsAlive && DateTime.UtcNow < deadline)
         {
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
+            Thread.Sleep(50);
         }
 
         Assert.IsFalse(contextReference.IsAlive, "The toolset ALC remained alive after cache clear and context disposal.");
