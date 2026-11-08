@@ -34,7 +34,7 @@ Host projects register implementations via `AddExecutionServices()`:
 - Revit: `source/RevitDevTool/Composition/RevitServiceRegistration.cs`
 - AutoCAD: `source/AcadDevTool/Composition/AcadServiceRegistration.cs`
 
-The `AddExecutionServices()` call is the central DI hub — it registers orchestrator, MCP in-host pipe server (`DevToolsPipeServer`), pytest handler, and all strategy factories. Runtime init: `PythonInitializer` + `IronPythonInitializer` only; `PythonExecutor` / `PythonDebugger` / `IronPythonDebugger` are static.
+The `AddExecutionServices()` call is the central DI hub — it registers orchestrator, the pytest/control pipe server (`DevToolsPipeServer`), pytest handler, and all strategy factories. Runtime init: `PythonInitializer` + `IronPythonInitializer` only; `PythonExecutor` / `PythonDebugger` / `IronPythonDebugger` are static.
 
 ## Execution Guard (Dialog & Failure Suppression)
 
@@ -71,21 +71,21 @@ Caller sets ExecutionGuardContext.Mode → RevitHostContextExecutor reads mode
 
 ### Feedback Philosophy
 
-Only **unresolvable failure rollbacks** are surfaced to AI callers via `ExecutionGuardContext.RollbackSummary`. All other suppressions (warnings dismissed, errors auto-resolved, dialogs auto-dismissed) are silent — the operation succeeded and AI doesn't need to know. Warnings remain queryable via `Document.GetWarnings()` if the agent needs quality checks.
+Only unresolvable failure rollbacks are surfaced to AI callers via `ExecutionGuardContext.RollbackSummary`. All other suppressions (warnings dismissed, errors auto-resolved, dialogs auto-dismissed) are silent — the operation succeeded and AI doesn't need to know. Warnings remain queryable via `Document.GetWarnings()` if the agent needs quality checks.
 
 ### Key Design Decisions
 
-- **RevitDevTool.Core has no logging dependency**: guard is pure Revit API; logging lives in host executor.
-- **Reference-counted scopes**: nested MCP calls share one event subscription; safe for FIFO queue.
-- **AsyncLocal propagation**: avoids changing `IHostContextExecutor` interface; each async flow isolated.
-- **Only rollback feedback**: AI only needs to know when operations fail, not when warnings are dismissed.
-- **net48 compatible**: uses `Polyfill` package for `Lock` type; no .NET 9+ APIs.
-- **PickObject not affected**: modal selection is not a `DialogBoxShowing` event.
-- **Save prompts → No**: `TaskDialog_Save_File` overrides with `TaskDialogResult.No`.
+- RevitDevTool.Core has no logging dependency: the guard is pure Revit API; logging lives in host executor.
+- Reference-counted scopes: nested MCP calls share one event subscription; safe for FIFO queue.
+- AsyncLocal propagation: avoids changing `IHostContextExecutor` interface; each async flow isolated.
+- Only rollback feedback: AI only needs to know when operations fail, not when warnings are dismissed.
+- net48 compatible: uses `Polyfill` package for `Lock` type; no .NET 9+ APIs.
+- PickObject is not affected: modal selection is not a `DialogBoxShowing` event.
+- Save prompts answer No: `TaskDialog_Save_File` overrides with `TaskDialogResult.No`.
 
 ## Script Modes
 
-- Python: [python-runtime.md](../architecture/Execution/python-runtime.md). Host probe picks uv XOR pixi; pip only if that manager fails. Trap: `InitializeEngine(hostDll)` before any `await`; do not `Py_Finalize` when `HostOwnsInterpreter`.
+- Python: [python-runtime.md](../architecture/Execution/python-runtime.md). Host probe picks uv XOR pixi; pip only if that manager fails. Call `InitializeEngine(hostDll)` before any `await`, and skip `Py_Finalize` when `HostOwnsInterpreter`, because the host still owns that interpreter.
 - IronPython: Python files ending `_ipy_script.py`.
 - F#: `.fsx`, NuGet resolution under `%APPDATA%\RevitDevTool\nuget`, 30 second compile timeout.
 - C#: `.csx`, Roslyn compilation cache, 30 second compile timeout.
@@ -96,4 +96,4 @@ Only **unresolvable failure rollbacks** are surfaced to AI callers via `Executio
 - Keep host-thread rules in host adapters.
 - If changing execution guard: verify both `Suppress` and `Passthrough` paths work; test reference counting with nested calls.
 - Run the narrowest host build and related unit tests from `verification.md`.
-- Remember current tests are shallow; add focused tests for shared pure logic when behavior changes.
+- Add focused tests for shared pure logic when behavior changes.

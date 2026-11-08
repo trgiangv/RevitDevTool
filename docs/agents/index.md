@@ -1,42 +1,25 @@
-# Agent Harness Index
+# Agent Task Router
 
-Task router and verification pointers. Work shape: `docs/WORKFLOW.md`.
-Build/deploy traps: `.agents/skills/build/SKILL.md`.
-
-## Task routing
+Pick the row that matches the task and read only what it lists. The entry point
+is [`AGENTS.md`](../../AGENTS.md); work shape is [`WORKFLOW.md`](../WORKFLOW.md).
 
 | Task | Read | Projects |
 |------|------|----------|
-| Compile / deploy / verify | `build` skill, `verification.md`, `build-matrix.md`, **`test-matrix.md` (Current gaps first)** | `source/`, `scripts/`, `tests/` |
-| MCP integration testing | `mcp-integration-test.md` | Host + daemon |
-| MTP host testing | `revit-test` skill, `host-testing.md`, `docs/product/host-testing.md`, `docs/architecture/Testing/` | `DevTools.Testing.*`, `DevTools.NUnit.*`, `DevTools.TUnit.*`, `DevTools.MSTest.*`, `DevTools.TestAdapter`, `DevTools.TestRunner*` |
-| TUnit provider | `docs/product/tunit-host-testing.md`, `host-testing.md` | `DevTools.TUnit.*` |
-| MSTest provider | `docs/decisions/0038-mstest-host-provider.md`, `host-testing.md`, `source/DevTools.TestAdapter/README.md` | `DevTools.MSTest.*` |
-| MCP agent efficiency | `docs/plans/completed/2026-07-26-mcp-agent-efficiency.md` | `DevTools.Mcp.*`, daemon |
-| Execution / MCP / host pipe / logging | Matching `docs/agents/*.md` + `docs/architecture/<Module>/` + `docs/product/` | `DevTools.*`, hosts |
-| Revit API + live execute | `revit-developer` skill, `architecture/MCP/workflows.md` | MCP + rvtdocs-mcp |
-| Multi-session work | `docs/plans/active/` | — |
-| Release a product | `release.md` | `build/`, `.github/workflows/release.yml` |
-| Policy | `docs/decisions/` | — |
+| Compile, deploy, verify | `build` skill, [verification.md](verification.md), [build-matrix.md](build-matrix.md), [test-matrix.md](test-matrix.md) | `source/`, `scripts/`, `tests/` |
+| Add tests or measure coverage | [test-matrix.md](test-matrix.md) | `tests/` |
+| MCP integration testing | [mcp-integration-test.md](mcp-integration-test.md) | Host and Daemon |
+| MTP host testing | `revit-test` skill, [host-testing.md](host-testing.md), `docs/product/host-testing.md`, `docs/architecture/Testing/` | `DevTools.Testing.*`, `DevTools.NUnit.*`, `DevTools.TUnit.*`, `DevTools.MSTest.*`, `DevTools.TestAdapter`, `DevTools.TestRunner*` |
+| TUnit provider | `docs/product/tunit-host-testing.md`, [host-testing.md](host-testing.md) | `DevTools.TUnit.*` |
+| MSTest provider | `docs/decisions/0038-mstest-host-provider.md`, [host-testing.md](host-testing.md), `source/DevTools.TestAdapter/README.md` | `DevTools.MSTest.*` |
+| MCP agent efficiency | `docs/plans/completed/2026-07-26-mcp-agent-efficiency.md` | `DevTools.Mcp.*`, Daemon |
+| Execution | [execution-system.md](execution-system.md), `docs/architecture/Execution/` | `DevTools.Execution*` |
+| MCP or host pipe | [mcp-pytest-bridge.md](mcp-pytest-bridge.md), `docs/architecture/MCP/` | `DevTools.Ipc`, `DevTools.Mcp.*`, `DevTools.Daemon` |
+| Shared vs host code | [host-boundaries.md](host-boundaries.md) | `DevTools.*`, hosts |
+| Revit API and live execute | `revit-developer` skill, `docs/architecture/MCP/workflows.md` | MCP, rvtdocs-mcp |
+| Platform, IPC, packaging | `platform-change` skill | `source/DevTools.*`, `build/` |
+| Formatting and lint | [formatting-linting.md](formatting-linting.md) | `.editorconfig`, `scripts/format-lint.ps1` |
+| Release a product | [release.md](release.md) | `build/`, `.github/workflows/release.yml` |
+| Multi-session work | `docs/plans/active/` | |
+| Policy | `docs/decisions/` | |
 
-Domain skills: `.agents/skills/*/SKILL.md` — read the one that matches.
-
-## Operating loop
-
-1. Classify work (`WORKFLOW.md`): read-only / bounded / plan / pause.
-2. Read product + architecture + one agent digest as needed. **Before new tests, Coverlet, or Execution/MCP/Ipc/Daemon refactor:** `test-matrix.md` Current gaps + untestable limits.
-3. Edit; **compile** per build skill; run **in-repo** tests when contracts change.
-4. Live MCP checklist when wire/surface changed and host available.
-5. Update one doc layer if behavior changed.
-6. Report proof and blockers (`test-matrix.md` Current gaps / Skip / live). Do not spawn a second Coverlet on a live testhost.
-
-## Documentation layers
-
-| Layer | Holds |
-|-------|--------|
-| `docs/product/` | Observable behavior |
-| `docs/architecture/` | Module structure |
-| `docs/agents/` | Traps, verify, integration runbooks |
-| `docs/decisions/` | Lasting choices |
-| `docs/plans/` | Multi-session execution |
-| `.agents/skills/` | Repeatable workflows (build, platform, Revit) |
+Skills live in `.agents/skills/<name>/SKILL.md`.

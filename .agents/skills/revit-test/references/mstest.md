@@ -14,8 +14,8 @@ Project setup: [project-setup.md](project-setup.md). Shared rules:
 </Project>
 ```
 
-`MSTest.Sdk` brings the framework. Do not add `NUnit3TestAdapter` or a
-`.runsettings` file. `NetFxModuleInitializer` does not apply.
+`MSTest.Sdk` brings the framework; no other test adapter or `.runsettings`
+file is needed. `NetFxModuleInitializer` does not apply.
 
 Selecting one test also runs its `[DependsOn]` prerequisites (method and
 class, transitive). Both the testhost discoverer and the in-host session add

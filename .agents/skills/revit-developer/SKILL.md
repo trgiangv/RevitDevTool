@@ -1,79 +1,100 @@
 ---
 name: revit-developer
-description: Develop, test, and explore Revit API using RevitDevTool MCP (execute code, undo, vision) combined with rvtdocs-mcp (search API docs, browse namespaces, compare versions). Use when writing Revit API code, debugging Revit add-ins, exploring API patterns, testing against live Revit instances, or when the user mentions Revit API, Revit MCP, execute in Revit, or search Revit docs.
+description: >
+  Write, run, and verify Revit API code against a live Revit through RevitDevTool
+  MCP (execute code, undo, screenshots), using rvtdocs-mcp to search, browse, and
+  compare the API docs. Use when writing or debugging Revit API code or add-ins,
+  executing code in Revit, or looking up Revit API members and version changes.
 ---
 
 # Revit Developer Workflow
 
-Two MCP servers work together for complete Revit API development:
+Two MCP servers work together:
 
 | Server | Role | Tools |
 |--------|------|-------|
-| `revitdevtool-mcp` | Execute code in live Revit | `execute_csharp_code`, `execute_python_code`, `navigate_history`, resources |
-| `rvtdocs-mcp` | Explore API documentation in detail | `rvtdocs_search`, `rvtdocs_scan`, `rvtdocs_diff`, `rvtdocs_fetch` |
+| `revitdevtool` | Run code in live Revit | `list_processes`, `launch_host`, `read_file_info`, `code_mode` |
+| `rvtdocs-mcp` | Revit API documentation | `rvtdocs_search`, `rvtdocs_scan`, `rvtdocs_diff`, `rvtdocs_fetch` |
 
-## Core Pattern: Explore → Code → Execute → Verify
+`revitdevtool` is the server key in the MCP client config that the RevitDevTool
+settings panel shows; a client may use another key. The server lists only those
+four tools. The Revit tools
+(`execute_csharp_code`, `execute_python_code`, `navigate_history`,
+`view_screenshot`) and resources (`revit://model/context`, …) are reached from
+a `code_mode` program, a C# async method body with these calls:
+
+| Call | Returns |
+|------|---------|
+| `SearchAsync(query, limit, processId, primitiveType)` | Ranked `Name`, `Description`, `ProcessId`, `PrimitiveType` (`tool`, `resource`, `resource_template`) |
+| `DescribeAsync(name, processId)` | The tool's `InputSchema` and annotations |
+| `InvokeAsync(name, arguments, processId)` | The host `CallToolResult` |
+| `ReadAsync(name, arguments, processId)` | The `ReadResourceResult` |
+
+Only the program's `return` value reaches you, so return a projection, or the
+image block when you need to see it.
+
+## Loop: explore, code, execute, verify
 
 ```
-1. rvtdocs_search("wall create curve")     → discover API
-2. rvtdocs_fetch(url)                       → read method signature
-3. use the execute tool description          → entry pattern is already there
-4. read revit://model/context               → get live model state
-5. execute_csharp_code(code)                → run in Revit
-6. view_screenshot                          → verify visually
-7. navigate_history(direction="back")       → undo if wrong
+1. rvtdocs_search("wall create curve")      → discover API
+2. rvtdocs_fetch(url)                        → read method signature
+3. code_mode: DescribeAsync("execute_csharp_code") → entry pattern is in its description
+4. code_mode: ReadAsync("revit://model/context")   → live model state
+5. code_mode: InvokeAsync("execute_csharp_code", {code}) → run in Revit
+6. code_mode: InvokeAsync("view_screenshot")        → verify visually
+7. code_mode: InvokeAsync("navigate_history", {direction:"back"}) → undo if wrong
 ```
 
-## API Discovery (rvtdocs-mcp)
+## API discovery (rvtdocs-mcp)
 
-### Search: Vague query → ranked results
+Search first when unsure which API exists; namespaces rank at the top.
 
 ```
 rvtdocs_search(query="structural rebar placement", year="2025", limit=15)
 → classes, methods, properties with FQN + URL
 ```
 
-Always search first when unsure which API exists. Namespaces appear at top.
-
-### Scan: Browse namespace or class
+Browse a namespace or class the search revealed; filter with `types="class,method,property"`.
 
 ```
 rvtdocs_scan(target="Autodesk.Revit.DB.Structure", types="class")
 → 126 classes in that namespace
 ```
 
-Use after search reveals a namespace. Filter with `types="class,method,property"`.
-
-### Diff: Compare versions
+Compare versions for migration or compatibility.
 
 ```
 rvtdocs_diff(from_year="2025", to_year="2027", scope="Autodesk.Revit.DB.Electrical")
 → {added: [...], removed: [...], summary: {addedCount: 6, removedCount: 18}}
 ```
 
-Use for migration, compatibility checking, or finding new APIs.
-
-### Fetch: Get full documentation
+Fetch the full page only when you need signatures or remarks.
 
 ```
 rvtdocs_fetch(url="https://rvtdocs.com/2025/Autodesk.Revit.DB.Wall.Create")
 → method table, parameters, remarks
 ```
 
-Only fetch when you need detailed signatures or documentation text.
+## Code execution (revitdevtool)
 
-## Code Execution (revitdevtool)
+Revit must be running with the DevTools add-in; `list_processes` confirms the
+connection and gives the `processId`. The `execute_csharp_code` /
+`execute_python_code` descriptions carry the entry pattern.
 
-### Prerequisites
-
-1. Revit must be running with DevTools add-in loaded
-2. `list_processes` confirms connection
-3. The `execute_csharp_code` / `execute_python_code` description has the entry pattern.
-
-### C# Execution
+From `code_mode`, the host source is one C# verbatim string, with each `"`
+written as `""`:
 
 ```csharp
-// Always wrap in IExternalCommand pattern
+var code = @"
+<entry pattern from the execute_csharp_code description>
+";
+var result = await InvokeAsync("execute_csharp_code", new Dictionary<string, object> { ["code"] = code }, 80740);
+return new { result.IsError, text = result.Content.OfType<TextContentBlock>().FirstOrDefault()?.Text };
+```
+
+`execute_csharp_code` compiles and runs an `IExternalCommand.Execute` body:
+
+```csharp
 // Revit provides: commandData (ExternalCommandData)
 using Autodesk.Revit.DB;
 var doc = commandData.Application.ActiveUIDocument.Document;
@@ -85,106 +106,71 @@ using (var tx = new Transaction(doc, "Create Wall"))
 }
 ```
 
-Key: `execute_csharp_code` compiles and runs an `IExternalCommand.Execute` body.
-
-### Python Execution
+Python gets `__revit__` (UIApplication) injected; PEP 723 headers install dependencies:
 
 ```python
-# __revit__ is injected (UIApplication)
 doc = __revit__.ActiveUIDocument.Document
-# PEP 723 for external deps:
 # /// script
 # dependencies = ["polars>=1.0"]
 # ///
 import polars as pl
 ```
 
-### Error Recovery
+C# takes NuGet references with `#r "nuget: NetTopologySuite, 2.6.0"`.
 
-| Error Type | Action |
-|-----------|--------|
-| `[COMPILATION ERROR]` | Fix code, retry |
-| `[RUNTIME ERROR]` | Read error details, fix logic, retry |
-| `[ROLLBACK]` | Constraint violation auto-resolved, check warnings |
+| Result | Action |
+|--------|--------|
+| `[COMPILATION ERROR]` | Fix the code and retry |
+| `[RUNTIME ERROR]` | Read the details, fix the logic, retry; undo with `InvokeAsync("navigate_history", new { direction = "back", steps = 1 }, pid)` |
+| `[ROLLBACK]` | A constraint violation was auto-resolved; check warnings |
 
-After runtime errors: `navigate_history(direction="back", steps=1)` to undo.
+## Resources and screenshot
 
-### NuGet / PEP 723
-
-```csharp
-// C# — NuGet reference
-#r "nuget: NetTopologySuite, 2.6.0"
-```
-
-```python
-# Python — PEP 723 deps (auto-installed)
-# /// script
-# dependencies = ["pandas>=2.0"]
-# ///
-```
-
-## Resources (read once per session)
+Read resources with `ReadAsync(uri, null, pid)`:
 
 | Resource | When to read |
 |----------|-------------|
 | `revit://model/context` | Before each operation (live state) |
-| `revit://model/warnings` | After operations to check issues |
-| `revit://version` | To confirm API version |
-| `view_screenshot` | To verify visual results (1280 px PNG). Return the `ImageContentBlock` from `code_mode`. |
+| `revit://model/warnings` | After operations, to check issues |
+| `revit://version` | To confirm the API version |
+| `revit://csharp-cheatsheet`, `revit://python-cheatsheet` | Once per session, before writing code |
 
-## Multi-Host
+The screenshot is the `view_screenshot` tool, not a resource. It captures the
+active view as a 1280 px PNG; return the image block so you can see it:
 
-When multiple Revit instances or Revit + AutoCAD are connected:
+```csharp
+var shot = await InvokeAsync("view_screenshot", null, 80740);
+return shot.Content.OfType<ImageContentBlock>().First();
+```
+
+## Several hosts
+
+With several Revit instances, or Revit and AutoCAD, connected, the same tool
+name exists on each process, and a call without `processId` is rejected as
+ambiguous:
 
 ```
 list_processes → see all PIDs
-code_mode → SearchAsync, then InvokeAsync on the chosen processId
+code_mode → SearchAsync, then InvokeAsync or ReadAsync with the chosen processId
 ```
 
-## Common Workflows
-
-### Write code for unknown API
-
-1. `rvtdocs_search` with vague terms
-2. `rvtdocs_scan` the discovered namespace
-3. `rvtdocs_fetch` for specific method signatures
-4. Write and execute code from the tool description's entry pattern
-5. Verify with screenshot
-
-### Check version compatibility
+## Version compatibility
 
 1. `rvtdocs_diff(from_year="2024", to_year="2027", scope="...")`
-2. Identify added/removed APIs
-3. Use `#if REVIT2025_OR_GREATER` for conditional compilation
+2. Find the added and removed APIs.
+3. Guard with `#if REVIT2025_OR_GREATER` for conditional compilation.
 
-### Debug failing code
+## NuGet packages for geometry and data
 
-1. Read error message from `execute_csharp_code` response
-2. `rvtdocs_search` for correct API usage
-3. `rvtdocs_fetch` for parameter details
-4. Fix and retry
-5. `navigate_history(direction="back")` if state is corrupted
+Not in the Revit SDK; add with `#r "nuget:"`:
 
-### Explore new domain
-
-1. `rvtdocs_search("electrical")` → discover namespace
-2. `rvtdocs_scan("Autodesk.Revit.DB.Electrical", types="class")` → 78 classes
-3. Pick interesting class → `rvtdocs_fetch` for details
-4. Write exploratory code to test understanding
-
-## Useful NuGet Packages
-
-Not included in Revit SDK — use `#r "nuget:"` to add at runtime:
-
-| Package | Version | Use Case |
-|---------|---------|----------|
+| Package | Version | Use |
+|---------|---------|-----|
 | `Clipper2` | 2.0.0 | Polygon boolean (union/intersect/diff), offsetting, triangulation |
 | `NetTopologySuite` | 2.6.0 | 2D spatial operations, WKT/WKB, topology predicates, buffering |
 | `MathNet.Numerics` | 6.0.0-beta2 | Linear algebra, matrix ops, interpolation, statistics |
 | `CsvHelper` | 33.0.1 | CSV import/export for schedules, data analysis |
 | `MiniExcel` | 1.45.0 | Excel read/write without Office interop |
-
-### Usage in execute_csharp_code
 
 ```csharp
 #r "nuget: Clipper2, 2.0.0"
@@ -201,18 +187,3 @@ var factory = new GeometryFactory();
 var polygon = factory.CreatePolygon(coordinates);
 var buffered = polygon.Buffer(1.0);
 ```
-
-## Token Efficiency
-
-| Action | Tokens |
-|--------|--------|
-| rvtdocs_search (20 results) | ~500 |
-| rvtdocs_scan (full namespace) | ~1500 |
-| rvtdocs_diff (full comparison) | ~1500 |
-| rvtdocs_fetch (page content) | ~1000-3000 |
-| C# code execution | ~2000 |
-| Model context read | ~200 |
-| Cheatsheet (one-time) | ~800 |
-| Screenshot | 0 (binary) |
-
-Typical explore+code+verify loop: ~5000-8000 tokens total.

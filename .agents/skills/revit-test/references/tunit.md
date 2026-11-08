@@ -15,8 +15,8 @@ Project setup: [project-setup.md](project-setup.md). Shared rules:
 </ItemGroup>
 ```
 
-**net48:** leave `NetFxModuleInitializer` unset unless another polyfill already
-defines `[ModuleInitializer]` — then set it `false`.
+On net48, leave `NetFxModuleInitializer` unset unless another polyfill already
+defines `[ModuleInitializer]`; then set it `false`.
 
 ## Paths
 
@@ -76,4 +76,4 @@ passed blocks). `Assert.Fail("…")` surfaces on the failure node.
 ## Timeout
 
 `PerTestTimeout` is the adapter per-test budget. TUnit `[Timeout]` is
-framework-local; do not assume it cancels Revit API mid-call on the main thread.
+framework-local and cannot cancel a Revit API call mid-way on the main thread.

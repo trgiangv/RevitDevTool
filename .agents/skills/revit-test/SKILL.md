@@ -1,48 +1,48 @@
 ---
 name: revit-test
 description: >
-  Configure and run in-host CAD/BIM tests with RevitDevTool.TestAdapter (Microsoft
-  Testing Platform). Use when a repo references that NuGet package; writing or running
-  NUnit, TUnit, or MSTest inside Revit, AutoCAD, Civil3D, or family; setting HostName,
-  HostVersion, or ForceLaunch; using dotnet test --filter; selecting [Explicit]
-  tests; or diagnosing MTP exit code 8 / zero tests discovered.
+  Configure, write, and run NUnit, TUnit, or MSTest tests inside Revit, AutoCAD,
+  Civil 3D, or a family document with RevitDevTool.TestAdapter (Microsoft Testing
+  Platform). Use in a repo that references that package: project setup
+  (HostName, HostVersion, ForceLaunch), dotnet test filters and [Explicit] tests,
+  or MTP exit code 8 and zero tests discovered.
 ---
 
 # Host tests (RevitDevTool.TestAdapter)
 
-Consumer skill for any repo that references
+For any repo that references
 [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter).
-Copy this folder to `~/.cursor/skills/revit-test/`, `~/.agents/skills/revit-test/`,
-or `.agents/skills/revit-test/` in the repo.
+To use it elsewhere, copy this folder to `.agents/skills/revit-test/` in that repo
+or to your agent's user-level skills folder.
 
-**Prerequisites:** [RevitDevTool](https://github.com/trgiangv/RevitDevTool) installed
-on the machine (provides the host add-in) and the .NET 10 runtime or later (the
-package's `DevTools.TestRunner` is framework-dependent).
+Prerequisites: [RevitDevTool](https://github.com/trgiangv/RevitDevTool) installed
+on the machine (it provides the host add-in), and the .NET 10 runtime or later
+(the package's `DevTools.TestRunner` is framework-dependent).
 
 ```text
 dotnet test → MTP testhost (discover locally, no host)
            → DevTools.TestRunner → host pipe → NUnit | TUnit | MSTest in host
 ```
 
-Test bodies never run in the MTP process.
+Test bodies run in the host, never in the MTP process.
 
 ## Detect
 
-The consumer project should have:
+The consumer project has:
 
-- `PackageReference` `RevitDevTool.TestAdapter`
-- Nearest `global.json` (from the cwd where you run `dotnet test`) with
-  `"test": { "runner": "Microsoft.Testing.Platform" }`
+- a `PackageReference` to `RevitDevTool.TestAdapter`;
+- a nearest `global.json` (from the directory where you run `dotnet test`) with
+  `"test": { "runner": "Microsoft.Testing.Platform" }`.
 
-Do **not** add `NUnit3TestAdapter`, `ricaun.RevitTest.TestAdapter`, or
-`Microsoft.Testing.Extensions.VSTestBridge` to the same project.
+It is the only test adapter in the project; `NUnit3TestAdapter`,
+`ricaun.RevitTest.TestAdapter`, and `Microsoft.Testing.Extensions.VSTestBridge`
+conflict with it.
 
 ## Quick start
 
-Default engine: **NUnit**. TUnit: `TestingFramework=tunit` + the `TUnit` package.
-MSTest: `Sdk="MSTest.Sdk"` + `TestingFramework=mstest`.
-Any framework version at or above the adapter's baseline in the same major runs;
-see [project-setup.md](references/project-setup.md).
+NUnit is the default. TUnit: `TestingFramework=tunit` plus the `TUnit` package.
+MSTest: `Sdk="MSTest.Sdk"` plus `TestingFramework=mstest`. Any framework version
+at or above the adapter's baseline in the same major runs.
 
 ```xml
 <PropertyGroup>
@@ -61,13 +61,13 @@ see [project-setup.md](references/project-setup.md).
 </ItemGroup>
 ```
 
-Full properties, the `global.json` to copy and where to place it, conflicts,
-runner path:
-[project-setup.md](references/project-setup.md).
+All properties, the `global.json` to copy and where it goes, conflicts, and the
+runner: [project-setup.md](references/project-setup.md).
 
 ## Run
 
-Run `dotnet test` from a directory covered by the intended `global.json`.
+Run `dotnet test` from a directory covered by the intended `global.json`. The
+adapter starts or reuses the host; you do not start `Revit.exe` or `acad.exe`.
 
 ```powershell
 dotnet test --project path/to/Host.Tests.csproj -c <Config> --filter MethodName --output Detailed
@@ -77,23 +77,20 @@ dotnet test --project Host.Tests.csproj -c <Config> --list-tests
 
 | Behavior | Detail |
 |----------|--------|
-| Discovery | `--list-tests`, Test Explorer refresh — **no host** |
+| Discovery | `--list-tests` and Test Explorer refresh start no host |
 | Run | Starts or reuses a host (`ForceLaunch=false` still launches if none match) |
-| Passed stdout | `--output Detailed` shows Console / Trace / `Assert.Pass` on passes; default `Normal` expands failures only |
-| `--filter` | Method-name regex (NUnit `<name re="1">`), **not** VSTest `FullyQualifiedName~` |
+| Passed stdout | `--output Detailed` shows Console, Trace, and `Assert.Pass` on passes; the default `Normal` expands failures only |
+| `--filter` | Method-name regex (NUnit `<name re="1">`); VSTest `FullyQualifiedName~` matches nothing |
 | `[Explicit]` | Selected only when `--filter` matches the method name |
-| Host launch | Do not start `Revit.exe` / `acad.exe` yourself |
 
-Filters, `--filter-uid`, exit 8: [mtp-filter.md](references/mtp-filter.md).
+Filters, `--filter-uid`, and exit 8: [mtp-filter.md](references/mtp-filter.md).
 
 ## Write tests
 
-Bodies run on the Autodesk API context (not the MTP process). WPF
-`Dispatcher.Invoke` is not an API context.
-
-**Paths:** prefer `[CallerFilePath]` for fixtures and agent-visible outputs.
-`TestContext.WorkDirectory` is **NUnit-only** and points at a generation shadow —
-do not use it for assets or reports. Details: [test-patterns.md](references/test-patterns.md).
+Bodies run on the Autodesk API context. WPF `Dispatcher.Invoke` is not an API
+context. Locate fixtures and outputs with `[CallerFilePath]`: test assemblies are
+stream-loaded, and NUnit's `TestContext.WorkDirectory` points at a generation
+shadow.
 
 | Topic | Reference |
 |-------|-----------|
@@ -106,16 +103,16 @@ do not use it for assets or reports. Details: [test-patterns.md](references/test
 
 | Symptom | Fix |
 |---------|-----|
-| `--filter FullyQualifiedName~…` / `Name=` matches nothing | Use `--filter MethodName` |
+| `--filter FullyQualifiedName~…` or `Name=` matches nothing | Use `--filter MethodName` |
 | No passed stdout under `dotnet test` | Add `--output Detailed` |
-| `[Explicit]` never runs | Select with `--filter MethodName` |
-| Exit 8, zero tests | Wrong filter syntax, or cwd `global.json` still has VSTest |
+| `[Explicit]` never runs | Select it with `--filter MethodName` |
+| Exit 8, zero tests | Wrong filter syntax, or the cwd `global.json` still selects VSTest |
 | `"did not find the TestRunner at '…'"` | Restore the RevitDevTool.TestAdapter package again |
 | `"needs the .NET 10 runtime or later"` | Install the .NET 10 runtime or later on the `dotnet test` machine |
-| Timeout | Raise `PerTestTimeout` (60s is smoke-only) |
+| Timeout | Raise `PerTestTimeout` (60 s is for smoke tests) |
 | Stale host state (net48) | Restart the host process |
 
 ## Links
 
 - NuGet: [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter)
-- Installer / runner: [RevitDevTool](https://github.com/trgiangv/RevitDevTool)
+- Installer and runner: [RevitDevTool](https://github.com/trgiangv/RevitDevTool)
