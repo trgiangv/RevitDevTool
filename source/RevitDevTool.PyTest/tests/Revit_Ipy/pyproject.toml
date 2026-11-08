@@ -1,0 +1,5 @@
+[tool.ruff.lint]
+ignore = [
+    "UP032",
+    "UP009",
+]

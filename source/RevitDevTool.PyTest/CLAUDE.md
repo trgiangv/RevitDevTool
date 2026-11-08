@@ -1,0 +1,1 @@
+Refer to [AGENTS.md](./AGENTS.md) for project rules, conventions, and workflow.
