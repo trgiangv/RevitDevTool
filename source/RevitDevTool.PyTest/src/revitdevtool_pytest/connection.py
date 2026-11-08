@@ -103,7 +103,9 @@ def _connect_discovered_or_launched(
             instances = instances_for_version(host_name, version)
 
         free = lease_store.find_free(suite_key, instances) if lease_store else instances
-        bridge, error = _connect_and_lease(free, suite_key, lease_store, "Assigned free instance")
+        bridge, error = _connect_and_lease(
+            free, suite_key, lease_store, "Assigned free instance"
+        )
         if bridge is not None:
             return ConnectionResult(bridge=bridge)
         if error is not None:
@@ -112,9 +114,14 @@ def _connect_discovered_or_launched(
     launch_version = _resolve_launch_version(host_name, version, instances)
     result = auto_launch(host_name, launch_version, launch_timeout_s)
     bridge, error = _connect_and_lease(
-        [result.launched_instance], suite_key, lease_store, "Spawned and leased",
+        [result.launched_instance],
+        suite_key,
+        lease_store,
+        "Spawned and leased",
     )
-    return ConnectionResult(bridge=bridge, dialog_resolver=result.dialog_resolver, error=error)
+    return ConnectionResult(
+        bridge=bridge, dialog_resolver=result.dialog_resolver, error=error
+    )
 
 
 @dataclass
@@ -143,7 +150,9 @@ def auto_launch(host_name: str, version: str, launch_timeout_s: float) -> Launch
     except ImportError:
         pass
 
-    instance = wait_for_host_pipe(host_name, version, timeout_s=launch_timeout_s, process_id=process_id)
+    instance = wait_for_host_pipe(
+        host_name, version, timeout_s=launch_timeout_s, process_id=process_id
+    )
     if instance is None:
         pytest.exit(
             f"{PLUGIN_NAME}: {host_name} {version} launched but Named Pipe did not appear within {launch_timeout_s}s.",
@@ -153,7 +162,9 @@ def auto_launch(host_name: str, version: str, launch_timeout_s: float) -> Launch
     # Pipe availability can precede full UI/API readiness during cold start.
     time.sleep(2.0)
 
-    log.info("Connected to %s %s (pid=%d)", host_name, instance.version, instance.process_id)
+    log.info(
+        "Connected to %s %s (pid=%d)", host_name, instance.version, instance.process_id
+    )
     return LaunchResult(launched_instance=instance, dialog_resolver=dialog_resolver)
 
 
@@ -168,7 +179,8 @@ def instances_for_version(host_name: str, version: str | None) -> list[HostInsta
 
 
 def find_instance_by_pid(
-    instances: list[HostInstance], process_id: int,
+    instances: list[HostInstance],
+    process_id: int,
 ) -> HostInstance | None:
     for instance in instances:
         if instance.process_id == process_id:
@@ -185,9 +197,11 @@ def is_process_alive(process_id: int, host_name: str = DEFAULT_HOST) -> bool:
     cfg = get_host_config(host_name)
     expected_name = cfg.exe_name
 
-    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000  # noqa: N806
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
     handle = ctypes.windll.kernel32.OpenProcess(  # type: ignore[attr-defined]
-        PROCESS_QUERY_LIMITED_INFORMATION, False, int(process_id),
+        PROCESS_QUERY_LIMITED_INFORMATION,
+        False,
+        int(process_id),
     )
     if handle == 0:
         return False
@@ -197,7 +211,10 @@ def is_process_alive(process_id: int, host_name: str = DEFAULT_HOST) -> bool:
         buf = ctypes.create_unicode_buffer(260)
         size = ctypes.wintypes.DWORD(260)
         ok = ctypes.windll.kernel32.QueryFullProcessImageNameW(  # type: ignore[attr-defined]
-            handle, 0, buf, ctypes.byref(size),
+            handle,
+            0,
+            buf,
+            ctypes.byref(size),
         )
         if not ok:
             return True  # can't verify name — assume alive conservatively
@@ -234,7 +251,9 @@ def _try_reconnect_leased(
         store.assign(suite_key, leased_instance)
         log.info(
             "Reusing lease suite=%s pid=%d pipe=%s",
-            suite_key, leased_instance.process_id, leased_instance.pipe_name,
+            suite_key,
+            leased_instance.process_id,
+            leased_instance.pipe_name,
         )
         return bridge
 
@@ -255,7 +274,10 @@ def _connect_and_lease(
         store.assign(suite_key, selected)
     log.info(
         "%s suite=%s pid=%d pipe=%s",
-        label, suite_key, selected.process_id, selected.pipe_name,
+        label,
+        suite_key,
+        selected.process_id,
+        selected.pipe_name,
     )
     return bridge, None
 
@@ -309,7 +331,9 @@ def _exit_if_incompatible(bridge: HostBridge) -> None:
 
 
 def _resolve_launch_version(
-    host_name: str, version: str | None, instances: list[HostInstance],
+    host_name: str,
+    version: str | None,
+    instances: list[HostInstance],
 ) -> str:
     if version is not None:
         return version

@@ -55,12 +55,14 @@ class SuiteLeaseStore:
         instances: list[HostInstance],
     ) -> list[HostInstance]:
         occupied = {
-            lease.process_id
-            for key, lease in self._leases.items()
-            if key != suite_key
+            lease.process_id for key, lease in self._leases.items() if key != suite_key
         }
-        free = [instance for instance in instances if instance.process_id not in occupied]
-        return sorted(free, key=lambda item: (item.version, item.process_id), reverse=True)
+        free = [
+            instance for instance in instances if instance.process_id not in occupied
+        ]
+        return sorted(
+            free, key=lambda item: (item.version, item.process_id), reverse=True
+        )
 
     def assign(
         self,
@@ -88,7 +90,7 @@ class SuiteLeaseStore:
             return {}
         try:
             payload = json.loads(self._state_file.read_text(encoding="utf-8"))
-        except Exception: # noqa
+        except Exception:  # noqa
             return {}
 
         if not isinstance(payload, dict):
@@ -113,7 +115,9 @@ class SuiteLeaseStore:
         self._state_file.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "version": _STATE_VERSION,
-            "suite_leases": {key: lease.to_dict() for key, lease in self._leases.items()},
+            "suite_leases": {
+                key: lease.to_dict() for key, lease in self._leases.items()
+            },
         }
         content = json.dumps(payload, ensure_ascii=False, indent=2)
         encoded = content.encode("utf-8")

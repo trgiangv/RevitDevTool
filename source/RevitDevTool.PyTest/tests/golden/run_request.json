@@ -1,0 +1,10 @@
+{
+  "workspace_root": "C:\\work\\suite",
+  "test_root": "C:\\work\\suite",
+  "nodeids": ["tests/test_walls.py::test_count", "tests/test_walls.py::test_height"],
+  "pytest_args": ["--maxfail=1"],
+  "sender": {
+    "version": "0.6.1",
+    "protocol": { "current": 1, "min": 1 }
+  }
+}

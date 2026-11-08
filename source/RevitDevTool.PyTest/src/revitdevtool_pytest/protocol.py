@@ -24,15 +24,21 @@ SENDER: dict[str, Any] = {
 }
 
 
-def explain_mismatch(info: dict[str, Any], client_version: str = __version__) -> str | None:
+def explain_mismatch(
+    info: dict[str, Any], client_version: str = __version__
+) -> str | None:
     """The message to show when this package and the host are not compatible, else ``None``."""
     host_current, host_min = _host_range(info)
     if PROTOCOL_MIN <= host_current and host_min <= PROTOCOL_CURRENT:
         return None
 
     host = f"RevitDevTool {info.get('productVersion', '')}".rstrip()
-    message = UPDATE_PRODUCT_MESSAGE if host_current < PROTOCOL_MIN else UPDATE_CLIENT_MESSAGE
-    return f"{host} is not compatible with revitdevtool_pytest {client_version}. {message}"
+    message = (
+        UPDATE_PRODUCT_MESSAGE if host_current < PROTOCOL_MIN else UPDATE_CLIENT_MESSAGE
+    )
+    return (
+        f"{host} is not compatible with revitdevtool_pytest {client_version}. {message}"
+    )
 
 
 def _host_range(info: dict[str, Any]) -> tuple[int, int]:

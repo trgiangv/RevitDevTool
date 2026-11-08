@@ -37,9 +37,15 @@ def test_make_report_wires_stdout_section():
 
 def test_host_lease_key_shared_across_conftest_trees(tmp_path: Path):
     root = str(tmp_path)
-    assert host_lease_key("revit", "2025", root) == host_lease_key("revit", "2025", root)
-    assert host_lease_key("revit", "2025", root) != host_lease_key("civil3d", "2025", root)
-    assert host_lease_key("revit", "2025", root) != host_lease_key("revit", "2026", root)
+    assert host_lease_key("revit", "2025", root) == host_lease_key(
+        "revit", "2025", root
+    )
+    assert host_lease_key("revit", "2025", root) != host_lease_key(
+        "civil3d", "2025", root
+    )
+    assert host_lease_key("revit", "2025", root) != host_lease_key(
+        "revit", "2026", root
+    )
 
 
 def test_resolve_suite_context_uses_workspace_not_conftest(tmp_path: Path):
@@ -133,14 +139,16 @@ def test_emit_item_reports_skipped_setup_not_missing():
 
 
 def test_run_response_from_dict_keeps_engine():
-    response = RunResponse.from_dict({
-        "exit_code": 0,
-        "summary": {},
-        "results": [],
-        "collection_errors": [],
-        "rootdir": "/tmp",
-        "engine": "pyrevit",
-    })
+    response = RunResponse.from_dict(
+        {
+            "exit_code": 0,
+            "summary": {},
+            "results": [],
+            "collection_errors": [],
+            "rootdir": "/tmp",
+            "engine": "pyrevit",
+        }
+    )
     assert response.engine == "pyrevit"
 
 
@@ -172,10 +180,15 @@ def test_run_remote_session_ipy_uses_batch_only():
 
 
 def test_pipe_wait_timeout_cpython_adds_prepare_ipy_does_not():
-    assert pipe_wait_timeout_s(60.0, 2, ipy=False, prepare_timeout_s=DEFAULT_LAUNCH_TIMEOUT_S) == (
-        120.0 + DEFAULT_LAUNCH_TIMEOUT_S
+    assert pipe_wait_timeout_s(
+        60.0, 2, ipy=False, prepare_timeout_s=DEFAULT_LAUNCH_TIMEOUT_S
+    ) == (120.0 + DEFAULT_LAUNCH_TIMEOUT_S)
+    assert (
+        pipe_wait_timeout_s(
+            60.0, 2, ipy=True, prepare_timeout_s=DEFAULT_LAUNCH_TIMEOUT_S
+        )
+        == 120.0
     )
-    assert pipe_wait_timeout_s(60.0, 2, ipy=True, prepare_timeout_s=DEFAULT_LAUNCH_TIMEOUT_S) == 120.0
     assert pipe_wait_timeout_s(60.0, 0, ipy=True) == 60.0
 
 
@@ -197,7 +210,10 @@ def test_run_remote_session_cpython_pipe_wait_includes_prepare():
         pytest_args=["--maxfail=1"],
     )
 
-    assert bridge.run_tests.call_args.kwargs["timeout_s"] == 60.0 + DEFAULT_LAUNCH_TIMEOUT_S
+    assert (
+        bridge.run_tests.call_args.kwargs["timeout_s"]
+        == 60.0 + DEFAULT_LAUNCH_TIMEOUT_S
+    )
     assert bridge.run_tests.call_args.kwargs["pytest_args"] == ["--maxfail=1"]
     bridge.run_ipy_tests.assert_not_called()
 

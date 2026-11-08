@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from ..constants import get_host_config
 from .acad import find_acad_executable, product_code
-from .revit import find_revit_executable, supports as revit_supports
+from .revit import find_revit_executable
+from .revit import supports as revit_supports
 
 __all__ = ["find_executable"]
 

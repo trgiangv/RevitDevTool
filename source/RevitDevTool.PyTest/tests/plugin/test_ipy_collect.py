@@ -93,16 +93,23 @@ def test_vscode_style_nodeid_selects_one_item(pytester: pytest.Pytester):
         f"{target}::TestMath::test_add",
         "--collect-only",
         "-q",
-        "-p", "revitdevtool",
+        "-p",
+        "revitdevtool",
     )
     result.stdout.fnmatch_lines(["*test_math_ipy.py::TestMath::test_add*"])
     assert result.ret == 0
     assert "ERROR: not found" not in result.stdout.str()
-    collected = [line for line in result.stdout.str().splitlines() if "::" in line and "test_math_ipy" in line]
+    collected = [
+        line
+        for line in result.stdout.str().splitlines()
+        if "::" in line and "test_math_ipy" in line
+    ]
     assert len(collected) == 1
 
 
-def test_collect_suite_item_when_testcase_has_no_test_methods(pytester: pytest.Pytester):
+def test_collect_suite_item_when_testcase_has_no_test_methods(
+    pytester: pytest.Pytester,
+):
     pytester.makeini("[pytest]\n")
     target = pytester.path / "test_suite_only_ipy.py"
     target.write_text(
@@ -117,6 +124,8 @@ def test_collect_suite_item_when_testcase_has_no_test_methods(pytester: pytest.P
         ),
         encoding="utf-8",
     )
-    result = pytester.runpytest(str(target), "--collect-only", "-q", "-p", "revitdevtool")
+    result = pytester.runpytest(
+        str(target), "--collect-only", "-q", "-p", "revitdevtool"
+    )
     result.stdout.fnmatch_lines(["*test_suite_only_ipy.py::(suite)*"])
     assert result.ret == 0

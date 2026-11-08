@@ -25,9 +25,14 @@ def _info(current: int, minimum: int, product: str = "5.0.0") -> dict:
 
 
 def test_host_without_protocols_says_to_update_revitdevtool():
-    message = explain_mismatch({"hostApp": "Revit", "processId": 1, "versionNumber": "2025"}, "1.0.0")
+    message = explain_mismatch(
+        {"hostApp": "Revit", "processId": 1, "versionNumber": "2025"}, "1.0.0"
+    )
 
-    assert message == f"RevitDevTool is not compatible with revitdevtool_pytest 1.0.0. {UPDATE_PRODUCT_MESSAGE}"
+    assert (
+        message
+        == f"RevitDevTool is not compatible with revitdevtool_pytest 1.0.0. {UPDATE_PRODUCT_MESSAGE}"
+    )
 
 
 def test_host_inside_the_range_is_accepted():
@@ -36,18 +41,26 @@ def test_host_inside_the_range_is_accepted():
 
 
 def test_newer_host_says_to_update_the_package():
-    message = explain_mismatch(_info(PROTOCOL_CURRENT + 2, PROTOCOL_CURRENT + 1), "0.5.0")
+    message = explain_mismatch(
+        _info(PROTOCOL_CURRENT + 2, PROTOCOL_CURRENT + 1), "0.5.0"
+    )
 
     assert message is not None
-    assert message.startswith("RevitDevTool 5.0.0 is not compatible with revitdevtool_pytest 0.5.0")
+    assert message.startswith(
+        "RevitDevTool 5.0.0 is not compatible with revitdevtool_pytest 0.5.0"
+    )
     assert message.endswith(UPDATE_CLIENT_MESSAGE)
 
 
 def test_older_host_says_to_update_revitdevtool():
-    message = explain_mismatch(_info(PROTOCOL_MIN - 1, PROTOCOL_MIN - 1, "4.0.0"), "1.0.0")
+    message = explain_mismatch(
+        _info(PROTOCOL_MIN - 1, PROTOCOL_MIN - 1, "4.0.0"), "1.0.0"
+    )
 
     assert message is not None
-    assert message.startswith("RevitDevTool 4.0.0 is not compatible with revitdevtool_pytest 1.0.0")
+    assert message.startswith(
+        "RevitDevTool 4.0.0 is not compatible with revitdevtool_pytest 1.0.0"
+    )
     assert message.endswith(UPDATE_PRODUCT_MESSAGE)
 
 

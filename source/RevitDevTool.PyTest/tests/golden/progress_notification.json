@@ -1,0 +1,10 @@
+{
+  "nodeid": "tests/test_walls.py::test_count",
+  "outcome": "passed",
+  "phase": "call",
+  "duration_ms": 12.5,
+  "stdout": "walls: 4\n",
+  "stderr": "",
+  "message": "",
+  "traceback": ""
+}

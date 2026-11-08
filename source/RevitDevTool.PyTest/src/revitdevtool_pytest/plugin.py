@@ -68,37 +68,58 @@ _SUPPORTED_HOSTS = ", ".join(sorted(HOST_REGISTRY))
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    grp = parser.getgroup("host", "Host application testing (Revit, AutoCAD, Civil3D, etc.)")
+    grp = parser.getgroup(
+        "host", "Host application testing (Revit, AutoCAD, Civil3D, etc.)"
+    )
     grp.addoption(
-        "--host", dest=OPT_HOST, default=None,
+        "--host",
+        dest=OPT_HOST,
+        default=None,
         help=f"Host application name. Supported: {_SUPPORTED_HOSTS} (default: {DEFAULT_HOST}).",
     )
     grp.addoption(
-        "--host-version", dest=OPT_VERSION, default=None,
+        "--host-version",
+        dest=OPT_VERSION,
+        default=None,
         help="Host version (e.g. 2025, 8.0). Required when --force-launch is set.",
     )
     grp.addoption(
-        "--per-test-timeout", dest=OPT_PER_TEST_TIMEOUT, default=None, type=float,
+        "--per-test-timeout",
+        dest=OPT_PER_TEST_TIMEOUT,
+        default=None,
+        type=float,
         help=(
             f"Per-test execution budget in seconds (default: {DEFAULT_TEST_TIMEOUT_S}). "
             "The tests/run pipe wait is this value times the number of collected tests."
         ),
     )
     grp.addoption(
-        "--host-pipe", dest=OPT_PIPE, default=None,
+        "--host-pipe",
+        dest=OPT_PIPE,
+        default=None,
         help="Explicit pipe name (bypasses auto-discovery).",
     )
     grp.addoption(
-        "--force-launch", dest=OPT_FORCE_LAUNCH, action="store_true", default=False,
+        "--force-launch",
+        dest=OPT_FORCE_LAUNCH,
+        action="store_true",
+        default=False,
         help="Force-launch a new host instance (skip reusing existing). Requires --host-version.",
     )
     grp.addoption(
-        "--launch-timeout", dest=OPT_LAUNCH_TIMEOUT, default=None, type=float,
+        "--launch-timeout",
+        dest=OPT_LAUNCH_TIMEOUT,
+        default=None,
+        type=float,
         help=f"Seconds to wait for host pipe after launch (default: {DEFAULT_LAUNCH_TIMEOUT_S}).",
     )
 
-    parser.addini(OPT_HOST, "Host application name", type="string", default=DEFAULT_HOST)
-    parser.addini(OPT_VERSION, "Host version (e.g. 2025, 8.0)", type="string", default=None)
+    parser.addini(
+        OPT_HOST, "Host application name", type="string", default=DEFAULT_HOST
+    )
+    parser.addini(
+        OPT_VERSION, "Host version (e.g. 2025, 8.0)", type="string", default=None
+    )
     parser.addini(
         OPT_PER_TEST_TIMEOUT,
         "Per-test execution budget (seconds); tests/run wait is this times collected tests",
@@ -106,8 +127,18 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         default=str(DEFAULT_TEST_TIMEOUT_S),
     )
     parser.addini(OPT_PIPE, "Explicit pipe name", type="string", default=None)
-    parser.addini(OPT_FORCE_LAUNCH, "Force-launch a new host instance (skip reusing existing)", type="bool", default=False)
-    parser.addini(OPT_LAUNCH_TIMEOUT, "Wait for host pipe after launch (seconds)", type="string", default=str(DEFAULT_LAUNCH_TIMEOUT_S))
+    parser.addini(
+        OPT_FORCE_LAUNCH,
+        "Force-launch a new host instance (skip reusing existing)",
+        type="bool",
+        default=False,
+    )
+    parser.addini(
+        OPT_LAUNCH_TIMEOUT,
+        "Wait for host pipe after launch (seconds)",
+        type="string",
+        default=str(DEFAULT_LAUNCH_TIMEOUT_S),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +153,7 @@ def pytest_configure(config: pytest.Config) -> None:
     if "P" not in reportchars:
         config.option.reportchars = reportchars + "P"
 
-    global _lease_store  # noqa
+    global _lease_store
     _lease_store = SuiteLeaseStore()
 
 
@@ -151,7 +182,7 @@ def pytest_runtestloop(session: pytest.Session) -> bool | None:
 
 
 @pytest.hookimpl(tryfirst=True)
-def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> bool:  # noqa
+def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> bool:
     results_by_nodeid = item.session.stash.get(_remote_results_key, None)
     if results_by_nodeid is None:
         # firstresult: None lets pytest's own protocol run. False would swallow it.
@@ -163,14 +194,17 @@ def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None) -> 
 
     results = results_by_nodeid.get(item.nodeid, [])
     emit_item_reports(
-        item, results,
+        item,
+        results,
         collection_failed=item.session.stash.get(_remote_collection_failed_key, False),
-        collection_error_message=item.session.stash.get(_remote_collection_error_key, None),
+        collection_error_message=item.session.stash.get(
+            _remote_collection_error_key, None
+        ),
     )
     return True
 
 
-def pytest_unconfigure(config: pytest.Config) -> None:  # noqa
+def pytest_unconfigure(config: pytest.Config) -> None:
     global _bridge, _dialog_resolver, _lease_store
     _suite_mutex.release()
     if _dialog_resolver is not None:
@@ -189,7 +223,10 @@ def pytest_unconfigure(config: pytest.Config) -> None:  # noqa
 
 def _dispatch_remote_run(session: pytest.Session) -> None:
     assert _bridge is not None
-    per_test_timeout = _opt_float(session.config, OPT_PER_TEST_TIMEOUT, OPT_PER_TEST_TIMEOUT) or DEFAULT_TEST_TIMEOUT_S
+    per_test_timeout = (
+        _opt_float(session.config, OPT_PER_TEST_TIMEOUT, OPT_PER_TEST_TIMEOUT)
+        or DEFAULT_TEST_TIMEOUT_S
+    )
 
     ipy_items = [item for item in session.items if isinstance(item, IpyTestItem)]
     py_items = [item for item in session.items if not isinstance(item, IpyTestItem)]
@@ -205,7 +242,10 @@ def _dispatch_remote_run(session: pytest.Session) -> None:
             or DEFAULT_LAUNCH_TIMEOUT_S
         )
         py_results, py_streamed, py_failed, py_error = run_remote_session(
-            session, _bridge, per_test_timeout, items=py_items,
+            session,
+            _bridge,
+            per_test_timeout,
+            items=py_items,
             prepare_timeout_s=prepare_timeout_s,
             pytest_args=host_pytest_args(session.config),
         )
@@ -214,9 +254,18 @@ def _dispatch_remote_run(session: pytest.Session) -> None:
         collection_failed = collection_failed or py_failed
         collection_error = collection_error or py_error
 
-    if ipy_items and not collection_failed and not session.shouldfail and not session.shouldstop:
+    if (
+        ipy_items
+        and not collection_failed
+        and not session.shouldfail
+        and not session.shouldstop
+    ):
         ipy_results, ipy_streamed, ipy_failed, ipy_error = run_remote_session(
-            session, _bridge, per_test_timeout, items=ipy_items, ipy=True,
+            session,
+            _bridge,
+            per_test_timeout,
+            items=ipy_items,
+            ipy=True,
             pytest_args=host_pytest_args(session.config),
         )
         ipy_results = fan_suite_results(ipy_items, ipy_results)
@@ -242,7 +291,9 @@ def _ensure_bridge(session: pytest.Session, host_name: str) -> bool:
 
     config = session.config
     suite_key, _ = resolve_suite_context(
-        session, host_name, _opt(config, OPT_VERSION, OPT_VERSION),
+        session,
+        host_name,
+        _opt(config, OPT_VERSION, OPT_VERSION),
     )
 
     explicit_pipe = _opt(config, OPT_PIPE, OPT_PIPE)
@@ -260,7 +311,8 @@ def _ensure_bridge(session: pytest.Session, host_name: str) -> bool:
     result = ensure_bridge(
         current_bridge=_bridge,
         lease_store=_lease_store,
-        launch_timeout_s=_opt_float(config, OPT_LAUNCH_TIMEOUT, OPT_LAUNCH_TIMEOUT) or DEFAULT_LAUNCH_TIMEOUT_S,
+        launch_timeout_s=_opt_float(config, OPT_LAUNCH_TIMEOUT, OPT_LAUNCH_TIMEOUT)
+        or DEFAULT_LAUNCH_TIMEOUT_S,
         host_name=host_name,
         version=_opt(config, OPT_VERSION, OPT_VERSION),
         explicit_pipe=explicit_pipe,

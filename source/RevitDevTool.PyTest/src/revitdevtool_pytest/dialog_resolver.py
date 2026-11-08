@@ -19,7 +19,9 @@ _BUTTON_CLASS = "button"
 _user32: Any = ctypes.windll.user32  # type: ignore[attr-defined]
 
 _EnumWindowsProc = ctypes.WINFUNCTYPE(  # type: ignore[misc]
-    ctypes.wintypes.BOOL, ctypes.wintypes.HWND, ctypes.wintypes.LPARAM,
+    ctypes.wintypes.BOOL,
+    ctypes.wintypes.HWND,
+    ctypes.wintypes.LPARAM,
 )
 
 
@@ -55,16 +57,39 @@ def _send_click(hwnd: int) -> None:
 @dataclass
 class DialogResolverOptions:
     poll_interval_s: float = 0.5
-    dialog_title_keywords: list[str] = field(default_factory=lambda: [
-        "Autodesk", "Revit", "AutoCAD", "Civil", "Plant",
-        "Load", "Security", "Warning", "Add-in", "Addin",
-    ])
-    preferred_button_keywords: list[str] = field(default_factory=lambda: [
-        "Always Load", "Load Once", "Load", "OK", "Yes", "Accept", "Continue", "Close",
-    ])
-    blocked_button_keywords: list[str] = field(default_factory=lambda: [
-        "Do Not Load", "Cancel", "No",
-    ])
+    dialog_title_keywords: list[str] = field(
+        default_factory=lambda: [
+            "Autodesk",
+            "Revit",
+            "AutoCAD",
+            "Civil",
+            "Plant",
+            "Load",
+            "Security",
+            "Warning",
+            "Add-in",
+            "Addin",
+        ]
+    )
+    preferred_button_keywords: list[str] = field(
+        default_factory=lambda: [
+            "Always Load",
+            "Load Once",
+            "Load",
+            "OK",
+            "Yes",
+            "Accept",
+            "Continue",
+            "Close",
+        ]
+    )
+    blocked_button_keywords: list[str] = field(
+        default_factory=lambda: [
+            "Do Not Load",
+            "Cancel",
+            "No",
+        ]
+    )
 
 
 class StartupDialogResolver:
@@ -81,7 +106,9 @@ class StartupDialogResolver:
         if self._thread is not None:
             return
         self._stop.clear()
-        self._thread = threading.Thread(target=self._run, daemon=True, name="host-dialog-resolver")
+        self._thread = threading.Thread(
+            target=self._run, daemon=True, name="host-dialog-resolver"
+        )
         self._thread.start()
 
     def stop(self) -> None:
@@ -141,7 +168,9 @@ class StartupDialogResolver:
         return windows
 
 
-def _get_button_score(hwnd: int, keywords: list[str], blocked_keywords: list[str]) -> int | None:
+def _get_button_score(
+    hwnd: int, keywords: list[str], blocked_keywords: list[str]
+) -> int | None:
     if _get_class_name(hwnd).lower() != _BUTTON_CLASS:
         return None
 

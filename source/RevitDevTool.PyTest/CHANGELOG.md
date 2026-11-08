@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1]
+
+### Changed
+
+- Moved into the RevitDevTool repository; no behavior change.
+
 ## [0.6.0] - 2026-11-02
 
 ### Added

@@ -161,15 +161,16 @@ def revit_auto_rollback(revit_transaction_service):
 5. Results and optional progress notifications return to the client.
 6. Plugin maps `CaseResult` → standard pytest reports.
 
-## Developing this repository
+## Developing this package
 
-Clone and run integration tests against a live host:
+The source lives in [`source/RevitDevTool.PyTest`](https://github.com/trgiangv/RevitDevTool/tree/develop/source/RevitDevTool.PyTest) of the RevitDevTool repository. Dev tasks use [pixi](https://pixi.sh), from that folder:
 
 ```powershell
-cd RevitDevTool.PyTest
-uv run pytest -v                          # Revit suite (default)
-uv run pytest tests/Revit/test_smoke.py -v
-uv run pytest --host civil3d --host-version 2026  # after switching testpaths/host in pyproject.toml
+pixi run lint                                  # ruff check + format check
+pixi run test                                  # unit and golden wire tests, no host
+pixi run build                                 # wheel and sdist into dist/
+pixi run live                                  # live host suite, settings in tests/live.ini
+pixi run live tests/Revit/test_smoke.py -v
 ```
 
 ### Layout
@@ -177,10 +178,12 @@ uv run pytest --host civil3d --host-version 2026  # after switching testpaths/ho
 | Path | Purpose |
 |---|---|
 | `src/revitdevtool_pytest/` | Plugin source (published wheel) |
+| `tests/plugin/` | Unit tests, no host |
+| `tests/golden/` | Wire fixtures shared with the C# tests |
 | `tests/Revit/` | Revit integration tests + `schedule/` helpers |
 | `tests/Civil3d/` | Civil 3D / AutoCAD API tests |
 
-Revit suite settings in `pyproject.toml`: `testpaths = ["tests/Revit"]`, `pythonpath = ["tests/Revit"]` for local `schedule` imports.
+Live suite settings in `tests/live.ini`: `testpaths = Revit`, `pythonpath = Revit` for local `schedule` imports; switch to `Civil3d` there.
 
 Optional env: `REVIT_TEST_MODEL_PATH` — path to `.rvt` for `revit_doc` fixture (default `F:\Project1.rvt`).
 

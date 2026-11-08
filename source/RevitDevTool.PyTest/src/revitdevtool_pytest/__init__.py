@@ -1,3 +1,5 @@
 """RevitDevTool.PyTest: Run pytest tests inside a live Autodesk host (Revit, AutoCAD, Civil3D, etc.) via Named Pipe bridge."""
 
-__version__ = "0.6.0"
+from importlib.metadata import version
+
+__version__ = version("revitdevtool_pytest")

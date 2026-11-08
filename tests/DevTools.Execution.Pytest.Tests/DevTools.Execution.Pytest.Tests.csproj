@@ -30,6 +30,7 @@
 
     <ItemGroup>
         <None Update="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest"/>
+        <None Include="..\..\source\RevitDevTool.PyTest\tests\golden\*.json" Link="Golden\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest"/>
     </ItemGroup>
 
 </Project>

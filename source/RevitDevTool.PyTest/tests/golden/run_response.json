@@ -1,0 +1,36 @@
+{
+  "exit_code": 1,
+  "summary": { "passed": 1, "failed": 1, "skipped": 0, "errors": 1, "xfailed": 0, "xpassed": 0 },
+  "results": [
+    {
+      "nodeid": "tests/test_walls.py::test_count",
+      "outcome": "passed",
+      "phase": "call",
+      "duration_ms": 12.5,
+      "stdout": "walls: 4\n",
+      "stderr": "",
+      "message": "",
+      "traceback": ""
+    },
+    {
+      "nodeid": "tests/test_walls.py::test_height",
+      "outcome": "failed",
+      "phase": "call",
+      "duration_ms": 3.25,
+      "stdout": "",
+      "stderr": "",
+      "message": "assert 3000.0 == 2800.0",
+      "traceback": "tests/test_walls.py:12: AssertionError"
+    }
+  ],
+  "collection_errors": [
+    {
+      "nodeid": "tests/test_doors.py",
+      "path": "C:\\work\\suite\\tests\\test_doors.py",
+      "message": "ImportError: No module named 'clr'",
+      "traceback": "tests/test_doors.py:1: ImportError"
+    }
+  ],
+  "rootdir": "C:\\work\\suite",
+  "engine": "cpython"
+}

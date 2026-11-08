@@ -57,12 +57,14 @@ def find_host_pipes(host_name: str | None = None) -> list[HostInstance]:
         if target_prefix is not None and prefix_lower != target_prefix:
             continue
         resolved = _PREFIX_TO_HOST.get(prefix_lower, prefix_raw)
-        instances.append(HostInstance(
-            pipe_name=name,
-            host_name=resolved,
-            version=m.group(2),
-            process_id=int(m.group(3)),
-        ))
+        instances.append(
+            HostInstance(
+                pipe_name=name,
+                host_name=resolved,
+                version=m.group(2),
+                process_id=int(m.group(3)),
+            )
+        )
     return instances
 
 
@@ -73,7 +75,7 @@ def start_host(host_name: str, version: str) -> int:
     if exe_path is None:
         raise FileNotFoundError(f"{host_name} {version} installation not found.")
 
-    process = subprocess.Popen(  # noqa: S603
+    process = subprocess.Popen(
         [exe_path, *cfg.launch_args],
         creationflags=subprocess.DETACHED_PROCESS,
     )

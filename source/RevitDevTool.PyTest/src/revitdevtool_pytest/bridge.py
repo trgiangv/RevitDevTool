@@ -42,7 +42,10 @@ class HostBridge:
     """Synchronous Named Pipe client for the DevTool bridge."""
 
     def __init__(
-        self, pipe_name: str, *, connect_timeout_ms: int = DEFAULT_CONNECT_TIMEOUT_MS,
+        self,
+        pipe_name: str,
+        *,
+        connect_timeout_ms: int = DEFAULT_CONNECT_TIMEOUT_MS,
     ) -> None:
         self._pipe_name = pipe_name
         self._connect_timeout_ms = connect_timeout_ms
@@ -62,13 +65,20 @@ class HostBridge:
                 self._handle = win32file.CreateFile(
                     pipe_path,
                     win32file.GENERIC_READ | win32file.GENERIC_WRITE,
-                    0, None, win32file.OPEN_EXISTING, 0, None,
+                    0,
+                    None,
+                    win32file.OPEN_EXISTING,
+                    0,
+                    None,
                 )
                 win32pipe.SetNamedPipeHandleState(
-                    self._handle, win32pipe.PIPE_READMODE_BYTE, None, None,
+                    self._handle,
+                    win32pipe.PIPE_READMODE_BYTE,
+                    None,
+                    None,
                 )
                 return
-            except Exception: # noqa
+            except Exception:  # noqa
                 if time.monotonic() >= deadline:
                     raise ConnectionError(
                         f"Cannot connect to pipe '{self._pipe_name}' "
@@ -106,8 +116,12 @@ class HostBridge:
 
     # -- Public RPC methods -------------------------------------------------
 
-    def instance_info(self, timeout_s: float = DEFAULT_CONNECT_TIMEOUT_MS / 1000.0) -> dict[str, Any]:
-        response = self._request(BridgeRequest(method=BRIDGE_METHOD_INSTANCE_INFO), timeout_s)
+    def instance_info(
+        self, timeout_s: float = DEFAULT_CONNECT_TIMEOUT_MS / 1000.0
+    ) -> dict[str, Any]:
+        response = self._request(
+            BridgeRequest(method=BRIDGE_METHOD_INSTANCE_INFO), timeout_s
+        )
         return response.result
 
     def run_tests(
@@ -150,7 +164,9 @@ class HostBridge:
             pytest_args=pytest_args or [],
         )
         response: BridgeResponse = self._request(
-            BridgeRequest(method=BRIDGE_METHOD_IPY_TESTS_RUN, params=request.to_params()),
+            BridgeRequest(
+                method=BRIDGE_METHOD_IPY_TESTS_RUN, params=request.to_params()
+            ),
             timeout_s,
             on_notification=on_notification,
         )
@@ -237,5 +253,5 @@ def _dispatch_notification(
     params = parsed.get("params")
     try:
         callback(method, params)
-    except Exception:  # noqa
+    except Exception:
         log.debug("Notification callback error for method=%s", method, exc_info=True)

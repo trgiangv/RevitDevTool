@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "revitdevtool_pytest"
-version = "0.6.0"
+version = "0.6.1"
 description = "pytest plugin for testing CAD/BIM API code inside host applications via RevitDevTool Named Pipe bridge"
 readme = "README.md"
 license = "MIT"
@@ -30,24 +30,16 @@ dependencies = ["pytest>=9.1.1,<10", "pywin32>=312"]
 revitdevtool = "revitdevtool_pytest.plugin"
 
 [project.urls]
-Homepage = "https://github.com/trgiangv/RevitDevTool.PyTest"
-Repository = "https://github.com/trgiangv/RevitDevTool.PyTest"
-Issues = "https://github.com/trgiangv/RevitDevTool.PyTest/issues"
+Homepage = "https://github.com/trgiangv/RevitDevTool"
+Repository = "https://github.com/trgiangv/RevitDevTool"
+Issues = "https://github.com/trgiangv/RevitDevTool/issues"
+Changelog = "https://github.com/trgiangv/RevitDevTool/blob/develop/source/RevitDevTool.PyTest/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/revitdevtool_pytest"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests/Revit"]
-pythonpath = ["tests/Revit"]
-# testpaths = ["tests/Civil3d"]
-# pythonpath = ["tests/Civil3d"]
-host_name = "revit"
-host_version = "2025"
-# host_name = "civil3d"
-# host_version = "2026"
-# host_name = "plant3d"
-# host_version = "2027"
-per_test_timeout = "60"
-force_launch = false
-launch_timeout = "180"
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+ignore = ["UP032", "UP009", "FLY002"]

@@ -2,6 +2,8 @@ using DevTools.Execution.External.Handlers;
 using DevTools.Execution.External.Testing;
 using DevTools.Hosting;
 using DevTools.Ipc;
+using DevTools.Utilities;
+using System.Reflection;
 using System.Text.Json;
 
 namespace DevTools.Execution.Tests;
@@ -30,6 +32,19 @@ public sealed class InstanceRequestHandlerTests
         Assert.IsFalse(string.IsNullOrWhiteSpace(info.ProductVersion));
         Assert.AreEqual(PytestProtocol.Range, info.Protocols![PytestProtocol.Name]);
         Assert.Contains("\"protocols\":{\"pytest\":{\"current\":1,\"min\":1}}", response.Result.Value.GetRawText(), StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task Info_reports_addin_version()
+    {
+        var addin = typeof(Assert).Assembly;
+        var expected = addin.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
+        AppVersion.UseAddin(addin);
+        var handler = new InstanceRequestHandler(new StubHostAppInfo(HostApp.Revit, "2025"));
+
+        var response = await handler.HandleAsync("7", IpcBridgeMethods.InstanceInfo, null, TestContext.CancellationToken);
+
+        Assert.AreEqual(expected, response.Result!.Value.Deserialize<InstanceInfo>()!.ProductVersion);
     }
 
     [TestMethod]

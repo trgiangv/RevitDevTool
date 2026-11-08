@@ -1,0 +1,9 @@
+{
+  "hostApp": "Revit",
+  "processId": 12345,
+  "versionNumber": "2025",
+  "productVersion": "4.0.0-beta.8",
+  "protocols": {
+    "pytest": { "current": 1, "min": 1 }
+  }
+}

@@ -118,7 +118,10 @@ def run_remote_session(
     selected = items if items is not None else list(session.items)
     workspace_root = str(session.config.rootdir)
     total_timeout = pipe_wait_timeout_s(
-        timeout_per_test, len(selected), ipy=ipy, prepare_timeout_s=prepare_timeout_s,
+        timeout_per_test,
+        len(selected),
+        ipy=ipy,
+        prepare_timeout_s=prepare_timeout_s,
     )
     nodeids = [item.nodeid for item in selected]
     streamed: set[str] = set()
@@ -265,7 +268,7 @@ def _emit_streaming_report(
             OUTCOME_ERROR,
         }:
             ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
-    except Exception:  # noqa
+    except Exception:
         log.debug("Failed to emit streaming report", exc_info=True)
 
 
@@ -285,10 +288,18 @@ def emit_item_reports(
     ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
 
     if collection_failed:
-        message = collection_error_message or "Remote collection failed before test execution."
+        message = (
+            collection_error_message
+            or "Remote collection failed before test execution."
+        )
         reports = [_emit_single(ihook, make_error_report(item, message))]
     elif not results:
-        reports = [_emit_single(ihook, make_error_report(item, "No result received from host for this test."))]
+        reports = [
+            _emit_single(
+                ihook,
+                make_error_report(item, "No result received from host for this test."),
+            )
+        ]
     else:
         reports = [_emit_single(ihook, make_report(item, r)) for r in results]
 
@@ -386,7 +397,10 @@ def skip_all(session: pytest.Session, reason: str) -> None:
 
 
 def report_collection_error(
-    session: pytest.Session, nodeid: str, message: str, tb: str,
+    session: pytest.Session,
+    nodeid: str,
+    message: str,
+    tb: str,
 ) -> None:
     full = f"{message}\n{tb}" if tb else message
     session.config.hook.pytest_collectreport(
