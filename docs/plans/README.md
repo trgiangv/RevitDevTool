@@ -33,7 +33,8 @@ Rename an active plan when its ADR number or workstream id changed.
 
 | Plan | Decision |
 |------|----------|
-| [2026-11-06-release-trains-0059.md](active/2026-11-06-release-trains-0059.md) | [0059](../decisions/0059-independent-release-trains-and-one-gate-ci.md) four release trains, `channels.json`, one-gate CI |
+| [2026-11-06-release-trains-0059.md](active/2026-11-06-release-trains-0059.md) | [0059](../decisions/0059-independent-release-trains-and-one-gate-ci.md) four release trains, `channels.json`, one-gate CI, PyTest in this repo |
+| [2026-10-25-auto-update.md](active/2026-10-25-auto-update.md) | [0046](../decisions/0046-per-year-release-payloads-and-update-manifest.md)–[0053](../decisions/0053-velopack-for-daemon-distribution.md) engine features left in Phase 2 (release work moved to 0059) |
 
 ## Recently Completed
 

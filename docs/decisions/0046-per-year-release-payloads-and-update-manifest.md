@@ -4,7 +4,9 @@ Date: 2026-10-25
 
 ## Status
 
-**Proposed 2026-10-25.**
+**Proposed 2026-10-25.** The "one version" rules (one product version across the
+Daemon and every year payload) are replaced by the independent `daemon` and `addin`
+trains of [0059](0059-independent-release-trains-and-one-gate-ci.md).
 
 First of the auto-update set: 0046 (release artifacts), [0047](0047-velopack-setup-and-host-picker.md)
 (installer and host picker), [0048](0048-daemon-hosted-update-engine.md) (engine and discovery),

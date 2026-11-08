@@ -11,6 +11,10 @@ Date: 2026-10-29
 what the update engine installs. It changes how the pieces that talk to each
 other prove that they can.
 
+§5, §6, and §7 are replaced by [0059](0059-independent-release-trains-and-one-gate-ci.md)
+(2026-11-08): every component is a train with its own version file, and PyTest moves
+into this repo. §1–§4 and §8–§10 stay.
+
 ## Context
 
 A release stamps one product version (`4.0.0-beta.4`) on the Daemon, TestRunner,

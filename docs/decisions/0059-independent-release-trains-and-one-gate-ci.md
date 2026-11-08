@@ -4,8 +4,8 @@ Date: 2026-11-05
 
 ## Status
 
-**Proposed 2026-11-05.** A clean redesign: shipped Daemons, adapters, and plugins
-are not carried forward. When accepted, it replaces
+**Accepted 2026-11-08** (proposed 2026-11-05). A clean redesign: shipped Daemons,
+adapters, and plugins are not carried forward. It replaces
 [0054](0054-release-automation-channels-and-4-0-cutover.md), the release
 discovery of [0048](0048-daemon-hosted-update-engine.md), the "one version"
 rules of [0046](0046-per-year-release-payloads-and-update-manifest.md), and
@@ -14,6 +14,14 @@ The contract ranges of 0055 (§1–§4, §8–§10) stay: they are what makes
 independent releases safe.
 
 Amended 2026-11-07: §6 adds the `PublicAPI.Unshipped.txt` move at a stable `addin` release ([0060](0060-framework-runtime-shims-ship-with-nettest.md) §8).
+
+Amended 2026-11-08, at acceptance: §1 lists the framework runtimes in `nettest` and
+which train owns each testing piece (0060 §1); §5 adds the `0.x` rule and the
+framework floor and major rules (0060 §9); §11 names `develop` as the trunk. Later the
+same day, from the implementation plan: §5 local version form and no solution-wide
+version, §6 the bump PR moves `PublicAPI`, §7 which job holds no secret. Then, by
+the owner: a clean cut inside the repo too; the first train releases are the
+baseline (§5 refusal, "What is removed").
 
 ## Context
 
@@ -63,7 +71,7 @@ Read from `gh run list` and `.github/workflows/` on 2026-11-05:
 |-------|----------|--------------|-----|------------------|
 | `daemon` | Daemon, update engine, `RevitDevTool-Setup.exe` | `<Version>` in `source/DevTools.Daemon/DevTools.Daemon.csproj` | `daemon/vX.Y.Z` | Velopack feed, `channels.json` |
 | `addin` | Revit and AutoCAD add-ins, one payload per year, offline bundle | `<Version>` in `source/AddinVersion.props` (imported by the host projects) | `addin/vX.Y.Z` | `update-manifest.json`, `channels.json` |
-| `nettest` | NuGet `RevitDevTool.TestAdapter`: adapter, MTP providers, TestRunner | `<Version>` in `source/DevTools.TestAdapter/DevTools.TestAdapter.csproj` | `nettest/vX.Y.Z` | nuget.org |
+| `nettest` | NuGet `RevitDevTool.TestAdapter`: adapter, MTP providers, framework runtimes and their manifests (0060), TestRunner | `<Version>` in `source/DevTools.TestAdapter/DevTools.TestAdapter.csproj` | `nettest/vX.Y.Z` | nuget.org |
 | `pytest` | PyPI `revitdevtool_pytest` | `version` in `source/RevitDevTool.PyTest/pyproject.toml` | `pytest/vX.Y.Z` | PyPI |
 
 Every train has the same life: a version file bumped in a PR, a CI job, one
@@ -73,6 +81,10 @@ release tooling knows no special train.
 - Each train releases only when its own code changed. Shared `DevTools.*` code
   belongs to every train that builds it, and its change is a reason to release
   each of them, not a train of its own.
+- Testing pieces follow 0060 §1: the kernel (`DevTools.Testing.Host`) is `addin`;
+  the framework runtimes, MTP providers, adapter, and runner are `nettest`;
+  `DevTools.Testing.Abstractions`, `DevTools.Testing.Transport`, and
+  `props/TestingRuntime.props` are shared by both.
 - Compatibility between trains is decided by the 0055 contract ranges. The one
   version rule across trains is `minUpdaterVersion` in the add-in manifest: the
   oldest Daemon that can install the payload (0052).
@@ -146,9 +158,12 @@ release updates one file, `channels.json`, signed like the feeds (0051):
 - `daemon` and `addin` both start at `4.0.0` and then move on their own.
 - `+<sha>` appears only in `InformationalVersion`.
 - **Non-release builds** use `0.0.0`: `0.0.0-ci.<run>+<sha>` in CI,
-  `0.0.0-local+<sha>` on a dev machine, `0.0.0.dev<run>` for `pytest`. `publish`
-  refuses `0.0.0`. A local pack cannot collide with a published package, so the
-  NuGet cache workaround in `PackTestAdapterModule` goes away.
+  `0.0.0-local.<UTC yyyyMMddHHmmss>+<sha>` on a dev machine (NuGet ignores `+…`, so the
+  stamp keeps local packs apart), `0.0.0.dev<run>` for `pytest`. `publish` refuses
+  `0.0.0`. A local pack cannot collide with a published or an earlier local package, so
+  the NuGet cache workaround in `PackTestAdapterModule` goes away.
+- No version is passed to the whole solution: each train's entry projects read its
+  version file, and the product version a process reports is its own train's.
 - **GitVersion is dropped.** The version file is the only source.
 
 | Part | When |
@@ -158,8 +173,12 @@ release updates one file, `channels.json`, signed like the feeds (0051):
 | `PATCH` | Fixes only |
 | `-LABEL.N` | Labels go `alpha` → `beta` → `rc`, never back. `N` starts at 1 per label |
 
+- While `MAJOR` is `0`, a change that would raise `MAJOR` raises `MINOR`.
+- `nettest` only: raising a framework floor (0060 §9) raises `MINOR`; dropping a
+  supported framework major raises `MAJOR`.
+
 `release <train>` refuses a version that does not match the grammar, is not
-greater than every published version of the train, goes back a label, is stable
+greater than the train's latest `<train>/v*` tag, goes back a label, is stable
 without a changelog section, or is stable and needs a prerelease of another train.
 It warns when a contract `Min` changed since the last tag and `MAJOR` did not.
 
@@ -175,9 +194,10 @@ The same steps for every train:
    gets a CI warning.
 5. The stable version needs the edited changelog section.
 
-A stable `addin` release also moves every line of
+The bump PR of a stable `addin` release also moves every line of
 `source/DevTools.Testing.Abstractions/PublicAPI.Unshipped.txt` into
-`PublicAPI.Shipped.txt` and leaves `Unshipped` empty. A `*REMOVED*` line is resolved
+`PublicAPI.Shipped.txt` and leaves `Unshipped` empty; `release addin` refuses a stable
+version while `Unshipped` has lines. A `*REMOVED*` line is resolved
 there and is allowed only when `MAJOR` rises (0055 §3).
 
 Where the prerelease goes:
@@ -210,11 +230,16 @@ fix stays below the open prerelease, so both channels keep their order.
 | `verify-install` | `daemon`, `addin` | Clean runner: install `Setup.exe` from `channels.json`, `--select`, check `installation.json`; issue on failure |
 
 - One run per release. Follow-up work is a `needs:` job.
-- The job that runs repo code holds no secret. Each environment holds only its
-  train's secrets: the signing key in `daemon` and `addin`, nothing stored in
+- The job that compiles and tests holds no secret; `publish` runs only the publish
+  step of the same commit, in the train's protected environment. Each environment holds
+  only its train's secrets: the signing key in `daemon` and `addin`, nothing stored in
   `nettest` and `pytest` (OIDC).
 - The Velopack delta is built against the previous `daemon/v*` release, downloaded
-  by tag.
+  by tag. A release holds only the delta from the version before it, so the Daemon's
+  update source keeps a delta only when the feed lists the full package of the
+  installed version; otherwise Velopack takes the full package. Without that filter
+  Velopack applies the one delta to an older base and leaves stale files (verified
+  2026-11-08).
 
 ### 8. CI
 
@@ -246,7 +271,8 @@ fix stays below the open prerelease, so both channels keep their order.
 | `nettest` | `source/DevTools.TestAdapter/CHANGELOG.md` |
 | `pytest` | `source/RevitDevTool.PyTest/CHANGELOG.md` |
 
-All use Keep a Changelog. The root `Changelog.md` becomes an index of the four.
+All use Keep a Changelog. The root `Changelog.md` is deleted; the root README links
+the four.
 
 1. **Draft.** `changelog <train>` runs `git-cliff` (installed with pixi) over the
    train's paths since its last tag and writes `## [Unreleased]`. A commit goes to
@@ -281,8 +307,9 @@ permissions, environments, and OIDC steps.
 
 ### 11. One trunk
 
-Releases are cut from one trunk branch. The second long-lived branch and the
-"fast-forward develop" step are retired. `release/<train>/X.Y` branches exist only
+Releases are cut from `develop`, the default branch. `main`, which only marked
+releases, and the "fast-forward develop" step are retired: a release is marked by
+its `<train>/v*` tag. `release/<train>/X.Y` branches exist only
 for hotfixes (§6).
 
 ### What is removed
@@ -291,8 +318,14 @@ GitVersion and `GitVersion.yml`; `GitHubReleaseProvider` release-list discovery;
 the shared product tag and the "one version across years" rule; the TestRunner in
 the Daemon package and the lookup in the Daemon folder; `Compile.yml`,
 `PublishRelease.yml`, `PublishTestAdapter.yml`, `TestReleaseInstall.yml`, and the
-deploy part of `Docs.yml`; `.github/release.yml` label categories; the separate
-`RevitDevTool.PyTest` repo.
+`Docs.yml` (its build and deploy move into `ci.yml`); `.github/release.yml` label categories; the separate
+`RevitDevTool.PyTest` repo; the 3.0.0 Inno Setup cleanup in the Daemon; the root
+`Changelog.md`.
+
+The first release of each train is the baseline. Releases, tags, and registry
+versions from before the trains are history: the release tool reads only
+`<train>/v*` tags, and nothing in the repo keeps an old path working beside the
+new one.
 
 ## Alternatives Considered
 
@@ -347,13 +380,8 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Choose the Velopack update source for `daemon`: `SimpleWebSource` on the release
-  URL (a client more than one version behind takes the full package), or a custom
-  `IUpdateSource` that resolves assets across `daemon/v*` releases. Verify before
-  building `channels.json`.
 - Plan in `docs/plans/active/`: train declarations in `build/` and `0.0.0`
   builds; `ci.yml` and `gate`; `release.yml` for `nettest` (smallest); PyTest move
   and `pytest`; `channels.json` and the update engine; `daemon` and `addin`;
   changelog targets; delete the old workflows.
 - Update `docs/agents/` build and test-matrix pages once `ci <train>` exists.
-- Choose the trunk name (`develop` or `main`).

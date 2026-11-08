@@ -79,16 +79,17 @@ here.
   picker (0047), hourly checks without the REST API, per-year lock and apply
   that never ends host processes, and `auto` (default)/`notify`/`off` modes with
   toasts. Not shipped.
-  [0054](0054-release-automation-channels-and-4-0-cutover.md) is **Proposed**:
-  next stable is 4.0.0 after `4.0.0-beta.N` on the `prerelease` channel; the release
-  waits for green CI on the SHA, verifies signatures with the shipped public key,
-  and `TestReleaseInstall.yml` installs the published `Setup.exe` on a clean runner.
+  [0054](0054-release-automation-channels-and-4-0-cutover.md) is **Superseded** by 0059.
+  [0059](0059-independent-release-trains-and-one-gate-ci.md) is **Accepted** (2026-11-08):
+  four trains (`daemon`, `addin`, `nettest`, `pytest`), each with its own version file,
+  tag `<train>/vX.Y.Z`, changelog, and one `release.yml` run; the Daemon finds updates
+  through a signed `channels.json`; PyTest lives in this repo; `ci.yml` has one
+  required check, `gate`; releases are cut from `develop`.
   [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) is **Accepted**:
   compatibility is decided by per-protocol `Current`/`Min` ranges, not product
   versions; each checked message carries one `sender` (version and range),
   and shipped clients without it get the update sentence; `Min` rises only in
-  a new major; the NuGet adapter keeps its own
-  version, bumped by hand when it changes; pytest and the
+  a new major; versions and release are 0059 (§5–§7 replaced); pytest and the
   gateway declare ranges; a mismatch ends with one sentence that names the
   update to make; a major Daemon update waits for the add-ins.
   [0056](0056-mcp-run-command.md) is **Accepted** and landed (2026-11-03): one standalone host
@@ -152,10 +153,10 @@ here.
 | [0051](0051-update-integrity-and-trust.md) | Update integrity and trust | Proposed |
 | [0052](0052-updater-self-update.md) | Updater self-update through Velopack, plus crash-on-start rollback | Proposed |
 | [0053](0053-velopack-for-daemon-distribution.md) | Velopack owns Daemon install and self-update; year folders stay custom | Proposed |
-| [0054](0054-release-automation-channels-and-4-0-cutover.md) | Release automation, channels, and the 4.0.0 cutover | Proposed |
-| [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) | Product version, wire contract ranges, and satellite (NuGet, pytest, gateway) compatibility | Accepted |
+| [0054](0054-release-automation-channels-and-4-0-cutover.md) | Release automation, channels, and the 4.0.0 cutover | Superseded by 0059 |
+| [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) | Product version, wire contract ranges, and satellite (NuGet, pytest, gateway) compatibility | Accepted; §5–§7 replaced by 0059 |
 | [0056](0056-mcp-run-command.md) | MCP `run_command` runs a built entry point by exact path and name | Accepted — landed 2026-11-03; partly superseded by 0057 |
 | [0057](0057-command-execution-shared-by-panel-and-mcp.md) | Command Execution has one owner, shared by the panel and `run_command` | Accepted |
 | [0058](0058-mcp-toolsets-shared-by-panel-and-add-tools.md) | MCP toolsets have one owner, shared by the registry panel and `add_tools` | Accepted |
-| [0059](0059-independent-release-trains-and-one-gate-ci.md) | Four independent release trains (daemon, addin, nettest, pytest), signed channel index, version grammar, prerelease flow, one-gate CI | Proposed |
+| [0059](0059-independent-release-trains-and-one-gate-ci.md) | Four independent release trains (daemon, addin, nettest, pytest), signed channel index, version grammar, prerelease flow, one-gate CI | Accepted |
 | [0060](0060-framework-runtime-shims-ship-with-nettest.md) | Framework runtimes ship with nettest; the user's framework needs the same major and no lower than the baseline; add-in and adapter meet only through the `testing.runtime` range | Accepted |

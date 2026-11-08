@@ -4,7 +4,15 @@ Date: 2026-10-25
 
 ## Status
 
-Active — Phase 1 (build pipeline) implemented and proven locally. The Inno
+Active, narrowed 2026-11-08: the release pipeline, release discovery, versions, and
+the real release proof moved to [2026-11-06-release-trains-0059](2026-11-06-release-trains-0059.md)
+([0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md) replaces 0054 and
+the discovery of 0048). This plan keeps the engine features left in Phase 2: start
+guard + downgrade (0052), Windows toasts, Skip and Rollback in the UI. Text below that
+names `Compile.yml`, `PublishRelease.yml`, GitVersion, the TestRunner in the Daemon
+package, or the 0054 release proof is history.
+
+History: Phase 1 (build pipeline) implemented and proven locally. The Inno
 installer is removed and `pack` is the only release flow (Phase 3 steps 3–4
 pulled forward on 2026-10-25). `Compile.yml` and the draft-then-publish path
 are not yet exercised in CI. **Do not tag a release before Phase 2**: the new
@@ -163,12 +171,12 @@ caller, so they were removed).
   manifest hash matches the zip, `vpk` verified `VelopackApp.Run()`, Velopack
   `Setup.exe` 80.3 MB / full nupkg 73.1 MB, no delta (no earlier Velopack release).
   Second run with a throwaway P-256 key: both `.sig` files verify, a one-byte change fails.
-- [ ] `Compile.yml` green with `pack`.
+- [x] ~~`Compile.yml` green with `pack`~~ replaced by `ci.yml` (plan 0059 P2).
 - [x] Phase 2 engine, Updates tab, tray notices, Velopack hooks, `--select` (2026-10-25).
   `dotnet run --project tests/DevTools.Update.Tests` 21/21.
-- [ ] Phase 2 remaining: start guard + downgrade, Windows toasts, Skip/Rollback UI,
-  live install test from a real release.
-- [ ] Phase 3.
+- [ ] Phase 2 remaining: start guard + downgrade, Windows toasts, Skip/Rollback UI.
+  The live install test from a real release moved to plan 0059 P6.
+- [x] ~~Phase 3 and the 0054 release proof~~ moved to plan 0059 (P5, P6, Release order).
 
 ## Decisions
 

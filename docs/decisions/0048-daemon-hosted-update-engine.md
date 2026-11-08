@@ -7,6 +7,9 @@ Date: 2026-10-25
 **Proposed 2026-10-25.** Part of the auto-update set
 ([0046](0046-per-year-release-payloads-and-update-manifest.md)–[0053](0053-velopack-for-daemon-distribution.md)).
 
+Release discovery (reading the GitHub release list) is replaced by the signed
+`channels.json` of [0059](0059-independent-release-trains-and-one-gate-ci.md) §2.
+
 ## Context
 
 Something has to run on a schedule, outside any Revit or AutoCAD process, while

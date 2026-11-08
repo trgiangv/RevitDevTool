@@ -6,12 +6,20 @@ parallel duplicate plans for the same workstream, and move a plan to
 `../completed/` only after the result is verified.
 
 
-## Auto-update (active)
+## Release trains and CI (active)
+
+Four trains (`daemon`, `addin`, `nettest`, `pytest`), signed `channels.json`, one
+`release.yml`, `ci.yml` with one `gate`, PyTest in this repo
+([0059](../../decisions/0059-independent-release-trains-and-one-gate-ci.md)):
+[2026-11-06-release-trains-0059](2026-11-06-release-trains-0059.md). It also owns the
+release proof of the auto-update work.
+
+## Auto-update engine (active, narrowed)
 
 Velopack Daemon package plus custom per-year folders
 ([0046](../../decisions/0046-per-year-release-payloads-and-update-manifest.md)–[0053](../../decisions/0053-velopack-for-daemon-distribution.md)):
-[2026-10-25-auto-update](2026-10-25-auto-update.md). `dotnet run --project build -- pack`
-produces the new release assets; the Inno installer is removed.
+[2026-10-25-auto-update](2026-10-25-auto-update.md). Only the engine features left in
+Phase 2 remain; release and discovery moved to the 0059 plan.
 
 ## Daemon
 
