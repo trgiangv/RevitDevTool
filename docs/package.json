@@ -2,7 +2,16 @@
   "name": "revitdevtool-docs",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "bun@1.4.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.18.0",
+      "onFail": "download"
+    }
+  },
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
@@ -14,7 +23,9 @@
   },
   "dependencies": {
     "@docusaurus/core": "3.10.2",
+    "@docusaurus/plugin-content-docs": "3.10.2",
     "@docusaurus/preset-classic": "3.10.2",
+    "@docusaurus/theme-common": "3.10.2",
     "@docusaurus/theme-mermaid": "3.10.2",
     "@easyops-cn/docusaurus-search-local": "^0.55.3",
     "@lobehub/icons": "^6.9.0",
@@ -34,10 +45,10 @@
     "@docusaurus/module-type-aliases": "3.10.2",
     "@docusaurus/tsconfig": "3.10.2",
     "@docusaurus/types": "3.10.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@types/three": "0.186.0",
-    "typescript": "7.0.2"
-  },
-  "engines": {
-    "node": ">=20"
+    "typescript": "7.0.2",
+    "vite-plus": "^1.5.0"
   }
 }
