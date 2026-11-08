@@ -16,15 +16,17 @@ layout used by TUnit:
 | [src/](src/) | Site theme and custom UI |
 | [static/](static/) | Site assets |
 
+The site uses the [Vite+](https://viteplus.dev) `vp` CLI: it installs the Node.js
+version in `.node-version` and the pnpm version in `package.json` `devEngines`.
 From this directory:
 
 ```bash
-bun install
-bun run start
-bun run build
+vp install
+vp run start
+vp run build
 ```
 
-`bun run build` writes the generated site to `docs/build/`. Do not edit that
+`vp run build` writes the generated site to `docs/build/`. Do not edit that
 generated directory. The public Markdown is intentionally separate from the
 engineering source-of-truth below; link to product and architecture documents
 when deeper detail is needed.

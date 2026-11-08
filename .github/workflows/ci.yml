@@ -126,19 +126,22 @@ jobs:
           lfs: true
           persist-credentials: false
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@cab1ab9eaff52d4857875f4f2c016e36af8f2c76 # v1.22.0
         with:
-          bun-version: 1.4.2
+          working-directory: docs
+          node-version-file: .node-version
+          cache: true
+          run-install: false
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: vp install --frozen-lockfile
 
       - name: Check TypeScript
-        run: bun run typecheck
+        run: vp run typecheck
 
       - name: Build site
-        run: bun run build
+        run: vp run build
 
       - name: Upload Pages artifact
         if: github.event_name == 'push'

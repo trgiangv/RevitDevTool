@@ -31,7 +31,7 @@ updates:
         patterns:
           - '*'
 
-  - package-ecosystem: bun
+  - package-ecosystem: npm
     directory: /docs
     schedule:
       interval: weekly
