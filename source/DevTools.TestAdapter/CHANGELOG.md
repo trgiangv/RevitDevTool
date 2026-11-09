@@ -11,7 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - The TestRunner ships inside the package under `tools/runner`. The adapter no longer looks for a runner in the RevitDevTool install folder.
 - The NUnit, TUnit, and MSTest runtimes come from the RevitDevTool add-in. The package keeps only the test host side.
-- The framework versions the runtimes were built against are `NUnit` 5.0.0, `TUnit` 1.78.0, and `MSTest` 4.5.2. A newer version with the same major works.
+- The framework versions the runtimes were built against are `NUnit` 5.0.0, `TUnit` 1.81.10, and `MSTest` 4.5.2. A newer version with the same major works.
 
 ### Requirements
 

@@ -37,7 +37,7 @@ Same `HostName` / `HostVersion` / host API as NUnit. Opt in with
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" Version="0.2.0" />
-  <PackageReference Include="TUnit" Version="1.78.0" />
+  <PackageReference Include="TUnit" Version="1.81.10" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>

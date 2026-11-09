@@ -11,7 +11,7 @@ Project setup: [project-setup.md](project-setup.md). Shared rules:
   <TestingFramework>tunit</TestingFramework>
 </PropertyGroup>
 <ItemGroup>
-  <PackageReference Include="TUnit" Version="1.78.0" />
+  <PackageReference Include="TUnit" Version="1.81.10" />
 </ItemGroup>
 ```
 

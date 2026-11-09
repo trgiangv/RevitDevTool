@@ -18,7 +18,7 @@ The package versions on these pages are the ones that work with the latest Revit
 
 | Stack | Framework | Package | Entry doc |
 | --- | --- | --- | --- |
-| **.NET** | NUnit `5.0.0` (default), TUnit `1.78.0`, or MSTest `4.5.2` | NuGet: [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.2.0) `0.2.0` | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) |
+| **.NET** | NUnit `5.0.0` (default), TUnit `1.81.10`, or MSTest `4.5.2` | NuGet: [RevitDevTool.TestAdapter](https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.2.0) `0.2.0` | [NUnit](/docs/testing/NUnit) · [TUnit](/docs/testing/TUnit) · [MSTest](/docs/testing/MSTest) |
 | **CPython** | pytest | PyPI: [revitdevtool_pytest 0.5.0](https://pypi.org/project/revitdevtool_pytest/0.5.0/) | [pytest](/docs/testing/pytest) |
 | **IronPython** | unittest (`TestCase`) | Name files `test_*_ipy.py`; pytest discovers them as IronPython tests | [unittest](/docs/testing/unittest) |
 
