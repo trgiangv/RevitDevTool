@@ -9,6 +9,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="ConsoleAppFramework" PrivateAssets="all" />
         <PackageReference Include="Sourcy.DotNet" />
         <PackageReference Include="Shouldly" />
         <PackageReference Include="ModularPipelines" />

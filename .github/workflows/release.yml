@@ -107,7 +107,7 @@ jobs:
           name: diagnostics-release-${{ inputs.product }}
           path: |
             **/log_*.diag
-            **/hangdump*
+            **/TestResults/*_hang.*
             **/*.binlog
           if-no-files-found: ignore
           retention-days: 7

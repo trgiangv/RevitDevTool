@@ -1,84 +1,76 @@
+using Build.Modules;
 using Build.Pipeline;
+using Build.Products;
 using Build.Releases;
 using Build.Tools;
-using Build.Products;
+using ConsoleAppFramework;
 using Sourcy.DotNet;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Build.Cli;
 
 /// <summary>
-///     One method per target. A refusal is one sentence on stderr and exit code 1.
+///     One command per target. A refusal is one sentence on stderr and exit code 1.
 /// </summary>
 [SuppressMessage("Usage", "ConsoleUse", Justification = "The command line runs before and after the pipeline.")]
-public static class Targets
+public sealed class Targets
 {
-    public static async Task<int> RunAsync(string[] args)
-    {
-        if (BuildCommand.Parse(args) is not { } command)
-        {
-            Console.Error.WriteLine(BuildCommand.Usage);
-            return 1;
-        }
+    private static readonly string Root = Path.GetDirectoryName(Solutions.RevitDevTool.FullName)!;
+    private static readonly string StalePaths = $"{ProductPaths.FilterFile} is stale; run 'dotnet run --project build -- paths' and commit it.";
 
-        var root = Path.GetDirectoryName(Solutions.RevitDevTool.FullName)!;
-        try
-        {
-            return command.Target switch
-            {
-                "paths" => Paths(root, command.Check),
-                "ci" => await CiAsync(root, command.Product!, command.Base),
-                "pack" => await PackAsync(root, command.Product!),
-                "release" => await ReleaseAsync(root, command.Product!, command.DryRun),
-                "changelog" => Changelog(root, command.Product!),
-                "publish" => Done(Publish.Run(root, command.Product!)),
-                _ => Done(await Channels.RunAsync(root, command.Product!, command.Version!))
-            };
-        }
-        catch (InvalidOperationException exception)
-        {
-            return Fail(exception.Message);
-        }
-    }
-
-    private static int Paths(string root, bool check)
+    /// <summary>Write or check .github/product-paths.yml.</summary>
+    /// <param name="check">Fail when the file is stale instead of writing it.</param>
+    [Command("paths")]
+    public int Paths(bool check = false)
     {
         if (!check)
         {
-            ProductPaths.Write(root);
+            ProductPaths.Write(Root);
             return Done($"Wrote {ProductPaths.FilterFile}.");
         }
 
-        return ProductPaths.IsCurrent(root)
-            ? Done($"{ProductPaths.FilterFile} is current.")
-            : Fail($"{ProductPaths.FilterFile} is stale; run 'dotnet run --project build -- paths' and commit it.");
+        return ProductPaths.IsCurrent(Root) ? Done($"{ProductPaths.FilterFile} is current.") : Fail(StalePaths);
     }
 
-    private static async Task<int> CiAsync(string root, Product product, string? baseSha)
+    /// <summary>Compile; the add-in also publishes into source/*/bin/**/publish.</summary>
+    /// <param name="product">daemon, addin, nettest or pytest.</param>
+    /// <param name="hostVersion">Compile the add-in for this host version only.</param>
+    [Command("compile")]
+    public async Task<int> Compile([Argument] Product product, string? hostVersion = null)
     {
-        if (Paths(root, check: true) != 0) return 1;
+        if (hostVersion is null) return await RunStagesAsync(product, Stage.Compile);
+        if (product != Product.Addin) return Fail("--host-version applies to the add-in only.");
 
-        Warn(BumpWarnings.Collect(root, product, baseSha));
-        var version = new ProductVersion(product, VersionFile.Read(root, product.VersionFile), false, null);
-        await ProductPipeline.RunAsync(new BuildRun(root, product, BuildTarget.Ci, version));
-        return 0;
+        var configurations = await ResolveConfigsModule.ReleaseConfigurationsAsync(CancellationToken.None);
+        return configurations.Any(name => name.EndsWith($".{hostVersion}", StringComparison.Ordinal))
+            ? await RunStagesAsync(product, Stage.Compile, hostVersion: hostVersion)
+            : Fail($"Unknown host version '{hostVersion}'; use one of the Release.Autodesk.* configurations in RevitDevTool.slnx.");
     }
 
-    private static async Task<int> PackAsync(string root, Product product)
-    {
-        var number = ProductVersion.NonRelease(product, Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER"), DateTimeOffset.UtcNow);
-        var version = new ProductVersion(product, number, true, ProductVersion.PickPrevious(product, Git.Tags(root, product)));
-        Console.WriteLine($"Packing {product.Name} {number}.");
-        await ProductPipeline.RunAsync(new BuildRun(root, product, BuildTarget.Pack, version));
-        return 0;
-    }
+    /// <summary>Check the path filters, print the bump warnings, run the tests.</summary>
+    /// <param name="product">daemon, addin, nettest or pytest.</param>
+    /// <param name="base">The commit the bump warnings compare against.</param>
+    [Command("test")]
+    public Task<int> Test([Argument] Product product, string? @base = null) => RunStagesAsync(product, Stage.Test, @base);
 
-    /// <summary>
-    ///     Validates, then tests and builds the artifacts at the file version and writes <c>notes.md</c> for the publish job.
-    /// </summary>
-    private static async Task<int> ReleaseAsync(string root, Product product, bool dryRun)
+    /// <summary>Compile, then test.</summary>
+    /// <param name="product">daemon, addin, nettest or pytest.</param>
+    /// <param name="base">The commit the bump warnings compare against.</param>
+    [Command("ci")]
+    public Task<int> Ci([Argument] Product product, string? @base = null) => RunStagesAsync(product, Stage.Compile | Stage.Test, @base);
+
+    /// <summary>Artifacts at a 0.0.0 version into output/&lt;product&gt;; pack addin bundles a prior compile.</summary>
+    /// <param name="product">daemon, addin, nettest or pytest.</param>
+    [Command("pack")]
+    public Task<int> Pack([Argument] Product product) => RunStagesAsync(product, Stage.Pack);
+
+    /// <summary>Validate the release; without --dry-run also compile, test and pack it, and write notes.md.</summary>
+    /// <param name="product">daemon, addin, nettest or pytest.</param>
+    /// <param name="dryRun">Only validate.</param>
+    [Command("release")]
+    public async Task<int> Release([Argument] Product product, bool dryRun = false)
     {
-        var plan = ReleasePlan.Create(root, product);
+        var plan = ReleasePlan.Create(Root, product);
         Console.Write(plan.Render());
         Warn(plan.Warnings);
         if (plan.Refusals.Count > 0) return Fail(string.Join(Environment.NewLine, plan.Refusals));
@@ -86,17 +78,49 @@ public static class Targets
         plan.WriteGitHubFiles();
         if (dryRun) return 0;
 
-        var run = new BuildRun(root, product, BuildTarget.Release, plan.Version);
+        var run = new BuildRun(Root, product, Stage.Release, plan.Version);
         await ProductPipeline.RunAsync(run);
         if (product == Product.Daemon || product == Product.Addin) ReleaseAssets.Verify(plan.Version, run.Output, signed: false);
-        await File.WriteAllTextAsync(Path.Combine(run.Output, "notes.md"), ChangelogNotes.ForRelease(root, product, plan.Version.Version) + "\n");
+        await File.WriteAllTextAsync(Path.Combine(run.Output, "notes.md"), ChangelogNotes.ForRelease(Root, product, plan.Version.Version) + "\n");
         return 0;
     }
 
-    private static int Changelog(string root, Product product)
+    /// <summary>Rewrite the Unreleased block of the product changelog with git-cliff.</summary>
+    /// <param name="product">daemon, addin, nettest or pytest.</param>
+    [Command("changelog")]
+    public int Changelog([Argument] Product product)
     {
-        ChangelogNotes.Update(root, product);
+        ChangelogNotes.Update(Root, product);
         return Done($"Updated the Unreleased block of {product.Changelog}.");
+    }
+
+    /// <summary>Sign and push the built release and create its GitHub Release.</summary>
+    /// <param name="product">daemon, addin or nettest.</param>
+    [Command("publish")]
+    public int Publish([Argument] Product product) => Done(Releases.Publish.Run(Root, product));
+
+    /// <summary>Move the product in channels.json, sign it, upload it to the channels release.</summary>
+    /// <param name="product">daemon or addin.</param>
+    /// <param name="version">The released version to move.</param>
+    [Command("channels")]
+    public async Task<int> Channels([Argument] Product product, string version) => Done(await Releases.Channels.RunAsync(Root, product, version));
+
+    /// <summary>
+    ///     Runs the stages at a <c>0.0.0</c> version. The test stage first checks the path filters and prints the bump warnings.
+    /// </summary>
+    private static async Task<int> RunStagesAsync(Product product, Stage stages, string? @base = null, string? hostVersion = null)
+    {
+        if (stages.HasFlag(Stage.Test))
+        {
+            if (!ProductPaths.IsCurrent(Root)) return Fail(StalePaths);
+            Warn(BumpWarnings.Collect(Root, product, @base));
+        }
+
+        var number = ProductVersion.NonRelease(product, Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER"), DateTimeOffset.UtcNow);
+        var version = new ProductVersion(product, number, true, ProductVersion.PickPrevious(product, Git.Tags(Root, product)));
+        Console.WriteLine($"{product.Name} {stages} {number} {hostVersion}".TrimEnd());
+        await ProductPipeline.RunAsync(new BuildRun(Root, product, stages, version, hostVersion));
+        return 0;
     }
 
     private static void Warn(IEnumerable<string> warnings)

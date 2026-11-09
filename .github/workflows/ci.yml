@@ -21,7 +21,8 @@ jobs:
       contents: read
       pull-requests: read
     outputs:
-      products: ${{ steps.products.outputs.list }}
+      jobs: ${{ steps.products.outputs.jobs }}
+      addin: ${{ steps.products.outputs.addin }}
       docs: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.docs == 'true' }}
       workflows: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.workflows == 'true' }}
     steps:
@@ -37,25 +38,35 @@ jobs:
         with:
           filters: .github/product-paths.yml
 
-      - name: List changed products
+      - name: List the jobs
         id: products
         env:
           CHANGES: ${{ github.event_name == 'workflow_dispatch' && '["daemon","addin","nettest","pytest"]' || steps.filter.outputs.changes }}
-        run: echo "list=$(jq -c '[.[] | select(. != "docs" and . != "workflows")]' <<< "$CHANGES")" >> "$GITHUB_OUTPUT"
+          BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+        run: |
+          versions=$(grep -oP 'BuildType Name="Release\.Autodesk\.\K\d{4}' RevitDevTool.slnx | jq -Rsc 'split("\n") | map(select(. != ""))')
+          jobs=$(jq -c --argjson versions "$versions" --arg base "${BASE:+ --base $BASE}" '[.[] | select(. != "docs" and . != "workflows")
+            | if . == "addin"
+              then {name: "addin tests", run: "test addin\($base)"},
+                   ($versions[] | {name: "addin \(.)", run: "compile addin --host-version \(.)", host_version: .})
+              else {name: ., run: "ci \(.)\($base)", pack: .} end]' <<< "$CHANGES")
+          echo "jobs=$jobs" >> "$GITHUB_OUTPUT"
+          echo "addin=$(jq 'any(.[]; .name | startswith("addin"))' <<< "$jobs")" >> "$GITHUB_OUTPUT"
 
   product:
     needs: changes
-    if: needs.changes.outputs.products != '[]'
+    if: needs.changes.outputs.jobs != '[]'
+    name: ${{ matrix.name }}
     strategy:
       fail-fast: false
       matrix:
-        product: ${{ fromJSON(needs.changes.outputs.products) }}
+        include: ${{ fromJSON(needs.changes.outputs.jobs) }}
     runs-on: windows-latest
     permissions:
       contents: read
     env:
-      PRODUCT: ${{ matrix.product }}
-      BASE: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || github.event.before }}
+      RUN: ${{ matrix.run }}
+      PACK: ${{ matrix.pack }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,42 +83,88 @@ jobs:
           restore-keys: ${{ runner.os }}-nuget-
 
       - name: Setup pixi
-        if: matrix.product == 'pytest'
+        if: matrix.pack == 'pytest'
         uses: prefix-dev/setup-pixi@9936258fee697aff89b3fed6ca1f80a382ef694e # v0.11.3
         with:
           manifest-path: source/RevitDevTool.PyTest/pyproject.toml
 
-      - name: Compile and test
-        run: |
-          $arguments = @('run', '--project', 'build', '--', 'ci', $env:PRODUCT)
-          if ($env:BASE) { $arguments += @('--base', $env:BASE) }
-          dotnet @arguments
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build
+        run: dotnet run --project build -- @($env:RUN -split ' ')
 
       - name: Pack
-        if: github.event_name == 'push' || matrix.product == 'nettest'
-        run: dotnet run --project build -- pack $env:PRODUCT
+        if: matrix.pack && (github.event_name == 'push' || matrix.pack == 'nettest')
+        run: dotnet run --project build -- pack $env:PACK
 
       - name: Upload artifacts
-        if: github.event_name == 'push' || matrix.product == 'nettest'
+        if: matrix.pack && (github.event_name == 'push' || matrix.pack == 'nettest')
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ${{ matrix.product }}
-          path: output/${{ matrix.product }}
+          name: ${{ matrix.pack }}
+          path: output/${{ matrix.pack }}
           if-no-files-found: error
           retention-days: 3
+
+      - name: Upload host version
+        if: matrix.host_version && github.event_name == 'push'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: addin-${{ matrix.host_version }}
+          path: |
+            source/RevitDevTool/bin/Release.Autodesk.${{ matrix.host_version }}/publish
+            source/AcadDevTool/bin/Release.Autodesk.${{ matrix.host_version }}/publish
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Upload diagnostics
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: diagnostics-${{ matrix.product }}
+          name: diagnostics-${{ matrix.name }}
           path: |
             **/log_*.diag
-            **/hangdump*
+            **/TestResults/*_hang.*
             **/*.binlog
           if-no-files-found: ignore
           retention-days: 7
+
+  addin-bundle:
+    needs: [changes, product]
+    if: github.event_name == 'push' && needs.changes.outputs.addin == 'true'
+    name: addin bundle
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Cache packages
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', 'Directory.Build.props', 'Directory.Packages.props', 'dotnet-tools.json') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Download host versions
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: addin-*
+          path: source
+          merge-multiple: true
+
+      - name: Bundle
+        run: dotnet run --project build -- pack addin
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: addin
+          path: output/addin
+          if-no-files-found: error
+          retention-days: 3
 
   docs:
     needs: changes
@@ -190,12 +247,12 @@ jobs:
 
   gate:
     if: always()
-    needs: [changes, product, docs, docs-deploy, workflows]
+    needs: [changes, product, addin-bundle, docs, docs-deploy, workflows]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
       - name: Check the jobs
         uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
-          allowed-skips: product, docs, docs-deploy, workflows
+          allowed-skips: product, addin-bundle, docs, docs-deploy, workflows
           jobs: ${{ toJSON(needs) }}

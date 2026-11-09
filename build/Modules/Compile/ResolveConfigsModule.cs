@@ -1,3 +1,4 @@
+using Build.Pipeline;
 using Microsoft.VisualStudio.SolutionPersistence.Model;
 using Microsoft.VisualStudio.SolutionPersistence.Serializer;
 using ModularPipelines.Context;
@@ -8,13 +9,15 @@ using Sourcy.DotNet;
 namespace Build.Modules;
 
 /// <summary>
-///     Resolve solution configurations required to compile the add-in for all supported Revit versions.
+///     The <c>Release.Autodesk.&lt;host version&gt;</c> solution configurations the add-in compiles, or the one host version of the run.
 /// </summary>
 [UsedImplicitly]
-public sealed class ResolveConfigsModule : Module<string[]>
+public sealed class ResolveConfigsModule(BuildRun run) : Module<string[]>
 {
     protected override async Task<string[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken) =>
-        await ReleaseConfigurationsAsync(cancellationToken);
+        (await ReleaseConfigurationsAsync(cancellationToken))
+        .Where(configuration => run.HostVersion is null || configuration.EndsWith($".{run.HostVersion}", StringComparison.Ordinal))
+        .ToArray();
 
     public static async Task<string[]> ReleaseConfigurationsAsync(CancellationToken cancellationToken)
     {

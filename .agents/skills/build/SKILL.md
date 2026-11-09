@@ -92,10 +92,11 @@ stop every Revit process: other running versions may hold someone's work.
 
 | Artifact | Command |
 |----------|---------|
-| Add-in payloads, `update-manifest.json`, bundle zip in `output/addin` | `dotnet run --project build -- pack addin` |
+| Add-in payloads, `update-manifest.json`, bundle zip in `output/addin` | `dotnet run --project build -- compile addin`, then `pack addin` |
 | Velopack `RevitDevTool-Setup.exe`, nupkg, `releases.*.json` in `output/daemon` | `dotnet run --project build -- pack daemon` |
 | TestAdapter NuGet in `output/nettest` | `dotnet run --project build -- pack nettest` |
 | Compile and host-free tests of one product, as CI runs them | `dotnet run --project build -- ci <daemon\|addin\|nettest\|pytest>` |
+| One add-in host version, or only the add-in tests, as one CI job runs them | `dotnet run --project build -- compile addin --host-version 2026` / `test addin` |
 
 `dotnet run --project build` with no target prints the targets and products (ADR 0059 §10).
 Every pack is `0.0.0-local.<UTC stamp>`, so it never collides with a published or

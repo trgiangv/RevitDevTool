@@ -33,14 +33,16 @@ public static class ProductPaths
         ("workflows", [".github/**"])
     ];
 
-    public static IReadOnlyList<string> Compute(string root, Product product)
+    public static IReadOnlyList<string> Compute(string root, Product product) => Compute(root, product, Product.All);
+
+    public static IReadOnlyList<string> Compute(string root, Product product, IReadOnlyList<Product> products)
     {
         var paths = new SortedSet<string>(StringComparer.Ordinal) { product.VersionFile, product.Changelog };
         paths.UnionWith(product.ExtraPaths);
         if (product.IsDotNet)
         {
             var closure = ProjectGraph.Closure(root, product.Roots);
-            var tests = ProjectGraph.TestProjects(root, closure)
+            var tests = ProjectGraph.TestProjects(root, product, products)
                 .SelectMany(test => ProjectGraph.Closure(root, [test]))
                 .Where(project => project.StartsWith("tests/", StringComparison.Ordinal));
             paths.UnionWith(closure.Concat(tests).Select(project => project[..project.LastIndexOf('/')] + "/**"));

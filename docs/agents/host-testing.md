@@ -59,7 +59,7 @@ What to rebuild:
   nothing is deployed to the bundle `Contents` or the Velopack folder, and there is
   no runner-path override. Each pack has a new `0.0.0-local.<stamp>` version and
   samples restore with `RestoreForce=true`, so no stale extraction is reused.
-- Installer: `dotnet run --project build -- pack addin`.
+- Installer: `dotnet run --project build -- compile addin`, then `pack addin`.
 
 ## Rules
 

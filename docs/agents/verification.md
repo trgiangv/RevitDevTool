@@ -18,7 +18,7 @@ gaps and expected Skips: [test-matrix.md](test-matrix.md). Host years and TFMs:
 | MCP tests | `dotnet run --project tests/DevTools.Mcp.<Module>.Tests/DevTools.Mcp.<Module>.Tests.csproj` (Core, Catalog, Adapter, Client, Server). Build the sample toolsets first or parser tests Skip |
 | Python parser (this repo) | `scripts/test-pyserver.ps1` |
 | A product as CI runs it | `dotnet run --project build -- ci <daemon\|addin\|nettest\|pytest>` |
-| Add-in bundle / Daemon installer | `dotnet run --project build -- pack addin` / `pack daemon` |
+| Add-in bundle / Daemon installer | `dotnet run --project build -- compile addin`, then `pack addin` / `pack daemon` |
 | TestAdapter NuGet | `dotnet run --project build -- pack nettest` (writes a `0.0.0-local.<stamp>` nupkg to `output/nettest` with the runner at `tools/runner/DevTools.TestRunner.exe`). Runner changes need this pack; there is no runner-path override |
 | Release check | `dotnet run --project build -- release <product> --dry-run`; steps in [release.md](release.md) |
 | TestAdapter consumer surface (net48 / net8 / net10 build and host-free discovery) | `scripts/test-adapter-matrix.ps1` |

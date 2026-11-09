@@ -9,8 +9,8 @@ using ModularPipelines.Extensions;
 namespace Build.Pipeline;
 
 /// <summary>
-///     The modules of one run. <c>ci</c> compiles and tests, <c>pack</c> compiles and packs, <c>release</c> does all three.
-///     The <c>nettest</c> pack builds its own projects, and <c>pytest</c> has no .NET compile.
+///     The modules of each stage of one run. The add-in pack bundles what the compile left in <c>bin/**/publish</c>;
+///     the other packs build what they ship themselves. <c>pytest</c> has no .NET compile.
 /// </summary>
 public static class ProductPipeline
 {
@@ -32,9 +32,9 @@ public static class ProductPipeline
     private static void AddModules(IServiceCollection services, BuildRun run)
     {
         var product = run.Product;
-        if (product.IsDotNet && (run.RunsTests || product != Product.NetTest)) AddCompile(services, product);
-        if (run.RunsTests) AddTests(services, product);
-        if (run.BuildsArtifacts) AddPack(services, product);
+        if (run.Has(Stage.Compile) && product.IsDotNet) AddCompile(services, product);
+        if (run.Has(Stage.Test)) AddTests(services, product);
+        if (run.Has(Stage.Pack)) AddPack(services, product);
     }
 
     private static void AddCompile(IServiceCollection services, Product product)

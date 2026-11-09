@@ -15,6 +15,9 @@ public sealed class ProductPathsTests
         Project("source/Other/Other.csproj");
         Project("tests/Lib.Tests/Lib.Tests.csproj", @"..\..\source\lib\Lib.csproj");
         Project("tests/Other.Tests/Other.Tests.csproj", @"..\..\source\Other\Other.csproj");
+        Project("source/Tool/Tool.csproj", @"..\Core\Core.csproj");
+        Project("tests/Core.Tests/Core.Tests.csproj", @"..\..\source\Core\Core.csproj");
+        Project("tests/Mixed.Tests/Mixed.Tests.csproj", @"..\..\source\Lib\Lib.csproj", @"..\..\source\Tool\Tool.csproj");
     }
 
     [TestCleanup]
@@ -31,13 +34,24 @@ public sealed class ProductPathsTests
     [TestMethod]
     public void Tests_follow_the_closure()
     {
-        CollectionAssert.AreEqual(new[] { "tests/Lib.Tests/Lib.Tests.csproj" }, ProjectGraph.TestProjects(_root, Fixture).ToArray());
+        CollectionAssert.AreEqual(
+            new[] { "tests/Core.Tests/Core.Tests.csproj", "tests/Lib.Tests/Lib.Tests.csproj", "tests/Mixed.Tests/Mixed.Tests.csproj" },
+            ProjectGraph.TestProjects(_root, Fixture, [Fixture]).ToArray());
+    }
+
+    [TestMethod]
+    public void Shared_test_runs_in_the_smallest_product()
+    {
+        Product[] products = [Fixture, ToolProduct];
+
+        CollectionAssert.AreEqual(new[] { "tests/Lib.Tests/Lib.Tests.csproj", "tests/Mixed.Tests/Mixed.Tests.csproj" }, ProjectGraph.TestProjects(_root, Fixture, products).ToArray());
+        CollectionAssert.AreEqual(new[] { "tests/Core.Tests/Core.Tests.csproj", "tests/Mixed.Tests/Mixed.Tests.csproj" }, ProjectGraph.TestProjects(_root, ToolProduct, products).ToArray());
     }
 
     [TestMethod]
     public void Paths_cover_closure_and_tests()
     {
-        var paths = ProductPaths.Compute(_root, Fixture);
+        var paths = ProductPaths.Compute(_root, Fixture, [Fixture]);
 
         CollectionAssert.IsSubsetOf(
             new[] { "source/App/**", "source/Core/**", "source/Lib/**", "tests/Lib.Tests/**", "Directory.Packages.props", "build/**" },
@@ -83,11 +97,18 @@ public sealed class ProductPathsTests
         Assert.AreEqual(match, ProductPaths.Matches([pattern], path));
     }
 
-    private Product Fixture => Product.Daemon with
+    private static readonly Product Fixture = Product.Daemon with
     {
         Roots = ["source/App/App.csproj"],
         VersionFile = "source/App/App.csproj",
         Changelog = "source/App/CHANGELOG.md"
+    };
+
+    private static readonly Product ToolProduct = Product.NetTest with
+    {
+        Roots = ["source/Tool/Tool.csproj"],
+        VersionFile = "source/Tool/Tool.csproj",
+        Changelog = "source/Tool/CHANGELOG.md"
     };
 
     private static string RepositoryRoot
