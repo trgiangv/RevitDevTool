@@ -9,7 +9,7 @@ using ModularPipelines.Extensions;
 namespace Build.Pipeline;
 
 /// <summary>
-///     The modules of each stage of one run. The add-in pack bundles what the compile left in <c>bin/**/publish</c>;
+///     The modules of each stage of one run. The add-in pack bundles what the compile left in <see cref="AddinHosts"/>;
 ///     the other packs build what they ship themselves. <c>pytest</c> has no .NET compile.
 /// </summary>
 public static class ProductPipeline

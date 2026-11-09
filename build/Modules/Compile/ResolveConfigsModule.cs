@@ -31,6 +31,9 @@ public sealed class ResolveConfigsModule(BuildRun run) : Module<string[]>
         return configurations;
     }
 
+    public static async Task<string[]> HostVersionsAsync(CancellationToken cancellationToken) =>
+        (await ReleaseConfigurationsAsync(cancellationToken)).Select(AddinHosts.HostVersion).ToArray();
+
     private static async Task<SolutionModel> LoadSolutionModelAsync(CancellationToken cancellationToken)
     {
         var sampleSolutionPath = Solutions.RevitDevTool.FullName;

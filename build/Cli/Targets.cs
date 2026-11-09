@@ -32,7 +32,7 @@ public sealed class Targets
         return ProductPaths.IsCurrent(Root) ? Done($"{ProductPaths.FilterFile} is current.") : Fail(StalePaths);
     }
 
-    /// <summary>Compile; the add-in also publishes into source/*/bin/**/publish.</summary>
+    /// <summary>Compile; the add-in also collects each host version into output/hosts.</summary>
     /// <param name="product">daemon, addin, nettest or pytest.</param>
     /// <param name="hostVersion">Compile the add-in for this host version only.</param>
     [Command("compile")]
@@ -41,8 +41,7 @@ public sealed class Targets
         if (hostVersion is null) return await RunStagesAsync(product, Stage.Compile);
         if (product != Product.Addin) return Fail("--host-version applies to the add-in only.");
 
-        var configurations = await ResolveConfigsModule.ReleaseConfigurationsAsync(CancellationToken.None);
-        return configurations.Any(name => name.EndsWith($".{hostVersion}", StringComparison.Ordinal))
+        return (await ResolveConfigsModule.HostVersionsAsync(CancellationToken.None)).Contains(hostVersion)
             ? await RunStagesAsync(product, Stage.Compile, hostVersion: hostVersion)
             : Fail($"Unknown host version '{hostVersion}'; use one of the Release.Autodesk.* configurations in RevitDevTool.slnx.");
     }
@@ -106,7 +105,8 @@ public sealed class Targets
     public async Task<int> Channels([Argument] Product product, string version) => Done(await Releases.Channels.RunAsync(Root, product, version));
 
     /// <summary>
-    ///     Runs the stages at a <c>0.0.0</c> version. The test stage first checks the path filters and prints the bump warnings.
+    ///     Runs the stages at a <c>0.0.0</c> version; <c>pack addin</c> keeps the version its host versions were compiled at.
+    ///     The test stage first checks the path filters and prints the bump warnings.
     /// </summary>
     private static async Task<int> RunStagesAsync(Product product, Stage stages, string? @base = null, string? hostVersion = null)
     {
@@ -116,11 +116,20 @@ public sealed class Targets
             Warn(BumpWarnings.Collect(Root, product, @base));
         }
 
-        var number = ProductVersion.NonRelease(product, Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER"), DateTimeOffset.UtcNow);
+        var number = product == Product.Addin && stages == Stage.Pack
+            ? await CompiledAddinVersionAsync()
+            : ProductVersion.NonRelease(product, Environment.GetEnvironmentVariable("GITHUB_RUN_NUMBER"), DateTimeOffset.UtcNow);
         var version = new ProductVersion(product, number, true, ProductVersion.PickPrevious(product, Git.Tags(Root, product)));
         Console.WriteLine($"{product.Name} {stages} {number} {hostVersion}".TrimEnd());
         await ProductPipeline.RunAsync(new BuildRun(Root, product, stages, version, hostVersion));
         return 0;
+    }
+
+    private static async Task<string> CompiledAddinVersionAsync()
+    {
+        var version = AddinHosts.CompiledVersion(Root);
+        AddinHosts.Require(Root, await ResolveConfigsModule.HostVersionsAsync(CancellationToken.None), version);
+        return version;
     }
 
     private static void Warn(IEnumerable<string> warnings)

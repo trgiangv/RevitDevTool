@@ -48,10 +48,10 @@ jobs:
           jobs=$(jq -c --argjson versions "$versions" --arg base "${BASE:+ --base $BASE}" '[.[] | select(. != "docs" and . != "workflows")
             | if . == "addin"
               then {name: "addin tests", run: "test addin\($base)"},
-                   ($versions[] | {name: "addin \(.)", run: "compile addin --host-version \(.)", host_version: .})
+                   ($versions[] | {name: "Autodesk \(.)", run: "compile addin --host-version \(.)", host_version: .})
               else {name: ., run: "ci \(.)\($base)", pack: .} end]' <<< "$CHANGES")
           echo "jobs=$jobs" >> "$GITHUB_OUTPUT"
-          echo "addin=$(jq 'any(.[]; .name | startswith("addin"))' <<< "$jobs")" >> "$GITHUB_OUTPUT"
+          echo "addin=$(jq 'any(.[]; .host_version)' <<< "$jobs")" >> "$GITHUB_OUTPUT"
 
   product:
     needs: changes
@@ -109,9 +109,7 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: addin-${{ matrix.host_version }}
-          path: |
-            source/RevitDevTool/bin/Release.Autodesk.${{ matrix.host_version }}/publish
-            source/AcadDevTool/bin/Release.Autodesk.${{ matrix.host_version }}/publish
+          path: output/hosts
           if-no-files-found: error
           retention-days: 1
 
@@ -127,10 +125,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  addin-bundle:
+  autodesk-bundle:
     needs: [changes, product]
     if: github.event_name == 'push' && needs.changes.outputs.addin == 'true'
-    name: addin bundle
+    name: Autodesk bundle
     runs-on: windows-latest
     permissions:
       contents: read
@@ -152,7 +150,7 @@ jobs:
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: addin-*
-          path: source
+          path: output/hosts
           merge-multiple: true
 
       - name: Bundle
@@ -247,12 +245,12 @@ jobs:
 
   gate:
     if: always()
-    needs: [changes, product, addin-bundle, docs, docs-deploy, workflows]
+    needs: [changes, product, autodesk-bundle, docs, docs-deploy, workflows]
     runs-on: ubuntu-latest
     permissions: {}
     steps:
       - name: Check the jobs
         uses: re-actors/alls-green@b5b5b37504aa4183270bd3d855c52a67f212be35 # v1.3.0
         with:
-          allowed-skips: product, addin-bundle, docs, docs-deploy, workflows
+          allowed-skips: product, autodesk-bundle, docs, docs-deploy, workflows
           jobs: ${{ toJSON(needs) }}

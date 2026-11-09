@@ -39,19 +39,19 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 - `test <product>` builds its test projects in one MSBuild call per configuration through `output/tests/<product>.<configuration>.proj` (`Debug`, or the newest `Debug.Autodesk` on one node for tests that reach a host), then runs them one at a time with `--no-build`.
 - The add-in compile builds the solution with `-t:RevitDevTool;ACadDevTool`, so only the host projects and their references build, with the solution's configuration mapping.
 - On one machine host versions stay sequential. Shared projects are solution-mapped to `Debug`/`Release`, so later host versions reuse `bin/<Debug|Release>/<tfm>`.
-- Targets are stages: `compile`, `test`, `ci` (compile + test), `pack`, `release` (all three). The add-in compile always publishes into `bin/Release.Autodesk.<v>/publish` with the run version; `pack addin` only bundles what is there, so run `compile addin` first.
+- Targets are stages: `compile`, `test`, `ci` (compile + test), `pack`, `release` (all three). The add-in compile collects each host version into `output/hosts/<v>` (`Contents\<v>` of both hosts) and writes `output/hosts/<v>.version` with the version it stamped. `pack addin` bundles only `output/hosts`, at that version, and refuses when a `Release.Autodesk.*` host version is missing or was compiled at another version, so run `compile addin` first.
 - `ci.yml` runs each add-in host version on its own runner instead:
 
   | Job | Command |
   |-----|---------|
-  | `addin <v>` | `compile addin --host-version <v>`; on push the publish folders upload as `addin-<v>` |
+  | `Autodesk <v>` | `compile addin --host-version <v>`; on push `output/hosts` uploads as `addin-<v>` |
   | `addin tests` | `test addin` |
-  | `addin bundle` (push) | downloads every `addin-*`, then `pack addin` |
+  | `Autodesk bundle` (push) | downloads every `addin-*` into `output/hosts`, then `pack addin` |
 
   The host versions come from the `Release.Autodesk.*` build types in `RevitDevTool.slnx`. `release.yml` still runs `release addin` on one runner.
 - NUnit, TUnit, and MSTest host packaging builds those runtime projects with `Debug` or `Release`, not `*.Autodesk.YYYY`.
 - `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. Bundle creation waits for every year.
-- The add-in compile of `build/` sets `DeployAddin=false` and `PublishAddin=true`. `Revit.targets` and `AutoCad.targets` both read those two properties; each project imports only one of those files. The bundle zip is packed from `bin/**/publish`, so `build/` does not copy into `%AppData%\Autodesk\ApplicationPlugins\RevitDevTool.bundle`. A solution build of both hosts into that one folder races `RemoveDir` on `Contents\<year>` (`MSB3231`). Local host deploy stays `scripts/build-host.ps1`.
+- The add-in compile of `build/` sets `DeployAddin=false` and `PublishAddin=true`. `Revit.targets` and `AutoCad.targets` both read those two properties; each project imports only one of those files. The bundle zip is packed from `output/hosts`, so `build/` does not copy into `%AppData%\Autodesk\ApplicationPlugins\RevitDevTool.bundle`. A solution build of both hosts into that one folder races `RemoveDir` on `Contents\<year>` (`MSB3231`). Local host deploy stays `scripts/build-host.ps1`.
 
 ## DevTools.Daemon
 
