@@ -2,21 +2,24 @@ using Build.Products;
 
 namespace Build.Pipeline;
 
-public enum BuildTarget
+[Flags]
+public enum Stage
 {
-    Ci,
-    Pack,
-    Release
+    Compile = 1,
+    Test = 2,
+    Pack = 4,
+    Release = Compile | Test | Pack
 }
 
 /// <summary>
-///     What one pipeline run builds: the product, the target, and the version stamped into its artifacts.
+///     What one pipeline run builds: the product, its stages, and the version stamped into its artifacts.
+///     <see cref="HostVersion"/> limits the add-in compile to one host version.
 /// </summary>
-public sealed record BuildRun(string Root, Product Product, BuildTarget Target, ProductVersion Version)
+public sealed record BuildRun(string Root, Product Product, Stage Stages, ProductVersion Version, string? HostVersion = null)
 {
     public string Output => Product.Output(Root);
 
-    public bool RunsTests => Target != BuildTarget.Pack;
+    public bool Has(Stage stage) => Stages.HasFlag(stage);
 
-    public bool BuildsArtifacts => Target != BuildTarget.Ci;
+    public bool IsRelease => Stages == Stage.Release;
 }

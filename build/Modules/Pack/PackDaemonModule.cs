@@ -1,8 +1,8 @@
 using Build.Options;
 using Build.Pipeline;
+using Build.Products;
 using Build.Releases;
 using Build.Tools;
-using Build.Products;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using ModularPipelines.Attributes;
@@ -25,7 +25,7 @@ namespace Build.Modules;
 ///     names this version and one delta base. A local <c>pack</c> keeps the folder, so the next local pack builds a delta.
 /// </remarks>
 /// <seealso href="../../docs/decisions/0053-velopack-for-daemon-distribution.md">0053</seealso>
-[DependsOn<CompileProductModule>]
+[DependsOn<CompileProductModule>(Optional = true)]
 [DependsOn<TestProductModule>(Optional = true)]
 [UsedImplicitly]
 public sealed class PackDaemonModule(
@@ -36,7 +36,7 @@ public sealed class PackDaemonModule(
     private const string DaemonExecutable = "DevTools.Daemon.exe";
     private const string NonReleaseCore = "0.0.0-";
     private const string VelopackLowestCore = "0.0.1-";
-    private static readonly string[] VelopackArtifacts = ["*.nupkg", "releases.*.json", "assets.*.json", "RELEASES*", "*-Setup.exe"];
+    private static readonly string[] VelopackArtifacts = ["*.nupkg", "releases.*.json", "assets.*.json", "*-Setup.exe"];
 
     protected override async Task<string?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
@@ -49,7 +49,7 @@ public sealed class PackDaemonModule(
         var publishPath = Path.Combine(daemonFolder, "bin", "Release", "velopack");
         if (Directory.Exists(publishPath)) Directory.Delete(publishPath, recursive: true);
 
-        if (run.Target == BuildTarget.Release)
+        if (run.IsRelease)
         {
             DeleteVelopackArtifacts(outputPath);
             DownloadDeltaBase(context, outputPath, channel);
@@ -130,8 +130,8 @@ public sealed class PackDaemonModule(
     }
 
     /// <summary>
-    ///     The release carries only this version's packages; the delta base stays named in the feed.
-    ///     The legacy <c>RELEASES</c> file is dropped: no client reads it.
+    ///     The release carries only this version's packages and feeds; the delta base stays named in the feed.
+    ///     <c>vpk pack</c> always writes a <c>RELEASES</c> file too, which nothing here reads.
     /// </summary>
     private static void KeepThisVersion(string outputPath, string packId, string version)
     {

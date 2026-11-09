@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Build.Products;
 
 public enum VersionGrammar
@@ -13,7 +15,7 @@ public sealed record Product(
     string VersionFile,
     string Changelog,
     VersionGrammar Grammar,
-    string[] Artifacts)
+    string[] Artifacts) : ISpanParsable<Product>
 {
     public static Product Daemon { get; } = new(
         "daemon",
@@ -72,4 +74,18 @@ public sealed record Product(
 
     public static Product? Find(string name) =>
         All.FirstOrDefault(product => string.Equals(product.Name, name, StringComparison.Ordinal));
+
+    public static Product Parse(string s, IFormatProvider? provider) => Parse(s.AsSpan(), provider);
+
+    public static Product Parse(ReadOnlySpan<char> s, IFormatProvider? provider) =>
+        TryParse(s, provider, out var product) ? product : throw new FormatException($"Unknown product '{s}'; use daemon, addin, nettest or pytest.");
+
+    public static bool TryParse(string? s, IFormatProvider? provider, [NotNullWhen(true)] out Product? result) =>
+        TryParse(s.AsSpan(), provider, out result);
+
+    public static bool TryParse(ReadOnlySpan<char> s, IFormatProvider? provider, [NotNullWhen(true)] out Product? result)
+    {
+        result = Find(s.ToString());
+        return result is not null;
+    }
 }
