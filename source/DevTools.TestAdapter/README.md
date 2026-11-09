@@ -14,7 +14,7 @@ version or another major stops the build with one sentence that names the fix.
 | Package | Baseline |
 |---------|----------|
 | `NUnit` | 5.0.0 |
-| `TUnit` | 1.78.0 |
+| `TUnit` | 1.81.10 |
 | `MSTest` (`MSTest.Sdk` / `MSTest.TestFramework`) | 4.5.2 |
 
 All three work with every host below. Set `HostName` and `HostVersion` to
@@ -62,7 +62,7 @@ Reference the `TUnit` package, not only `TUnit.Core`.
 </PropertyGroup>
 <ItemGroup>
   <PackageReference Include="RevitDevTool.TestAdapter" Version="0.3.0" />
-  <PackageReference Include="TUnit" Version="1.78.0" />
+  <PackageReference Include="TUnit" Version="1.81.10" />
   <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="2025.0.*"
     IncludeAssets="build; compile" PrivateAssets="All" />
 </ItemGroup>
