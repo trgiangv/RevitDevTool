@@ -1,5 +1,5 @@
-using Build.Tools;
 using Build.Products;
+using Build.Tools;
 using System.Text;
 
 namespace Build.Releases;
@@ -53,20 +53,24 @@ public sealed record ReleasePlan(ProductVersion Version, string Notes, IReadOnly
         {
             File.AppendAllText(output,
                 $"version={Version.Version}\nprevious={Version.Previous}\ntag={Version.Tag}\n" +
-                $"prerelease={Version.IsPrerelease.ToString().ToLowerInvariant()}\nlatest={Version.IsLatest.ToString().ToLowerInvariant()}\n");
+                $"prerelease={Version.IsPrerelease.ToString().ToLowerInvariant()}\nlatest={Version.IsLatest.ToString().ToLowerInvariant()}\n" +
+                $"page={Version.Page(Environment.GetEnvironmentVariable("GITHUB_REPOSITORY") ?? "")}\n");
         }
 
         if (Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY") is { Length: > 0 } summary)
-        {
-            var builder = new StringBuilder($"### release {Version.Product.Name}\n\n| Field | Value |\n|---|---|\n");
-            foreach (var line in Render().Split('\n', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var separator = line.IndexOf(": ", StringComparison.Ordinal);
-                builder.Append($"| {line[..separator]} | {line[(separator + 2)..]} |\n");
-            }
+            File.AppendAllText(summary, Summary());
+    }
 
-            File.AppendAllText(summary, builder.ToString());
+    public string Summary()
+    {
+        var builder = new StringBuilder($"### release {Version.Product.Name}\n\n| Field | Value |\n|---|---|\n");
+        foreach (var line in Render().Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var separator = line.IndexOf(": ", StringComparison.Ordinal);
+            builder.Append($"| {line[..separator]} | {line[(separator + 2)..]} |\n");
         }
+
+        return builder.ToString();
     }
 
     private static IReadOnlyList<string> ContractWarnings(string root, ProductVersion version, ReleaseVersion? parsed)

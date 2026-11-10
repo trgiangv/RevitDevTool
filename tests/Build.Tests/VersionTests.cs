@@ -119,6 +119,16 @@ public sealed class VersionTests
     }
 
     [TestMethod]
+    [DataRow("daemon", "4.0.0", "https://github.com/o/r/releases/tag/daemon/v4.0.0")]
+    [DataRow("addin", "4.1.0-beta.2", "https://github.com/o/r/releases/tag/addin/v4.1.0-beta.2")]
+    [DataRow("nettest", "0.4.0", "https://www.nuget.org/packages/RevitDevTool.TestAdapter/0.4.0")]
+    [DataRow("pytest", "0.6.1", "https://pypi.org/project/revitdevtool-pytest/0.6.1/")]
+    public void Page_points_where_users_get_it(string product, string version, string page)
+    {
+        Assert.AreEqual(page, new ProductVersion(Product.Find(product)!, version, false, null).Page("o/r"));
+    }
+
+    [TestMethod]
     public void Ci_version_uses_run_number()
     {
         Assert.AreEqual("0.0.0-ci.42", ProductVersion.NonRelease(Product.Daemon, "42", DateTimeOffset.UnixEpoch));
