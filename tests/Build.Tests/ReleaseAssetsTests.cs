@@ -69,11 +69,13 @@ public sealed class ReleaseAssetsTests
     }
 
     [TestMethod]
-    [DataRow("daemon", "RevitDevTool Daemon 4.0.0")]
-    [DataRow("addin", "RevitDevTool add-in 4.0.0")]
-    public void Release_title_names_train(string product, string title)
+    [DataRow("daemon", "Daemon 4.0.0")]
+    [DataRow("addin", "Add-in 4.0.0")]
+    [DataRow("nettest", "NetTest-Adapter 4.0.0")]
+    [DataRow("pytest", "PyTest-Adapter 4.0.0")]
+    public void Release_title_names_product(string product, string title)
     {
-        Assert.AreEqual(title, Publish.Title(new ProductVersion(Product.Find(product)!, "4.0.0", false, null)));
+        Assert.AreEqual(title, new ProductVersion(Product.Find(product)!, "4.0.0", false, null).Title);
     }
 
     private static VelopackAssetFeed Feed(params (string Version, string Type)[] assets) =>

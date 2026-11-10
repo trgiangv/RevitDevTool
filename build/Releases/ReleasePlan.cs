@@ -54,7 +54,7 @@ public sealed record ReleasePlan(ProductVersion Version, string Notes, IReadOnly
             File.AppendAllText(output,
                 $"version={Version.Version}\nprevious={Version.Previous}\ntag={Version.Tag}\n" +
                 $"prerelease={Version.IsPrerelease.ToString().ToLowerInvariant()}\nlatest={Version.IsLatest.ToString().ToLowerInvariant()}\n" +
-                $"page={Version.Page(Environment.GetEnvironmentVariable("GITHUB_REPOSITORY") ?? "")}\n");
+                $"page={Version.Page(Environment.GetEnvironmentVariable("GITHUB_REPOSITORY") ?? "")}\ntitle={Version.Title}\n");
         }
 
         if (Environment.GetEnvironmentVariable("GITHUB_STEP_SUMMARY") is { Length: > 0 } summary)

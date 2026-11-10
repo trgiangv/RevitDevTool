@@ -1,5 +1,5 @@
-using Build.Tools;
 using Build.Products;
+using Build.Tools;
 
 namespace Build.Releases;
 
@@ -12,13 +12,6 @@ public static class Publish
     public const string NuGetKeyVariable = "NUGET_API_KEY";
     private const string NuGetSource = "https://api.nuget.org/v3/index.json";
     private const string AdapterPackageId = "RevitDevTool.TestAdapter";
-
-    public static string Title(ProductVersion version) => version.Product.Name switch
-    {
-        "daemon" => $"RevitDevTool Daemon {version.Version}",
-        "addin" => $"RevitDevTool add-in {version.Version}",
-        _ => $"{AdapterPackageId} {version.Version}"
-    };
 
     public static string Run(string root, Product product)
     {
@@ -44,7 +37,7 @@ public static class Publish
         if (Gh.ReleaseExists(root, version.Tag)) return $"Release {version.Tag} already exists; nothing to create.";
 
         Gh.Run(root, [.. CreateArguments(root, version, notes), package]);
-        return $"Published {Title(version)} as {version.Tag}.";
+        return $"Published {version.Title} as {version.Tag}.";
     }
 
     /// <summary>
@@ -74,7 +67,7 @@ public static class Publish
             throw;
         }
 
-        return $"Published {Title(version)} as {version.Tag} with {payloads.Count} payloads and {feeds.Count} feed files.";
+        return $"Published {version.Title} as {version.Tag} with {payloads.Count} payloads and {feeds.Count} feed files.";
     }
 
     private static List<string> CreateArguments(string root, ProductVersion version, string notes)
@@ -83,7 +76,7 @@ public static class Publish
         [
             "release", "create", version.Tag,
             "--target", Git.Head(root),
-            "--title", Title(version),
+            "--title", version.Title,
             "--notes-file", notes,
             "--latest=false"
         ];

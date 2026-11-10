@@ -8,6 +8,13 @@ public sealed record ProductVersion(Product Product, string Version, bool IsPrer
 
     public bool IsLatest => Product == Product.Daemon && !IsPrerelease;
 
+    /// <summary>The GitHub Release title; the repository already names RevitDevTool.</summary>
+    public string Title =>
+        Product == Product.Daemon ? $"Daemon {Version}"
+        : Product == Product.Addin ? $"Add-in {Version}"
+        : Product == Product.NetTest ? $"NetTest-Adapter {Version}"
+        : $"PyTest-Adapter {Version}";
+
     /// <summary>
     ///     Where users get this version: the registry page for <c>nettest</c> and <c>pytest</c>, the GitHub Release otherwise.
     ///     <c>release.yml</c> shows it as the deployment URL of the product's environment.

@@ -29,6 +29,7 @@ jobs:
       prerelease: ${{ steps.plan.outputs.prerelease }}
       latest: ${{ steps.plan.outputs.latest }}
       page: ${{ steps.plan.outputs.page }}
+      title: ${{ steps.plan.outputs.title }}
     env:
       PRODUCT: ${{ inputs.product }}
     steps:
@@ -297,11 +298,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ needs.validate.outputs.tag }}
-          VERSION: ${{ needs.validate.outputs.version }}
+          TITLE: ${{ needs.validate.outputs.title }}
           PRERELEASE: ${{ needs.validate.outputs.prerelease }}
           SHA: ${{ github.sha }}
         run: |
           if gh release view "$TAG" > /dev/null 2>&1; then exit 0; fi
-          flags=(--target "$SHA" --title "revitdevtool-pytest $VERSION" --notes-file notes.md --latest=false)
+          flags=(--target "$SHA" --title "$TITLE" --notes-file notes.md --latest=false)
           if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
           gh release create "$TAG" "${flags[@]}" output/pytest/*.whl output/pytest/*.tar.gz
