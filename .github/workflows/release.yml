@@ -28,6 +28,7 @@ jobs:
       tag: ${{ steps.plan.outputs.tag }}
       prerelease: ${{ steps.plan.outputs.prerelease }}
       latest: ${{ steps.plan.outputs.latest }}
+      page: ${{ steps.plan.outputs.page }}
     env:
       PRODUCT: ${{ inputs.product }}
     steps:
@@ -95,7 +96,9 @@ jobs:
     needs: [validate, build]
     if: inputs.product != 'pytest'
     runs-on: windows-latest
-    environment: ${{ inputs.product }}
+    environment:
+      name: ${{ inputs.product }}
+      url: ${{ needs.validate.outputs.page }}
     permissions:
       contents: write
       id-token: write
@@ -142,7 +145,9 @@ jobs:
     needs: [validate, publish]
     if: inputs.product == 'daemon' || inputs.product == 'addin'
     runs-on: windows-latest
-    environment: ${{ inputs.product }}
+    environment:
+      name: ${{ inputs.product }}
+      url: ${{ needs.validate.outputs.page }}
     concurrency:
       group: channels
       cancel-in-progress: false
@@ -257,7 +262,9 @@ jobs:
     needs: [validate, build]
     if: inputs.product == 'pytest'
     runs-on: ubuntu-latest
-    environment: pytest
+    environment:
+      name: pytest
+      url: ${{ needs.validate.outputs.page }}
     permissions:
       contents: write
       id-token: write
@@ -276,6 +283,9 @@ jobs:
             output/pytest/*.whl
             output/pytest/*.tar.gz
 
+      - name: Keep notes out of the upload
+        run: mv output/pytest/notes.md notes.md
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
@@ -292,6 +302,6 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           if gh release view "$TAG" > /dev/null 2>&1; then exit 0; fi
-          flags=(--target "$SHA" --title "revitdevtool-pytest $VERSION" --notes-file output/pytest/notes.md --latest=false)
+          flags=(--target "$SHA" --title "revitdevtool-pytest $VERSION" --notes-file notes.md --latest=false)
           if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
           gh release create "$TAG" "${flags[@]}" output/pytest/*.whl output/pytest/*.tar.gz

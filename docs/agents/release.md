@@ -52,11 +52,14 @@ Provider first: `daemon`, then `addin`, then `nettest` and `pytest`. The first `
 ## Owner setup on GitHub
 
 - Environments `daemon`, `addin`, `nettest`, `pytest`, each with a required reviewer and deployments limited to
-  `develop` and `release/*`.
+  `develop` and `release/*`. Each release shows under the repository's Deployments with a link to where users get
+  that version: nuget.org for `nettest`, PyPI for `pytest`, the GitHub Release for `daemon` and `addin`
+  (`ProductVersion.Page`, the `page` output of `release --dry-run`).
 - Secret `UPDATE_SIGNING_KEY` (ECDSA P-256 private key, PEM) in environments `daemon` and `addin`; its public key is
   `Update:PublicKey` in `source/DevTools.Daemon/appsettings.json`.
 - Variable `NUGET_USER` (the nuget.org account name).
 - nuget.org trusted publishing policy: repository `trgiangv/RevitDevTool`, workflow `release.yml`, environment `nettest`.
+- PyPI trusted publisher on `revitdevtool-pytest`: same repository and workflow, environment `pytest`.
 - Label `bug` (the `verify-install` issue uses it).
 - Tag rulesets for `daemon/*`, `addin/*`, `nettest/*`, `pytest/*` that block updates and deletions but let the
   `release` workflow create tags. The first `channels` job creates the `channels` release and tag.

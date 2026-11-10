@@ -9,6 +9,15 @@ public sealed record ProductVersion(Product Product, string Version, bool IsPrer
     public bool IsLatest => Product == Product.Daemon && !IsPrerelease;
 
     /// <summary>
+    ///     Where users get this version: the registry page for <c>nettest</c> and <c>pytest</c>, the GitHub Release otherwise.
+    ///     <c>release.yml</c> shows it as the deployment URL of the product's environment.
+    /// </summary>
+    public string Page(string repository) =>
+        Product == Product.NetTest ? $"https://www.nuget.org/packages/RevitDevTool.TestAdapter/{Version}"
+        : Product == Product.PyTest ? $"https://pypi.org/project/revitdevtool-pytest/{Version}/"
+        : $"https://github.com/{repository}/releases/tag/{Tag}";
+
+    /// <summary>
     ///     The release version in the product's version file; a <c>0.0.0</c> or malformed version is refused.
     /// </summary>
     public static ProductVersion FromFile(string root, Product product)
