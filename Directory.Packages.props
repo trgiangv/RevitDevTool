@@ -39,7 +39,7 @@
         <PackageVersion Include="Sentry" Version="6.12.1" />
         <!--Logging-->
         <PackageVersion Include="ZLogger" Version="2.6.1" />
-        <PackageVersion Include="ZLogger.Scintilla" Version="0.1.0" />
+        <PackageVersion Include="ZLogger.Scintilla" Version="0.1.1" />
         <!--Utilities-->
         <PackageVersion Include="JetBrains.Annotations" Version="2026.2.0" />
         <GlobalPackageReference Include="Polyfill" Version="11.4.5" />
