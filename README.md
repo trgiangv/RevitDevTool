@@ -3,10 +3,10 @@
 Bring standard development ecosystems into CAD/BIM hosts — without replacing them.
 
 <div style="vertical-align: center;">
-    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/badge/Revit-2022--2027-blue.svg?style=flat-square" alt="RevitVersion"></a>
-    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/badge/AutoCAD-2022--2027-orange.svg?style=flat-square" alt="AutoCADVersion"></a>
-    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/v/release/trgiangv/RevitDevTool?style=flat-square" alt="Release"></a>
-    <a href="https://github.com/trgiangv/RevitDevTool/releases/latest"><img src="https://img.shields.io/github/downloads/trgiangv/RevitDevTool/total?style=flat-square" alt="Downloads"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases?q=daemon"><img src="https://img.shields.io/badge/Revit-2022--2027-blue.svg?style=flat-square" alt="RevitVersion"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases?q=daemon"><img src="https://img.shields.io/badge/AutoCAD-2022--2027-orange.svg?style=flat-square" alt="AutoCADVersion"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases?q=daemon"><img src="https://img.shields.io/github/v/release/trgiangv/RevitDevTool?filter=daemon%2F*&include_prereleases&label=release&style=flat-square" alt="Release"></a>
+    <a href="https://github.com/trgiangv/RevitDevTool/releases?q=daemon"><img src="https://img.shields.io/github/downloads/trgiangv/RevitDevTool/total?style=flat-square" alt="Downloads"></a>
 </div>
 
 **The development platform for BIM and CAD.** Run scripts and add-ins in the live session, test them in-process, and let AI assistants work with your open model, all from one add-in.
@@ -30,7 +30,7 @@ Other AutoCAD-based products load the same add-in. Plant 3D embeds its own CPyth
 
 ## Quick start
 
-**1. Install.** Download `RevitDevTool-Setup.exe` from [Releases](https://github.com/trgiangv/RevitDevTool/releases/latest) and run it. It installs for the current user and needs no administrator rights.
+**1. Install.** Download `RevitDevTool-Setup.exe` from the newest `daemon/v...` release on [Releases](https://github.com/trgiangv/RevitDevTool/releases?q=daemon) and run it. It installs for the current user and needs no administrator rights.
 
 **2. Write a script.** Create `hello_script.py` in an empty folder. Dependencies go in the header:
 

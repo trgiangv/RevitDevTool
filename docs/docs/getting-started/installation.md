@@ -15,7 +15,7 @@ RevitDevTool installs as an add-in bundle for Revit and AutoCAD-based products. 
 
 ## Install
 
-1. Download `RevitDevTool-Setup.exe` from [GitHub Releases](https://github.com/trgiangv/RevitDevTool/releases/latest).
+1. Download `RevitDevTool-Setup.exe` from the newest `daemon/v...` release on [GitHub Releases](https://github.com/trgiangv/RevitDevTool/releases?q=daemon).
 2. Run the installer.
 3. Start your Autodesk application.
 4. Open the RevitDevTool (Revit) or DevTools (AutoCAD) panel from the ribbon.
@@ -40,7 +40,12 @@ On the **Add-ins** tab, under **External Tools**, choose **DevTools**. **StubBui
 </TabItem>
 </Tabs>
 
-That's it. The installer registers one add-in bundle per host under `%APPDATA%\Autodesk\ApplicationPlugins\`: `RevitDevTool.bundle` for Revit and `AcadDevTool.bundle` for AutoCAD. Only the hosts you select are downloaded.
+That's it. The installer registers one add-in bundle per host under `%APPDATA%\Autodesk\ApplicationPlugins\`: `RevitDevTool.bundle` for Revit and `AcadDevTool.bundle` for AutoCAD. Only the hosts you select are downloaded. The Daemon is installed under `%LOCALAPPDATA%\RevitDevTool`, and `installation.json` lives in `%APPDATA%\RevitDevTool`.
+
+## Update
+
+The Daemon and the add-in update separately from the **Updates** tab. Each follows the `stable` or `prerelease` channel. Versions `4.0.0-beta.7` and earlier cannot update in place: run `RevitDevTool-Setup.exe` once, then use the **Updates** tab. Coming from 3.x? Follow [Upgrade from 3.x to 4](/docs/getting-started/Upgrade-From-3). See
+[Release Notes](/docs/getting-started/Release-Notes) for what changed.
 
 :::tip No administrator rights needed
 The installer works for the current Windows user only, so it runs without elevation.
@@ -87,14 +92,14 @@ Where to go next:
 
 ## Connect an AI client
 
-Point any MCP v2 client that supports stdio (Cursor, Claude, GitHub Copilot, …) at the MCP server in the bundle:
+Point any MCP v2 client that supports stdio (Cursor, Claude, GitHub Copilot, …) at the MCP server installed with the Daemon:
 
 ```json title="mcp.json"
 {
   "mcpServers": {
     "revitdevtool": {
       "type": "stdio",
-      "command": "%APPDATA%/Autodesk/ApplicationPlugins/RevitDevTool.bundle/Contents/DevTools.Daemon.exe",
+      "command": "%LOCALAPPDATA%/RevitDevTool/current/DevTools.Daemon.exe",
       "args": ["--stdio"]
     }
   }
