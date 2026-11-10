@@ -1,4 +1,5 @@
 using DevTools.Update.Apply;
+using DevTools.Update.Autodesk;
 
 namespace DevTools.Update.Engine;
 
@@ -8,9 +9,9 @@ namespace DevTools.Update.Engine;
 internal sealed class PayloadBatch(string version)
 {
     public string Version { get; } = version;
-    public List<string> Applied { get; } = [];
-    public List<(string HostVersion, IReadOnlyList<LockingProcess> Lockers)> Pending { get; } = [];
-    public List<string> Unavailable { get; } = [];
+    public List<AddinTarget> Applied { get; } = [];
+    public List<(AddinTarget Target, IReadOnlyList<LockingProcess> Lockers)> Pending { get; } = [];
+    public List<AddinTarget> Unavailable { get; } = [];
     public bool Changed => Applied.Count > 0 || Pending.Count > 0;
-    public string[] PendingHostVersions => Pending.Select(item => item.HostVersion).ToArray();
+    public AddinTarget[] PendingTargets => Pending.Select(item => item.Target).ToArray();
 }

@@ -108,14 +108,15 @@ internal static class DaemonTestDoubles
 
     public static UpdatesViewModel CreateUpdates()
     {
-        var bundle = new AutodeskBundle(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+        var root = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        var bundles = new AutodeskBundles(root);
         var reader = new ReleaseReader(new HttpClient(), new ReleaseSignature(null));
         var engine = new UpdateEngine(
-            bundle,
-            new InstallationStore(bundle),
+            bundles,
+            new InstallationStore(Path.Combine(root, "installation.json")),
             Mock.Of<IChannelIndexSource>(source => source.GetAsync(It.IsAny<CancellationToken>()) == Task.FromResult(new ChannelIndex())),
             reader,
-            new PayloadInstaller(bundle, Mock.Of<IFolderLock>(), reader),
+            new PayloadInstaller(bundles, Mock.Of<IFolderLock>(), reader),
             new DaemonUpdater(reader),
             Mock.Of<IUpdateNotifier>(),
             [],

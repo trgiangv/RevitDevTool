@@ -13,7 +13,7 @@
     -->
 
     <PropertyGroup>
-        <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\RevitDevTool.bundle</BundleDestinationFolder>
+        <BundleDestinationFolder Condition="'$(BundleDestinationFolder)' == ''">$(AppData)\Autodesk\ApplicationPlugins\AcadDevTool.bundle</BundleDestinationFolder>
         <DeployAddin Condition="'$(DeployAddin)' == ''">false</DeployAddin>
         <PublishAddin Condition="'$(DeployAddin)' == 'true'">true</PublishAddin>
         <PublishAddin Condition="'$(PublishAddin)' == ''">false</PublishAddin>
@@ -24,7 +24,7 @@
             Condition="$(PublishAddin) == 'true' AND '$(AutoCadVersion)' != '' AND '$(TargetFramework)' != ''">
 
         <ItemGroup>
-            <PackageContentsFile Include="$(MSBuildThisFileDirectory)PackageContents.xml"/>
+            <PackageContentsFile Include="$(MSBuildThisFileDirectory)AcadDevTool.bundle\PackageContents.xml"/>
             <BundleItems Include="$(TargetDir)**\*" Exclude="**\$(PublishDirName)\**\*"/>
         </ItemGroup>
 

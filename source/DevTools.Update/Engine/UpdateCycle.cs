@@ -1,3 +1,5 @@
+using DevTools.Update.Autodesk;
+
 namespace DevTools.Update.Engine;
 
 public enum UpdateTrigger
@@ -20,5 +22,5 @@ public enum UpdateCycleStatus
 public sealed record UpdateCycleResult(
     UpdateCycleStatus Status,
     string? Version = null,
-    IReadOnlyList<string>? Applied = null,
-    IReadOnlyList<string>? Pending = null);
+    IReadOnlyList<AddinTarget>? Applied = null,
+    IReadOnlyList<AddinTarget>? Pending = null);

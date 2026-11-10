@@ -27,12 +27,12 @@ plan `docs/plans/active/2026-11-06-product-releases-0059.md`). All four products
   deletes the draft and its tag. Only a stable `daemon` is marked latest.
 - Assets: `daemon` = `RevitDevTool-Setup.exe`, `RevitDevTool-<v>-*full.nupkg`, `RevitDevTool-<v>-*delta.nupkg` (when an
   earlier release of the channel exists), `releases.<channel>.json` + `.sig`, `assets.<channel>.json`.
-  `addin` = `RevitDevTool-<v>-<year>.zip` per year, `RevitDevTool.bundle.zip`, `update-manifest.json` + `.sig`.
+  `addin` = `RevitDevTool-<v>-<host version>.zip` and `AcadDevTool-<v>-<host version>.zip` per host version, `RevitDevTool.bundle.zip`, `AcadDevTool.bundle.zip`, `update-manifest.json` + `.sig` (0061).
 - `channels` runs one at a time (concurrency group `channels`). It checks that each URL it names answers before it
   uploads `channels.json`, then `channels.json.sig`.
 - `verify-install` reads `channels.json`, installs the channel's Setup with `--silent`, runs `--select "Revit 2025"
-  --select "AutoCAD 2025"` when the channel names an add-in, checks `installation.json` against the channel's add-in
-  version and the bundle files, and checks that `--stdio` exits 0 within 60 s.
+  --select "AutoCAD 2025"` when the channel names an add-in, checks `%APPDATA%\RevitDevTool\installation.json` against the channel's add-in
+  version and the files of both bundles (no AutoCAD file in the Revit bundle), and checks that `--stdio` exits 0 within 60 s.
 - Rerun after a failure: run `release` again. A published release is kept and skipped; a leftover draft is replaced.
   A bad `channels.json` is fixed by rerunning the `channels` job of the last good release.
 

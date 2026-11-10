@@ -40,7 +40,7 @@ On the **Add-ins** tab, under **External Tools**, choose **DevTools**. **StubBui
 </TabItem>
 </Tabs>
 
-That's it. The installer registers the add-in bundle under `%APPDATA%\Autodesk\ApplicationPlugins\RevitDevTool.bundle\`.
+That's it. The installer registers one add-in bundle per host under `%APPDATA%\Autodesk\ApplicationPlugins\`: `RevitDevTool.bundle` for Revit and `AcadDevTool.bundle` for AutoCAD. Only the hosts you select are downloaded.
 
 :::tip No administrator rights needed
 The installer works for the current Windows user only, so it runs without elevation.

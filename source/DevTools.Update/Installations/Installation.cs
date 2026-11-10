@@ -8,23 +8,21 @@ namespace DevTools.Update.Installations;
 /// </summary>
 public sealed class Installation
 {
-    public int Schema { get; set; } = 1;
+    public int Schema { get; set; } = 2;
+
     public UpdatePolicy Policy { get; set; } = new();
     public List<AddinTarget> Targets { get; set; } = [];
     public List<InstalledPayload> Payloads { get; set; } = [];
     public List<AddinTarget> KnownTargets { get; set; } = [];
 
-    public IEnumerable<string> SelectedHostVersions() =>
-        Targets.Select(target => target.HostVersion).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
+    public string? InstalledVersion(AddinTarget target) => Payloads.Find(entry => entry.Target == target)?.Version;
 
-    public string? InstalledVersion(string hostVersion) => Payloads.Find(entry => entry.HostVersion == hostVersion)?.Version;
-
-    public InstalledPayload Payload(string hostVersion)
+    public InstalledPayload Payload(AddinTarget target)
     {
-        var payload = Payloads.Find(entry => entry.HostVersion == hostVersion);
+        var payload = Payloads.Find(entry => entry.Target == target);
         if (payload is not null) return payload;
 
-        payload = new InstalledPayload { HostVersion = hostVersion };
+        payload = new InstalledPayload { Platform = target.Platform, HostVersion = target.HostVersion };
         Payloads.Add(payload);
         return payload;
     }
@@ -60,7 +58,12 @@ public enum UpdateMode
 /// </summary>
 public sealed class InstalledPayload
 {
+    public string Platform { get; set; } = "";
     public string HostVersion { get; set; } = "";
+
+    [JsonIgnore]
+    public AddinTarget Target => new(Platform, HostVersion);
+
     public string? Version { get; set; }
     public string? PendingVersion { get; set; }
     public string? RollbackVersion { get; set; }

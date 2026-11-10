@@ -11,8 +11,8 @@ using System.Security.Cryptography;
 namespace Build.Modules;
 
 /// <summary>
-///     Zips each payload folder <c>Contents\&lt;host version&gt;</c> into <c>RevitDevTool-&lt;version&gt;-&lt;host version&gt;.zip</c>.
-///     The platforms of a payload are the template components that have their module file in the bundle.
+///     Zips each payload folder <c>&lt;bundle&gt;\Contents\&lt;host version&gt;</c> into <see cref="ManifestPayload.AssetName"/>:
+///     one zip per template component that has its module file in the bundle.
 /// </summary>
 [DependsOn<CreateBundleModule>]
 [UsedImplicitly]
@@ -21,36 +21,39 @@ public sealed class PackPayloadsModule(BuildRun run) : Module<ManifestPayload[]>
     protected override async Task<ManifestPayload[]?> ExecuteAsync(IModuleContext context, CancellationToken cancellationToken)
     {
         var bundleResult = await context.GetModule<CreateBundleModule>();
+        var bundles = bundleResult.ValueOrDefault!.Select(root => new AutodeskBundle(root)).ToDictionary(bundle => bundle.Name);
         var version = run.Version.Version;
-        var bundle = new AutodeskBundle(bundleResult.ValueOrDefault!);
-        var outputPath = run.Output;
 
-        foreach (var stale in Directory.GetFiles(outputPath, "RevitDevTool-*-*.zip")) File.Delete(stale);
+        foreach (var name in bundles.Keys)
+        {
+            foreach (var stale in Directory.GetFiles(run.Output, $"{Path.GetFileNameWithoutExtension(name)}-*-*.zip")) File.Delete(stale);
+        }
 
-        var platformsByHostVersion = PackageContents.TemplateComponents()
-            .Where(component => File.Exists(Path.Combine(bundle.Root, component.ModulePath)))
-            .GroupBy(component => component.Target.HostVersion, component => component.Target.Platform)
-            .OrderBy(group => group.Key, StringComparer.Ordinal)
+        var components = PackageContents.TemplateComponents()
+            .Where(component => File.Exists(Path.Combine(bundles[component.Bundle].Root, component.ModulePath)))
+            .OrderBy(component => component.Bundle, StringComparer.Ordinal)
+            .ThenBy(component => component.Target.HostVersion, StringComparer.Ordinal)
             .ToArray();
-        platformsByHostVersion.ShouldNotBeEmpty("No template component has its module file in the bundle");
+        components.ShouldNotBeEmpty("No template component has its module file in a bundle");
 
         var payloads = new List<ManifestPayload>();
-        foreach (var group in platformsByHostVersion)
+        foreach (var component in components)
         {
-            var asset = $"RevitDevTool-{version}-{group.Key}.zip";
-            var zipPath = Path.Combine(outputPath, asset);
-            await Task.Run(() => ZipFile.CreateFromDirectory(bundle.PayloadPath(group.Key), zipPath, CompressionLevel.Optimal, includeBaseDirectory: false), cancellationToken);
+            var asset = ManifestPayload.AssetName(component.Target, version);
+            var zipPath = Path.Combine(run.Output, asset);
+            var folder = bundles[component.Bundle].PayloadPath(component.Target.HostVersion);
+            await Task.Run(() => ZipFile.CreateFromDirectory(folder, zipPath, CompressionLevel.Optimal, includeBaseDirectory: false), cancellationToken);
 
             await using var zip = File.OpenRead(zipPath);
             payloads.Add(new ManifestPayload
             {
-                HostVersion = group.Key,
-                Platforms = group.Order(StringComparer.Ordinal).ToArray(),
+                Platform = component.Target.Platform,
+                HostVersion = component.Target.HostVersion,
                 Asset = asset,
                 Sha256 = Convert.ToHexStringLower(await SHA256.HashDataAsync(zip, cancellationToken)),
                 Size = zip.Length
             });
-            context.Summary.KeyValue("Artifacts", $"Payload {group.Key}", $"{asset} ({string.Join(", ", group)})");
+            context.Summary.KeyValue("Artifacts", component.Description, asset);
         }
 
         return payloads.ToArray();

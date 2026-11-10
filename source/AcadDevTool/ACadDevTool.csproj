@@ -8,7 +8,6 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <UseWindowsForms>true</UseWindowsForms>
         <DeployAddin>true</DeployAddin>
-        <BundleDestinationFolder>$(AppData)\Autodesk\ApplicationPlugins\RevitDevTool.bundle</BundleDestinationFolder>
     </PropertyGroup>
 
     <PropertyGroup>

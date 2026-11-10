@@ -17,7 +17,7 @@
             Condition="$(PublishAddin) == 'true' AND '$(RevitVersion)' != ''">
 
         <ItemGroup>
-            <PackageContentsFile Include="$(MSBuildThisFileDirectory)PackageContents.xml"/>
+            <PackageContentsFile Include="$(MSBuildThisFileDirectory)RevitDevTool.bundle\PackageContents.xml"/>
             <RevitAddinFile Include="$(ProjectDir)*.addin"/>
             <RevitBundleItems Include="$(TargetDir)**\*" Exclude="**\$(PublishDirName)\**\*"/>
             <_ResolvedFileToPublishAlways Include="@(Content)"

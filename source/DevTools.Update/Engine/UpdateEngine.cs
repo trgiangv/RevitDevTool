@@ -14,7 +14,7 @@ namespace DevTools.Update.Engine;
 ///     It does not stop host processes.
 /// </summary>
 public sealed class UpdateEngine(
-    AutodeskBundle bundle,
+    AutodeskBundles bundles,
     InstallationStore store,
     IChannelIndexSource channels,
     ReleaseReader reader,
@@ -74,9 +74,7 @@ public sealed class UpdateEngine(
         var hosts = DetectHosts();
         var selected = installation?.Targets.ToHashSet() ?? DefaultSelection(hosts.Keys.ToHashSet());
         var manifest = await reader.ReadManifestAsync(release, cancellationToken).ConfigureAwait(false);
-        var released = manifest.Payloads
-            .SelectMany(payload => payload.Platforms.Select(platform => new AddinTarget(platform, payload.HostVersion)))
-            .ToHashSet();
+        var released = manifest.Payloads.Select(payload => payload.Target).ToHashSet();
 
         var latest = manifest.Version;
         var installed = installation?.Targets.ToHashSet() ?? [];
@@ -85,7 +83,7 @@ public sealed class UpdateEngine(
             .Select(component =>
             {
                 var payload = installed.Contains(component.Target)
-                    ? installation!.Payloads.Find(entry => entry.HostVersion == component.Target.HostVersion)
+                    ? installation!.Payloads.Find(entry => entry.Target == component.Target)
                     : null;
                 return new TargetOption(component, hosts.GetValueOrDefault(component.Target, []), selected.Contains(component.Target),
                     payload?.Version, payload?.PendingVersion, latest);
@@ -101,9 +99,10 @@ public sealed class UpdateEngine(
 
     /// <summary>
     ///     Installs or changes the host selection (first run, Updates tab, <c>--select</c>). The payloads come from the
-    ///     <c>addin</c> release of the install's channel, or from <paramref name="offlineBundle"/> (<c>RevitDevTool.bundle.zip</c>).
+    ///     <c>addin</c> release of the install's channel, or from <paramref name="offlineBundles"/> (<c>RevitDevTool.bundle.zip</c>,
+    ///     <c>AcadDevTool.bundle.zip</c>).
     /// </summary>
-    public async Task<SelectionResult> ApplySelectionAsync(IReadOnlyList<AddinTarget> selection, UpdatePolicy? policy, string? offlineBundle,
+    public async Task<SelectionResult> ApplySelectionAsync(IReadOnlyList<AddinTarget> selection, UpdatePolicy? policy, IReadOnlyList<string>? offlineBundles,
         IProgress<PayloadProgress>? progress, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -115,13 +114,13 @@ public sealed class UpdateEngine(
             installation.KnownTargets = installation.KnownTargets.Union(DetectInstalledTargets()).ToList();
             RemoveUnselected(installation);
 
-            var batch = offlineBundle is null
+            var batch = offlineBundles is null or []
                 ? await InstallFromReleaseAsync(installation, progress, cancellationToken).ConfigureAwait(false)
-                : InstallFromBundle(installation, offlineBundle);
+                : InstallFromBundles(installation, offlineBundles);
 
             Commit(installation);
             Report(batch, null);
-            return new SelectionResult(batch.Version, batch.Applied, batch.PendingHostVersions, batch.Unavailable);
+            return new SelectionResult(batch.Version, batch.Applied, batch.PendingTargets, batch.Unavailable);
         }
         finally
         {
@@ -138,7 +137,7 @@ public sealed class UpdateEngine(
     private HashSet<AddinTarget> DefaultSelection(HashSet<AddinTarget> onComputer)
     {
         var onDisk = PackageContents.TemplateComponents()
-            .Where(component => File.Exists(Path.Combine(bundle.Root, component.ModulePath)))
+            .Where(component => File.Exists(Path.Combine(bundles.Named(component.Bundle).Root, component.ModulePath)))
             .Select(component => component.Target)
             .ToHashSet();
         return onDisk.Count > 0 ? onDisk : onComputer;
@@ -149,11 +148,12 @@ public sealed class UpdateEngine(
     private Dictionary<AddinTarget, HostApp[]> DetectHosts() => InstalledHosts.Detect(resolvers);
 
     /// <summary>
-    ///     Velopack uninstall hook. Removes the bundle that the engine installed.
+    ///     Velopack uninstall hook. Removes the bundles and the <c>installation.json</c> that the engine wrote.
     /// </summary>
-    public static void RemoveBundle(AutodeskBundle bundle)
+    public static void RemoveBundles(AutodeskBundles bundles, InstallationStore store)
     {
-        if (Directory.Exists(bundle.Root)) Directory.Delete(bundle.Root, recursive: true);
+        foreach (var bundle in bundles.All.Where(bundle => Directory.Exists(bundle.Root))) Directory.Delete(bundle.Root, recursive: true);
+        store.Delete();
     }
 
     public void Dispose()
@@ -193,16 +193,16 @@ public sealed class UpdateEngine(
         SwapUpdater(installation, daemonTarget, trigger);
 
         var status = batch.Changed || daemonTarget is not null ? UpdateCycleStatus.Updated : UpdateCycleStatus.UpToDate;
-        return new UpdateCycleResult(status, manifest?.Version, batch.Applied, batch.PendingHostVersions);
+        return new UpdateCycleResult(status, manifest?.Version, batch.Applied, batch.PendingTargets);
     }
 
     private async Task<(Release? Daemon, Release? Addin)> PickAsync(bool prerelease, CancellationToken cancellationToken) =>
         (await channels.GetAsync(cancellationToken).ConfigureAwait(false)).Pick(prerelease);
 
-    private static ManifestPayload[] OutdatedPayloads(Installation installation, UpdateManifest manifest) => installation.SelectedHostVersions()
+    private static ManifestPayload[] OutdatedPayloads(Installation installation, UpdateManifest manifest) => installation.Targets.Distinct()
         .Select(manifest.FindPayload)
         .OfType<ManifestPayload>()
-        .Where(payload => Versions.IsNewer(manifest.Version, installation.InstalledVersion(payload.HostVersion)))
+        .Where(payload => Versions.IsNewer(manifest.Version, installation.InstalledVersion(payload.Target)))
         .ToArray();
 
     /// <summary>
@@ -256,11 +256,11 @@ public sealed class UpdateEngine(
         {
             try
             {
-                Apply(installation, payload.HostVersion, await installer.StageAsync(release, payload, null, cancellationToken).ConfigureAwait(false), batch);
+                Apply(installation, payload.Target, await installer.StageAsync(release, payload, null, cancellationToken).ConfigureAwait(false), batch);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.ZLogError(ex, $"The update of {payload.HostVersion} to {release.Version} failed");
+                logger.ZLogError(ex, $"The update of {payload.Target} to {release.Version} failed");
                 notifier.Notify(new UpdateNotice(UpdateNoticeKind.Failed, "Update failed",
                     $"{release.Version} is not installed. The current version stays in use.", release.Version));
             }
@@ -274,50 +274,63 @@ public sealed class UpdateEngine(
     {
         var release = await SetupReleaseAsync(installation, cancellationToken).ConfigureAwait(false);
         var manifest = await reader.ReadManifestAsync(release, cancellationToken).ConfigureAwait(false);
-        var wanted = installation.SelectedHostVersions().ToArray();
+        var wanted = installation.Targets.Distinct().ToArray();
 
         var batch = new PayloadBatch(manifest.Version);
-        batch.Unavailable.AddRange(wanted.Where(hostVersion => manifest.FindPayload(hostVersion) is null));
+        batch.Unavailable.AddRange(wanted.Where(target => manifest.FindPayload(target) is null));
 
-        var missing = wanted.Select(manifest.FindPayload).OfType<ManifestPayload>().Where(payload => !IsInstalled(installation, payload.HostVersion, manifest.Version)).ToArray();
-        foreach (var payload in missing) progress?.Report(new PayloadProgress(payload.HostVersion, PayloadStage.Waiting, 0));
+        var missing = wanted.Select(manifest.FindPayload).OfType<ManifestPayload>().Where(payload => !IsInstalled(installation, payload.Target, manifest.Version)).ToArray();
+        foreach (var payload in missing) progress?.Report(new PayloadProgress(payload.Target, PayloadStage.Waiting, 0));
 
         var staged = new string[missing.Length];
         await Parallel.ForAsync(0, missing.Length, new ParallelOptions { MaxDegreeOfParallelism = ParallelDownloads, CancellationToken = cancellationToken },
             async (index, token) => staged[index] = await installer.StageAsync(release, missing[index], progress, token).ConfigureAwait(false)).ConfigureAwait(false);
 
         for (var index = 0; index < missing.Length; index++)
-            Apply(installation, missing[index].HostVersion, staged[index], batch);
+            Apply(installation, missing[index].Target, staged[index], batch);
 
         return batch;
     }
 
-    private PayloadBatch InstallFromBundle(Installation installation, string bundleZip)
+    /// <summary>
+    ///     Installs each selected target from the offline zip of its bundle. A target whose bundle zip is missing is unavailable.
+    /// </summary>
+    private PayloadBatch InstallFromBundles(Installation installation, IReadOnlyList<string> bundleZips)
     {
-        var batch = new PayloadBatch(PayloadInstaller.ReadBundleVersion(bundleZip));
-        foreach (var hostVersion in installation.SelectedHostVersions())
-            Apply(installation, hostVersion, installer.StageFromBundle(bundleZip, hostVersion, batch.Version), batch);
+        var offline = bundleZips.Select(OfflineBundle.Read).ToArray();
+        var versions = offline.Select(item => item.Version).Distinct(StringComparer.Ordinal).ToArray();
+        if (versions.Length != 1)
+            throw new InvalidOperationException($"The offline bundles have different versions ({string.Join(", ", versions)}); use the zips of one release.");
+
+        var batch = new PayloadBatch(versions[0]);
+        foreach (var target in installation.Targets.Distinct())
+        {
+            if (offline.FirstOrDefault(item => item.Bundle == PackageContents.BundleOf(target)) is { } source)
+                Apply(installation, target, installer.StageFromBundle(source, target), batch);
+            else
+                batch.Unavailable.Add(target);
+        }
 
         return batch;
     }
 
-    private bool IsInstalled(Installation installation, string hostVersion, string version) =>
-        installation.InstalledVersion(hostVersion) == version && Directory.Exists(bundle.PayloadPath(hostVersion));
+    private bool IsInstalled(Installation installation, AddinTarget target, string version) =>
+        installation.InstalledVersion(target) == version && Directory.Exists(bundles.PayloadPath(target));
 
     private void RemoveUnselected(Installation installation)
     {
-        var selected = installation.SelectedHostVersions().ToHashSet(StringComparer.Ordinal);
-        installation.Payloads.RemoveAll(payload => !selected.Contains(payload.HostVersion) && installer.TryRemove(payload.HostVersion));
+        var selected = installation.Targets.ToHashSet();
+        installation.Payloads.RemoveAll(payload => !selected.Contains(payload.Target) && installer.TryRemove(payload.Target));
     }
 
-    private void Apply(Installation installation, string hostVersion, string stagedPath, PayloadBatch batch)
+    private void Apply(Installation installation, AddinTarget target, string stagedPath, PayloadBatch batch)
     {
-        var payload = installation.Payload(hostVersion);
-        var lockers = installer.TryApply(hostVersion, stagedPath);
+        var payload = installation.Payload(target);
+        var lockers = installer.TryApply(target, stagedPath);
         if (lockers.Count > 0)
         {
             payload.PendingVersion = batch.Version;
-            batch.Pending.Add((hostVersion, lockers));
+            batch.Pending.Add((target, lockers));
             (_lockers ??= new LockerWatcher(RetryPendingAsync, logger)).Watch(lockers, _lifetime.Token);
             return;
         }
@@ -325,7 +338,7 @@ public sealed class UpdateEngine(
         payload.RollbackVersion = payload.Version;
         payload.Version = batch.Version;
         payload.PendingVersion = null;
-        batch.Applied.Add(hostVersion);
+        batch.Applied.Add(target);
     }
 
     /// <summary>
@@ -334,7 +347,7 @@ public sealed class UpdateEngine(
     private void RetryPending(Installation installation)
     {
         var groups = installation.Payloads
-            .Where(payload => payload.PendingVersion is { } version && installer.IsStaged(version, payload.HostVersion))
+            .Where(payload => payload.PendingVersion is { } version && installer.IsStaged(version, payload.Target))
             .GroupBy(payload => payload.PendingVersion!)
             .ToArray();
 
@@ -343,7 +356,7 @@ public sealed class UpdateEngine(
         {
             var batch = new PayloadBatch(group.Key);
             foreach (var payload in group)
-                Apply(installation, payload.HostVersion, installer.StagedPath(group.Key, payload.HostVersion), batch);
+                Apply(installation, payload.Target, installer.StagedPath(group.Key, payload.Target), batch);
 
             Report(batch, null);
             changed |= batch.Applied.Count > 0;
@@ -415,10 +428,15 @@ public sealed class UpdateEngine(
     private void Commit(Installation installation)
     {
         store.Save(installation);
-        if (Versions.Max(installation.Payloads.Select(payload => payload.Version)) is { } version)
-            PackageContents.Write(bundle, installation.Targets, version);
-        else
-            File.Delete(bundle.PackageContentsPath);
+        foreach (var bundle in bundles.All)
+        {
+            var versions = installation.Payloads.Where(payload => PackageContents.BundleOf(payload.Target) == bundle.Name).Select(payload => payload.Version);
+            if (Versions.Max(versions) is { } version)
+                PackageContents.Write(bundle, installation.Targets, version);
+            else if (File.Exists(bundle.PackageContentsPath))
+                File.Delete(bundle.PackageContentsPath);
+        }
+
         CleanStaging(installation);
     }
 

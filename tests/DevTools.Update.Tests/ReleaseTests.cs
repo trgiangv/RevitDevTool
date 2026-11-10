@@ -2,6 +2,7 @@ using DevTools.Update.Engine;
 using DevTools.Update.Releases;
 using System.Security.Cryptography;
 using System.Text;
+using static DevTools.Update.Tests.Hosts;
 
 namespace DevTools.Update.Tests;
 
@@ -35,7 +36,7 @@ public sealed class ReleaseTests
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         using var other = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var releases = new FakeChannels(other);
-        var release = releases.PublishAddin("3.1.0", ("2024", ["Revit"], "new"));
+        var release = releases.PublishAddin("3.1.0", (Revit("2024"), "new"));
         var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(key.ExportSubjectPublicKeyInfoPem()));
 
         await Assert.ThrowsExactlyAsync<UpdateIntegrityException>(() => reader.ReadManifestAsync(release, CancellationToken.None));
@@ -46,23 +47,24 @@ public sealed class ReleaseTests
     {
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         var releases = new FakeChannels();
-        var release = releases.PublishAddin("3.1.0", ("2024", ["Revit"], "new"));
+        var release = releases.PublishAddin("3.1.0", (Revit("2024"), "new"));
         var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(key.ExportSubjectPublicKeyInfoPem()));
 
         await Assert.ThrowsExactlyAsync<UpdateIntegrityException>(() => reader.ReadManifestAsync(release, CancellationToken.None));
     }
 
     [TestMethod]
-    public async Task Manifest_parses_payloads_with_string_host_versions()
+    public async Task Manifest_has_one_payload_per_host()
     {
         var releases = new FakeChannels();
-        var release = releases.PublishAddin("3.1.0", ("2024", ["AutoCAD*", "Revit"], "new"));
+        var release = releases.PublishAddin("3.1.0", (Revit("2024"), "new"), (Acad("2024"), "new"));
         var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(null));
 
         var manifest = await reader.ReadManifestAsync(release, CancellationToken.None);
 
-        CollectionAssert.AreEqual(new[] { "AutoCAD*", "Revit" }, manifest.FindPayload("2024")!.Platforms.ToArray());
-        Assert.IsNull(manifest.FindPayload("2025"));
+        Assert.AreEqual("AcadDevTool-3.1.0-2024.zip", manifest.FindPayload(Acad("2024"))!.Asset);
+        Assert.AreEqual("RevitDevTool-3.1.0-2024.zip", manifest.FindPayload(Revit("2024"))!.Asset);
+        Assert.IsNull(manifest.FindPayload(Revit("2025")));
     }
 
     [TestMethod]
@@ -138,7 +140,7 @@ public sealed class ReleaseTests
     public async Task Download_starts_again_when_the_connection_drops()
     {
         var releases = new FakeChannels { DroppedResponses = ReleaseReader.Attempts - 1 };
-        var release = releases.PublishAddin("3.1.0", ("2024", ["Revit"], "new"));
+        var release = releases.PublishAddin("3.1.0", (Revit("2024"), "new"));
         var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(null)) { RetryDelay = TimeSpan.Zero };
         var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.zip");
 
@@ -159,7 +161,7 @@ public sealed class ReleaseTests
     public async Task Download_stops_after_the_last_attempt()
     {
         var releases = new FakeChannels { DroppedResponses = ReleaseReader.Attempts };
-        var release = releases.PublishAddin("3.1.0", ("2024", ["Revit"], "new"));
+        var release = releases.PublishAddin("3.1.0", (Revit("2024"), "new"));
         var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(null)) { RetryDelay = TimeSpan.Zero };
 
         await Assert.ThrowsAsync<HttpRequestException>(() => reader.ReadManifestAsync(release, CancellationToken.None));

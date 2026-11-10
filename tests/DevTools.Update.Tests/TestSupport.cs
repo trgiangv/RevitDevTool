@@ -10,29 +10,43 @@ using System.Text;
 
 namespace DevTools.Update.Tests;
 
-internal sealed class TempBundle : IDisposable
+internal static class Hosts
 {
-    public TempBundle()
+    public static AddinTarget Revit(string hostVersion) => new(PackageContents.RevitPlatform, hostVersion);
+
+    public static AddinTarget Acad(string hostVersion) => new(PackageContents.AutoCadPlatform, hostVersion);
+}
+
+/// <summary>
+///     A temporary <c>ApplicationPlugins</c> folder with <c>installation.json</c> beside it.
+/// </summary>
+internal sealed class TempPlugins : IDisposable
+{
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "DevTools.Update.Tests", Guid.NewGuid().ToString("N"));
+
+    public TempPlugins()
     {
-        Root = Path.Combine(Path.GetTempPath(), "DevTools.Update.Tests", Guid.NewGuid().ToString("N"), AutodeskBundle.BundleName);
-        Directory.CreateDirectory(Root);
-        Bundle = new AutodeskBundle(Root);
+        Bundles = new AutodeskBundles(Path.Combine(_folder, "ApplicationPlugins"));
+        Directory.CreateDirectory(Bundles.Root);
     }
 
-    public string Root { get; }
-    public AutodeskBundle Bundle { get; }
+    public AutodeskBundles Bundles { get; }
+    public string Root => Bundles.Root;
+    public string InstallationPath => Path.Combine(_folder, "installation.json");
+    public AutodeskBundle Revit => Bundles.Named("RevitDevTool.bundle");
+    public AutodeskBundle Acad => Bundles.Named("AcadDevTool.bundle");
 
-    public string WritePayload(string hostVersion, string marker, params string[] files)
+    public string WritePayload(AddinTarget target, string marker, params string[] files)
     {
-        var folder = Bundle.PayloadPath(hostVersion);
+        var folder = Bundles.PayloadPath(target);
         Directory.CreateDirectory(folder);
         foreach (var file in files.Append("marker.txt")) File.WriteAllText(Path.Combine(folder, file), marker);
         return folder;
     }
 
-    public string Marker(string hostVersion) => File.ReadAllText(Path.Combine(Bundle.PayloadPath(hostVersion), "marker.txt"));
+    public string Marker(AddinTarget target) => File.ReadAllText(Path.Combine(Bundles.PayloadPath(target), "marker.txt"));
 
-    public void Dispose() => Directory.Delete(Path.GetDirectoryName(Root)!, recursive: true);
+    public void Dispose() => Directory.Delete(_folder, recursive: true);
 }
 
 /// <summary>
@@ -76,20 +90,31 @@ internal sealed class FakeChannels : HttpMessageHandler
 
     public string? MinUpdaterVersion { get; set; }
 
-    public Release PublishAddin(string version, params (string HostVersion, string[] Platforms, string Marker)[] payloads)
+    public Release PublishAddin(string version, params (AddinTarget Target, string Marker)[] payloads)
     {
         var release = new Release(version, version.Contains('-', StringComparison.Ordinal), new Uri(Downloads, $"addin/v{version}/"));
         var entries = payloads.Select(payload =>
         {
-            var asset = $"RevitDevTool-{version}-{payload.HostVersion}.zip";
+            var asset = ManifestPayload.AssetName(payload.Target, version);
             var zip = PayloadZip(payload.Marker);
             _files[release.Asset(asset)] = zip;
-            return new ManifestPayload { HostVersion = payload.HostVersion, Platforms = payload.Platforms, Asset = asset, Sha256 = Convert.ToHexStringLower(SHA256.HashData(zip)), Size = zip.Length };
+            return new ManifestPayload
+            {
+                Platform = payload.Target.Platform,
+                HostVersion = payload.Target.HostVersion,
+                Asset = asset,
+                Sha256 = Convert.ToHexStringLower(SHA256.HashData(zip)),
+                Size = zip.Length
+            };
         }).ToArray();
 
         var manifest = new UpdateManifest
         {
-            Schema = UpdateManifest.SupportedSchema, Version = version, Channel = "stable", MinUpdaterVersion = MinUpdaterVersion, Payloads = entries
+            Schema = UpdateManifest.SupportedSchema,
+            Version = version,
+            Channel = "stable",
+            MinUpdaterVersion = MinUpdaterVersion,
+            Payloads = entries
         };
         AddSigned(release.Asset(UpdateManifest.FileName), manifest.ToJson());
         Move(version, channel => channel.Addin?.Version, channel => channel with { Addin = new AddinEntry(version, release.Asset(UpdateManifest.FileName)) });

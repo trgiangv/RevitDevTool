@@ -220,18 +220,21 @@ jobs:
           ADDIN: ${{ steps.channel.outputs.addin }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $bundle = Join-Path $env:APPDATA 'Autodesk\ApplicationPlugins\RevitDevTool.bundle'
-          $installation = Get-Content (Join-Path $bundle 'installation.json') -Raw | ConvertFrom-Json
-          $payload = $installation.payloads | Where-Object hostVersion -eq '2025'
-          if ($payload.version -ne $env:ADDIN) { throw "Payload 2025 is '$($payload.version)', not $env:ADDIN." }
+          $installation = Get-Content (Join-Path $env:APPDATA 'RevitDevTool\installation.json') -Raw | ConvertFrom-Json
+          $plugins = Join-Path $env:APPDATA 'Autodesk\ApplicationPlugins'
+          foreach ($expected in @{ platform = 'Revit'; bundle = 'RevitDevTool.bundle'; module = './Contents/2025/RevitDevTool.addin' },
+                            @{ platform = 'AutoCAD*'; bundle = 'AcadDevTool.bundle'; module = './Contents/2025/AcadDevTool.dll' }) {
+            $payload = $installation.payloads | Where-Object { $_.platform -eq $expected.platform -and $_.hostVersion -eq '2025' }
+            if ($payload.version -ne $env:ADDIN) { throw "Payload $($expected.platform) 2025 is '$($payload.version)', not $env:ADDIN." }
 
-          [xml]$package = Get-Content (Join-Path $bundle 'PackageContents.xml')
-          $modules = $package.ApplicationPackage.Components.ComponentEntry.ModuleName
-          foreach ($module in './Contents/2025/RevitDevTool.addin', './Contents/2025/AcadDevTool.dll') {
-            if ($modules -notcontains $module) { throw "PackageContents.xml has no $module." }
-            if (-not (Test-Path (Join-Path $bundle $module))) { throw "$module is not on disk." }
+            $bundle = Join-Path $plugins $expected.bundle
+            [xml]$package = Get-Content (Join-Path $bundle 'PackageContents.xml')
+            $modules = @($package.ApplicationPackage.Components.ComponentEntry.ModuleName)
+            if ($modules -notcontains $expected.module) { throw "$($expected.bundle) PackageContents.xml has no $($expected.module)." }
+            if (-not (Test-Path (Join-Path $bundle $expected.module))) { throw "$($expected.module) is not on disk in $($expected.bundle)." }
+            if (Test-Path (Join-Path $bundle 'Contents\DevTools.Daemon.exe')) { throw "$($expected.bundle) must not contain the Daemon." }
           }
-          if (Test-Path (Join-Path $bundle 'Contents\DevTools.Daemon.exe')) { throw 'The bundle must not contain the Daemon.' }
+          if (Test-Path (Join-Path $plugins 'RevitDevTool.bundle\Contents\2025\AcadDevTool.dll')) { throw 'The Revit bundle must not contain AutoCAD files.' }
 
       - name: Start the MCP server
         shell: pwsh

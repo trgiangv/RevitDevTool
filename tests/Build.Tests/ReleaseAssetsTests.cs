@@ -27,15 +27,17 @@ public sealed class ReleaseAssetsTests
     }
 
     [TestMethod]
-    public void Addin_assets_per_year()
+    public void Addin_assets_per_host()
     {
         var (payloads, feeds) = ReleaseAssets.Split(AddinStable,
         [
-            "update-manifest.json.sig", "RevitDevTool-4.0.0-2025.zip", "update-manifest.json", "RevitDevTool.bundle.zip",
-            "RevitDevTool-4.0.0-2026.zip", "RevitDevTool-3.9.0-2025.zip", "notes.md"
+            "update-manifest.json.sig", "RevitDevTool-4.0.0-2025.zip", "update-manifest.json", "RevitDevTool.bundle.zip", "AcadDevTool.bundle.zip",
+            "AcadDevTool-4.0.0-2025.zip", "RevitDevTool-4.0.0-2026.zip", "RevitDevTool-3.9.0-2025.zip", "notes.md"
         ]);
 
-        CollectionAssert.AreEqual(new[] { "RevitDevTool-4.0.0-2025.zip", "RevitDevTool-4.0.0-2026.zip", "RevitDevTool.bundle.zip" }, payloads.ToArray());
+        CollectionAssert.AreEqual(
+            new[] { "AcadDevTool-4.0.0-2025.zip", "AcadDevTool.bundle.zip", "RevitDevTool-4.0.0-2025.zip", "RevitDevTool-4.0.0-2026.zip", "RevitDevTool.bundle.zip" },
+            payloads.ToArray());
         CollectionAssert.AreEqual(new[] { "update-manifest.json", "update-manifest.json.sig" }, feeds.ToArray());
     }
 

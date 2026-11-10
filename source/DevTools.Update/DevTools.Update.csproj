@@ -22,7 +22,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="..\..\props\PackageContents.xml" LogicalName="DevTools.Update.PackageContents.xml"/>
+        <EmbeddedResource Include="..\..\props\RevitDevTool.bundle\PackageContents.xml" LogicalName="DevTools.Update.RevitDevTool.bundle.PackageContents.xml"/>
+        <EmbeddedResource Include="..\..\props\AcadDevTool.bundle\PackageContents.xml" LogicalName="DevTools.Update.AcadDevTool.bundle.PackageContents.xml"/>
     </ItemGroup>
 
     <ItemGroup>

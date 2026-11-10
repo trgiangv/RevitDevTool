@@ -1,14 +1,16 @@
 using System.Security.Cryptography;
+using System.Xml.Linq;
 
 namespace Build.Pipeline;
 
 /// <summary>
-///     The add-in compile leaves one folder per host version in <c>output/hosts</c>: the bundle's <c>Contents\&lt;host version&gt;</c>
-///     of both hosts, and <c>&lt;host version&gt;.version</c> with the version stamped into it. <c>pack addin</c> bundles only these
-///     folders, so each host version can compile on its own runner.
+///     The add-in compile leaves one folder per host version in <c>output/hosts</c>: <c>shared</c> holds the files that every host
+///     publishes, <c>&lt;bundle&gt;</c> the files of one host, and <c>&lt;host version&gt;.version</c> the version stamped into them.
+///     <c>pack addin</c> bundles only these folders, so each host version can compile on its own runner.
 /// </summary>
 public static class AddinHosts
 {
+    public const string Shared = "shared";
     private const string VersionExtension = ".version";
 
     public static string Folder(string root) => Path.Combine(root, "output", "hosts");
@@ -16,8 +18,8 @@ public static class AddinHosts
     public static string HostVersion(string configuration) => configuration[(configuration.LastIndexOf('.') + 1)..];
 
     /// <summary>
-    ///     Merges the publish folders of both hosts. Hosts of one host version share the folder, so a file both publish must be
-    ///     byte-identical (0046).
+    ///     Splits the publish folders of the hosts into <see cref="Shared"/> and one folder per bundle. A file that two hosts
+    ///     publish must be byte-identical (0046).
     /// </summary>
     public static void Collect(BuildRun run, string configuration)
     {
@@ -25,13 +27,19 @@ public static class AddinHosts
         var target = Path.Combine(Folder(run.Root), hostVersion);
         if (Directory.Exists(target)) Directory.Delete(target, recursive: true);
 
-        foreach (var project in run.Product.Roots)
-        {
-            var source = Path.Combine(run.Root, Path.GetDirectoryName(project)!, "bin", configuration, "publish", "Contents", hostVersion);
-            if (!Directory.Exists(source))
-                throw new InvalidOperationException($"{Path.GetFileNameWithoutExtension(project)} published nothing into {source}.");
+        var hosts = run.Product.Roots.Select(project => Publish(run.Root, project, configuration, hostVersion)).ToArray();
+        var files = hosts.SelectMany(host => Directory.EnumerateFiles(host.Folder, "*", SearchOption.AllDirectories)
+                .Select(file => (host.Bundle, File: file, Relative: Path.GetRelativePath(host.Folder, file))))
+            .GroupBy(item => item.Relative, StringComparer.OrdinalIgnoreCase);
 
-            Merge(source, target, hostVersion);
+        foreach (var group in files)
+        {
+            var copies = group.ToArray();
+            if (copies.Skip(1).FirstOrDefault(copy => !HaveSameContent(copies[0].File, copy.File)) is { File: not null } differs)
+                throw new InvalidOperationException($"Contents\\{hostVersion}\\{group.Key} differs between hosts of the same host version: '{copies[0].File}' vs '{differs.File}'.");
+
+            var folders = copies.Length == hosts.Length ? [Shared] : copies.Select(copy => copy.Bundle);
+            foreach (var folder in folders) Copy(copies[0].File, Path.Combine(target, folder, group.Key));
         }
 
         File.WriteAllText(target + VersionExtension, run.Version.Version);
@@ -70,22 +78,24 @@ public static class AddinHosts
         return hostVersions.Select(hostVersion => Path.Combine(folder, hostVersion)).ToArray();
     }
 
-    private static void Merge(string source, string target, string hostVersion)
+    /// <summary>
+    ///     The bundle comes from the <c>Name</c> in the <c>PackageContents.xml</c> that the project publishes next to <c>Contents</c>.
+    /// </summary>
+    private static (string Bundle, string Folder) Publish(string root, string project, string configuration, string hostVersion)
     {
-        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
-        {
-            var relativePath = Path.GetRelativePath(source, file);
-            var destination = Path.Combine(target, relativePath);
-            if (File.Exists(destination))
-            {
-                if (!HaveSameContent(file, destination))
-                    throw new InvalidOperationException($"Contents\\{hostVersion}\\{relativePath} differs between hosts of the same host version: '{file}' vs '{destination}'.");
-                continue;
-            }
+        var publish = Path.Combine(root, Path.GetDirectoryName(project)!, "bin", configuration, "publish");
+        var contents = Path.Combine(publish, "Contents", hostVersion);
+        var manifest = Path.Combine(publish, "PackageContents.xml");
+        if (!Directory.Exists(contents) || !File.Exists(manifest))
+            throw new InvalidOperationException($"{Path.GetFileNameWithoutExtension(project)} published nothing into {publish}.");
 
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.Copy(file, destination);
-        }
+        return (XDocument.Load(manifest).Root!.Attribute("Name")!.Value + ".bundle", contents);
+    }
+
+    private static void Copy(string source, string destination)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        File.Copy(source, destination);
     }
 
     private static bool HaveSameContent(string left, string right)

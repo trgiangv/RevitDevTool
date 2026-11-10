@@ -4,6 +4,7 @@ using DevTools.Update.Installations;
 using DevTools.Update.Releases;
 using System.IO.Compression;
 using System.Xml.Linq;
+using static DevTools.Update.Tests.Hosts;
 
 namespace DevTools.Update.Tests;
 
@@ -11,21 +12,35 @@ namespace DevTools.Update.Tests;
 public sealed class BundleTests
 {
     [TestMethod]
-    public void Template_components_have_platform_host_version_and_description()
+    public void Template_components_name_their_bundle()
     {
         var components = PackageContents.TemplateComponents();
 
-        var revit = components.Single(component => component.Target == new AddinTarget("Revit", "2024"));
+        var revit = components.Single(component => component.Target == Revit("2024"));
         Assert.AreEqual("Revit 2024", revit.Description);
+        Assert.AreEqual("RevitDevTool.bundle", revit.Bundle);
         Assert.AreEqual("Contents/2024/RevitDevTool.addin", revit.ModulePath);
-        Assert.IsTrue(components.Any(component => component.Target == new AddinTarget("AutoCAD*", "2027")));
+        var acad = components.Single(component => component.Target == Acad("2027"));
+        Assert.AreEqual("AcadDevTool.bundle", acad.Bundle);
+        Assert.AreEqual("Contents/2027/AcadDevTool.dll", acad.ModulePath);
     }
 
     [TestMethod]
-    public void Only_the_newest_template_component_of_a_platform_has_no_series_max()
+    public void Each_bundle_holds_one_platform()
     {
-        using var stream = typeof(PackageContents).Assembly.GetManifestResourceStream("DevTools.Update.PackageContents.xml")!;
-        var open = XDocument.Load(stream).Root!.Elements("Components")
+        foreach (var name in PackageContents.BundleNames)
+        {
+            var platforms = PackageContents.TemplateComponents().Where(component => component.Bundle == name).Select(component => component.Target.Platform).Distinct();
+            Assert.HasCount(1, platforms.ToArray(), name);
+        }
+
+        Assert.AreEqual("AcadDevTool.bundle", PackageContents.BundleOf(Acad("2099")));
+    }
+
+    [TestMethod]
+    public void Only_the_newest_AutoCad_component_is_open()
+    {
+        var open = PackageContents.LoadTemplate("AcadDevTool.bundle").Root!.Elements("Components")
             .Select(component => component.Element("RuntimeRequirements")!)
             .Where(requirements => requirements.Attribute("SeriesMax") is null)
             .Select(requirements => requirements.Attribute("SeriesMin")!.Value)
@@ -37,31 +52,30 @@ public sealed class BundleTests
     [TestMethod]
     public void PackageContents_keeps_only_selected_targets_that_are_on_disk()
     {
-        using var temp = new TempBundle();
-        temp.WritePayload("2024", "a", "RevitDevTool.addin", "AcadDevTool.dll");
-        temp.WritePayload("2025", "b", "AcadDevTool.dll");
+        using var temp = new TempPlugins();
+        temp.WritePayload(Revit("2024"), "a", "RevitDevTool.addin");
+        temp.WritePayload(Revit("2025"), "b");
 
-        var written = PackageContents.Write(temp.Bundle,
-            [new AddinTarget("Revit", "2024"), new AddinTarget("AutoCAD*", "2025"), new AddinTarget("Revit", "2025"), new AddinTarget("Revit", "2026")],
-            "3.1.0");
+        var written = PackageContents.Write(temp.Revit, [Revit("2024"), Revit("2025"), Revit("2026"), Acad("2024")], "3.1.0");
 
-        CollectionAssert.AreEquivalent(new[] { new AddinTarget("Revit", "2024"), new AddinTarget("AutoCAD*", "2025") }, written.ToArray());
-        var document = XDocument.Load(temp.Bundle.PackageContentsPath);
+        CollectionAssert.AreEqual(new[] { Revit("2024") }, written.ToArray());
+        var document = XDocument.Load(temp.Revit.PackageContentsPath);
         Assert.AreEqual("3.1.0", document.Root!.Attribute("AppVersion")!.Value);
-        Assert.HasCount(2, document.Root.Elements("Components"));
+        Assert.AreEqual("RevitDevTool", document.Root.Attribute("Name")!.Value);
+        Assert.HasCount(1, document.Root.Elements("Components"));
     }
 
     [TestMethod]
     public void Installation_round_trips_with_a_lowercase_mode()
     {
-        using var temp = new TempBundle();
-        var store = new InstallationStore(temp.Bundle);
-        store.Save(new Installation { Policy = { Mode = UpdateMode.Notify }, Targets = [new AddinTarget("Revit", "2024")] });
+        using var temp = new TempPlugins();
+        var store = new InstallationStore(temp.InstallationPath);
+        store.Save(new Installation { Policy = { Mode = UpdateMode.Notify }, Targets = [Revit("2024")] });
 
-        StringAssert.Contains(File.ReadAllText(temp.Bundle.InstallationPath), "\"mode\": \"notify\"");
+        StringAssert.Contains(File.ReadAllText(temp.InstallationPath), "\"mode\": \"notify\"");
         var loaded = store.Load()!;
         Assert.AreEqual(UpdateMode.Notify, loaded.Policy.Mode);
-        Assert.AreEqual(new AddinTarget("Revit", "2024"), loaded.Targets.Single());
+        Assert.AreEqual(Revit("2024"), loaded.Targets.Single());
     }
 
     [TestMethod]
@@ -74,65 +88,67 @@ public sealed class BundleTests
     [TestMethod]
     public void Busy_payload_is_not_swapped()
     {
-        using var temp = new TempBundle();
+        using var temp = new TempPlugins();
         var folderLock = new FakeFolderLock();
-        var current = temp.WritePayload("2024", "old");
-        var staged = temp.WritePayload("staged", "new");
+        var current = temp.WritePayload(Revit("2024"), "old");
+        var staged = Stage(temp, Revit("2024"), "new");
         folderLock.Lock(current);
 
-        var lockers = Installer(temp, folderLock).TryApply("2024", staged);
+        var lockers = Installer(temp, folderLock).TryApply(Revit("2024"), staged);
 
         Assert.HasCount(1, lockers);
-        Assert.AreEqual("old", temp.Marker("2024"));
+        Assert.AreEqual("old", temp.Marker(Revit("2024")));
         Assert.IsTrue(Directory.Exists(staged));
     }
 
     [TestMethod]
     public void Free_payload_swaps_keeps_one_rollback_and_rolls_back()
     {
-        using var temp = new TempBundle();
+        using var temp = new TempPlugins();
         var installer = Installer(temp, new FakeFolderLock());
-        temp.WritePayload("2024", "v1");
+        temp.WritePayload(Acad("2024"), "v1");
 
-        Assert.IsEmpty(installer.TryApply("2024", Stage(temp, "v2")));
-        Assert.IsEmpty(installer.TryApply("2024", Stage(temp, "v3")));
+        Assert.IsEmpty(installer.TryApply(Acad("2024"), Stage(temp, Acad("2024"), "v2")));
+        Assert.IsEmpty(installer.TryApply(Acad("2024"), Stage(temp, Acad("2024"), "v3")));
 
-        Assert.AreEqual("v3", temp.Marker("2024"));
-        Assert.HasCount(1, Directory.GetDirectories(temp.Bundle.Rollback));
-        Assert.IsTrue(installer.TryRollback("2024"));
-        Assert.AreEqual("v2", temp.Marker("2024"));
+        Assert.AreEqual("v3", temp.Marker(Acad("2024")));
+        Assert.HasCount(1, Directory.GetDirectories(temp.Acad.Rollback));
+        Assert.IsTrue(installer.TryRollback(Acad("2024")));
+        Assert.AreEqual("v2", temp.Marker(Acad("2024")));
+        Assert.IsFalse(Directory.Exists(temp.Revit.Root));
     }
 
     [TestMethod]
     public async Task Staging_refuses_a_zip_that_does_not_match_the_manifest()
     {
-        using var temp = new TempBundle();
+        using var temp = new TempPlugins();
         var releases = new FakeChannels();
-        var release = releases.PublishAddin("3.1.0", ("2024", ["Revit"], "new"));
+        var release = releases.PublishAddin("3.1.0", (Revit("2024"), "new"));
         releases.Add(release.Asset("RevitDevTool-3.1.0-2024.zip"), FakeChannels.PayloadZip("changed"));
         var reader = new ReleaseReader(new HttpClient(releases), new ReleaseSignature(null));
-        var installer = new PayloadInstaller(temp.Bundle, new FakeFolderLock(), reader);
+        var installer = new PayloadInstaller(temp.Bundles, new FakeFolderLock(), reader);
         var manifest = await reader.ReadManifestAsync(release, CancellationToken.None);
 
-        await Assert.ThrowsExactlyAsync<UpdateIntegrityException>(() => installer.StageAsync(release, manifest.FindPayload("2024")!, null, CancellationToken.None));
-        Assert.IsFalse(installer.IsStaged("3.1.0", "2024"));
+        await Assert.ThrowsExactlyAsync<UpdateIntegrityException>(() => installer.StageAsync(release, manifest.FindPayload(Revit("2024"))!, null, CancellationToken.None));
+        Assert.IsFalse(installer.IsStaged("3.1.0", Revit("2024")));
     }
 
     [TestMethod]
     public void Offline_bundle_stages_one_payload_and_gives_the_release_version()
     {
-        using var temp = new TempBundle();
-        var zip = Path.Combine(temp.Root, "RevitDevTool.bundle.zip");
+        using var temp = new TempPlugins();
+        var zip = Path.Combine(temp.Root, "AcadDevTool.bundle.zip");
         using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
         {
-            Write(archive, "RevitDevTool.bundle/PackageContents.xml", """<ApplicationPackage AppVersion="3.1.0"><CompanyDetails /></ApplicationPackage>""");
-            Write(archive, "RevitDevTool.bundle/Contents/2024/marker.txt", "offline");
-            Write(archive, "RevitDevTool.bundle/Contents/2025/marker.txt", "other");
+            Write(archive, "AcadDevTool.bundle/PackageContents.xml", """<ApplicationPackage AppVersion="3.1.0"><CompanyDetails /></ApplicationPackage>""");
+            Write(archive, "AcadDevTool.bundle/Contents/2024/marker.txt", "offline");
+            Write(archive, "AcadDevTool.bundle/Contents/2025/marker.txt", "other");
         }
 
-        var staged = Installer(temp, new FakeFolderLock()).StageFromBundle(zip, "2024", "3.1.0");
+        var offline = OfflineBundle.Read(zip);
+        var staged = Installer(temp, new FakeFolderLock()).StageFromBundle(offline, Acad("2024"));
 
-        Assert.AreEqual("3.1.0", PayloadInstaller.ReadBundleVersion(zip));
+        Assert.AreEqual(new OfflineBundle(zip, "AcadDevTool.bundle", "3.1.0"), offline);
         Assert.AreEqual("offline", File.ReadAllText(Path.Combine(staged, "marker.txt")));
         Assert.HasCount(1, Directory.GetFiles(staged));
     }
@@ -140,8 +156,8 @@ public sealed class BundleTests
     [TestMethod]
     public void Restart_manager_reports_this_process_for_an_open_dll()
     {
-        using var temp = new TempBundle();
-        var folder = temp.WritePayload("2024", "x", "Locked.dll");
+        using var temp = new TempPlugins();
+        var folder = temp.WritePayload(Revit("2024"), "x", "Locked.dll");
         var folderLock = new RestartManagerFolderLock();
 
         Assert.IsEmpty(folderLock.GetLockers(folder));
@@ -151,12 +167,12 @@ public sealed class BundleTests
         }
     }
 
-    private static PayloadInstaller Installer(TempBundle temp, IFolderLock folderLock) =>
-        new(temp.Bundle, folderLock, new ReleaseReader(new HttpClient(new FakeChannels()), new ReleaseSignature(null)));
+    private static PayloadInstaller Installer(TempPlugins temp, IFolderLock folderLock) =>
+        new(temp.Bundles, folderLock, new ReleaseReader(new HttpClient(new FakeChannels()), new ReleaseSignature(null)));
 
-    private static string Stage(TempBundle temp, string marker)
+    private static string Stage(TempPlugins temp, AddinTarget target, string marker)
     {
-        var path = Path.Combine(temp.Bundle.StagingPath(marker), "2024");
+        var path = Installer(temp, new FakeFolderLock()).StagedPath(marker, target);
         Directory.CreateDirectory(path);
         File.WriteAllText(Path.Combine(path, "marker.txt"), marker);
         return path;

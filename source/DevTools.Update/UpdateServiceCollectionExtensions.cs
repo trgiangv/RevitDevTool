@@ -21,11 +21,11 @@ public static class UpdateServiceCollectionExtensions
         services.AddOptions<UpdateEngineOptions>();
         services.TryAddSingleton<IUpdateNotifier, NullUpdateNotifier>();
         services.TryAddSingleton<IFolderLock, RestartManagerFolderLock>();
-        services.AddSingleton(sp => new AutodeskBundle(Options(sp).BundlePath ?? AutodeskBundle.DefaultRoot));
+        services.AddSingleton(sp => new AutodeskBundles(Options(sp).PluginsPath ?? AutodeskBundles.DefaultRoot));
         services.AddSingleton(sp => new ReleaseReader(new HttpClient(), new ReleaseSignature(Options(sp).PublicKey), sp.GetService<ILogger<ReleaseReader>>()));
         services.AddSingleton<IChannelIndexSource>(sp => new CachedChannelIndexSource(
             new ChannelIndexSource(sp.GetRequiredService<ReleaseReader>(), Options(sp).ChannelIndexUrl), TimeProvider.System));
-        services.AddSingleton<InstallationStore>();
+        services.AddSingleton(sp => new InstallationStore(Options(sp).InstallationPath ?? InstallationStore.DefaultPath));
         services.AddSingleton<PayloadInstaller>();
         services.AddSingleton<DaemonUpdater>();
         services.AddSingleton<UpdateEngine>();

@@ -11,4 +11,4 @@ public sealed record TargetOption(AddinComponent Component, IReadOnlyList<HostAp
     public bool OnComputer => Hosts.Count > 0;
 }
 
-public sealed record SelectionResult(string Version, IReadOnlyList<string> Applied, IReadOnlyList<string> Pending, IReadOnlyList<string> Unavailable);
+public sealed record SelectionResult(string Version, IReadOnlyList<AddinTarget> Applied, IReadOnlyList<AddinTarget> Pending, IReadOnlyList<AddinTarget> Unavailable);

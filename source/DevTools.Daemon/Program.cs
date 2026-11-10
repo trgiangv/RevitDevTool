@@ -24,7 +24,7 @@ internal static class Program
             .OnBeforeUninstallFastCallback(_ =>
             {
                 StartupRegistration.Disable();
-                UpdateEngine.RemoveBundle(new AutodeskBundle(AutodeskBundle.DefaultRoot));
+                UpdateEngine.RemoveBundles(new AutodeskBundles(AutodeskBundles.DefaultRoot), new InstallationStore(InstallationStore.DefaultPath));
             })
             .Run();
 
@@ -55,7 +55,7 @@ internal static class Program
     }
 
     /// <summary>
-    ///     <c>--select "Revit 2024" --select "AutoCAD 2026" [--source &lt;RevitDevTool.bundle.zip&gt;] [--notify]</c>.
+    ///     <c>--select "Revit 2024" --select "AutoCAD 2026" [--source &lt;RevitDevTool.bundle.zip&gt; --source &lt;AcadDevTool.bundle.zip&gt;] [--notify]</c>.
     ///     Installs payloads without UI (0047). A value is the <c>Description</c> of a <c>PackageContents.xml</c> component.
     /// </summary>
     private static async Task<int> RunSelectAsync(string[] args)
@@ -74,7 +74,7 @@ internal static class Program
         var policy = engine.Policy;
         policy.Mode = args.Contains(AppConstants.NotifyArg, StringComparer.OrdinalIgnoreCase) ? UpdateMode.Notify : UpdateMode.Auto;
         var selection = names.Select(name => components[name].Target).ToArray();
-        var result = await engine.ApplySelectionAsync(selection, policy, Values(args, AppConstants.SourceArg).FirstOrDefault(), null, CancellationToken.None).ConfigureAwait(false);
+        var result = await engine.ApplySelectionAsync(selection, policy, Values(args, AppConstants.SourceArg).ToArray(), null, CancellationToken.None).ConfigureAwait(false);
 
         Console.WriteLine($"RevitDevTool {result.Version}: installed [{string.Join(", ", result.Applied)}], pending [{string.Join(", ", result.Pending)}], unavailable [{string.Join(", ", result.Unavailable)}].");
         StartupRegistration.Enable();

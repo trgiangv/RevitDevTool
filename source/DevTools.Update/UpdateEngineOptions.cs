@@ -18,9 +18,14 @@ public sealed class UpdateEngineOptions
     public string? PublicKey { get; set; }
 
     /// <summary>
-    ///     Bundle root. The default is <c>%APPDATA%\Autodesk\ApplicationPlugins\RevitDevTool.bundle</c>.
+    ///     The folder of the bundles. The default is <c>%APPDATA%\Autodesk\ApplicationPlugins</c>.
     /// </summary>
-    public string? BundlePath { get; set; }
+    public string? PluginsPath { get; set; }
+
+    /// <summary>
+    ///     The default is <c>%APPDATA%\RevitDevTool\installation.json</c>.
+    /// </summary>
+    public string? InstallationPath { get; set; }
 
     public TimeSpan StartupDelay { get; set; } = TimeSpan.FromMinutes(2);
 }

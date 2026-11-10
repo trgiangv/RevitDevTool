@@ -29,11 +29,11 @@ public sealed record Product(
     public static Product Addin { get; } = new(
         "addin",
         ["source/RevitDevTool/RevitDevTool.csproj", "source/AcadDevTool/ACadDevTool.csproj"],
-        ["props/PackageContents.xml", "source/RevitDevTool.PyTest/tests/golden/**"],
+        ["props/AcadDevTool.bundle/**", "props/RevitDevTool.bundle/**", "source/RevitDevTool.PyTest/tests/golden/**"],
         "props/AddinVersion.props",
         "CHANGELOG.md",
         VersionGrammar.SemVer,
-        ["RevitDevTool-{0}-<year>.zip", "update-manifest.json", "RevitDevTool.bundle.zip"]);
+        ["RevitDevTool-{0}-<host version>.zip", "AcadDevTool-{0}-<host version>.zip", "update-manifest.json", "RevitDevTool.bundle.zip", "AcadDevTool.bundle.zip"]);
 
     public static Product NetTest { get; } = new(
         "nettest",

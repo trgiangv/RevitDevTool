@@ -100,12 +100,12 @@ public sealed partial class UpdatesViewModel(UpdateEngine engine) : ObservableOb
 
     private Progress<PayloadProgress> TrackProgress()
     {
-        var payloads = new Dictionary<string, double>(StringComparer.Ordinal);
+        var payloads = new Dictionary<AddinTarget, double>();
         return new Progress<PayloadProgress>(report =>
         {
-            foreach (var row in Rows.Where(row => row.Component.Target.HostVersion == report.HostVersion)) row.Show(report);
+            foreach (var row in Rows.Where(row => row.Component.Target == report.Target)) row.Show(report);
 
-            payloads[report.HostVersion] = report.Stage == PayloadStage.Installing ? 100 : report.Percent ?? 0;
+            payloads[report.Target] = report.Stage == PayloadStage.Installing ? 100 : report.Percent ?? 0;
             Progress = payloads.Values.Average();
             ProgressText = Progress < 100 ? $"Downloading {Progress:0}%" : "Installing";
         });

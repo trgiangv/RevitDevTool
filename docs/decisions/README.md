@@ -78,7 +78,8 @@ here.
   year folders only: one signed-manifest asset per year, a first-run host
   picker (0047), hourly checks without the REST API, per-year lock and apply
   that never ends host processes, and `auto` (default)/`notify`/`off` modes with
-  toasts. Not shipped.
+  toasts. Not shipped. [0061](0061-one-bundle-per-host.md) splits the bundle per host:
+  the payload is one platform at one host version.
   [0054](0054-release-automation-channels-and-4-0-cutover.md) is **Superseded** by 0059.
   [0059](0059-independent-product-releases-and-one-gate-ci.md) is **Accepted** (2026-11-08):
   four products (`daemon`, `addin`, `nettest`, `pytest`), each with its own version file,
@@ -145,7 +146,7 @@ here.
 | [0043](0043-ipc-shared-infrastructure-separate-protocols.md) | Shared `DevTools.Ipc`; test pipe, MCP pipe, daemon control pipe | Accepted — landed 2026-10-13 |
 | [0044](0044-hybrid-tool-retrieval.md) | Evaluate hybrid retrieval only if lexical baseline misses labeled tasks | Proposed |
 | [0045](0045-sentry-telemetry-operations-and-internal-errors.md) | Sentry telemetry: operations, sessions, internal errors only | Accepted — landed 2026-10-24 |
-| [0046](0046-per-year-release-payloads-and-update-manifest.md) | Per-year release payloads and update manifest | Proposed |
+| [0046](0046-per-year-release-payloads-and-update-manifest.md) | Per-year release payloads and update manifest | Proposed; payload unit replaced by 0061 |
 | [0047](0047-velopack-setup-and-host-picker.md) | Velopack Setup plus a first-run host picker replaces Inno Setup | Proposed |
 | [0048](0048-daemon-hosted-update-engine.md) | Update engine in `DevTools.Update`, hosted by the Daemon | Proposed |
 | [0049](0049-lock-aware-per-year-apply.md) | Lock-aware per-year apply, mixed versions, rollback | Proposed |
@@ -160,3 +161,4 @@ here.
 | [0058](0058-mcp-toolsets-shared-by-panel-and-add-tools.md) | MCP toolsets have one owner, shared by the registry panel and `add_tools` | Accepted |
 | [0059](0059-independent-product-releases-and-one-gate-ci.md) | Four independently released products (daemon, addin, nettest, pytest), signed channel index, version grammar, prerelease flow, one-gate CI | Accepted |
 | [0060](0060-framework-runtime-shims-ship-with-nettest.md) | Framework runtimes ship with nettest; the user's framework needs the same major and no lower than the baseline; add-in and adapter meet only through the `testing.runtime` range | Accepted |
+| [0061](0061-one-bundle-per-host.md) | One bundle per host; the payload is one platform at one host version | Accepted |

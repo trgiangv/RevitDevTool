@@ -1,5 +1,6 @@
 using Build.Products;
 using DevTools.Update;
+using DevTools.Update.Autodesk;
 using DevTools.Update.Engine;
 using DevTools.Update.Releases;
 using Microsoft.Extensions.Configuration;
@@ -16,7 +17,7 @@ namespace Build.Releases;
 public static class ReleaseAssets
 {
     public const string SetupName = "RevitDevTool-Setup.exe";
-    public const string BundleName = "RevitDevTool.bundle.zip";
+    public static IReadOnlyList<string> BundleZips { get; } = PackageContents.BundleNames.Select(name => name + ".zip").ToArray();
 
     public static string VelopackChannel(bool prerelease) => prerelease ? DaemonUpdater.PrereleaseChannel : DaemonUpdater.StableChannel;
 
@@ -62,7 +63,7 @@ public static class ReleaseAssets
             var manifest = UpdateManifest.FromJson(data);
             Check(manifest.Version == version.Version, $"The manifest version {manifest.Version} is not {version.Version}.");
             foreach (var payload in manifest.Payloads) VerifyFile(Path.Combine(output, payload.Asset), payload.Sha256, payload.Size);
-            Check(File.Exists(Path.Combine(output, BundleName)), $"{BundleName} is missing.");
+            foreach (var zip in BundleZips) Check(File.Exists(Path.Combine(output, zip)), $"{zip} is missing.");
             return;
         }
 
@@ -92,10 +93,11 @@ public static class ReleaseAssets
 
     private static bool IsPayload(ProductVersion version, string name)
     {
-        var prefix = $"RevitDevTool-{version.Version}-";
-        return version.Product == Product.Addin
-            ? name == BundleName || (name.StartsWith(prefix, StringComparison.Ordinal) && name.EndsWith(".zip", StringComparison.Ordinal))
-            : name == SetupName || (name.StartsWith(prefix, StringComparison.Ordinal) && name.EndsWith(".nupkg", StringComparison.Ordinal));
+        if (version.Product != Product.Addin)
+            return name == SetupName || (name.StartsWith($"RevitDevTool-{version.Version}-", StringComparison.Ordinal) && name.EndsWith(".nupkg", StringComparison.Ordinal));
+
+        return BundleZips.Contains(name) || PackageContents.BundleNames.Any(bundle =>
+            name.StartsWith($"{Path.GetFileNameWithoutExtension(bundle)}-{version.Version}-", StringComparison.Ordinal) && name.EndsWith(".zip", StringComparison.Ordinal));
     }
 
     private static bool IsFeed(ProductVersion version, string name)
