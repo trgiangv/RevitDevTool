@@ -2,64 +2,89 @@
 
 ## [Unreleased]
 
-### Added
-- Breaking: Four release trains in build/ with version files
-- Breaking: Run NUnit from the user's output and stop the add-in shipping it
-- Log tasks/* requests at the protocol boundary
-- Send the Daemon sender on register
-- Show the product version in window titles
-- Open the window when the user starts the Daemon
-- Host the update engine and add the Updates tab
-- Rank catalog search with schema coverage and BM25F
-- Save a large code_mode return and include its path
-- Replace search and invoke with code_mode
-- Add STJ source-gen facades for daemon wires
-- MewUI desktop shell and folder layout split
-- Compose host launch via DI specs
-- Introduce hosting utilities for AutoCAD and Revit integration
-- Symmetric catalogs + vision/undo workflows
-- Add dynamic resources + symmetric primitive pattern
-- Add DevTools.Daemon
+## [4.0.0-beta.8]
 
 ### Changed
-- Route remaining direct loads through the kernel
-- Move tray composition into control, tunnel, desktop, and host connections
-- Simplify search index scoring and related cleanup
-- Fold list_machines into ListMachinesTool
-- Fold Server/Client/Core/Adapter into Daemon and Catalog
-- Replace MewUI with HandyControl WPF
-- Adopt SDK types on the host wire
-- Drop self-contained R2R for Daemon and TestRunner
-- Rename host test handlers and drop unused IPC aliases
-- Cut dead load paths and drop fake in-process DI
-- Move HostApp identity out of Logging
-- Breaking: Adopt MCP SDK 2.0 with platform split and spec-first host
-- Reorganize Pytest bridge and update property names
-- Typed McpSchemaBuilder + DynamicToolCatalog models
-- Typed IHostBridgeClient API and handler deserialization
-- Replace anonymous serialization with typed DTOs and enum HostApp
-- Consolidate MCP layer architecture
-- Decouple Presentation from Execution.External, remove dead code
-- Add MCP bridge abstractions and move routing types to DevTools.Mcp
-- Create DevTools.Mcp and move MCP models from McpParser
-- Move IPC transport types to DevTools.Ipc with TypeForwardedTo
-- Move ExecutionMode/State to DevTools.Execution.Abstractions with TypeForwardedTo
-- Consolidate DaemonConstants and update references
-- Update partial accessors (MVVMTK0042)
+
+- Updates come from a signed `channels.json`. The Daemon and the add-in update separately, each from the channel the
+  install is on (`stable` or `prerelease`).
+- Daemon updates download a delta when the feed holds the installed version, otherwise the full package.
+- The add-in update installs one zip per host and host version, so a busy Revit no longer holds back the AutoCAD
+  update. `installation.json` moves to `%APPDATA%\RevitDevTool`.
+- Developer diagnostics are no longer logged in the release build.
+
+### Removed
+
+- The GitHub release lookup. The updater reads only the signed channel.
+
+### Upgrade
+
+- RevitDevTool `4.0.0-beta.7` and earlier cannot read the new channel. Install this version once with
+  `RevitDevTool-Setup.exe`; later versions arrive through the Updates tab.
+
+## [4.0.0-beta.6]
+
+### Added
+
+- Each `tasks/*` request and its response or error is logged with the request id, task id, status, and error code.
+
+## [4.0.0-beta.5]
+
+### Added
+
+- The Daemon window shows the product version (`DevTools 4.0.0-beta.5`).
+- When the gateway rejects the Daemon, it stops reconnecting and shows "Not compatible with the gateway".
+
+### Changed
+
+- An update to a higher major waits while an add-in of that major is waiting for its host to close. Minor updates do
+  not wait.
+
+### Upgrade
+
+- The MCP gateway rejects Daemons from before this release. Update the Daemon to reconnect the tunnel.
+
+## [4.0.0-beta.4]
 
 ### Fixed
-- Reference single-target FileMetadata projects without SetTargetFramework
-- Show the install progress on the Update button
-- Correct the Updates tab and the payload install flow
-- Reuse an in-flight sign-in and reopen the browser
-- Drop list_machines from the daemon
-- Keep host pipe discovery from stalling on one connect
-- Pass host source through a verbatim string in code_mode
-- Return code_mode objects as JSON text
-- Keep Revit command samples on TransactionMode.Manual
-- Refresh host catalog on protocol 2026-07-28 and simplify sessions
-- Own theme enum so Settings can drop UI
-- Add Program entry point
-- Prevent console log pollution on stdio MCP transport
-- Update pipe name to prevent cross-app collisions
-- Fresh token on tunnel reconnect, add TunnelStatus for dashboard
+
+- Asset downloads retry after a network error, and wait when GitHub limits the request rate.
+
+## [4.0.0-beta.3]
+
+### Changed
+
+- Starting the Daemon opens its window; a second start shows the window of the running Daemon. The Run value and the
+  host add-ins start it in the background.
+- After an update that you started, the Daemon opens on the Updates tab. A scheduled update restarts it in the
+  background.
+
+### Fixed
+
+- The scheduled update check now runs.
+- The staging folder is deleted after an update to a host selection.
+
+## [4.0.0-beta.2]
+
+### Fixed
+
+- The Updates tab shows install progress on the Update button, detects Civil 3D and Plant 3D for the AutoCAD
+  component, and uses the latest release of the chosen channel when none matches the Daemon version.
+
+## [4.0.0-beta.1]
+
+### Added
+
+- `RevitDevTool-Setup.exe` replaces the Inno installer, and the Daemon has an Updates tab that updates the add-in by
+  host and host version.
+- `code_mode` replaces the MCP search and invoke tools.
+
+### Changed
+
+- The Daemon window moves from MewUI to HandyControl.
+- The Daemon no longer lists machines.
+
+### Fixed
+
+- A sign-in already in progress is reused and reopens the browser.
+- The tunnel uses a fresh token when it reconnects.

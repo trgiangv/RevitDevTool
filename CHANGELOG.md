@@ -2,261 +2,769 @@
 
 ## [Unreleased]
 
-### Added
-- Breaking: Four release trains in build/ with version files
-- Breaking: Run NUnit from the user's output and stop the add-in shipping it
-- Breaking: Run TUnit from the user's output and report stops as one sentence
-- Breaking: Run MSTest from the user's output through a framework runtime manifest
-- Show the product version in window titles
-- Resolve Element Finder tokens with find_elements
-- Run MSTest 4.4.1 inside the host
-- Extract RevitDevTool.Tools and Element Finder
-- Select linked Revit elements from monitor tokens
-- Show IronPython and CPython debug ports
-- Run and debug pyRevit scripts on ScriptExecutor
-- Add IronPython pydevd 2.8 listen-on-port
-- Wire StartupTrace into Revit and AutoCAD add-in startup
-- Catalog expansion and in-host Engine execution
-- Spike TUnit provider runtime for Revit
-- Compose generic testing host and pack Abstractions loose
-- Move host API assembly names onto in-process policy
-- Wire Runner CLI v2, adapter, and host packaging
-- Wire hosts, packaging, and sample smoke tests
-- Bridge notification publisher and probe load context
-- Add execute_python_code built-in tool with PEP 723 deps + cheatsheets
-- Symmetric catalogs + vision/undo workflows
-- Add dynamic resources + symmetric primitive pattern
-- Add DevTools.Agents.Revit and DevTools.Agents.Acad
-- Add ExecutionGuard for dialog/failure suppression
-- Add DevTools.Daemon
-- Implement IDocumentBridge for document operations
-- Refactor script compilation and execution interfaces
-- Add CSharp scripting support
-- Implement assembly loading for extension DLLs
-- Add stack for StubBuilder and Commands
-- Introduce Command Browser like Autocad
-- Prevent loading paths under existing roots
-- Add pyRevit runtime execution
-- Execute via pyRevit ScriptExecutor when available
-- Integrate IronPython support into the execution framework
-- Integrate telemetry service
-- Add new SVG assets
-- Refactor Python script integration and resource management
-- Full RevitDevTool port
-- Enhance project structure and functionality
-- Introduce UI theme management and resource integration
-- Implement toolset assembly load context management
-- Support Plane Visualization
-- Support for Autodesk 2027
-- Stream progress notifications
-- Breaking: Replace ExternalEventController with RevitContextExecutor
-- Add RevitImageExporter for exporting views as images
-- Integrate PytestRequestHandler for test management
-- Implement dockable pane initialization and management
-- Testing workflow with pytest in-process
-- Implement test execution
-- Add pythonnet-stub-generator as a submodule and update project references
-- Enhance logging capabilities with new abstractions and HTTP/file logging support
-- Update logging subsystem with ZLogger and Scintilla integration
-- New buid system
-- Implement NugetInstaller and refactor NugetManager for improved package management
-- Enhance Python tool parsing and add tests
-- Use namepiped with multiple instances
-- Migrate to C# mcp SDK
-- Integrate ModelContextProtocol
-- Introduce installed package management
-- Add Raise action without UIApplication
-- Real-time memory tracking
-- Enhance asynchronous execution framework
-- Enhance file watcher service with root lifecycle tracking
-- Implement Revit connection management and job execution framework
-- Add UiAppExtension handle MFCMDIFrame
-- Add F# script execution support and utilities
-- Separated Logger && fork Serilog.Sinks.RichTextBoxForms
-- Enhance debugger with dynamic port
-- Use Pixi as default depedency manager
-- Add Python debugging support with debugpy integration
-- Add support for processing Python iterable objects in GeometryListener
-- Python runtime behavior
-- Add PythonNetStubGenerator
-- Enhance stdout/stderr redirection
-- Add IsTraceEnabled setting
-- Implement Python dependency management and installation UI
-- Implement unified execution strategies for DotNet and Python
-- Dynamo logger disabling
-- Add __file__ built-in variable
-- Add Python execute throught Dynamo
-- Add last executed add-in tracking
-- Implement add-in loading
-- Implement auto-clean log files
-- Add Revit enrichers for enhanced logging context
-- Enhance logging config with filter keywords and pretty JSON option
-- Add settings view and related components for configuration
-- Enrich log messages with stack trace information
-- Implement logging configuration and management UI
-- Add log settings configuration and management UI
-- Implement trace event notifier and floating window management
-- Support Outline objects
-- Add Idling event listener for Trace.Listeners consistency
-- Add hardware graphics acceleration toggle and update settings management
-- Add scale property and UI controls for bounding box visualization
-- Implement settings management and visualization options
-- Add Settings window and integrate theme management
-- Add support for Outline geometry in bounding box visualization
-- Add Serilog sink for WinForms RichTextBox with theme support
-- Trace IEnumerable<CurveLoop>
+## [4.0.0-beta.8]
 
 ### Changed
-- Compile developer diagnostics out of Release and finish the ZLogger conversion
-- Remove the add-in's framework runtime path and document the new one
-- Route remaining direct loads through the kernel
-- Take the product version from the composition root
-- Send Sentry operations and internal errors only
-- Migrate extension methods to C# 14 extension blocks
-- Name catalog adapters and assembly isolation after what they own
-- Fold Server/Client/Core/Adapter into Daemon and Catalog
-- Compile HandyControl into DevTools.UI and drop the MahApps forks
-- Bind debugger chips to DebugEndpoints
-- Initializer owns engine and static debugger
-- Fold Host/Core assemblies and drop Host* vocab
-- Share one Polyfill graph and use ThrowIf*
-- Streamline host reference handling in compile script bridges
-- Consolidate ALC identity and primitive backends
-- Update NUnit and TUnit packaging and runtime handling
-- Share, Pin, Isolated, and AssemblyLoader
-- Isolate host runtime and MTP dependencies
-- Isolate add-in and command assembly loading
-- Remove NUnit VSTest compatibility
-- Isolate MTP kernel and NUnit provider
-- Rename shared-assembly names and directory loader
-- Rename Agents.Revit/Acad to Mcp.Revit/Acad
-- Cut dead load paths and drop fake in-process DI
-- Slim launch types and keep assembly policy in add-ins
-- Keep Hosting and Sentry only
-- Make Logging a headless ZLogger provider
-- Strip WPF and Shell so Utilities is UI-free
-- Move HostApp identity out of Logging
-- Breaking: Adopt MCP SDK 2.0 with platform split and spec-first host
-- Unify undo/redo into navigate_history + add integration test workflow
-- Rename api-cheatsheet to csharp-cheatsheet and add package lifecycle docs
-- Streamline command execution and improve error handling
-- Clean up project files by removing unused package references
-- Rename IEnableable to IActivatable and update interfaces
-- Standardize logging via ILogger<T> + ZLogger DI injection
-- Split ExecutionMode into ContainerMode + ExecutionMode
-- Consolidate MCP layer architecture
-- Move ExecutionMode/State to DevTools.Execution.Abstractions with TypeForwardedTo
-- Update partial accessors (MVVMTK0042)
-- Harden Revit host dispatch flow
-- Improve visibility management and loading logic
-- Enhance caching and command creation for C# and F# scripts
-- Implement script execution strategy factory and enhance script execution provider
-- Refactor caching for compiled C# and F# scripts
-- Clean up stuff
-- Update icons and improve command availability handling
-- Update telemetry methods to use structured logging
-- Enhance API context management and assembly resolution
-- Improve asynchronous startup handling
-- Streamline command type retrieval and version handling
-- Streamline bundle creation and deployment process
-- Rename logging services
-- Replace DispatcherHelper with HostUiHelper
-- Correct Autocad product id
-- Enhance settings management and logging integration
-- DevTools.Views to DevTools.Presentation
-- Enhance RevitLinkifier and RevitSearchService functionality
-- Streamline server and view model management
-- CodeExecuteConfig to ExecutionConfig for clarity
-- RevitDevTool.Mcp* to DevTool.Mcp*
-- Mcp + Testing now ExternalExecution
-- Update package management logic and improve installation process
-- Streamline path handling and improve file watcher logic
-- Consolidate Python environment providers and enhance initialization
-- DI register instead of default hard coded
-- Update log target interfaces
-- Replace FileLoggerProvider with FileLogProcessor and update logging options
-- Introduce NetworkService for centralized network operations
-- Enhance Python execution handling and introduce scope variable constants
-- Improve message handling and schema building
-- Rename and reorganize MCP components
-- Add new Tools Parser with Tests
-- Replace Nice3point.Revit.Toolkit within RevitDevTool.Core
-- Rename TraceCommand to DevToolsCommand
-- Replace FSharpNugetResolver with FSharpReferenceResolver
-- Enhance execution strategies and error handling
-- Rename CodeExecute to Execution
-- Streamline logging architecture
-- Enhance assembly loading mechanism for .NET Core
-- Improve external event handling structure
-- Streamline script execution and scope management
-- Simplify module removal logic in PythonExecutor
-- Clean up invalid assembly and directory paths
-- Streamline dockable pane visibility handling
-- Optimize tree operations and enhance file watching
-- Improve script execution and output handling
-- Reorganized listeners
-- Reorganize logging structure
-- Adjust axis length for improved scaling
-- Streamline geometry handling and rendering logic
-- Enhance clear command logic and state management
-- Improve theme update logic and clean up code
-- Update namespace for ColorPicker control
-- Simplify method visibility and remove unused overrides
-- Streamline color picker integration and adjust UI element
-- Update theme handling and settings integration across visualization components
-- Introduce interfaces for visualization lifecycle and update settings management
-- Update TraceLog to configure RichTextBoxSink with dynamic theme and max log lines
-- Update TraceLog to use WindowsForms RichTextBox and improve theme handling
-- Optimize bounding box calculations by transforming corners individually
-- Streamline buffer disposal and clearing methods
-- Disposed umanaged resource
+
+- One bundle per host: `RevitDevTool.bundle` and `AcadDevTool.bundle`. A Revit-only install no longer carries AutoCAD
+  files.
+- The add-in updates on its own channel, one zip per host and host version, so a busy Revit no longer holds back the
+  AutoCAD update. `installation.json` moves to `%APPDATA%\RevitDevTool`.
+- NUnit, TUnit, and MSTest run from the test project's output. The add-in no longer ships a test framework, so a
+  newer framework of the same major needs no add-in update. Use `RevitDevTool.TestAdapter` 0.3.0 or later.
+- A test run that cannot start (framework too old, framework missing, add-in too old) stops with one sentence that
+  names the fix.
+- Telerik, Syncfusion, and DevExpress assemblies are shared with the host instead of loaded twice.
+- Developer diagnostics are no longer logged in the release build.
 
 ### Fixed
-- AppVersion names the release train of the process
-- Isolate each IronPython command on the reused engine
-- Include library extension paths on ad-hoc IronPython runs
-- Stop pack from deploying the shared add-in bundle
-- Sync RequirePackages before the owned interpreter starts
-- Ensure dockable pane shows on main thread
-- Override command DLLs on net48 via temp LoadFile
-- Return StartAsync before runtime env setup
-- Allow pydevd listen on net48 Revit
-- Keep Share() forgiveness silent and snapshot host APIs
-- Scope log AutoClean to log_* files
-- Share host Revit API parents without compile version match
-- Replace message pump with blocking start for host initialization
-- Keep command isolation sessions alive for modeless UI
-- Own theme enum so Settings can drop UI
-- Implement PythonJsonSerializer for safely pyobject serialization
-- Being clear after register
-- PanelController wpf root visual issue
-- Switch MainPage to Singleton and detach Content on window close
-- Convert MainPage from Page to UserControl
-- Wrong version due to build config mismatch
-- Missing ConsoleRedirector + WPFTraceSource
-- Build output missing unmanaged dlls
-- Pyrevit cengines discovery
-- Assembly reuse and prevent type duplication that make revit crash
-- Add MahApps.Metro, ControlzEx, and XamlBehaviorsWpf as submodules and update references
-- Streamline search text handling and reload process
-- Custom_print not have enough parameter when parse mcp toolset
-- Prevent multiple ListenToDebugger at startup
-- Ensure newly-installed packages are importable in runtime
-- Wrap command execution in external event handler
-- Ensure UI thread handling for Revit API mode
-- Adjust extrusion and transparency calculations
-- Include stack trace in UI output
-- Build error
-- Copy SQLite.Interop.dll
-- Unregister when revit closing
-- Remove PixiEditor.ColorPicker
-- Scale property for bbox and solid
-- Improve theme initialization and update dictionary handling
-- Remove Revit 2026 context isolation
-- Skip solids with zero volume in bounding box calculation
-- Handle exceptions when retrieving bbox of solid
-- Multiple geometries visulization
-- SolidVisualizationServer render
+
+- NUnit no longer hangs the host when another add-in leaves its own synchronization context on the main thread.
+- NUnit async tests run without another add-in supplying their dependencies, and show their source location.
+- An empty test selection runs nothing instead of the whole assembly.
+- On .NET Framework hosts (Revit 2024 and earlier), another
+  runner's tests no longer get a session's NUnit and run zero tests.
+
+### Upgrade
+
+- Needs RevitDevTool (Daemon) `4.0.0-beta.8` or later. Install it with `RevitDevTool-Setup.exe`; `4.0.0-beta.7` and
+  earlier cannot read the new channel.
+
+## [4.0.0-beta.7]
+
+### Added
+
+- `add_tools` registers, reloads, lists, or removes an MCP toolset (a `[McpTool]` .dll or a `*mcp.py` folder) without
+  restarting the host. A toolset that fails to load reports why, and names the SDK fix when it lacks
+  `ModelContextProtocol`.
+
+### Changed
+
+- .NET MCP toolsets ship their own MCP SDK (do not exclude its runtime assets). A toolset built the old way loaded but
+  could not return results.
+- The panel and `run_command` share one Command Execution tree.
+
+### Fixed
+
+- A rebuilt toolset no longer keeps running its old code after a reload.
+- A task started by an MCP client can be polled again: `tasks/get` was missing on host sessions.
+- Command Execution paths are saved as soon as they change, so a host that is killed during a build loop keeps them.
+- The last executed mark moves when a run starts, even if the run fails or is cancelled.
+- A closing MCP session no longer writes a cancelled-listen entry to the host log.
+
+## [4.0.0-beta.6]
+
+### Added
+
+- `run_command` runs a built entry point from `code_mode`: a Revit `IExternalCommand` class or an AutoCAD
+  `CommandMethod`, loaded fresh on each run.
+
+## [4.0.0-beta.5]
+
+### Added
+
+- The Daemon window, the Revit dock pane and floating window, and the AutoCAD palette show the product version
+  (`DevTools 4.0.0-beta.5`).
+- The test adapter, TestRunner, add-in, pytest plugin, and MCP gateway check each other's protocol range. A mismatch
+  ends with one sentence that names both sides and the update to make.
+
+### Changed
+
+- Test projects need MSTest 4.5.2 and TUnit 1.78.0 (Microsoft.Testing.Platform 2.5.2). A project on the old pins fails
+  at generation.
+- Sentry releases use the full product version, including the prerelease suffix.
+
+### Fixed
+
+- When pytest stops before running tests (for example a missing node id), the result names the exit code and the node
+  ids instead of "No result received from host for this test."
+
+### Upgrade
+
+- Update everything together: `RevitDevTool.TestAdapter` 0.2.0 and `revitdevtool_pytest` 0.6.0 need this release or
+  later, and older ones stop with a message that names the update.
+- A new adapter against `4.0.0-beta.4` or older shows `Testing protocol version 0 is not supported`. Update
+  RevitDevTool.
+- Restart Revit or AutoCAD after updating, so the host loads the new add-in.
+
+## [4.0.0-beta.4]
+
+### Fixed
+
+- Update downloads retry after a network error, and wait when GitHub limits the request rate.
+
+## [4.0.0-beta.3]
+
+### Fixed
+
+- AutoCAD 2027 no longer loads AcadDevTool twice.
+- The scheduled update check now runs.
+- The staging folder is deleted after an update to a host selection.
+
+## [4.0.0-beta.2]
+
+### Fixed
+
+- A host's MCP pipe session is freed when its client disconnects, so dead clients no longer fill the session limit.
+- The Updates tab shows install progress on the Update button, detects Civil 3D and Plant 3D for the AutoCAD
+  component, and uses the latest release of the chosen channel when none matches the installed version.
+
+## [4.0.0-beta.1]
+
+### Added
+
+- `RevitDevTool-Setup.exe` replaces the Inno installer. The Daemon has an Updates tab and updates the add-in by host
+  and host version.
+- Run Revit and AutoCAD tests with MSTest 4 alongside NUnit and TUnit; TUnit now works on AutoCAD-family hosts. Tests
+  run through Microsoft.Testing.Platform.
+- `code_mode` replaces the MCP search and invoke tools: an AI assistant writes one program against the host.
+  `find_elements` resolves Element Finder tokens, and a large result is saved to a file whose path is returned.
+- Run and debug C# scripts (`.csx`), F# scripts (`.fsx`), and pyRevit scripts. IronPython debugs through pydevd, and
+  the panel shows the IronPython and CPython debug ports.
+- IronPython unit tests (`ipytests/run`), and PEP 723 dependencies for CPython tests.
+- Monitor tokens select linked Revit elements.
+- A startup crash writes a `crash_*` file in the log folder.
+
+### Changed
+
+- The UI moves from MahApps to HandyControl, in the add-in and the Daemon.
+- Assemblies of the add-in, commands, scripts, and test frameworks load in isolation, so another add-in's versions no
+  longer clash with RevitDevTool's.
+- Python runtimes keep separate package stores, and the host's CPython is used when present.
+- Sentry receives operations and internal errors only.
+- The Daemon no longer lists machines.
+
+### Fixed
+
+- Command DLLs on .NET Framework hosts (Revit 2024 and earlier) load their own copy instead of a stale one.
+- AutoCAD enters the command context before host API work, and starts without ricaun workspace shutdown.
+- IronPython pyRevit commands are isolated on the reused engine and include library extension paths.
+- Packages in `RequirePackages` sync before the Python interpreter starts.
+- The host no longer deadlocks on shutdown, and pipe discovery no longer stalls on one connection.
+- A sign-in already in progress is reused and reopens the browser.
+- Clipboard menus in editable combo boxes follow the theme.
+
+## [3.0.0]
+
+v3.0 transforms RevitDevTool from a Revit-only developer tool into a **development platform for .NET-based CAD/BIM applications**. The execution engine, logging, dependency management, AI integration, and remote testing are now shared across hosts. Revit remains the primary experience, AutoCAD-family products are fully supported, and the architecture is designed to extend to any .NET-capable host (Tekla, Bentley, Rhino, etc.).
+
+### Platform Architecture (new)
+
+Revit-specific code has been extracted into a host project. All reusable behavior now lives in shared `DevTools.*` libraries that multiple hosts consume:
+
+- **Shared platform**: `DevTools.Execution`, `DevTools.Logging`, `DevTools.McpParser`, `DevTools.McpServer`, `DevTools.Presentation`, `DevTools.Settings`, `DevTools.Telemetry`, `DevTools.UI`, `DevTools.Utilities`
+- **Host projects**: `RevitDevTool` (Revit), `AcadDevTool` (AutoCAD / Civil 3D / Plant 3D)
+- **Solution**: `RevitDevTool.slnx` replaces `RevitDevTool.sln`
+- **Build configurations**: `Debug.Autodesk.2022` through `Debug.Autodesk.2027`, `Release.Autodesk.2022` through `Release.Autodesk.2027` (replaces old `Release R25` naming)
+
+Adding a new host (Tekla, Bentley, etc.) requires only a host-specific adapter project — shared libraries stay untouched.
+
+### Multi-Host Support (new)
+
+#### AutoCAD-Family
+
+Full add-in for AutoCAD, Civil 3D, Plant 3D, and all AutoCAD verticals (Architecture, MEP, Electrical, Mechanical, Map 3D). Shares the same execution engine, logging, MCP, and PyTest bridge as Revit.
+
+#### Revit 2027 / .NET 10
+
+- Added Revit 2027 support targeting `net10.0-windows`
+- Build matrix: 2022–2024 → `net48`, 2025–2026 → `net8.0-windows`, 2027 → `net10.0-windows`
+
+### MCP — AI Tool Integration (new)
+
+#### Standalone MCP Server
+
+`MCPServer.exe` runs outside host processes and exposes tools to AI assistants (Cursor, Claude Desktop, VS Code Copilot, any MCP client) via the Model Context Protocol:
+
+- **Multi-host discovery**: scans Named Pipes matching `{Host}_{Version}_{PID}` to find all running instances
+- **Built-in tools**: `list_host_instances`, `launch_host`, `open_model`, `read_file_info`
+- **Routing**: dispatches tool calls to the correct host instance
+
+#### In-Host MCP Runtime
+
+Each host registers custom toolsets (Python and C#) that the server can dispatch to via Named Pipe:
+
+- **Built-in in-host tools**: `execute_csharp_code`, `open_document`
+- **Custom toolsets**: Python/C# MCP tools registered via folder convention (`mcp_tools/`)
+- **Document bridge**: `IDocumentBridge` — shared abstraction for opening documents (Revit projects, DWG files)
+
+### PyTest Bridge — Remote Testing (new)
+
+Run pytest tests inside live host processes via Named Pipe. Published as a separate package: [`revitdevtool_pytest`](https://github.com/trgiangv/RevitDevTool.PyTest) on [PyPI](https://pypi.org/project/revitdevtool_pytest/).
+
+- **Multi-host CLI**: `--host revit`, `--host autocad`, `--host civil3d`, `--host-version`, `--host-pipe`, `--host-launch`
+- **Auto-discovery**: finds running host instances and connects automatically
+- **Auto-launch**: spawns a new host process if none running
+- **IDE integration**: VS Code, Cursor, PyCharm test runners
+- **Flexible pipe pattern**: version accepts any string (year, semver, dotted)
+
+### Execution — New Script Runtimes
+
+#### C# Scripts (new)
+
+Execute `.csx` files directly — Roslyn-based compilation without a project file.
+
+#### F# Scripts (new)
+
+Execute `.fsx` files for interactive/functional scripting workflows.
+
+#### IronPython (new)
+
+First-class script mode with pyRevit runtime support and IronPython 3.4.2 fallback. Runs `*_ipy_script.py` files.
+
+#### Revit Command Browser (new)
+
+Searchable access to all registered Revit commands from the dockable panel.
+
+### Logging
+
+#### High-Performance Log Monitor
+
+The logging subsystem has been re-architected for performance:
+
+- **ZLogger** replaces Serilog as the structured logging backend — significantly lower allocation and faster throughput
+- **Scintilla.NET** replaces WinForms RichTextBox as the log rendering surface — handles large volumes of output without UI freezing
+- Syntax highlighting, JSON formatting, and color keywords retain the same user experience on the new backend
+
+### Dependency Management
+
+#### Pixi-First
+
+**Pixi** replaces UV as the primary dependency resolver:
+
+- Resolves from conda-forge + PyPI channels
+- Pixi environment managed under `%APPDATA%\RevitDevTool\pixi-env\`
+- PEP 723 inline dependencies auto-installed on script execution
+- pip/pyRevit CPython available as fallback
+
+### Bug Fixes
+
+- **Python state attribute**: unified to `sys.__devtool__` across all hosts (was `sys.__revitdevtool__` for Revit, `sys.__acaddevtool__` for AutoCAD — caused crashes on AutoCAD)
+- **Startup dialog resolver**: expanded keywords to cover AutoCAD, Civil 3D, Plant 3D startup dialogs
+
+## [2.2.0]
+
+### 🚀 Major Features
+
+#### Python Debugging with VSCode
+
+Full IDE debugging support for Python scripts in Revit:
+
+- **VSCode Debugger Integration**
+  - Set breakpoints directly in VSCode
+  - Step through code execution (F10, F11)
+  - Inspect variables and Revit API objects
+  - Debug console for expression evaluation
+  - Conditional breakpoints support
+  - Visual connection status indicator (🔴/🟢)
+
+  ![Python Debugger](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDebugger.gif)
+
+- **Technical Implementation**
+  - `debugpy` integration via PEP 723 automatic installation
+  - Configurable debug port (default: 5678)
+  - In-process debug adapter for seamless integration
+  - Connection status monitoring in UI
+  - Non-blocking - scripts run normally without debugger attached
+
+- **New Components**
+  - `PythonInitializer` - Manages Python runtime and debugpy listener
+  - `IsDebuggerConnected` property - Real-time connection status
+  - Debug port configuration in General Settings
+  - Status indicator in Trace panel
+
+**Documentation:**
+- [Python Debugging Guide](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonDebugging)
+- Demo script: `debugpy_script.py`
+
+### 🎯 New Features
+
+#### PythonNet3 Interface Implementation Demo
+
+- **Interface Implementation Workaround**
+  - Added `selectionfilter_script.py` demonstrating `__namespace__` pattern
+  - Shows how to implement .NET interfaces (e.g., `ISelectionFilter`) in PythonNet3
+  - Documents runtime overhead trade-off for dynamic type checking
+
+### 🔧 Improvements
+
+#### Python Execution
+
+- **Streamlined Script Execution**
+  - Refactored `PythonExecutor` for cleaner scope management
+  - Improved script content execution flow
+  - Better separation of concerns between initialization and execution
+  - Enhanced error handling and cleanup
+
+#### Stub Generation
+
+- **Enhanced Method Writing**
+  - Improved generic type handling in stub generation
+  - Better overload detection and signature writing
+  - More accurate property accessor detection
+  - Enhanced type mapping for complex .NET types
+
+### 📚 Documentation
+
+#### Comprehensive Documentation Updates
+
+- **README Enhancements**
+  - Redesigned for better first impression
+  - Visual-first approach with demos and context
+  - Clear value proposition and target audience
+  - Improved structure and navigation
+  - Added comparison tables (vs pyRevit, Python ecosystems)
+
+- **Wiki Updates**
+  - New dedicated [Python Debugging](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonDebugging) page
+  - Updated [Python Execution](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonExecution) with debugger info
+  - Revised [vs pyRevit](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-VsPyRevit) to focus on target audiences
+  - Updated [Python Ecosystems](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-PythonEcosystems) with objective analysis
+  - Simplified [CodeExecute Overview](https://github.com/trgiangv/RevitDevTool/wiki/CodeExecute-Overview) to be true overview
+  - Enhanced [Dashboard Example](https://github.com/trgiangv/RevitDevTool/wiki/Examples-Dashboard) with accurate architecture
+
+- **Architecture Documentation**
+  - Converted text diagrams to Mermaid charts for better readability
+  - Updated PythonDemo architecture with debugging workflow
+  - Improved cross-repo link handling (relative paths → URLs)
+  - Removed architecture details from Wiki (moved to docs/)
+
+## [2.1.1]
+
+### 🎯 New Features
+
+- **Python UV Installer Improvements**
+  - Added robust UV installation and update management flow
+  - Improved detection and handling for local UV binaries
+  - Enhanced reliability for Python package tooling bootstrap
+
+### 🔧 Improvements
+
+- **CI Workflow Enhancements**
+  - Compile workflow now builds per-Revit version via dynamic matrix
+  - Matrix versions are derived from `source/Directory.Build.props` to avoid hardcoded values
+  - Added workflow concurrency controls with auto-cancel on newer runs
+  - Added cross-workflow lock so compile and release do not run in parallel
+
+- **Build Configuration Flexibility**
+  - Exposed build configuration patterns as Nuke parameter for targeted CI builds
+
+### 🛠️ Technical Changes
+
+- Updated dependency definitions for Python/UV execution path
+- Refined UV resource handling in project configuration
+
+---
+
+**Stats**: 9 files changed, 221 insertions(+), 34 deletions(-)
+
+## [2.1.0]
+
+### 🚀 Major Features
+
+#### Python Ecosystem Integration
+
+A complete Python runtime environment with professional package management and development tools:
+
+- **Python Script Execution**
+  - Execute Python scripts directly in Revit with native Python runtime
+  - Support for PEP 723 inline script metadata for dependency declarations
+  - Built-in `__file__` variable for script file path access
+  - Enhanced stdout/stderr redirection for better debugging
+  - Support for processing Python iterable objects (lists, tuples, generators) in GeometryListener
+
+- **Python Dependency Management**
+  - Integrated `uv` package manager for fast, reliable Python package installation
+  - Professional dependency resolution and conflict management
+  - UI for installing and managing Python packages
+  - Automatic detection of newly-installed packages for immediate use
+  - Support for `pyproject.toml` dependency specifications
+
+  ![Python Dependency Management](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDependencyResolve.gif)
+
+- **Python Stub Generator (PythonNetStubGenerator)**
+  - Generate Python type stubs (.pyi) from .NET assemblies for IntelliSense support
+  - Complete support for methods, properties, events, and nested types
+  - XML documentation comments extraction and conversion
+  - Enhanced IDE experience with autocomplete and type hints
+
+  ![Python Stubs](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonStubs.png)
+
+- **Enhanced Python Type System**
+  - Improved type conversion for delegates and indexers
+  - Better handling of Python-to-.NET type conversions
+  - Support for complex Python data structures
+
+#### Code Execution System (NEW)
+
+Brand new code execution infrastructure built from scratch with modern design patterns:
+
+- **Unified Execution System**
+  - Strategy Pattern implementation for DotNet and Python execution
+  - Centralized ExecutionOrchestrator for managing execution workflows
+  - Clean separation between execution providers and strategies
+  - Support for multiple execution modes (File, Selection, Addin)
+
+- **Tree-Based Code Structure**
+  - New tree model for representing directory and file hierarchies
+  - Efficient tree state management with caching
+  - Smart file watching with debouncing for hot reload
+  - Enhanced tree operations (expand, collapse, refresh)
+  - Visual feedback with highlight ranges for executed code
+
+  ![Code Execute Hot Reload](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_CodeExecuteHotReload.gif)
+
+- **Add-in Manager**
+  - Load and execute external Revit add-ins (.dll) dynamically
+  - Assembly Load Context isolation for proper unloading
+  - Track last executed add-in for quick re-execution
+  - Support for IExternalCommand implementations
+
+#### Python Dashboard Demo
+
+Professional-grade Python analytics dashboard showcasing advanced integration:
+
+- **Modern Web-Based UI**
+  - Built with React, TypeScript, and TailwindCSS
+  - Hosted in WebView2 with seamless Revit integration
+  - Real-time bidirectional communication bridge
+  - Support for light/dark themes
+
+  ![Python Dashboard](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDashboard.png)
+
+- **Comprehensive Analytics**
+  - Project metrics and statistics dashboard
+  - Family and category inventory analysis
+  - Health monitoring with warnings matrix
+  - Heavy families tracker for performance optimization
+  - Schedule data explorer with export to Excel
+
+- **Advanced Features**
+  - Element filtering and selection synchronization
+  - Keyboard shortcuts for power users
+  - Session history tracking
+  - Automatic data refresh with progress indicators
+
+  ![Python Demo](https://github.com/trgiangv/RevitDevTool/wiki/images/RevitDevTool_PythonDemo.gif)
+
+### 🎯 New Features
+
+- **Code Execute View**
+  - New dockable panel for code execution interface
+  - Tree view with directory and file browsing
+  - Syntax highlighting for selected code regions
+  - Double-click to execute files or selections
+
+- **Trace Toggle Setting**
+  - New `IsTraceEnabled` setting to enable/disable trace listener
+  - Improves performance when tracing is not needed
+  - Configurable via settings UI
+
+- **CSharp Execution Thread Safety**
+  - Wrapped command execution in external event handler
+  - Prevents threading issues when executing code from UI
+
+- **Python Package Imports**
+  - Ensured newly-installed packages are immediately importable
+  - Fixed module path resolution after package installation
+
+### 📚 Documentation
+
+- **Comprehensive Architecture Documentation**
+  - Added architecture guides for all major modules:
+    - Code Execution (Strategy Pattern, Tree Model)
+    - Logging System (Listeners, Theme System, Python Integration)
+    - Visualization System (Geometry Processing)
+    - Python Demo (Dashboard, WebView2 Integration)
+    - PythonNetStubGenerator (Stub Generation Process)
+  - Developer guides for extending functionality
+  - Detailed README files with diagrams and examples
+
+### 🔧 Improvements
+
+- **Refactored Logging Infrastructure**
+  - Reorganized listeners for better modularity
+  - Improved separation between LoggerTraceListener and NotifyListener
+  - Enhanced GeometryListener with Python iterable support
+  - Better error handling and diagnostics
+
+- **Optimized File Operations**
+  - Enhanced file watching with better performance
+  - Debouncing for file change events
+  - Reduced unnecessary tree refreshes
+
+- **Code Quality**
+  - Cleaned up invalid assembly and directory paths
+  - Simplified module removal logic in PythonExecutor
+  - Better script execution and output handling
+  - More robust error handling throughout
+
+- **Settings Management**
+  - Added CodeExecuteConfig for execution-related settings
+  - Improved settings persistence and loading
+  - Better validation for configuration values
+
+### 🐛 Fixes
+
+- **Dockable Pane Visibility**
+  - Streamlined visibility handling for trace command
+  - Better state management for floating vs docked windows
+
+### 🛠️ Technical Changes
+
+- **Build System**
+  - Added Git LFS filters for executable and archive files (.exe, .dll, .msi, .zip)
+  - Updated global.json for SDK compatibility
+  - Enhanced project dependencies management
+
+- **Resources**
+  - Added Python icon (python32.png) for UI consistency
+  - Bundled uv executables (uv.exe, uvw.exe, uvx.exe) for offline package management
+  - Moved and reorganized image assets
+
+---
+
+**Stats**: 236 files changed, 32,835 insertions(+), 773 deletions(-)
+
+## [2.0.1]
+
+### Fixed
+
+- Ensure UI thread handling for open/close FloatingWindow
+
+### Documentation
+
+- Updated usage instructions in README
+- Clarified `Trace` methods support for Geometry and Pretty JSON
+
+## [2.0.0]
+
+### Breaking Changes
+
+- **Dropped Revit 2021 Support** - Minimum supported version is now Revit 2022
+- **Removed SQLite Log Format** - SQLite (.db) logging format has been removed. Use JSON or CLEF formats for structured logging
+- **Removed CLEF Log Format** - CLEF (.clef) format has been removed. Use JSON format for Seq integration
+
+### Added
+
+- **WPF Trace Listener**
+  - Capture WPF binding errors and trace output directly in the log panel
+  - Configurable WPF trace level (Off, Error, Warning, Information, Verbose)
+  - Helps debug XAML binding issues without external tools
+
+- **Filter Keywords for Log Level Detection**
+  - Automatic log level detection based on message content
+  - Customizable keywords for each log level (Information, Warning, Error, Critical)
+  - Default keywords: `info,success,completed` for Info, `warning,warn,caution` for Warning, etc.
+  - Supports prefix detection: `[INFO]`, `[WARN]`, `[ERROR]`, `[FATAL]`, `[DEBUG]`
+
+- **Pretty JSON Output**
+  - Enable formatted JSON output for complex objects in trace logs
+  - Objects logged via `Trace.WriteLine(object)` are automatically serialized
+  - Configurable via settings UI
+
+- **Revit Enrichers**
+  - Add Revit context to every log entry automatically
+  - Available enrichers: Revit Version, Document Title, Document Path, Model Path, Addin ID
+  - Configurable via settings UI
+
+- **New Single-Page Settings UI**
+  - All settings now accessible in a single integrated panel
+  - No more separate settings window - everything in the dockable panel
+  - Cleaner, more intuitive configuration experience
+
+- **Live Geometry Count Badge**
+  - Real-time badge showing count of geometry objects currently visualized
+  - Visual feedback for geometry pool status
+  - Helps track visualization state at a glance
+
+- **Python Stack Trace Support**
+  - Enhanced logging for Python/pyRevit scripts with full traceback
+  - `PyTrace.Write(message, traceback)` bridge for Python integration
+  - Respects stack trace depth settings
+  - Helper script: [`source/RevitDevTool/Logging/Python/trace.py`](source/RevitDevTool/Logging/Python/trace.py)
+
+- **Auto-Clean Log Files**
+  - Automatically clean old log files based on rolling interval
+  - Prevents log folder from growing indefinitely
+
+- **Process ID in Log Files**
+  - Log file names now include process ID for multi-instance scenarios
+  - Easier identification of logs from different Revit sessions
+
+### Changed
+
+- **Logging Architecture Refactored**
+  - Complete reorganization of logging infrastructure
+  - Improved separation of concerns between trace listener and logger adapter
+  - Better extensibility for future logging backends
+
+- **UI Enhancements**
+  - Improved settings panel layout and organization
+  - Better visual feedback for pending changes
+  - Enhanced theme consistency
+
+### Fixed
+
+- Stack trace now properly included in UI output
+- Settings reset functionality improved
+- geometry rendering ratio calculations
+
+## [1.4.0]
+
+### Added
+
+- **Automatic Floating Window on Trace Events**
+  - Floating trace log window automatically opens when trace events occur and no document is open
+  - Listener monitors document open/close events to manage window visibility
+  - Auto-hides when document is opened to avoid interference
+
+- **External File Logging System**
+  - Multiple log file format support:
+    - **Plain Text (.log)** - Human-readable format with timestamps
+    - **JSON (.json)** - Structured JSON format for parsing
+    - **CLEF (.clef)** - Compact Log Event Format for analysis tools like Seq
+    - **SQLite (.db)** - Database format for querying and data analysis
+  - Configurable rolling intervals (daily, hourly, etc.)
+  - File size limit controls
+  - Shared file access support for multi-process logging
+
+- **Log Configuration UI**
+  - Settings panel for managing log output preferences
+  - Enable/disable external file logging
+  - Select log format and output path
+  - Configure rolling intervals and file management
+  - Stack trace inclusion toggle with depth control
+
+- **Enhanced Stack Trace in Logs**
+  - Stack traces now show actual caller location (method, file, line number)
+  - Automatic filtering of framework and system internals
+  - Configurable stack trace depth
+  - Displays call chain in readable format (e.g., `MyClass.Execute:42 > Helper.Process:18`)
+  - Includes Revit version and active document name in structured log context
+
+### Changed
+
+- **Visualization System**
+  - Adjusted default axis length for better scale
+  - Optimized geometry rendering pipeline
+
+- **UI Adjustments**
+  - Disabled window backdrop (mica/acrylic) to fix RichTextBox overlay issues
+  - Adjusted glass frame thickness for better WinForms control integration
+
+### Fixed
+
+- Proper cleanup of trace listener when Revit closes
+- Window theme subscription leaks on close
+
+## [1.3.3]
+
+### Changed
+
+- Updated manual test case: batch log
+
+### Fixed
+
+- `Clear` method in TraceLog - text not actually clearing and reappearing on next trace event due to `OnIdling` event handler interference
+- Curve Test case - cast to `Edge` instead of `Curve`
+
+## [1.3.2]
+
+### Added
+
+- DockablePane visibility tracking to automatically subscribe/unsubscribe TraceLog when panel is shown/hidden
+- Proper lifecycle management for TraceLog with subscription state tracking
+
+### Changed
+
+- Changed default `AxisLength` in `XyzVisualizationSettings` from 6 to 2 for better default visualization scale
+- Changed Settings window startup location from `CenterScreen` to `CenterOwner`
+- Improved TraceLog initialization and disposal flow with better state management
+- Refactored TraceLog to completely unsubscribe when panel is not visible
+- Enhanced theme change handling with proper dispatcher invocation
+- Removed unused external event handlers (`AsyncEventHandler`, `AsyncCollectionEventHandler`, `IdlingEventHandler`)
+- Updated `.csproj` repack configuration to exclude only UI assemblies
+
+### Fixed
+
+- Prevented multiple Settings windows from opening simultaneously by controlling `OpenSettings` command execution state
+- TraceLog resource cleanup and memory management
+- Trace listeners registration to ensure persistence across application lifecycle
+
+## [1.3.1]
+
+### Fixed
+
+- Removed `PixiEditor.ColorPicker` to avoid conflicts between `Microsoft.Xaml.Behaviors.Wpf` and other add-ins.
+
+## [1.3.0]
+
+### Added
+
+- Settings integration
+  - Visualization options
+  - Theme management options
+- Suppor `Outline` object
+
+### Fixed
+
+- Revit 2026 context isolation
+- Ensure Trace.Listeners are re-added if removed by other add-ins
+
+## [1.2.0]
+
+### Added
+
+- DirectContext3D visualization support for geometry rendering
+- Support for visualizing multiple geometry types (Solid, Face, Curve, XYZ, CurveLoop, Outline)
+- Trace support for ICollection `<object>` and IEnumerable `<CurveLoop>`
+- Serilog sink for WinForms RichTextBox with theme support
+- Nice3Point packages integration
+- New designed icons and button icons
+
+### Fixed
+
+- Multiple geometries visualization
 - Face normal vector visualization
-- VisualizationServerController start
-- C# compatible
+- SolidVisualizationServer rendering issues
+- VisualizationServerController startup
+- Exception handling when retrieving bounding box of solids
+- Skip solids with zero volume in bounding box calculation
+
+### Changed
+
+- Improved theme management and resource handling
+- Enhanced TraceLog with RichTextBox using dynamic theme and max log lines
+- Optimized bounding box calculations by transforming corners individually
+- Streamlined buffer disposal and clearing methods
+- Refactored XYZ rendering methods with updated color settings and axis length support
+- Updated PolylineVisualizationServer rendering
+- Improved safe server registration
+- Better start/stop mechanism for Visualization server
+
+### Performance
+
+- Disposed unmanaged resources properly
+
+### Documentation
+
+- Added RenderHelper in-depth documentation
+- Updated README with Acknowledgments section
+- Refined geometry visualization details in README
+- Streamlined table of contents and updated Python references for Revit 2025
+
+## [1.1.1]
+
+- Listen to Console.WriteLine
+- Auto start listening on revit start
+
+## [1.1.0]
+
+- Use single DockablePanel
+- Simplified codebase
+- UI ehancements
+
+## [1.0.0]
+
+Initial release. Enjoy!

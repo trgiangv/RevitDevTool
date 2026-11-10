@@ -1,6 +1,6 @@
 # pytest
 
-Run CPython pytest tests inside a live Revit or AutoCAD-family host through the RevitDevTool pytest bridge. The client package is `revitdevtool_pytest` `0.5.0`. Collection and reporting happen in the local Python process; Revit API code executes in the host.
+Run CPython pytest tests inside a live Revit or AutoCAD-family host through the RevitDevTool pytest bridge. The client package is `revitdevtool_pytest` `0.6.1`. Collection and reporting happen in the local Python process; Revit API code executes in the host.
 
 :::info Prerequisites
 
@@ -14,7 +14,7 @@ Run CPython pytest tests inside a live Revit or AutoCAD-family host through the 
 From the test project, add the pinned client package and run through `uv`:
 
 ```powershell title="Terminal"
-uv add "revitdevtool_pytest==0.5.0"
+uv add "revitdevtool_pytest==0.6.1"
 uv run pytest --host revit --host-version 2025 -v
 ```
 

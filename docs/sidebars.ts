@@ -9,6 +9,8 @@ const sidebars: SidebarsConfig = {
       items: [
         'intro',
         'getting-started/installation',
+        'getting-started/Upgrade-From-3',
+        'getting-started/Release-Notes',
         'getting-started/Troubleshooting',
       ],
     },
