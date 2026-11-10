@@ -31,6 +31,7 @@ and `docs/agents/`. Read only the layer the task needs.
 | pytest host tests | `.agents/skills/revit-pytest/SKILL.md` |
 | Platform, IPC, or packaging edit | `.agents/skills/platform-change/SKILL.md` |
 | Formatting and lint | `docs/agents/formatting-linting.md` |
+| CI workflow edit or a failed CI run | `.agents/skills/ci-change/SKILL.md`, `docs/agents/ci.md` |
 | Release a product | `docs/agents/release.md` |
 
 ## Verify before done

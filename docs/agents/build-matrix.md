@@ -40,17 +40,7 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
 - The add-in compile builds the solution with `-t:RevitDevTool;ACadDevTool`, so only the host projects and their references build, with the solution's configuration mapping.
 - On one machine host versions stay sequential. Shared projects are solution-mapped to `Debug`/`Release`, so later host versions reuse `bin/<Debug|Release>/<tfm>`.
 - Targets are stages: `compile`, `test`, `ci` (compile + test), `pack`, `release` (all three). The add-in compile empties the host `bin/<configuration>` folders first, then collects each host version into `output/hosts/<v>`: `shared` (files both hosts publish, byte-identical) and one folder per bundle (`RevitDevTool.bundle`, `AcadDevTool.bundle`), and writes `output/hosts/<v>.version` with the version it stamped. `pack addin` builds one bundle per host from `shared` plus that host's folder (0061), only from `output/hosts`, at that version, and refuses when a `Release.Autodesk.*` host version is missing or was compiled at another version, so run `compile addin` first.
-- `ci.yml` runs each add-in host version on its own runner instead:
-
-  | Job | Command |
-  |-----|---------|
-  | `Autodesk <v>` | `compile addin --host-version <v>`; on push `output/hosts` uploads as `addin-<v>` |
-  | `addin tests` | `test addin` |
-  | `Autodesk bundle` (push) | downloads every `addin-*` into `output/hosts`, then `pack addin` |
-
-  The `result` job fails when `changes` did not succeed or any job failed or was cancelled.
-
-  `build -- paths` writes the jobs of each product to `.github/ci-jobs.json` (host versions from the `Release.Autodesk.*` build types in `RevitDevTool.slnx`), and the test stage refuses a stale copy as it does `product-paths.yml`. `ci.yml` only looks up the changed products there. Each job keeps its own NuGet cache (`nuget-<cache>-<hash>`) and saves it on a push whose key is new. `test` and `ci` read the bump-warning base from the GitHub event when `--base` is not given. `release.yml` still runs `release addin` on one runner.
+- `ci.yml` runs each add-in host version on its own runner instead; jobs, caches, and timing are in [ci.md](ci.md). `release.yml` still runs `release addin` on one runner.
 - NUnit, TUnit, and MSTest host packaging builds those runtime projects with `Debug` or `Release`, not `*.Autodesk.YYYY`.
 - `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. Bundle creation waits for every year.
 - The add-in compile of `build/` sets `DeployAddin=false` and `PublishAddin=true`. `Revit.targets` and `AutoCad.targets` both read those two properties; each project imports only one of those files. The bundle zips are packed from `output/hosts`, so `build/` does not copy into `%AppData%\Autodesk\ApplicationPlugins`. A local deploy puts Revit into `RevitDevTool.bundle` and AutoCAD into `AcadDevTool.bundle`, each with its template from `props/<bundle>/PackageContents.xml`. Local host deploy stays `scripts/build-host.ps1`.

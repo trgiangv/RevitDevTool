@@ -18,6 +18,7 @@ is [`AGENTS.md`](../../AGENTS.md); work shape is [`WORKFLOW.md`](../WORKFLOW.md)
 | Revit API and live execute | `revit-developer` skill, `docs/architecture/MCP/workflows.md` | MCP, rvtdocs-mcp |
 | Platform, IPC, packaging | `platform-change` skill | `source/DevTools.*`, `build/` |
 | Formatting and lint | [formatting-linting.md](formatting-linting.md) | `.editorconfig`, `scripts/format-lint.ps1` |
+| Change CI or debug a CI run | `ci-change` skill, [ci.md](ci.md) | `.github/`, `build/Products/`, `build/Cli/` |
 | Release a product | [release.md](release.md) | `build/`, `.github/workflows/release.yml` |
 | Multi-session work | `docs/plans/active/` | |
 | Policy | `docs/decisions/` | |
