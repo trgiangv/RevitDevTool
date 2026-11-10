@@ -73,71 +73,43 @@ public sealed class DesktopComponentTests
     [TestMethod]
     public void StartupRegistration_EnableDisable_RoundTripsRegistryValue()
     {
-        var runKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
-        object? original = null;
-        using (var key = Registry.CurrentUser.OpenSubKey(runKey))
-            original = key?.GetValue(AppConstants.AutoStartValueName);
+        using var state = new TempUserState();
+        var startup = state.Startup;
 
-        try
-        {
-            StartupRegistration.Disable();
-            Assert.IsFalse(StartupRegistration.IsEnabled);
+        startup.Disable();
+        Assert.IsFalse(startup.IsEnabled);
 
-            StartupRegistration.Enable();
-            if (Environment.ProcessPath is not null)
-            {
-                Assert.IsTrue(StartupRegistration.IsEnabled);
-                using var key = Registry.CurrentUser.OpenSubKey(runKey);
-                Assert.EndsWith($" {IpcConstants.DaemonArgs.Background}", (string)key!.GetValue(AppConstants.AutoStartValueName)!);
-            }
+        startup.Enable(@"C:\RevitDevTool\DevTools.Daemon.exe");
+        Assert.IsTrue(startup.IsEnabled);
+        using (var key = Registry.CurrentUser.OpenSubKey(startup.KeyPath))
+            Assert.AreEqual($"\"C:\\RevitDevTool\\DevTools.Daemon.exe\" {IpcConstants.DaemonArgs.Background}", key!.GetValue(AppConstants.AutoStartValueName));
 
-            StartupRegistration.Disable();
-            Assert.IsFalse(StartupRegistration.IsEnabled);
-        }
-        finally
-        {
-            using var key = Registry.CurrentUser.OpenSubKey(runKey, writable: true);
-            if (original is null)
-                key?.DeleteValue(AppConstants.AutoStartValueName, throwOnMissingValue: false);
-            else
-                key?.SetValue(AppConstants.AutoStartValueName, original);
-        }
+        startup.Disable();
+        Assert.IsFalse(startup.IsEnabled);
     }
 
     [TestMethod]
     public void UserSettingsStore_Update_WritesAndReloadsSettings()
     {
-        var settingsPath = UserSettings.FilePath;
-        var backup = File.Exists(settingsPath) ? File.ReadAllText(settingsPath) : null;
-
-        try
+        using var state = new TempUserState();
+        var store = DaemonTestDoubles.CreateUserSettingsStore(state.SettingsPath, new UserSettings
         {
-            var store = DaemonTestDoubles.CreateUserSettingsStore(new UserSettings
-            {
-                Theme = AppTheme.Light,
-                AutoStartEnabled = false,
-            });
+            Theme = AppTheme.Light,
+            AutoStartEnabled = false,
+        });
 
-            store.Update(s =>
-            {
-                s.Theme = AppTheme.Dark;
-                s.AutoStartEnabled = true;
-            });
-
-            var loaded = JsonSerializer.Deserialize(
-                File.ReadAllText(settingsPath),
-                UserSettingsJsonContext.Default.DictionaryStringUserSettings);
-            Assert.AreEqual(AppTheme.Dark, loaded![UserSettings.SectionName].Theme);
-            Assert.IsTrue(loaded[UserSettings.SectionName].AutoStartEnabled);
-            Assert.Contains("\"Theme\"", File.ReadAllText(settingsPath), StringComparison.Ordinal);
-        }
-        finally
+        store.Update(s =>
         {
-            if (backup is null)
-                File.Delete(settingsPath);
-            else
-                File.WriteAllText(settingsPath, backup);
-        }
+            s.Theme = AppTheme.Dark;
+            s.AutoStartEnabled = true;
+        });
+
+        var loaded = JsonSerializer.Deserialize(
+            File.ReadAllText(state.SettingsPath),
+            UserSettingsJsonContext.Default.DictionaryStringUserSettings);
+        Assert.AreEqual(AppTheme.Dark, loaded![UserSettings.SectionName].Theme);
+        Assert.IsTrue(loaded[UserSettings.SectionName].AutoStartEnabled);
+        Assert.Contains("\"Theme\"", File.ReadAllText(state.SettingsPath), StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -181,21 +153,20 @@ public sealed class DesktopComponentTests
     [TestMethod]
     public async Task DiscoveryHostedService_StartsAndStops()
     {
-        var running = CancellationToken.None;
+        var running = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
         var discovery = new Mock<IHostConnections>();
         discovery.Setup(d => d.RunAsync(It.IsAny<CancellationToken>()))
             .Returns<CancellationToken>(ct =>
             {
-                running = ct;
+                running.SetResult(ct);
                 return Task.Delay(Timeout.Infinite, ct);
             });
 
         var service = new DiscoveryHostedService(discovery.Object);
-        using var cts = new CancellationTokenSource();
-        await service.StartAsync(cts.Token);
-        await cts.CancelAsync();
+        await service.StartAsync(CancellationToken.None);
+        var token = await running.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await service.StopAsync(CancellationToken.None);
 
-        Assert.IsTrue(running.IsCancellationRequested);
+        Assert.IsTrue(token.IsCancellationRequested);
     }
 }

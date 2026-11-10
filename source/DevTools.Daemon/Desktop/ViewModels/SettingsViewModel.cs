@@ -10,6 +10,7 @@ namespace DevTools.Daemon.Desktop.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly UserSettingsStore _settings;
+    private readonly StartupRegistration _startup;
     private bool _suppressAutoStartSync;
 
     [ObservableProperty]
@@ -20,9 +21,10 @@ public partial class SettingsViewModel : ObservableObject
 
     public IReadOnlyList<AppTheme> Themes { get; } = Enum.GetValues<AppTheme>();
 
-    public SettingsViewModel(UserSettingsStore settings)
+    public SettingsViewModel(UserSettingsStore settings, StartupRegistration startup)
     {
         _settings = settings;
+        _startup = startup;
         Theme = settings.Current.Theme;
 
         ReloadAutoStart();
@@ -33,7 +35,7 @@ public partial class SettingsViewModel : ObservableObject
     public void ReloadAutoStart()
     {
         _suppressAutoStartSync = true;
-        AutoStartEnabled = StartupRegistration.IsEnabled;
+        AutoStartEnabled = _startup.IsEnabled;
         _suppressAutoStartSync = false;
     }
 
@@ -43,9 +45,9 @@ public partial class SettingsViewModel : ObservableObject
             return;
 
         if (value)
-            StartupRegistration.Enable();
+            _startup.Enable();
         else
-            StartupRegistration.Disable();
+            _startup.Disable();
 
         _settings.Update(s => s.AutoStartEnabled = value);
     }

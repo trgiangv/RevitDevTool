@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace DevTools.Daemon.Desktop.Models;
 
-public sealed class UserSettingsStore(IOptionsMonitor<UserSettings> monitor, IConfiguration configuration)
+public sealed class UserSettingsStore(IOptionsMonitor<UserSettings> monitor, IConfiguration configuration, string filePath)
 {
     public UserSettings Current => monitor.CurrentValue;
 
@@ -21,7 +21,7 @@ public sealed class UserSettingsStore(IOptionsMonitor<UserSettings> monitor, ICo
         try
         {
             File.WriteAllText(
-                UserSettings.FilePath,
+                filePath,
                 JsonSerializer.Serialize(
                     new Dictionary<string, UserSettings> { [UserSettings.SectionName] = next },
                     UserSettingsJsonContext.Default.DictionaryStringUserSettings));

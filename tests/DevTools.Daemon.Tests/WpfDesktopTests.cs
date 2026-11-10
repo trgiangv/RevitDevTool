@@ -9,6 +9,7 @@ using DevTools.Daemon.Tunnel;
 using DevTools.Settings.Configs;
 using DevTools.Utilities;
 using Moq;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -20,6 +21,11 @@ namespace DevTools.Daemon.Tests;
 [TestClass]
 public sealed class WpfDesktopTests : WpfApplicationTestBase
 {
+    private readonly TempUserState _state = new();
+
+    [TestCleanup]
+    public void DeleteUserState() => _state.Dispose();
+
     [TestMethod]
     public void Views_ConstructAndShow()
     {
@@ -90,26 +96,15 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     {
         RunOnUi(() =>
         {
-            var settingsPath = UserSettings.FilePath;
-            var backup = File.Exists(settingsPath) ? File.ReadAllText(settingsPath) : null;
-            try
-            {
-                var store = DaemonTestDoubles.CreateUserSettingsStore(new UserSettings { Theme = AppTheme.Light });
-                var preferences = new SettingsViewModel(store);
+            var store = DaemonTestDoubles.CreateUserSettingsStore(_state.SettingsPath, new UserSettings { Theme = AppTheme.Light });
+            var preferences = new SettingsViewModel(store, _state.Startup);
 
-                preferences.Theme = AppTheme.Dark;
-                Assert.AreEqual(AppTheme.Dark, preferences.Theme);
-            }
-            finally
-            {
-                if (backup is null)
-                    File.Delete(settingsPath);
-                else
-                    File.WriteAllText(settingsPath, backup);
-            }
+            preferences.Theme = AppTheme.Dark;
+            Assert.AreEqual(AppTheme.Dark, preferences.Theme);
+            var saved = JsonSerializer.Deserialize(File.ReadAllText(_state.SettingsPath), UserSettingsJsonContext.Default.DictionaryStringUserSettings);
+            Assert.AreEqual(AppTheme.Dark, saved![UserSettings.SectionName].Theme);
         });
     }
-
     [TestMethod]
     public void ShellViewModel_RefreshAuthAndTunnelStatusText()
     {
@@ -232,32 +227,14 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
     {
         RunOnUi(() =>
         {
-            var runKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
-            object? original = null;
-            using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(runKey))
-                original = key?.GetValue(AppConstants.AutoStartValueName);
+            var preferences = new SettingsViewModel(DaemonTestDoubles.CreateUserSettingsStore(_state.SettingsPath), _state.Startup);
 
-            try
-            {
-                var store = DaemonTestDoubles.CreateUserSettingsStore();
-                var preferences = new SettingsViewModel(store);
-                preferences.AutoStartEnabled = true;
-                if (Environment.ProcessPath is not null)
-                    Assert.IsTrue(StartupRegistration.IsEnabled);
-                preferences.AutoStartEnabled = false;
-                Assert.IsFalse(StartupRegistration.IsEnabled);
-            }
-            finally
-            {
-                using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(runKey, writable: true);
-                if (original is null)
-                    key?.DeleteValue(AppConstants.AutoStartValueName, throwOnMissingValue: false);
-                else
-                    key?.SetValue(AppConstants.AutoStartValueName, original);
-            }
+            preferences.AutoStartEnabled = true;
+            Assert.IsTrue(_state.Startup.IsEnabled);
+            preferences.AutoStartEnabled = false;
+            Assert.IsFalse(_state.Startup.IsEnabled);
         });
     }
-
     [TestMethod]
     public void ShellViewModel_NotAuthenticated_ShowsSignedOutTunnelStatusText()
     {
@@ -283,7 +260,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
         });
     }
 
-    private static ShellViewModel CreateShellViewModel(
+    private ShellViewModel CreateShellViewModel(
         IAuthService? auth = null,
         ITunnelStatusProvider? tunnel = null)
     {
@@ -291,7 +268,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
         tunnel ??= DaemonTestDoubles.CreateTunnelStatus().Object;
         var broker = DaemonTestDoubles.CreateHostConnections().Object;
         var scanner = DaemonTestDoubles.CreatePipeScanner().Object;
-        var store = DaemonTestDoubles.CreateUserSettingsStore();
-        return new ShellViewModel(auth, broker, scanner, DaemonTestDoubles.CreateUpdates(), store, tunnel);
+        var store = DaemonTestDoubles.CreateUserSettingsStore(_state.SettingsPath);
+        return new ShellViewModel(auth, broker, scanner, DaemonTestDoubles.CreateUpdates(), store, _state.Startup, tunnel);
     }
 }

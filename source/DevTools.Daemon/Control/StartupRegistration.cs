@@ -4,15 +4,20 @@ using System.IO;
 
 namespace DevTools.Daemon.Control;
 
-public static class StartupRegistration
+/// <summary>
+///     The <see cref="AppConstants.AutoStartValueName"/> value under an HKCU key; <see cref="CurrentUserRun"/> starts the Daemon with Windows.
+/// </summary>
+public sealed class StartupRegistration(string keyPath)
 {
-    private const string RunKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+    public static StartupRegistration CurrentUserRun { get; } = new(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
 
-    public static bool IsEnabled
+    public string KeyPath { get; } = keyPath;
+
+    public bool IsEnabled
     {
         get
         {
-            using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+            using var key = Registry.CurrentUser.OpenSubKey(KeyPath);
             return key?.GetValue(AppConstants.AutoStartValueName) is not null;
         }
     }
@@ -36,28 +41,28 @@ public static class StartupRegistration
     }
 
     /// <summary>
-    ///     Starts the Daemon with Windows, in the background.
+    ///     Starts the Daemon in the background; creates the key when it is missing.
     /// </summary>
-    public static void Enable(string? exePath = null)
+    public void Enable(string? exePath = null)
     {
         exePath ??= DefaultExePath;
         if (exePath is null) return;
 
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
-        key?.SetValue(AppConstants.AutoStartValueName, $"\"{exePath}\" {IpcConstants.DaemonArgs.Background}");
+        using var key = Registry.CurrentUser.CreateSubKey(KeyPath);
+        key.SetValue(AppConstants.AutoStartValueName, $"\"{exePath}\" {IpcConstants.DaemonArgs.Background}");
     }
 
     /// <summary>
-    ///     Writes the Run value again if it is on, so a value from an earlier version also gets the background argument.
+    ///     Writes the value again if it is on, so a value from an earlier version also gets the background argument.
     /// </summary>
-    public static void Refresh()
+    public void Refresh()
     {
         if (IsEnabled) Enable();
     }
 
-    public static void Disable()
+    public void Disable()
     {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
+        using var key = Registry.CurrentUser.OpenSubKey(KeyPath, writable: true);
         key?.DeleteValue(AppConstants.AutoStartValueName, throwOnMissingValue: false);
     }
 }

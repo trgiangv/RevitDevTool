@@ -20,6 +20,7 @@ namespace DevTools.Daemon.Tests.Support;
 internal static class DaemonTestDoubles
 {
     public static UserSettingsStore CreateUserSettingsStore(
+        string filePath,
         UserSettings? settings = null,
         Action<ConfigurationBuilder>? configure = null)
     {
@@ -35,7 +36,7 @@ internal static class DaemonTestDoubles
 
         var monitor = new Mock<IOptionsMonitor<UserSettings>>();
         monitor.Setup(m => m.CurrentValue).Returns(settings);
-        return new UserSettingsStore(monitor.Object, configuration);
+        return new UserSettingsStore(monitor.Object, configuration, filePath);
     }
 
     public static Mock<IAuthService> CreateAuthService(

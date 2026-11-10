@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using DevTools.Daemon.Auth;
+using DevTools.Daemon.Control;
 using DevTools.Daemon.Desktop.Models;
 using DevTools.Daemon.Desktop.Updates;
 using DevTools.Daemon.Mcp.Processes;
@@ -14,6 +15,7 @@ public partial class ShellViewModel(
     IMcpPipeScanner pipeScanner,
     UpdatesViewModel updater,
     UserSettingsStore settings,
+    StartupRegistration startup,
     ITunnelStatusProvider tunnelStatus) : ObservableObject
 {
     public const int UpdatesTabIndex = 2;
@@ -23,7 +25,7 @@ public partial class ShellViewModel(
 
     public OverviewViewModel Overview { get; } = new(authService, tunnelStatus);
     public HostsViewModel Hosts { get; } = new(sessions, pipeScanner);
-    public SettingsViewModel Settings { get; } = new(settings);
+    public SettingsViewModel Settings { get; } = new(settings, startup);
     public UpdatesViewModel Updater { get; } = updater;
     public string Version { get; } = AppVersion.Current;
 

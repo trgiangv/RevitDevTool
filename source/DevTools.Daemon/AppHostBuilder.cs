@@ -20,6 +20,7 @@ using DevTools.Update.Engine;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 
 namespace DevTools.Daemon;
 
@@ -40,6 +41,7 @@ public static class AppHostBuilder
         builder.Services.AddSingleton<UpdateNotices>();
         builder.Services.AddSingleton<IUpdateNotifier>(sp => sp.GetRequiredService<UpdateNotices>());
         builder.Services.AddSingleton<UpdatesViewModel>();
+        builder.Services.AddSingleton(StartupRegistration.CurrentUserRun);
         builder.Services.AddSingleton<ShellViewModel>();
         builder.Services.AddSingleton<MainWindow>();
         builder.Services.AddSingleton<TrayMenu>();
@@ -99,7 +101,7 @@ public static class AppHostBuilder
             builder.Configuration.GetSection(GatewayOptions.SectionName));
         builder.Services.Configure<UserSettings>(
             builder.Configuration.GetSection(UserSettings.SectionName));
-        builder.Services.AddSingleton<UserSettingsStore>();
+        builder.Services.AddSingleton(sp => new UserSettingsStore(sp.GetRequiredService<IOptionsMonitor<UserSettings>>(), sp.GetRequiredService<IConfiguration>(), UserSettings.FilePath));
         builder.Services
             .AddFileMetadataReaders()
             .AddRevitFileMetadataReader()

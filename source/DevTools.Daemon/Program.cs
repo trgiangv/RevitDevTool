@@ -20,16 +20,16 @@ internal static class Program
         VelopackApp.Build()
             .SetArgs(args)
             .SetAutoApplyOnStartup(false)
-            .OnAfterInstallFastCallback(_ => StartupRegistration.Enable())
+            .OnAfterInstallFastCallback(_ => StartupRegistration.CurrentUserRun.Enable())
             .OnBeforeUninstallFastCallback(_ =>
             {
-                StartupRegistration.Disable();
+                StartupRegistration.CurrentUserRun.Disable();
                 UpdateEngine.RemoveBundles(new AutodeskBundles(AutodeskBundles.DefaultRoot), new InstallationStore(InstallationStore.DefaultPath));
             })
             .Run();
 
         if (VelopackLocator.IsCurrentSet && VelopackLocator.Current.CurrentlyInstalledVersion is not null)
-            StartupRegistration.Refresh();
+            StartupRegistration.CurrentUserRun.Refresh();
 
         if (args.Contains(AppConstants.SelectArg, StringComparer.OrdinalIgnoreCase))
             return RunSelectAsync(args).GetAwaiter().GetResult();
@@ -77,7 +77,7 @@ internal static class Program
         var result = await engine.ApplySelectionAsync(selection, policy, Values(args, AppConstants.SourceArg).ToArray(), null, CancellationToken.None).ConfigureAwait(false);
 
         Console.WriteLine($"RevitDevTool {result.Version}: installed [{string.Join(", ", result.Applied)}], pending [{string.Join(", ", result.Pending)}], unavailable [{string.Join(", ", result.Unavailable)}].");
-        StartupRegistration.Enable();
+        StartupRegistration.CurrentUserRun.Enable();
         return result.Unavailable.Count == 0 ? 0 : 3;
     }
 
