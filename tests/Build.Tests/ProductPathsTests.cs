@@ -111,7 +111,7 @@ public sealed class ProductPathsTests
         Changelog = "source/Tool/CHANGELOG.md"
     };
 
-    private static string RepositoryRoot
+    internal static string RepositoryRoot
     {
         get
         {

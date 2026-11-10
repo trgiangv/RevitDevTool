@@ -254,7 +254,7 @@ fix stays below the open prerelease, so both channels keep their order.
 | `pytest` | PyTest product paths and golden fixtures | pixi lint, test, build `0.0.0.dev` wheel, golden contract |
 | `docs` | `docs/**` | Typecheck and build; on trunk push deploy to Pages (`environment: github-pages`) |
 | `workflows` | `.github/**` | `actionlint`, `zizmor` |
-| `gate` | always | `re-actors/alls-green`. **The only required check** |
+| `result` | always | Fails when a job failed or was cancelled. **The only required check** |
 
 - A PR that changes a product's paths without changing its version file gets a
   warning, not a failure.
@@ -381,7 +381,7 @@ Tradeoffs:
 ## Follow-Up
 
 - Plan in `docs/plans/active/`: product declarations in `build/` and `0.0.0`
-  builds; `ci.yml` and `gate`; `release.yml` for `nettest` (smallest); PyTest move
+  builds; `ci.yml` and `result`; `release.yml` for `nettest` (smallest); PyTest move
   and `pytest`; `channels.json` and the update engine; `daemon` and `addin`;
   changelog targets; delete the old workflows.
 - Update `docs/agents/` build and test-matrix pages once `ci <product>` exists.

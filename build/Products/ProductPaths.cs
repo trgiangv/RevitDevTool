@@ -24,7 +24,8 @@ public static class ProductPaths
         "build/**",
         "props/**",
         "tests/*",
-        FilterFile
+        FilterFile,
+        CiJobs.JobsFile
     ];
 
     private static readonly (string Key, string[] Paths)[] OtherFilters =

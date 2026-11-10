@@ -24,7 +24,7 @@ https://claude.ai/artifact/UQFpzx18qhrfoaqWMdfnvJ
 3. The TestRunner ships inside the `nettest` nupkg; the Daemon package no longer
    carries it.
 4. `RevitDevTool.PyTest` lives in `source/RevitDevTool.PyTest/`, built with pixi.
-5. `ci.yml` has one required check (`gate`); docs-only and workflow-only changes
+5. `ci.yml` has one required check (`result`); docs-only and workflow-only changes
    skip .NET.
 6. The old workflows, GitVersion, and the shared product tag are gone.
 
@@ -70,7 +70,7 @@ Agreed with the owner in the 2026-11-05/06 session. Each line says why.
 | L9 | Non-release builds are `0.0.0-ci.<run>+<sha>`, `0.0.0-local.<UTC stamp>+<sha>` (L24), `0.0.0.dev<run>` (pytest). `publish` refuses `0.0.0`. | A local pack never collides with a published package; removes the NuGet-cache workaround |
 | L10 | Bump rules: `MAJOR` = contract `Min` rises or a user feature is removed; `MINOR` = feature or `Current` rises; `PATCH` = fixes. | 0055 §3 |
 | L11 | One `release.yml`, `workflow_dispatch`, single input `product`, `run-name: release <product>`. Jobs: `validate` → `build` (no secrets) → `publish` (`environment: <product>`) → `channels` and `verify-install` (daemon/addin only). Environments are named after products: `daemon`, `addin`, `nettest`, `pytest`, plus `github-pages`. | One place to change; readable runs; per-product secrets |
-| L12 | `ci.yml`: `changes` → `daemon`, `addin`, `nettest`, `pytest`, `docs` (deploys on trunk push), `workflows` (`actionlint`, `zizmor`) → `gate` (`re-actors/alls-green`), the only required check. Warnings, not failures: product paths changed without a version bump; a `!` commit without a major. | Less noise; one required check with path filters |
+| L12 | `ci.yml`: `changes` → `daemon`, `addin`, `nettest`, `pytest`, `docs` (deploys on trunk push), `workflows` (`actionlint`, `zizmor`) → `result` (fails on any failed or cancelled job), the only required check. Warnings, not failures: product paths changed without a version bump; a `!` commit without a major. | Less noise; one required check with path filters |
 | L13 | TestRunner: framework-dependent single-file under `tools/runner/` of the nupkg, `net10.0-windows` + `RollForward=Major`. The runner is the package's, named by `devtools.runnerPath` metadata; no override, no Daemon-folder lookup (owner, 2026-11-08). Missing runtime → one sentence. | Every `dotnet test` machine has the SDK (owner confirmed). AOT refused (EnvDTE/`[ComImport]`); self-contained (~70 MB) and own Velopack package refused |
 | L14 | PyTest moves into `source/RevitDevTool.PyTest/` with history; pixi tasks `lint`, `test`, `build`; golden JSON fixtures shared with the C# tests. | Contract drift becomes a CI failure |
 | L15 | Changelog: one Keep a Changelog file per product (`source/DevTools.Daemon/CHANGELOG.md`, `CHANGELOG.md`, `source/DevTools.TestAdapter/CHANGELOG.md`, `source/RevitDevTool.PyTest/CHANGELOG.md`); root `Changelog.md` becomes an index. Draft from commits with `git-cliff` (via pixi) over the product's paths; a person edits; stable without a section fails; prerelease falls back to the draft. | Commits, not PR labels, are the source here |
@@ -330,7 +330,7 @@ concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: ${{ github.event
 | `docs` | ubuntu-latest | `contents: read` | the `Docs.yml` build steps (bun 1.4.2, frozen lockfile, typecheck, build); on push: upload the Pages artifact |
 | `docs-deploy` | ubuntu-latest | `pages: write`, `id-token: write`, `environment: github-pages` | needs `docs`, only on push to `develop` |
 | `workflows` | ubuntu-latest | `contents: read` | `actionlint`; `zizmor` (offline, fail on high) |
-| `gate` | ubuntu-latest | none | `if: always()`, needs all of the above; `re-actors/alls-green` with `allowed-skips` = every job except `changes` |
+| `result` | ubuntu-latest | none | `if: always()`, needs all of the above; fails when a job failed or was cancelled, or `changes` did not succeed |
 
 - `<base>` is `github.event.pull_request.base.sha`, or `github.event.before` on push;
   `ci` prints the warnings (P1).
@@ -344,9 +344,9 @@ concurrency: { group: ci-${{ github.ref }}, cancel-in-progress: ${{ github.event
 - Delete `Compile.yml` and `Docs.yml`; their useful steps (NuGet cache key, diagnostics
   upload, the docs build) are in the jobs above.
 
-Owner: make `ci / gate` the only required check on `develop` (0059 L12), after one green run.
+Owner: make `ci / result` the only required check on `develop` (0059 L12), after one green run.
 
-Proof: a PR that touches only `docs/` runs `changes`, `docs`, `gate`; one that touches
+Proof: a PR that touches only `docs/` runs `changes`, `docs`, `result`; one that touches
 `source/DevTools.TestRunner` runs `nettest` and no other product job; a PR with a stale `product-paths.yml` fails the product job;
 `actionlint` and `zizmor` pass on the new file.
 
@@ -726,13 +726,13 @@ outside `docs/decisions/` and `docs/plans/completed/`: no hit.
   `channels.json`, two versions shown in the Updates tab.
 - `docs/agents/mcp-pytest-bridge.md` and `AGENTS.md`: PyTest is in-repo (after P4).
 - New `docs/agents/release.md`, the one runbook 0059 promises: the release steps, each
-  marked by hand or automatic (draft with `build -- changelog`, bump PR, `gate`, Run
+  marked by hand or automatic (draft with `build -- changelog`, bump PR, `result`, Run
   workflow with the product, environment approval, then publish, `channels`, and
   `verify-install`), plus hotfix from `release/<product>/X.Y`, rerun after a failure, and
   the cross-product order. Linked from `docs/agents/index.md` and `AGENTS.md`. Write it
   early (with P3b) and correct it after each first release.
 - Owner: tag rulesets (`daemon/*`, `addin/*`, `nettest/*`, `pytest/*`), protection
-  of `develop` with `ci / gate`, retire `main`.
+  of `develop` with `ci / result`, retire `main`.
 
 ## Release order (first releases under the new scheme)
 
@@ -777,7 +777,7 @@ Users of shipped versions reinstall `Setup.exe` once (L1).
 - [x] P6 daemon and addin products, code (2026-11-08; `publish`, `channels`, `verify-install` in `release.yml`; local delta pack proven; first real releases wait for the owner)
 - [x] P7 changelog targets (merge `9476c818`; include paths are the product's project folders; first release sections are written in each product's release PR)
 - [x] P8 cleanup and docs (2026-11-08; old names gone outside decisions and plans; owner settings listed in `docs/agents/release.md`)
-- [ ] Owner: environments, secrets, trusted publishers, tag rulesets, `ci / gate` required; then first releases in the order below
+- [ ] Owner: environments, secrets, trusted publishers, tag rulesets, `ci / result` required; then first releases in the order below
 
 ## Decisions
 

@@ -6,7 +6,7 @@ plan `docs/plans/active/2026-11-06-product-releases-0059.md`). All four products
 | Step | Who | How |
 |------|-----|-----|
 | 1. Bump PR | by hand | Raise the version in the product's version file, write the `## [X.Y.Z]` section in its `CHANGELOG.md`, move pins in docs that name the version |
-| 2. Check | automatic | `ci / gate` on the PR; `dotnet run --project build -- release <product> --dry-run` locally prints version, tag, notes source, artifacts, or one sentence naming the fix |
+| 2. Check | automatic | `ci / result` on the PR; `dotnet run --project build -- release <product> --dry-run` locally prints version, tag, notes source, artifacts, or one sentence naming the fix |
 | 3. Run | by hand | Actions, workflow `release`, input `product`, from `develop` (or `release/<product>/X.Y` for a hotfix) |
 | 4. Validate | automatic | `release <product> --dry-run` on the chosen commit; stops with the refusal sentence |
 | 5. Build | automatic | `release <product>`: tests, then the artifacts and `notes.md`, no secrets, uploaded as `release-<product>` |

@@ -84,7 +84,7 @@ here.
   four products (`daemon`, `addin`, `nettest`, `pytest`), each with its own version file,
   tag `<product>/vX.Y.Z`, changelog, and one `release.yml` run; the Daemon finds updates
   through a signed `channels.json`; PyTest lives in this repo; `ci.yml` has one
-  required check, `gate`; releases are cut from `develop`.
+  required check, `result`; releases are cut from `develop`.
   [0055](0055-product-version-wire-contracts-and-satellite-compatibility.md) is **Accepted**:
   compatibility is decided by per-protocol `Current`/`Min` ranges, not product
   versions; each checked message carries one `sender` (version and range),

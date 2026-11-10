@@ -16,20 +16,21 @@ namespace Build.Cli;
 public sealed class Targets
 {
     private static readonly string Root = Path.GetDirectoryName(Solutions.RevitDevTool.FullName)!;
-    private static readonly string StalePaths = $"{ProductPaths.FilterFile} is stale; run 'dotnet run --project build -- paths' and commit it.";
+    private static readonly string StalePaths = $"{ProductPaths.FilterFile} or {CiJobs.JobsFile} is stale; run 'dotnet run --project build -- paths' and commit them.";
 
-    /// <summary>Write or check .github/product-paths.yml.</summary>
-    /// <param name="check">Fail when the file is stale instead of writing it.</param>
+    /// <summary>Write or check .github/product-paths.yml and .github/ci-jobs.json.</summary>
+    /// <param name="check">Fail when a file is stale instead of writing it.</param>
     [Command("paths")]
-    public int Paths(bool check = false)
+    public async Task<int> Paths(bool check = false)
     {
         if (!check)
         {
             ProductPaths.Write(Root);
-            return Done($"Wrote {ProductPaths.FilterFile}.");
+            CiJobs.Write(Root, await ResolveConfigsModule.HostVersionsAsync(CancellationToken.None));
+            return Done($"Wrote {ProductPaths.FilterFile} and {CiJobs.JobsFile}.");
         }
 
-        return ProductPaths.IsCurrent(Root) ? Done($"{ProductPaths.FilterFile} is current.") : Fail(StalePaths);
+        return await PathsAreCurrentAsync() ? Done($"{ProductPaths.FilterFile} and {CiJobs.JobsFile} are current.") : Fail(StalePaths);
     }
 
     /// <summary>Compile; the add-in also collects each host version into output/hosts.</summary>
@@ -48,13 +49,13 @@ public sealed class Targets
 
     /// <summary>Check the path filters, print the bump warnings, run the tests.</summary>
     /// <param name="product">daemon, addin, nettest or pytest.</param>
-    /// <param name="base">The commit the bump warnings compare against.</param>
+    /// <param name="base">The commit the bump warnings compare against; in CI the base of the GitHub event.</param>
     [Command("test")]
     public Task<int> Test([Argument] Product product, string? @base = null) => RunStagesAsync(product, Stage.Test, @base);
 
     /// <summary>Compile, then test.</summary>
     /// <param name="product">daemon, addin, nettest or pytest.</param>
-    /// <param name="base">The commit the bump warnings compare against.</param>
+    /// <param name="base">The commit the bump warnings compare against; in CI the base of the GitHub event.</param>
     [Command("ci")]
     public Task<int> Ci([Argument] Product product, string? @base = null) => RunStagesAsync(product, Stage.Compile | Stage.Test, @base);
 
@@ -112,8 +113,8 @@ public sealed class Targets
     {
         if (stages.HasFlag(Stage.Test))
         {
-            if (!ProductPaths.IsCurrent(Root)) return Fail(StalePaths);
-            Warn(BumpWarnings.Collect(Root, product, @base));
+            if (!await PathsAreCurrentAsync()) return Fail(StalePaths);
+            Warn(BumpWarnings.Collect(Root, product, @base ?? GitHubEvent.BaseSha()));
         }
 
         var number = product == Product.Addin && stages == Stage.Pack
@@ -124,6 +125,9 @@ public sealed class Targets
         await ProductPipeline.RunAsync(new BuildRun(Root, product, stages, version, hostVersion));
         return 0;
     }
+
+    private static async Task<bool> PathsAreCurrentAsync() =>
+        ProductPaths.IsCurrent(Root) && CiJobs.IsCurrent(Root, await ResolveConfigsModule.HostVersionsAsync(CancellationToken.None));
 
     private static async Task<string> CompiledAddinVersionAsync()
     {

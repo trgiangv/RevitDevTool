@@ -48,7 +48,9 @@ through *Y*. Override `RevitVersionMinimal` / `AutoCadVersionMinimal`, or set
   | `addin tests` | `test addin` |
   | `Autodesk bundle` (push) | downloads every `addin-*` into `output/hosts`, then `pack addin` |
 
-  The host versions come from the `Release.Autodesk.*` build types in `RevitDevTool.slnx`. `release.yml` still runs `release addin` on one runner.
+  The `result` job fails when `changes` did not succeed or any job failed or was cancelled.
+
+  `build -- paths` writes the jobs of each product to `.github/ci-jobs.json` (host versions from the `Release.Autodesk.*` build types in `RevitDevTool.slnx`), and the test stage refuses a stale copy as it does `product-paths.yml`. `ci.yml` only looks up the changed products there. Each job keeps its own NuGet cache (`nuget-<cache>-<hash>`) and saves it on a push whose key is new. `test` and `ci` read the bump-warning base from the GitHub event when `--base` is not given. `release.yml` still runs `release addin` on one runner.
 - NUnit, TUnit, and MSTest host packaging builds those runtime projects with `Debug` or `Release`, not `*.Autodesk.YYYY`.
 - `CompileBaseModule` builds the first release configuration. `CompileExpandModule` builds the later years, still one at a time. Bundle creation waits for every year.
 - The add-in compile of `build/` sets `DeployAddin=false` and `PublishAddin=true`. `Revit.targets` and `AutoCad.targets` both read those two properties; each project imports only one of those files. The bundle zip is packed from `output/hosts`, so `build/` does not copy into `%AppData%\Autodesk\ApplicationPlugins\RevitDevTool.bundle`. A solution build of both hosts into that one folder races `RemoveDir` on `Contents\<year>` (`MSB3231`). Local host deploy stays `scripts/build-host.ps1`.
