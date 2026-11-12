@@ -1,6 +1,7 @@
+using System.Collections;
+using System.Reflection;
 using AcadDevTool.Adapters;
 using Autodesk.AutoCAD.Runtime;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AcadDevTool.Tests;
 
@@ -13,10 +14,9 @@ public sealed class AcadCommandDiscoveryTests
         List<string> names;
         try
         {
-            var discovery = new AcadCommandDiscovery(NullLogger<AcadCommandDiscovery>.Instance);
-            names = discovery.ParseCommands(typeof(DiscoveryCommands).Assembly.Location)
-                .Where(command => command.FullClassName.StartsWith(typeof(DiscoveryCommands).FullName!, StringComparison.Ordinal))
-                .Select(command => command.Name)
+            names = ParseCommands(typeof(DiscoveryCommands).Assembly.Location)
+                .Where(command => Read(command, "FullClassName").StartsWith(typeof(DiscoveryCommands).FullName!, StringComparison.Ordinal))
+                .Select(command => Read(command, "Name"))
                 .OrderBy(name => name, StringComparer.Ordinal)
                 .ToList();
         }
@@ -28,6 +28,18 @@ public sealed class AcadCommandDiscoveryTests
 
         CollectionAssert.AreEqual(new[] { "RDT_FLAGGED", "RDT_GROUPED", "RDT_LOCALIZED", "RDT_SIMPLE" }, names);
     }
+
+    private static IEnumerable<object> ParseCommands(string assemblyPath)
+    {
+        var ctor = typeof(AcadCommandDiscovery).GetConstructors(BindingFlags.Instance | BindingFlags.Public).Single();
+        var logger = AcadCompiledScriptBridgeTests.CreateNullLogger(ctor.GetParameters().Single().ParameterType);
+        var discovery = ctor.Invoke([logger]);
+        var parse = typeof(AcadCommandDiscovery).GetMethod(nameof(AcadCommandDiscovery.ParseCommands))!;
+        return ((IEnumerable)parse.Invoke(discovery, [assemblyPath])!).Cast<object>();
+    }
+
+    private static string Read(object command, string property) =>
+        (string)command.GetType().GetProperty(property)!.GetValue(command)!;
 }
 
 public sealed class DiscoveryCommands

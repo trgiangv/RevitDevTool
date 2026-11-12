@@ -99,7 +99,7 @@ public sealed class AcadCompiledScriptBridgeTests
         return Activator.CreateInstance(type)!;
     }
 
-    private static object CreateNullLogger(Type expectedLoggerType)
+    internal static object CreateNullLogger(Type expectedLoggerType)
     {
         var runnerType = expectedLoggerType.GetGenericArguments()[0];
         var nullLoggerOpen = expectedLoggerType.Assembly.GetType("Microsoft.Extensions.Logging.Abstractions.NullLogger`1")
