@@ -111,6 +111,15 @@ public static class LayerCommands
 `Trace` output appears in the RevitDevTool Trace panel on both hosts, so you can use the same logging in Revit and AutoCAD commands.
 :::
 
+The command tree lists a method when:
+
+- it is public, returns `void`, takes no parameters, and has `[CommandMethod]`. It may be static or instance;
+- its name is the global command name, also with the `(groupName, globalName, ...)` overloads;
+- it is declared on a concrete class, or inherited from an abstract one. A command on a concrete base class is listed once, under that class;
+- the assembly declares no `[assembly: CommandClass(typeof(...))]`, or names its class there. AutoCAD searches only those classes when the attribute is present.
+
+Discovery reads metadata against the host's own API folders, Civil 3D's `C3D` folder included. A type or method that references an assembly the host cannot resolve is skipped with a warning in the log; the other commands are still listed.
+
 ## Samples
 
 - [`CSharpDemo`](https://github.com/trgiangv/RevitDevTool/tree/main/samples/CSharpDemo): Revit commands that trace geometry for visualization

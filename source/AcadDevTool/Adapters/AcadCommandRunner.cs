@@ -72,7 +72,14 @@ public sealed class AcadCommandRunner(ILogger<AcadCommandRunner> logger, HostAss
         if (type == null)
             return ExecutionResult.Failed($"Type '{typeName}' not found in assembly.");
 
-        var method = type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static);
+        // Discovery only lists parameterless commands; binding on the empty signature keeps an overload of the same name
+        // from making the lookup ambiguous.
+        var method = type.GetMethod(
+            methodName,
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static,
+            binder: null,
+            Type.EmptyTypes,
+            modifiers: null);
         if (method == null)
             return ExecutionResult.Failed($"Method '{methodName}' not found on type '{typeName}'.");
 
