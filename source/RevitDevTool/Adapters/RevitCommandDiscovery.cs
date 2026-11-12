@@ -10,6 +10,14 @@ namespace RevitDevTool.Adapters;
 public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger) : ICommandDiscovery
 {
     private static readonly string CommandFullName = typeof(IExternalCommand).FullName!;
+    private static readonly Type[] ResolutionAnchors =
+    [
+        typeof(IExternalCommand),
+        typeof(System.Windows.Window),
+        typeof(System.Windows.Media.Visual),
+        typeof(System.Windows.DependencyObject),
+        typeof(RevitCommandDiscovery)
+    ];
 
     public List<CommandItem> ParseCommands(string assemblyPath)
     {
@@ -19,84 +27,36 @@ public sealed class RevitCommandDiscovery(ILogger<RevitCommandDiscovery> logger)
             return [];
         }
 
-        var commands = new List<CommandItem>();
-        try
-        {
-            using var session = MetadataAssemblySession.Create(assemblyPath, CollectAssemblyPaths(assemblyPath));
-            var assembly = session.LoadEntryAssembly();
+        var scan = new MetadataScan();
+        var commands = ReadCommands(scan, assemblyPath);
 
-            foreach (var type in GetMetadataTypes(assembly))
-            {
-                if (type.IsAbstract || type.IsInterface) continue;
-                if (!ImplementsInterface(type, CommandFullName)) continue;
-                commands.Add(new CommandItem(assemblyPath, type.FullName!));
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.ZLogError($"Failed to parse commands from '{assemblyPath}': {ex.Message}");
-        }
+        if (scan.Skipped.Count > 0)
+            logger.ZLogWarning($"{scan.Skipped.Count} type(s) skipped in '{assemblyPath}' (unresolved references). First: {scan.Skipped[0]}");
 
         return commands;
     }
 
-    private static HashSet<string> CollectAssemblyPaths(string assemblyPath)
-    {
-        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        AddDllsFromDirectory(paths, Path.GetDirectoryName(assemblyPath));
-        AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(IExternalCommand).Assembly.Location));
-        AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(object).Assembly.Location));
-        AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(System.Windows.Window).Assembly.Location));
-        AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(System.Windows.Media.Visual).Assembly.Location));
-        AddDllsFromDirectory(paths, Path.GetDirectoryName(typeof(System.Windows.DependencyObject).Assembly.Location));
-        AddDllsFromDirectory(paths, Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-
-        return paths;
-    }
-
-    private static void AddDllsFromDirectory(HashSet<string> paths, string? directory)
-    {
-        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory)) return;
-        try
-        {
-            foreach (var dll in Directory.GetFiles(directory, "*.dll"))
-                paths.Add(dll);
-        }
-        catch
-        {
-            // ignore errors scanning directories
-        }
-    }
-
-    private static List<Type> GetMetadataTypes(Assembly assembly)
+    private List<CommandItem> ReadCommands(MetadataScan scan, string assemblyPath)
     {
         try
         {
-            return [.. assembly.GetTypes()];
+            using var session = MetadataAssemblySession.Create(assemblyPath, MetadataResolutionPaths.Collect(assemblyPath, ResolutionAnchors));
+            return scan.GetTypes(session.LoadEntryAssembly())
+                .Where(type => IsCommand(scan, type))
+                .Select(type => new CommandItem(assemblyPath, type.FullName!))
+                .ToList();
         }
-        catch (ReflectionTypeLoadException ex)
+        catch (Exception ex)
         {
-            return ex.Types.Where(t => t != null).ToList()!;
+            logger.ZLogError($"Failed to parse commands from '{assemblyPath}': {ex.Message}");
+            return [];
         }
-        catch
-        {
-            var types = new List<Type>();
-            foreach (var typeInfo in assembly.DefinedTypes)
-            {
-                try
-                {
-                    var type = typeInfo.AsType();
-                    _ = type.BaseType;
-                    types.Add(type);
-                }
-                catch
-                {
-                    // skip types that fail to load
-                }
-            }
-            return types;
-        }
+    }
+
+    private static bool IsCommand(MetadataScan scan, Type type)
+    {
+        if (type.IsAbstract || type.IsInterface) return false;
+        return scan.TryRead(type.FullName!, () => ImplementsInterface(type, CommandFullName), out var isCommand) && isCommand;
     }
 
     private static bool ImplementsInterface(Type type, string interfaceFullName)

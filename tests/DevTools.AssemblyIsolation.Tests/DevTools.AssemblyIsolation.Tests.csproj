@@ -14,6 +14,7 @@
         <ProjectReference Include="Fixtures\PrivateAfterDisposeDependency\PrivateAfterDisposeDependency.csproj" ReferenceOutputAssembly="false" />
         <ProjectReference Include="Fixtures\SameSimpleNameV1\SameSimpleNameV1.csproj" ReferenceOutputAssembly="false" />
         <ProjectReference Include="Fixtures\SameSimpleNameV2\SameSimpleNameV2.csproj" ReferenceOutputAssembly="false" />
+        <ProjectReference Include="Fixtures\MissingReferenceConsumer\MissingReferenceConsumer.csproj" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>

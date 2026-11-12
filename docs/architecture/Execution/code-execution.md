@@ -36,6 +36,8 @@ flowchart LR
 | `Script` | `ScriptExecutionProvider` | Folder scan for `*script.py`, `*script.fsx`, `*script.csx`. |
 | `Assembly` | `AssemblyExecutionProvider` | `.dll` reflection. Host-specific `ICommandDiscovery`. |
 
+Command discovery reads metadata through `MetadataScan` (`DevTools.AssemblyIsolation.Metadata`). A type or method whose references do not resolve is skipped and logged as one warning; the other commands in the DLL are still listed. AutoCAD checks `[CommandMethod]` before the method signature and reads the name from its `globalName` argument. Both hosts build resolution paths with `MetadataResolutionPaths.Collect`: the DLL folder, the runtime, the folders of host API and WPF anchor types, and every assembly the host has loaded, so Civil 3D types resolve inside Civil 3D.
+
 `ScriptExecutionProvider` skips folders: `docs`, `resources`, `bin`, `obj`, `packages`, `node_modules`, `output`, caches, virtualenvs, and agent/tool folders.
 
 ---
