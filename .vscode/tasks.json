@@ -1,0 +1,329 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build: Revit 2022 (Debug)",
+      "detail": "Stop Revit 2022, build Debug.Autodesk.2022, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "Revit",
+        "-Year",
+        "2022",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: Revit 2023 (Debug)",
+      "detail": "Stop Revit 2023, build Debug.Autodesk.2023, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "Revit",
+        "-Year",
+        "2023",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: Revit 2024 (Debug)",
+      "detail": "Stop Revit 2024, build Debug.Autodesk.2024, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "Revit",
+        "-Year",
+        "2024",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: Revit 2025 (Debug)",
+      "detail": "Stop Revit 2025, build Debug.Autodesk.2025, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "Revit",
+        "-Year",
+        "2025",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: Revit 2026 (Debug)",
+      "detail": "Stop Revit 2026, build Debug.Autodesk.2026, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "Revit",
+        "-Year",
+        "2026",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: Revit 2027 (Debug)",
+      "detail": "Stop Revit 2027, build Debug.Autodesk.2027, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "Revit",
+        "-Year",
+        "2027",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: AutoCAD 2022 (Debug)",
+      "detail": "Stop AutoCAD 2022, build Debug.Autodesk.2022, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "AutoCAD",
+        "-Year",
+        "2022",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: AutoCAD 2023 (Debug)",
+      "detail": "Stop AutoCAD 2023, build Debug.Autodesk.2023, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "AutoCAD",
+        "-Year",
+        "2023",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: AutoCAD 2024 (Debug)",
+      "detail": "Stop AutoCAD 2024, build Debug.Autodesk.2024, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "AutoCAD",
+        "-Year",
+        "2024",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: AutoCAD 2025 (Debug)",
+      "detail": "Stop AutoCAD 2025, build Debug.Autodesk.2025, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "AutoCAD",
+        "-Year",
+        "2025",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: AutoCAD 2026 (Debug)",
+      "detail": "Stop AutoCAD 2026, build Debug.Autodesk.2026, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "AutoCAD",
+        "-Year",
+        "2026",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "build: AutoCAD 2027 (Debug)",
+      "detail": "Stop AutoCAD 2027, build Debug.Autodesk.2027, deploy the add-in",
+      "type": "process",
+      "command": "pwsh",
+      "args": [
+        "-NoProfile",
+        "-File",
+        "${workspaceFolder}/scripts/build-host.ps1",
+        "-HostApp",
+        "AutoCAD",
+        "-Year",
+        "2027",
+        "-Mode",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": "$msCompile",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    }
+  ]
+}

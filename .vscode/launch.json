@@ -2,12 +2,46 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Attach Host: NetFramework",
+      "type": "clr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "1. Attach",
+        "order": 1
+      }
+    },
+    {
+      "name": "Attach Host: NetCore",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "1. Attach",
+        "order": 2
+      }
+    },
+    {
       "name": "Attach Host: Python",
       "type": "debugpy",
       "request": "attach",
       "connect": {
         "host": "localhost",
         "port": 5678
+      },
+      "presentation": {
+        "group": "1. Attach",
+        "order": 11
       }
     },
     {
@@ -17,23 +51,593 @@
       "connect": {
         "host": "localhost",
         "port": 4567
+      },
+      "presentation": {
+        "group": "1. Attach",
+        "order": 12
       }
     },
     {
-      "name": "Attach Host: NetFramework",
+      "name": "Revit 2022",
       "type": "clr",
-      "request": "attach",
-      "processId": "${command:pickProcess}",
+      "request": "launch",
+      "preLaunchTask": "build: Revit 2022 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\Revit 2022\\Revit.exe",
+      "args": [],
+      "cwd": "C:\\Program Files\\Autodesk\\Revit 2022",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
       "justMyCode": true,
-      "requireExactSource": false
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "2. Revit",
+        "order": 2022
+      }
     },
     {
-      "name": "Attach Host: NetCore",
-      "type": "coreclr",
-      "request": "attach",
-      "processId": "${command:pickProcess}",
+      "name": "Revit 2023",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: Revit 2023 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\Revit 2023\\Revit.exe",
+      "args": [],
+      "cwd": "C:\\Program Files\\Autodesk\\Revit 2023",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
       "justMyCode": true,
-      "requireExactSource": false
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "2. Revit",
+        "order": 2023
+      }
+    },
+    {
+      "name": "Revit 2024",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: Revit 2024 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\Revit 2024\\Revit.exe",
+      "args": [],
+      "cwd": "C:\\Program Files\\Autodesk\\Revit 2024",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "2. Revit",
+        "order": 2024
+      }
+    },
+    {
+      "name": "Revit 2025",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: Revit 2025 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\Revit 2025\\Revit.exe",
+      "args": [],
+      "cwd": "C:\\Program Files\\Autodesk\\Revit 2025",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "2. Revit",
+        "order": 2025
+      }
+    },
+    {
+      "name": "Revit 2026",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: Revit 2026 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\Revit 2026\\Revit.exe",
+      "args": [],
+      "cwd": "C:\\Program Files\\Autodesk\\Revit 2026",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "2. Revit",
+        "order": 2026
+      }
+    },
+    {
+      "name": "Revit 2027",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: Revit 2027 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\Revit 2027\\Revit.exe",
+      "args": [],
+      "cwd": "C:\\Program Files\\Autodesk\\Revit 2027",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "2. Revit",
+        "order": 2027
+      }
+    },
+    {
+      "name": "AutoCAD 2022",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2022 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2022\\acad.exe",
+      "args": [
+        "/product",
+        "ACAD",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2022",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "3. AutoCAD",
+        "order": 2022
+      }
+    },
+    {
+      "name": "AutoCAD 2023",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2023 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2023\\acad.exe",
+      "args": [
+        "/product",
+        "ACAD",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2023",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "3. AutoCAD",
+        "order": 2023
+      }
+    },
+    {
+      "name": "AutoCAD 2024",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2024 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2024\\acad.exe",
+      "args": [
+        "/product",
+        "ACAD",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2024",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "3. AutoCAD",
+        "order": 2024
+      }
+    },
+    {
+      "name": "AutoCAD 2025",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2025 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2025\\acad.exe",
+      "args": [
+        "/product",
+        "ACAD",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2025",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "3. AutoCAD",
+        "order": 2025
+      }
+    },
+    {
+      "name": "AutoCAD 2026",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2026 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2026\\acad.exe",
+      "args": [
+        "/product",
+        "ACAD",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2026",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "3. AutoCAD",
+        "order": 2026
+      }
+    },
+    {
+      "name": "AutoCAD 2027",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2027 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2027\\acad.exe",
+      "args": [
+        "/product",
+        "ACAD",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2027",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "3. AutoCAD",
+        "order": 2027
+      }
+    },
+    {
+      "name": "Civil 3D 2022",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2022 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2022\\acad.exe",
+      "args": [
+        "/ld",
+        "C:\\Program Files\\Autodesk\\AutoCAD 2022\\AecBase.dbx",
+        "/product",
+        "C3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2022",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "4. Civil 3D",
+        "order": 2022
+      }
+    },
+    {
+      "name": "Civil 3D 2023",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2023 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2023\\acad.exe",
+      "args": [
+        "/ld",
+        "C:\\Program Files\\Autodesk\\AutoCAD 2023\\AecBase.dbx",
+        "/product",
+        "C3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2023",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "4. Civil 3D",
+        "order": 2023
+      }
+    },
+    {
+      "name": "Civil 3D 2024",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2024 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2024\\acad.exe",
+      "args": [
+        "/ld",
+        "C:\\Program Files\\Autodesk\\AutoCAD 2024\\AecBase.dbx",
+        "/product",
+        "C3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2024",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "4. Civil 3D",
+        "order": 2024
+      }
+    },
+    {
+      "name": "Civil 3D 2025",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2025 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2025\\acad.exe",
+      "args": [
+        "/ld",
+        "C:\\Program Files\\Autodesk\\AutoCAD 2025\\AecBase.dbx",
+        "/product",
+        "C3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2025",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "4. Civil 3D",
+        "order": 2025
+      }
+    },
+    {
+      "name": "Civil 3D 2026",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2026 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2026\\acad.exe",
+      "args": [
+        "/ld",
+        "C:\\Program Files\\Autodesk\\AutoCAD 2026\\AecBase.dbx",
+        "/product",
+        "C3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2026",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "4. Civil 3D",
+        "order": 2026
+      }
+    },
+    {
+      "name": "Civil 3D 2027",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2027 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2027\\acad.exe",
+      "args": [
+        "/ld",
+        "C:\\Program Files\\Autodesk\\AutoCAD 2027\\AecBase.dbx",
+        "/product",
+        "C3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2027",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "4. Civil 3D",
+        "order": 2027
+      }
+    },
+    {
+      "name": "Plant 3D 2022",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2022 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2022\\acad.exe",
+      "args": [
+        "/product",
+        "PLNT3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2022",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "5. Plant 3D",
+        "order": 2022
+      }
+    },
+    {
+      "name": "Plant 3D 2023",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2023 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2023\\acad.exe",
+      "args": [
+        "/product",
+        "PLNT3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2023",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "5. Plant 3D",
+        "order": 2023
+      }
+    },
+    {
+      "name": "Plant 3D 2024",
+      "type": "clr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2024 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2024\\acad.exe",
+      "args": [
+        "/product",
+        "PLNT3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2024",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "5. Plant 3D",
+        "order": 2024
+      }
+    },
+    {
+      "name": "Plant 3D 2025",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2025 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2025\\acad.exe",
+      "args": [
+        "/product",
+        "PLNT3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2025",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "5. Plant 3D",
+        "order": 2025
+      }
+    },
+    {
+      "name": "Plant 3D 2026",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2026 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2026\\acad.exe",
+      "args": [
+        "/product",
+        "PLNT3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2026",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "5. Plant 3D",
+        "order": 2026
+      }
+    },
+    {
+      "name": "Plant 3D 2027",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build: AutoCAD 2027 (Debug)",
+      "program": "C:\\Program Files\\Autodesk\\AutoCAD 2027\\acad.exe",
+      "args": [
+        "/product",
+        "PLNT3D",
+        "/language",
+        "en-US"
+      ],
+      "cwd": "C:\\Program Files\\Autodesk\\AutoCAD 2027",
+      "console": "externalTerminal",
+      "stopAtEntry": false,
+      "justMyCode": true,
+      "requireExactSource": false,
+      "symbolOptions": {
+        "searchMicrosoftSymbolServer": false
+      },
+      "presentation": {
+        "group": "5. Plant 3D",
+        "order": 2027
+      }
     }
   ]
 }

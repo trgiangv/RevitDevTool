@@ -113,7 +113,7 @@ difference from Visual Studio is that these IDEs allow Run while attached.
 | IDE | What to attach | How |
 |-----|----------------|-----|
 | **Rider** | Host PID (`Revit.exe` / `acad.exe`) | Rider Attach to Process — same PID pick as Visual Studio, then **Run** tests. No repo config file. |
-| **C# Dev Kit** (VS Code only) | Host PID | `.vscode/launch.json`: `Attach Host: NetFramework` (`clr`, Revit/AutoCAD 2022–2024 / net48) or `Attach Host: NetCore` (`coreclr`, 2025+). `${command:pickProcess}`. C# Dev Kit is not a VS Code-fork debugger. |
+| **C# Dev Kit** (VS Code only) | Host PID | `.vscode/launch.json`: `Attach Host: NetFramework` (`clr`, Revit/AutoCAD 2022–2024 / net48) or `Attach Host: NetCore` (`coreclr`, 2025+). `${command:pickProcess}`. Or start the host under the debugger: `{Revit\|AutoCAD\|Civil 3D\|Plant 3D} {2022–2027}` runs the `.vscode/tasks.json` task `build: {Revit\|AutoCAD} {year} (Debug)` (`scripts/build-host.ps1 -Mode Debug`) first. C# Dev Kit is not a VS Code-fork debugger. |
 | **VS Code and forks** (Cursor, …) | Python `debugpy` port | `.vscode/launch.json`: `Attach Host: Python` (`debugpy`, `localhost:5678`). Host already listens (`PythonDebugger`, preferred port 5678). CLR/`coreclr` attach does **not** debug Python locals. |
 | **PyCharm** (and Rider Python) | Python `debugpy` port | `.run/Attach.run.xml`: `Attach Host: Python` (`PythonDapAttachConfiguration`, `localhost:5678`). |
 
