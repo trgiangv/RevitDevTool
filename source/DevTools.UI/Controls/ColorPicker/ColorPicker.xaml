@@ -698,6 +698,7 @@
                                               BorderThickness="0"
                                               Focusable="False"
                                               IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                              IsHitTestVisible="False"
                                               Style="{x:Null}">
                                     <ToggleButton.Template>
                                         <ControlTemplate TargetType="ToggleButton">

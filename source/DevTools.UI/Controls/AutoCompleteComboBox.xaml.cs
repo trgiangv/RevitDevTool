@@ -25,11 +25,11 @@ public partial class AutoCompleteComboBox
     private Predicate<object>? _cachedFilter;
 
     [UsedImplicitly]
-    public System.Windows.Controls.TextBox? EditableTextBox
+    public TextBox? EditableTextBox
     {
         get
         {
-            field ??= FindDescendant(this, "PART_EditableTextBox") as System.Windows.Controls.TextBox;
+            field ??= FindDescendant(this, "PART_EditableTextBox") as TextBox;
             return field;
         }
     }
@@ -41,6 +41,15 @@ public partial class AutoCompleteComboBox
         _itemTextEvaluator ??= new BindingEvaluator<string>();
         _itemTextEvaluator.SetBinding(item, TextSearch.GetTextPath(this));
         return _itemTextEvaluator.Value ?? string.Empty;
+    }
+
+    public override void OnApplyTemplate()
+    {
+        base.OnApplyTemplate();
+        if (GetTemplateChild("PART_EditableTextBox") is TextBox textBox)
+        {
+            textBox.SetBinding(TextBoxBase.CaretBrushProperty, new Binding(nameof(Foreground)) { Source = this });
+        }
     }
 
     protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
@@ -67,7 +76,7 @@ public partial class AutoCompleteComboBox
 
     #region TextChanged / Filtering
 
-    private readonly struct TextBoxStateSaver(System.Windows.Controls.TextBox? textBox) : IDisposable
+    private readonly struct TextBoxStateSaver(TextBox? textBox) : IDisposable
     {
         private readonly int _selectionStart = textBox?.SelectionStart ?? 0;
         private readonly int _selectionLength = textBox?.SelectionLength ?? 0;
