@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [4.0.0-beta.9]
+
+### Fixed
+
+- AutoCAD and Civil 3D list the commands of a DLL that has WPF views. Before, such a DLL showed no commands.
+- A type or method whose references cannot be resolved no longer hides the other commands of the DLL. It is skipped,
+  and the host log names it.
+- An AutoCAD command declared with a group, such as `[CommandMethod("GROUP", "NAME", CommandFlags.Modal)]`, shows its
+  command name instead of the group name.
+
 ## [4.0.0-beta.8]
 
 ### Changed
