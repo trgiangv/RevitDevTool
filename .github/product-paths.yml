@@ -101,6 +101,7 @@ addin:
   - 'tests/DevTools.Mcp.Catalog.Tests/**'
   - 'tests/DevTools.ModelsContext.Tests.Shared/**'
   - 'tests/DevTools.ModelsContext.Tests/**'
+  - 'tests/DevTools.ModelsContext.Views.Tests/**'
   - 'tests/DevTools.NUnit.Host.NetFramework.Tests/**'
   - 'tests/DevTools.NUnit.Host.Spike.Fixtures/**'
   - 'tests/DevTools.NUnit.Host.Tests/**'

@@ -1,0 +1,34 @@
+<Project Sdk="MSTest.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net48;net8.0-windows;net10.0-windows</TargetFrameworks>
+        <UseWPF>true</UseWPF>
+        <IsPackable>false</IsPackable>
+        <NoWarn>$(NoWarn);CA1707</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(TargetFramework)' == 'net48'">
+        <TestingExtensionsProfile>None</TestingExtensionsProfile>
+        <EnableMicrosoftTestingExtensionsCodeCoverage>false</EnableMicrosoftTestingExtensionsCodeCoverage>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(TargetFramework)' != 'net48'">
+        <UseMicrosoftCodeCoverage>true</UseMicrosoftCodeCoverage>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FlaUI.UIA3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\DevTools.ModelsContext\DevTools.ModelsContext.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.ModelsContext.Views\DevTools.ModelsContext.Views.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.UI\DevTools.UI.csproj" />
+        <ProjectReference Include="..\DevTools.ModelsContext.Tests.Shared\DevTools.ModelsContext.Tests.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
+    </ItemGroup>
+
+</Project>

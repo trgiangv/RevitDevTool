@@ -1,0 +1,217 @@
+using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Tests.Shared;
+using DevTools.ModelsContext.ViewModels;
+using DevTools.ModelsContext.Views;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
+
+namespace DevTools.ModelsContext.Sandbox;
+
+internal enum SandboxSize
+{
+    Hundred,
+    Million
+}
+
+internal sealed class SandboxRun : IDisposable
+{
+    private readonly Dispatcher _dispatcher;
+
+    private SandboxRun(SandboxSize size, FakeModelData data, FakeModel model, ModelContextViewModel panel, Dispatcher dispatcher)
+    {
+        Size = size;
+        Data = data;
+        Model = model;
+        Panel = panel;
+        _dispatcher = dispatcher;
+    }
+
+    public SandboxSize Size { get; }
+
+    public FakeModelData Data { get; }
+
+    public FakeModel Model { get; }
+
+    public ModelContextViewModel Panel { get; }
+
+    public static FakeModelData BuildData(SandboxSize size)
+    {
+        if (size == SandboxSize.Hundred)
+        {
+            return FakeModelGenerator.Generate(new FakeModelOptions { CurrentElements = 100_000, LinkElements = 20_000 });
+        }
+
+        var data = FakeModelGenerator.Generate(new FakeModelOptions { CurrentElements = 300_000, LinkElements = 175_000 });
+        var fifth = new DocumentInfo(
+            DocumentKey.Link(FakeModelGenerator.ModelId, 9004),
+            FakeModelGenerator.MepSource,
+            "MEP-Mech.rvt",
+            true,
+            data.Documents[1].Capabilities);
+        return data with { Documents = [.. data.Documents, fifth] };
+    }
+
+    public static SandboxRun Create(SandboxSize size, TimeSpan delay, Dispatcher dispatcher)
+    {
+        var data = BuildData(size);
+        var model = new FakeModel(data);
+        var source = SlowSource.Wrap(model, () => delay);
+        var services = new ModelContextServices(source, model, model, model, model, model, model, new SystemClock(),
+            new DispatcherScheduler(dispatcher));
+        var panel = new ModelContextViewModel(services);
+        panel.ContextBar.Scope = ScopeKind.WholeModel;
+        return new SandboxRun(size, data, model, panel, dispatcher);
+    }
+
+    public static int CountContainers(DependencyObject node)
+    {
+        var count = node is ListBoxItem ? 1 : 0;
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(node); index++)
+        {
+            count += CountContainers(VisualTreeHelper.GetChild(node, index));
+        }
+
+        return count;
+    }
+
+    public async Task<IReadOnlyList<string>> MeasureAsync(ModelContextView view, Action<string> log)
+    {
+        var lines = new List<string>();
+        void Report(string text)
+        {
+            lines.Add(text);
+            log(text);
+        }
+
+        var stall = new StallMeter(_dispatcher);
+        stall.Start();
+        var tree = Panel.Tree;
+        var watch = Stopwatch.StartNew();
+        double? firstRows = null;
+        tree.Rows.CollectionChanged += (_, _) => firstRows ??= tree.Rows.Count > 0 ? watch.Elapsed.TotalMilliseconds : null;
+
+        await Panel.InitializeAsync(CancellationToken.None);
+        var rowsMs = firstRows ?? watch.Elapsed.TotalMilliseconds;
+        await Idle();
+        var renderedMs = watch.Elapsed.TotalMilliseconds;
+        Report($"first rows {rowsMs:F0} ms (rendered {renderedMs:F0} ms), rows {tree.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
+
+        watch.Restart();
+        Panel.ContextBar.Tick(Data.Documents.Select(document => document.Key));
+        await Panel.RefreshAsync();
+        await Idle();
+        Report($"all {Data.Documents.Count} documents ticked {watch.Elapsed.TotalMilliseconds:F0} ms, rows {tree.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
+
+        var type = await FindTypeAsync(tree);
+        stall.TakeMax();
+        watch.Restart();
+        await tree.ExpandAsync(type);
+        await Idle();
+        var expandMs = watch.Elapsed.TotalMilliseconds;
+        var shown = type.Children!.Count(child => child.Kind == TreeRowKind.Instance);
+        Report($"expand {shown} instances {expandMs:F0} ms, longest stall {stall.TakeMax():F0} ms");
+
+        var list = Find<DevTools.UI.Controls.FlatTreeList>(view);
+        Report($"realized row containers {CountContainers(list)} of {tree.Rows.Count} rows");
+        stall.Stop();
+        return lines;
+    }
+
+    public void Dispose()
+    {
+        Panel.Dispose();
+    }
+
+    private static T Find<T>(DependencyObject node)
+        where T : DependencyObject
+    {
+        return FindOrDefault<T>(node) ?? throw new InvalidOperationException(typeof(T).Name + " was not found.");
+    }
+    private static T? FindOrDefault<T>(DependencyObject node)
+        where T : DependencyObject
+    {
+        if (node is T match)
+        {
+            return match;
+        }
+
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(node); index++)
+        {
+            if (FindOrDefault<T>(VisualTreeHelper.GetChild(node, index)) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return default;
+    }
+
+    private async Task<TreeRow> FindTypeAsync(TreeTabViewModel tree)
+    {
+        var current = tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
+        foreach (var group in current.Children!.ToList())
+        {
+            await tree.ExpandAsync(group);
+            foreach (var family in group.Children!.ToList())
+            {
+                await tree.ExpandAsync(family);
+                var type = family.Children!.FirstOrDefault(child => child.Count >= TreeTabViewModel.InstancePageSize);
+                if (type is not null)
+                {
+                    return type;
+                }
+            }
+        }
+
+        throw new InvalidOperationException("No type with a full instance page.");
+    }
+
+    private Task Idle()
+    {
+        return _dispatcher.InvokeAsync(() => { }, DispatcherPriority.ContextIdle).Task;
+    }
+}
+
+internal sealed class StallMeter
+{
+    private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(10);
+    private readonly DispatcherTimer _timer;
+    private readonly Stopwatch _clock = new();
+    private double _last;
+    private double _max;
+
+    public StallMeter(Dispatcher dispatcher)
+    {
+        _timer = new DispatcherTimer(DispatcherPriority.Normal, dispatcher) { Interval = Interval };
+        _timer.Tick += (_, _) =>
+        {
+            var now = _clock.Elapsed.TotalMilliseconds;
+            _max = Math.Max(_max, now - _last - Interval.TotalMilliseconds);
+            _last = now;
+        };
+    }
+
+    public void Start()
+    {
+        _clock.Restart();
+        _last = 0;
+        _max = 0;
+        _timer.Start();
+    }
+
+    public void Stop()
+    {
+        _timer.Stop();
+    }
+
+    public double TakeMax()
+    {
+        var max = Math.Max(0, _max);
+        _max = 0;
+        _last = _clock.Elapsed.TotalMilliseconds;
+        return max;
+    }
+}

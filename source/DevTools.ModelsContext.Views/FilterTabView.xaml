@@ -1,0 +1,535 @@
+<UserControl x:Class="DevTools.ModelsContext.Views.FilterTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:model="clr-namespace:DevTools.ModelsContext.Model;assembly=DevTools.ModelsContext"
+             xmlns:views="clr-namespace:DevTools.ModelsContext.Views"
+             xmlns:vm="clr-namespace:DevTools.ModelsContext.ViewModels;assembly=DevTools.ModelsContext"
+             d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
+             d:DesignHeight="600"
+             d:DesignWidth="320"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DevTools.ModelsContext.Views;component/ModelContextResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <views:OperatorTextConverter x:Key="OperatorText" />
+
+            <Style x:Key="WhenReadOnly" TargetType="FrameworkElement">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Filter.IsReadOnly}" Value="True">
+                        <Setter Property="IsEnabled" Value="False" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="RuleGridStyle" TargetType="Grid">
+                <Setter Property="Margin" Value="0,2" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsReadOnly}" Value="True">
+                        <Setter Property="IsEnabled" Value="False" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="SourceIconStyle" TargetType="Path">
+                <Setter Property="Width" Value="12" />
+                <Setter Property="Height" Value="12" />
+                <Setter Property="Margin" Value="0,0,6,0" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Stretch" Value="Uniform" />
+                <Setter Property="Fill" Value="{DynamicResource PrimaryTextBrush}" />
+                <Setter Property="Data" Value="{StaticResource CustomFilter}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IconKey}" Value="Funnel">
+                        <Setter Property="Data" Value="{StaticResource Funnel}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IconKey}" Value="Cursor">
+                        <Setter Property="Data" Value="{StaticResource Cursor}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <DataTemplate x:Key="SourceTemplate" DataType="{x:Type vm:FilterSourceItem}">
+                <StackPanel Orientation="Horizontal">
+                    <Path Style="{StaticResource SourceIconStyle}" />
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                    <TextBlock x:Name="Dirty"
+                               Margin="4,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource PrimaryBrush}"
+                               Text="●"
+                               Visibility="Collapsed" />
+                    <TextBlock x:Name="InView"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"
+                               FontSize="10"
+                               Style="{StaticResource SecondaryText}"
+                               Text="in view"
+                               Visibility="Collapsed" />
+                </StackPanel>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding IsDirty}" Value="True">
+                        <Setter TargetName="Dirty" Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding InView}" Value="True">
+                        <Setter TargetName="InView" Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
+
+            <DataTemplate x:Key="OperatorTemplate">
+                <TextBlock Text="{Binding Converter={StaticResource OperatorText}}" TextTrimming="CharacterEllipsis" />
+            </DataTemplate>
+
+            <DataTemplate x:Key="ValueCountTemplate" DataType="{x:Type model:ValueCount}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Value}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1"
+                               Margin="8,0,0,0"
+                               Opacity="0.6"
+                               Text="{Binding Count, StringFormat=N0}" />
+                </Grid>
+            </DataTemplate>
+
+            <ItemsPanelTemplate x:Key="ValuesPanel">
+                <VirtualizingStackPanel IsVirtualizing="True" VirtualizationMode="Recycling" />
+            </ItemsPanelTemplate>
+
+
+
+            <DataTemplate x:Key="RootSetTemplate" DataType="{x:Type vm:RuleSetViewModel}">
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Width="104"
+                                  AutomationProperties.AutomationId="Filter.Set.Match"
+                                  SelectedValue="{Binding Match}"
+                                  SelectedValuePath="Tag">
+                            <ComboBoxItem Content="All (AND)" Tag="{x:Static model:SetMatch.All}" />
+                            <ComboBoxItem Content="Any (OR)" Tag="{x:Static model:SetMatch.Any}" />
+                        </ComboBox>
+                        <Button Grid.Column="2"
+                                hc:IconElement.Geometry="{StaticResource AddGeometry}"
+                                AutomationProperties.AutomationId="Filter.Rule.Add"
+                                Command="{Binding AddRuleCommand}"
+                                Style="{StaticResource PanelIconButton}"
+                                ToolTip="Add rule" />
+                        <Button Grid.Column="3"
+                                hc:IconElement.Geometry="{StaticResource Stack}"
+                                AutomationProperties.AutomationId="Filter.Set.Add"
+                                Command="{Binding AddSetCommand}"
+                                Style="{StaticResource PanelIconButton}"
+                                ToolTip="Add set" />
+                    </Grid>
+                    <ItemsControl Margin="0,4,0,0"
+                                  AutomationProperties.AutomationId="Filter.Rules"
+                                  ItemsSource="{Binding Children}" />
+                </StackPanel>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:RuleSetViewModel}">
+                <Border Margin="0,2"
+                        Padding="6,2,0,2"
+                        BorderBrush="{DynamicResource BorderBrush}"
+                        BorderThickness="2,0,0,0">
+                    <StackPanel>
+                        <Grid Style="{StaticResource RuleGridStyle}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox Width="104"
+                                      AutomationProperties.AutomationId="Filter.Set.Match"
+                                      SelectedValue="{Binding Match}"
+                                      SelectedValuePath="Tag">
+                                <ComboBoxItem Content="All (AND)" Tag="{x:Static model:SetMatch.All}" />
+                                <ComboBoxItem Content="Any (OR)" Tag="{x:Static model:SetMatch.Any}" />
+                            </ComboBox>
+                            <Button Grid.Column="2"
+                                    hc:IconElement.Geometry="{StaticResource AddGeometry}"
+                                    AutomationProperties.AutomationId="Filter.Rule.Add"
+                                    Command="{Binding AddRuleCommand}"
+                                    Style="{StaticResource PanelIconButton}"
+                                    ToolTip="Add rule" />
+                            <Button Grid.Column="3"
+                                    hc:IconElement.Geometry="{StaticResource Stack}"
+                                    AutomationProperties.AutomationId="Filter.Set.Add"
+                                    Command="{Binding AddSetCommand}"
+                                    Style="{StaticResource PanelIconButton}"
+                                    ToolTip="Add set" />
+                            <Button Grid.Column="4"
+                                    hc:IconElement.Geometry="{StaticResource RemoveGeometry}"
+                                    AutomationProperties.AutomationId="Filter.Set.Remove"
+                                    Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}"
+                                    Style="{StaticResource PanelIconButton}"
+                                    ToolTip="Remove set" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Children}" />
+                    </StackPanel>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:RuleViewModel}">
+                <Grid Style="{StaticResource RuleGridStyle}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox hc:InfoElement.Placeholder="Parameter"
+                                 AutomationProperties.AutomationId="Filter.Rule.Parameter"
+                                 Style="{StaticResource TextBoxExtend}"
+                                 Text="{Binding ParameterName, UpdateSourceTrigger=PropertyChanged}" />
+                        <ComboBox Grid.Column="1"
+                                  Width="84"
+                                  Margin="4,0,0,0"
+                                  AutomationProperties.AutomationId="Filter.Rule.Kind"
+                                  ItemsSource="{x:Static views:FilterTabView.ValueKinds}"
+                                  SelectedItem="{Binding Kind}" />
+                        <Button Grid.Column="2"
+                                hc:IconElement.Geometry="{StaticResource RemoveGeometry}"
+                                AutomationProperties.AutomationId="Filter.Rule.Remove"
+                                Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                Style="{StaticResource PanelIconButton}"
+                                ToolTip="Remove rule" />
+                    </Grid>
+                    <Grid Grid.Row="1" Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="132" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox AutomationProperties.AutomationId="Filter.Rule.Operator"
+                                  ItemTemplate="{StaticResource OperatorTemplate}"
+                                  ItemsSource="{Binding Operators}"
+                                  SelectedItem="{Binding Operator}" />
+                        <ComboBox x:Name="ValueBox"
+                                  Grid.Column="1"
+                                  Margin="4,0,0,0"
+                                  AutomationProperties.AutomationId="Filter.Rule.Value"
+                                  DropDownOpened="OnValuesOpened"
+                                  IsEditable="True"
+                                  ItemTemplate="{StaticResource ValueCountTemplate}"
+                                  ItemsPanel="{StaticResource ValuesPanel}"
+                                  ItemsSource="{Binding Values}"
+                                  MaxDropDownHeight="200"
+                                  Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                  TextSearch.TextPath="Value" />
+                    </Grid>
+                    <StackPanel Grid.Row="2"
+                                Margin="0,2,0,0"
+                                Orientation="Horizontal">
+                        <TextBlock x:Name="NoParameter"
+                                   FontSize="10"
+                                   Style="{StaticResource SecondaryText}"
+                                   Text="{Binding NoParameterCount, StringFormat='[No parameter] · {0:N0}'}" />
+                        <TextBlock x:Name="MoreValues"
+                                   Margin="8,0,0,0"
+                                   FontSize="10"
+                                   Style="{StaticResource SecondaryText}"
+                                   Text="more…"
+                                   Visibility="Collapsed" />
+                    </StackPanel>
+                </Grid>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding NeedsValue}" Value="False">
+                        <Setter TargetName="ValueBox" Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding NoParameterCount}" Value="0">
+                        <Setter TargetName="NoParameter" Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding HasMoreValues}" Value="True">
+                        <Setter TargetName="MoreValues" Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type vm:UnsupportedRuleViewModel}">
+                <TextBlock Margin="0,2"
+                           AutomationProperties.AutomationId="Filter.Rule.Unsupported"
+                           Foreground="{DynamicResource WarningBrush}"
+                           Text="{Binding Description, StringFormat='Unsupported rule: {0}'}"
+                           TextWrapping="Wrap" />
+            </DataTemplate>
+
+            <DataTemplate x:Key="CategoryTemplate" DataType="{x:Type vm:CategoryItemViewModel}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <CheckBox AutomationProperties.AutomationId="Filter.Category.Item"
+                              Content="{Binding Name}"
+                              IsChecked="{Binding IsChecked}" />
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Opacity="0.6"
+                               Text="{Binding Count, StringFormat=N0}" />
+                </Grid>
+            </DataTemplate>
+
+            <Style x:Key="BoxedNameStyle" TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Filter.NameError}" Value="{x:Null}">
+                        <Setter Property="BorderBrush" Value="Transparent" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="WhenEditingName" TargetType="StackPanel">
+                <Setter Property="Margin" Value="0,4,0,0" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Filter.IsEditingName}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="WhenSwitchPending" TargetType="Border">
+                <Setter Property="Margin" Value="0,4,0,0" />
+                <Setter Property="Padding" Value="6" />
+                <Setter Property="Background" Value="{DynamicResource SecondaryRegionBrush}" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Filter.IsSwitchPending}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="WhenReadOnlyRow" TargetType="StackPanel">
+                <Setter Property="Margin" Value="0,4,0,0" />
+                <Setter Property="Orientation" Value="Horizontal" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Filter.IsReadOnly}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Filter.SelectedSource}" Value="{x:Null}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="PausedText"
+                   BasedOn="{StaticResource SecondaryText}"
+                   TargetType="TextBlock">
+                <Setter Property="Text" Value="Live paused · use Select in Revit" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Filter.IsLivePaused}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="0,8,0,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="SourceBox"
+                          AutomationProperties.AutomationId="Filter.Source"
+                          ItemTemplate="{StaticResource SourceTemplate}"
+                          ItemsSource="{Binding Filter.Sources}"
+                          SelectedItem="{Binding Filter.SelectedSource}">
+                    <ComboBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <TextBlock Margin="4,4,0,2"
+                                               FontWeight="SemiBold"
+                                               Opacity="0.6"
+                                               Text="{Binding Name}" />
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ComboBox.GroupStyle>
+                </ComboBox>
+                <Button Grid.Column="1"
+                        Margin="4,0,0,0"
+                        hc:IconElement.Geometry="{StaticResource AddGeometry}"
+                        AutomationProperties.AutomationId="Filter.Add"
+                        Command="{Binding Filter.AddCommand}"
+                        Style="{StaticResource PanelIconButton}"
+                        ToolTip="New custom filter" />
+                <Button Grid.Column="2"
+                        hc:IconElement.Geometry="{StaticResource DeleteGeometry}"
+                        AutomationProperties.AutomationId="Filter.Delete"
+                        Command="{Binding Filter.DeleteCommand}"
+                        Style="{StaticResource PanelIconButton}"
+                        ToolTip="Delete custom filter" />
+                <Button Grid.Column="3"
+                        hc:IconElement.Geometry="{StaticResource SaveGeometry}"
+                        AutomationProperties.AutomationId="Filter.Save"
+                        Command="{Binding Filter.SaveCommand}"
+                        Style="{StaticResource PanelIconButton}"
+                        ToolTip="Save" />
+            </Grid>
+
+            <StackPanel Style="{StaticResource WhenEditingName}">
+                <Border Style="{StaticResource BoxedNameStyle}">
+                    <TextBox x:Name="NameBox"
+                             AutomationProperties.AutomationId="Filter.Name"
+                             IsVisibleChanged="OnNameVisibleChanged"
+                             LostKeyboardFocus="OnNameLostFocus"
+                             PreviewKeyDown="OnNameKeyDown"
+                             Text="{Binding Filter.EditName, UpdateSourceTrigger=PropertyChanged}" />
+                </Border>
+                <TextBlock AutomationProperties.AutomationId="Filter.NameError"
+                           Style="{StaticResource ErrorText}"
+                           Text="{Binding Filter.NameError}" />
+            </StackPanel>
+
+            <Border Style="{StaticResource WhenSwitchPending}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock VerticalAlignment="Center" Text="Unsaved changes" />
+                    <Button Margin="8,0,0,0"
+                            AutomationProperties.AutomationId="Filter.SaveSwitch"
+                            Command="{Binding Filter.SaveAndSwitchCommand}"
+                            Content="Save"
+                            Style="{StaticResource PanelLinkButton}" />
+                    <Button Margin="4,0,0,0"
+                            AutomationProperties.AutomationId="Filter.DiscardSwitch"
+                            Command="{Binding Filter.DiscardAndSwitchCommand}"
+                            Content="Discard"
+                            Style="{StaticResource PanelLinkButton}" />
+                    <Button Margin="4,0,0,0"
+                            AutomationProperties.AutomationId="Filter.CancelSwitch"
+                            Command="{Binding Filter.CancelSwitchCommand}"
+                            Content="Cancel"
+                            Style="{StaticResource PanelLinkButton}" />
+                </StackPanel>
+            </Border>
+
+            <StackPanel Style="{StaticResource WhenReadOnlyRow}">
+                <TextBlock VerticalAlignment="Center"
+                           Style="{StaticResource SecondaryText}"
+                           Text="Read only" />
+                <Button Margin="8,0,0,0"
+                        AutomationProperties.AutomationId="Filter.Duplicate"
+                        Command="{Binding Filter.DuplicateCommand}"
+                        Content="Duplicate"
+                        Style="{StaticResource PanelLinkButton}" />
+            </StackPanel>
+
+            <Expander Margin="0,8,0,0"
+                      HorizontalContentAlignment="Stretch"
+                      AutomationProperties.AutomationId="Filter.Categories"
+                      IsExpanded="False">
+                <Expander.Header>
+                    <TextBlock MaxWidth="240"
+                               Text="{Binding Filter.CategorySummary}"
+                               TextTrimming="CharacterEllipsis" />
+                </Expander.Header>
+                <StackPanel Margin="0,4,0,0" Style="{StaticResource WhenReadOnly}">
+                    <TextBox hc:InfoElement.Placeholder="Search categories"
+                             hc:InfoElement.ShowClearButton="True"
+                             AutomationProperties.AutomationId="Filter.CategorySearch"
+                             Style="{StaticResource TextBoxExtend}"
+                             Text="{Binding Filter.CategorySearch, UpdateSourceTrigger=PropertyChanged}" />
+                    <ListBox MaxHeight="160"
+                             Margin="0,4,0,0"
+                             AutomationProperties.AutomationId="Filter.CategoryList"
+                             ItemTemplate="{StaticResource CategoryTemplate}"
+                             ItemsSource="{Binding Filter.VisibleCategories}"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling" />
+                </StackPanel>
+            </Expander>
+
+            <ContentPresenter Margin="0,8,0,0"
+                              Content="{Binding Filter.Root}"
+                              ContentTemplate="{StaticResource RootSetTemplate}" />
+
+            <Border x:Name="ResultRow"
+                    Margin="0,8,0,0"
+                    Padding="8"
+                    AutomationProperties.AutomationId="Filter.Result"
+                    Background="{DynamicResource SecondaryRegionBrush}"
+                    ContextMenuOpening="OnResultMenuOpening"
+                    CornerRadius="4">
+                <Border.ContextMenu>
+                    <views:ModelContextMenu />
+                </Border.ContextMenu>
+                <StackPanel>
+                    <TextBlock AutomationProperties.AutomationId="Filter.ResultCount"
+                               FontWeight="SemiBold"
+                               Text="{Binding Filter.ResultText}" />
+                    <TextBlock Margin="0,2,0,0"
+                               AutomationProperties.AutomationId="Filter.Paused"
+                               Style="{StaticResource PausedText}" />
+                    <Grid Margin="0,6,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Width="84"
+                                  AutomationProperties.AutomationId="Filter.Mode"
+                                  SelectedValue="{Binding Filter.Mode}"
+                                  SelectedValuePath="Tag">
+                            <ComboBoxItem Content="New" Tag="{x:Static vm:ResultSelectionMode.New}" />
+                            <ComboBoxItem Content="Add" Tag="{x:Static vm:ResultSelectionMode.Add}" />
+                            <ComboBoxItem Content="Remove" Tag="{x:Static vm:ResultSelectionMode.Remove}" />
+                        </ComboBox>
+                        <TextBlock Grid.Column="2"
+                                   Margin="0,0,6,0"
+                                   VerticalAlignment="Center"
+                                   Text="Live" />
+                        <ToggleButton Grid.Column="3"
+                                      AutomationProperties.AutomationId="Filter.Live"
+                                      AutomationProperties.Name="Live"
+                                      IsChecked="{Binding Filter.IsLiveOn}"
+                                      Style="{StaticResource ToggleButtonSwitch.Small}" />
+                        <Button Grid.Column="4"
+                                Margin="8,0,0,0"
+                                hc:IconElement.Geometry="{StaticResource More}"
+                                AutomationProperties.AutomationId="Filter.Menu"
+                                Click="OnResultMenuClick"
+                                Style="{StaticResource PanelIconButton}"
+                                ToolTip="Actions" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

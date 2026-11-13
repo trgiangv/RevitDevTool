@@ -1,0 +1,116 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:hc="https://handyorg.github.io/handycontrol"
+                    xmlns:o="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    xmlns:views="clr-namespace:DevTools.ModelsContext.Views">
+
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <Geometry x:Key="Funnel" o:Freeze="True">M3,4 L21,4 L14,12.5 L14,19 L10,21 L10,12.5 Z</Geometry>
+    <Geometry x:Key="CustomFilter" o:Freeze="True">M3,17.25 L3,21 L6.75,21 L17.81,9.94 L14.06,6.19 Z M20.71,7.04 C21.1,6.65 21.1,6.02 20.71,5.63 L18.37,3.29 C17.98,2.9 17.35,2.9 16.96,3.29 L15.13,5.12 L18.88,8.87 Z</Geometry>
+    <Geometry x:Key="More" o:Freeze="True">M4,10 A2,2 0 1 1 4,14 A2,2 0 1 1 4,10 Z M12,10 A2,2 0 1 1 12,14 A2,2 0 1 1 12,10 Z M20,10 A2,2 0 1 1 20,14 A2,2 0 1 1 20,10 Z</Geometry>
+    <Geometry x:Key="Chevron" o:Freeze="True">M3,1 L10,7 L3,13 Z</Geometry>
+
+    <SolidColorBrush x:Key="HoverOverlayBrush"
+                     o:Freeze="True"
+                     Color="#22808080" />
+
+    <Style x:Key="PanelIconButton" TargetType="Button">
+        <Setter Property="Width" Value="24" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Back"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="4">
+                        <Path Width="14"
+                              Height="14"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"
+                              Data="{Binding Path=(hc:IconElement.Geometry), RelativeSource={RelativeSource TemplatedParent}}"
+                              Fill="{TemplateBinding Foreground}"
+                              Stretch="Uniform" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Back" Property="Background" Value="{StaticResource HoverOverlayBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="PanelLinkButton" TargetType="Button">
+        <Setter Property="Padding" Value="2,0" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}">
+                        <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Foreground" Value="{DynamicResource DarkPrimaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="PanelTextButton"
+           BasedOn="{StaticResource ButtonDefault}"
+           TargetType="Button">
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="Focusable" Value="False" />
+    </Style>
+
+    <Style x:Key="PanelPrimaryButton"
+           BasedOn="{StaticResource ButtonPrimary}"
+           TargetType="Button">
+        <Setter Property="Height" Value="24" />
+        <Setter Property="Padding" Value="10,0" />
+        <Setter Property="Focusable" Value="False" />
+    </Style>
+
+    <Style x:Key="SecondaryText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
+        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+
+    <Style x:Key="ErrorText" TargetType="TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Text}" Value="{x:Null}">
+                <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Text}" Value="">
+                <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+</ResourceDictionary>

@@ -226,8 +226,29 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   74/74 on net48, net8.0-windows and net10.0-windows; Tools builds for 2025.
 - [x] Phase 3a — shared controls (`SummaryCheckComboBox` fork, `FlatTreeList`,
   icons). Proof: `DevTools.HandyControl.Tests` 19/19 on all three TFMs.
-- [ ] Phase 3b — lifecycle and port gaps in the core (list under Decisions).
-- [ ] Phase 3c — views, Views.Tests, sandbox, performance numbers.
+- [x] Phase 3b — lifecycle, version rule, quick counts, port gaps. Proof:
+  `DevTools.ModelsContext.Tests` 94/94 on all three TFMs; 1M elements across 5
+  documents: generate 78 ms, build 181 ms, aggregate 91 ms, snapshot 57.7 MB
+  per million (Debug, net10.0-windows).
+- [x] Phase 3c — views, Views.Tests, sandbox. Proof: Views builds on all TFMs
+  with 0 warnings; `DevTools.ModelsContext.Views.Tests` 7/7 (net10, net48);
+  `Build.Tests` 119/119. Sandbox `--measure` (Debug, no host delay):
+
+  | Check | 100k, 3 links | 1M, 5 docs | Target |
+  |---|---|---|---|
+  | First rows | 78 ms (185 rendered) | 19 ms (142 rendered) | pass |
+  | Expand 200-instance page | 68 ms | 73–83 ms | miss (< 50) |
+  | Longest UI stall | 47 ms | 36 ms | pass, borderline |
+  | Realized containers | 29 | 29 | pass |
+  | Snapshot memory per million | 75.7 MB | 70.8 MB | miss (< 64) |
+
+- [ ] Phase 3d — close the two misses and the view gaps: expand without a
+  full-list reset or thread hop; snapshot memory under 64 MB per million (the
+  core test reports 57.7 MB from array sizes, the sandbox 70–76 MB from the
+  heap, so measure the same way first); a row Color command; precomputed
+  `Indent` and `CountText` on rows; hover highlight of affected rows; bind the
+  parameter catalog, busy text and pane visibility from Phase 3b; a tree menu
+  UI test through UIA; stronger stale-result test.
 - [ ] Phase 3 — controls, views, UI tests, sandbox, performance numbers.
 - [ ] Phase 4 — Revit adapter T0–T2, host tests, snapshot export.
 - [ ] Phase 5 — spike; T3 queue or no-go path.
@@ -258,6 +279,18 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   rule parameters; a pane-visibility hook that pauses and resyncs; stable row
   keys (document, level, group/family/type ids) so open branches survive a
   rebuild.
+- 2026-11-14 (Phase 3b): an unloaded link stays ticked with rows from the kept
+  snapshot and "not loaded" as the reason; quick counts are skipped in
+  Selection scope; the version check compares `VersionGUID` only; "too large"
+  means changed ids over 20% of the snapshot; changes while the pane is hidden
+  mark the snapshot dirty; a model switch keeps the selected filter but drops
+  its unsaved edits.
+- Open after Phase 3b, owned by Phase 4: the busy text comes from the adapter
+  (host name), not the core; an `IModelEvents` signal for parameter
+  definitions added or deleted refreshes the catalog; `GetHiddenIdsAsync`
+  returns ids hidden in the active view by permanent hide, temporary hide or
+  isolate, and the adapter documents which; the "stale result is dropped" test
+  is strengthened to fail without generation numbers.
 
 ## Validation
 

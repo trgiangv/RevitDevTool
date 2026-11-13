@@ -1,0 +1,48 @@
+<Window x:Class="DevTools.ModelsContext.Sandbox.SandboxWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Model Context Sandbox"
+        Width="320"
+        Height="800"
+        Background="{DynamicResource RegionBrush}"
+        Foreground="{DynamicResource PrimaryTextBrush}">
+
+    <Window.Resources>
+        <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+    </Window.Resources>
+
+    <DockPanel>
+        <WrapPanel Margin="8,8,8,0" DockPanel.Dock="Top">
+            <ComboBox x:Name="SizeBox"
+                      Width="136"
+                      Margin="0,0,4,4"
+                      AutomationProperties.AutomationId="Sandbox.Size"
+                      SelectedIndex="0"
+                      SelectionChanged="OnSettingChanged">
+                <ComboBoxItem Content="100k · 3 links" />
+                <ComboBoxItem Content="1M · 5 documents" />
+            </ComboBox>
+            <ComboBox x:Name="DelayBox"
+                      Width="72"
+                      Margin="0,0,4,4"
+                      AutomationProperties.AutomationId="Sandbox.Delay"
+                      SelectedIndex="0"
+                      SelectionChanged="OnSettingChanged">
+                <ComboBoxItem Content="0 ms" Tag="0" />
+                <ComboBoxItem Content="100 ms" Tag="100" />
+                <ComboBoxItem Content="500 ms" Tag="500" />
+            </ComboBox>
+            <ToggleButton x:Name="ThemeToggle"
+                          Margin="0,0,4,4"
+                          AutomationProperties.AutomationId="Sandbox.Theme"
+                          Checked="OnThemeChanged"
+                          Content="Dark"
+                          Unchecked="OnThemeChanged" />
+            <Button Margin="0,0,0,4"
+                    AutomationProperties.AutomationId="Sandbox.Reload"
+                    Click="OnReload"
+                    Content="Reload" />
+        </WrapPanel>
+        <ContentPresenter x:Name="Host" />
+    </DockPanel>
+</Window>

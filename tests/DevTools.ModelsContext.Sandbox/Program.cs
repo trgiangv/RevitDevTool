@@ -1,0 +1,73 @@
+using DevTools.ModelsContext.Tests.Shared;
+using System.Diagnostics;
+using System.Windows;
+
+namespace DevTools.ModelsContext.Sandbox;
+
+internal static class Program
+{
+    [STAThread]
+    private static int Main(string[] args)
+    {
+        PresentationTraceSources.Refresh();
+        PresentationTraceSources.DataBindingSource.Listeners.Add(new ConsoleTraceListener());
+        PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
+        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal));
+        var exitCode = 0;
+        if (args.Contains("--measure", StringComparer.Ordinal))
+        {
+            window.Loaded += async (_, _) => exitCode = await MeasureAsync(window, app);
+        }
+        else
+        {
+            app.ShutdownMode = ShutdownMode.OnMainWindowClose;
+        }
+
+        app.Run(window);
+        return exitCode;
+    }
+
+    private static async Task<int> MeasureAsync(SandboxWindow window, Application app)
+    {
+        try
+        {
+            await window.Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+            foreach (var size in new[] { SandboxSize.Hundred, SandboxSize.Million })
+            {
+                Console.WriteLine($"== {size}");
+                await window.MeasureAsync(size, Console.WriteLine);
+                MeasureSnapshotMemory(size);
+            }
+
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex);
+            return 1;
+        }
+        finally
+        {
+            app.Shutdown();
+        }
+    }
+
+    private static void MeasureSnapshotMemory(SandboxSize size)
+    {
+        var data = SandboxRun.BuildData(size);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        var before = GC.GetTotalMemory(true);
+        var snapshots = data.Sources.Values.Select(source => FakeModelGenerator.BuildSnapshot(source)).ToList();
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        var after = GC.GetTotalMemory(true);
+        var elements = snapshots.Sum(snapshot => (long)snapshot.ElementCount);
+        var megabytes = (after - before) / 1024d / 1024d;
+        Console.WriteLine($"snapshot memory {megabytes:F1} MB for {elements:N0} elements = {megabytes / elements * 1_000_000:F1} MB per million");
+        GC.KeepAlive(snapshots);
+    }
+}

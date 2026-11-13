@@ -1,0 +1,36 @@
+<Window x:Class="DevTools.ModelsContext.Views.ColorPickDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
+        Title="Color"
+        AutomationProperties.AutomationId="ColorDialog"
+        Background="{DynamicResource RegionBrush}"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterOwner">
+
+    <Window.Resources>
+        <ResourceDictionary Source="/DevTools.ModelsContext.Views;component/ModelContextResources.xaml" />
+    </Window.Resources>
+
+    <StackPanel Margin="12">
+        <c:ColorPicker x:Name="Picker"
+                       Width="240"
+                       AutomationProperties.AutomationId="ColorDialog.Picker" />
+        <StackPanel Margin="0,12,0,0"
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal">
+            <Button AutomationProperties.AutomationId="ColorDialog.Ok"
+                    Click="OnOk"
+                    Content="OK"
+                    IsDefault="True"
+                    Style="{StaticResource PanelPrimaryButton}" />
+            <Button Margin="4,0,0,0"
+                    AutomationProperties.AutomationId="ColorDialog.Cancel"
+                    Content="Cancel"
+                    IsCancel="True"
+                    Style="{StaticResource PanelTextButton}" />
+        </StackPanel>
+    </StackPanel>
+</Window>
