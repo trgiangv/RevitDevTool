@@ -52,20 +52,21 @@ public static class ElementSearcher
         return byDoc.Count == 0 ? [] : BuildMatches(byDoc);
     }
 
-    private static Dictionary<Document, DocBucket> GroupByDocument(
+    private static Dictionary<ElementId, DocBucket> GroupByDocument(
         Document hostDocument,
         IReadOnlyList<TokenParser.ParsedToken> parsed)
     {
-        var byDoc = new Dictionary<Document, DocBucket>();
+        var byDoc = new Dictionary<ElementId, DocBucket>();
         foreach (var token in parsed)
         {
             if (!TryResolveDocument(hostDocument, token.LinkInstanceId, out var targetDoc, out var linkInstance))
                 continue;
 
-            if (!byDoc.TryGetValue(targetDoc, out var bucket))
+            var key = linkInstance?.Id ?? ElementId.InvalidElementId;
+            if (!byDoc.TryGetValue(key, out var bucket))
             {
-                bucket = new DocBucket(linkInstance);
-                byDoc[targetDoc] = bucket;
+                bucket = new DocBucket(targetDoc, linkInstance);
+                byDoc[key] = bucket;
             }
 
             bucket.Add(token.Kind, token.Value);
@@ -74,12 +75,12 @@ public static class ElementSearcher
         return byDoc;
     }
 
-    private static List<SearchMatch> BuildMatches(Dictionary<Document, DocBucket> byDoc)
+    private static List<SearchMatch> BuildMatches(Dictionary<ElementId, DocBucket> byDoc)
     {
         var matches = new List<SearchMatch>(byDoc.Count);
-        foreach (var (document, bucket) in byDoc)
+        foreach (var bucket in byDoc.Values)
         {
-            var ids = ResolveBucket(document, bucket);
+            var ids = ResolveBucket(bucket.Document, bucket);
             if (ids.Count == 0)
                 continue;
 
@@ -116,8 +117,9 @@ public static class ElementSearcher
         return ids;
     }
 
-    private sealed class DocBucket(RevitLinkInstance? linkInstance)
+    private sealed class DocBucket(Document document, RevitLinkInstance? linkInstance)
     {
+        public Document Document { get; } = document;
         public RevitLinkInstance? LinkInstance { get; } = linkInstance;
         public HashSet<string> ElementIds { get; } = new(StringComparer.Ordinal);
         public HashSet<string> UniqueIds { get; } = new(StringComparer.Ordinal);
