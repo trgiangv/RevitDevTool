@@ -419,7 +419,9 @@ The rest of this section describes the Revit adapter.
 - Nothing from the Revit API crosses threads: only `long`, `int`, `string` and
   plain structs.
 - One cancellation source per (scope, ticked documents); any change cancels it.
-- Debounce uses `DispatcherTimer` stop/start, the pattern already in the repo.
+- Debounce lives in the core (`Debouncer` on `IClock` and `IScheduler`); the
+  WPF side implements `IScheduler` with `DispatcherTimer` stop/start, the
+  pattern already in the repo.
 
 **Document snapshot** (plain data, no Revit objects):
 

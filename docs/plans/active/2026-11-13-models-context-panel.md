@@ -201,7 +201,9 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   Proof: new projects build on all TFMs; Tools builds for 2023 and 2025;
   `DevTools.ModelsContext.Tests` 1/1 on net10.0-windows and net48;
   `Build.Tests` 119/119.
-- [ ] Phase 1 — core model, engine, fake model, tests.
+- [x] Phase 1 — core model, engine, fake model, tests. Proof: core builds on
+  all TFMs with 0 warnings; `DevTools.ModelsContext.Tests` 34/34 on net48,
+  net8.0-windows and net10.0-windows; Tools builds for 2025.
 - [ ] Phase 2 — view models and tests.
 - [ ] Phase 3 — controls, views, UI tests, sandbox, performance numbers.
 - [ ] Phase 4 — Revit adapter T0–T2, host tests, snapshot export.
@@ -215,6 +217,13 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   core tests do not load WPF.
 - 2026-11-13: Revit 2023+, assuming the latest update; two link hints need
   2024.
+- 2026-11-13 (Phase 1): groups are `long GroupId` everywhere; All models rows
+  carry the Current model `DocumentKey`; a type that changes group or family
+  marks the snapshot dirty instead of moving counts; the planner returns no
+  partial plans (any disabled target disables the plan with its reason);
+  `SelectionGuard` records expire after 2 s on `IClock`; rule values are text
+  and the adapter parses units; `SnapshotStore` shares one snapshot per
+  `SourceId`.
 
 ## Validation
 
