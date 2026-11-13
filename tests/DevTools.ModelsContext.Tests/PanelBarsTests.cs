@@ -65,7 +65,7 @@ public sealed class PanelBarsTests
 
         fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
 
-        Assert.IsFalse(fixture.Panel.ContextMenu[MenuAction.SelectInRevit].IsVisible);
+        Assert.IsFalse(fixture.Panel.ContextMenu[MenuAction.SelectInHost].IsVisible);
     }
 
     [TestMethod]
@@ -76,7 +76,7 @@ public sealed class PanelBarsTests
 
         fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
 
-        Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.SelectInRevit].IsVisible);
+        Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.SelectInHost].IsVisible);
     }
 
     [TestMethod]

@@ -25,16 +25,43 @@ public sealed class TreeTabTests
     }
 
     [TestMethod]
-    public async Task ExpandRaisesOneReset()
+    public async Task SmallExpandRaisesItemAdds()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var ducts = fixture.Group(Current, "Ducts");
-        var events = new List<NotifyCollectionChangedAction>();
-        fixture.Tree.Rows.CollectionChanged += (_, args) => events.Add(args.Action);
+        var events = new List<NotifyCollectionChangedEventArgs>();
+        fixture.Tree.Rows.CollectionChanged += (_, args) => events.Add(args);
 
         await fixture.Tree.ExpandAsync(ducts);
 
+        Assert.HasCount(ducts.Children!.Count, events);
+        Assert.IsTrue(events.All(args => args.Action == NotifyCollectionChangedAction.Add && args.NewItems!.Count == 1));
+        var index = fixture.Tree.Rows.IndexOf(ducts);
+        CollectionAssert.AreEqual(Enumerable.Range(index + 1, ducts.Children!.Count).ToList(),
+            events.Select(args => args.NewStartingIndex).ToList());
+    }
+
+    [TestMethod]
+    public void LargeInsertRaisesOneReset()
+    {
+        var rows = new RangeObservableCollection<int> { 1, 2 };
+        var events = new List<NotifyCollectionChangedAction>();
+        rows.CollectionChanged += (_, args) => events.Add(args.Action);
+
+        rows.InsertRange(1, Enumerable.Range(10, RangeObservableCollection<int>.ItemEventLimit + 1));
+
         CollectionAssert.AreEqual(new[] { NotifyCollectionChangedAction.Reset }, events);
+        Assert.HasCount(RangeObservableCollection<int>.ItemEventLimit + 3, rows);
+    }
+
+    [TestMethod]
+    public void SmallReplaceKeepsOrder()
+    {
+        var rows = new RangeObservableCollection<int> { 1, 2, 3, 4 };
+
+        rows.ReplaceRange(1, 2, [7, 8, 9]);
+
+        CollectionAssert.AreEqual(new[] { 1, 7, 8, 9, 4 }, rows.ToList());
     }
 
     [TestMethod]
@@ -136,6 +163,73 @@ public sealed class TreeTabTests
         await fixture.Tree.ToggleEyeCommand.ExecuteAsync(row);
 
         Assert.AreEqual(RowEye.HiddenByAllModels, fixture.Group(Current, "Ducts").Eye);
+    }
+
+    [TestMethod]
+    public async Task EyeHoverHighlightsBranch()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+        await fixture.Tree.ExpandAsync(ducts);
+        var walls = fixture.Group(Current, "Walls");
+
+        fixture.Tree.HighlightEyeTargets(ducts);
+        var lit = fixture.Tree.Rows.Where(row => row.IsHighlighted).ToList();
+        fixture.Tree.ClearHighlight();
+
+        CollectionAssert.AreEquivalent(ducts.Children!.Prepend(ducts).ToList(), lit);
+        Assert.IsFalse(walls.IsHighlighted);
+        Assert.IsFalse(fixture.Tree.Rows.Any(row => row.IsHighlighted));
+    }
+
+    [TestMethod]
+    public async Task AllModelsHoverLightsGroups()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var row = fixture.Tree.Rows.First(row => row.Kind == TreeRowKind.AllModelsGroup && row.Text == "Ducts");
+
+        fixture.Tree.HighlightEyeTargets(row);
+
+        Assert.IsTrue(row.IsHighlighted);
+        Assert.IsTrue(fixture.Group(Current, "Ducts").IsHighlighted);
+        Assert.IsFalse(fixture.Group(Current, "Walls").IsHighlighted);
+    }
+
+    [TestMethod]
+    public async Task RowColorRunsColorPlan()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        await fixture.Tree.ColorCommand.ExecuteAsync(new RowColor(fixture.Group(Current, "Ducts"), new RgbColor(255, 0, 0)));
+
+        var plan = fixture.Model.ExecutedPlans.Single();
+        Assert.AreEqual(VisibilityAction.Color, plan.Action);
+        Assert.AreEqual(new RgbColor(255, 0, 0), plan.Color);
+    }
+
+    [TestMethod]
+    public async Task MenuColorAsksThenApplies()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var menu = fixture.Panel.ContextMenu;
+        var requested = 0;
+        menu.ColorRequested += (_, _) => requested++;
+        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+
+        await menu[MenuAction.Color].Command.ExecuteAsync(null);
+        await menu.ApplyColorCommand.ExecuteAsync(new RgbColor(0, 0, 255));
+
+        Assert.AreEqual(1, requested);
+        Assert.AreEqual(new RgbColor(0, 0, 255), fixture.Model.ExecutedPlans.Single().Color);
+    }
+
+    [TestMethod]
+    public async Task RowsCarryIndentAndCount()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+
+        Assert.AreEqual(ducts.Level * TreeRow.IndentPerLevel, ducts.Indent);
+        Assert.AreEqual(ducts.Count.ToString("N0", System.Globalization.CultureInfo.CurrentCulture), ducts.CountText);
     }
 
     private static readonly Lazy<FakeModelData> Large = new(() => FakeModelGenerator.Generate(new FakeModelOptions

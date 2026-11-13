@@ -61,6 +61,8 @@ internal sealed class PanelRuntime
 
     public bool IsBusy { get; set; }
 
+    public string BusyText => VisibilityReasons.HostBusy(Services.Source.HostName);
+
     public event EventHandler<string>? Failed;
 
     public Task<IReadOnlyList<ParameterInfo>> ParametersAsync(SourceId source, CancellationToken cancellationToken)
@@ -75,6 +77,14 @@ internal sealed class PanelRuntime
             task = Services.Source.GetParameterCatalogAsync(source, cancellationToken);
             _parameters[source] = task;
             return task;
+        }
+    }
+
+    public void ForgetParameters(SourceId source)
+    {
+        lock (_parameters)
+        {
+            _parameters.Remove(source);
         }
     }
 

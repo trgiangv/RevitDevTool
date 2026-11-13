@@ -1,11 +1,11 @@
-<UserControl x:Class="DevTools.ModelsContext.Views.FilterTabView"
+<UserControl x:Class="DevTools.Presentation.Views.ModelsContext.FilterTabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:model="clr-namespace:DevTools.ModelsContext.Model;assembly=DevTools.ModelsContext"
-             xmlns:views="clr-namespace:DevTools.ModelsContext.Views"
+             xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext"
              xmlns:vm="clr-namespace:DevTools.ModelsContext.ViewModels;assembly=DevTools.ModelsContext"
              d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
              d:DesignHeight="600"
@@ -15,7 +15,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/DevTools.ModelsContext.Views;component/ModelContextResources.xaml" />
+                <views:ModelContextResources />
             </ResourceDictionary.MergedDictionaries>
 
             <views:OperatorTextConverter x:Key="OperatorText" />
@@ -127,13 +127,13 @@
                                 hc:IconElement.Geometry="{StaticResource AddGeometry}"
                                 AutomationProperties.AutomationId="Filter.Rule.Add"
                                 Command="{Binding AddRuleCommand}"
-                                Style="{StaticResource PanelIconButton}"
+                                Style="{StaticResource ButtonIcon.Small}"
                                 ToolTip="Add rule" />
                         <Button Grid.Column="3"
                                 hc:IconElement.Geometry="{StaticResource Stack}"
                                 AutomationProperties.AutomationId="Filter.Set.Add"
                                 Command="{Binding AddSetCommand}"
-                                Style="{StaticResource PanelIconButton}"
+                                Style="{StaticResource ButtonIcon.Small}"
                                 ToolTip="Add set" />
                     </Grid>
                     <ItemsControl Margin="0,4,0,0"
@@ -167,20 +167,20 @@
                                     hc:IconElement.Geometry="{StaticResource AddGeometry}"
                                     AutomationProperties.AutomationId="Filter.Rule.Add"
                                     Command="{Binding AddRuleCommand}"
-                                    Style="{StaticResource PanelIconButton}"
+                                    Style="{StaticResource ButtonIcon.Small}"
                                     ToolTip="Add rule" />
                             <Button Grid.Column="3"
                                     hc:IconElement.Geometry="{StaticResource Stack}"
                                     AutomationProperties.AutomationId="Filter.Set.Add"
                                     Command="{Binding AddSetCommand}"
-                                    Style="{StaticResource PanelIconButton}"
+                                    Style="{StaticResource ButtonIcon.Small}"
                                     ToolTip="Add set" />
                             <Button Grid.Column="4"
                                     hc:IconElement.Geometry="{StaticResource RemoveGeometry}"
                                     AutomationProperties.AutomationId="Filter.Set.Remove"
                                     Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                     CommandParameter="{Binding}"
-                                    Style="{StaticResource PanelIconButton}"
+                                    Style="{StaticResource ButtonIcon.Small}"
                                     ToolTip="Remove set" />
                         </Grid>
                         <ItemsControl ItemsSource="{Binding Children}" />
@@ -201,10 +201,17 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox hc:InfoElement.Placeholder="Parameter"
-                                 AutomationProperties.AutomationId="Filter.Rule.Parameter"
-                                 Style="{StaticResource TextBoxExtend}"
-                                 Text="{Binding ParameterName, UpdateSourceTrigger=PropertyChanged}" />
+                        <ComboBox hc:InfoElement.Placeholder="Parameter"
+                                  AutomationProperties.AutomationId="Filter.Rule.Parameter"
+                                  DisplayMemberPath="DisplayName"
+                                  IsEditable="True"
+                                  ItemsPanel="{StaticResource ValuesPanel}"
+                                  ItemsSource="{Binding Parameters}"
+                                  MaxDropDownHeight="200"
+                                  SelectedItem="{Binding SelectedParameter}"
+                                  Style="{StaticResource ComboBoxExtend}"
+                                  Text="{Binding ParameterName, UpdateSourceTrigger=PropertyChanged}"
+                                  TextSearch.TextPath="DisplayName" />
                         <ComboBox Grid.Column="1"
                                   Width="84"
                                   Margin="4,0,0,0"
@@ -216,7 +223,7 @@
                                 AutomationProperties.AutomationId="Filter.Rule.Remove"
                                 Command="{Binding DataContext.RemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                 CommandParameter="{Binding}"
-                                Style="{StaticResource PanelIconButton}"
+                                Style="{StaticResource ButtonIcon.Small}"
                                 ToolTip="Remove rule" />
                     </Grid>
                     <Grid Grid.Row="1" Margin="0,4,0,0">
@@ -344,7 +351,7 @@
             <Style x:Key="PausedText"
                    BasedOn="{StaticResource SecondaryText}"
                    TargetType="TextBlock">
-                <Setter Property="Text" Value="Live paused · use Select in Revit" />
+                <Setter Property="Text" Value="{Binding Filter.LivePausedText}" />
                 <Setter Property="Visibility" Value="Collapsed" />
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding Filter.IsLivePaused}" Value="True">
@@ -387,19 +394,19 @@
                         hc:IconElement.Geometry="{StaticResource AddGeometry}"
                         AutomationProperties.AutomationId="Filter.Add"
                         Command="{Binding Filter.AddCommand}"
-                        Style="{StaticResource PanelIconButton}"
+                        Style="{StaticResource ButtonIcon.Small}"
                         ToolTip="New custom filter" />
                 <Button Grid.Column="2"
                         hc:IconElement.Geometry="{StaticResource DeleteGeometry}"
                         AutomationProperties.AutomationId="Filter.Delete"
                         Command="{Binding Filter.DeleteCommand}"
-                        Style="{StaticResource PanelIconButton}"
+                        Style="{StaticResource ButtonIcon.Small}"
                         ToolTip="Delete custom filter" />
                 <Button Grid.Column="3"
                         hc:IconElement.Geometry="{StaticResource SaveGeometry}"
                         AutomationProperties.AutomationId="Filter.Save"
                         Command="{Binding Filter.SaveCommand}"
-                        Style="{StaticResource PanelIconButton}"
+                        Style="{StaticResource ButtonIcon.Small}"
                         ToolTip="Save" />
             </Grid>
 
@@ -525,7 +532,7 @@
                                 hc:IconElement.Geometry="{StaticResource More}"
                                 AutomationProperties.AutomationId="Filter.Menu"
                                 Click="OnResultMenuClick"
-                                Style="{StaticResource PanelIconButton}"
+                                Style="{StaticResource ButtonIcon.Small}"
                                 ToolTip="Actions" />
                     </Grid>
                 </StackPanel>

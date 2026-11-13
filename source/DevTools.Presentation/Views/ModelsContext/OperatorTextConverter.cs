@@ -2,7 +2,7 @@ using DevTools.ModelsContext.Model;
 using System.Globalization;
 using System.Windows.Data;
 
-namespace DevTools.ModelsContext.Views;
+namespace DevTools.Presentation.Views.ModelsContext;
 
 public sealed class OperatorTextConverter : IValueConverter
 {

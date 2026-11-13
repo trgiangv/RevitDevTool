@@ -1,5 +1,7 @@
 using DevTools.ModelsContext.Tests.Shared;
+using DevTools.Presentation.Views.ModelsContext;
 using FlaUI.Core.Definitions;
+using FlaUI.Core.Tools;
 using System.Windows.Controls;
 
 namespace DevTools.ModelsContext.Views.Tests;
@@ -73,8 +75,54 @@ public sealed class PanelViewTests
             Assert.IsNotNull(ui.Host.FindInMenu(menu, "Menu." + id), id + " is missing.");
         }
 
-        Assert.IsNull(ui.Host.TryFindInMenu(menu, "Menu.SelectInRevit"), "Select in Revit shows while Live is on.");
+        Assert.IsNull(ui.Host.TryFindInMenu(menu, "Menu.SelectInHost"), "Select in host shows while Live is on.");
         Assert.IsNull(ui.Host.TryFindInMenu(menu, "Menu.ResetView"), "Reset view shows outside temporary mode.");
+    }
+
+    [TestMethod]
+    public void RowMenuListsActions()
+    {
+        using var ui = PanelUi.Open();
+        ui.Collapse("All models");
+        var menu = WpfSta.Invoke(() =>
+        {
+            var tabs = (TabControl)ui.View.FindName("Tabs");
+            var tree = (TreeTabView)((TabItem)tabs.Items[0]).Content;
+            return ((Control)tree.FindName("RowList")).ContextMenu!;
+        });
+        var row = ui.Host.Row("Ducts");
+
+        row.Patterns.SelectionItem.Pattern.Select();
+        ui.PressIn(row, "Tree.Row.Menu");
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => menu.IsOpen), "The row menu did not open.");
+        foreach (var id in new[] { "Zoom", "SectionBox", "Isolate", "HideShow", "Halftone", "Color" })
+        {
+            Assert.IsNotNull(ui.Host.FindInMenu(menu, "Menu." + id), id + " is missing.");
+        }
+    }
+
+    [TestMethod]
+    public void RowColorOpensPicker()
+    {
+        using var ui = PanelUi.Open();
+        ui.Collapse("All models");
+        var picker = WpfSta.Invoke(() => (DevTools.UI.Controls.ColorPicker)ui.View.FindName("ColorPicker"));
+        var row = ui.Host.Row("Ducts");
+
+        row.Patterns.SelectionItem.Pattern.Select();
+        ui.PressIn(row, "Tree.Row.Color");
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => picker.IsDropDownOpen), "The color picker did not open.");
+        var popup = WpfSta.Invoke(() => (System.Windows.Controls.Primitives.Popup)picker.Template.FindName("PART_Popup", picker));
+        var palette = ui.Host.FindInPopup(popup, "ColorPickerStandardPalette");
+        var swatch = Retry.WhileNull(() => palette.FindFirstDescendant(cf => cf.ByControlType(ControlType.ListItem)),
+            TimeSpan.FromSeconds(5), ignoreException: true).Result;
+        Assert.IsNotNull(swatch, "The palette has no colors.");
+        swatch.Patterns.SelectionItem.Pattern.Select();
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Model.ExecutedPlans.Any(plan => plan.Action == DevTools.ModelsContext.Model.VisibilityAction.Color)),
+            "Picking a color did not run a color plan.");
     }
 
     [TestMethod]

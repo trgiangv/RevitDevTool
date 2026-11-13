@@ -4,6 +4,8 @@ namespace DevTools.ModelsContext.Ports;
 
 public interface IModelSource
 {
+    string HostName { get; }
+
     TreeSchema Schema { get; }
 
     Task<IReadOnlyList<DocumentInfo>> GetDocumentsAsync(CancellationToken cancellationToken);

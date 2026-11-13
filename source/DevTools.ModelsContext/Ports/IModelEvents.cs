@@ -23,4 +23,6 @@ public interface IModelEvents
     event EventHandler<LinkStatusChange>? LinkStatusChanged;
 
     event EventHandler<bool>? BusyChanged;
+
+    event EventHandler<SourceId>? ParameterDefinitionsChanged;
 }

@@ -6,7 +6,7 @@ namespace DevTools.ModelsContext.ViewModels;
 
 public enum MenuAction
 {
-    SelectInRevit,
+    SelectInHost,
     Zoom,
     SectionBox,
     Isolate,
@@ -122,22 +122,25 @@ public sealed class ContextMenuViewModel : ObservableObject
         _resetSeparator = MenuItemViewModel.Separator();
         Items =
         [
-            Add(MenuAction.SelectInRevit, "Select in Revit", "Select", null, SelectAsync),
+            Add(MenuAction.SelectInHost, "Select in " + runtime.Services.Source.HostName, "Select", null, SelectAsync),
             Add(MenuAction.Zoom, "Zoom", "Zoom", "Z", ZoomAsync),
             Add(MenuAction.SectionBox, "Section box", "SectionBox", "B", SectionBoxAsync),
             MenuItemViewModel.Separator(),
             Add(MenuAction.Isolate, "Isolate", "Isolate", "I", () => RunAsync(VisibilityAction.Isolate)),
             Add(MenuAction.HideShow, "Hide", "Hide", "H", HideShowAsync),
             Add(MenuAction.Halftone, "Halftone", "Halftone", null, () => RunAsync(VisibilityAction.Halftone)),
-            Add(MenuAction.Color, "Color…", "Color", null, ColorAsync),
+            Add(MenuAction.Color, "Color…", "Color", null, RequestColorAsync),
             _resetSeparator,
             Add(MenuAction.ResetView, "Reset view", "Reset", null, () => _temporaryBar.ResetCommand.ExecuteAsync(null))
         ];
+        ApplyColorCommand = new AsyncRelayCommand<RgbColor?>(color => _runtime.RunAsync(() => ApplyColorAsync(color)));
     }
+
+    public event EventHandler? ColorRequested;
 
     public IReadOnlyList<MenuItemViewModel> Items { get; }
 
-    public Func<Task<RgbColor?>>? PickColorAsync { get; set; }
+    public IAsyncRelayCommand<RgbColor?> ApplyColorCommand { get; }
 
     public string? Message
     {
@@ -165,7 +168,7 @@ public sealed class ContextMenuViewModel : ObservableObject
         _target = target;
         Message = null;
         var empty = target.IsEmpty ? VisibilityReasons.Nothing : null;
-        var select = this[MenuAction.SelectInRevit];
+        var select = this[MenuAction.SelectInHost];
         select.IsVisible = !target.IsSyncing;
         select.DisabledReason = empty;
         this[MenuAction.Zoom].DisabledReason = empty;
@@ -187,7 +190,7 @@ public sealed class ContextMenuViewModel : ObservableObject
         {
             foreach (var item in Items.Where(item => !item.IsSeparator))
             {
-                item.DisabledReason = VisibilityReasons.Busy;
+                item.DisabledReason = _runtime.BusyText;
             }
         }
     }
@@ -243,14 +246,18 @@ public sealed class ContextMenuViewModel : ObservableObject
         return RunAsync(_target?.IsHidden == true ? VisibilityAction.Show : VisibilityAction.Hide);
     }
 
-    private async Task ColorAsync()
+    private Task RequestColorAsync()
     {
-        if (PickColorAsync is null || await PickColorAsync() is not { } color)
-        {
-            return;
-        }
+        ColorRequested?.Invoke(this, EventArgs.Empty);
+        return Task.CompletedTask;
+    }
 
-        await RunAsync(VisibilityAction.Color, color);
+    private async Task ApplyColorAsync(RgbColor? color)
+    {
+        if (color is { } picked)
+        {
+            await RunAsync(VisibilityAction.Color, picked);
+        }
     }
 
     private async Task RunAsync(VisibilityAction action, RgbColor? color = null)

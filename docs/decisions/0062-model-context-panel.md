@@ -363,8 +363,9 @@ DevTools.ModelsContext               core, no host API, no WPF
                 IFilterEvaluator, IHostFilterCatalog, ICustomFilterStore, IClock
    ViewModels/  ModelContextViewModel, ContextBar, TreeTab, FilterTab,
                 TemporaryBar, ContextMenu
-DevTools.ModelsContext.Views         XAML only (DevTools.UI); every control has an AutomationId
-DevTools.UI/Controls                 FlatTreeList, summary CheckComboBox template, icons
+DevTools.Presentation/Views/ModelsContext
+                                     XAML views on DevTools.UI; every control has an AutomationId
+DevTools.UI/Controls, Theme/Styles   FlatTreeList, SummaryCheckComboBox fork, Icons.xaml
 RevitDevTool.Tools/ModelsContext     Revit adapter, implements the ports
    RevitModelSource, RevitModelEvents (event hub), RevitSelectionPort,
    RevitViewActions (T0–T2), PostCommandQueue (T3), RevitFilterEvaluator,
@@ -589,13 +590,30 @@ panel and never throws into Revit.
 
 - Core (model, engine, ports, view models): `source/DevTools.ModelsContext/`,
   shared layer, no host API, same target frameworks as `DevTools.UI`.
-- Views: `source/DevTools.ModelsContext.Views/`, XAML on `DevTools.UI`.
+- Views: `source/DevTools.Presentation/Views/ModelsContext/`, XAML on
+  `DevTools.UI`. The add-in ILRepacks every assembly except
+  `RepackBinariesExcludes`, and only `DevTools.UI` stays loose for WPF (0037),
+  so XAML in a merged assembly uses no `;component/` URI to itself: only
+  `/DevTools.UI;component/...` URIs, and panel-only resources are an `x:Class`
+  `ResourceDictionary` merged by instance. Icons are `Geometry` entries in
+  `DevTools.UI/Theme/Styles/Icons.xaml` or HandyControl geometries, never
+  defined inside a view. Views reuse HandyControl styles and attached
+  properties (`ButtonDefault.Small`, `ButtonIcon.Small` and kin,
+  `hc:IconElement.Geometry`) and add a style or template only when no stock
+  one covers the need (the tree row template). Colors come only from
+  HandyControl brush resources through `DynamicResource` (`PrimaryBrush`,
+  `WarningBrush`, `RegionBrush`, `BorderBrush`, text brushes and kin): no color
+  literals, no new brush keys, no custom panel surfaces. The temporary bar and
+  the T3 marker use `WarningBrush`. Color uses the `DevTools.UI` `ColorPicker`
+  in place (its own drop-down on the row and from the menu), never a separate
+  window. A view test fails on any other `;component/` URI.
 - Revit adapter, pane and T3 queue: `RevitDevTool.Tools/ModelsContext/`
   (0036). Link references reuse `Selection/ElementSelector`; token search
   reuses `Selection/ElementSearcher`, which groups by link instance, not by
   link document.
 - Tests: `tests/DevTools.ModelsContext.Tests` (core and view models on fakes),
-  `tests/DevTools.ModelsContext.Views.Tests` (FlaUI, AutomationIds),
+  `tests/DevTools.ModelsContext.Views.Tests` (FlaUI, AutomationIds, against
+  the views in `DevTools.Presentation`),
   `tests/DevTools.ModelsContext.Tests.Shared` (fake model),
   `tests/DevTools.ModelsContext.Sandbox` (standalone app).
 - Dockable pane registration: `RevitDevTool.Core` `DockablePaneProvider`

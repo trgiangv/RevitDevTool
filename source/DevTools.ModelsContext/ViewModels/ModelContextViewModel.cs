@@ -65,6 +65,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         events.ModelSynced += OnModelSynced;
         events.LinkStatusChanged += OnLinkStatusChanged;
         events.BusyChanged += OnBusyChanged;
+        events.ParameterDefinitionsChanged += OnParameterDefinitionsChanged;
     }
 
     public ContextBarViewModel ContextBar { get; }
@@ -141,7 +142,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         }
     }
 
-    public string? BusyText => IsBusy ? VisibilityReasons.Busy : null;
+    public string? BusyText => IsBusy ? _runtime.BusyText : null;
 
     public bool IsPaneVisible
     {
@@ -203,6 +204,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         events.ModelSynced -= OnModelSynced;
         events.LinkStatusChanged -= OnLinkStatusChanged;
         events.BusyChanged -= OnBusyChanged;
+        events.ParameterDefinitionsChanged -= OnParameterDefinitionsChanged;
         _selectionDebouncer.Dispose();
         _deltaDebouncer.Dispose();
         _documentsDebouncer.Dispose();
@@ -448,7 +450,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         var selection = await _runtime.Services.Selection.GetSelectionAsync(ticket.Token);
         if (IsCurrent(ticket))
         {
-            await Tree.ApplyRevitSelectionAsync(selection);
+            await Tree.ApplyHostSelectionAsync(selection);
         }
     }
 
@@ -664,6 +666,15 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         IsBusy = busy;
     }
 
+    private void OnParameterDefinitionsChanged(object? sender, SourceId source)
+    {
+        _runtime.ForgetParameters(source);
+        if (_isPaneVisible)
+        {
+            _ = _runtime.RunAsync(() => Filter.RefreshParametersAsync(source));
+        }
+    }
+
     private async Task VerifyAsync(DocumentKey model)
     {
         if (_runtime.Store.Find(model) is not { } info)
@@ -700,7 +711,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
         if (SelectedTab == PanelTab.Tree)
         {
-            await Tree.ApplyRevitSelectionAsync(incoming);
+            await Tree.ApplyHostSelectionAsync(incoming);
         }
     }
 

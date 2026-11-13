@@ -78,7 +78,7 @@ public sealed class VisibilityController
     {
         if (_runtime.IsBusy)
         {
-            return VisibilityReasons.Busy;
+            return _runtime.BusyText;
         }
 
         if (View is not { } view)
@@ -154,7 +154,7 @@ public sealed class VisibilityController
             return;
         }
 
-        var hidden = await _runtime.Services.ViewActions.GetHiddenIdsAsync(document, cancellationToken);
+        var hidden = await _runtime.Services.ViewActions.GetIdsHiddenPermanentlyOrTemporarilyAsync(document, cancellationToken);
         _viewHidden[document] = hidden as HashSet<long> ?? [.. hidden];
     }
 

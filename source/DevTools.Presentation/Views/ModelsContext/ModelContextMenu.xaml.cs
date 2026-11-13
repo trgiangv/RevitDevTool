@@ -2,7 +2,7 @@ using DevTools.ModelsContext.ViewModels;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace DevTools.ModelsContext.Views;
+namespace DevTools.Presentation.Views.ModelsContext;
 
 public partial class ModelContextMenu : ContextMenu
 {

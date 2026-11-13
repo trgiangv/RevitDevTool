@@ -66,8 +66,9 @@ internal static class Program
         GC.Collect();
         var after = GC.GetTotalMemory(true);
         var elements = snapshots.Sum(snapshot => (long)snapshot.ElementCount);
-        var megabytes = (after - before) / 1024d / 1024d;
-        Console.WriteLine($"snapshot memory {megabytes:F1} MB for {elements:N0} elements = {megabytes / elements * 1_000_000:F1} MB per million");
+        var estimated = snapshots.Sum(snapshot => snapshot.EstimatedBytes) / 1024d / 1024d;
+        var heap = (after - before) / 1024d / 1024d;
+        Console.WriteLine($"snapshot memory for {elements:N0} elements: array sizes {estimated:F1} MB = {estimated / elements * 1_000_000:F1} MB per million; GC heap delta {heap:F1} MB = {heap / elements * 1_000_000:F1} MB per million");
         GC.KeepAlive(snapshots);
     }
 }

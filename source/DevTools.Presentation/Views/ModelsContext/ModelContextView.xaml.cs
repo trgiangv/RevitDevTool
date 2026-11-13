@@ -3,18 +3,30 @@ using DevTools.ModelsContext.ViewModels;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
-namespace DevTools.ModelsContext.Views;
+namespace DevTools.Presentation.Views.ModelsContext;
 
 public partial class ModelContextView : UserControl
 {
+    private Action<RgbColor>? _applyColor;
     private ModelContextViewModel? _panel;
+    private bool _isResettingColor;
     private bool _isSyncing;
 
     public ModelContextView()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+        IsVisibleChanged += OnIsVisibleChanged;
+    }
+
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_panel is not null)
+        {
+            _panel.IsPaneVisible = (bool)e.NewValue;
+        }
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
@@ -23,7 +35,7 @@ public partial class ModelContextView : UserControl
         {
             _panel.ContextBar.PropertyChanged -= OnContextBarChanged;
             _panel.ContextBar.Documents.CollectionChanged -= OnDocumentsChanged;
-            _panel.ContextMenu.PickColorAsync = null;
+            _panel.ContextMenu.ColorRequested -= OnColorRequested;
         }
 
         _panel = e.NewValue as ModelContextViewModel;
@@ -34,7 +46,7 @@ public partial class ModelContextView : UserControl
 
         _panel.ContextBar.PropertyChanged += OnContextBarChanged;
         _panel.ContextBar.Documents.CollectionChanged += OnDocumentsChanged;
-        _panel.ContextMenu.PickColorAsync = PickColorAsync;
+        _panel.ContextMenu.ColorRequested += OnColorRequested;
         Tabs.SelectedIndex = (int)_panel.SelectedTab;
         SyncDocuments();
     }
@@ -115,12 +127,41 @@ public partial class ModelContextView : UserControl
         _panel.SelectedTab = (PanelTab)Tabs.SelectedIndex;
     }
 
-    private Task<RgbColor?> PickColorAsync()
+    internal void OpenColorPicker(FrameworkElement anchor, Action<RgbColor> apply)
     {
-        var dialog = new ColorPickDialog { Owner = Window.GetWindow(this) };
-        var result = dialog.ShowDialog() == true && dialog.Picked is { } color
-            ? new RgbColor(color.R, color.G, color.B)
-            : (RgbColor?)null;
-        return Task.FromResult(result);
+        var corner = anchor.TranslatePoint(new Point(0, anchor.ActualHeight), (UIElement)ColorPicker.Parent);
+        Canvas.SetLeft(ColorPicker, corner.X);
+        Canvas.SetTop(ColorPicker, corner.Y);
+        _isResettingColor = true;
+        try
+        {
+            ColorPicker.SelectedColor = null;
+        }
+        finally
+        {
+            _isResettingColor = false;
+        }
+
+        _applyColor = apply;
+        ColorPicker.IsDropDownOpen = true;
+    }
+
+    private void OnColorRequested(object? sender, EventArgs e)
+    {
+        if (_panel is { } panel)
+        {
+            OpenColorPicker(Tabs, color => panel.ContextMenu.ApplyColorCommand.Execute(color));
+        }
+    }
+
+    private void OnPickerColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+    {
+        if (_isResettingColor || e.NewValue is not { } color || _applyColor is not { } apply)
+        {
+            return;
+        }
+
+        _applyColor = null;
+        apply(new RgbColor(color.R, color.G, color.B));
     }
 }

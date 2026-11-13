@@ -3,10 +3,11 @@ using DevTools.ModelsContext.ViewModels;
 using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace DevTools.ModelsContext.Views;
+namespace DevTools.Presentation.Views.ModelsContext;
 
 public partial class TreeTabView : UserControl
 {
@@ -74,13 +75,13 @@ public partial class TreeTabView : UserControl
         }
 
         var wanted = _panel.Tree.SelectedRows;
-        var visible = new HashSet<TreeRow>(_panel.Tree.Rows);
         var current = RowList.SelectedItems.Cast<TreeRow>().ToList();
-        if (current.Count == wanted.Count && wanted.All(current.Contains))
+        if (current.Count == wanted.Count && current.All(wanted.Contains))
         {
             return;
         }
 
+        var visible = new HashSet<TreeRow>(_panel.Tree.Rows);
         _isApplying = true;
         try
         {
@@ -113,20 +114,64 @@ public partial class TreeTabView : UserControl
             return;
         }
 
+        if (RowList.ContextMenu is { } menu)
+        {
+            menu.ClearValue(ContextMenu.PlacementProperty);
+            menu.ClearValue(ContextMenu.HorizontalOffsetProperty);
+            menu.ClearValue(ContextMenu.VerticalOffsetProperty);
+        }
+
         _panel.Tree.OpenMenu(RowOf(e.OriginalSource as DependencyObject));
         ApplySelection();
     }
 
     private void OnRowColorClick(object sender, RoutedEventArgs e)
     {
-        if (_panel is null || ((FrameworkElement)sender).DataContext is not TreeRow row)
+        if (_panel is not { } panel || sender is not FrameworkElement { DataContext: TreeRow row } button)
+        {
+            return;
+        }
+
+        var host = FindHost(button);
+        host?.OpenColorPicker(button, color => panel.Tree.ColorCommand.Execute(new RowColor(row, color)));
+    }
+
+    private static ModelContextView? FindHost(DependencyObject? node)
+    {
+        while (node is not null and not ModelContextView)
+        {
+            node = VisualTreeHelper.GetParent(node);
+        }
+
+        return node as ModelContextView;
+    }
+
+    private void OnEyeMouseEnter(object sender, MouseEventArgs e)
+    {
+        _panel?.Tree.HighlightEyeTargets(((FrameworkElement)sender).DataContext as TreeRow);
+    }
+
+    private void OnEyeMouseLeave(object sender, MouseEventArgs e)
+    {
+        _panel?.Tree.ClearHighlight();
+    }
+
+    private void OnRowMenuClick(object sender, RoutedEventArgs e)
+    {
+        if (_panel is null || RowList.ContextMenu is not { } menu
+                           || sender is not FrameworkElement { DataContext: TreeRow row } button)
         {
             return;
         }
 
         _panel.Tree.OpenMenu(row);
         ApplySelection();
-        _ = _panel.ContextMenu[MenuAction.Color].Command.ExecuteAsync(null);
+        var corner = button.TranslatePoint(new Point(0, button.ActualHeight), RowList);
+        menu.PlacementTarget = RowList;
+        menu.Placement = PlacementMode.Relative;
+        menu.HorizontalOffset = corner.X;
+        menu.VerticalOffset = corner.Y;
+        menu.IsOpen = true;
     }
 
     private async void OnRowsKeyDown(object sender, KeyEventArgs e)

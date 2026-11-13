@@ -1,7 +1,18 @@
+using System.ComponentModel;
+using System.Globalization;
+
 namespace DevTools.ModelsContext.Model;
 
-public sealed class TreeRow
+public sealed class TreeRow : INotifyPropertyChanged
 {
+    public const double IndentPerLevel = 14;
+
+    private static readonly PropertyChangedEventArgs HighlightChanged = new(nameof(IsHighlighted));
+
+    private int _count;
+    private string _countText = "0";
+    private bool _isHighlighted;
+
     public TreeRow(
         TreeRowKind kind,
         string text,
@@ -17,7 +28,10 @@ public sealed class TreeRow
         Path = path ?? RowPath.None;
         Id = id;
         Level = parent is null ? 0 : parent.Level + 1;
+        Indent = Level * IndentPerLevel;
     }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public TreeRowKind Kind { get; }
 
@@ -33,7 +47,22 @@ public sealed class TreeRow
 
     public int Level { get; }
 
-    public int Count { get; set; }
+    public double Indent { get; }
+
+    public int Count
+    {
+        get => _count;
+        set
+        {
+            if (_count != value)
+            {
+                _count = value;
+                _countText = value.ToString("N0", CultureInfo.CurrentCulture);
+            }
+        }
+    }
+
+    public string CountText => _countText;
 
     public int SelectedInside { get; set; }
 
@@ -58,4 +87,17 @@ public sealed class TreeRow
     public bool IsHeader => Kind is TreeRowKind.AllModelsHeader or TreeRowKind.CurrentModelHeader;
 
     public bool IsInsideLink => Document is { IsCurrentModel: false } && Kind != TreeRowKind.LinkModel;
+
+    public bool IsHighlighted
+    {
+        get => _isHighlighted;
+        internal set
+        {
+            if (_isHighlighted != value)
+            {
+                _isHighlighted = value;
+                PropertyChanged?.Invoke(this, HighlightChanged);
+            }
+        }
+    }
 }

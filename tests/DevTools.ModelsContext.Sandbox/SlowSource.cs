@@ -21,7 +21,8 @@ public class SlowSource : DispatchProxy
     {
         ArgumentNullException.ThrowIfNull(targetMethod);
         var type = targetMethod.ReturnType;
-        if (!type.IsGenericType || type.GetGenericTypeDefinition() != typeof(Task<>))
+        var readsSnapshot = targetMethod.Name == nameof(IModelSource.GetInstanceNamesAsync) && _delay() <= TimeSpan.Zero;
+        if (readsSnapshot || !type.IsGenericType || type.GetGenericTypeDefinition() != typeof(Task<>))
         {
             return Unwrap(() => targetMethod.Invoke(_inner, args));
         }

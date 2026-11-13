@@ -1,7 +1,7 @@
 using DevTools.ModelsContext.Ports;
 using System.Windows.Threading;
 
-namespace DevTools.ModelsContext.Views;
+namespace DevTools.Presentation.Views.ModelsContext;
 
 public sealed class DispatcherScheduler(Dispatcher dispatcher) : IScheduler
 {

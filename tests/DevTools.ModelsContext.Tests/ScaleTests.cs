@@ -39,6 +39,7 @@ public sealed class ScaleTests
         Assert.AreEqual(5, snapshots.Count);
         Assert.AreEqual(1_000_000, elements);
         Assert.AreEqual(elements, recount);
+        Assert.IsLessThan(64.0, perMillion);
     }
 
     private void Log(string format, params object[] values)

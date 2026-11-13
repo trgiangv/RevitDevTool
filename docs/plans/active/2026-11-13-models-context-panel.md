@@ -39,7 +39,9 @@ lands.
 In scope:
 
 - `source/DevTools.ModelsContext/` (core: model, engine, ports, view models).
-- `source/DevTools.ModelsContext.Views/` (XAML).
+- Views in `source/DevTools.Presentation/Views/ModelsContext/` (XAML; moved
+  there in Phase 3d from a separate `DevTools.ModelsContext.Views` project,
+  which the add-in ILRepack would have merged and broken its self pack URIs).
 - `DevTools.UI` controls: flat tree list, summary `CheckComboBox` template,
   icon geometries; a private `CheckComboBox` fork in
   `DevTools.UI/Controls/CheckComboBox` (`libs/HandyControl` is never edited).
@@ -133,7 +135,7 @@ Owner: `source/DevTools.ModelsContext/ViewModels`; VM tests in
 
 Owner: `source/DevTools.UI/Controls/FlatTreeList*`,
 `source/DevTools.UI/Controls/CheckComboBox/` (private fork; `libs/HandyControl`
-untouched), `source/DevTools.ModelsContext.Views`,
+untouched), `source/DevTools.Presentation/Views/ModelsContext`,
 `tests/DevTools.ModelsContext.Views.Tests`, `tests/DevTools.ModelsContext.Sandbox`.
 
 - Phase 3a (shared controls) landed first: `SummaryCheckComboBox` fork with
@@ -242,13 +244,30 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   | Realized containers | 29 | 29 | pass |
   | Snapshot memory per million | 75.7 MB | 70.8 MB | miss (< 64) |
 
-- [ ] Phase 3d — close the two misses and the view gaps: expand without a
+- [x] Phase 3d — done. Views moved to `DevTools.Presentation/Views/ModelsContext`
+  (Views project deleted; guard `PresentationXamlUsesNoSelfUris`); stock
+  HandyControl button styles, `hc:IconElement` and brushes only; one shared
+  `ColorPicker` per panel, no dialog window. Sandbox `--measure` (Release):
+  expand 200 instances 13–43 ms at 100k and 9–34 ms at 1M (target < 50);
+  snapshot 37.0 MB per million by array sizes and by GC heap (`RowIdIndex`
+  replaces the id dictionary); first-load stall still 33–59 ms. Proof:
+  `DevTools.ModelsContext.Tests` 105/105 (net48, net8, net10),
+  `Views.Tests` 10/10 (net48, net10), `DevTools.HandyControl.Tests` 19/19,
+  `Build.Tests` 119/119, merged `RevitDevTool` host builds for 2025 with
+  ILRepack. Port changes for Phase 4: `IModelSource.HostName`,
+  `IModelEvents.ParameterDefinitionsChanged`,
+  `IViewActions.GetIdsHiddenPermanentlyOrTemporarilyAsync`.
+- Original Phase 3d list: close the two misses and the view gaps: expand without a
   full-list reset or thread hop; snapshot memory under 64 MB per million (the
   core test reports 57.7 MB from array sizes, the sandbox 70–76 MB from the
   heap, so measure the same way first); a row Color command; precomputed
   `Indent` and `CountText` on rows; hover highlight of affected rows; bind the
   parameter catalog, busy text and pane visibility from Phase 3b; a tree menu
-  UI test through UIA; stronger stale-result test.
+  UI test through UIA; stronger stale-result test. Also move the views into
+  `DevTools.Presentation/Views/ModelsContext`, delete the separate Views
+  project, use no self `;component/` URI (x:Class resource dictionary), keep
+  icons in `DevTools.UI` `Icons.xaml`, and add a guard test for other
+  `;component/` URIs; prove with a build of the merged `RevitDevTool` host.
 - [ ] Phase 3 — controls, views, UI tests, sandbox, performance numbers.
 - [ ] Phase 4 — Revit adapter T0–T2, host tests, snapshot export.
 - [ ] Phase 5 — spike; T3 queue or no-go path.

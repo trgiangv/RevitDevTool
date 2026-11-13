@@ -16,5 +16,5 @@ public interface IViewActions
 
     Task<TemporaryState?> ReadTemporaryStateAsync(CancellationToken cancellationToken);
 
-    Task<IReadOnlyCollection<long>> GetHiddenIdsAsync(DocumentKey document, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<long>> GetIdsHiddenPermanentlyOrTemporarilyAsync(DocumentKey document, CancellationToken cancellationToken);
 }

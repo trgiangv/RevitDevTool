@@ -1,4 +1,4 @@
-<UserControl x:Class="DevTools.ModelsContext.Views.TreeTabView"
+<UserControl x:Class="DevTools.Presentation.Views.ModelsContext.TreeTabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
@@ -6,7 +6,7 @@
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:model="clr-namespace:DevTools.ModelsContext.Model;assembly=DevTools.ModelsContext"
-             xmlns:views="clr-namespace:DevTools.ModelsContext.Views"
+             xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext"
              xmlns:vm="clr-namespace:DevTools.ModelsContext.ViewModels;assembly=DevTools.ModelsContext"
              d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
              d:DesignHeight="600"
@@ -16,7 +16,7 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/DevTools.ModelsContext.Views;component/ModelContextResources.xaml" />
+                <views:ModelContextResources />
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="TreeRowContainerStyle"
@@ -39,7 +39,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Border x:Name="Indent" Width="0" />
+                    <Border Width="{Binding Indent, Mode=OneTime}" />
 
                     <Button x:Name="Chevron"
                             Grid.Column="1"
@@ -49,7 +49,7 @@
                             Command="{Binding DataContext.Tree.ToggleExpandCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             RenderTransformOrigin="0.5,0.5"
-                            Style="{StaticResource PanelIconButton}" />
+                            Style="{StaticResource ButtonIcon.Small}" />
 
                     <Path x:Name="LevelIcon"
                           Grid.Column="2"
@@ -80,7 +80,7 @@
                                Margin="6,0"
                                VerticalAlignment="Center"
                                Opacity="0.6"
-                               Text="{Binding Count, Mode=OneTime, StringFormat=N0}" />
+                               Text="{Binding CountText, Mode=OneTime}" />
 
                     <Border x:Name="BadgeBox"
                             Grid.Column="5"
@@ -118,7 +118,9 @@
                             AutomationProperties.ItemStatus="{Binding Eye, Mode=OneTime}"
                             Command="{Binding DataContext.Tree.ToggleEyeCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
-                            Style="{StaticResource PanelIconButton}"
+                            MouseEnter="OnEyeMouseEnter"
+                            MouseLeave="OnEyeMouseLeave"
+                            Style="{StaticResource ButtonIcon.Small}"
                             ToolTip="Hide" />
 
                     <StackPanel x:Name="Actions"
@@ -130,40 +132,31 @@
                                 AutomationProperties.AutomationId="Tree.Row.Isolate"
                                 Command="{Binding DataContext.Tree.IsolateCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                                 CommandParameter="{Binding}"
-                                Style="{StaticResource PanelIconButton}"
+                                Style="{StaticResource ButtonIcon.Small}"
                                 ToolTip="Isolate" />
                         <Button x:Name="Halftone"
                                 hc:IconElement.Geometry="{StaticResource Halftone}"
                                 AutomationProperties.AutomationId="Tree.Row.Halftone"
                                 Command="{Binding DataContext.Tree.HalftoneCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                                 CommandParameter="{Binding}"
-                                Style="{StaticResource PanelIconButton}"
+                                Style="{StaticResource ButtonIcon.Small}"
                                 ToolTip="Halftone" />
                         <Button x:Name="Color"
                                 hc:IconElement.Geometry="{StaticResource ColorDrop}"
                                 AutomationProperties.AutomationId="Tree.Row.Color"
                                 Click="OnRowColorClick"
-                                Style="{StaticResource PanelIconButton}"
+                                Style="{StaticResource ButtonIcon.Small}"
                                 ToolTip="Color…" />
+                        <Button x:Name="RowMenu"
+                                hc:IconElement.Geometry="{StaticResource More}"
+                                AutomationProperties.AutomationId="Tree.Row.Menu"
+                                Click="OnRowMenuClick"
+                                Style="{StaticResource ButtonIcon.Small}"
+                                ToolTip="Actions" />
                     </StackPanel>
                 </Grid>
 
                 <DataTemplate.Triggers>
-                    <DataTrigger Binding="{Binding Level}" Value="1">
-                        <Setter TargetName="Indent" Property="Width" Value="14" />
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding Level}" Value="2">
-                        <Setter TargetName="Indent" Property="Width" Value="28" />
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding Level}" Value="3">
-                        <Setter TargetName="Indent" Property="Width" Value="42" />
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding Level}" Value="4">
-                        <Setter TargetName="Indent" Property="Width" Value="56" />
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding Level}" Value="5">
-                        <Setter TargetName="Indent" Property="Width" Value="70" />
-                    </DataTrigger>
 
                     <DataTrigger Binding="{Binding HasChildren}" Value="False">
                         <Setter TargetName="Chevron" Property="Visibility" Value="Hidden" />
@@ -236,11 +229,16 @@
                         <Setter TargetName="RowGrid" Property="Opacity" Value="0.55" />
                     </DataTrigger>
 
+                    <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
+                        <Setter TargetName="RowGrid" Property="Background" Value="{DynamicResource SecondaryRegionBrush}" />
+                    </DataTrigger>
+
                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsMouseOver}" Value="True">
                         <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
                         <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="RowGrid" Property="Background" Value="{x:Null}" />
                     </DataTrigger>
 
                     <DataTrigger Binding="{Binding IsHeader}" Value="True">

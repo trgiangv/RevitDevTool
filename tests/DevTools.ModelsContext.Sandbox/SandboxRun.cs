@@ -1,7 +1,7 @@
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
-using DevTools.ModelsContext.Views;
+using DevTools.Presentation.Views.ModelsContext;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
@@ -109,10 +109,21 @@ internal sealed class SandboxRun : IDisposable
         stall.TakeMax();
         watch.Restart();
         await tree.ExpandAsync(type);
+        var modelMs = watch.Elapsed.TotalMilliseconds;
         await Idle();
         var expandMs = watch.Elapsed.TotalMilliseconds;
         var shown = type.Children!.Count(child => child.Kind == TreeRowKind.Instance);
-        Report($"expand {shown} instances {expandMs:F0} ms, longest stall {stall.TakeMax():F0} ms");
+        Report($"expand {shown} instances {expandMs:F0} ms (view model {modelMs:F0} ms, layout {expandMs - modelMs:F0} ms), longest stall {stall.TakeMax():F0} ms");
+        tree.Collapse(type);
+        await Idle();
+        var second = await FindTypeAsync(tree, type);
+        stall.TakeMax();
+        watch.Restart();
+        await tree.ExpandAsync(second);
+        modelMs = watch.Elapsed.TotalMilliseconds;
+        await Idle();
+        expandMs = watch.Elapsed.TotalMilliseconds;
+        Report($"expand again {expandMs:F0} ms (view model {modelMs:F0} ms, layout {expandMs - modelMs:F0} ms), longest stall {stall.TakeMax():F0} ms");
 
         var list = Find<DevTools.UI.Controls.FlatTreeList>(view);
         Report($"realized row containers {CountContainers(list)} of {tree.Rows.Count} rows");
@@ -149,7 +160,7 @@ internal sealed class SandboxRun : IDisposable
         return default;
     }
 
-    private async Task<TreeRow> FindTypeAsync(TreeTabViewModel tree)
+    private async Task<TreeRow> FindTypeAsync(TreeTabViewModel tree, TreeRow? skip = null)
     {
         var current = tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
         foreach (var group in current.Children!.ToList())
@@ -158,7 +169,8 @@ internal sealed class SandboxRun : IDisposable
             foreach (var family in group.Children!.ToList())
             {
                 await tree.ExpandAsync(family);
-                var type = family.Children!.FirstOrDefault(child => child.Count >= TreeTabViewModel.InstancePageSize);
+                var type = family.Children!.FirstOrDefault(child =>
+                    child.Count >= TreeTabViewModel.InstancePageSize && child != skip);
                 if (type is not null)
                 {
                     return type;

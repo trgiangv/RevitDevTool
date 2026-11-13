@@ -28,6 +28,24 @@ public sealed class DeltaTests
     }
 
     [TestMethod]
+    public void DeletesKeepOtherIdsFound()
+    {
+        var snapshot = TestModel.Snapshot(FakeModelGenerator.Current);
+        var ids = snapshot.Rows.Select(row => row.Id).ToList();
+        var deleted = ids.Where((_, index) => index % 7 == 3).Take(DeltaApplier.DirtyThreshold).ToList();
+
+        DeltaApplier.Apply(snapshot, ElementDelta.DeletedOnly(snapshot.Source, deleted));
+
+        var gone = deleted.ToHashSet();
+        Assert.IsTrue(deleted.All(id => !snapshot.Contains(id)));
+        foreach (var id in ids.Where(id => !gone.Contains(id)))
+        {
+            Assert.IsTrue(snapshot.TryGetRow(id, out var row));
+            Assert.AreEqual(id, row.Id);
+        }
+    }
+
+    [TestMethod]
     public void LargeDeltaMarksDirty()
     {
         var snapshot = TestModel.Snapshot(FakeModelGenerator.Current);

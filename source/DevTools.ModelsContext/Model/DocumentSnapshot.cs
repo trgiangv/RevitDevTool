@@ -4,7 +4,7 @@ public sealed class DocumentSnapshot
 {
     private readonly Dictionary<long, int> _groupIndex = [];
     private readonly List<GroupRow> _groups = [];
-    private readonly Dictionary<long, int> _rowIndex = [];
+    private readonly RowIdIndex _rowIndex;
     private readonly List<ElementRow> _rows = [];
     private readonly Dictionary<long, int> _typeIndex = [];
     private readonly List<TypeRow> _types = [];
@@ -18,6 +18,7 @@ public sealed class DocumentSnapshot
 
         Source = source;
         GroupingDepth = groupingDepth;
+        _rowIndex = new RowIdIndex(_rows);
     }
 
     public SourceId Source { get; }
@@ -50,10 +51,11 @@ public sealed class DocumentSnapshot
             const int typeRowBytes = 24;
             const int groupRowBytes = 16;
             const int indexEntryBytes = 28;
+            const int slotBytes = 4;
             const int nameOverheadBytes = 52;
             const int countNodeBytes = 96;
             var bytes = (long)_rows.Capacity * elementRowBytes
-                        + (long)_rowIndex.Count * indexEntryBytes
+                        + (long)_rowIndex.SlotCount * slotBytes
                         + (long)_types.Capacity * typeRowBytes
                         + (long)_typeIndex.Count * indexEntryBytes
                         + (long)_groups.Capacity * groupRowBytes
@@ -182,6 +184,7 @@ public sealed class DocumentSnapshot
     internal void TrimExcess()
     {
         _rows.TrimExcess();
+        _rowIndex.TrimExcess();
         _types.TrimExcess();
         _groups.TrimExcess();
     }
@@ -260,16 +263,16 @@ public sealed class DocumentSnapshot
         }
 
         Count(_rows[index], -1);
+        _rowIndex.Remove(id);
         var last = _rows.Count - 1;
         if (index != last)
         {
             var moved = _rows[last];
+            _rowIndex.Move(moved.Id, index);
             _rows[index] = moved;
-            _rowIndex[moved.Id] = index;
         }
 
         _rows.RemoveAt(last);
-        _rowIndex.Remove(id);
         Version++;
         return true;
     }

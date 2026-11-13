@@ -274,6 +274,8 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
 
     public bool IsSyncing => IsLiveOn && !IsLivePaused;
 
+    public string LivePausedText => "Live paused · use Select in " + _runtime.Services.Source.HostName;
+
     public void Dispose()
     {
         _liveDebouncer.Dispose();
@@ -398,6 +400,14 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         RebuildCategories();
         Parameters = await LoadParametersAsync(cancellationToken);
         await LoadSourcesAsync(cancellationToken);
+    }
+
+    internal async Task RefreshParametersAsync(SourceId source)
+    {
+        if (_data.Documents.Any(document => document.Snapshot.Source == source))
+        {
+            Parameters = await LoadParametersAsync(_token);
+        }
     }
 
     internal FilterState Capture()

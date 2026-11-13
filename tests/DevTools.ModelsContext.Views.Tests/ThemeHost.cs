@@ -77,6 +77,18 @@ internal sealed class ThemeHost : IDisposable
         return TryFind(() => MenuHandle(menu), automationId);
     }
 
+    public AutomationElement FindInPopup(System.Windows.Controls.Primitives.Popup popup, string automationId)
+    {
+        var element = Retry.WhileNull(
+            () => TryFind(() => WpfSta.Invoke(() => popup.Child is { } child && PresentationSource.FromVisual(child) is HwndSource source
+                ? source.Handle
+                : IntPtr.Zero), automationId),
+            Timeout,
+            ignoreException: true).Result;
+        Assert.IsNotNull(element, automationId + " was not found in the popup.");
+        return element;
+    }
+
     public AutomationElement Row(string name)
     {
         var list = FindInWindow("Tree.Rows");

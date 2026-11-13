@@ -7,6 +7,8 @@ using System.Text.RegularExpressions;
 
 namespace DevTools.ModelsContext.ViewModels;
 
+public sealed record RowColor(TreeRow Row, RgbColor Color);
+
 public sealed class TreeTabViewModel : ObservableObject, IDisposable
 {
     public const int InstancePageSize = 200;
@@ -25,6 +27,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
     private readonly ContextMenuViewModel _menu;
     private readonly PanelRuntime _runtime;
     private readonly Debouncer _searchDebouncer;
+    private readonly List<TreeRow> _highlighted = [];
     private readonly HashSet<TreeRow> _selectedRows = [];
     private readonly Debouncer _sendDebouncer;
     private readonly Dictionary<DocumentKey, DocumentState> _states = [];
@@ -63,6 +66,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         ToggleEyeCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ToggleEyeAsync(row)));
         IsolateCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ActAsync(row, VisibilityAction.Isolate)));
         HalftoneCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ActAsync(row, VisibilityAction.Halftone)));
+        ColorCommand = new AsyncRelayCommand<RowColor?>(request => Run(() => ColorAsync(request)));
         ClearSelectionCommand = new AsyncRelayCommand(() => Run(ClearSelectionAsync));
         ShowInTreeCommand = new RelayCommand(ShowInTree);
         ExpandAllCommand = new AsyncRelayCommand(() => Run(ExpandAllAsync));
@@ -88,6 +92,8 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand<TreeRow?> IsolateCommand { get; }
 
     public IAsyncRelayCommand<TreeRow?> HalftoneCommand { get; }
+
+    public IAsyncRelayCommand<RowColor?> ColorCommand { get; }
 
     public IAsyncRelayCommand ClearSelectionCommand { get; }
 
@@ -270,6 +276,37 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         return elements.ToList();
     }
 
+    public void HighlightEyeTargets(TreeRow? row)
+    {
+        ClearHighlight();
+        if (row is null || row.Eye is RowEye.None or RowEye.HiddenByAllModels)
+        {
+            return;
+        }
+
+        var targets = new HashSet<TreeRow>(TargetsFor(row));
+        var groups = new HashSet<long>(targets.Where(target => target.Kind == TreeRowKind.AllModelsGroup)
+            .Select(target => target.Id));
+        foreach (var visible in Rows)
+        {
+            if (IsAffected(visible, targets, groups))
+            {
+                visible.IsHighlighted = true;
+                _highlighted.Add(visible);
+            }
+        }
+    }
+
+    public void ClearHighlight()
+    {
+        foreach (var row in _highlighted)
+        {
+            row.IsHighlighted = false;
+        }
+
+        _highlighted.Clear();
+    }
+
     public string? ReasonFor(TreeRow row, VisibilityAction action)
     {
         return _visibility.Plan(VisibilityRequest.ForRows(action, row)).DisabledReason;
@@ -303,6 +340,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
     internal void Reset(TreeState state)
     {
         _pending = state;
+        ClearHighlight();
         _data = ContextData.Empty;
         _roots = [];
         _states.Clear();
@@ -412,7 +450,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    internal async Task ApplyRevitSelectionAsync(IReadOnlyCollection<ElementRef> incoming)
+    internal async Task ApplyHostSelectionAsync(IReadOnlyCollection<ElementRef> incoming)
     {
         _selectedElements = [.. incoming];
         SyncHint = null;
@@ -629,6 +667,30 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         }
 
         Message = await _visibility.RunAsync(new VisibilityRequest(action, TargetsFor(row), []), _token);
+    }
+
+    private static bool IsAffected(TreeRow row, HashSet<TreeRow> targets, HashSet<long> groups)
+    {
+        for (var current = row; current is not null; current = current.Parent)
+        {
+            if (targets.Contains(current) || (current.Kind == TreeRowKind.Group && groups.Contains(current.Id)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private async Task ColorAsync(RowColor? request)
+    {
+        if (request is not { } color)
+        {
+            return;
+        }
+
+        Message = await _visibility.RunAsync(
+            new VisibilityRequest(VisibilityAction.Color, TargetsFor(color.Row), [], color.Color), _token);
     }
 
     private List<TreeRow> TargetsFor(TreeRow row)

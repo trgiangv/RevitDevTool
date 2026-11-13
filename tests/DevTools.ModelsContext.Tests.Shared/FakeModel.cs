@@ -13,6 +13,8 @@ public sealed class FakeModel :
     IHostFilterCatalog,
     ICustomFilterStore
 {
+    public const string FakeHostName = "Fake host";
+
     private readonly Dictionary<string, List<DocumentInfo>> _documents = new(StringComparer.Ordinal);
     private readonly Dictionary<SourceId, List<FakeVersion>> _history = [];
     private readonly string _primary;
@@ -20,7 +22,7 @@ public sealed class FakeModel :
     private readonly Dictionary<SourceId, FakeSource> _sources = [];
     private string _active;
     private List<CustomFilter> _customFilters = [];
-    private TaskCompletionSource<bool>? _scopeGate;
+    private List<TaskCompletionSource<bool>>? _scopeGates;
     private IReadOnlyCollection<ElementRef> _selection = [];
     private TaskCompletionSource<bool>? _snapshotGate;
 
@@ -49,6 +51,8 @@ public sealed class FakeModel :
     public int DocumentReads { get; private set; }
 
     public int SelectionReads { get; private set; }
+
+    public int CatalogReads { get; private set; }
 
     public bool EchoSelection { get; set; } = true;
 
@@ -84,6 +88,10 @@ public sealed class FakeModel :
 
     public event EventHandler<bool>? BusyChanged;
 
+    public event EventHandler<SourceId>? ParameterDefinitionsChanged;
+
+    public string HostName => FakeHostName;
+
     public TreeSchema Schema => FakeModelGenerator.Schema;
 
     public Task<IReadOnlyList<DocumentInfo>> GetDocumentsAsync(CancellationToken cancellationToken)
@@ -110,7 +118,14 @@ public sealed class FakeModel :
         CancellationToken cancellationToken)
     {
         var ids = ScopeIds(document, scope);
-        return _scopeGate is { } gate ? AfterAsync(gate.Task, ids) : Task.FromResult(ids);
+        if (_scopeGates is not { } gates)
+        {
+            return Task.FromResult(ids);
+        }
+
+        var gate = new TaskCompletionSource<bool>();
+        gates.Add(gate);
+        return AfterAsync(gate.Task, ids);
     }
 
     public Task<IReadOnlyList<InstanceName>> GetInstanceNamesAsync(
@@ -162,6 +177,7 @@ public sealed class FakeModel :
         SourceId source,
         CancellationToken cancellationToken)
     {
+        CatalogReads++;
         return Task.FromResult(FakeParameters.Catalog(_sources[source]));
     }
 
@@ -240,7 +256,7 @@ public sealed class FakeModel :
         return Task.FromResult<TemporaryState?>(new TemporaryState(View, active, false));
     }
 
-    public Task<IReadOnlyCollection<long>> GetHiddenIdsAsync(DocumentKey document, CancellationToken cancellationToken)
+    public Task<IReadOnlyCollection<long>> GetIdsHiddenPermanentlyOrTemporarilyAsync(DocumentKey document, CancellationToken cancellationToken)
     {
         var snapshot = SnapshotOf(document);
         var hidden = new HashSet<long>();
@@ -435,16 +451,26 @@ public sealed class FakeModel :
         history.RemoveRange(0, history.Count - 1);
     }
 
+    public int HeldScopes => _scopeGates?.Count ?? 0;
+
     public void HoldScopes()
     {
-        _scopeGate = new TaskCompletionSource<bool>();
+        _scopeGates = [];
+    }
+
+    public void ReleaseScope(int index)
+    {
+        _scopeGates![index].TrySetResult(true);
     }
 
     public void ReleaseScopes()
     {
-        var gate = _scopeGate;
-        _scopeGate = null;
-        gate?.TrySetResult(true);
+        var gates = _scopeGates ?? [];
+        _scopeGates = null;
+        foreach (var gate in gates)
+        {
+            gate.TrySetResult(true);
+        }
     }
 
     public void HoldSnapshots()
@@ -484,6 +510,11 @@ public sealed class FakeModel :
     public void RaiseDocumentClosing(DocumentKey document)
     {
         DocumentClosing?.Invoke(this, document);
+    }
+
+    public void RaiseParameterDefinitionsChanged(SourceId source)
+    {
+        ParameterDefinitionsChanged?.Invoke(this, source);
     }
 
     public void RaiseModelSynced(DocumentKey model)

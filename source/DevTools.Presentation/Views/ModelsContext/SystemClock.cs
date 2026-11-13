@@ -1,6 +1,6 @@
 using DevTools.ModelsContext.Ports;
 
-namespace DevTools.ModelsContext.Views;
+namespace DevTools.Presentation.Views.ModelsContext;
 
 public sealed class SystemClock : IClock
 {

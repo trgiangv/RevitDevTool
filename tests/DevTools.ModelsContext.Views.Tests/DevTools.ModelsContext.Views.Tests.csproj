@@ -22,7 +22,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\source\DevTools.ModelsContext\DevTools.ModelsContext.csproj" />
-        <ProjectReference Include="..\..\source\DevTools.ModelsContext.Views\DevTools.ModelsContext.Views.csproj" />
+        <ProjectReference Include="..\..\source\DevTools.Presentation\DevTools.Presentation.csproj" />
         <ProjectReference Include="..\..\source\DevTools.UI\DevTools.UI.csproj" />
         <ProjectReference Include="..\DevTools.ModelsContext.Tests.Shared\DevTools.ModelsContext.Tests.Shared.csproj" />
     </ItemGroup>

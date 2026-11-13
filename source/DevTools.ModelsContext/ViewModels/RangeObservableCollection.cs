@@ -6,6 +6,8 @@ namespace DevTools.ModelsContext.ViewModels;
 
 public sealed class RangeObservableCollection<T> : ObservableCollection<T>
 {
+    public const int ItemEventLimit = 512;
+
     private static readonly PropertyChangedEventArgs CountChanged = new(nameof(Count));
     private static readonly PropertyChangedEventArgs IndexerChanged = new("Item[]");
     private static readonly NotifyCollectionChangedEventArgs ResetArgs = new(NotifyCollectionChangedAction.Reset);
@@ -40,9 +42,24 @@ public sealed class RangeObservableCollection<T> : ObservableCollection<T>
         }
 
         CheckReentrancy();
-        var inserted = items.ToList();
+        var inserted = items as IReadOnlyList<T> ?? items.ToList();
         if (removeCount == 0 && inserted.Count == 0)
         {
+            return;
+        }
+
+        if (removeCount + inserted.Count <= ItemEventLimit)
+        {
+            for (var position = index + removeCount - 1; position >= index; position--)
+            {
+                RemoveAt(position);
+            }
+
+            for (var offset = 0; offset < inserted.Count; offset++)
+            {
+                Insert(index + offset, inserted[offset]);
+            }
+
             return;
         }
 

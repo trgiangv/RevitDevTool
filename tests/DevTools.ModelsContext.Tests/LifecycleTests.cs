@@ -35,6 +35,26 @@ public sealed class LifecycleTests
     }
 
     [TestMethod]
+    public async Task OldJobFinishingLastIsDropped()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var bar = fixture.Panel.ContextBar;
+
+        fixture.Model.HoldScopes();
+        bar.Scope = ScopeKind.ActiveView;
+        bar.Tick([Mep]);
+        fixture.Model.ReleaseScope(1);
+        fixture.Model.ReleaseScope(2);
+        var newer = fixture.Tree.Rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep);
+        fixture.Model.ReleaseScope(0);
+
+        Assert.AreEqual(3, fixture.Model.HeldScopes);
+        Assert.IsTrue(newer);
+        Assert.IsTrue(fixture.Tree.Rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep));
+        Assert.IsFalse(fixture.Panel.IsUpdating);
+    }
+
+    [TestMethod]
     public async Task ClosingDropsSession()
     {
         using var fixture = await PanelFixture.OpenAsync();
@@ -113,11 +133,34 @@ public sealed class LifecycleTests
         fixture.Model.SetBusy(false);
         fixture.Settle();
 
-        Assert.AreEqual(VisibilityReasons.Busy, isolate);
+        Assert.AreEqual(VisibilityReasons.HostBusy(FakeModel.FakeHostName), isolate);
         Assert.IsFalse(zoom);
-        Assert.AreEqual(VisibilityReasons.Busy, message);
+        Assert.AreEqual(VisibilityReasons.HostBusy(FakeModel.FakeHostName), message);
         Assert.IsEmpty(fixture.Model.ExecutedPlans);
         Assert.IsEmpty(await fixture.Model.GetSelectionAsync(CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task BusyTextNamesHost()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+
+        fixture.Model.SetBusy(true);
+
+        Assert.AreEqual(FakeModel.FakeHostName + " is busy.", fixture.Panel.BusyText);
+        StringAssert.EndsWith(fixture.Panel.ContextMenu[MenuAction.SelectInHost].Text, FakeModel.FakeHostName);
+    }
+
+    [TestMethod]
+    public async Task DefinitionChangeRefreshesCatalog()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var reads = fixture.Model.CatalogReads;
+
+        fixture.Model.RaiseParameterDefinitionsChanged(FakeModelGenerator.CurrentSource);
+
+        Assert.AreEqual(reads + 1, fixture.Model.CatalogReads);
+        Assert.IsNotEmpty(fixture.Filter.Parameters);
     }
 
     [TestMethod]

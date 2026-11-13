@@ -68,7 +68,6 @@ addin:
   - 'source/DevTools.Mcp.Acad/**'
   - 'source/DevTools.Mcp.Catalog/**'
   - 'source/DevTools.Mcp.Revit/**'
-  - 'source/DevTools.ModelsContext.Views/**'
   - 'source/DevTools.ModelsContext/**'
   - 'source/DevTools.Presentation/**'
   - 'source/DevTools.Settings/**'

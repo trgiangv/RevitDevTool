@@ -51,11 +51,11 @@ public sealed class SyncTests
         fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
 
         Assert.IsTrue(fixture.Tree.IsSyncPaused);
-        Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.SelectInRevit].IsVisible);
+        Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.SelectInHost].IsVisible);
     }
 
     [TestMethod]
-    public async Task SelectedRowSelectsInRevit()
+    public async Task SelectedRowSelectsInHost()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var ducts = fixture.Group(Current, "Ducts");
