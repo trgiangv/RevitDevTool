@@ -162,3 +162,4 @@ here.
 | [0059](0059-independent-product-releases-and-one-gate-ci.md) | Four independently released products (daemon, addin, nettest, pytest), signed channel index, version grammar, prerelease flow, one-gate CI | Accepted |
 | [0060](0060-framework-runtime-shims-ship-with-nettest.md) | Framework runtimes ship with nettest; the user's framework needs the same major and no lower than the baseline; add-in and adapter meet only through the `testing.runtime` range | Accepted |
 | [0061](0061-one-bundle-per-host.md) | One bundle per host; the payload is one platform at one host version | Accepted |
+| [0062](0062-model-context-panel.md) | Model Context panel: documents as one list, Tree/Filter/Layers, temporary-first visibility, T0–T3 tiers for linked elements, no model writes | Proposed |
