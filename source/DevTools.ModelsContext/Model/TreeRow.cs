@@ -43,6 +43,10 @@ public sealed class TreeRow
 
     public IReadOnlyList<TreeRow>? Children { get; set; }
 
+    public RowEye Eye { get; set; }
+
+    public int Badge => IsExpanded ? 0 : SelectedInside;
+
     public bool ChildrenLoaded => Children is not null;
 
     public bool IsHeader => Kind is TreeRowKind.AllModelsHeader or TreeRowKind.CurrentModelHeader;

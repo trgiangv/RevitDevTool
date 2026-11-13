@@ -134,11 +134,10 @@ that cannot run shows disabled with a one-line tooltip giving the reason.
   link instance; duplicate file names get an instance suffix. Entries are `DocumentKey`s (§11), not `Document`
   objects.
 - The box shows one line: ticked document names joined by commas, cut with an
-  ellipsis, full list in the tooltip. `DevTools.UI` carries a copy of the
-  `CheckComboBox` template whose tag area is a summary `TextBlock`. Because
-  `CheckComboBox.UpdateTags()` returns before it syncs the "All" item when
-  `PART_Panel` is missing, the fork in `libs/HandyControl` moves the "All" sync
-  above that early return.
+  ellipsis, full list in the tooltip. `DevTools.UI/Controls/CheckComboBox`
+  carries a private fork of HandyControl's `CheckComboBox` with a one-line
+  summary instead of tags, an "All" item that stays in sync without a tag panel,
+  and "All" that skips disabled entries (§12 fork rule).
 - Default: the current document only. Links are opt-in; newly loaded links
   start unticked. At least one entry stays ticked. Unloaded links show
   disabled and "All" skips them.
@@ -451,10 +450,22 @@ dropped on `ViewActivated` and on any `DocumentChanged`.
   rebuilds on next use. While the pane is hidden, changes only mark dirty.
 - Undo and Redo go through the same handler; if the spike shows their ids are
   unreliable, they mark dirty instead. They always mark the T3 journal stale.
-- Link snapshots drop when a `RevitLinkType` is modified (reload, unload), when
-  a link instance is added or deleted, on `DocumentClosing`, or when on use
-  `IsValidObject` fails or the instance's `GetLinkDocument()` is another
-  object.
+- Link snapshots are stamped with the link document's
+  `Document.GetDocumentVersion` (`VersionGUID`, `NumberOfSaves`), present in
+  every supported version. A version changes when the file is saved or synced,
+  not per transaction. On reload (`RevitLinkType` modified, link instance added,
+  `IsValidObject` false, or `GetLinkDocument()` another object):
+  - same `VersionGUID` → keep the snapshot as is, no collection;
+  - different → `linkDoc.GetChangedElements(oldVersionGuid)` gives created,
+    modified and deleted ids, applied through the same delta path as the
+    Current model;
+  - the old version is unknown to the new file, or the delta is larger than
+    about 20% of the snapshot → rebuild in slices.
+- The Current model follows `DocumentChanged` live. After Reload Latest or a
+  sync, `GetChangedElements(lastSeenVersion)` is used as a check that the
+  delta path missed nothing; on mismatch the snapshot rebuilds.
+- A link source shared by several open Current models keeps one snapshot with
+  a reference count; it drops when the last user closes or the link unloads.
 - `ValueIndexCache`: built lazily per (snapshot, parameter, category set),
   quick filters first, in slices, cancelled when the rule changes. At most 500
   distinct values ("more…"), at most 8 indexes (least recently used dropped).
@@ -476,6 +487,28 @@ queue is busy, `Idling`. Panel-level parts listen while the pane is visible;
 tab-level handlers listen only while their tab is open, and a tab that comes
 back resyncs once. A hidden pane pauses everything.
 
+**Lifecycle.** Each open Current model has its own session (ticked documents,
+expansion, selected filter, Sync/Live, journal pages per view). Every
+asynchronous job carries the session and a generation number; a result whose
+session closed or whose generation moved on is dropped on the UI thread, never
+applied. Every port call resolves its `DocumentKey` through `DocumentRegistry`
+first and does nothing for a closed, unloaded or replaced document.
+
+| Event | Panel does |
+|-------|------------|
+| View activated, same model | Cancel scope jobs, drop view id sets, read the new view's temporary state; tree expansion kept; Active view counts recount from the snapshot. |
+| Active model switched | Cancel the old session's jobs, park its session in memory, show the new model's session (built on first show). No call touches the old model afterwards. |
+| `DocumentClosing` | Cancel that session's jobs, drop its session, journal and snapshots (shared link snapshots by reference count), release every key. If the close is cancelled, the session rebuilds on next show. |
+| Link unloaded | Its rows disable with the reason; its snapshot is kept until reload decides by version. |
+| Link reloaded | Version rule above. |
+| Undo / Redo | Delta path; journal stale. |
+| Revit busy (modal command, edit or sketch mode, no active document) | Actions disable with "Revit is busy"; nothing is queued for later. |
+| Family document | Works as a Current model without links. |
+| Pane hidden | Pause; on show, resync once. |
+
+Every adapter call is wrapped: a failure becomes a one-line status in the
+panel and never throws into Revit.
+
 ### 12. UI controls and performance
 
 - **Flat tree list** (`DevTools.UI`): a `ListBox` with `SelectionMode=Extended`,
@@ -494,10 +527,32 @@ back resyncs once. A hidden pane pauses everything.
   once instead of raising per-row `PropertyChanged`.
 - Value dropdowns use a `VirtualizingStackPanel` with recycling as
   `ItemsPanel` and a fixed `MaxDropDownHeight`; values load on open.
-- Targets (100k elements, two to three links, Release, Revit 2024 and 2026):
-  first Category rows < 300 ms, expand a 200-instance page < 50 ms, Live change
-  to Revit selection < 200 ms after the debounce, about 40 realized row
-  containers, no `Document` retained after a model closes ten times.
+- **Fork rule.** A HandyControl control that needs more than a Style is copied
+  into `DevTools.UI/Controls/<Name>/` under the `DevTools.UI.Controls`
+  namespace and changed there. `libs/HandyControl` (a submodule) is never
+  edited.
+- **Scale.** The panel must stay responsive at millions of elements across
+  several models. Rules that follow from it:
+  - No object per element: snapshots are arrays of structs and name tables;
+    objects exist only for visible rows (bounded by expansion and paging).
+  - First paint does not wait for the snapshot: Category rows and counts come
+    first from one quick count per category
+    (`FilteredElementCollector.OfCategoryId(...).GetElementCount()`), then
+    Family and Type levels fill in as slices finish.
+  - Deltas update counts in place; a full rebuild happens only when the
+    version rule or the delta size says so.
+  - Active view id sets are cached per (view, model) and dropped by
+    `DocumentChanged`, not recollected on every expand.
+  - All collection runs in cancellable slices; aggregation runs off the UI
+    thread on plain data.
+- Targets, Release, Revit 2024 and 2026:
+  - 100k elements and three links: first Category rows < 300 ms, expand a
+    200-instance page < 50 ms, Live change to Revit selection < 200 ms after
+    the debounce, about 40 realized row containers.
+  - 1M elements across five models: first Category rows < 1 s, full counts
+    without blocking the UI for more than 50 ms at a time, snapshot memory
+    < 64 MB per million elements.
+  - No `Document` retained after a model closes ten times.
 
 ### 13. State and storage
 
@@ -542,9 +597,8 @@ back resyncs once. A hidden pane pauses everything.
   `tests/DevTools.ModelsContext.Sandbox` (standalone app).
 - Dockable pane registration: `RevitDevTool.Core` `DockablePaneProvider`
   (0007). Revit calls go through `RevitDevTool.Core` `RevitContextExecutor`.
-- Shared controls (flat tree list, row template, summary `CheckComboBox`
-  template, icon geometries): `DevTools.UI`. The "All" sync fix lives in the
-  HandyControl fork under `libs/HandyControl`.
+- Shared controls (flat tree list, row template, forked `CheckComboBox`, icon
+  geometries): `DevTools.UI/Controls`. `libs/HandyControl` is not edited.
 
 ## Alternatives Considered
 
@@ -590,9 +644,16 @@ back resyncs once. A hidden pane pauses everything.
     controls). It repeated the tree's Model › Category levels; its only own
     parts, the *All models* group and always-listed hidden rows, moved into the
     tree.
-21. **Switch links to By Linked View to keep them visible.** Changes link
+21. **Cysharp ObservableCollections for tree rows.** Thread-safe collections,
+    filtered views and a WPF dispatcher bridge, MIT. Not adopted for the
+    first release: the visible row list is small (expansion and paging bound
+    it), its Slim WPF bridge rejects range changes, and the cost at scale sits
+    in the snapshot and in Revit collection, which a collection library does
+    not change. Revisit if search or sorting over large expanded lists needs
+    filtered views.
+22. **Switch links to By Linked View to keep them visible.** Changes link
     overrides behind the user's back.
-22. **Permanent `HideElements` for T3.** No API unhide; kept only as what Keep
+23. **Permanent `HideElements` for T3.** No API unhide; kept only as what Keep
     produces after an explicit confirmation.
 
 ## Consequences
@@ -644,8 +705,15 @@ Tradeoffs:
      Current model category of about 50k elements.
   8. Undo and Redo visible in `DocumentChanged` with usable ids.
   9. Flicker of reset plus re-apply.
+  10. Document version: `GetDocumentVersion` before and after a link reload
+      with and without a save of the link file; `GetChangedElements(oldGuid)`
+      on a reloaded link (ids returned, cost at 100k and 1M, exception when the
+      old version is unknown); same after Reload Latest on a workshared
+      Current model; cloud models.
+  11. Quick per-category `GetElementCount()` time on a 1M-element model.
 - Benchmark the flat tree list against the §12 targets on a model of about
-  100k elements with two to three links.
+  100k elements with two to three links, and on a generated 1M-element model
+  across five documents in the sandbox.
 - After the spike, set Accepted or amend, then add
   `docs/product/model-context.md` and `docs/architecture/ModelsContext/`.
 - Execution plan: [2026-11-13-models-context-panel](../plans/active/2026-11-13-models-context-panel.md).

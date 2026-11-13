@@ -41,7 +41,8 @@ In scope:
 - `source/DevTools.ModelsContext/` (core: model, engine, ports, view models).
 - `source/DevTools.ModelsContext.Views/` (XAML).
 - `DevTools.UI` controls: flat tree list, summary `CheckComboBox` template,
-  icon geometries; the "All" sync fix in `libs/HandyControl` `CheckComboBox`.
+  icon geometries; a private `CheckComboBox` fork in
+  `DevTools.UI/Controls/CheckComboBox` (`libs/HandyControl` is never edited).
 - `RevitDevTool.Tools/ModelsContext/` (Revit adapter T0–T2, pane, filter
   compiler and catalog).
 - Tests: `DevTools.ModelsContext.Tests`, `DevTools.ModelsContext.Views.Tests`,
@@ -130,10 +131,14 @@ Owner: `source/DevTools.ModelsContext/ViewModels`; VM tests in
 
 ### Phase 3 — Controls, views and sandbox (Sonnet; flat list by Opus)
 
-Owner: `source/DevTools.UI/Controls/FlatTreeList*`, the summary
-`CheckComboBox` template, `libs/HandyControl/.../CheckComboBox.cs` (move the
-"All" sync above the early return), `source/DevTools.ModelsContext.Views`,
+Owner: `source/DevTools.UI/Controls/FlatTreeList*`,
+`source/DevTools.UI/Controls/CheckComboBox/` (private fork; `libs/HandyControl`
+untouched), `source/DevTools.ModelsContext.Views`,
 `tests/DevTools.ModelsContext.Views.Tests`, `tests/DevTools.ModelsContext.Sandbox`.
+
+- Phase 3a (shared controls) landed first: `SummaryCheckComboBox` fork with
+  "All" sync and disabled-skip, `FlatTreeList` styles (28 px, recycling),
+  panel icons; 6 FlaUI tests in `DevTools.HandyControl.Tests`.
 
 - Views follow 0062 §2, §4, §5, §7, §12 and the canvas; every interactive
   element has an `AutomationId`.
@@ -143,8 +148,14 @@ Owner: `source/DevTools.UI/Controls/FlatTreeList*`, the summary
   tabs are Tree and Filter; group header has no controls; eye toggles row;
   context menu lists actions; documents box shows one line; All tracks manual
   ticks.
-- Performance check in the sandbox against §12 (first rows < 300 ms, expand
-  200 < 50 ms, about 40 realized containers); record numbers here.
+- Performance check in the sandbox against §12, at 100k with three links and
+  at 1M across five documents (first rows, expand, longest UI stall, memory
+  per million); record numbers here.
+- Lifecycle in the core with fakes (0062 §11 Lifecycle): sessions per Current
+  model, generation numbers that drop stale results, view switch, model
+  switch, closing, link unload/reload, busy host. Expected tests: stale result
+  is dropped; closing drops session; model switch parks session; busy host
+  disables actions; same link version keeps snapshot.
 
 ### Phase 4 — Revit adapter T0–T2 (Opus)
 
@@ -158,6 +169,13 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   Properties, Keep, Reset, Zoom via `ZoomAndCenterRectangle`, Section box),
   `RevitFilterEvaluator`, `RevitFilterCatalog` (rule reader with an
   unsupported-rule row), `REVIT2024_OR_GREATER` hints.
+- Version rule (0062 §11 Invalidation): stamp snapshots with
+  `GetDocumentVersion`; on link reload keep on same `VersionGUID`, apply
+  `GetChangedElements(oldGuid)` on a different one, rebuild when unknown or
+  large. Quick per-category `GetElementCount()` for first paint.
+- Lifecycle wiring: `ViewActivated`, active model switch, `DocumentClosing`,
+  link status, busy detection; every call wrapped, failures become a status
+  line.
 - Snapshot export script for MCP `execute_csharp_code`, so real models replay
   in the sandbox.
 - Proof: build for 2023, 2025 and 2027 configs; host tests (MTP via
@@ -204,7 +222,12 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
 - [x] Phase 1 — core model, engine, fake model, tests. Proof: core builds on
   all TFMs with 0 warnings; `DevTools.ModelsContext.Tests` 34/34 on net48,
   net8.0-windows and net10.0-windows; Tools builds for 2025.
-- [ ] Phase 2 — view models and tests.
+- [x] Phase 2 — view models and tests. Proof: `DevTools.ModelsContext.Tests`
+  74/74 on net48, net8.0-windows and net10.0-windows; Tools builds for 2025.
+- [x] Phase 3a — shared controls (`SummaryCheckComboBox` fork, `FlatTreeList`,
+  icons). Proof: `DevTools.HandyControl.Tests` 19/19 on all three TFMs.
+- [ ] Phase 3b — lifecycle and port gaps in the core (list under Decisions).
+- [ ] Phase 3c — views, Views.Tests, sandbox, performance numbers.
 - [ ] Phase 3 — controls, views, UI tests, sandbox, performance numbers.
 - [ ] Phase 4 — Revit adapter T0–T2, host tests, snapshot export.
 - [ ] Phase 5 — spike; T3 queue or no-go path.
@@ -224,6 +247,17 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   `SelectionGuard` records expire after 2 s on `IClock`; rule values are text
   and the adapter parses units; `SnapshotStore` shares one snapshot per
   `SourceId`.
+- 2026-11-13 (Phase 2): default scope Active view, Sync on; an empty custom
+  filter matches nothing and Live sends nothing; the panel's eye record clears
+  on Keep and Reset; turning an eye back on clears Isolate; Duplicate drops
+  unsupported rules and names the copy "X (2)"; Tree → Revit selects instances
+  inside the active scope; a link model row selects the link instance.
+- 2026-11-13 (Phase 2 gaps, fixed in Phase 3b): `UniqueId` for the journal
+  comes from the adapter at action time; per-element visibility read-back
+  through `IViewActions` for Current model eyes; a parameter catalog port for
+  rule parameters; a pane-visibility hook that pauses and resyncs; stable row
+  keys (document, level, group/family/type ids) so open branches survive a
+  rebuild.
 
 ## Validation
 
