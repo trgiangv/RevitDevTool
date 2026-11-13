@@ -15,4 +15,6 @@ public interface IViewActions
     Task SectionBoxAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken);
 
     Task<TemporaryState?> ReadTemporaryStateAsync(CancellationToken cancellationToken);
+
+    Task<IReadOnlyCollection<long>> GetHiddenIdsAsync(DocumentKey document, CancellationToken cancellationToken);
 }

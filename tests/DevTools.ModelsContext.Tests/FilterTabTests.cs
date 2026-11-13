@@ -8,6 +8,23 @@ namespace DevTools.ModelsContext.Tests;
 public sealed class FilterTabTests
 {
     [TestMethod]
+    public async Task ParameterListComesFromCatalog()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.AddCommand.Execute(null);
+        filter.Root.AddRuleCommand.Execute(null);
+        var rule = (RuleViewModel)filter.Root.Children[0];
+
+        rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.DisplayName == "Width");
+
+        CollectionAssert.AreEquivalent(new[] { "Comments", "Level", "Mark", "Width" },
+            filter.Parameters.Select(parameter => parameter.DisplayName).ToArray());
+        Assert.AreEqual(ValueKind.Number, rule.Kind);
+        Assert.AreEqual(FakeParameters.Width, rule.Parameter);
+    }
+
+    [TestMethod]
     public async Task NewFilterGetsNextName()
     {
         using var fixture = await PanelFixture.OpenAsync();

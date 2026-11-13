@@ -9,6 +9,7 @@ public sealed class VisibilityController
 
     private readonly Dictionary<(DocumentKey Model, string ViewId), Ledger> _ledgers = [];
     private readonly PanelRuntime _runtime;
+    private readonly Dictionary<DocumentKey, HashSet<long>> _viewHidden = [];
 
     internal VisibilityController(PanelRuntime runtime)
     {
@@ -40,11 +41,21 @@ public sealed class VisibilityController
 
     public bool IsHidden(ElementRef element, long groupId)
     {
+        if (element.Document.IsCurrentModel)
+        {
+            return _viewHidden.TryGetValue(element.Document, out var ids) && ids.Contains(element.Id);
+        }
+
         return Current is { } ledger && ledger.IsHidden(element, groupId);
     }
 
     public HashSet<long> HiddenIds(DocumentScope document)
     {
+        if (document.Key.IsCurrentModel)
+        {
+            return _viewHidden.TryGetValue(document.Key, out var ids) ? ids : [];
+        }
+
         var hidden = new HashSet<long>();
         if (Current is not { IsEmpty: false } ledger)
         {
@@ -65,6 +76,11 @@ public sealed class VisibilityController
 
     public async Task<string?> RunAsync(VisibilityRequest request, CancellationToken cancellationToken)
     {
+        if (_runtime.IsBusy)
+        {
+            return VisibilityReasons.Busy;
+        }
+
         if (View is not { } view)
         {
             return NoActiveView;
@@ -90,40 +106,63 @@ public sealed class VisibilityController
             case VisibilityAction.Hide:
                 await actions.ExecuteAsync(plan, cancellationToken);
                 ledger.Add(plan);
-                Record(view, plan);
+                await RecordAsync(view, plan, cancellationToken);
                 break;
             case VisibilityAction.Isolate:
                 await actions.ExecuteAsync(plan, cancellationToken);
                 ledger.Isolation = Isolation.From(plan);
-                Record(view, plan);
+                await RecordAsync(view, plan, cancellationToken);
                 break;
             default:
                 await actions.ExecuteAsync(plan, cancellationToken);
                 ledger.Appearance.Add(plan);
-                Record(view, plan);
+                await RecordAsync(view, plan, cancellationToken);
                 break;
         }
 
+        await ReadBackAsync(view.Model.CurrentModel, cancellationToken);
         Changed?.Invoke(this, EventArgs.Empty);
         return null;
     }
 
     public async Task KeepAsync(CancellationToken cancellationToken)
     {
+        if (_runtime.IsBusy)
+        {
+            return;
+        }
+
         await _runtime.Services.ViewActions.KeepAsync(cancellationToken);
-        Clear();
+        await ClearAsync(cancellationToken);
     }
 
     public async Task ResetAsync(CancellationToken cancellationToken)
     {
+        if (_runtime.IsBusy)
+        {
+            return;
+        }
+
         await _runtime.Services.ViewActions.ResetAsync(cancellationToken);
-        Clear();
+        await ClearAsync(cancellationToken);
+    }
+
+    internal async Task ReadBackAsync(DocumentKey document, CancellationToken cancellationToken)
+    {
+        if (!document.IsCurrentModel)
+        {
+            return;
+        }
+
+        var hidden = await _runtime.Services.ViewActions.GetHiddenIdsAsync(document, cancellationToken);
+        _viewHidden[document] = hidden as HashSet<long> ?? [.. hidden];
     }
 
     internal void Forget(DocumentKey document)
     {
         if (document.IsCurrentModel)
         {
+            _viewHidden.Remove(document);
             _runtime.Journal.ClearModel(document);
             foreach (var key in _ledgers.Keys.Where(key => key.Model.ModelId == document.ModelId).ToList())
             {
@@ -142,12 +181,13 @@ public sealed class VisibilityController
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    private void Clear()
+    private async Task ClearAsync(CancellationToken cancellationToken)
     {
         if (View is { } view)
         {
             _runtime.Journal.Reset(view.Model, view.ViewId);
             _ledgers.Remove((view.Model, view.ViewId));
+            await ReadBackAsync(view.Model.CurrentModel, cancellationToken);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
@@ -170,24 +210,31 @@ public sealed class VisibilityController
         if (ledger.HidePlan() is { } hide)
         {
             await actions.ExecuteAsync(hide, cancellationToken);
-            Record(view, hide);
+            await RecordAsync(view, hide, cancellationToken);
         }
 
         foreach (var plan in ledger.Appearance)
         {
             await actions.ExecuteAsync(plan, cancellationToken);
-            Record(view, plan);
+            await RecordAsync(view, plan, cancellationToken);
         }
     }
 
-    private void Record(ViewInfo view, VisibilityPlan plan)
+    private async Task RecordAsync(ViewInfo view, VisibilityPlan plan, CancellationToken cancellationToken)
     {
-        var entries = plan.Action is VisibilityAction.Hide or VisibilityAction.Isolate
-            ? plan.Steps.OfType<ReferenceCommandStep>()
-                .SelectMany(step => step.Ids.Select(id =>
-                    new JournalEntry(new ElementRef(step.Document, id), string.Empty, plan.Action)))
-                .ToList()
-            : null;
+        List<JournalEntry>? entries = null;
+        if (plan.Action is VisibilityAction.Hide or VisibilityAction.Isolate)
+        {
+            entries = [];
+            foreach (var step in plan.Steps.OfType<ReferenceCommandStep>())
+            {
+                var uniqueIds = await _runtime.Services.Source.GetUniqueIdsAsync(step.Document, step.Ids,
+                    cancellationToken);
+                entries.AddRange(step.Ids.Select(id => new JournalEntry(new ElementRef(step.Document, id),
+                    uniqueIds.TryGetValue(id, out var uniqueId) ? uniqueId : string.Empty, plan.Action)));
+            }
+        }
+
         _runtime.Journal.Record(view.Model, view.ViewId, entries);
     }
 

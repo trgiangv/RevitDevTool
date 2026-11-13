@@ -182,6 +182,22 @@ public sealed class ContextMenuViewModel : ObservableObject
         var reset = _temporaryBar.IsVisible;
         this[MenuAction.ResetView].IsVisible = reset;
         _resetSeparator.IsVisible = reset;
+        this[MenuAction.ResetView].DisabledReason = null;
+        if (_runtime.IsBusy)
+        {
+            foreach (var item in Items.Where(item => !item.IsSeparator))
+            {
+                item.DisabledReason = VisibilityReasons.Busy;
+            }
+        }
+    }
+
+    internal void Refresh()
+    {
+        if (_target is { } target)
+        {
+            Open(target);
+        }
     }
 
     private void Plan(MenuAction item, VisibilityAction action)

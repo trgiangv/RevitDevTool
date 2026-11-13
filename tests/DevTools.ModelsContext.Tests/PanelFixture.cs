@@ -25,13 +25,24 @@ internal sealed class PanelFixture : IDisposable
 
     public static async Task<PanelFixture> OpenAsync(FakeModelData? data = null, ScopeKind scope = ScopeKind.WholeModel)
     {
-        var model = new FakeModel(data ?? TestModel.SmallData);
+        var fixture = Create(new FakeModel(data ?? TestModel.SmallData), scope);
+        await fixture.Panel.InitializeAsync(CancellationToken.None);
+        return fixture;
+    }
+
+    public static PanelFixture Create(FakeModel model, ScopeKind scope = ScopeKind.WholeModel)
+    {
         var clock = new FakeClock();
         var panel = new ModelContextViewModel(new ModelContextServices(model, model, model, model, model, model, model,
             clock, clock));
         panel.ContextBar.Scope = scope;
-        await panel.InitializeAsync(CancellationToken.None);
         return new PanelFixture(model, clock, panel);
+    }
+
+    public TreeRow? FindGroup(DocumentKey document, string name)
+    {
+        return Tree.Rows.FirstOrDefault(row =>
+            row.Kind == TreeRowKind.Group && row.Document == document && row.Text == name);
     }
 
     public void Settle()

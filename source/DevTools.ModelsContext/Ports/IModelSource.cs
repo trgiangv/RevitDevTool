@@ -22,4 +22,25 @@ public interface IModelSource
         DocumentKey document,
         IReadOnlyList<long> ids,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<GroupCount>> CountGroupsAsync(
+        DocumentKey document,
+        ScopeKind scope,
+        CancellationToken cancellationToken);
+
+    Task<DocumentVersion?> GetVersionAsync(SourceId source, CancellationToken cancellationToken);
+
+    Task<ElementDelta?> GetChangesSinceAsync(
+        SourceId source,
+        DocumentVersion since,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<ParameterInfo>> GetParameterCatalogAsync(
+        SourceId source,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyDictionary<long, string>> GetUniqueIdsAsync(
+        DocumentKey document,
+        IReadOnlyCollection<long> ids,
+        CancellationToken cancellationToken);
 }

@@ -40,6 +40,34 @@ public sealed class DocumentSnapshot
 
     public int Version { get; private set; }
 
+    public DocumentVersion? Stamp { get; private set; }
+
+    public long EstimatedBytes
+    {
+        get
+        {
+            const int elementRowBytes = 32;
+            const int typeRowBytes = 24;
+            const int groupRowBytes = 16;
+            const int indexEntryBytes = 28;
+            const int nameOverheadBytes = 52;
+            const int countNodeBytes = 96;
+            var bytes = (long)_rows.Capacity * elementRowBytes
+                        + (long)_rowIndex.Count * indexEntryBytes
+                        + (long)_types.Capacity * typeRowBytes
+                        + (long)_typeIndex.Count * indexEntryBytes
+                        + (long)_groups.Capacity * groupRowBytes
+                        + (long)_groupIndex.Count * indexEntryBytes
+                        + (long)CountNodes(Counts) * countNodeBytes;
+            foreach (var name in Names.Names)
+            {
+                bytes += nameOverheadBytes + 2L * name.Length;
+            }
+
+            return bytes;
+        }
+    }
+
     public bool TryGetRow(long id, out ElementRow row)
     {
         if (_rowIndex.TryGetValue(id, out var index))
@@ -144,6 +172,29 @@ public sealed class DocumentSnapshot
     {
         IsDirty = true;
         Version++;
+    }
+
+    internal void SetStamp(DocumentVersion? stamp)
+    {
+        Stamp = stamp;
+    }
+
+    internal void TrimExcess()
+    {
+        _rows.TrimExcess();
+        _types.TrimExcess();
+        _groups.TrimExcess();
+    }
+
+    private static int CountNodes(CountNode node)
+    {
+        var count = 1;
+        foreach (var child in node.Children.Values)
+        {
+            count += CountNodes(child);
+        }
+
+        return count;
     }
 
     internal int UpsertType(TypeRecord type, out bool moved)

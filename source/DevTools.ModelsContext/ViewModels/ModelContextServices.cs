@@ -36,6 +36,8 @@ public sealed class ModelContextServices(
 
 internal sealed class PanelRuntime
 {
+    private readonly Dictionary<SourceId, Task<IReadOnlyList<ParameterInfo>>> _parameters = [];
+
     public PanelRuntime(ModelContextServices services)
     {
         Services = services;
@@ -57,7 +59,36 @@ internal sealed class PanelRuntime
 
     public VisibilityPlanner Planner { get; }
 
+    public bool IsBusy { get; set; }
+
     public event EventHandler<string>? Failed;
+
+    public Task<IReadOnlyList<ParameterInfo>> ParametersAsync(SourceId source, CancellationToken cancellationToken)
+    {
+        lock (_parameters)
+        {
+            if (_parameters.TryGetValue(source, out var task) && !task.IsFaulted && !task.IsCanceled)
+            {
+                return task;
+            }
+
+            task = Services.Source.GetParameterCatalogAsync(source, cancellationToken);
+            _parameters[source] = task;
+            return task;
+        }
+    }
+
+    public void Forget(IEnumerable<SourceId> sources)
+    {
+        foreach (var source in sources)
+        {
+            Values.Invalidate(source);
+            lock (_parameters)
+            {
+                _parameters.Remove(source);
+            }
+        }
+    }
 
     public async Task RunAsync(Func<Task> work)
     {
@@ -76,6 +107,11 @@ internal sealed class PanelRuntime
 
     public async Task SelectAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
     {
+        if (IsBusy)
+        {
+            return;
+        }
+
         Guard.RecordSent(elements);
         await Services.Selection.SelectAsync(elements, cancellationToken);
     }

@@ -36,4 +36,5 @@ public static class VisibilityReasons
     public const string NotSupported = "This model does not support this action.";
     public const string Updating = "Model data is updating.";
     public const string Nothing = "Nothing to act on.";
+    public const string Busy = "Revit is busy.";
 }

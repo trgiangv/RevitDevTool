@@ -36,7 +36,9 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
     private ResultSelectionMode _mode;
     private string _name = string.Empty;
     private string? _nameError;
+    private IReadOnlyList<ParameterInfo> _parameters = [];
     private FilterSourceItem? _pending;
+    private FilterState? _restore;
     private IReadOnlyList<ElementRef> _result = [];
     private RuleSetViewModel _root;
     private CancellationToken _token;
@@ -189,6 +191,18 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         {
             var names = Categories.Where(item => item.IsChecked).Select(item => item.Name).ToList();
             return names.Count == 0 ? AllCategories : string.Join(", ", names);
+        }
+    }
+
+    public IReadOnlyList<ParameterInfo> Parameters
+    {
+        get => _parameters;
+        private set
+        {
+            if (SetProperty(ref _parameters, value))
+            {
+                Root.NotifyParameters();
+            }
         }
     }
 
@@ -382,7 +396,50 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         _data = data;
         _token = cancellationToken;
         RebuildCategories();
+        Parameters = await LoadParametersAsync(cancellationToken);
         await LoadSourcesAsync(cancellationToken);
+    }
+
+    internal FilterState Capture()
+    {
+        return _restore is { } pending ? pending with { IsLiveOn = _isLiveOn } : new FilterState(_current, _isLiveOn);
+    }
+
+    internal void Reset(FilterState state)
+    {
+        _restore = state;
+        _evaluation?.Cancel();
+        _liveDebouncer.Cancel();
+        _data = ContextData.Empty;
+        SetPending(null);
+        IsLivePaused = false;
+        if (_isLiveOn != state.IsLiveOn)
+        {
+            _isLiveOn = state.IsLiveOn;
+            OnPropertyChanged(nameof(IsLiveOn));
+            OnPropertyChanged(nameof(IsSyncing));
+        }
+
+        Result = [];
+    }
+
+    private async Task<IReadOnlyList<ParameterInfo>> LoadParametersAsync(CancellationToken cancellationToken)
+    {
+        var merged = new Dictionary<ParameterKey, ParameterInfo>();
+        foreach (var source in _data.Documents.Select(document => document.Snapshot.Source).Distinct())
+        {
+            foreach (var parameter in await _runtime.ParametersAsync(source, cancellationToken))
+            {
+                if (!merged.ContainsKey(parameter.Key))
+                {
+                    merged.Add(parameter.Key, parameter);
+                }
+            }
+        }
+
+        return merged.Values
+            .OrderBy(parameter => parameter.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
 
     internal async Task ActivateAsync()
@@ -446,10 +503,12 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
 
     private async Task LoadSourcesAsync(CancellationToken cancellationToken)
     {
+        var restore = _restore;
+        var target = restore is null ? _current : restore.Selected;
         var items = _runtime.Services.CustomFilters.Load()
             .Select(filter => FilterSourceItem.Custom(filter, filter.Name))
             .ToList();
-        if (_current is { IsCustom: true, Saved: null } draft)
+        if (target is { IsCustom: true, Saved: null } draft)
         {
             items.Add(draft);
         }
@@ -460,14 +519,20 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
             items.AddRange(filters.Select(filter => FilterSourceItem.ForHost(filter, document.Label)));
         }
 
-        var keep = _current is null ? null : items.FirstOrDefault(item => item.SameAs(_current));
+        var keep = target is null ? null : items.FirstOrDefault(item => item.SameAs(target));
         Sources.Clear();
         foreach (var item in items)
         {
             Sources.Add(item);
         }
 
-        if (keep is null)
+        if (restore is not null)
+        {
+            _restore = null;
+            _current = null;
+            await SwitchToAsync(keep);
+        }
+        else if (keep is null)
         {
             await SwitchToAsync(null);
         }

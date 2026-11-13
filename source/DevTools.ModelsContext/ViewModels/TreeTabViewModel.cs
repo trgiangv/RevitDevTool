@@ -34,6 +34,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
     private bool _isSyncPaused;
     private bool _isUpdating;
     private string? _message;
+    private TreeState? _pending;
     private bool _revealPending;
     private List<TreeRow> _roots = [];
     private HashSet<TreeRow>? _searchHits;
@@ -229,7 +230,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
     {
         _selectedRows.Clear();
         _selectedRows.UnionWith(rows);
-        if (IsSyncOn && IsSyncVisible)
+        if (IsSyncOn && IsSyncVisible && !_runtime.IsBusy)
         {
             _sendDebouncer.Trigger();
         }
@@ -287,21 +288,111 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         _menu.Open(new MenuTarget(rows, [], () => ElementsOf(rows), IsSyncing, hidden, _token));
     }
 
-    internal async Task LoadAsync(ContextData data, CancellationToken cancellationToken)
+    internal TreeState Capture()
     {
-        var previous = new HashSet<string>(_roots.Select(KeyOf), StringComparer.Ordinal);
+        if (_pending is { } pending)
+        {
+            return pending with { IsSyncOn = _isSyncOn };
+        }
+
         var expanded = new HashSet<string>(StringComparer.Ordinal);
         CollectExpanded(_roots, expanded);
+        return new TreeState(expanded, new HashSet<string>(_roots.Select(KeyOf), StringComparer.Ordinal), _isSyncOn);
+    }
+
+    internal void Reset(TreeState state)
+    {
+        _pending = state;
+        _data = ContextData.Empty;
+        _roots = [];
+        _states.Clear();
+        _instanceIds.Clear();
+        _selectedRows.Clear();
+        _selectedElements = [];
+        _searchHits = null;
+        _searchMatches = [];
+        _revealPending = false;
+        SyncHint = null;
+        IsSyncPaused = false;
+        if (_isSyncOn != state.IsSyncOn)
+        {
+            _isSyncOn = state.IsSyncOn;
+            OnPropertyChanged(nameof(IsSyncOn));
+            OnPropertyChanged(nameof(IsSyncing));
+        }
+
+        _sendDebouncer.Cancel();
+        Rows.ReplaceAll([]);
+        RaiseSelectionCounts();
+        RowSelectionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    internal void ShowQuickCounts(IReadOnlyList<QuickDocument> documents, DocumentKey? currentModel)
+    {
+        _pending ??= Capture();
+        var state = _pending;
+        _data = ContextData.Empty;
+        _states.Clear();
+        _instanceIds.Clear();
+        _selectedRows.Clear();
+        _roots = [];
+        if (documents.Count > 0)
+        {
+            var current = currentModel ?? documents[0].Key.CurrentModel;
+            var header = new TreeRow(TreeRowKind.AllModelsHeader, AllModelsText, document: current)
+            {
+                HasChildren = true,
+                Key = RowKey(TreeRowKind.AllModelsHeader, current)
+            };
+            var merged = documents.SelectMany(document => document.Groups)
+                .GroupBy(group => group.GroupId)
+                .Select(group => new GroupCount(group.Key, group.First().Name, group.Sum(item => item.Count)))
+                .ToList();
+            header.Children = QuickGroupRows(header, TreeRowKind.AllModelsGroup, current, merged);
+            header.Count = merged.Sum(group => group.Count);
+            _roots.Add(header);
+            foreach (var document in documents.OrderBy(document => !document.Key.IsCurrentModel))
+            {
+                var root = RootRow(document.Key, document.Label);
+                root.Children = QuickGroupRows(root, TreeRowKind.Group, document.Key, document.Groups);
+                root.Count = document.Groups.Sum(group => group.Count);
+                _roots.Add(root);
+            }
+
+            foreach (var root in _roots)
+            {
+                root.IsExpanded = state.Expanded.Contains(root.Key) || !state.Roots.Contains(root.Key);
+            }
+        }
+
+        var visible = new List<TreeRow>();
+        foreach (var root in _roots)
+        {
+            visible.Add(root);
+            if (root.IsExpanded)
+            {
+                visible.AddRange(root.Children!);
+            }
+        }
+
+        Rows.ReplaceAll(visible);
+    }
+
+    internal async Task LoadAsync(ContextData data, CancellationToken cancellationToken)
+    {
+        var state = _pending ?? Capture();
         _data = data;
         _token = cancellationToken;
         _instanceIds.Clear();
         _selectedRows.Clear();
         ComputeStates();
         _roots = BuildRoots();
-        foreach (var root in _roots.Where(root => expanded.Contains(KeyOf(root)) || !previous.Contains(KeyOf(root))))
+        foreach (var root in _roots.Where(root => state.Expanded.Contains(KeyOf(root)) || !state.Roots.Contains(KeyOf(root))))
         {
-            await RestoreAsync(root, expanded);
+            await RestoreAsync(root, state.Expanded);
         }
+
+        _pending = null;
 
         if (_searchText.Trim().Length > 0)
         {
@@ -361,8 +452,50 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
     private static string KeyOf(TreeRow row)
     {
-        return string.Join("|", (int)row.Kind, row.Document?.ToString() ?? string.Empty, row.Path.Group,
-            row.Path.Family, row.Path.Type, row.Id);
+        return row.Key;
+    }
+
+    private static string RowKey(
+        TreeRowKind kind,
+        DocumentKey? document,
+        long group = RowPath.Unset,
+        string family = "",
+        long type = RowPath.Unset,
+        long element = RowPath.Unset)
+    {
+        return string.Join("|", (int)kind, document?.ToString() ?? string.Empty,
+            group.ToString(CultureInfo.InvariantCulture), family, type.ToString(CultureInfo.InvariantCulture),
+            element.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private static TreeRow RootRow(DocumentKey key, string label)
+    {
+        return key.IsCurrentModel
+            ? new TreeRow(TreeRowKind.CurrentModelHeader, ContextBarViewModel.CurrentModelLabel, document: key)
+            {
+                HasChildren = true,
+                Key = RowKey(TreeRowKind.CurrentModelHeader, key)
+            }
+            : new TreeRow(TreeRowKind.LinkModel, label, document: key, id: key.LinkInstanceId)
+            {
+                HasChildren = true,
+                Key = RowKey(TreeRowKind.LinkModel, key)
+            };
+    }
+
+    private static List<TreeRow> QuickGroupRows(
+        TreeRow parent,
+        TreeRowKind kind,
+        DocumentKey document,
+        IEnumerable<GroupCount> groups)
+    {
+        return Sorted(groups.Where(group => group.Count > 0).Select(group =>
+            new TreeRow(kind, group.Name, parent, id: group.GroupId)
+            {
+                Count = group.Count,
+                DisabledReason = VisibilityReasons.Updating,
+                Key = RowKey(kind, document, group.GroupId)
+            }));
     }
 
     private static void CollectExpanded(IEnumerable<TreeRow> rows, HashSet<string> keys)
@@ -543,7 +676,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
     private async Task SendSelectionAsync()
     {
-        if (!IsSyncOn || !IsSyncVisible)
+        if (!IsSyncOn || !IsSyncVisible || _runtime.IsBusy)
         {
             return;
         }
@@ -641,18 +774,13 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         }
 
         var current = _data.CurrentModel ?? _data.Documents[0].Key.CurrentModel;
-        roots.Add(new TreeRow(TreeRowKind.AllModelsHeader, AllModelsText, document: current) { HasChildren = true });
-        foreach (var document in _data.Documents.OrderBy(document => !document.Key.IsCurrentModel))
+        roots.Add(new TreeRow(TreeRowKind.AllModelsHeader, AllModelsText, document: current)
         {
-            roots.Add(document.Key.IsCurrentModel
-                ? new TreeRow(TreeRowKind.CurrentModelHeader, ContextBarViewModel.CurrentModelLabel,
-                    document: document.Key)
-                { HasChildren = true }
-                : new TreeRow(TreeRowKind.LinkModel, document.Label, document: document.Key,
-                    id: document.Key.LinkInstanceId)
-                { HasChildren = true });
-        }
-
+            HasChildren = true,
+            Key = RowKey(TreeRowKind.AllModelsHeader, current)
+        });
+        roots.AddRange(_data.Documents.OrderBy(document => !document.Key.IsCurrentModel)
+            .Select(document => RootRow(document.Key, document.Label)));
         return roots;
     }
 
@@ -694,37 +822,55 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
         return Sorted(groups.Select(group => new TreeRow(TreeRowKind.AllModelsGroup, group.Name, header,
             id: group.GroupId)
-        { Count = group.Count }));
+        {
+            Count = group.Count,
+            Key = RowKey(TreeRowKind.AllModelsGroup, header.Document, group.GroupId)
+        }));
     }
 
     private List<TreeRow> GroupRows(TreeRow parent, DocumentScope scope)
     {
         var snapshot = scope.Snapshot;
         var state = _states[scope.Key];
-        return Sorted(KeysOf(scope.Counts, state.Hidden).Select(index => new TreeRow(TreeRowKind.Group,
-            snapshot.GroupName(index), parent, path: RowPath.ForGroup(index),
-            id: snapshot.Groups[index].GroupId)
-        { HasChildren = true }));
+        return Sorted(KeysOf(scope.Counts, state.Hidden).Select(index =>
+        {
+            var groupId = snapshot.Groups[index].GroupId;
+            return new TreeRow(TreeRowKind.Group, snapshot.GroupName(index), parent, path: RowPath.ForGroup(index),
+                id: groupId)
+            {
+                HasChildren = true,
+                Key = RowKey(TreeRowKind.Group, scope.Key, groupId)
+            };
+        }));
     }
 
     private List<TreeRow> FamilyRows(TreeRow parent, DocumentScope scope)
     {
         var keys = KeyPath(parent.Path, 3);
         var group = parent.Path.Group;
+        var groupId = scope.Snapshot.Groups[group].GroupId;
         return Sorted(KeysOf(scope.Counts.Find(keys), _states[scope.Key].Hidden.Find(keys)).Select(family =>
             new TreeRow(TreeRowKind.Family, scope.Snapshot.Names[family], parent,
                 path: RowPath.ForFamily(group, family))
-            { HasChildren = true }));
+            {
+                HasChildren = true,
+                Key = RowKey(TreeRowKind.Family, scope.Key, groupId, scope.Snapshot.Names[family])
+            }));
     }
 
     private List<TreeRow> TypeRows(TreeRow parent, DocumentScope scope)
     {
         var snapshot = scope.Snapshot;
         var keys = KeyPath(parent.Path, snapshot.GroupingDepth);
+        var groupId = snapshot.Groups[parent.Path.Group].GroupId;
+        var family = parent.Path.Family == RowPath.Any ? string.Empty : snapshot.Names[parent.Path.Family];
         return Sorted(KeysOf(scope.Counts.Find(keys), _states[scope.Key].Hidden.Find(keys)).Select(type =>
             new TreeRow(TreeRowKind.Type, snapshot.TypeName(type), parent,
                 path: RowPath.ForType(parent.Path.Group, parent.Path.Family, type))
-            { HasChildren = true }));
+            {
+                HasChildren = true,
+                Key = RowKey(TreeRowKind.Type, scope.Key, groupId, family, snapshot.Types[type].TypeId)
+            }));
     }
 
     private async Task<IReadOnlyList<TreeRow>> InstanceRowsAsync(TreeRow parent, DocumentScope scope)
@@ -755,12 +901,18 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         var take = ids.Skip(existing.Count).Take(InstancePageSize).ToList();
         var names = await _runtime.Services.Source.GetInstanceNamesAsync(key, take, _token);
         var page = names.Select(name => new TreeRow(TreeRowKind.Instance, name.Name, parent,
-            path: RowPath.ForElement(name.Id), id: name.Id)).ToList();
+            path: RowPath.ForElement(name.Id), id: name.Id)
+        {
+            Key = RowKey(TreeRowKind.Instance, key, element: name.Id)
+        }).ToList();
         var shown = existing.Count + take.Count;
         if (shown < ids.Length)
         {
             page.Add(new TreeRow(TreeRowKind.MorePage,
-                string.Format(CultureInfo.CurrentCulture, "{0:N0} of {1:N0} · more", shown, ids.Length), parent));
+                string.Format(CultureInfo.CurrentCulture, "{0:N0} of {1:N0} · more", shown, ids.Length), parent)
+            {
+                Key = parent.Key + "|" + RowKey(TreeRowKind.MorePage, key)
+            });
         }
 
         parent.Children = existing.Concat(page).ToList();
@@ -832,6 +984,11 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
     private void ApplyState(TreeRow row)
     {
+        if (DocumentOf(row) is { } document)
+        {
+            row.DisabledReason = document.Info.IsLoaded ? null : VisibilityReasons.NotLoaded;
+        }
+
         var stale = _visibility.Journal.IsStale;
         switch (row.Kind)
         {

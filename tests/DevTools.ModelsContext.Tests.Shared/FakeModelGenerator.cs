@@ -12,6 +12,17 @@ public sealed record FakeModelOptions
 
     public DocumentCapabilities LinkCapabilities { get; init; } =
         DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands;
+
+    public string ModelId { get; init; } = FakeModelGenerator.ModelId;
+
+    public int ExtraLinks { get; init; }
+
+    public static FakeModelOptions Million { get; } = new()
+    {
+        CurrentElements = 200_000,
+        LinkElements = 200_000,
+        ExtraLinks = 2
+    };
 }
 
 public sealed record FakeSource(SourceId Id, string FileName, IReadOnlyList<TypeRecord> Types, IReadOnlyList<ElementRecord> Elements);
@@ -84,7 +95,10 @@ public static class FakeModelGenerator
         var levels = LevelNames.Select((name, index) => (Id: 300L + index, Name: name))
             .ToDictionary(level => level.Id, level => level.Name);
 
-        var current = CreateSource(CurrentSource, "Current model", "AMS", options.CurrentElements, options.Seed,
+        var modelId = options.ModelId;
+        var currentSource = modelId == ModelId ? CurrentSource : new SourceId($"current-{modelId}");
+        var currentKey = DocumentKey.Current(modelId);
+        var current = CreateSource(currentSource, "Current model", "AMS", options.CurrentElements, options.Seed,
             1_000_000, levels);
         var arch = CreateSource(ArchSource, "Arch.rvt", "AS", options.LinkElements, options.Seed + 1, 2_000_000,
             levels);
@@ -93,33 +107,58 @@ public static class FakeModelGenerator
 
         const DocumentCapabilities currentCapabilities =
             DocumentCapabilities.HideById | DocumentCapabilities.HideGroupEverywhere;
-        DocumentInfo[] documents =
-        [
-            new(Current, CurrentSource, "Current model", true, currentCapabilities),
-            new(ArchFirst, ArchSource, "Arch.rvt", true, options.LinkCapabilities),
-            new(ArchSecond, ArchSource, "Arch.rvt (2)", true, options.LinkCapabilities),
-            new(Mep, MepSource, "MEP-Mech.rvt", true, options.LinkCapabilities)
-        ];
+        var documents = new List<DocumentInfo>
+        {
+            new(currentKey, currentSource, "Current model", true, currentCapabilities),
+            new(DocumentKey.Link(modelId, ArchFirstInstance), ArchSource, "Arch.rvt", true, options.LinkCapabilities),
+            new(DocumentKey.Link(modelId, ArchSecondInstance), ArchSource, "Arch.rvt (2)", true,
+                options.LinkCapabilities),
+            new(DocumentKey.Link(modelId, MepInstance), MepSource, "MEP-Mech.rvt", true, options.LinkCapabilities)
+        };
 
         var sources = new Dictionary<SourceId, FakeSource>
         {
-            [CurrentSource] = current,
+            [currentSource] = current,
             [ArchSource] = arch,
             [MepSource] = mep
         };
 
-        return new FakeModelData(Current, documents, sources, levels);
+        for (var index = 1; index <= options.ExtraLinks; index++)
+        {
+            var id = new SourceId($"link-{index}");
+            var fileName = $"Link-{index}.rvt";
+            sources[id] = CreateSource(id, fileName, "ASM", options.LinkElements, options.Seed + 2 + index,
+                3_000_000 + index * 1_000_000L, levels);
+            documents.Add(new DocumentInfo(DocumentKey.Link(modelId, MepInstance + index), id, fileName, true,
+                options.LinkCapabilities));
+        }
+
+        return new FakeModelData(currentKey, documents, sources, levels);
     }
 
     public static DocumentSnapshot BuildSnapshot(FakeSource source, int groupingDepth = TreeSchema.MaxGroupingDepth)
     {
+        return BuildSnapshot(source, null, false, groupingDepth);
+    }
+
+    public static DocumentSnapshot BuildSnapshot(
+        FakeSource source,
+        DocumentVersion? stamp,
+        bool reversed,
+        int groupingDepth = TreeSchema.MaxGroupingDepth)
+    {
         var builder = new DocumentSnapshotBuilder(source.Id, groupingDepth);
-        foreach (var type in source.Types)
+        if (stamp is { } version)
+        {
+            builder.WithStamp(version);
+        }
+
+        foreach (var type in reversed ? source.Types.Reverse() : source.Types)
         {
             builder.AddType(type);
         }
 
-        foreach (var element in source.Elements)
+        foreach (var element in reversed ? source.Elements.Reverse() : source.Elements)
         {
             builder.AddElement(element);
         }

@@ -50,11 +50,6 @@ public sealed class DocumentItemViewModel : ObservableObject
     {
         Info = info;
         Label = label;
-        if (!info.IsLoaded)
-        {
-            _isChecked = false;
-        }
-
         OnPropertyChanged(string.Empty);
     }
 
@@ -139,6 +134,11 @@ public sealed class ContextBarViewModel : ObservableObject
 
     public void SetDocuments(IReadOnlyList<DocumentInfo> documents)
     {
+        SetDocuments(documents, null);
+    }
+
+    internal void SetDocuments(IReadOnlyList<DocumentInfo> documents, IReadOnlyCollection<DocumentKey>? ticks)
+    {
         var labels = Labels(documents);
         var known = Documents.ToDictionary(item => item.Key);
         var first = Documents.Count == 0;
@@ -156,10 +156,15 @@ public sealed class ContextBarViewModel : ObservableObject
                 item.SetChecked(first && info.Key.IsCurrentModel && info.IsLoaded);
             }
 
+            if (ticks is not null)
+            {
+                item.SetChecked(ticks.Contains(info.Key));
+            }
+
             Documents.Add(item);
         }
 
-        if (!Documents.Any(item => item.IsChecked))
+        if (!Documents.Any(item => item.IsChecked && item.IsEnabled))
         {
             (Documents.FirstOrDefault(item => item.Key.IsCurrentModel && item.IsEnabled)
              ?? Documents.FirstOrDefault(item => item.IsEnabled))?.SetChecked(true);
@@ -193,7 +198,7 @@ public sealed class ContextBarViewModel : ObservableObject
             return item.IsEnabled;
         }
 
-        return Documents.Any(other => !ReferenceEquals(other, item) && other.IsChecked);
+        return Documents.Any(other => !ReferenceEquals(other, item) && other.IsChecked && other.IsEnabled);
     }
 
     internal void OnTicksChanged()

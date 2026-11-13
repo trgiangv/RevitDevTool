@@ -7,6 +7,8 @@ namespace DevTools.ModelsContext.ViewModels;
 
 internal interface IFilterEditor
 {
+    IReadOnlyList<ParameterInfo> Parameters { get; }
+
     void OnEdited();
 
     Task LoadValuesAsync(RuleViewModel rule);
@@ -25,6 +27,10 @@ public abstract class FilterNodeViewModel : ObservableObject
     internal IFilterEditor Editor { get; }
 
     internal abstract FilterNode? ToNode();
+
+    internal virtual void NotifyParameters()
+    {
+    }
 
     internal static FilterNodeViewModel From(FilterNode node, IFilterEditor editor, bool isReadOnly)
     {
@@ -98,6 +104,14 @@ public sealed class RuleSetViewModel : FilterNodeViewModel
         return set.Children.Count == 0 ? null : set;
     }
 
+    internal override void NotifyParameters()
+    {
+        foreach (var child in Children)
+        {
+            child.NotifyParameters();
+        }
+    }
+
     private void Add(FilterNodeViewModel node)
     {
         Children.Add(node);
@@ -121,6 +135,7 @@ public sealed class RuleViewModel : FilterNodeViewModel
     private FilterOperator _operator;
     private ParameterKey? _parameter;
     private string _parameterName;
+    private ParameterInfo? _selectedParameter;
     private string _value;
     private IReadOnlyList<ValueCount> _values = [];
 
@@ -132,7 +147,37 @@ public sealed class RuleViewModel : FilterNodeViewModel
         _kind = rule?.Kind ?? ValueKind.Text;
         _operator = rule?.Operator ?? FilterOperator.Equal;
         _value = rule?.Value ?? string.Empty;
+        _selectedParameter = rule is null
+            ? null
+            : editor.Parameters.FirstOrDefault(parameter => parameter.Key == rule.Parameter);
         LoadValuesCommand = new AsyncRelayCommand(() => Editor.LoadValuesAsync(this));
+    }
+
+    public IReadOnlyList<ParameterInfo> Parameters => Editor.Parameters;
+
+    public ParameterInfo? SelectedParameter
+    {
+        get => _selectedParameter;
+        set
+        {
+            if (IsReadOnly || Equals(value, _selectedParameter))
+            {
+                return;
+            }
+
+            _selectedParameter = value;
+            OnPropertyChanged();
+            _parameter = value?.Key;
+            _parameterName = value?.DisplayName ?? string.Empty;
+            OnPropertyChanged(nameof(ParameterName));
+            if (value is not null)
+            {
+                SetKind(value.Kind);
+            }
+
+            Values = [];
+            Edited();
+        }
     }
 
     public string ParameterName
@@ -145,7 +190,16 @@ public sealed class RuleViewModel : FilterNodeViewModel
                 return;
             }
 
-            _parameter = null;
+            var match = Parameters.FirstOrDefault(parameter =>
+                string.Equals(parameter.DisplayName, _parameterName.Trim(), StringComparison.OrdinalIgnoreCase));
+            _selectedParameter = match;
+            OnPropertyChanged(nameof(SelectedParameter));
+            _parameter = match?.Key;
+            if (match is not null)
+            {
+                SetKind(match.Kind);
+            }
+
             Values = [];
             Edited();
         }
@@ -156,17 +210,9 @@ public sealed class RuleViewModel : FilterNodeViewModel
         get => _kind;
         set
         {
-            if (IsReadOnly || !SetProperty(ref _kind, value))
+            if (IsReadOnly || !SetKind(value))
             {
                 return;
-            }
-
-            OnPropertyChanged(nameof(Operators));
-            if (!FilterOperators.Allows(value, _operator))
-            {
-                _operator = Operators[0];
-                OnPropertyChanged(nameof(Operator));
-                OnPropertyChanged(nameof(NeedsValue));
             }
 
             Edited();
@@ -228,6 +274,17 @@ public sealed class RuleViewModel : FilterNodeViewModel
         ? null
         : _parameter ?? new ParameterKey(_parameterName.Trim());
 
+    internal override void NotifyParameters()
+    {
+        if (_parameter is { } key && _selectedParameter is null)
+        {
+            _selectedParameter = Parameters.FirstOrDefault(parameter => parameter.Key == key);
+            OnPropertyChanged(nameof(SelectedParameter));
+        }
+
+        OnPropertyChanged(nameof(Parameters));
+    }
+
     internal void SetValues(IReadOnlyList<ValueCount> values, bool hasMore, int noParameter)
     {
         Values = values;
@@ -243,6 +300,24 @@ public sealed class RuleViewModel : FilterNodeViewModel
         }
 
         return new FilterRule(parameter, Kind, Operator, Value);
+    }
+
+    private bool SetKind(ValueKind kind)
+    {
+        if (!SetProperty(ref _kind, kind, nameof(Kind)))
+        {
+            return false;
+        }
+
+        OnPropertyChanged(nameof(Operators));
+        if (!FilterOperators.Allows(kind, _operator))
+        {
+            _operator = Operators[0];
+            OnPropertyChanged(nameof(Operator));
+            OnPropertyChanged(nameof(NeedsValue));
+        }
+
+        return true;
     }
 }
 

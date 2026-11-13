@@ -4,6 +4,8 @@ namespace DevTools.ModelsContext.Ports;
 
 public interface IModelEvents
 {
+    bool IsBusy { get; }
+
     event EventHandler? DocumentsChanged;
 
     event EventHandler<ElementDelta>? ElementsChanged;
@@ -13,4 +15,12 @@ public interface IModelEvents
     event EventHandler<ViewInfo>? ViewActivated;
 
     event EventHandler<DocumentKey>? DocumentClosing;
+
+    event EventHandler<DocumentKey>? ActiveModelChanged;
+
+    event EventHandler<DocumentKey>? ModelSynced;
+
+    event EventHandler<LinkStatusChange>? LinkStatusChanged;
+
+    event EventHandler<bool>? BusyChanged;
 }

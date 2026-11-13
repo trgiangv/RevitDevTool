@@ -26,10 +26,18 @@ public sealed class DocumentSnapshotBuilder(SourceId source, int groupingDepth =
         return this;
     }
 
+    public DocumentSnapshotBuilder WithStamp(DocumentVersion stamp)
+    {
+        EnsureOpen();
+        _snapshot.SetStamp(stamp);
+        return this;
+    }
+
     public DocumentSnapshot Build()
     {
         EnsureOpen();
         _built = true;
+        _snapshot.TrimExcess();
         return _snapshot;
     }
 

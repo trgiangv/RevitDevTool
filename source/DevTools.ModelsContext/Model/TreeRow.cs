@@ -45,6 +45,12 @@ public sealed class TreeRow
 
     public RowEye Eye { get; set; }
 
+    public string Key { get; init; } = string.Empty;
+
+    public string? DisabledReason { get; set; }
+
+    public bool IsEnabled => DisabledReason is null;
+
     public int Badge => IsExpanded ? 0 : SelectedInside;
 
     public bool ChildrenLoaded => Children is not null;

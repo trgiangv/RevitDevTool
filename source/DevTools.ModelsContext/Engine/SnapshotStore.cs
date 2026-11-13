@@ -20,21 +20,56 @@ public sealed class SnapshotStore(IModelSource source)
         }
     }
 
-    public void SetDocuments(IEnumerable<DocumentInfo> documents)
+    public IReadOnlyList<SourceId> SetDocuments(IEnumerable<DocumentInfo> documents)
     {
         lock (_gate)
         {
-            _documents.Clear();
-            foreach (var document in documents)
+            var list = documents.ToList();
+            var models = list.Select(document => document.Key.ModelId).ToHashSet(StringComparer.Ordinal);
+            foreach (var key in _documents.Keys.Where(key => models.Contains(key.ModelId)).ToList())
+            {
+                _documents.Remove(key);
+            }
+
+            foreach (var document in list)
             {
                 _documents[document.Key] = document;
             }
 
-            var live = _documents.Values.Select(document => document.Source).ToHashSet();
-            foreach (var stale in _snapshots.Keys.Where(id => !live.Contains(id)).ToList())
+            return DropUnused();
+        }
+    }
+
+    public IReadOnlyList<SourceId> DropModel(string modelId)
+    {
+        lock (_gate)
+        {
+            foreach (var key in _documents.Keys.Where(key => key.ModelId == modelId).ToList())
             {
-                _snapshots.Remove(stale);
+                _documents.Remove(key);
             }
+
+            return DropUnused();
+        }
+    }
+
+    public int UsersOf(SourceId id)
+    {
+        lock (_gate)
+        {
+            return _documents.Values
+                .Where(document => document.Source == id)
+                .Select(document => document.Key.ModelId)
+                .Distinct(StringComparer.Ordinal)
+                .Count();
+        }
+    }
+
+    public bool Holds(SourceId id)
+    {
+        lock (_gate)
+        {
+            return _snapshots.ContainsKey(id);
         }
     }
 
@@ -73,31 +108,32 @@ public sealed class SnapshotStore(IModelSource source)
     {
         lock (_gate)
         {
-            if (!_documents.TryGetValue(key, out var info)
-                || !_snapshots.TryGetValue(info.Source, out var task)
-                || task.Status != TaskStatus.RanToCompletion)
-            {
-                return null;
-            }
-
-            return task.Result;
+            return _documents.TryGetValue(key, out var info) ? Completed(info.Source) : null;
         }
+    }
+
+    public bool IsReady(DocumentKey key)
+    {
+        return TryGet(key) is { IsDirty: false };
     }
 
     public DeltaOutcome Apply(ElementDelta delta)
     {
-        DocumentSnapshot snapshot;
+        DocumentSnapshot? snapshot;
         lock (_gate)
         {
-            if (!_snapshots.TryGetValue(delta.Source, out var task) || task.Status != TaskStatus.RanToCompletion)
-            {
-                return DeltaOutcome.Ignored;
-            }
-
-            snapshot = task.Result;
+            snapshot = Completed(delta.Source);
         }
 
-        return DeltaApplier.Apply(snapshot, delta);
+        return snapshot is null ? DeltaOutcome.Ignored : DeltaApplier.Apply(snapshot, delta);
+    }
+
+    public void MarkDirty(SourceId id)
+    {
+        lock (_gate)
+        {
+            Completed(id)?.MarkDirty();
+        }
     }
 
     public void Drop(SourceId id)
@@ -108,8 +144,101 @@ public sealed class SnapshotStore(IModelSource source)
         }
     }
 
+    public async Task<ReloadOutcome> ReloadAsync(SourceId id, CancellationToken cancellationToken)
+    {
+        DocumentSnapshot? snapshot;
+        lock (_gate)
+        {
+            snapshot = Completed(id);
+        }
+
+        if (snapshot is null || snapshot.IsDirty || snapshot.Stamp is not { } stamp)
+        {
+            return Rebuild(snapshot);
+        }
+
+        var current = await source.GetVersionAsync(id, cancellationToken).ConfigureAwait(false);
+        if (current is not { } now)
+        {
+            return Rebuild(snapshot);
+        }
+
+        if (VersionRule.IsSame(stamp, now))
+        {
+            return ReloadOutcome.Kept;
+        }
+
+        var delta = await source.GetChangesSinceAsync(id, stamp, cancellationToken).ConfigureAwait(false);
+        if (delta is null
+            || VersionRule.IsTooLarge(delta, snapshot.ElementCount)
+            || DeltaApplier.Apply(snapshot, delta, int.MaxValue) != DeltaOutcome.Applied)
+        {
+            return Rebuild(snapshot);
+        }
+
+        snapshot.SetStamp(now);
+        return ReloadOutcome.Patched;
+    }
+
+    public async Task<bool> VerifyAsync(SourceId id, CancellationToken cancellationToken)
+    {
+        DocumentSnapshot? snapshot;
+        lock (_gate)
+        {
+            snapshot = Completed(id);
+        }
+
+        if (snapshot is null || snapshot.IsDirty)
+        {
+            return true;
+        }
+
+        var current = await source.GetVersionAsync(id, cancellationToken).ConfigureAwait(false);
+        if (current is not { } now || VersionRule.IsSame(snapshot.Stamp, now))
+        {
+            return true;
+        }
+
+        var delta = snapshot.Stamp is { } stamp
+            ? await source.GetChangesSinceAsync(id, stamp, cancellationToken).ConfigureAwait(false)
+            : null;
+        if (delta is null || !VersionRule.IsReflected(snapshot, delta))
+        {
+            snapshot.MarkDirty();
+            return false;
+        }
+
+        snapshot.SetStamp(now);
+        return true;
+    }
+
+    private static ReloadOutcome Rebuild(DocumentSnapshot? snapshot)
+    {
+        snapshot?.MarkDirty();
+        return ReloadOutcome.Rebuilt;
+    }
+
     private static bool IsUnusable(Task<DocumentSnapshot> task)
     {
         return task.IsFaulted || task.IsCanceled || (task.Status == TaskStatus.RanToCompletion && task.Result.IsDirty);
+    }
+
+    private DocumentSnapshot? Completed(SourceId id)
+    {
+        return _snapshots.TryGetValue(id, out var task) && task.Status == TaskStatus.RanToCompletion
+            ? task.Result
+            : null;
+    }
+
+    private List<SourceId> DropUnused()
+    {
+        var live = _documents.Values.Select(document => document.Source).ToHashSet();
+        var stale = _snapshots.Keys.Where(id => !live.Contains(id)).ToList();
+        foreach (var id in stale)
+        {
+            _snapshots.Remove(id);
+        }
+
+        return stale;
     }
 }

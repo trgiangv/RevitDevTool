@@ -465,7 +465,10 @@ dropped on `ViewActivated` and on any `DocumentChanged`.
   sync, `GetChangedElements(lastSeenVersion)` is used as a check that the
   delta path missed nothing; on mismatch the snapshot rebuilds.
 - A link source shared by several open Current models keeps one snapshot with
-  a reference count; it drops when the last user closes or the link unloads.
+  a reference count; it drops when the last user closes. An unloaded link keeps
+  its snapshot (rows disabled) until a reload decides by version.
+- The parameter catalog of a source refreshes when a parameter definition is
+  added or deleted in it (the adapter reports this from `DocumentChanged`).
 - `ValueIndexCache`: built lazily per (snapshot, parameter, category set),
   quick filters first, in slices, cancelled when the rule changes. At most 500
   distinct values ("more…"), at most 8 indexes (least recently used dropped).

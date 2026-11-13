@@ -12,6 +12,23 @@ public static class FakeParameters
 
     private static readonly HashSet<string> SizedGroups = ["Ducts", "Pipes", "Cable Trays", "Conduits"];
 
+    public static IReadOnlyList<ParameterInfo> Catalog(FakeSource source)
+    {
+        var groups = source.Types.Select(type => type.GroupName).ToHashSet(StringComparer.Ordinal);
+        var catalog = new List<ParameterInfo>
+        {
+            new(Mark, "Mark", ValueKind.Text),
+            new(Comments, "Comments", ValueKind.Text),
+            new(Level, "Level", ValueKind.Text)
+        };
+        if (groups.Overlaps(SizedGroups))
+        {
+            catalog.Add(new ParameterInfo(Width, "Width", ValueKind.Number));
+        }
+
+        return catalog;
+    }
+
     public static bool TryGet(
         DocumentSnapshot snapshot,
         ElementRow row,
