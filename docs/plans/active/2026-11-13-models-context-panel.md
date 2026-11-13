@@ -72,11 +72,13 @@ diff, runs format-lint once per phase and records proof here.
     `UseWpf`, no Revit, `CommunityToolkit.Mvvm`.
   - `DevTools.ModelsContext.Views`: same TFMs, `UseWpf`, references the core
     and `DevTools.UI`.
-  - `tests/DevTools.ModelsContext.Tests` and `.Views.Tests`: `MSTest.Sdk`,
-    same TFMs (copy `DevTools.HandyControl.Tests` settings; Views.Tests adds
-    `FlaUI.UIA3`).
+  - `tests/DevTools.ModelsContext.Tests`: `MSTest.Sdk`, same TFMs (copy
+    `DevTools.HandyControl.Tests` settings), with one guard test
+    `CoreReferencesNoHostOrWpf` so the project is never empty.
   - `tests/DevTools.ModelsContext.Tests.Shared`: library.
-  - `tests/DevTools.ModelsContext.Sandbox`: WPF exe, `net10.0-windows`.
+  - `.Views.Tests` (adds `FlaUI.UIA3`) and the `Sandbox` WPF exe
+    (`net10.0-windows`) are created in Phase 3 with their first content; an
+    empty MTP test project exits with code 8.
 - Add all to `RevitDevTool.slnx`; reference the core and views from
   `RevitDevTool.Tools`.
 - CI: follow the ci-change skill (`product-paths`, `ci-jobs.json`,
@@ -194,7 +196,11 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
 - [x] 0062 amended: Current model vocabulary, Tree + Filter tabs, context menu,
   three-layer architecture.
 - [x] `ElementSearcher` groups by link instance (pre-existing bug).
-- [ ] Phase 0 — scaffolding and CI.
+- [x] Phase 0 — scaffolding and CI. Core, Views, Tests.Shared, Tests in the
+  slnx; `addin` product paths regenerated (`dotnet run --project build -- paths`).
+  Proof: new projects build on all TFMs; Tools builds for 2023 and 2025;
+  `DevTools.ModelsContext.Tests` 1/1 on net10.0-windows and net48;
+  `Build.Tests` 119/119.
 - [ ] Phase 1 — core model, engine, fake model, tests.
 - [ ] Phase 2 — view models and tests.
 - [ ] Phase 3 — controls, views, UI tests, sandbox, performance numbers.

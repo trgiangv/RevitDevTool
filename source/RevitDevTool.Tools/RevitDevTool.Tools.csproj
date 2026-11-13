@@ -8,6 +8,8 @@
     <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />
     <ProjectReference Include="..\DevTools.UI\DevTools.UI.csproj" />
     <ProjectReference Include="..\DevTools.Settings\DevTools.Settings.csproj" />
+    <ProjectReference Include="..\DevTools.ModelsContext\DevTools.ModelsContext.csproj" />
+    <ProjectReference Include="..\DevTools.ModelsContext.Views\DevTools.ModelsContext.Views.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
