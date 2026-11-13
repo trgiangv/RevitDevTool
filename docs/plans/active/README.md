@@ -6,6 +6,13 @@ parallel duplicate plans for the same workstream, and move a plan to
 `../completed/` only after the result is verified.
 
 
+## Models Context panel (active)
+
+Dockable Model Context panel: host-neutral core `DevTools.ModelsContext`,
+views, Revit adapter, T3 spike
+([0062](../../decisions/0062-model-context-panel.md)):
+[2026-11-13-models-context-panel](2026-11-13-models-context-panel.md).
+
 ## Product releases and CI (active)
 
 Four products (`daemon`, `addin`, `nettest`, `pytest`), signed `channels.json`, one
