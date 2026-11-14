@@ -142,8 +142,8 @@ public class Application : IExternalApplication
 #if REVIT2023_OR_GREATER
 
         stack.AddPushButton<ModelContextCommand>("Model Context")
-            .SetLargeImage("/DevTools.UI;component/Resources/Icons/Commands-32-Light.png")
-            .SetImage("/DevTools.UI;component/Resources/Icons/Commands-16-Light.png")
+            .SetLargeImage("/DevTools.UI;component/Resources/Icons/ModelContext-32-Light.png")
+            .SetImage("/DevTools.UI;component/Resources/Icons/ModelContext-16-Light.png")
             .SetToolTip("Show or hide the Model Context panel");
 #endif
     }

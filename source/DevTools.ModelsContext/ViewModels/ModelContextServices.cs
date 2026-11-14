@@ -115,6 +115,20 @@ internal sealed class PanelRuntime
         }
     }
 
+    public bool TryRun(Action work)
+    {
+        try
+        {
+            work();
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Failed?.Invoke(this, exception.Message);
+            return false;
+        }
+    }
+
     public async Task SelectAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
     {
         if (IsBusy)

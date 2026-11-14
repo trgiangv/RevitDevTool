@@ -181,17 +181,15 @@ internal sealed class RevitViewActions : IViewActions
 
     public async Task<IReadOnlyCollection<long>> GetIdsHiddenPermanentlyOrTemporarilyAsync(
         DocumentKey document,
+        IReadOnlyCollection<long> candidates,
         CancellationToken cancellationToken)
     {
-        if (!document.IsCurrentModel)
+        if (!document.IsCurrentModel || candidates.Count == 0)
         {
             return [];
         }
 
-        var ids = await RevitCall.RunAsync(application =>
-            DocumentRegistry.IsActive(application, document) && application.ActiveUIDocument?.ActiveView is not null
-                ? ElementReader.CollectIds(application.ActiveUIDocument.Document)
-                : [], cancellationToken).ConfigureAwait(false);
+        var ids = candidates.ToArray();
         var hidden = new HashSet<long>();
         var index = 0;
         while (index < ids.Length)

@@ -411,16 +411,6 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
                 documents.Add(new DocumentScope(info, ContextBar.LabelOf(key), snapshot, ids));
             }
 
-            foreach (var document in documents.Where(document => document.Key.IsCurrentModel && document.Info.IsLoaded))
-            {
-                await _visibility.ReadBackAsync(document.Key, cancellationToken);
-            }
-
-            if (!IsCurrent(ticket))
-            {
-                return;
-            }
-
             var data = new ContextData(scope, ContextBar.CurrentModel, documents);
             await Tree.LoadAsync(data, cancellationToken);
             if (!IsCurrent(ticket))
@@ -507,6 +497,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     {
         _runtime.Store.MarkDirty(delta.Source);
         _runtime.Values.Invalidate(delta.Source);
+        _visibility.DropReadBack(delta.Source);
         if (delta.IsUndoRedo && _active is { } session)
         {
             _runtime.Journal.MarkStale(session.Model);
@@ -728,6 +719,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         {
             _runtime.Store.Apply(delta);
             _runtime.Values.Invalidate(delta.Source);
+            _visibility.DropReadBack(delta.Source);
             if (delta.IsUndoRedo && _active is { } session)
             {
                 _runtime.Journal.MarkStale(session.Model);

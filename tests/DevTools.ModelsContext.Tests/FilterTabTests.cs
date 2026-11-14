@@ -126,6 +126,54 @@ public sealed class FilterTabTests
     }
 
     [TestMethod]
+    public async Task HostFilterUsesOwnEvaluation()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        var host = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+
+        filter.SelectedSource = host;
+        fixture.Settle();
+
+        var expected = fixture.Elements(FakeModelGenerator.Current, 7);
+        CollectionAssert.AreEquivalent(expected.ToList(), filter.Result.ToList());
+        CollectionAssert.Contains(fixture.Model.HostEvaluations, (FakeModelGenerator.Current, 1L));
+    }
+
+    [TestMethod]
+    public async Task ReadOnlyHostIgnoresEdits()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        fixture.Settle();
+        var before = filter.Result;
+        var evaluations = fixture.Model.HostEvaluations.Count;
+
+        Category(filter, "Doors").IsChecked = true;
+        fixture.Settle();
+
+        Assert.IsFalse(filter.IsDirty);
+        Assert.AreSame(before, filter.Result);
+        Assert.HasCount(evaluations, fixture.Model.HostEvaluations);
+    }
+
+    [TestMethod]
+    public async Task SaveFailureShowsMessage()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.AddCommand.Execute(null);
+        fixture.Model.StoreError = "Settings file is locked.";
+
+        filter.SaveCommand.Execute(null);
+
+        Assert.AreEqual("Settings file is locked.", fixture.Panel.Message);
+        Assert.IsTrue(filter.IsDirty);
+        Assert.IsEmpty(fixture.Model.Load());
+    }
+
+    [TestMethod]
     public async Task LiveDebounceFiresOnce()
     {
         using var fixture = await PanelFixture.OpenAsync();

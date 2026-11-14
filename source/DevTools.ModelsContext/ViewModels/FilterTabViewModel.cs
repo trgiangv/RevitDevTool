@@ -25,7 +25,6 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
     private string _editName = string.Empty;
     private CancellationTokenSource? _evaluation;
     private FilterDefinition? _hostDefinition;
-    private IReadOnlyCollection<long> _hostSelectionIds = [];
     private bool _isDirty;
     private bool _isEditingName;
     private bool _isLiveOn = true;
@@ -515,9 +514,9 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
     {
         var restore = _restore;
         var target = restore is null ? _current : restore.Selected;
-        var items = _runtime.Services.CustomFilters.Load()
-            .Select(filter => FilterSourceItem.Custom(filter, filter.Name))
-            .ToList();
+        IReadOnlyList<CustomFilter> saved = [];
+        _runtime.TryRun(() => saved = _runtime.Services.CustomFilters.Load());
+        var items = saved.Select(filter => FilterSourceItem.Custom(filter, filter.Name)).ToList();
         if (target is { IsCustom: true, Saved: null } draft)
         {
             items.Add(draft);
@@ -588,7 +587,6 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         try
         {
             _hostDefinition = null;
-            _hostSelectionIds = [];
             var definition = FilterDefinition.Empty;
             switch (item?.Kind)
             {
@@ -599,10 +597,6 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
                     _hostDefinition = await _runtime.Services.HostFilters.ReadAsync(item.Host!.Document, item.Host.Id,
                         _token) ?? FilterDefinition.Empty;
                     definition = _hostDefinition;
-                    break;
-                case FilterSourceKind.Selection:
-                    _hostSelectionIds = await _runtime.Services.HostFilters.GetSelectionIdsAsync(item.Host!.Document,
-                        item.Host.Id, _token);
                     break;
             }
 
@@ -654,11 +648,12 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
             return;
         }
 
-        if (item.Saved is { } saved)
-        {
-            _runtime.Services.CustomFilters.Save(_runtime.Services.CustomFilters.Load()
+        var store = _runtime.Services.CustomFilters;
+        if (item.Saved is { } saved && !_runtime.TryRun(() => store.Save(store.Load()
                 .Where(filter => !string.Equals(filter.Name, saved.Name, StringComparison.OrdinalIgnoreCase))
-                .ToList());
+                .ToList())))
+        {
+            return;
         }
 
         IsDirty = false;
@@ -676,10 +671,24 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
 
         var filter = new CustomFilter(Name, Definition());
         var store = _runtime.Services.CustomFilters;
-        var filters = store.Load().ToList();
-        var index = item.Saved is { } saved
-            ? filters.FindIndex(other => string.Equals(other.Name, saved.Name, StringComparison.OrdinalIgnoreCase))
-            : -1;
+        var previous = item.Saved;
+        if (!_runtime.TryRun(() => store.Save(Upsert(store.Load(), previous, filter))))
+        {
+            return false;
+        }
+
+        item.Saved = filter;
+        item.Name = Name;
+        IsDirty = false;
+        return true;
+    }
+
+    private static List<CustomFilter> Upsert(IReadOnlyList<CustomFilter> stored, CustomFilter? previous, CustomFilter filter)
+    {
+        var filters = stored.ToList();
+        var index = previous is null
+            ? -1
+            : filters.FindIndex(other => string.Equals(other.Name, previous.Name, StringComparison.OrdinalIgnoreCase));
         if (index >= 0)
         {
             filters[index] = filter;
@@ -689,11 +698,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
             filters.Add(filter);
         }
 
-        store.Save(filters);
-        item.Saved = filter;
-        item.Name = Name;
-        IsDirty = false;
-        return true;
+        return filters;
     }
 
     private void Duplicate()
@@ -816,24 +821,26 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
             return [];
         }
 
-        if (item.Kind == FilterSourceKind.Selection)
+        if (!item.IsCustom)
         {
-            return _data.Find(item.Document!.Value) is { } scope
-                ? _hostSelectionIds.Where(scope.InScope).Select(id => new ElementRef(scope.Key, id)).ToList()
-                : [];
+            if (item.Host is not { } host || _data.Find(host.Document) is not { } scope)
+            {
+                return [];
+            }
+
+            var matches = await _runtime.Services.HostFilters.EvaluateAsync(scope.Key, host.Id, scope.Ids,
+                cancellationToken);
+            return matches.Where(scope.InScope).Select(id => new ElementRef(scope.Key, id)).ToList();
         }
 
         var definition = Definition();
-        if (item.IsCustom && IsEmpty(definition))
+        if (IsEmpty(definition))
         {
             return [];
         }
 
-        var documents = item.IsCustom
-            ? _data.Documents
-            : _data.Documents.Where(document => document.Key == item.Document).ToList();
         var result = new List<ElementRef>();
-        foreach (var document in documents)
+        foreach (var document in _data.Documents)
         {
             var ids = await _runtime.Services.Evaluator.EvaluateAsync(document.Key, definition, document.Ids,
                 cancellationToken);

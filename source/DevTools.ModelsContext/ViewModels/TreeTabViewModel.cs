@@ -71,6 +71,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         ShowInTreeCommand = new RelayCommand(ShowInTree);
         ExpandAllCommand = new AsyncRelayCommand(() => Run(ExpandAllAsync));
         _visibility.Changed += (_, _) => OnVisibilityChanged();
+        _visibility.VisibleIds = VisibleIdsOf;
     }
 
     public event EventHandler? RowSelectionChanged;
@@ -207,6 +208,10 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         var visible = new List<TreeRow>();
         Flatten(row.Children!, IsUnderMatch(row), visible);
         Rows.InsertRange(index + 1, visible);
+        if (await ReadHiddenAsync())
+        {
+            Publish();
+        }
     }
 
     public void Collapse(TreeRow row)
@@ -423,6 +428,8 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         _token = cancellationToken;
         _instanceIds.Clear();
         _selectedRows.Clear();
+        _roots = [];
+        await ReadHiddenAsync();
         ComputeStates();
         _roots = BuildRoots();
         foreach (var root in _roots.Where(root => state.Expanded.Contains(KeyOf(root)) || !state.Roots.Contains(KeyOf(root))))
@@ -443,6 +450,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
             await RevealSelectionAsync(OpenPathLimit);
         }
 
+        await ReadHiddenAsync();
         OnPropertyChanged(nameof(IsSyncVisible));
         OnPropertyChanged(nameof(IsSyncing));
         OnPropertyChanged(nameof(CanShowInTree));
@@ -480,6 +488,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
             SyncHint = TooManyHint;
         }
 
+        await ReadHiddenAsync();
         Publish();
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
         if (Rows.FirstOrDefault(_selectedRows.Contains) is { } first)
@@ -646,6 +655,11 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         {
             Rows.ReplaceRange(index, 1, page);
         }
+
+        if (await ReadHiddenAsync())
+        {
+            Publish();
+        }
     }
 
     private async Task ToggleEyeAsync(TreeRow? row)
@@ -732,6 +746,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         SyncHint = null;
         _selectedRows.Clear();
         await RevealSelectionAsync(int.MaxValue);
+        await ReadHiddenAsync();
         Publish();
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -1001,6 +1016,68 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         return null;
     }
 
+    private async Task<bool> ReadHiddenAsync()
+    {
+        var changed = false;
+        foreach (var document in _data.Documents.Where(document => document.Key.IsCurrentModel && document.Info.IsLoaded)
+                     .ToList())
+        {
+            changed |= await _visibility.ReadBackAsync(document.Key, _token);
+        }
+
+        if (changed)
+        {
+            ComputeStates();
+        }
+
+        return changed;
+    }
+
+    private IEnumerable<long> VisibleIdsOf(DocumentKey document)
+    {
+        if (_data.Find(document) is not { } scope)
+        {
+            return [];
+        }
+
+        var visible = new List<TreeRow>();
+        Flatten(_roots, false, visible);
+        var snapshot = scope.Snapshot;
+        var groups = new HashSet<int>();
+        var ids = new List<long>();
+        foreach (var row in visible)
+        {
+            switch (row.Kind)
+            {
+                case TreeRowKind.AllModelsGroup when snapshot.GroupIndexOf(row.Id) is var index and >= 0:
+                    groups.Add(index);
+                    break;
+                case TreeRowKind.Group or TreeRowKind.Family or TreeRowKind.Type when row.Document == document:
+                    groups.Add(row.Path.Group);
+                    break;
+                case TreeRowKind.Instance when row.Document == document:
+                    ids.Add(row.Id);
+                    break;
+            }
+        }
+
+        if (groups.Count == 0)
+        {
+            return ids;
+        }
+
+        if (scope.Ids is null)
+        {
+            ids.AddRange(snapshot.Rows.Where(row => groups.Contains(row.GroupIndex)).Select(row => row.Id));
+        }
+        else
+        {
+            ids.AddRange(scope.Ids.Where(id => snapshot.TryGetRow(id, out var row) && groups.Contains(row.GroupIndex)));
+        }
+
+        return ids;
+    }
+
     private void OnVisibilityChanged()
     {
         ComputeStates();
@@ -1157,6 +1234,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
     private async Task ApplySearchAsync()
     {
         await CollectSearchAsync();
+        await ReadHiddenAsync();
         Publish();
     }
 

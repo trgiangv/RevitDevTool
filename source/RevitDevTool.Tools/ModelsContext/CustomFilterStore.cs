@@ -18,9 +18,9 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
                     new FilterDefinition(filter.Groups, ToSet(filter.Root))))
                 .ToList();
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            return [];
+            throw new InvalidOperationException(exception.Message);
         }
     }
 
@@ -38,8 +38,9 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
                 }).ToList()
             });
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            throw new InvalidOperationException(exception.Message);
         }
     }
 

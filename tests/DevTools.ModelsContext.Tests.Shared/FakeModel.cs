@@ -62,6 +62,12 @@ public sealed class FakeModel :
 
     public List<VisibilityPlan> ExecutedPlans { get; } = [];
 
+    public List<IReadOnlyList<long>> HiddenReads { get; } = [];
+
+    public List<(DocumentKey Document, long FilterId)> HostEvaluations { get; } = [];
+
+    public string? StoreError { get; set; }
+
     public int KeepCount { get; private set; }
 
     public int ResetCount { get; private set; }
@@ -256,29 +262,33 @@ public sealed class FakeModel :
         return Task.FromResult<TemporaryState?>(new TemporaryState(View, active, false));
     }
 
-    public Task<IReadOnlyCollection<long>> GetIdsHiddenPermanentlyOrTemporarilyAsync(DocumentKey document, CancellationToken cancellationToken)
+    public Task<IReadOnlyCollection<long>> GetIdsHiddenPermanentlyOrTemporarilyAsync(
+        DocumentKey document,
+        IReadOnlyCollection<long> candidates,
+        CancellationToken cancellationToken)
     {
+        HiddenReads.Add(candidates.ToList());
         var snapshot = SnapshotOf(document);
-        var hidden = new HashSet<long>();
-        HashSet<long>? kept = null;
+        var hidden = new PlanTargets();
+        PlanTargets? kept = null;
         foreach (var plan in ExecutedPlans)
         {
             if (plan.Action == VisibilityAction.Hide)
             {
-                hidden.UnionWith(IdsOf(plan, document, snapshot));
+                hidden.Add(plan, document, snapshot);
             }
             else if (plan.Action == VisibilityAction.Isolate)
             {
-                kept = [.. IdsOf(plan, document, snapshot)];
+                kept = new PlanTargets();
+                kept.Add(plan, document, snapshot);
             }
         }
 
-        if (kept is not null)
-        {
-            hidden.UnionWith(snapshot.Rows.Where(row => !kept.Contains(row.Id)).Select(row => row.Id));
-        }
-
-        return Task.FromResult<IReadOnlyCollection<long>>(hidden);
+        IReadOnlyCollection<long> ids = candidates
+            .Where(id => snapshot.TryGetRow(id, out var row)
+                         && (hidden.Contains(row) || (kept is not null && !kept.Contains(row))))
+            .ToList();
+        return Task.FromResult(ids);
     }
 
     public Task<IReadOnlyCollection<long>> EvaluateAsync(
@@ -348,14 +358,19 @@ public sealed class FakeModel :
         return Task.FromResult(definition);
     }
 
-    public Task<IReadOnlyCollection<long>> GetSelectionIdsAsync(
+    public Task<IReadOnlyCollection<long>> EvaluateAsync(
         DocumentKey document,
         long filterId,
+        IReadOnlyCollection<long>? scope,
         CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<long> ids = filterId == 2
-            ? SourceOf(document).Elements.Take(10).Select(element => element.Id).ToList()
-            : [];
+        HostEvaluations.Add((document, filterId));
+        var inScope = scope as ISet<long> ?? scope?.ToHashSet();
+        IReadOnlyCollection<long> ids = SourceOf(document).Elements
+            .Take(filterId == 1 ? 7 : filterId == 2 ? 10 : 0)
+            .Select(element => element.Id)
+            .Where(id => inScope is null || inScope.Contains(id))
+            .ToList();
         return Task.FromResult(ids);
     }
 
@@ -366,6 +381,11 @@ public sealed class FakeModel :
 
     public void Save(IReadOnlyList<CustomFilter> filters)
     {
+        if (StoreError is { } error)
+        {
+            throw new InvalidOperationException(error);
+        }
+
         _customFilters = filters.ToList();
     }
 
@@ -544,31 +564,6 @@ public sealed class FakeModel :
         return ids;
     }
 
-    private static IEnumerable<long> IdsOf(VisibilityPlan plan, DocumentKey document, DocumentSnapshot snapshot)
-    {
-        foreach (var step in plan.Steps)
-        {
-            switch (step)
-            {
-                case ElementsStep elements when elements.Document == document:
-                    foreach (var id in elements.Ids)
-                    {
-                        yield return id;
-                    }
-
-                    break;
-                case GroupEverywhereStep group:
-                    var index = snapshot.GroupIndexOf(group.GroupId);
-                    foreach (var row in snapshot.Rows.Where(row => row.GroupIndex == index))
-                    {
-                        yield return row.Id;
-                    }
-
-                    break;
-            }
-        }
-    }
-
     private async Task<DocumentSnapshot> BuildAfterAsync(
         Task gate,
         SourceId source,
@@ -634,4 +629,31 @@ public sealed class FakeModel :
     }
 
     private sealed record FakeVersion(DocumentVersion Version, IReadOnlyList<ElementRecord> Elements);
+
+    private sealed class PlanTargets
+    {
+        private readonly HashSet<int> _groups = [];
+        private readonly HashSet<long> _ids = [];
+
+        public void Add(VisibilityPlan plan, DocumentKey document, DocumentSnapshot snapshot)
+        {
+            foreach (var step in plan.Steps)
+            {
+                switch (step)
+                {
+                    case ElementsStep elements when elements.Document == document:
+                        _ids.UnionWith(elements.Ids);
+                        break;
+                    case GroupEverywhereStep group:
+                        _groups.Add(snapshot.GroupIndexOf(group.GroupId));
+                        break;
+                }
+            }
+        }
+
+        public bool Contains(ElementRow row)
+        {
+            return _ids.Contains(row.Id) || _groups.Contains(row.GroupIndex);
+        }
+    }
 }

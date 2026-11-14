@@ -291,8 +291,30 @@ public sealed class LifecycleTests
 
         await fixture.Model.ExecuteAsync(new VisibilityPlan(VisibilityAction.Hide, null,
             [new ElementsStep(Current, [id])], null), CancellationToken.None);
-        await fixture.Panel.RefreshAsync();
+        fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
+        fixture.Settle();
 
         Assert.AreEqual(RowEye.Partly, fixture.Group(Current, "Ducts").Eye);
+    }
+
+    [TestMethod]
+    public async Task ReadBackAsksVisibleRowsOnly()
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        var tree = fixture.Tree;
+        await tree.ToggleExpandCommand.ExecuteAsync(tree.Rows.First(row => row.Kind == TreeRowKind.AllModelsHeader));
+        await tree.ToggleExpandCommand.ExecuteAsync(tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
+        fixture.Model.HiddenReads.Clear();
+
+        fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", false));
+        fixture.Settle();
+        var collapsed = fixture.Model.HiddenReads.Sum(read => read.Count);
+        await tree.ToggleExpandCommand.ExecuteAsync(tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
+
+        var asked = fixture.Model.HiddenReads.SelectMany(read => read).ToHashSet();
+        var inView = (await fixture.Model.CollectScopeAsync(Current, ScopeKind.ActiveView, CancellationToken.None))
+            .ToHashSet();
+        Assert.AreEqual(0, collapsed);
+        Assert.IsTrue(asked.SetEquals(inView));
     }
 }

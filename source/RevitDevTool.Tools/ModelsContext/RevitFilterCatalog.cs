@@ -59,18 +59,37 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
         }, cancellationToken);
     }
 
-    public Task<IReadOnlyCollection<long>> GetSelectionIdsAsync(
+    public async Task<IReadOnlyCollection<long>> EvaluateAsync(
         DocumentKey document,
         long filterId,
+        IReadOnlyCollection<long>? scope,
         CancellationToken cancellationToken)
     {
-        return RevitCall.RunAsync<IReadOnlyCollection<long>>(application =>
+        var candidates = await RevitCall.RunAsync(application =>
         {
             var target = DocumentRegistry.Require(application, document).Target;
-            return target.GetElement(RevitIds.From(filterId)) is SelectionFilterElement filter
-                ? RevitIds.ValuesOf(filter.GetElementIds().Where(id => target.GetElement(id) is not null))
-                : [];
-        }, cancellationToken);
+            var ids = target.GetElement(RevitIds.From(filterId)) switch
+            {
+                ParameterFilterElement rule when rule.GetCategories() is { Count: > 0 } categories =>
+                    ElementReader.CollectIds(target, categories),
+                SelectionFilterElement selection => RevitIds.ValuesOf(selection.GetElementIds()).ToArray(),
+                _ => []
+            };
+            return RevitFilterEvaluator.InScope(ids, scope);
+        }, cancellationToken).ConfigureAwait(false);
+        return await RevitFilterEvaluator.MatchInSlicesAsync(document, candidates,
+            (target, chunk) => Match(target, chunk, filterId), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static List<long> Match(Document target, List<ElementId> chunk, long filterId)
+    {
+        return target.GetElement(RevitIds.From(filterId)) switch
+        {
+            ParameterFilterElement rule when rule.GetElementFilter() is { } elementFilter =>
+                RevitIds.ValuesOf(new FilteredElementCollector(target, chunk).WherePasses(elementFilter).ToElementIds()),
+            ParameterFilterElement or SelectionFilterElement => RevitIds.ValuesOf(chunk),
+            _ => []
+        };
     }
 
     private static HashSet<long> FiltersInView(UIApplication application, DocumentKey document, ResolvedDocument resolved)

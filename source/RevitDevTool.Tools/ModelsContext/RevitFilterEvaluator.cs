@@ -15,15 +15,18 @@ internal sealed class RevitFilterEvaluator : IFilterEvaluator
         var candidates = await RevitCall.RunAsync(application =>
         {
             var target = DocumentRegistry.Require(application, document).Target;
-            var ids = ElementReader.CollectIds(target, Categories(filter.Groups));
-            if (scope is null)
-            {
-                return ids;
-            }
-
-            var inScope = scope as ISet<long> ?? new HashSet<long>(scope);
-            return ids.Where(inScope.Contains).ToArray();
+            return InScope(ElementReader.CollectIds(target, Categories(filter.Groups)), scope);
         }, cancellationToken).ConfigureAwait(false);
+        return await MatchInSlicesAsync(document, candidates, (target, chunk) => Match(target, chunk, filter),
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    internal static async Task<IReadOnlyCollection<long>> MatchInSlicesAsync(
+        DocumentKey document,
+        long[] candidates,
+        Func<Document, List<ElementId>, List<long>> match,
+        CancellationToken cancellationToken)
+    {
         var result = new List<long>();
         var index = 0;
         while (index < candidates.Length)
@@ -37,13 +40,24 @@ internal sealed class RevitFilterEvaluator : IFilterEvaluator
                 var chunk = RevitIds.From(candidates.Skip(start).Take(end - start))
                     .Where(id => target.GetElement(id) is not null)
                     .ToList();
-                return (end, Match(target, chunk, filter));
+                return (end, chunk.Count == 0 ? new List<long>() : match(target, chunk));
             }, cancellationToken).ConfigureAwait(false);
             result.AddRange(matches);
             index = next;
         }
 
         return result;
+    }
+
+    internal static long[] InScope(IEnumerable<long> ids, IReadOnlyCollection<long>? scope)
+    {
+        if (scope is null)
+        {
+            return ids.ToArray();
+        }
+
+        var inScope = scope as ISet<long> ?? new HashSet<long>(scope);
+        return ids.Where(inScope.Contains).ToArray();
     }
 
     public async Task<ParameterValueCounts> CountValuesAsync(

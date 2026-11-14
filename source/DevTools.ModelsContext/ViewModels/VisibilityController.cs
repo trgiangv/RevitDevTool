@@ -8,8 +8,10 @@ public sealed class VisibilityController
     public const string NoActiveView = "There is no active view.";
 
     private readonly Dictionary<(DocumentKey Model, string ViewId), Ledger> _ledgers = [];
+    private readonly Dictionary<(DocumentKey Model, string ViewId), ReadBack> _readBacks = [];
     private readonly PanelRuntime _runtime;
-    private readonly Dictionary<DocumentKey, HashSet<long>> _viewHidden = [];
+    private readonly Dictionary<(DocumentKey Model, string ViewId), HashSet<long>> _touched = [];
+    private ViewInfo? _view;
 
     internal VisibilityController(PanelRuntime runtime)
     {
@@ -18,7 +20,21 @@ public sealed class VisibilityController
 
     public event EventHandler? Changed;
 
-    public ViewInfo? View { get; internal set; }
+    public ViewInfo? View
+    {
+        get => _view;
+        internal set
+        {
+            if (_view is not null && (value is null || KeyOf(value) != KeyOf(_view)))
+            {
+                _readBacks.Clear();
+            }
+
+            _view = value;
+        }
+    }
+
+    internal Func<DocumentKey, IEnumerable<long>>? VisibleIds { get; set; }
 
     public JournalState Journal => View is null ? JournalState.Empty : _runtime.Journal.Get(View.Model, View.ViewId);
 
@@ -43,7 +59,7 @@ public sealed class VisibilityController
     {
         if (element.Document.IsCurrentModel)
         {
-            return _viewHidden.TryGetValue(element.Document, out var ids) && ids.Contains(element.Id);
+            return ReadBackOf(element.Document) is { } readBack && readBack.Hidden.Contains(element.Id);
         }
 
         return Current is { } ledger && ledger.IsHidden(element, groupId);
@@ -53,7 +69,7 @@ public sealed class VisibilityController
     {
         if (document.Key.IsCurrentModel)
         {
-            return _viewHidden.TryGetValue(document.Key, out var ids) ? ids : [];
+            return ReadBackOf(document.Key) is { } readBack ? [.. readBack.Hidden] : [];
         }
 
         var hidden = new HashSet<long>();
@@ -120,6 +136,8 @@ public sealed class VisibilityController
                 break;
         }
 
+        Touch(view, plan);
+        _readBacks.Remove(KeyOf(view));
         await ReadBackAsync(view.Model.CurrentModel, cancellationToken);
         Changed?.Invoke(this, EventArgs.Empty);
         return null;
@@ -147,26 +165,68 @@ public sealed class VisibilityController
         await ClearAsync(cancellationToken);
     }
 
-    internal async Task ReadBackAsync(DocumentKey document, CancellationToken cancellationToken)
+    internal async Task<bool> ReadBackAsync(DocumentKey document, CancellationToken cancellationToken)
     {
-        if (!document.IsCurrentModel)
+        if (!document.IsCurrentModel || View is not { } view || view.Model.CurrentModel != document)
         {
-            return;
+            return false;
         }
 
-        var hidden = await _runtime.Services.ViewActions.GetIdsHiddenPermanentlyOrTemporarilyAsync(document, cancellationToken);
-        _viewHidden[document] = hidden as HashSet<long> ?? [.. hidden];
+        var key = KeyOf(view);
+        if (!_readBacks.TryGetValue(key, out var readBack))
+        {
+            readBack = new ReadBack();
+            _readBacks.Add(key, readBack);
+        }
+
+        var candidates = new HashSet<long>(VisibleIds?.Invoke(document) ?? []);
+        if (_touched.TryGetValue(key, out var touched))
+        {
+            candidates.UnionWith(touched);
+        }
+
+        candidates.ExceptWith(readBack.Checked);
+        if (candidates.Count == 0)
+        {
+            return false;
+        }
+
+        var hidden = await _runtime.Services.ViewActions.GetIdsHiddenPermanentlyOrTemporarilyAsync(document,
+            candidates, cancellationToken);
+        readBack.Checked.UnionWith(candidates);
+        var before = readBack.Hidden.Count;
+        readBack.Hidden.UnionWith(hidden);
+        return readBack.Hidden.Count != before;
+    }
+
+    internal void DropReadBack(SourceId source)
+    {
+        foreach (var key in _readBacks.Keys
+                     .Where(key => _runtime.Store.Find(key.Model) is { } info && info.Source == source)
+                     .ToList())
+        {
+            _readBacks.Remove(key);
+        }
     }
 
     internal void Forget(DocumentKey document)
     {
         if (document.IsCurrentModel)
         {
-            _viewHidden.Remove(document);
             _runtime.Journal.ClearModel(document);
             foreach (var key in _ledgers.Keys.Where(key => key.Model.ModelId == document.ModelId).ToList())
             {
                 _ledgers.Remove(key);
+            }
+
+            foreach (var key in _readBacks.Keys.Where(key => key.Model.ModelId == document.ModelId).ToList())
+            {
+                _readBacks.Remove(key);
+            }
+
+            foreach (var key in _touched.Keys.Where(key => key.Model.ModelId == document.ModelId).ToList())
+            {
+                _touched.Remove(key);
             }
         }
         else
@@ -187,10 +247,39 @@ public sealed class VisibilityController
         {
             _runtime.Journal.Reset(view.Model, view.ViewId);
             _ledgers.Remove((view.Model, view.ViewId));
+            _readBacks.Remove(KeyOf(view));
             await ReadBackAsync(view.Model.CurrentModel, cancellationToken);
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static (DocumentKey Model, string ViewId) KeyOf(ViewInfo view)
+    {
+        return (view.Model.CurrentModel, view.ViewId);
+    }
+
+    private ReadBack? ReadBackOf(DocumentKey document)
+    {
+        return View is { } view && view.Model.CurrentModel == document
+                                && _readBacks.TryGetValue(KeyOf(view), out var readBack)
+            ? readBack
+            : null;
+    }
+
+    private void Touch(ViewInfo view, VisibilityPlan plan)
+    {
+        var model = view.Model.CurrentModel;
+        foreach (var step in plan.Steps.OfType<ElementsStep>().Where(step => step.Document == model))
+        {
+            if (!_touched.TryGetValue(KeyOf(view), out var touched))
+            {
+                touched = [];
+                _touched.Add(KeyOf(view), touched);
+            }
+
+            touched.UnionWith(step.Ids);
+        }
     }
 
     private Ledger LedgerOf(ViewInfo view)
@@ -270,6 +359,13 @@ public sealed class VisibilityController
         {
             return Elements.Contains(element) || Groups.Contains(groupId) || Links.Contains(element.Document);
         }
+    }
+
+    private sealed class ReadBack
+    {
+        public HashSet<long> Checked { get; } = [];
+
+        public HashSet<long> Hidden { get; } = [];
     }
 
     private sealed class Ledger

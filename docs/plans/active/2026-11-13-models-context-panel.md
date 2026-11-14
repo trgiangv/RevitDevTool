@@ -274,7 +274,15 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   warnings for 2022 (skips ModelsContext), 2023, 2025, 2027; merged host builds
   for 2025 with ILRepack; core 105/105; `Build.Tests` 119/119. No host test
   project (no repo pattern for Tools host tests).
-- [ ] Phase 4b — fixes before live run: Revit rule filters must run through
+- [x] Phase 4b — done: `IHostFilterCatalog.EvaluateAsync` runs Revit filters
+  in their own document (`GetElementFilter()` + categories, selection filters
+  by stored ids); store errors reach the status line; read-back asks only
+  panel-touched ids and visible rows, cached per (model, view); ribbon icon
+  PNGs rendered from the panel geometry. Proof: core 109/109 (net10, net48),
+  Views.Tests 10/10, Tools 0 warnings for 2023/2025/2027, merged host builds
+  for 2025, sandbox builds, `Build.Tests` 119/119. Limit: expanding a header
+  asks once for all in-scope ids of that model.
+- Original Phase 4b list: fixes before live run: Revit rule filters must run through
   `GetElementFilter()` in their own document (a port method to evaluate a host
   filter by id) instead of the read-back definition; custom filter save
   errors reach the status line; hidden-id read-back must not walk every
