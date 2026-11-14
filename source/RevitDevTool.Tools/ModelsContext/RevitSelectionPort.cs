@@ -15,11 +15,19 @@ internal sealed class RevitSelectionPort : ISelectionPort
                 return [];
             }
 
-            var selection = new HashSet<ElementRef>(ToRefs(active.Document, active.Selection.GetReferences()));
-            var model = DocumentRegistry.KeyOf(active.Document);
-            selection.UnionWith(active.Selection.GetElementIds().Select(id => new ElementRef(model, id.ToLong())));
-            return selection;
+            return ToSelection(active.Document, active.Selection.GetReferences(), active.Selection.GetElementIds());
         }, cancellationToken);
+    }
+
+    internal static HashSet<ElementRef> ToSelection(Document model, IList<Reference> references, ICollection<ElementId> ids)
+    {
+        var linkHosts = new HashSet<ElementId>(references
+            .Where(reference => reference.LinkedElementId != ElementId.InvalidElementId)
+            .Select(reference => reference.ElementId));
+        var selection = new HashSet<ElementRef>(ToRefs(model, references));
+        var key = DocumentRegistry.KeyOf(model);
+        selection.UnionWith(ids.Where(id => !linkHosts.Contains(id)).Select(id => new ElementRef(key, id.ToLong())));
+        return selection;
     }
 
     public Task SelectAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)

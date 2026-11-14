@@ -308,10 +308,7 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
                 return;
             }
 
-            var model = e.GetDocument();
-            var selection = new HashSet<ElementRef>(RevitSelectionPort.ToRefs(model, e.GetReferences()));
-            var key = DocumentRegistry.KeyOf(model);
-            selection.UnionWith(e.GetSelectedElements().Select(id => new ElementRef(key, id.ToLong())));
+            var selection = RevitSelectionPort.ToSelection(e.GetDocument(), e.GetReferences(), e.GetSelectedElements());
             Post(() => SelectionChanged?.Invoke(this, selection));
         }
         catch (Exception exception)
