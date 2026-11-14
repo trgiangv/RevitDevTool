@@ -31,6 +31,34 @@ public sealed class PanelViewTests
     }
 
     [TestMethod]
+    public void UpdatingBarOverlapsNothing()
+    {
+        using var ui = PanelUi.Open();
+
+        var (bar, others) = WpfSta.Invoke(() =>
+        {
+            var progress = (ProgressBar)ui.View.FindName("UpdatingBar");
+            progress.Visibility = System.Windows.Visibility.Visible;
+            ui.View.UpdateLayout();
+            System.Windows.Rect BoundsOf(string name)
+            {
+                var element = (System.Windows.FrameworkElement)ui.View.FindName(name);
+                return element.TransformToAncestor(ui.View)
+                    .TransformBounds(new System.Windows.Rect(element.RenderSize));
+            }
+
+            return (BoundsOf("UpdatingBar"), new[] { BoundsOf("Tabs"), BoundsOf("DocumentsBox") });
+        });
+
+        Assert.IsGreaterThan(0, bar.Height);
+        foreach (var other in others)
+        {
+            Assert.IsFalse(bar.IntersectsWith(other) && System.Windows.Rect.Intersect(bar, other).Height > 0,
+                "The updating bar overlaps " + other);
+        }
+    }
+
+    [TestMethod]
     public void GroupHeaderHasNoControls()
     {
         using var ui = PanelUi.Open();

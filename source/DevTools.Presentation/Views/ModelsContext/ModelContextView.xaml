@@ -96,8 +96,10 @@
                    Style="{StaticResource ErrorText}"
                    Text="{Binding BusyText}" />
 
-        <ProgressBar Grid.Row="2"
-                     VerticalAlignment="Bottom"
+        <ProgressBar x:Name="UpdatingBar"
+                     Grid.Row="2"
+                     Margin="0,2,0,0"
+                     VerticalAlignment="Top"
                      AutomationProperties.AutomationId="ModelContext.Updating"
                      Style="{StaticResource UpdatingBarStyle}" />
         <Grid Grid.Row="1">

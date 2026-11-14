@@ -175,7 +175,8 @@ control; its rows still form a tree.
 - Whole model counts the main model and primary design options. Active view
   counts what the view collector returns.
 - Counts come from the document snapshot (§11). When a snapshot is older than
-  the last model change it is rebuilding, the status line shows *Updating…*.
+  the last model change it is rebuilding, a flat progress bar shows in the gap
+  between the context bar and the tabs; it takes no space and covers nothing.
 - Rows: 28 px, stock HandyControl selection look (solid primary, white text).
 - The Instance level loads on expand and pages ("200 of 1,402 · more").
 - **Status line** at the bottom-left: *N selected* and **Clear**. N counts the
