@@ -1,3 +1,4 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 
@@ -60,6 +61,26 @@ public sealed class VisibilityController
         return Current?.Groups.ContainsKey(groupId) == true;
     }
 
+    public RowOverride? OverrideOf(TreeRow row)
+    {
+        if (Current is not { HasMarks: true } ledger)
+        {
+            return null;
+        }
+
+        if (row.Kind == TreeRowKind.AllModelsGroup)
+        {
+            return CategoryOverrideOf(row.Id);
+        }
+
+        return ledger.Rows.TryGetValue(row.Key, out var mark) ? mark.Override : null;
+    }
+
+    public RowOverride? CategoryOverrideOf(long groupId)
+    {
+        return Current is { } ledger && ledger.Categories.TryGetValue(groupId, out var category) ? category : null;
+    }
+
     public bool IsHidden(ElementRef element, long groupId)
     {
         if (element.Document.IsCurrentModel)
@@ -113,6 +134,7 @@ public sealed class VisibilityController
             return plan.DisabledReason;
         }
 
+        var timer = TraceTimer.Start(_runtime.Logger);
         var actions = _runtime.Services.ViewActions;
         var ledger = LedgerOf(view);
         switch (plan.Action)
@@ -137,6 +159,7 @@ public sealed class VisibilityController
             default:
                 await actions.ExecuteAsync(plan, cancellationToken);
                 ledger.Appearance.Add(plan);
+                ledger.Mark(request.Rows, plan);
                 await RecordAsync(view, plan, cancellationToken);
                 break;
         }
@@ -145,7 +168,28 @@ public sealed class VisibilityController
         _readBacks.Remove(KeyOf(view));
         await ReadBackAsync(view.Model.CurrentModel, cancellationToken);
         Changed?.Invoke(this, EventArgs.Empty);
+        if (timer.IsEnabled)
+        {
+            _runtime.Logger.VisibilityApplied(plan.Action, plan.Steps.Count, ElementCountOf(plan), timer.ElapsedMs);
+        }
+
         return null;
+    }
+
+    private static int ElementCountOf(VisibilityPlan plan)
+    {
+        var count = 0;
+        foreach (var step in plan.Steps)
+        {
+            count += step switch
+            {
+                ElementsStep elements => elements.Ids.Count,
+                ReferenceCommandStep references => references.Ids.Count,
+                _ => 0
+            };
+        }
+
+        return count;
     }
 
     public async Task KeepAsync(CancellationToken cancellationToken)
@@ -366,6 +410,8 @@ public sealed class VisibilityController
         }
     }
 
+    private readonly record struct RowMark(DocumentKey? Document, RowOverride Override);
+
     private sealed class ReadBack
     {
         public HashSet<long> Checked { get; } = [];
@@ -382,6 +428,12 @@ public sealed class VisibilityController
         public HashSet<DocumentKey> Links { get; } = [];
 
         public List<VisibilityPlan> Appearance { get; } = [];
+
+        public Dictionary<string, RowMark> Rows { get; } = new(StringComparer.Ordinal);
+
+        public Dictionary<long, RowOverride> Categories { get; } = [];
+
+        public bool HasMarks => Rows.Count > 0 || Categories.Count > 0;
 
         public Isolation? Isolation { get; set; }
 
@@ -441,8 +493,30 @@ public sealed class VisibilityController
             }
         }
 
+        public void Mark(IEnumerable<TreeRow> rows, VisibilityPlan plan)
+        {
+            foreach (var row in rows)
+            {
+                if (row.Kind == TreeRowKind.AllModelsGroup)
+                {
+                    Categories.TryGetValue(row.Id, out var category);
+                    Categories[row.Id] = category.With(plan);
+                }
+                else
+                {
+                    Rows.TryGetValue(row.Key, out var mark);
+                    Rows[row.Key] = new RowMark(row.Document, mark.Override.With(plan));
+                }
+            }
+        }
+
         public void Forget(DocumentKey link)
         {
+            foreach (var key in Rows.Where(pair => pair.Value.Document == link).Select(pair => pair.Key).ToList())
+            {
+                Rows.Remove(key);
+            }
+
             Links.Remove(link);
             Elements.RemoveWhere(element => element.Document == link);
             Appearance.RemoveAll(plan => plan.Steps.Any(step => step is AttachedModelStep model && model.Document == link));

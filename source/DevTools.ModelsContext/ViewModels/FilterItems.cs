@@ -69,27 +69,21 @@ public enum ResultSelectionMode
     Remove
 }
 
-public sealed class FilterSourceItem : ObservableObject
+public sealed partial class FilterSourceItem : ObservableObject
 {
     public const string CustomGroup = "Custom filters";
 
-    private bool _isDirty;
-    private string _name;
-
     private FilterSourceItem(string name, string groupName, FilterSourceKind kind, HostFilterInfo? host, CustomFilter? saved)
     {
-        _name = name;
+        Name = name;
         GroupName = groupName;
         Kind = kind;
         Host = host;
         Saved = saved;
     }
 
-    public string Name
-    {
-        get => _name;
-        internal set => SetProperty(ref _name, value);
-    }
+    [ObservableProperty]
+    public partial string Name { get; internal set; }
 
     public string GroupName { get; }
 
@@ -108,11 +102,8 @@ public sealed class FilterSourceItem : ObservableObject
 
     public DocumentKey? Document => Host?.Document;
 
-    public bool IsDirty
-    {
-        get => _isDirty;
-        internal set => SetProperty(ref _isDirty, value);
-    }
+    [ObservableProperty]
+    public partial bool IsDirty { get; internal set; }
 
     internal HostFilterInfo? Host { get; }
 
@@ -137,17 +128,16 @@ public sealed class FilterSourceItem : ObservableObject
     }
 }
 
-public sealed class CategoryItemViewModel : ObservableObject
+public sealed partial class CategoryItemViewModel : ObservableObject
 {
     private readonly Action _changed;
-    private int _count;
     private bool _isChecked;
 
     internal CategoryItemViewModel(long groupId, string name, int count, Action changed)
     {
         GroupId = groupId;
         Name = name;
-        _count = count;
+        Count = count;
         _changed = changed;
     }
 
@@ -155,11 +145,8 @@ public sealed class CategoryItemViewModel : ObservableObject
 
     public string Name { get; }
 
-    public int Count
-    {
-        get => _count;
-        internal set => SetProperty(ref _count, value);
-    }
+    [ObservableProperty]
+    public partial int Count { get; internal set; }
 
     public bool IsChecked
     {

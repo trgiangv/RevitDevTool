@@ -11,7 +11,7 @@ public sealed class DocumentSnapshot
 
     internal DocumentSnapshot(SourceId source, int groupingDepth)
     {
-        if (groupingDepth < 1 || groupingDepth > TreeSchema.MaxGroupingDepth)
+        if (groupingDepth is < 1 or > TreeSchema.MaxGroupingDepth)
         {
             throw new ArgumentOutOfRangeException(nameof(groupingDepth));
         }

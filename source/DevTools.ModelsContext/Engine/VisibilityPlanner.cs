@@ -52,59 +52,56 @@ public sealed class VisibilityPlanner(
 
     private string? AddRow(Builder builder, TreeRow row)
     {
-        switch (row.Kind)
+        return row.Kind switch
         {
-            case TreeRowKind.AllModelsHeader:
-            case TreeRowKind.CurrentModelHeader:
-                return VisibilityReasons.HeaderHasNoActions;
-            case TreeRowKind.MorePage:
-                return VisibilityReasons.PageRowHasNoActions;
-            case TreeRowKind.AllModelsGroup:
-                return AddGroupEverywhere(builder, row);
-        }
+            TreeRowKind.AllModelsHeader or TreeRowKind.CurrentModelHeader => VisibilityReasons.HeaderHasNoActions,
+            TreeRowKind.MorePage => VisibilityReasons.PageRowHasNoActions,
+            TreeRowKind.AllModelsGroup => AddGroupEverywhere(builder, row),
+            _ => AddDocumentRow(builder, row)
+        };
+    }
 
+    private string? AddDocumentRow(Builder builder, TreeRow row)
+    {
         if (row.Document is not { } key)
         {
             return VisibilityReasons.NotSupported;
         }
 
-        var info = documents(key);
-        if (info is null || !info.IsLoaded)
+        if (documents(key) is not { IsLoaded: true } info)
         {
             return VisibilityReasons.NotLoaded;
         }
 
-        if (row.Kind == TreeRowKind.LinkModel)
-        {
-            if (!info.Can(DocumentCapabilities.WholeModel))
-            {
-                return VisibilityReasons.NotSupported;
-            }
+        return row.Kind == TreeRowKind.LinkModel
+            ? AddLinkModel(builder, info)
+            : AddBranch(builder, row, info);
+    }
 
-            builder.AttachedModels.Add(key);
-            return null;
+    private static string? AddLinkModel(Builder builder, DocumentInfo info)
+    {
+        if (!info.Can(DocumentCapabilities.WholeModel))
+        {
+            return VisibilityReasons.NotSupported;
         }
 
-        var check = CheckDocument(builder.Action, info);
-        if (check is not null)
+        builder.AttachedModels.Add(info.Key);
+        return null;
+    }
+
+    private string? AddBranch(Builder builder, TreeRow row, DocumentInfo info)
+    {
+        if (CheckDocument(builder.Action, info) is { } reason)
         {
-            return check;
+            return reason;
         }
 
-        if (snapshots(key) is not { IsDirty: false } snapshot)
+        if (snapshots(info.Key) is not { IsDirty: false } snapshot)
         {
             return VisibilityReasons.Updating;
         }
 
-        if (builder.Collect)
-        {
-            builder.Ids(key).UnionWith(snapshot.IdsUnder(row.Path));
-        }
-        else
-        {
-            builder.Touch(key);
-        }
-
+        builder.Add(info.Key, () => snapshot.IdsUnder(row.Path));
         return null;
     }
 
@@ -128,21 +125,12 @@ public sealed class VisibilityPlanner(
             return VisibilityReasons.NotLoaded;
         }
 
-        var check = CheckDocument(builder.Action, info);
-        if (check is not null)
+        if (CheckDocument(builder.Action, info) is { } reason)
         {
-            return check;
+            return reason;
         }
 
-        if (builder.Collect)
-        {
-            builder.Ids(element.Document).Add(element.Id);
-        }
-        else
-        {
-            builder.Touch(element.Document);
-        }
-
+        builder.Add(element.Document, () => [element.Id]);
         return null;
     }
 
@@ -170,8 +158,6 @@ public sealed class VisibilityPlanner(
 
         public VisibilityAction Action { get; } = action;
 
-        public bool Collect { get; } = collect;
-
         public Dictionary<long, string> Groups { get; } = [];
 
         public List<DocumentKey> AttachedModels { get; } = [];
@@ -181,20 +167,21 @@ public sealed class VisibilityPlanner(
 
         public bool TouchesLink => _touched.Any(key => !key.IsCurrentModel);
 
-        public void Touch(DocumentKey key)
+        public void Add(DocumentKey key, Func<IEnumerable<long>> ids)
         {
-            _touched.Add(key);
-        }
-
-        public HashSet<long> Ids(DocumentKey key)
-        {
-            if (!_ids.TryGetValue(key, out var ids))
+            if (!collect)
             {
-                ids = [];
-                _ids.Add(key, ids);
+                _touched.Add(key);
+                return;
             }
 
-            return ids;
+            if (!_ids.TryGetValue(key, out var set))
+            {
+                set = [];
+                _ids.Add(key, set);
+            }
+
+            set.UnionWith(ids());
         }
 
         public VisibilityPlan Build(RgbColor? color)

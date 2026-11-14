@@ -45,12 +45,12 @@ public sealed class LifecycleTests
         bar.Tick([Mep]);
         fixture.Model.ReleaseScope(1);
         fixture.Model.ReleaseScope(2);
-        var newer = fixture.Tree.Rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep);
+        var newer = fixture.Explorer.Rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep);
         fixture.Model.ReleaseScope(0);
 
         Assert.AreEqual(3, fixture.Model.HeldScopes);
         Assert.IsTrue(newer);
-        Assert.IsTrue(fixture.Tree.Rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep));
+        Assert.IsTrue(fixture.Explorer.Rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep));
         Assert.IsFalse(fixture.Panel.IsUpdating);
     }
 
@@ -58,12 +58,12 @@ public sealed class LifecycleTests
     public async Task ClosingDropsSession()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await fixture.Tree.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         var builds = fixture.Model.BuildCount;
 
         fixture.Model.RaiseDocumentClosing(Current);
         var sessions = fixture.Panel.SessionCount;
-        var rows = fixture.Tree.Rows.Count;
+        var rows = fixture.Explorer.Rows.Count;
         fixture.Settle();
 
         Assert.AreEqual(0, sessions);
@@ -101,12 +101,12 @@ public sealed class LifecycleTests
         using var fixture = PanelFixture.Create(model);
         await fixture.Panel.InitializeAsync(CancellationToken.None);
         fixture.Panel.ContextBar.Tick([Mep]);
-        await fixture.Tree.ExpandAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ExpandAsync(fixture.Group(Current, "Ducts"));
         var builds = model.BuildCount;
 
         model.ActivateModel(Other.Value.CurrentModel);
         fixture.Settle();
-        var otherRows = fixture.Tree.Rows.Where(row => row.Document is not null)
+        var otherRows = fixture.Explorer.Rows.Where(row => row.Document is not null)
             .All(row => row.Document!.Value.ModelId == "other-model");
         model.ActivateModel(Current);
         fixture.Settle();
@@ -125,11 +125,11 @@ public sealed class LifecycleTests
         var menu = fixture.Panel.ContextMenu;
 
         fixture.Model.SetBusy(true);
-        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
         var isolate = menu[MenuAction.Isolate].DisabledReason;
         var zoom = menu[MenuAction.Zoom].IsEnabled;
-        await fixture.Tree.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
-        var message = fixture.Tree.Message;
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        var message = fixture.Explorer.Message;
         fixture.Model.SetBusy(false);
         fixture.Settle();
 
@@ -176,7 +176,7 @@ public sealed class LifecycleTests
         fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, [id]));
         fixture.Settle();
 
-        Assert.AreEqual(0, fixture.Tree.SelectedCount);
+        Assert.AreEqual(0, fixture.Explorer.SelectedCount);
         Assert.AreEqual(reads, fixture.Model.SelectionReads);
         Assert.AreEqual(builds, fixture.Model.BuildCount);
     }
@@ -201,7 +201,7 @@ public sealed class LifecycleTests
         Assert.AreEqual(reads + 1, fixture.Model.SelectionReads);
         Assert.AreEqual(documents + 1, fixture.Model.DocumentReads);
         Assert.AreEqual(builds + 1, fixture.Model.BuildCount);
-        Assert.AreEqual(3, fixture.Tree.SelectedCount);
+        Assert.AreEqual(3, fixture.Explorer.SelectedCount);
     }
 
     [TestMethod]
@@ -236,9 +236,9 @@ public sealed class LifecycleTests
         using var fixture = PanelFixture.Create(model);
         await fixture.Panel.InitializeAsync(CancellationToken.None);
         var walls = fixture.Group(Current, "Walls");
-        await fixture.Tree.ExpandAsync(walls);
+        await fixture.Explorer.ExpandAsync(walls);
         var family = walls.Children![0];
-        await fixture.Tree.ExpandAsync(family);
+        await fixture.Explorer.ExpandAsync(family);
         var ids = model.Data.SourceOf(Current).Elements.Take(DeltaApplier.DirtyThreshold + 1)
             .Select(element => element.Id).ToList();
 
@@ -276,7 +276,7 @@ public sealed class LifecycleTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Tick([Mep]);
 
-        await fixture.Tree.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         var entries = fixture.Panel.Journal.LinkEntries;
         Assert.IsNotEmpty(entries);
@@ -287,7 +287,7 @@ public sealed class LifecycleTests
     public async Task EyeReadsBackHostState()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        var id = fixture.Tree.ElementsOf([fixture.Group(Current, "Ducts")])[0].Id;
+        var id = fixture.Explorer.ElementsOf([fixture.Group(Current, "Ducts")])[0].Id;
 
         await fixture.Model.ExecuteAsync(new VisibilityPlan(VisibilityAction.Hide, null,
             [new ElementsStep(Current, [id])], null), CancellationToken.None);
@@ -301,15 +301,15 @@ public sealed class LifecycleTests
     public async Task ReadBackAsksVisibleRowsOnly()
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
-        var tree = fixture.Tree;
-        await tree.ToggleExpandCommand.ExecuteAsync(tree.Rows.First(row => row.Kind == TreeRowKind.AllModelsHeader));
-        await tree.ToggleExpandCommand.ExecuteAsync(tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
+        var explorer = fixture.Explorer;
+        await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.AllModelsHeader));
+        await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
         fixture.Model.HiddenReads.Clear();
 
         fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", false));
         fixture.Settle();
         var collapsed = fixture.Model.HiddenReads.Sum(read => read.Count);
-        await tree.ToggleExpandCommand.ExecuteAsync(tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
+        await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
 
         var asked = fixture.Model.HiddenReads.SelectMany(read => read).ToHashSet();
         var inView = (await fixture.Model.CollectScopeAsync(Current, ScopeKind.ActiveView, CancellationToken.None))

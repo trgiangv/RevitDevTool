@@ -16,21 +16,15 @@ public enum MenuAction
     ResetView
 }
 
-public sealed class MenuItemViewModel : ObservableObject
+public sealed partial class MenuItemViewModel : ObservableObject
 {
     public const string LinkCommandsNote = "Goes through link commands";
-
-    private string? _disabledReason;
-    private string _iconKey;
-    private bool _isVisible = true;
-    private string _text;
-    private bool _usesReferenceCommands;
 
     internal MenuItemViewModel(MenuAction? action, string text, string iconKey, string? shortcut, Func<Task>? execute)
     {
         Action = action;
-        _text = text;
-        _iconKey = iconKey;
+        Text = text;
+        IconKey = iconKey;
         Shortcut = shortcut;
         Command = new AsyncRelayCommand(execute ?? (() => Task.CompletedTask), () => IsEnabled);
     }
@@ -39,55 +33,30 @@ public sealed class MenuItemViewModel : ObservableObject
 
     public bool IsSeparator => Action is null;
 
-    public string Text
-    {
-        get => _text;
-        internal set => SetProperty(ref _text, value);
-    }
+    [ObservableProperty]
+    public partial string Text { get; internal set; }
 
-    public string IconKey
-    {
-        get => _iconKey;
-        internal set => SetProperty(ref _iconKey, value);
-    }
+    [ObservableProperty]
+    public partial string IconKey { get; internal set; }
 
     public string? Shortcut { get; }
 
-    public bool IsVisible
-    {
-        get => _isVisible;
-        internal set => SetProperty(ref _isVisible, value);
-    }
+    [ObservableProperty]
+    public partial bool IsVisible { get; internal set; } = true;
 
     public bool IsEnabled => DisabledReason is null;
 
     public string? ToolTipText => DisabledReason ?? (UsesReferenceCommands ? LinkCommandsNote : null);
 
-    public string? DisabledReason
-    {
-        get => _disabledReason;
-        internal set
-        {
-            if (SetProperty(ref _disabledReason, value))
-            {
-                OnPropertyChanged(nameof(IsEnabled));
-                OnPropertyChanged(nameof(ToolTipText));
-                Command.NotifyCanExecuteChanged();
-            }
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEnabled))]
+    [NotifyPropertyChangedFor(nameof(ToolTipText))]
+    [NotifyCanExecuteChangedFor(nameof(Command))]
+    public partial string? DisabledReason { get; internal set; }
 
-    public bool UsesReferenceCommands
-    {
-        get => _usesReferenceCommands;
-        internal set
-        {
-            if (SetProperty(ref _usesReferenceCommands, value))
-            {
-                OnPropertyChanged(nameof(ToolTipText));
-            }
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ToolTipText))]
+    public partial bool UsesReferenceCommands { get; internal set; }
 
     public IAsyncRelayCommand Command { get; }
 
@@ -113,7 +82,7 @@ internal sealed record MenuTarget(
     }
 }
 
-public sealed class ContextMenuViewModel : ObservableObject
+public sealed partial class ContextMenuViewModel : ObservableObject
 {
     public const string NeedsThreeDView = "Section box needs a 3D view.";
 
@@ -122,7 +91,6 @@ public sealed class ContextMenuViewModel : ObservableObject
     private readonly PanelRuntime _runtime;
     private readonly TemporaryBarViewModel _temporaryBar;
     private readonly VisibilityController _visibility;
-    private string? _message;
     private MenuTarget? _target;
 
     internal ContextMenuViewModel(PanelRuntime runtime, VisibilityController visibility, TemporaryBarViewModel temporaryBar)
@@ -144,20 +112,14 @@ public sealed class ContextMenuViewModel : ObservableObject
             _resetSeparator,
             Add(MenuAction.ResetView, "Reset view", "Reset", null, () => _temporaryBar.ResetCommand.ExecuteAsync(null))
         ];
-        ApplyColorCommand = new AsyncRelayCommand<RgbColor?>(color => _runtime.RunAsync(() => ApplyColorAsync(color)));
     }
 
     public event EventHandler? ColorRequested;
 
     public IReadOnlyList<MenuItemViewModel> Items { get; }
 
-    public IAsyncRelayCommand<RgbColor?> ApplyColorCommand { get; }
-
-    public string? Message
-    {
-        get => _message;
-        private set => SetProperty(ref _message, value);
-    }
+    [ObservableProperty]
+    public partial string? Message { get; private set; }
 
     public MenuItemViewModel ResetSeparator => _resetSeparator;
 
@@ -237,6 +199,7 @@ public sealed class ContextMenuViewModel : ObservableObject
                 return (check.DisabledReason, check.UsesReferenceCommands);
         }
     }
+
     private MenuItemViewModel Add(MenuAction action, string text, string icon, string? shortcut, Func<Task> execute)
     {
         var item = new MenuItemViewModel(action, text, icon, shortcut, () => _runtime.RunAsync(execute));
@@ -279,12 +242,10 @@ public sealed class ContextMenuViewModel : ObservableObject
         return Task.CompletedTask;
     }
 
-    private async Task ApplyColorAsync(RgbColor? color)
+    [RelayCommand]
+    private Task ApplyColorAsync(RgbColor? color)
     {
-        if (color is { } picked)
-        {
-            await RunAsync(VisibilityAction.Color, picked);
-        }
+        return _runtime.RunAsync(() => color is { } picked ? RunAsync(VisibilityAction.Color, picked) : Task.CompletedTask);
     }
 
     private async Task RunAsync(VisibilityAction action, RgbColor? color = null)

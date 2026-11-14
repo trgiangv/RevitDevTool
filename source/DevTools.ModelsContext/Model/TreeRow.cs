@@ -15,15 +15,10 @@ public sealed class TreeRow : INotifyPropertyChanged
     private static readonly PropertyChangedEventArgs EyeChanged = new(nameof(Eye));
     private static readonly PropertyChangedEventArgs DisabledReasonChanged = new(nameof(DisabledReason));
     private static readonly PropertyChangedEventArgs IsEnabledChanged = new(nameof(IsEnabled));
-
-    private int _count;
-    private string _countText = "0";
-    private int _selectedInside;
-    private bool _isExpanded;
-    private bool _hasChildren;
-    private RowEye _eye;
-    private string? _disabledReason;
-    private bool _isHighlighted;
+    private static readonly PropertyChangedEventArgs OverrideColorChanged = new(nameof(OverrideColor));
+    private static readonly PropertyChangedEventArgs ColorHexChanged = new(nameof(ColorHex));
+    private static readonly PropertyChangedEventArgs HasColorChanged = new(nameof(HasColor));
+    private static readonly PropertyChangedEventArgs HalftoneChanged = new(nameof(IsHalftone));
 
     public TreeRow(
         TreeRowKind kind,
@@ -63,29 +58,29 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public int Count
     {
-        get => _count;
+        get;
         set
         {
-            if (_count != value)
+            if (field != value)
             {
-                _count = value;
-                _countText = value.ToString("N0", CultureInfo.CurrentCulture);
+                field = value;
+                CountText = value.ToString("N0", CultureInfo.CurrentCulture);
                 Raise(CountTextChanged);
             }
         }
     }
 
-    public string CountText => _countText;
+    public string CountText { get; private set; } = "0";
 
     public int SelectedInside
     {
-        get => _selectedInside;
+        get;
         set
         {
-            if (_selectedInside != value)
+            if (field != value)
             {
                 var badge = Badge;
-                _selectedInside = value;
+                field = value;
                 RaiseBadgeIfChanged(badge);
             }
         }
@@ -93,13 +88,13 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public bool IsExpanded
     {
-        get => _isExpanded;
+        get;
         set
         {
-            if (_isExpanded != value)
+            if (field != value)
             {
                 var badge = Badge;
-                _isExpanded = value;
+                field = value;
                 Raise(ExpandedChanged);
                 RaiseBadgeIfChanged(badge);
             }
@@ -108,12 +103,12 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public bool HasChildren
     {
-        get => _hasChildren;
+        get;
         set
         {
-            if (_hasChildren != value)
+            if (field != value)
             {
-                _hasChildren = value;
+                field = value;
                 Raise(HasChildrenChanged);
             }
         }
@@ -123,12 +118,12 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public RowEye Eye
     {
-        get => _eye;
+        get;
         set
         {
-            if (_eye != value)
+            if (field != value)
             {
-                _eye = value;
+                field = value;
                 Raise(EyeChanged);
             }
         }
@@ -138,13 +133,13 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public string? DisabledReason
     {
-        get => _disabledReason;
+        get;
         set
         {
-            if (_disabledReason != value)
+            if (field != value)
             {
                 var wasEnabled = IsEnabled;
-                _disabledReason = value;
+                field = value;
                 Raise(DisabledReasonChanged);
                 if (wasEnabled != IsEnabled)
                 {
@@ -154,11 +149,11 @@ public sealed class TreeRow : INotifyPropertyChanged
         }
     }
 
-    public bool IsEnabled => _disabledReason is null;
+    public bool IsEnabled => DisabledReason is null;
 
     public bool HasCount => Kind is not (TreeRowKind.Instance or TreeRowKind.MorePage);
 
-    public int Badge => _isExpanded ? 0 : _selectedInside;
+    public int Badge => IsExpanded ? 0 : SelectedInside;
 
     public bool ChildrenLoaded => Children is not null;
 
@@ -168,13 +163,52 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public bool IsHighlighted
     {
-        get => _isHighlighted;
+        get;
         internal set
         {
-            if (_isHighlighted != value)
+            if (field != value)
             {
-                _isHighlighted = value;
+                field = value;
                 Raise(HighlightChanged);
+            }
+        }
+    }
+
+    public RgbColor? OverrideColor
+    {
+        get;
+        internal set
+        {
+            if (field != value)
+            {
+                var had = HasColor;
+                field = value;
+                ColorHex = value is { } color
+                    ? string.Format(CultureInfo.InvariantCulture, "#{0:X2}{1:X2}{2:X2}", color.R, color.G, color.B)
+                    : string.Empty;
+                Raise(OverrideColorChanged);
+                Raise(ColorHexChanged);
+                if (had != HasColor)
+                {
+                    Raise(HasColorChanged);
+                }
+            }
+        }
+    }
+
+    public string ColorHex { get; private set; } = string.Empty;
+
+    public bool HasColor => OverrideColor is not null;
+
+    public bool IsHalftone
+    {
+        get;
+        internal set
+        {
+            if (field != value)
+            {
+                field = value;
+                Raise(HalftoneChanged);
             }
         }
     }

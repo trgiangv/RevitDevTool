@@ -1,10 +1,17 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Ports;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.ModelsContext.Engine;
 
-public sealed class ValueIndexCache(IFilterEvaluator evaluator, int capacity = ValueIndexCache.DefaultCapacity)
+public sealed class ValueIndexCache(
+    IFilterEvaluator evaluator,
+    int capacity = ValueIndexCache.DefaultCapacity,
+    ILogger? logger = null)
 {
+    private readonly ILogger _logger = logger ?? NullLogger.Instance;
     public const int DefaultCapacity = 8;
     public const int MaxValues = 500;
 
@@ -116,8 +123,14 @@ public sealed class ValueIndexCache(IFilterEvaluator evaluator, int capacity = V
         IReadOnlyCollection<long> groups,
         CancellationToken cancellationToken)
     {
+        var timer = TraceTimer.Start(_logger);
         var counts = await evaluator.CountValuesAsync(source, parameter, groups, cancellationToken)
             .ConfigureAwait(false);
+        if (timer.IsEnabled)
+        {
+            _logger.ValuesCounted(source, parameter.Name, counts.Values.Count, counts.Total, timer.ElapsedMs);
+        }
+
         return Summarize(counts);
     }
 

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using System.Globalization;
@@ -7,7 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace DevTools.ModelsContext.ViewModels;
 
-public sealed class TreeTabViewModel : ObservableObject, IDisposable
+public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 {
     public const int InstancePageSize = 200;
     public const int OpenPathLimit = 50;
@@ -32,20 +33,15 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
     private readonly VisibilityController _visibility;
     private ContextData _data = ContextData.Empty;
     private bool _isSyncOn = true;
-    private bool _isSyncPaused;
-    private bool _isUpdating;
-    private string? _message;
-    private TreeState? _pending;
+    private ExplorerState? _pending;
     private bool _revealPending;
     private List<TreeRow> _roots = [];
     private HashSet<TreeRow>? _searchHits;
     private HashSet<TreeRow> _searchMatches = [];
-    private string _searchText = string.Empty;
     private HashSet<ElementRef> _selectedElements = [];
-    private string? _syncHint;
     private CancellationToken _token;
 
-    internal TreeTabViewModel(
+    internal ExplorerTabViewModel(
         PanelRuntime runtime,
         VisibilityController visibility,
         ContextBarViewModel bar,
@@ -59,12 +55,6 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
             () => _ = _runtime.RunAsync(SendSelectionAsync));
         _searchDebouncer = new Debouncer(runtime.Services.Scheduler, SearchDelay,
             () => _ = _runtime.RunAsync(ApplySearchAsync));
-        ToggleExpandCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ToggleExpandAsync(row)));
-        LoadMoreCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => LoadMoreAsync(row)));
-        ToggleEyeCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ToggleEyeAsync(row)));
-        ClearSelectionCommand = new AsyncRelayCommand(() => Run(ClearSelectionAsync));
-        ShowInTreeCommand = new RelayCommand(ShowInTree);
-        ExpandAllCommand = new AsyncRelayCommand(() => Run(ExpandAllAsync));
         _visibility.Changed += (_, _) => OnVisibilityChanged();
         _visibility.VisibleIds = VisibleIdsOf;
     }
@@ -79,29 +69,17 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
     public IReadOnlyCollection<ElementRef> SelectedElements => _selectedElements;
 
-    public IAsyncRelayCommand<TreeRow?> ToggleExpandCommand { get; }
-
-    public IAsyncRelayCommand<TreeRow?> LoadMoreCommand { get; }
-
-    public IAsyncRelayCommand<TreeRow?> ToggleEyeCommand { get; }
-
-    public IAsyncRelayCommand ClearSelectionCommand { get; }
-
-    public IRelayCommand ShowInTreeCommand { get; }
-
-    public IAsyncRelayCommand ExpandAllCommand { get; }
-
     public string SearchText
     {
-        get => _searchText;
+        get;
         set
         {
-            if (SetProperty(ref _searchText, value ?? string.Empty))
+            if (SetProperty(ref field, value ?? string.Empty))
             {
                 _searchDebouncer.Trigger();
             }
         }
-    }
+    } = string.Empty;
 
     public bool IsSyncOn
     {
@@ -124,25 +102,14 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
     public bool IsSyncVisible => _bar.Scope != ScopeKind.Selection;
 
-    public bool IsSyncPaused
-    {
-        get => _isSyncPaused;
-        private set
-        {
-            if (SetProperty(ref _isSyncPaused, value))
-            {
-                OnPropertyChanged(nameof(IsSyncing));
-            }
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSyncing))]
+    public partial bool IsSyncPaused { get; private set; }
 
     public bool IsSyncing => IsSyncOn && IsSyncVisible && !IsSyncPaused;
 
-    public string? SyncHint
-    {
-        get => _syncHint;
-        private set => SetProperty(ref _syncHint, value);
-    }
+    [ObservableProperty]
+    public partial string? SyncHint { get; private set; }
 
     public int SelectedCount => _selectedElements.Count;
 
@@ -152,25 +119,14 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         ? "Updating…"
         : string.Format(CultureInfo.CurrentCulture, "{0:N0} selected", SelectedCount);
 
-    public bool CanShowInTree => IsSyncVisible && _selectedElements.Any(element => _data.Find(element.Document) is null);
+    public bool CanShowInExplorer => IsSyncVisible && _selectedElements.Any(element => _data.Find(element.Document) is null);
 
-    public bool IsUpdating
-    {
-        get => _isUpdating;
-        internal set
-        {
-            if (SetProperty(ref _isUpdating, value))
-            {
-                OnPropertyChanged(nameof(StatusText));
-            }
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusText))]
+    public partial bool IsUpdating { get; internal set; }
 
-    public string? Message
-    {
-        get => _message;
-        private set => SetProperty(ref _message, value);
-    }
+    [ObservableProperty]
+    public partial string? Message { get; private set; }
 
     public void Dispose()
     {
@@ -185,6 +141,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var timer = TraceTimer.Start(_runtime.Logger);
         await EnsureChildrenAsync(row);
         row.IsExpanded = true;
         ApplyState(row);
@@ -197,6 +154,11 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         var visible = new List<TreeRow>();
         Flatten(row.Children!, IsUnderMatch(row), visible);
         Rows.InsertRange(index + 1, visible);
+        if (timer.IsEnabled)
+        {
+            _runtime.Logger.RowExpanded(row.Text, visible.Count, timer.ElapsedMs);
+        }
+
         if (await ReadHiddenAsync())
         {
             Publish();
@@ -232,7 +194,20 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         _selectedRows.UnionWith(rows);
         if (IsSyncOn && IsSyncVisible && !_runtime.IsBusy)
         {
+            ClearBadges(_roots);
             _sendDebouncer.Trigger();
+        }
+    }
+
+    private static void ClearBadges(IEnumerable<TreeRow> rows)
+    {
+        foreach (var row in rows)
+        {
+            row.SelectedInside = 0;
+            if (row.Children is { } children)
+            {
+                ClearBadges(children);
+            }
         }
     }
 
@@ -331,7 +306,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         await item.Command.ExecuteAsync(null);
     }
 
-    internal TreeState Capture()
+    internal ExplorerState Capture()
     {
         if (_pending is { } pending)
         {
@@ -340,10 +315,10 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
         var expanded = new HashSet<string>(StringComparer.Ordinal);
         CollectExpanded(_roots, expanded);
-        return new TreeState(expanded, new HashSet<string>(_roots.Select(KeyOf), StringComparer.Ordinal), _isSyncOn);
+        return new ExplorerState(expanded, new HashSet<string>(_roots.Select(KeyOf), StringComparer.Ordinal), _isSyncOn);
     }
 
-    internal void Reset(TreeState state)
+    internal void Reset(ExplorerState state)
     {
         _pending = state;
         ClearHighlight();
@@ -440,7 +415,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
         _pending = null;
 
-        if (_searchText.Trim().Length > 0)
+        if (SearchText.Trim().Length > 0)
         {
             await CollectSearchAsync();
         }
@@ -454,7 +429,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         await ReadHiddenAsync();
         OnPropertyChanged(nameof(IsSyncVisible));
         OnPropertyChanged(nameof(IsSyncing));
-        OnPropertyChanged(nameof(CanShowInTree));
+        OnPropertyChanged(nameof(CanShowInExplorer));
         Publish();
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -621,7 +596,37 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         return _runtime.RunAsync(work);
     }
 
-    private async Task ToggleExpandAsync(TreeRow? row)
+    [RelayCommand]
+    private Task ToggleExpandAsync(TreeRow? row)
+    {
+        return Run(() => ToggleRowAsync(row));
+    }
+
+    [RelayCommand]
+    private Task LoadMoreAsync(TreeRow? more)
+    {
+        return Run(() => LoadMoreRowsAsync(more));
+    }
+
+    [RelayCommand]
+    private Task ToggleEyeAsync(TreeRow? row)
+    {
+        return Run(() => ToggleRowEyeAsync(row));
+    }
+
+    [RelayCommand]
+    private Task ClearSelectionAsync()
+    {
+        return Run(ClearAllAsync);
+    }
+
+    [RelayCommand]
+    private Task ExpandAllAsync()
+    {
+        return Run(RevealAllAsync);
+    }
+
+    private async Task ToggleRowAsync(TreeRow? row)
     {
         if (row is null)
         {
@@ -638,7 +643,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task LoadMoreAsync(TreeRow? more)
+    private async Task LoadMoreRowsAsync(TreeRow? more)
     {
         if (more is not { Kind: TreeRowKind.MorePage, Parent: { } parent })
         {
@@ -663,7 +668,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task ToggleEyeAsync(TreeRow? row)
+    private async Task ToggleRowEyeAsync(TreeRow? row)
     {
         if (row is null || row.Eye is RowEye.None or RowEye.HiddenByAllModels)
         {
@@ -673,7 +678,6 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         var action = row.Eye == RowEye.Hidden ? VisibilityAction.Show : VisibilityAction.Hide;
         Message = await _visibility.RunAsync(new VisibilityRequest(action, TargetsFor(row), []), _token);
     }
-
 
     private static bool IsAffected(TreeRow row, HashSet<TreeRow> targets, HashSet<long> groups)
     {
@@ -704,7 +708,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         return new MenuTarget(rows, [], () => ElementsOf(rows), IsSyncing, hidden, _token);
     }
 
-    private async Task ClearSelectionAsync()
+    private async Task ClearAllAsync()
     {
         _selectedRows.Clear();
         _selectedElements.Clear();
@@ -716,7 +720,8 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void ShowInTree()
+    [RelayCommand]
+    private void ShowInExplorer()
     {
         var missing = _selectedElements.Select(element => element.Document)
             .Where(document => _data.Find(document) is null)
@@ -731,7 +736,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         _bar.Tick(missing);
     }
 
-    private async Task ExpandAllAsync()
+    private async Task RevealAllAsync()
     {
         SyncHint = null;
         _selectedRows.Clear();
@@ -770,7 +775,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SelectedCount));
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(StatusText));
-        OnPropertyChanged(nameof(CanShowInTree));
+        OnPropertyChanged(nameof(CanShowInExplorer));
     }
 
     private async Task RevealSelectionAsync(int limit)
@@ -824,6 +829,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
             return;
         }
 
+        var timer = TraceTimer.Start(_runtime.Logger);
         await EnsureChildrenAsync(row);
         row.IsExpanded = true;
         foreach (var child in row.Children!.Where(child => expanded.Contains(KeyOf(child))))
@@ -1101,6 +1107,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
     private void Publish()
     {
+        var timer = TraceTimer.Start(_runtime.Logger);
         foreach (var root in _roots)
         {
             ApplyState(root);
@@ -1108,9 +1115,15 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
         var visible = new List<TreeRow>();
         Flatten(_roots, false, visible);
-        if (!IsSameOrder(visible))
+        var rebuilt = !IsSameOrder(visible);
+        if (rebuilt)
         {
             Rows.ReplaceAll(visible);
+        }
+
+        if (timer.IsEnabled)
+        {
+            _runtime.Logger.RowsPublished(visible.Count, rebuilt, timer.ElapsedMs);
         }
     }
 
@@ -1180,6 +1193,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
                 break;
         }
 
+        ApplyOverride(row, stale);
         if (row.Children is { } children)
         {
             foreach (var child in children)
@@ -1187,6 +1201,14 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
                 ApplyState(child);
             }
         }
+    }
+
+    private void ApplyOverride(TreeRow row, bool stale)
+    {
+        var own = stale ? null : _visibility.OverrideOf(row);
+        var category = !stale && row.Kind == TreeRowKind.Group ? _visibility.CategoryOverrideOf(row.Id) : null;
+        row.OverrideColor = own?.Color ?? category?.Color ?? row.Parent?.OverrideColor;
+        row.IsHalftone = own?.Halftone == true || category?.Halftone == true || row.Parent?.IsHalftone == true;
     }
 
     private void ApplyAllModelsState(TreeRow row)
@@ -1251,7 +1273,7 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
     private async Task CollectSearchAsync()
     {
-        var text = _searchText.Trim();
+        var text = SearchText.Trim();
         if (text.Length == 0)
         {
             _searchHits = null;

@@ -14,7 +14,7 @@ internal interface IFilterEditor
     Task LoadValuesAsync(RuleViewModel rule);
 }
 
-public abstract class FilterNodeViewModel : ObservableObject
+public abstract partial class FilterNodeViewModel : ObservableObject
 {
     private protected FilterNodeViewModel(IFilterEditor editor, bool isReadOnly)
     {
@@ -25,6 +25,12 @@ public abstract class FilterNodeViewModel : ObservableObject
     public bool IsReadOnly { get; }
 
     internal IFilterEditor Editor { get; }
+
+    internal RuleSetViewModel? Parent { get; set; }
+
+    private protected bool CanEdit => !IsReadOnly;
+
+    private bool CanRemove => Parent is { IsReadOnly: false };
 
     internal abstract FilterNode? ToNode();
 
@@ -47,9 +53,15 @@ public abstract class FilterNodeViewModel : ObservableObject
     {
         Editor.OnEdited();
     }
+
+    [RelayCommand(CanExecute = nameof(CanRemove))]
+    private void Remove()
+    {
+        Parent?.RemoveChild(this);
+    }
 }
 
-public sealed class RuleSetViewModel : FilterNodeViewModel
+public sealed partial class RuleSetViewModel : FilterNodeViewModel
 {
     private SetMatch _match;
 
@@ -57,9 +69,6 @@ public sealed class RuleSetViewModel : FilterNodeViewModel
         : base(editor, isReadOnly)
     {
         _match = match;
-        AddRuleCommand = new RelayCommand(() => Add(new RuleViewModel(Editor, false)), () => !IsReadOnly);
-        AddSetCommand = new RelayCommand(() => Add(new RuleSetViewModel(Editor, false)), () => !IsReadOnly);
-        RemoveCommand = new RelayCommand<FilterNodeViewModel?>(Remove, _ => !IsReadOnly);
     }
 
     public ObservableCollection<FilterNodeViewModel> Children { get; } = [];
@@ -76,18 +85,14 @@ public sealed class RuleSetViewModel : FilterNodeViewModel
         }
     }
 
-    public IRelayCommand AddRuleCommand { get; }
-
-    public IRelayCommand AddSetCommand { get; }
-
-    public IRelayCommand<FilterNodeViewModel?> RemoveCommand { get; }
-
     internal static RuleSetViewModel From(FilterSet set, IFilterEditor editor, bool isReadOnly)
     {
         var model = new RuleSetViewModel(editor, isReadOnly, set.Match);
         foreach (var child in set.Children)
         {
-            model.Children.Add(From(child, editor, isReadOnly));
+            var node = From(child, editor, isReadOnly);
+            node.Parent = model;
+            model.Children.Add(node);
         }
 
         return model;
@@ -112,32 +117,43 @@ public sealed class RuleSetViewModel : FilterNodeViewModel
         }
     }
 
-    private void Add(FilterNodeViewModel node)
+    internal void RemoveChild(FilterNodeViewModel node)
     {
-        Children.Add(node);
-        Edited();
-    }
-
-    private void Remove(FilterNodeViewModel? node)
-    {
-        if (node is not null && Children.Remove(node))
+        if (Children.Remove(node))
         {
+            node.Parent = null;
             Edited();
         }
     }
+
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void AddRule()
+    {
+        Add(new RuleViewModel(Editor, false));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEdit))]
+    private void AddSet()
+    {
+        Add(new RuleSetViewModel(Editor, false));
+    }
+
+    private void Add(FilterNodeViewModel node)
+    {
+        node.Parent = this;
+        Children.Add(node);
+        Edited();
+    }
 }
 
-public sealed class RuleViewModel : FilterNodeViewModel
+public sealed partial class RuleViewModel : FilterNodeViewModel
 {
     private ValueKind _kind;
-    private bool _hasMoreValues;
-    private int _noParameterCount;
     private FilterOperator _operator;
     private ParameterKey? _parameter;
     private string _parameterName;
     private ParameterInfo? _selectedParameter;
     private string _value;
-    private IReadOnlyList<ValueCount> _values = [];
 
     internal RuleViewModel(IFilterEditor editor, bool isReadOnly, FilterRule? rule = null)
         : base(editor, isReadOnly)
@@ -150,7 +166,6 @@ public sealed class RuleViewModel : FilterNodeViewModel
         _selectedParameter = rule is null
             ? null
             : editor.Parameters.FirstOrDefault(parameter => parameter.Key == rule.Parameter);
-        LoadValuesCommand = new AsyncRelayCommand(() => Editor.LoadValuesAsync(this));
     }
 
     public IReadOnlyList<ParameterInfo> Parameters => Editor.Parameters;
@@ -250,25 +265,14 @@ public sealed class RuleViewModel : FilterNodeViewModel
         }
     }
 
-    public IReadOnlyList<ValueCount> Values
-    {
-        get => _values;
-        private set => SetProperty(ref _values, value);
-    }
+    [ObservableProperty]
+    public partial IReadOnlyList<ValueCount> Values { get; private set; } = [];
 
-    public bool HasMoreValues
-    {
-        get => _hasMoreValues;
-        private set => SetProperty(ref _hasMoreValues, value);
-    }
+    [ObservableProperty]
+    public partial bool HasMoreValues { get; private set; }
 
-    public int NoParameterCount
-    {
-        get => _noParameterCount;
-        private set => SetProperty(ref _noParameterCount, value);
-    }
-
-    public IAsyncRelayCommand LoadValuesCommand { get; }
+    [ObservableProperty]
+    public partial int NoParameterCount { get; private set; }
 
     public ParameterKey? Parameter => _parameterName.Trim().Length == 0
         ? null
@@ -300,6 +304,12 @@ public sealed class RuleViewModel : FilterNodeViewModel
         }
 
         return new FilterRule(parameter, Kind, Operator, Value);
+    }
+
+    [RelayCommand]
+    private Task LoadValuesAsync()
+    {
+        return Editor.LoadValuesAsync(this);
     }
 
     private bool SetKind(ValueKind kind)

@@ -1,6 +1,7 @@
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
+using System.Collections.Specialized;
 
 namespace DevTools.ModelsContext.Tests;
 
@@ -22,6 +23,36 @@ public sealed class FilterTabTests
             filter.Parameters.Select(parameter => parameter.DisplayName).ToArray());
         Assert.AreEqual(ValueKind.Number, rule.Kind);
         Assert.AreEqual(FakeParameters.Width, rule.Parameter);
+    }
+
+    [TestMethod]
+    public async Task RuleRemovesItself()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.AddCommand.Execute(null);
+        filter.Root.AddSetCommand.Execute(null);
+        var set = (RuleSetViewModel)filter.Root.Children[0];
+        set.AddRuleCommand.Execute(null);
+        var rule = set.Children[0];
+
+        rule.RemoveCommand.Execute(null);
+        set.RemoveCommand.Execute(null);
+
+        Assert.AreEqual(0, set.Children.Count);
+        Assert.AreEqual(0, filter.Root.Children.Count);
+        Assert.IsTrue(filter.IsDirty);
+    }
+
+    [TestMethod]
+    public async Task ReadOnlyRuleCannotRemove()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        var rule = filter.Root.Children[0];
+
+        Assert.IsFalse(rule.RemoveCommand.CanExecute(null));
     }
 
     [TestMethod]
@@ -233,6 +264,81 @@ public sealed class FilterTabTests
 
         var selection = await fixture.Model.GetSelectionAsync(CancellationToken.None);
         CollectionAssert.AreEquivalent(baseline.Union(filter.Result).ToList(), selection.ToList());
+    }
+
+    [TestMethod]
+    public async Task AllChecksSearchedCategories()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.AddCommand.Execute(null);
+        filter.CategorySearch = "Doors";
+
+        filter.CheckAllCommand.Execute(null);
+
+        CollectionAssert.AreEqual(new[] { "Doors" },
+            filter.Categories.Where(category => category.IsChecked).Select(category => category.Name).ToArray());
+        Assert.IsTrue(filter.IsDirty);
+    }
+
+    [TestMethod]
+    public async Task NoneClearsSearchedCategories()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.AddCommand.Execute(null);
+        Category(filter, "Doors").IsChecked = true;
+        Category(filter, "Windows").IsChecked = true;
+        filter.CategorySearch = "Doors";
+
+        filter.CheckNoneCommand.Execute(null);
+
+        Assert.IsFalse(Category(filter, "Doors").IsChecked);
+        Assert.IsTrue(Category(filter, "Windows").IsChecked);
+    }
+
+    [TestMethod]
+    public async Task ReadOnlyIgnoresCheckAll()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        var before = filter.Categories.Where(category => category.IsChecked).ToList();
+
+        filter.CheckAllCommand.Execute(null);
+
+        CollectionAssert.AreEqual(before, filter.Categories.Where(category => category.IsChecked).ToList());
+        Assert.IsFalse(filter.IsDirty);
+    }
+
+    [TestMethod]
+    public async Task UntickLinksKeepsHostFilter()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        var bar = fixture.Panel.ContextBar;
+        bar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        fixture.Settle();
+        var expected = filter.Result;
+        filter.Sources.CollectionChanged += (_, change) =>
+        {
+            if (change.Action == NotifyCollectionChangedAction.Reset)
+            {
+                filter.SelectedSource = null;
+            }
+        };
+
+        foreach (var item in bar.Documents.Where(item => !item.Key.IsCurrentModel))
+        {
+            item.IsChecked = false;
+        }
+
+        fixture.Settle();
+
+        Assert.IsNull(fixture.Panel.Message);
+        Assert.AreEqual("Commented", filter.SelectedSource?.Name);
+        CollectionAssert.AreEquivalent(expected.ToList(), filter.Result.ToList());
     }
 
     private static CategoryItemViewModel Category(FilterTabViewModel filter, string name)

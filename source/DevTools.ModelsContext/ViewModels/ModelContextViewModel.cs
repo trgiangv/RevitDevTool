@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using System.ComponentModel;
@@ -7,11 +8,11 @@ namespace DevTools.ModelsContext.ViewModels;
 
 public enum PanelTab
 {
-    Tree,
+    Explorer,
     Filter
 }
 
-public sealed class ModelContextViewModel : ObservableObject, IDisposable
+public sealed partial class ModelContextViewModel : ObservableObject, IDisposable
 {
     public const string PanelTitle = "Model Context";
 
@@ -30,13 +31,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     private PanelSession? _active;
     private IReadOnlyCollection<ElementRef>? _incomingSelection;
     private ViewInfo? _incomingView;
-    private bool _isBusy;
-    private bool _isPaneVisible = true;
-    private bool _isUpdating;
-    private string? _message;
-    private PanelTab _selectedTab;
     private bool _suppressContextChanged;
-    private string _viewName = string.Empty;
 
     public ModelContextViewModel(ModelContextServices services)
     {
@@ -45,7 +40,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         ContextBar = new ContextBarViewModel();
         TemporaryBar = new TemporaryBarViewModel(_runtime, _visibility);
         ContextMenu = new ContextMenuViewModel(_runtime, _visibility, TemporaryBar);
-        Tree = new TreeTabViewModel(_runtime, _visibility, ContextBar, ContextMenu);
+        Explorer = new ExplorerTabViewModel(_runtime, _visibility, ContextBar, ContextMenu);
         Filter = new FilterTabViewModel(_runtime, _visibility, ContextMenu);
         var scheduler = services.Scheduler;
         _selectionDebouncer = new Debouncer(scheduler, EventDelay, () => _ = _runtime.RunAsync(OnSelectionSettledAsync));
@@ -70,7 +65,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
     public ContextBarViewModel ContextBar { get; }
 
-    public TreeTabViewModel Tree { get; }
+    public ExplorerTabViewModel Explorer { get; }
 
     public FilterTabViewModel Filter { get; }
 
@@ -78,84 +73,25 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
     public ContextMenuViewModel ContextMenu { get; }
 
-    public string ViewName
-    {
-        get => _viewName;
-        private set => SetProperty(ref _viewName, value);
-    }
-
     public bool IsTemporaryBarVisible => TemporaryBar.IsVisible;
 
-    public PanelTab SelectedTab
-    {
-        get => _selectedTab;
-        set
-        {
-            if (!SetProperty(ref _selectedTab, value))
-            {
-                return;
-            }
+    [ObservableProperty]
+    public partial PanelTab SelectedTab { get; set; }
 
-            _ = _runtime.RunAsync(value == PanelTab.Tree ? ResyncTreeAsync : Filter.ActivateAsync);
-        }
-    }
+    [ObservableProperty]
+    public partial bool IsUpdating { get; private set; }
 
-    public bool IsUpdating
-    {
-        get => _isUpdating;
-        private set
-        {
-            if (SetProperty(ref _isUpdating, value))
-            {
-                Tree.IsUpdating = value;
-            }
-        }
-    }
+    [ObservableProperty]
+    public partial string? Message { get; private set; }
 
-    public string? Message
-    {
-        get => _message;
-        private set => SetProperty(ref _message, value);
-    }
-
-    public bool IsBusy
-    {
-        get => _isBusy;
-        private set
-        {
-            if (!SetProperty(ref _isBusy, value))
-            {
-                return;
-            }
-
-            _runtime.IsBusy = value;
-            OnPropertyChanged(nameof(BusyText));
-            ContextMenu.Refresh();
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BusyText))]
+    public partial bool IsBusy { get; private set; }
 
     public string? BusyText => IsBusy ? _runtime.BusyText : null;
 
-    public bool IsPaneVisible
-    {
-        get => _isPaneVisible;
-        set
-        {
-            if (!SetProperty(ref _isPaneVisible, value))
-            {
-                return;
-            }
-
-            if (value)
-            {
-                _ = _runtime.RunAsync(ResumeAsync);
-            }
-            else
-            {
-                Pause();
-            }
-        }
-    }
+    [ObservableProperty]
+    public partial bool IsPaneVisible { get; set; } = true;
 
     public DocumentKey? ActiveModel => _active?.Model;
 
@@ -175,7 +111,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
     public Task RefreshAsync()
     {
-        if (_active is not { } session || !_isPaneVisible)
+        if (_active is not { } session || !IsPaneVisible)
         {
             return Task.CompletedTask;
         }
@@ -208,8 +144,36 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
         _sessions.Clear();
         _active = null;
-        Tree.Dispose();
+        Explorer.Dispose();
         Filter.Dispose();
+    }
+
+    partial void OnSelectedTabChanged(PanelTab value)
+    {
+        _ = _runtime.RunAsync(value == PanelTab.Explorer ? ResyncExplorerAsync : Filter.ActivateAsync);
+    }
+
+    partial void OnIsUpdatingChanged(bool value)
+    {
+        Explorer.IsUpdating = value;
+    }
+
+    partial void OnIsBusyChanged(bool value)
+    {
+        _runtime.IsBusy = value;
+        ContextMenu.Refresh();
+    }
+
+    partial void OnIsPaneVisibleChanged(bool value)
+    {
+        if (value)
+        {
+            _ = _runtime.RunAsync(ResumeAsync);
+        }
+        else
+        {
+            Pause();
+        }
     }
 
     private static DocumentKey? CurrentOf(IReadOnlyList<DocumentInfo> documents)
@@ -224,7 +188,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         return ReferenceEquals(ticket.Session, _active)
                && !ticket.Session.IsClosed
                && ticket.Generation == ticket.Session.Generation
-               && _isPaneVisible;
+               && IsPaneVisible;
     }
 
     private async Task SwitchAsync(DocumentKey model, IReadOnlyList<DocumentInfo>? documents)
@@ -249,7 +213,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(ActiveModel));
         OnPropertyChanged(nameof(SessionCount));
         var ticket = session.Begin();
-        Tree.Reset(session.Tree ?? TreeState.Fresh(true));
+        Explorer.Reset(session.Explorer ?? ExplorerState.Fresh(true));
         Filter.Reset(session.Filter ?? new FilterState(null, true));
         documents ??= await _runtime.Services.Source.GetDocumentsAsync(ticket.Token);
         if (!IsCurrent(ticket))
@@ -267,7 +231,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
             return;
         }
 
-        session.Tree = Tree.Capture();
+        session.Explorer = Explorer.Capture();
         session.Filter = Filter.Capture();
         session.Ticked = ContextBar.TickedDocuments;
         session.Cancel();
@@ -295,7 +259,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         SetView(state?.View);
         await TemporaryBar.RefreshAsync(ticket.Token);
         await RefreshAsync();
-        await ResyncTreeAsync();
+        await ResyncExplorerAsync();
     }
 
     private void SetDocumentsQuietly(IReadOnlyList<DocumentInfo> documents, IReadOnlyCollection<DocumentKey>? ticks)
@@ -332,6 +296,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     private async Task LoadContextAsync(JobTicket ticket)
     {
         var cancellationToken = ticket.Token;
+        var timer = TraceTimer.Start(_runtime.Logger);
         IsUpdating = true;
         try
         {
@@ -365,7 +330,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
                     return;
                 }
 
-                Tree.ShowQuickCounts(quick, ContextBar.CurrentModel);
+                Explorer.ShowQuickCounts(quick, ContextBar.CurrentModel);
             }
 
             var documents = new List<DocumentScope>();
@@ -404,13 +369,17 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
             }
 
             var data = new ContextData(scope, ContextBar.CurrentModel, documents);
-            await Tree.LoadAsync(data, cancellationToken);
+            await Explorer.LoadAsync(data, cancellationToken);
             if (!IsCurrent(ticket))
             {
                 return;
             }
 
             await Filter.LoadAsync(data, cancellationToken);
+            if (timer.IsEnabled)
+            {
+                _runtime.Logger.ContextLoaded(scope, documents.Count, timer.ElapsedMs);
+            }
         }
         finally
         {
@@ -421,9 +390,9 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         }
     }
 
-    private async Task ResyncTreeAsync()
+    private async Task ResyncExplorerAsync()
     {
-        if (_active is not { } session || !_isPaneVisible)
+        if (_active is not { } session || !IsPaneVisible)
         {
             return;
         }
@@ -432,7 +401,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
         var selection = await _runtime.Services.Selection.GetSelectionAsync(ticket.Token);
         if (IsCurrent(ticket))
         {
-            await Tree.ApplyHostSelectionAsync(selection);
+            await Explorer.ApplyHostSelectionAsync(selection);
         }
     }
 
@@ -460,7 +429,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     private async Task ResumeAsync()
     {
         var documents = await _runtime.Services.Source.GetDocumentsAsync(CancellationToken.None);
-        if (!_isPaneVisible)
+        if (!IsPaneVisible)
         {
             return;
         }
@@ -500,7 +469,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     {
         _active = null;
         OnPropertyChanged(nameof(ActiveModel));
-        Tree.Reset(TreeState.Fresh(Tree.IsSyncOn));
+        Explorer.Reset(ExplorerState.Fresh(Explorer.IsSyncOn));
         Filter.Reset(new FilterState(null, Filter.IsLiveOn));
         SetDocumentsQuietly([], null);
         SetView(null);
@@ -510,7 +479,6 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     private void SetView(ViewInfo? view)
     {
         _visibility.View = view;
-        ViewName = view?.Name ?? string.Empty;
     }
 
     private void OnFailed(object? sender, string message)
@@ -536,7 +504,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
     private void OnSelectionChanged(object? sender, IReadOnlyCollection<ElementRef> selection)
     {
-        if (!_isPaneVisible)
+        if (!IsPaneVisible)
         {
             return;
         }
@@ -551,7 +519,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
     private void OnElementsChanged(object? sender, ElementDelta delta)
     {
-        if (!_isPaneVisible)
+        if (!IsPaneVisible)
         {
             MarkChanged(delta);
             return;
@@ -567,7 +535,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
     private void OnDocumentsChanged(object? sender, EventArgs e)
     {
-        if (_isPaneVisible)
+        if (IsPaneVisible)
         {
             _documentsDebouncer.Trigger();
         }
@@ -580,7 +548,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
             _incomingView = view;
         }
 
-        if (_isPaneVisible)
+        if (IsPaneVisible)
         {
             _viewDebouncer.Trigger();
         }
@@ -609,7 +577,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
             _visibility.Forget(document);
         }
 
-        if (_isPaneVisible)
+        if (IsPaneVisible)
         {
             _documentsDebouncer.Trigger();
         }
@@ -617,7 +585,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
 
     private void OnActiveModelChanged(object? sender, DocumentKey model)
     {
-        if (_isPaneVisible)
+        if (IsPaneVisible)
         {
             _ = _runtime.RunAsync(() => SwitchAsync(model.CurrentModel, null));
         }
@@ -638,7 +606,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
             }
         }
 
-        if (_isPaneVisible)
+        if (IsPaneVisible)
         {
             _documentsDebouncer.Trigger();
         }
@@ -652,7 +620,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     private void OnParameterDefinitionsChanged(object? sender, SourceId source)
     {
         _runtime.ForgetParameters(source);
-        if (_isPaneVisible)
+        if (IsPaneVisible)
         {
             _ = _runtime.RunAsync(() => Filter.RefreshParametersAsync(source));
         }
@@ -692,9 +660,14 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
             await RefreshAsync();
         }
 
-        if (SelectedTab == PanelTab.Tree)
+        if (SelectedTab == PanelTab.Explorer)
         {
-            await Tree.ApplyHostSelectionAsync(incoming);
+            var timer = TraceTimer.Start(_runtime.Logger);
+            await Explorer.ApplyHostSelectionAsync(incoming);
+            if (timer.IsEnabled)
+            {
+                _runtime.Logger.SelectionReceived(incoming.Count, timer.ElapsedMs);
+            }
         }
     }
 
@@ -725,7 +698,7 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     {
         var session = _active;
         var documents = await _runtime.Services.Source.GetDocumentsAsync(CancellationToken.None);
-        if (!ReferenceEquals(session, _active) || !_isPaneVisible)
+        if (!ReferenceEquals(session, _active) || !IsPaneVisible)
         {
             return;
         }

@@ -65,34 +65,22 @@ public sealed class DocumentItemViewModel : ObservableObject
     }
 }
 
-public sealed class ContextBarViewModel : ObservableObject
+public sealed partial class ContextBarViewModel : ObservableObject
 {
     public const string CurrentModelLabel = "Current model";
 
-    private ScopeKind _scope = ScopeKind.ActiveView;
     private int _batch;
 
     public event EventHandler? Changed;
 
     public ObservableCollection<DocumentItemViewModel> Documents { get; } = [];
 
-    public ScopeKind Scope
-    {
-        get => _scope;
-        set
-        {
-            if (!SetProperty(ref _scope, value))
-            {
-                return;
-            }
-
-            OnPropertyChanged(nameof(IsSelectionScope));
-            OnPropertyChanged(nameof(IsActiveViewScope));
-            OnPropertyChanged(nameof(IsWholeModelScope));
-            OnPropertyChanged(nameof(IsDocumentListVisible));
-            Changed?.Invoke(this, EventArgs.Empty);
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSelectionScope))]
+    [NotifyPropertyChangedFor(nameof(IsActiveViewScope))]
+    [NotifyPropertyChangedFor(nameof(IsWholeModelScope))]
+    [NotifyPropertyChangedFor(nameof(IsDocumentListVisible))]
+    public partial ScopeKind Scope { get; set; } = ScopeKind.ActiveView;
 
     public bool IsSelectionScope
     {
@@ -122,9 +110,6 @@ public sealed class ContextBarViewModel : ObservableObject
         .ToList();
 
     public string Summary => string.Join(", ", Documents.Where(item => item.IsChecked).Select(item => item.Label));
-
-    public string SummaryToolTip => string.Join(Environment.NewLine,
-        Documents.Where(item => item.IsChecked).Select(item => item.Label));
 
     public string LabelOf(DocumentKey key)
     {
@@ -209,7 +194,6 @@ public sealed class ContextBarViewModel : ObservableObject
         }
 
         OnPropertyChanged(nameof(Summary));
-        OnPropertyChanged(nameof(SummaryToolTip));
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -230,6 +214,11 @@ public sealed class ContextBarViewModel : ObservableObject
         }
 
         return labels;
+    }
+
+    partial void OnScopeChanged(ScopeKind value)
+    {
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     private void SetScopeWhen(bool value, ScopeKind scope)

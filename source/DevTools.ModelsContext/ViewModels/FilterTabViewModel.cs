@@ -1,13 +1,13 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using System.Collections.ObjectModel;
-using System.Globalization;
 
 namespace DevTools.ModelsContext.ViewModels;
 
-public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDisposable
+public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor, IDisposable
 {
     public const int LivePauseLimit = 5000;
     public const string AllCategories = "All categories";
@@ -19,45 +19,25 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
     private readonly PanelRuntime _runtime;
     private readonly VisibilityController _visibility;
     private HashSet<ElementRef> _baseline = [];
-    private string _categorySearch = string.Empty;
     private FilterSourceItem? _current;
     private ContextData _data = ContextData.Empty;
-    private string _editName = string.Empty;
+    private bool _editingSources;
     private CancellationTokenSource? _evaluation;
     private FilterDefinition? _hostDefinition;
-    private bool _isDirty;
-    private bool _isEditingName;
     private bool _isLiveOn = true;
-    private bool _isLivePaused;
-    private bool _isReadOnly;
-    private bool _isSwitchPending;
     private bool _loading;
-    private ResultSelectionMode _mode;
-    private string _name = string.Empty;
-    private string? _nameError;
-    private IReadOnlyList<ParameterInfo> _parameters = [];
     private FilterSourceItem? _pending;
     private FilterState? _restore;
-    private IReadOnlyList<ElementRef> _result = [];
-    private RuleSetViewModel _root;
     private CancellationToken _token;
-    private IReadOnlyList<CategoryItemViewModel> _visibleCategories = [];
 
     internal FilterTabViewModel(PanelRuntime runtime, VisibilityController visibility, ContextMenuViewModel menu)
     {
         _runtime = runtime;
         _visibility = visibility;
         _menu = menu;
-        _root = new RuleSetViewModel(this, true);
+        Root = new RuleSetViewModel(this, true);
         _liveDebouncer = new Debouncer(runtime.Services.Scheduler, LiveDelay,
             () => _ = _runtime.RunAsync(EvaluateAsync));
-        AddCommand = new RelayCommand(AddFilter);
-        DeleteCommand = new RelayCommand(Delete, () => _current is { IsCustom: true });
-        SaveCommand = new RelayCommand(() => Save(), () => CanSave);
-        DuplicateCommand = new RelayCommand(Duplicate, () => _current is { Kind: FilterSourceKind.RuleBased });
-        SaveAndSwitchCommand = new RelayCommand(SaveAndSwitch);
-        DiscardAndSwitchCommand = new RelayCommand(DiscardAndSwitch);
-        CancelSwitchCommand = new RelayCommand(() => SetPending(null));
     }
 
     public ObservableCollection<FilterSourceItem> Sources { get; } = [];
@@ -67,7 +47,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         get => _current;
         set
         {
-            if (ReferenceEquals(value, _current))
+            if (_editingSources || ReferenceEquals(value, _current))
             {
                 return;
             }
@@ -83,84 +63,37 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         }
     }
 
-    public bool IsSwitchPending
-    {
-        get => _isSwitchPending;
-        private set => SetProperty(ref _isSwitchPending, value);
-    }
+    [ObservableProperty]
+    public partial bool IsSwitchPending { get; private set; }
 
-    public IRelayCommand AddCommand { get; }
+    [ObservableProperty]
+    public partial bool IsReadOnly { get; private set; }
 
-    public IRelayCommand DeleteCommand { get; }
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    public partial bool IsDirty { get; private set; }
 
-    public IRelayCommand SaveCommand { get; }
-
-    public IRelayCommand DuplicateCommand { get; }
-
-    public IRelayCommand SaveAndSwitchCommand { get; }
-
-    public IRelayCommand DiscardAndSwitchCommand { get; }
-
-    public IRelayCommand CancelSwitchCommand { get; }
-
-    public bool IsReadOnly
-    {
-        get => _isReadOnly;
-        private set => SetProperty(ref _isReadOnly, value);
-    }
-
-    public bool IsDirty
-    {
-        get => _isDirty;
-        private set
-        {
-            if (SetProperty(ref _isDirty, value))
-            {
-                if (_current is not null)
-                {
-                    _current.IsDirty = value;
-                }
-
-                SaveCommand.NotifyCanExecuteChanged();
-            }
-        }
-    }
-
-    public string Name
-    {
-        get => _name;
-        private set => SetProperty(ref _name, value);
-    }
+    [ObservableProperty]
+    public partial string Name { get; private set; } = string.Empty;
 
     public string EditName
     {
-        get => _editName;
+        get;
         set
         {
-            if (SetProperty(ref _editName, value ?? string.Empty))
+            if (SetProperty(ref field, value ?? string.Empty))
             {
-                NameError = IsEditingName ? FilterNames.Validate(_editName, OtherNames()) : null;
+                NameError = IsEditingName ? FilterNames.Validate(field, OtherNames()) : null;
             }
         }
-    }
+    } = string.Empty;
 
-    public string? NameError
-    {
-        get => _nameError;
-        private set
-        {
-            if (SetProperty(ref _nameError, value))
-            {
-                SaveCommand.NotifyCanExecuteChanged();
-            }
-        }
-    }
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    public partial string? NameError { get; private set; }
 
-    public bool IsEditingName
-    {
-        get => _isEditingName;
-        private set => SetProperty(ref _isEditingName, value);
-    }
+    [ObservableProperty]
+    public partial bool IsEditingName { get; private set; }
 
     public bool CanSave => _current is { IsCustom: true } && IsDirty && NameError is null;
 
@@ -168,21 +101,18 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
 
     public string CategorySearch
     {
-        get => _categorySearch;
+        get;
         set
         {
-            if (SetProperty(ref _categorySearch, value ?? string.Empty))
+            if (SetProperty(ref field, value ?? string.Empty))
             {
                 UpdateVisibleCategories();
             }
         }
-    }
+    } = string.Empty;
 
-    public IReadOnlyList<CategoryItemViewModel> VisibleCategories
-    {
-        get => _visibleCategories;
-        private set => SetProperty(ref _visibleCategories, value);
-    }
+    [ObservableProperty]
+    public partial IReadOnlyList<CategoryItemViewModel> VisibleCategories { get; private set; } = [];
 
     public string CategorySummary
     {
@@ -193,52 +123,20 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         }
     }
 
-    public IReadOnlyList<ParameterInfo> Parameters
-    {
-        get => _parameters;
-        private set
-        {
-            if (SetProperty(ref _parameters, value))
-            {
-                Root.NotifyParameters();
-            }
-        }
-    }
+    [ObservableProperty]
+    public partial IReadOnlyList<ParameterInfo> Parameters { get; private set; } = [];
 
-    public RuleSetViewModel Root
-    {
-        get => _root;
-        private set => SetProperty(ref _root, value);
-    }
+    [ObservableProperty]
+    public partial RuleSetViewModel Root { get; private set; }
 
-    public IReadOnlyList<ElementRef> Result
-    {
-        get => _result;
-        private set
-        {
-            if (SetProperty(ref _result, value))
-            {
-                OnPropertyChanged(nameof(ResultCount));
-                OnPropertyChanged(nameof(ResultText));
-            }
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ResultCount))]
+    public partial IReadOnlyList<ElementRef> Result { get; private set; } = [];
 
     public int ResultCount => Result.Count;
 
-    public string ResultText => string.Format(CultureInfo.CurrentCulture, "{0:N0} elements", ResultCount);
-
-    public ResultSelectionMode Mode
-    {
-        get => _mode;
-        set
-        {
-            if (SetProperty(ref _mode, value))
-            {
-                _liveDebouncer.Trigger();
-            }
-        }
-    }
+    [ObservableProperty]
+    public partial ResultSelectionMode Mode { get; set; }
 
     public bool IsLiveOn
     {
@@ -259,17 +157,9 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         }
     }
 
-    public bool IsLivePaused
-    {
-        get => _isLivePaused;
-        private set
-        {
-            if (SetProperty(ref _isLivePaused, value))
-            {
-                OnPropertyChanged(nameof(IsSyncing));
-            }
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSyncing))]
+    public partial bool IsLivePaused { get; private set; }
 
     public bool IsSyncing => IsLiveOn && !IsLivePaused;
 
@@ -309,8 +199,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
 
         var trimmed = EditName.Trim();
         IsEditingName = false;
-        _editName = trimmed;
-        OnPropertyChanged(nameof(EditName));
+        EditName = trimmed;
         if (!string.Equals(trimmed, Name, StringComparison.Ordinal))
         {
             Name = trimmed;
@@ -323,8 +212,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
     public void CancelRename()
     {
         IsEditingName = false;
-        _editName = Name;
-        OnPropertyChanged(nameof(EditName));
+        EditName = Name;
         NameError = null;
     }
 
@@ -502,9 +390,47 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         ((IFilterEditor)this).OnEdited();
     }
 
+    [RelayCommand]
+    private void CancelSwitch()
+    {
+        SetPending(null);
+    }
+
+    [RelayCommand]
+    private void CheckAll()
+    {
+        CheckVisible(true);
+    }
+
+    [RelayCommand]
+    private void CheckNone()
+    {
+        CheckVisible(false);
+    }
+
+    private void CheckVisible(bool value)
+    {
+        if (IsReadOnly)
+        {
+            return;
+        }
+
+        var changed = false;
+        foreach (var item in VisibleCategories.Where(item => item.IsChecked != value))
+        {
+            item.SetChecked(value);
+            changed = true;
+        }
+
+        if (changed)
+        {
+            ((IFilterEditor)this).OnEdited();
+        }
+    }
+
     private void UpdateVisibleCategories()
     {
-        var text = _categorySearch.Trim();
+        var text = CategorySearch.Trim();
         VisibleCategories = text.Length == 0
             ? Categories.ToList()
             : Categories.Where(item => item.Name.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
@@ -512,28 +438,33 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
 
     private async Task LoadSourcesAsync(CancellationToken cancellationToken)
     {
-        var restore = _restore;
-        var target = restore is null ? _current : restore.Selected;
         IReadOnlyList<CustomFilter> saved = [];
         _runtime.TryRun(() => saved = _runtime.Services.CustomFilters.Load());
+        var hosts = new List<FilterSourceItem>();
+        foreach (var document in _data.Documents)
+        {
+            var filters = await _runtime.Services.HostFilters.GetFiltersAsync(document.Key, cancellationToken);
+            hosts.AddRange(filters.Select(filter => FilterSourceItem.ForHost(filter, document.Label)));
+        }
+
+        var restore = _restore;
+        var target = restore is null ? _current : restore.Selected;
         var items = saved.Select(filter => FilterSourceItem.Custom(filter, filter.Name)).ToList();
         if (target is { IsCustom: true, Saved: null } draft)
         {
             items.Add(draft);
         }
 
-        foreach (var document in _data.Documents)
-        {
-            var filters = await _runtime.Services.HostFilters.GetFiltersAsync(document.Key, cancellationToken);
-            items.AddRange(filters.Select(filter => FilterSourceItem.ForHost(filter, document.Label)));
-        }
-
+        items.AddRange(hosts);
         var keep = target is null ? null : items.FirstOrDefault(item => item.SameAs(target));
-        Sources.Clear();
-        foreach (var item in items)
+        EditSources(() =>
         {
-            Sources.Add(item);
-        }
+            Sources.Clear();
+            foreach (var item in items)
+            {
+                Sources.Add(item);
+            }
+        });
 
         if (restore is not null)
         {
@@ -545,12 +476,29 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         {
             await SwitchToAsync(null);
         }
-        else if (!ReferenceEquals(keep, _current))
+        else
         {
-            keep.Name = _current!.Name;
-            keep.IsDirty = IsDirty;
-            _current = keep;
+            if (!ReferenceEquals(keep, _current))
+            {
+                keep.Name = _current!.Name;
+                keep.IsDirty = IsDirty;
+                _current = keep;
+            }
+
             OnPropertyChanged(nameof(SelectedSource));
+        }
+    }
+
+    private void EditSources(Action edit)
+    {
+        _editingSources = true;
+        try
+        {
+            edit();
+        }
+        finally
+        {
+            _editingSources = false;
         }
     }
 
@@ -559,7 +507,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         SetPending(null);
         if (_current is { IsCustom: true, Saved: null } draft && !ReferenceEquals(draft, item))
         {
-            Sources.Remove(draft);
+            EditSources(() => Sources.Remove(draft));
         }
 
         if (_current is not null)
@@ -569,7 +517,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
 
         if (item is not null && !Sources.Contains(item))
         {
-            Sources.Insert(Sources.Count(source => source.IsCustom), item);
+            EditSources(() => Sources.Insert(Sources.Count(source => source.IsCustom), item));
         }
 
         _current = item;
@@ -611,8 +559,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
             Root = RuleSetViewModel.From(definition.Root, this, IsReadOnly);
             Name = item?.Name ?? string.Empty;
             IsEditingName = false;
-            _editName = Name;
-            OnPropertyChanged(nameof(EditName));
+            EditName = Name;
             NameError = null;
             IsDirty = item is { IsCustom: true, Saved: null };
         }
@@ -622,7 +569,30 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         }
     }
 
-    private void AddFilter()
+    partial void OnIsDirtyChanged(bool value)
+    {
+        if (_current is not null)
+        {
+            _current.IsDirty = value;
+        }
+    }
+
+    partial void OnParametersChanged(IReadOnlyList<ParameterInfo> value)
+    {
+        Root.NotifyParameters();
+    }
+
+    partial void OnModeChanged(ResultSelectionMode value)
+    {
+        _liveDebouncer.Trigger();
+    }
+
+    private bool CanDelete => _current is { IsCustom: true };
+
+    private bool CanDuplicate => _current is { Kind: FilterSourceKind.RuleBased };
+
+    [RelayCommand]
+    private void Add()
     {
         var item = FilterSourceItem.Custom(null, FilterNames.NextFree(Sources.Where(source => source.IsCustom)
             .Select(source => source.Name)));
@@ -641,6 +611,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         BeginRename();
     }
 
+    [RelayCommand(CanExecute = nameof(CanDelete))]
     private void Delete()
     {
         if (_current is not { IsCustom: true } item)
@@ -657,12 +628,18 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         }
 
         IsDirty = false;
-        Sources.Remove(item);
+        EditSources(() => Sources.Remove(item));
         _current = null;
         _ = _runtime.RunAsync(() => SwitchToAsync(Sources.FirstOrDefault(source => source.IsCustom)));
     }
 
-    private bool Save()
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private void Save()
+    {
+        TrySave();
+    }
+
+    private bool TrySave()
     {
         if (_current is not { IsCustom: true } item || !CommitRename() || NameError is not null)
         {
@@ -701,6 +678,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         return filters;
     }
 
+    [RelayCommand(CanExecute = nameof(CanDuplicate))]
     private void Duplicate()
     {
         if (_current is not { Kind: FilterSourceKind.RuleBased } host || _hostDefinition is null)
@@ -744,10 +722,11 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
             .ToList());
     }
 
+    [RelayCommand]
     private void SaveAndSwitch()
     {
         var target = _pending;
-        if (!Save())
+        if (!TrySave())
         {
             return;
         }
@@ -755,6 +734,7 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         _ = _runtime.RunAsync(() => SwitchPendingAsync(target));
     }
 
+    [RelayCommand]
     private void DiscardAndSwitch()
     {
         var target = _pending;
@@ -784,8 +764,14 @@ public sealed class FilterTabViewModel : ObservableObject, IFilterEditor, IDispo
         _evaluation?.Dispose();
         _evaluation = CancellationTokenSource.CreateLinkedTokenSource(_token);
         var token = _evaluation.Token;
+        var timer = TraceTimer.Start(_runtime.Logger);
         var result = await ResultAsync(token);
         token.ThrowIfCancellationRequested();
+        if (timer.IsEnabled)
+        {
+            _runtime.Logger.FilterEvaluated(_current?.Name ?? "(none)", result.Count, timer.ElapsedMs);
+        }
+
         Result = result;
         if (!IsLiveOn || _current is null || (_current.IsCustom && IsEmpty(Definition())))
         {

@@ -1,6 +1,9 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Ports;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.ModelsContext.ViewModels;
 
@@ -13,7 +16,8 @@ public sealed class ModelContextServices(
     IHostFilterCatalog hostFilters,
     ICustomFilterStore customFilters,
     IClock clock,
-    IScheduler scheduler)
+    IScheduler scheduler,
+    ILogger? logger = null)
 {
     public IModelSource Source { get; } = source;
 
@@ -32,6 +36,8 @@ public sealed class ModelContextServices(
     public IClock Clock { get; } = clock;
 
     public IScheduler Scheduler { get; } = scheduler;
+
+    public ILogger Logger { get; } = logger ?? NullLogger.Instance;
 }
 
 internal sealed class PanelRuntime
@@ -41,13 +47,15 @@ internal sealed class PanelRuntime
     public PanelRuntime(ModelContextServices services)
     {
         Services = services;
-        Store = new SnapshotStore(services.Source);
+        Store = new SnapshotStore(services.Source, services.Logger);
         Guard = new SelectionGuard(services.Clock);
-        Values = new ValueIndexCache(services.Evaluator);
+        Values = new ValueIndexCache(services.Evaluator, logger: services.Logger);
         Planner = new VisibilityPlanner(Store.Find, Store.TryGet);
     }
 
     public ModelContextServices Services { get; }
+
+    public ILogger Logger => Services.Logger;
 
     public SnapshotStore Store { get; }
 
@@ -74,10 +82,20 @@ internal sealed class PanelRuntime
                 return task;
             }
 
-            task = Services.Source.GetParameterCatalogAsync(source, cancellationToken);
+            task = Logger.IsEnabled(LogLevel.Trace)
+                ? TimedCatalogAsync(source, cancellationToken)
+                : Services.Source.GetParameterCatalogAsync(source, cancellationToken);
             _parameters[source] = task;
             return task;
         }
+    }
+
+    private async Task<IReadOnlyList<ParameterInfo>> TimedCatalogAsync(SourceId source, CancellationToken cancellationToken)
+    {
+        var timer = TraceTimer.Start(Logger);
+        var catalog = await Services.Source.GetParameterCatalogAsync(source, cancellationToken).ConfigureAwait(false);
+        Logger.CatalogRead(source, catalog.Count, timer.ElapsedMs);
+        return catalog;
     }
 
     public void ForgetParameters(SourceId source)
@@ -108,10 +126,11 @@ internal sealed class PanelRuntime
         }
         catch (OperationCanceledException)
         {
+            Logger.Canceled();
         }
         catch (Exception exception)
         {
-            Failed?.Invoke(this, exception.Message);
+            Fail(exception);
         }
     }
 
@@ -124,9 +143,15 @@ internal sealed class PanelRuntime
         }
         catch (Exception exception)
         {
-            Failed?.Invoke(this, exception.Message);
+            Fail(exception);
             return false;
         }
+    }
+
+    private void Fail(Exception exception)
+    {
+        Logger.Failed(exception, exception.Message);
+        Failed?.Invoke(this, exception.Message);
     }
 
     public async Task SelectAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
@@ -137,6 +162,11 @@ internal sealed class PanelRuntime
         }
 
         Guard.RecordSent(elements);
+        var timer = TraceTimer.Start(Logger);
         await Services.Selection.SelectAsync(elements, cancellationToken);
+        if (timer.IsEnabled)
+        {
+            Logger.SelectionSent(elements.Count, timer.ElapsedMs);
+        }
     }
 }

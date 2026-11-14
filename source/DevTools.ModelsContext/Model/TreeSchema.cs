@@ -6,7 +6,7 @@ public sealed class TreeSchema
 
     public TreeSchema(IReadOnlyList<string> levels)
     {
-        if (levels.Count < 2 || levels.Count > MaxGroupingDepth + 1)
+        if (levels.Count is < 2 or > MaxGroupingDepth + 1)
         {
             throw new ArgumentException("A tree schema has a group level, up to two more levels and an instance level.",
                 nameof(levels));
@@ -21,5 +21,5 @@ public sealed class TreeSchema
 
     public string GroupLevel => Levels[0];
 
-    public string InstanceLevel => Levels[Levels.Count - 1];
+    public string InstanceLevel => Levels[^1];
 }

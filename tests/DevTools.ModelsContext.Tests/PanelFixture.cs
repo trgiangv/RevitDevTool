@@ -1,6 +1,7 @@
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
+using Microsoft.Extensions.Logging;
 
 namespace DevTools.ModelsContext.Tests;
 
@@ -19,29 +20,32 @@ internal sealed class PanelFixture : IDisposable
 
     public ModelContextViewModel Panel { get; }
 
-    public TreeTabViewModel Tree => Panel.Tree;
+    public ExplorerTabViewModel Explorer => Panel.Explorer;
 
     public FilterTabViewModel Filter => Panel.Filter;
 
-    public static async Task<PanelFixture> OpenAsync(FakeModelData? data = null, ScopeKind scope = ScopeKind.WholeModel)
+    public static async Task<PanelFixture> OpenAsync(
+        FakeModelData? data = null,
+        ScopeKind scope = ScopeKind.WholeModel,
+        ILogger? logger = null)
     {
-        var fixture = Create(new FakeModel(data ?? TestModel.SmallData), scope);
+        var fixture = Create(new FakeModel(data ?? TestModel.SmallData), scope, logger);
         await fixture.Panel.InitializeAsync(CancellationToken.None);
         return fixture;
     }
 
-    public static PanelFixture Create(FakeModel model, ScopeKind scope = ScopeKind.WholeModel)
+    public static PanelFixture Create(FakeModel model, ScopeKind scope = ScopeKind.WholeModel, ILogger? logger = null)
     {
         var clock = new FakeClock();
         var panel = new ModelContextViewModel(new ModelContextServices(model, model, model, model, model, model, model,
-            clock, clock));
+            clock, clock, logger));
         panel.ContextBar.Scope = scope;
         return new PanelFixture(model, clock, panel);
     }
 
     public TreeRow? FindGroup(DocumentKey document, string name)
     {
-        return Tree.Rows.FirstOrDefault(row =>
+        return Explorer.Rows.FirstOrDefault(row =>
             row.Kind == TreeRowKind.Group && row.Document == document && row.Text == name);
     }
 
@@ -52,7 +56,7 @@ internal sealed class PanelFixture : IDisposable
 
     public TreeRow Group(DocumentKey document, string name)
     {
-        return Tree.Rows.First(row => row.Kind == TreeRowKind.Group && row.Document == document && row.Text == name);
+        return Explorer.Rows.First(row => row.Kind == TreeRowKind.Group && row.Document == document && row.Text == name);
     }
 
     public IReadOnlyList<ElementRef> Elements(DocumentKey document, int count)

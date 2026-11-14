@@ -1,10 +1,14 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Ports;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DevTools.ModelsContext.Engine;
 
-public sealed class SnapshotStore(IModelSource source)
+public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 {
+    private readonly ILogger _logger = logger ?? NullLogger.Instance;
     private readonly Dictionary<DocumentKey, DocumentInfo> _documents = [];
     private readonly object _gate = new();
     private readonly Dictionary<SourceId, Task<DocumentSnapshot>> _snapshots = [];
@@ -98,7 +102,9 @@ public sealed class SnapshotStore(IModelSource source)
                 return task;
             }
 
-            task = source.BuildSnapshotAsync(info.Source, progress, cancellationToken);
+            task = _logger.IsEnabled(LogLevel.Trace)
+                ? TimedBuildAsync(info.Source, progress, cancellationToken)
+                : source.BuildSnapshotAsync(info.Source, progress, cancellationToken);
             _snapshots[info.Source] = task;
             return task;
         }
@@ -145,6 +151,29 @@ public sealed class SnapshotStore(IModelSource source)
     }
 
     public async Task<ReloadOutcome> ReloadAsync(SourceId id, CancellationToken cancellationToken)
+    {
+        var timer = TraceTimer.Start(_logger);
+        var outcome = await ReloadCoreAsync(id, cancellationToken).ConfigureAwait(false);
+        if (timer.IsEnabled)
+        {
+            _logger.SnapshotReloaded(id, outcome, timer.ElapsedMs);
+        }
+
+        return outcome;
+    }
+
+    private async Task<DocumentSnapshot> TimedBuildAsync(
+        SourceId id,
+        IProgress<SnapshotProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        var timer = TraceTimer.Start(_logger);
+        var snapshot = await source.BuildSnapshotAsync(id, progress, cancellationToken).ConfigureAwait(false);
+        _logger.SnapshotBuilt(id, snapshot.ElementCount, timer.ElapsedMs);
+        return snapshot;
+    }
+
+    private async Task<ReloadOutcome> ReloadCoreAsync(SourceId id, CancellationToken cancellationToken)
     {
         DocumentSnapshot? snapshot;
         lock (_gate)

@@ -18,10 +18,10 @@ public sealed class SyncTests
         fixture.Model.RaiseSelectionChanged(selection);
         fixture.Settle();
 
-        Assert.HasCount(3, fixture.Tree.SelectedRows);
+        Assert.HasCount(3, fixture.Explorer.SelectedRows);
         foreach (var element in selection)
         {
-            Assert.IsTrue(fixture.Tree.Rows.Any(row => row.Kind == TreeRowKind.Instance && row.Id == element.Id));
+            Assert.IsTrue(fixture.Explorer.Rows.Any(row => row.Kind == TreeRowKind.Instance && row.Id == element.Id));
         }
     }
 
@@ -33,10 +33,10 @@ public sealed class SyncTests
         fixture.Model.RaiseSelectionChanged(fixture.Elements(Current, 60));
         fixture.Settle();
 
-        Assert.AreEqual(TreeTabViewModel.TooManyHint, fixture.Tree.SyncHint);
-        Assert.IsEmpty(fixture.Tree.SelectedRows);
-        Assert.IsFalse(fixture.Tree.Rows.Any(row => row.Kind == TreeRowKind.Instance));
-        Assert.AreEqual(60, fixture.Tree.Rows.Where(row => row.Kind == TreeRowKind.Group && row.Document == Current)
+        Assert.AreEqual(ExplorerTabViewModel.TooManyHint, fixture.Explorer.SyncHint);
+        Assert.IsEmpty(fixture.Explorer.SelectedRows);
+        Assert.IsFalse(fixture.Explorer.Rows.Any(row => row.Kind == TreeRowKind.Instance));
+        Assert.AreEqual(60, fixture.Explorer.Rows.Where(row => row.Kind == TreeRowKind.Group && row.Document == Current)
             .Sum(row => row.Badge));
     }
 
@@ -47,15 +47,40 @@ public sealed class SyncTests
         var ducts = fixture.Group(Current, "Ducts");
         var resets = 0;
         var badges = 0;
-        fixture.Tree.Rows.CollectionChanged += (_, _) => resets++;
+        fixture.Explorer.Rows.CollectionChanged += (_, _) => resets++;
         ducts.PropertyChanged += (_, e) => badges += e.PropertyName == nameof(TreeRow.Badge) ? 1 : 0;
 
-        fixture.Tree.SetSelectedRows([ducts]);
+        fixture.Explorer.SetSelectedRows([ducts]);
         fixture.Settle();
 
         Assert.AreEqual(0, resets);
         Assert.AreEqual(1, badges);
         Assert.IsGreaterThan(0, ducts.Badge);
+    }
+
+    [TestMethod]
+    public async Task NextClickHidesOldBadge()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+        var pipes = fixture.Group(Current, "Pipes");
+        fixture.Explorer.SetSelectedRows([ducts]);
+        fixture.Settle();
+        var shown = new List<int>();
+        ducts.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(TreeRow.Badge))
+            {
+                shown.Add(ducts.Badge);
+            }
+        };
+
+        fixture.Explorer.SetSelectedRows([pipes]);
+        Assert.AreEqual(0, ducts.Badge);
+        fixture.Settle();
+
+        Assert.AreEqual(0, ducts.Badge);
+        CollectionAssert.AreEqual(new[] { 0 }, shown);
     }
 
     [TestMethod]
@@ -66,9 +91,9 @@ public sealed class SyncTests
 
         fixture.Model.RaiseSelectionChanged(selection);
         fixture.Settle();
-        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
-        Assert.IsTrue(fixture.Tree.IsSyncPaused);
+        Assert.IsTrue(fixture.Explorer.IsSyncPaused);
         Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.SelectInHost].IsVisible);
     }
 
@@ -78,12 +103,12 @@ public sealed class SyncTests
         using var fixture = await PanelFixture.OpenAsync();
         var ducts = fixture.Group(Current, "Ducts");
 
-        fixture.Tree.SetSelectedRows([ducts]);
+        fixture.Explorer.SetSelectedRows([ducts]);
         fixture.Settle();
 
         var selection = await fixture.Model.GetSelectionAsync(CancellationToken.None);
         Assert.AreEqual(ducts.Count, selection.Count);
-        Assert.AreEqual(ducts.Count, fixture.Tree.SelectedCount);
+        Assert.AreEqual(ducts.Count, fixture.Explorer.SelectedCount);
     }
 
     [TestMethod]
@@ -93,21 +118,21 @@ public sealed class SyncTests
 
         fixture.Panel.ContextBar.Scope = ScopeKind.Selection;
 
-        Assert.IsFalse(fixture.Tree.IsSyncVisible);
-        Assert.IsFalse(fixture.Tree.IsSyncing);
+        Assert.IsFalse(fixture.Explorer.IsSyncVisible);
+        Assert.IsFalse(fixture.Explorer.IsSyncing);
     }
 
     [TestMethod]
-    public async Task ShowInTreeTicksDocuments()
+    public async Task ShowInExplorerTicksDocuments()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.RaiseSelectionChanged(fixture.Elements(FakeModelGenerator.Mep, 2));
         fixture.Settle();
 
-        Assert.IsTrue(fixture.Tree.CanShowInTree);
-        fixture.Tree.ShowInTreeCommand.Execute(null);
+        Assert.IsTrue(fixture.Explorer.CanShowInExplorer);
+        fixture.Explorer.ShowInExplorerCommand.Execute(null);
 
         CollectionAssert.Contains(fixture.Panel.ContextBar.TickedDocuments.ToList(), FakeModelGenerator.Mep);
-        Assert.HasCount(2, fixture.Tree.SelectedRows);
+        Assert.HasCount(2, fixture.Explorer.SelectedRows);
     }
 }

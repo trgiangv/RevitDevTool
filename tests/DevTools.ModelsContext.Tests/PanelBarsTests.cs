@@ -15,7 +15,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Tick([Mep]);
-        await fixture.Tree.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         var asked = fixture.Panel.TemporaryBar.IsConfirmingKeep;
@@ -31,7 +31,7 @@ public sealed class PanelBarsTests
     public async Task KeepRunsAtOnceWithoutLinks()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await fixture.Tree.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
 
@@ -44,7 +44,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var bar = fixture.Panel.TemporaryBar;
-        await fixture.Tree.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         var shown = bar.IsVisible;
         var changes = bar.ChangeCount;
 
@@ -61,9 +61,9 @@ public sealed class PanelBarsTests
     public async Task SelectHiddenWhileSyncOn()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Tree.IsSyncOn = true;
+        fixture.Explorer.IsSyncOn = true;
 
-        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
         Assert.IsFalse(fixture.Panel.ContextMenu[MenuAction.SelectInHost].IsVisible);
     }
@@ -72,9 +72,9 @@ public sealed class PanelBarsTests
     public async Task SelectShownWhileSyncOff()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Tree.IsSyncOn = false;
+        fixture.Explorer.IsSyncOn = false;
 
-        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
         Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.SelectInHost].IsVisible);
     }
@@ -85,7 +85,7 @@ public sealed class PanelBarsTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Tick([Mep]);
 
-        fixture.Tree.OpenMenu(fixture.Group(Mep, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
 
         var menu = fixture.Panel.ContextMenu;
         Assert.IsFalse(menu[MenuAction.Halftone].IsEnabled);
@@ -98,7 +98,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
         Assert.AreEqual(ContextMenuViewModel.NeedsThreeDView,
             fixture.Panel.ContextMenu[MenuAction.SectionBox].DisabledReason);
@@ -109,11 +109,11 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var menu = fixture.Panel.ContextMenu;
-        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
         var before = menu[MenuAction.ResetView].IsVisible;
 
-        await fixture.Tree.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
-        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
         Assert.IsFalse(before);
         Assert.IsTrue(menu[MenuAction.ResetView].IsVisible);
@@ -124,7 +124,7 @@ public sealed class PanelBarsTests
     public async Task ShortcutZoomsTarget()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Tree.OpenMenu(fixture.Group(Current, "Ducts"));
+        fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
         var ran = await fixture.Panel.ContextMenu.RunShortcutAsync("z");
 
@@ -185,16 +185,5 @@ public sealed class PanelBarsTests
         Assert.AreEqual("Arch.rvt (2)", second.Label);
         Assert.IsFalse(mep.IsEnabled);
         Assert.IsFalse(mep.IsChecked);
-    }
-
-    [TestMethod]
-    public async Task ViewNameFollowsActiveView()
-    {
-        using var fixture = await PanelFixture.OpenAsync();
-
-        fixture.Model.RaiseViewActivated(fixture.Model.View with { ViewId = "view-2", Name = "3D" });
-        fixture.Settle();
-
-        Assert.AreEqual("3D", fixture.Panel.ViewName);
     }
 }

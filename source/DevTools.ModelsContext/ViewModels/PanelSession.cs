@@ -14,7 +14,7 @@ internal sealed class PanelSession(DocumentKey model)
 
     public CancellationToken Token => _jobs.Token;
 
-    public TreeState? Tree { get; set; }
+    public ExplorerState? Explorer { get; set; }
 
     public FilterState? Filter { get; set; }
 
@@ -49,11 +49,11 @@ internal sealed class PanelSession(DocumentKey model)
 
 internal readonly record struct JobTicket(PanelSession Session, int Generation, CancellationToken Token);
 
-internal sealed record TreeState(HashSet<string> Expanded, HashSet<string> Roots, bool IsSyncOn)
+internal sealed record ExplorerState(HashSet<string> Expanded, HashSet<string> Roots, bool IsSyncOn)
 {
-    public static TreeState Fresh(bool isSyncOn)
+    public static ExplorerState Fresh(bool isSyncOn)
     {
-        return new TreeState(new HashSet<string>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal),
+        return new ExplorerState(new HashSet<string>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal),
             isSyncOn);
     }
 }
