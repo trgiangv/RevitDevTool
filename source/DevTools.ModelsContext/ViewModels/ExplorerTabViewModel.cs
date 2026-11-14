@@ -41,6 +41,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private HashSet<ElementRef> _selectedElements = [];
     private int _selectionVersion;
     private int _sendsInFlight;
+    private IReadOnlyList<ElementRef>? _rowElements;
     private CancellationToken _token;
 
     internal ExplorerTabViewModel(
@@ -113,21 +114,17 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     public partial string? SyncHint { get; private set; }
 
-    public int SelectedCount => _selectedElements.Count;
+    public int SelectedCount => RowElements.Count;
 
-    public bool HasSelection => SelectedCount > 0;
+    public bool HasSelection => SelectedCount > 0 || _selectedElements.Count > 0;
+
+    private IReadOnlyList<ElementRef> RowElements => _rowElements ??= ElementsOf(_selectedRows);
 
     internal bool IsLocalSelectionPending => _sendDebouncer.IsPending || _sendsInFlight > 0;
 
-    public string StatusText => IsUpdating
-        ? "Updating…"
-        : string.Format(CultureInfo.CurrentCulture, "{0:N0} selected", SelectedCount);
+    public string StatusText => string.Format(CultureInfo.CurrentCulture, "{0:N0} selected", SelectedCount);
 
     public bool CanShowInExplorer => IsSyncVisible && _selectedElements.Any(element => _data.Find(element.Document) is null);
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StatusText))]
-    public partial bool IsUpdating { get; internal set; }
 
     [ObservableProperty]
     public partial string? Message { get; private set; }
@@ -197,6 +194,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _selectionVersion++;
         _selectedRows.Clear();
         _selectedRows.UnionWith(rows);
+        RaiseSelectionCounts();
         if (IsSyncOn && IsSyncVisible && !_runtime.IsBusy)
         {
             ClearBadges(_roots);
@@ -360,6 +358,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _states.Clear();
         _instanceIds.Clear();
         _selectedRows.Clear();
+        RaiseSelectionCounts();
         _roots = [];
         if (documents.Count > 0)
         {
@@ -434,6 +433,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         await ReadHiddenAsync();
+        RaiseSelectionCounts();
         OnPropertyChanged(nameof(IsSyncVisible));
         OnPropertyChanged(nameof(IsSyncing));
         OnPropertyChanged(nameof(CanShowInExplorer));
@@ -484,6 +484,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
         _selectedRows.Clear();
         _selectedRows.UnionWith(revealed);
+        RaiseSelectionCounts();
         await ReadHiddenAsync();
         Publish();
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
@@ -768,6 +769,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
         _selectedRows.Clear();
         _selectedRows.UnionWith(revealed);
+        RaiseSelectionCounts();
         await ReadHiddenAsync();
         Publish();
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
@@ -780,7 +782,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var elements = ElementsOf(_selectedRows);
+        var elements = RowElements;
         if (elements.Count > SyncPauseLimit)
         {
             IsSyncPaused = true;
@@ -814,6 +816,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     private void RaiseSelectionCounts()
     {
+        _rowElements = null;
         OnPropertyChanged(nameof(SelectedCount));
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(StatusText));

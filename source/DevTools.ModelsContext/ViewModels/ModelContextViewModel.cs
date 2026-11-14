@@ -153,11 +153,6 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         _ = _runtime.RunAsync(value == PanelTab.Explorer ? ResyncExplorerAsync : Filter.ActivateAsync);
     }
 
-    partial void OnIsUpdatingChanged(bool value)
-    {
-        Explorer.IsUpdating = value;
-    }
-
     partial void OnIsBusyChanged(bool value)
     {
         _runtime.IsBusy = value;
@@ -650,9 +645,20 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
             _incomingSelection = null;
         }
 
-        if (incoming is null || _runtime.Guard.ShouldDrop(incoming))
+        if (incoming is null)
         {
             return;
+        }
+
+        var awaitingEcho = _runtime.Guard.IsPending;
+        if (_runtime.Guard.ShouldDrop(incoming))
+        {
+            return;
+        }
+
+        if (awaitingEcho)
+        {
+            _runtime.Logger.SelectionMismatch(incoming.Count);
         }
 
         if (ContextBar.Scope == ScopeKind.Selection)

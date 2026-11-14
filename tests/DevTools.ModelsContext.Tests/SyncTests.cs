@@ -119,6 +119,36 @@ public sealed class SyncTests
     }
 
     [TestMethod]
+    public async Task CountShowsBeforeSend()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+
+        fixture.Explorer.SetSelectedRows([ducts]);
+
+        Assert.AreEqual(ducts.Count, fixture.Explorer.SelectedCount);
+    }
+
+    [TestMethod]
+    public async Task CountFollowsTreeRows()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.EchoSelection = false;
+        var element = fixture.Elements(Current, 1)[0];
+        fixture.Model.RaiseSelectionChanged([element]);
+        fixture.Settle();
+        var row = fixture.Explorer.SelectedRows.Single();
+        fixture.Explorer.SetSelectedRows([row]);
+        fixture.Settle();
+
+        fixture.Model.RaiseSelectionChanged([element, new ElementRef(Current, 987654321)]);
+        fixture.Settle();
+
+        Assert.AreEqual(1, fixture.Explorer.SelectedCount);
+        Assert.AreEqual("1 selected", fixture.Explorer.StatusText);
+    }
+
+    [TestMethod]
     public async Task SyncPausesAbove5000()
     {
         using var fixture = await PanelFixture.OpenAsync();

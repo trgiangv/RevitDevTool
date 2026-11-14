@@ -178,7 +178,10 @@ control; its rows still form a tree.
   the last model change it is rebuilding, the status line shows *Updating…*.
 - Rows: 28 px, stock HandyControl selection look (solid primary, white text).
 - The Instance level loads on expand and pages ("200 of 1,402 · more").
-- **Status line** at the bottom-left: *N selected* and **Clear**. When part of
+- **Status line** at the bottom-left: *N selected* and **Clear**. N counts the
+  elements under the rows selected in Explorer, not the host selection, so it
+  updates on click without waiting for the host. A host echo that differs from
+  what the panel sent is logged at Trace (`Selection mismatch`). When part of
   the selection is in documents that are not ticked, it adds **Show in Explorer**,
   which ticks those documents and reveals the rows.
 - Search matches only the text shown on rows: model, category, family, type

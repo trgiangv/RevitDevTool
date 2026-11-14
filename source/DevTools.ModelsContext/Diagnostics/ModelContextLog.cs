@@ -55,6 +55,10 @@ public static partial class ModelContextLog
         Message = "Selection received: {Elements} elements applied in {ElapsedMs} ms")]
     public static partial void SelectionReceived(this ILogger logger, int elements, double elapsedMs);
 
+    [LoggerMessage(EventId = 21, Level = LogLevel.Trace,
+        Message = "Selection mismatch: host holds {Elements} elements that differ from the panel send")]
+    public static partial void SelectionMismatch(this ILogger logger, int elements);
+
     [LoggerMessage(EventId = 16, Level = LogLevel.Trace,
         Message = "Filter {Filter}: {Matches} matches in {ElapsedMs} ms")]
     public static partial void FilterEvaluated(this ILogger logger, string filter, int matches, double elapsedMs);
