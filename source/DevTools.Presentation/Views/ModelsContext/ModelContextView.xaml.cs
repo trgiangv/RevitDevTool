@@ -76,7 +76,7 @@ public partial class ModelContextView : UserControl
         _isSyncing = true;
         try
         {
-            foreach (var item in _panel.ContextBar.Documents.ToList())
+            foreach (var item in _panel.ContextBar.Documents.Where(item => item.IsEnabled).OrderBy(item => item.Key.IsCurrentModel).ToList())
             {
                 item.IsChecked = selected.Contains(item);
             }
@@ -120,7 +120,7 @@ public partial class ModelContextView : UserControl
 
     private void OnTabChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (e.OriginalSource != Tabs || _panel is null || Tabs.SelectedIndex < 0)
+        if (!ReferenceEquals(e.OriginalSource, Tabs) || _panel is null || Tabs.SelectedIndex < 0)
         {
             return;
         }

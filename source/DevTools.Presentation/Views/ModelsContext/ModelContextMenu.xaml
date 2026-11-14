@@ -8,7 +8,7 @@
              xmlns:vm="clr-namespace:DevTools.ModelsContext.ViewModels;assembly=DevTools.ModelsContext"
              d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
              AutomationProperties.AutomationId="Menu"
-             DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+             DataContext="{Binding Path=PlacementTarget.(FrameworkElement.DataContext), RelativeSource={RelativeSource Self}}"
              Style="{DynamicResource {x:Type ContextMenu}}"
              mc:Ignorable="d">
 

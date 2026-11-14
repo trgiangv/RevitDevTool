@@ -15,15 +15,18 @@ internal sealed class PanelUi : IDisposable
         LinkElements = 2_000,
     }));
 
-    private PanelUi(FakeModel model, ModelContextViewModel panel, ModelContextView view, ThemeHost host)
+    private PanelUi(FakeModel model, FakeClock clock, ModelContextViewModel panel, ModelContextView view, ThemeHost host)
     {
         Model = model;
+        Clock = clock;
         Panel = panel;
         View = view;
         Host = host;
     }
 
     public FakeModel Model { get; }
+
+    public FakeClock Clock { get; }
 
     public ModelContextViewModel Panel { get; }
 
@@ -43,7 +46,7 @@ internal sealed class PanelUi : IDisposable
             return (panel, new ModelContextView { DataContext = panel });
         });
         WpfSta.Run(() => panel.InitializeAsync(CancellationToken.None));
-        return new PanelUi(model, panel, view, ThemeHost.Show(view));
+        return new PanelUi(model, clock, panel, view, ThemeHost.Show(view));
     }
 
     public void Press(string automationId)
@@ -66,10 +69,10 @@ internal sealed class PanelUi : IDisposable
         var menu = WpfSta.Invoke(() =>
         {
             var tabs = (System.Windows.Controls.TabControl)View.FindName("Tabs");
-            var tree = (TreeTabView)((System.Windows.Controls.TabItem)tabs.Items[0]).Content;
-            var list = (System.Windows.Controls.Control)tree.FindName("RowList");
-            var row = Panel.Tree.Rows.First(row => row.Text == rowName && row.Kind == TreeRowKind.Group);
-            Panel.Tree.OpenMenu(row);
+            var explorer = (ExplorerTabView)((System.Windows.Controls.TabItem)tabs.Items[0]).Content;
+            var list = (System.Windows.Controls.Control)explorer.FindName("RowList");
+            var row = Panel.Explorer.Rows.First(row => row.Text == rowName && row.Kind == TreeRowKind.Group);
+            Panel.Explorer.OpenMenu(row);
             list.ContextMenu!.PlacementTarget = list;
             list.ContextMenu.IsOpen = true;
             return list.ContextMenu;
@@ -80,7 +83,7 @@ internal sealed class PanelUi : IDisposable
 
     public void Collapse(string header)
     {
-        PressIn(Host.Row(header), "Tree.Row.Expand");
+        PressIn(Host.Row(header), "Explorer.Row.Expand");
     }
 
     public void ShowTab(string automationId)

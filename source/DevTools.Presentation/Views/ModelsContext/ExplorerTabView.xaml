@@ -1,4 +1,4 @@
-<UserControl x:Class="DevTools.Presentation.Views.ModelsContext.TreeTabView"
+<UserControl x:Class="DevTools.Presentation.Views.ModelsContext.ExplorerTabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
@@ -43,6 +43,8 @@
                 <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" />
             </Style>
 
+            <views:RgbBrushConverter x:Key="RgbBrush" />
+
             <DataTemplate x:Key="TreeRowTemplate" DataType="{x:Type model:TreeRow}">
                 <Grid x:Name="RowGrid" Height="28">
                     <Grid.ColumnDefinitions>
@@ -63,8 +65,8 @@
                             Grid.Column="1"
                             Width="20"
                             hc:IconElement.Geometry="{StaticResource Chevron}"
-                            AutomationProperties.AutomationId="Tree.Row.Expand"
-                            Command="{Binding DataContext.Tree.ToggleExpandCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
+                            AutomationProperties.AutomationId="Explorer.Row.Expand"
+                            Command="{Binding Path=(FrameworkElement.DataContext).(vm:ModelContextViewModel.Explorer).ToggleExpandCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             RenderTransformOrigin="0.5,0.5"
                             Style="{StaticResource RowButtonStyle}" />
@@ -86,8 +88,8 @@
                     <Button x:Name="More"
                             Grid.Column="3"
                             Grid.ColumnSpan="6"
-                            AutomationProperties.AutomationId="Tree.Row.More"
-                            Command="{Binding DataContext.Tree.LoadMoreCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
+                            AutomationProperties.AutomationId="Explorer.Row.More"
+                            Command="{Binding Path=(FrameworkElement.DataContext).(vm:ModelContextViewModel.Explorer).LoadMoreCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             Content="{Binding Text, Mode=OneTime}"
                             Style="{StaticResource PanelLinkButton}"
@@ -98,7 +100,7 @@
                             Height="16"
                             Margin="4,0,0,0"
                             Padding="5,0"
-                            AutomationProperties.AutomationId="Tree.Row.Badge"
+                            AutomationProperties.AutomationId="Explorer.Row.Badge"
                             Background="{DynamicResource PrimaryBrush}"
                             Content="{Binding Badge, StringFormat=N0}"
                             FontSize="10"
@@ -111,7 +113,7 @@
                                MinWidth="50"
                                Margin="6,0,0,0"
                                VerticalAlignment="Center"
-                               AutomationProperties.AutomationId="Tree.Row.Count"
+                               AutomationProperties.AutomationId="Explorer.Row.Count"
                                Opacity="0.6"
                                Text="{Binding CountText}"
                                TextAlignment="Right" />
@@ -128,46 +130,60 @@
 
                     <StackPanel x:Name="Actions"
                                 Grid.Column="7"
-                                Orientation="Horizontal"
-                                Visibility="Collapsed">
+                                Orientation="Horizontal">
                         <Button x:Name="Isolate"
                                 hc:IconElement.Geometry="{StaticResource Isolate}"
-                                AutomationProperties.AutomationId="Tree.Row.Isolate"
+                                AutomationProperties.AutomationId="Explorer.Row.Isolate"
                                 Click="OnToolClick"
                                 IsVisibleChanged="OnToolShown"
                                 MouseEnter="OnToolHover"
                                 Style="{StaticResource RowButtonStyle}"
                                 Tag="{x:Static vm:MenuAction.Isolate}"
                                 ToolTip="Isolate"
-                                ToolTipService.ShowOnDisabled="True" />
+                                ToolTipService.ShowOnDisabled="True"
+                                Visibility="Collapsed" />
                         <Button x:Name="Halftone"
                                 hc:IconElement.Geometry="{StaticResource Halftone}"
-                                AutomationProperties.AutomationId="Tree.Row.Halftone"
+                                AutomationProperties.AutomationId="Explorer.Row.Halftone"
+                                AutomationProperties.ItemStatus="{Binding IsHalftone}"
                                 Click="OnToolClick"
                                 IsVisibleChanged="OnToolShown"
                                 MouseEnter="OnToolHover"
                                 Style="{StaticResource RowButtonStyle}"
                                 Tag="{x:Static vm:MenuAction.Halftone}"
                                 ToolTip="Halftone"
-                                ToolTipService.ShowOnDisabled="True" />
-                        <Button x:Name="Color"
-                                hc:IconElement.Geometry="{StaticResource ColorDrop}"
-                                AutomationProperties.AutomationId="Tree.Row.Color"
-                                Click="OnToolClick"
-                                IsVisibleChanged="OnToolShown"
-                                MouseEnter="OnToolHover"
-                                Style="{StaticResource RowButtonStyle}"
-                                Tag="{x:Static vm:MenuAction.Color}"
-                                ToolTip="Color…"
-                                ToolTipService.ShowOnDisabled="True" />
+                                ToolTipService.ShowOnDisabled="True"
+                                Visibility="Collapsed" />
+                        <Grid x:Name="ColorCell" Visibility="Collapsed">
+                            <Button x:Name="Color"
+                                    hc:IconElement.Geometry="{StaticResource ColorDrop}"
+                                    AutomationProperties.AutomationId="Explorer.Row.Color"
+                                    AutomationProperties.ItemStatus="{Binding ColorHex}"
+                                    Click="OnToolClick"
+                                    IsVisibleChanged="OnToolShown"
+                                    MouseEnter="OnToolHover"
+                                    Style="{StaticResource RowButtonStyle}"
+                                    Tag="{x:Static vm:MenuAction.Color}"
+                                    ToolTip="Color…"
+                                    ToolTipService.ShowOnDisabled="True" />
+                            <Border x:Name="Swatch"
+                                    Width="12"
+                                    Height="12"
+                                    Background="{Binding OverrideColor, Converter={StaticResource RgbBrush}}"
+                                    BorderBrush="{DynamicResource BorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="2"
+                                    IsHitTestVisible="False"
+                                    Visibility="Collapsed" />
+                        </Grid>
                     </StackPanel>
 
                     <Button x:Name="Eye"
                             Grid.Column="8"
                             hc:IconElement.Geometry="{StaticResource EyeOpenGeometry}"
-                            AutomationProperties.AutomationId="Tree.Row.Eye"
+                            AutomationProperties.AutomationId="Explorer.Row.Eye"
                             AutomationProperties.ItemStatus="{Binding Eye}"
-                            Command="{Binding DataContext.Tree.ToggleEyeCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
+                            Command="{Binding Path=(FrameworkElement.DataContext).(vm:ModelContextViewModel.Explorer).ToggleEyeCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             MouseEnter="OnEyeMouseEnter"
                             MouseLeave="OnEyeMouseLeave"
@@ -223,8 +239,6 @@
                     </DataTrigger>
                     <DataTrigger Binding="{Binding IsInsideLink}" Value="True">
                         <Setter TargetName="LinkDot" Property="Visibility" Value="Visible" />
-                        <Setter TargetName="Halftone" Property="Visibility" Value="Collapsed" />
-                        <Setter TargetName="Color" Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
 
                     <DataTrigger Binding="{Binding Eye}" Value="{x:Static model:RowEye.None}">
@@ -255,13 +269,35 @@
                     </DataTrigger>
 
                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsMouseOver}" Value="True">
-                        <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="Isolate" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="Halftone" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="ColorCell" Property="Visibility" Value="Visible" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                        <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="Isolate" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="Halftone" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="ColorCell" Property="Visibility" Value="Visible" />
                         <Setter TargetName="BadgeBox" Property="Visibility" Value="Collapsed" />
                         <Setter TargetName="RowGrid" Property="Background" Value="{x:Null}" />
                     </DataTrigger>
+                    <DataTrigger Binding="{Binding IsInsideLink}" Value="True">
+                        <Setter TargetName="Halftone" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="ColorCell" Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding HasColor}" Value="True">
+                        <Setter TargetName="ColorCell" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="Swatch" Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsHalftone}" Value="True">
+                        <Setter TargetName="Halftone" Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                    <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                            <Condition Binding="{Binding IsHalftone}" Value="True" />
+                            <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="False" />
+                        </MultiDataTrigger.Conditions>
+                        <Setter TargetName="Halftone" Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
+                    </MultiDataTrigger>
 
                     <DataTrigger Binding="{Binding IsHeader}" Value="True">
                         <Setter TargetName="Actions" Property="Visibility" Value="Collapsed" />
@@ -282,7 +318,7 @@
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding Tree.SyncHint}" Value="{x:Null}">
+                    <DataTrigger Binding="{Binding Explorer.SyncHint}" Value="{x:Null}">
                         <Setter Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                 </Style.Triggers>
@@ -294,18 +330,18 @@
                 <Setter Property="Orientation" Value="Horizontal" />
                 <Setter Property="Margin" Value="8,0,0,0" />
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding Tree.IsSyncVisible}" Value="False">
+                    <DataTrigger Binding="{Binding Explorer.IsSyncVisible}" Value="False">
                         <Setter Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="ShowInTreeStyle"
+            <Style x:Key="ShowInExplorerStyle"
                    d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding Tree.CanShowInTree}" Value="False">
+                    <DataTrigger Binding="{Binding Explorer.CanShowInExplorer}" Value="False">
                         <Setter Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                 </Style.Triggers>
@@ -316,7 +352,7 @@
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding Tree.HasSelection}" Value="False">
+                    <DataTrigger Binding="{Binding Explorer.HasSelection}" Value="False">
                         <Setter Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                 </Style.Triggers>
@@ -339,29 +375,29 @@
             </Grid.ColumnDefinitions>
             <TextBox hc:InfoElement.Placeholder="Search"
                      hc:InfoElement.ShowClearButton="True"
-                     AutomationProperties.AutomationId="Tree.Search"
+                     AutomationProperties.AutomationId="Explorer.Search"
                      Style="{StaticResource TextBoxExtend}"
-                     Text="{Binding Tree.SearchText, UpdateSourceTrigger=PropertyChanged}" />
+                     Text="{Binding Explorer.SearchText, UpdateSourceTrigger=PropertyChanged}" />
             <StackPanel Grid.Column="1" Style="{StaticResource SyncPanelStyle}">
                 <TextBlock VerticalAlignment="Center" Text="Sync" />
                 <ToggleButton Margin="6,0,0,0"
-                              AutomationProperties.AutomationId="Tree.Sync"
+                              AutomationProperties.AutomationId="Explorer.Sync"
                               AutomationProperties.Name="Sync"
-                              IsChecked="{Binding Tree.IsSyncOn}"
+                              IsChecked="{Binding Explorer.IsSyncOn}"
                               Style="{StaticResource ToggleButtonSwitch.Small}" />
             </StackPanel>
         </Grid>
 
         <Button Grid.Row="1"
                 Margin="0,0,0,4"
-                AutomationProperties.AutomationId="Tree.Hint"
-                Command="{Binding Tree.ExpandAllCommand}"
-                Content="{Binding Tree.SyncHint}"
+                AutomationProperties.AutomationId="Explorer.Hint"
+                Command="{Binding Explorer.ExpandAllCommand}"
+                Content="{Binding Explorer.SyncHint}"
                 Style="{StaticResource HintButtonStyle}" />
 
         <c:FlatTreeList x:Name="RowList"
                         Grid.Row="2"
-                        AutomationProperties.AutomationId="Tree.Rows"
+                        AutomationProperties.AutomationId="Explorer.Rows"
                         ContextMenuOpening="OnContextMenuOpening"
                         ItemContainerStyle="{StaticResource TreeRowContainerStyle}"
                         ItemTemplate="{StaticResource TreeRowTemplate}"
@@ -380,26 +416,26 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock VerticalAlignment="Center"
-                       AutomationProperties.AutomationId="Tree.Status"
+                       AutomationProperties.AutomationId="Explorer.Status"
                        Style="{StaticResource SecondaryText}"
-                       Text="{Binding Tree.StatusText}" />
+                       Text="{Binding Explorer.StatusText}" />
             <Button Grid.Column="1"
                     Margin="8,0,0,0"
-                    AutomationProperties.AutomationId="Tree.Clear"
-                    Command="{Binding Tree.ClearSelectionCommand}"
+                    AutomationProperties.AutomationId="Explorer.Clear"
+                    Command="{Binding Explorer.ClearSelectionCommand}"
                     Content="Clear"
                     Style="{StaticResource ClearStyle}" />
             <Button Grid.Column="2"
                     Margin="8,0,0,0"
-                    AutomationProperties.AutomationId="Tree.ShowInTree"
-                    Command="{Binding Tree.ShowInTreeCommand}"
-                    Content="Show in tree"
-                    Style="{StaticResource ShowInTreeStyle}" />
+                    AutomationProperties.AutomationId="Explorer.ShowInExplorer"
+                    Command="{Binding Explorer.ShowInExplorerCommand}"
+                    Content="Show in Explorer"
+                    Style="{StaticResource ShowInExplorerStyle}" />
             <TextBlock Grid.Column="3"
                        Margin="8,0,0,0"
-                       AutomationProperties.AutomationId="Tree.Message"
+                       AutomationProperties.AutomationId="Explorer.Message"
                        Style="{StaticResource ErrorText}"
-                       Text="{Binding Tree.Message}" />
+                       Text="{Binding Explorer.Message}" />
         </Grid>
     </Grid>
 </UserControl>

@@ -38,12 +38,12 @@
         <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Style.Triggers>
-            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Text}" Value="{x:Null}">
+            <Trigger Property="Text" Value="{x:Null}">
                 <Setter Property="Visibility" Value="Collapsed" />
-            </DataTrigger>
-            <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=Text}" Value="">
+            </Trigger>
+            <Trigger Property="Text" Value="">
                 <Setter Property="Visibility" Value="Collapsed" />
-            </DataTrigger>
+            </Trigger>
         </Style.Triggers>
     </Style>
 

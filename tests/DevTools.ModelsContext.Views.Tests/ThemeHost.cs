@@ -103,7 +103,7 @@ internal sealed class ThemeHost : IDisposable
 
     public AutomationElement Row(string name)
     {
-        var list = FindInWindow("Tree.Rows");
+        var list = FindInWindow("Explorer.Rows");
         var row = Retry.WhileNull(
             () => list.FindFirstDescendant(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.ListItem).And(cf.ByName(name))),
             Timeout,

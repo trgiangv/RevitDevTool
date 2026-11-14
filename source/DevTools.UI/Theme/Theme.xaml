@@ -9,7 +9,6 @@
         <ResourceDictionary Source="/DevTools.UI;component/Theme/Styles/Icons.xaml" />
         <ResourceDictionary Source="/DevTools.UI;component/Theme/Styles/Sizes.xaml" />
         <ResourceDictionary Source="/DevTools.UI;component/Controls/ColorPicker/ColorPicker.xaml" />
-        <ResourceDictionary Source="/DevTools.UI;component/Controls/CheckComboBox/SummaryCheckComboBox.xaml" />
         <ResourceDictionary Source="/DevTools.UI;component/Controls/FlatTreeList.xaml" />
     </ResourceDictionary.MergedDictionaries>
 

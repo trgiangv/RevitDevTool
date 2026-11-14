@@ -8,12 +8,12 @@ using System.Windows.Media;
 
 namespace DevTools.Presentation.Views.ModelsContext;
 
-public partial class TreeTabView : UserControl
+public partial class ExplorerTabView : UserControl
 {
     private ModelContextViewModel? _panel;
     private bool _isApplying;
 
-    public TreeTabView()
+    public ExplorerTabView()
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
@@ -23,7 +23,7 @@ public partial class TreeTabView : UserControl
     {
         if (_panel is not null)
         {
-            var old = _panel.Tree;
+            var old = _panel.Explorer;
             old.Rows.CollectionChanged -= OnRowsChanging;
             old.Rows.CollectionChanged -= OnRowsChanged;
             old.RowSelectionChanged -= OnVmSelectionChanged;
@@ -37,12 +37,12 @@ public partial class TreeTabView : UserControl
             return;
         }
 
-        var tree = _panel.Tree;
-        tree.Rows.CollectionChanged += OnRowsChanging;
-        RowList.ItemsSource = tree.Rows;
-        tree.Rows.CollectionChanged += OnRowsChanged;
-        tree.RowSelectionChanged += OnVmSelectionChanged;
-        tree.ScrollRequested += OnScrollRequested;
+        var explorer = _panel.Explorer;
+        explorer.Rows.CollectionChanged += OnRowsChanging;
+        RowList.ItemsSource = explorer.Rows;
+        explorer.Rows.CollectionChanged += OnRowsChanged;
+        explorer.RowSelectionChanged += OnVmSelectionChanged;
+        explorer.ScrollRequested += OnScrollRequested;
     }
 
     private void OnRowsChanging(object? sender, NotifyCollectionChangedEventArgs e)
@@ -73,14 +73,14 @@ public partial class TreeTabView : UserControl
             return;
         }
 
-        var wanted = _panel.Tree.SelectedRows;
+        var wanted = _panel.Explorer.SelectedRows;
         var current = RowList.SelectedItems.Cast<TreeRow>().ToList();
         if (current.Count == wanted.Count && current.All(wanted.Contains))
         {
             return;
         }
 
-        var visible = new HashSet<TreeRow>(_panel.Tree.Rows);
+        var visible = new HashSet<TreeRow>(_panel.Explorer.Rows);
         _isApplying = true;
         try
         {
@@ -103,7 +103,7 @@ public partial class TreeTabView : UserControl
             return;
         }
 
-        _panel.Tree.SetSelectedRows(RowList.SelectedItems.Cast<TreeRow>().ToList());
+        _panel.Explorer.SetSelectedRows(RowList.SelectedItems.Cast<TreeRow>().ToList());
     }
 
     private void OnContextMenuOpening(object sender, ContextMenuEventArgs e)
@@ -120,7 +120,7 @@ public partial class TreeTabView : UserControl
             menu.ClearValue(ContextMenu.VerticalOffsetProperty);
         }
 
-        _panel.Tree.OpenMenu(RowOf(e.OriginalSource as DependencyObject));
+        _panel.Explorer.OpenMenu(RowOf(e.OriginalSource as DependencyObject));
         ApplySelection();
     }
 
@@ -135,7 +135,7 @@ public partial class TreeTabView : UserControl
         host?.SetColorAnchor(button);
         try
         {
-            await panel.Tree.RunToolAsync(row, action);
+            await panel.Explorer.RunToolAsync(row, action);
         }
         finally
         {
@@ -160,14 +160,20 @@ public partial class TreeTabView : UserControl
             return;
         }
 
-        var reason = panel.Tree.ReasonFor(row, action);
+        var reason = panel.Explorer.ReasonFor(row, action);
         button.IsEnabled = reason is null;
-        button.ToolTip = reason ?? ToolTipOf(action);
+        button.ToolTip = ToolTipOf(row, action, reason);
     }
 
-    private static string ToolTipOf(MenuAction action)
+    private static string ToolTipOf(TreeRow row, MenuAction action, string? reason)
     {
-        return action == MenuAction.Color ? "Color…" : action.ToString();
+        return action switch
+        {
+            MenuAction.Color when row.HasColor => "Color: " + row.ColorHex + " · " + (reason ?? "click to change"),
+            MenuAction.Halftone when row.IsHalftone => reason is null ? "Halftone: on" : "Halftone: on · " + reason,
+            MenuAction.Color => reason ?? "Color…",
+            _ => reason ?? action.ToString()
+        };
     }
     private static ModelContextView? FindHost(DependencyObject? node)
     {
@@ -181,12 +187,12 @@ public partial class TreeTabView : UserControl
 
     private void OnEyeMouseEnter(object sender, MouseEventArgs e)
     {
-        _panel?.Tree.HighlightEyeTargets(((FrameworkElement)sender).DataContext as TreeRow);
+        _panel?.Explorer.HighlightEyeTargets(((FrameworkElement)sender).DataContext as TreeRow);
     }
 
     private void OnEyeMouseLeave(object sender, MouseEventArgs e)
     {
-        _panel?.Tree.ClearHighlight();
+        _panel?.Explorer.ClearHighlight();
     }
 
     private async void OnRowsKeyDown(object sender, KeyEventArgs e)
@@ -201,15 +207,15 @@ public partial class TreeTabView : UserControl
         {
             case Key.Right when row is { HasChildren: true, IsExpanded: false }:
                 e.Handled = true;
-                await _panel.Tree.ToggleExpandCommand.ExecuteAsync(row);
+                await _panel.Explorer.ToggleExpandCommand.ExecuteAsync(row);
                 break;
             case Key.Left when row is { IsExpanded: true }:
                 e.Handled = true;
-                await _panel.Tree.ToggleExpandCommand.ExecuteAsync(row);
+                await _panel.Explorer.ToggleExpandCommand.ExecuteAsync(row);
                 break;
             case Key.Z or Key.B or Key.I or Key.H when Keyboard.Modifiers == ModifierKeys.None:
                 e.Handled = true;
-                _panel.Tree.OpenMenu(null);
+                _panel.Explorer.OpenMenu(null);
                 await _panel.ContextMenu.RunShortcutAsync(e.Key.ToString());
                 break;
         }

@@ -12,6 +12,9 @@ public partial class FilterTabView : UserControl
 {
     public static readonly IReadOnlyList<ValueKind> ValueKinds = Enum.GetValues(typeof(ValueKind)).Cast<ValueKind>().ToList();
 
+    public static readonly IReadOnlyList<ResultSelectionMode> Modes =
+        Enum.GetValues(typeof(ResultSelectionMode)).Cast<ResultSelectionMode>().ToList();
+
     private ModelContextViewModel? _panel;
 
     public FilterTabView()

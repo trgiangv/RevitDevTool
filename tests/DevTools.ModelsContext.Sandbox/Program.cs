@@ -12,6 +12,11 @@ internal static class Program
         PresentationTraceSources.Refresh();
         PresentationTraceSources.DataBindingSource.Listeners.Add(new ConsoleTraceListener());
         PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
+        if (args.Contains("--trace", StringComparer.Ordinal))
+        {
+            ConsoleLog.Current = new ConsoleLog(Microsoft.Extensions.Logging.LogLevel.Trace);
+        }
+
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var shots = Array.IndexOf(args, "--shots");
         if (args.Contains("--dark", StringComparer.Ordinal))

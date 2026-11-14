@@ -60,7 +60,7 @@ internal sealed class SandboxRun : IDisposable
         var model = new FakeModel(data);
         var source = SlowSource.Wrap(model, () => delay);
         var services = new ModelContextServices(source, model, model, model, model, model, model, new SystemClock(),
-            new DispatcherScheduler(dispatcher));
+            new DispatcherScheduler(dispatcher), ConsoleLog.Current);
         var panel = new ModelContextViewModel(services);
         panel.ContextBar.Scope = ScopeKind.WholeModel;
         return new SandboxRun(size, data, model, panel, dispatcher);
@@ -88,74 +88,74 @@ internal sealed class SandboxRun : IDisposable
 
         var stall = new StallMeter(_dispatcher);
         stall.Start();
-        var tree = Panel.Tree;
+        var explorer = Panel.Explorer;
         var watch = Stopwatch.StartNew();
         double? firstRows = null;
-        tree.Rows.CollectionChanged += (_, _) => firstRows ??= tree.Rows.Count > 0 ? watch.Elapsed.TotalMilliseconds : null;
+        explorer.Rows.CollectionChanged += (_, _) => firstRows ??= explorer.Rows.Count > 0 ? watch.Elapsed.TotalMilliseconds : null;
 
         await Panel.InitializeAsync(CancellationToken.None);
         var rowsMs = firstRows ?? watch.Elapsed.TotalMilliseconds;
         await Idle();
         var renderedMs = watch.Elapsed.TotalMilliseconds;
-        Report($"first rows {rowsMs:F0} ms (rendered {renderedMs:F0} ms), rows {tree.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
+        Report($"first rows {rowsMs:F0} ms (rendered {renderedMs:F0} ms), rows {explorer.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
 
         watch.Restart();
         Panel.ContextBar.Tick(Data.Documents.Select(document => document.Key));
         await Panel.RefreshAsync();
         await Idle();
-        Report($"all {Data.Documents.Count} documents ticked {watch.Elapsed.TotalMilliseconds:F0} ms, rows {tree.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
+        Report($"all {Data.Documents.Count} documents ticked {watch.Elapsed.TotalMilliseconds:F0} ms, rows {explorer.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
 
-        var type = await FindTypeAsync(tree);
+        var type = await FindTypeAsync(explorer);
         stall.TakeMax();
         watch.Restart();
-        await tree.ExpandAsync(type);
+        await explorer.ExpandAsync(type);
         var modelMs = watch.Elapsed.TotalMilliseconds;
         await Idle();
         var expandMs = watch.Elapsed.TotalMilliseconds;
         var shown = type.Children!.Count(child => child.Kind == TreeRowKind.Instance);
         Report($"expand {shown} instances {expandMs:F0} ms (view model {modelMs:F0} ms, layout {expandMs - modelMs:F0} ms), longest stall {stall.TakeMax():F0} ms");
-        tree.Collapse(type);
+        explorer.Collapse(type);
         await Idle();
-        var second = await FindTypeAsync(tree, type);
+        var second = await FindTypeAsync(explorer, type);
         stall.TakeMax();
         watch.Restart();
-        await tree.ExpandAsync(second);
+        await explorer.ExpandAsync(second);
         modelMs = watch.Elapsed.TotalMilliseconds;
         await Idle();
         expandMs = watch.Elapsed.TotalMilliseconds;
         Report($"expand again {expandMs:F0} ms (view model {modelMs:F0} ms, layout {expandMs - modelMs:F0} ms), longest stall {stall.TakeMax():F0} ms");
 
-        var current = tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
-        var category = tree.Rows.First(row => row.Kind == TreeRowKind.Group);
+        var current = explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
+        var category = explorer.Rows.First(row => row.Kind == TreeRowKind.Group);
         watch.Restart();
         foreach (var action in new[] { MenuAction.Isolate, MenuAction.Halftone, MenuAction.Color })
         {
-            tree.ReasonFor(category, action);
+            explorer.ReasonFor(category, action);
         }
 
         var hoverMs = watch.Elapsed.TotalMilliseconds;
         watch.Restart();
-        tree.OpenMenu(current);
-        tree.OpenMenu(category);
+        explorer.OpenMenu(current);
+        explorer.OpenMenu(category);
         Report($"row tools on hover {hoverMs:F1} ms, open menu twice {watch.Elapsed.TotalMilliseconds:F1} ms");
 
         var resets = 0;
         void OnRows(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => resets++;
-        tree.Rows.CollectionChanged += OnRows;
+        explorer.Rows.CollectionChanged += OnRows;
         await Idle();
         stall.TakeMax();
-        foreach (var row in tree.Rows.Where(row => row.Kind == TreeRowKind.Group).Take(5).ToList())
+        foreach (var row in explorer.Rows.Where(row => row.Kind == TreeRowKind.Group).Take(5).ToList())
         {
-            tree.SetSelectedRows([row]);
+            explorer.SetSelectedRows([row]);
             await Task.Delay(400);
             await Idle();
         }
 
-        tree.Rows.CollectionChanged -= OnRows;
+        explorer.Rows.CollectionChanged -= OnRows;
         Report($"click 5 rows with sync: row list rebuilt {resets} times, longest stall {stall.TakeMax():F0} ms");
 
         var list = Find<DevTools.UI.Controls.FlatTreeList>(view);
-        Report($"realized row containers {CountContainers(list)} of {tree.Rows.Count} rows");
+        Report($"realized row containers {CountContainers(list)} of {explorer.Rows.Count} rows");
         stall.Stop();
         return lines;
     }
@@ -189,17 +189,17 @@ internal sealed class SandboxRun : IDisposable
         return default;
     }
 
-    private async Task<TreeRow> FindTypeAsync(TreeTabViewModel tree, TreeRow? skip = null)
+    private async Task<TreeRow> FindTypeAsync(ExplorerTabViewModel explorer, TreeRow? skip = null)
     {
-        var current = tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
+        var current = explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
         foreach (var group in current.Children!.ToList())
         {
-            await tree.ExpandAsync(group);
+            await explorer.ExpandAsync(group);
             foreach (var family in group.Children!.ToList())
             {
-                await tree.ExpandAsync(family);
+                await explorer.ExpandAsync(family);
                 var type = family.Children!.FirstOrDefault(child =>
-                    child.Count >= TreeTabViewModel.InstancePageSize && child != skip);
+                    child.Count >= ExplorerTabViewModel.InstancePageSize && child != skip);
                 if (type is not null)
                 {
                     return type;
