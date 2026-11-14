@@ -3,7 +3,6 @@ using DevTools.ModelsContext.ViewModels;
 using System.Collections.Specialized;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -125,17 +124,51 @@ public partial class TreeTabView : UserControl
         ApplySelection();
     }
 
-    private void OnRowColorClick(object sender, RoutedEventArgs e)
+    private async void OnToolClick(object sender, RoutedEventArgs e)
     {
-        if (_panel is not { } panel || sender is not FrameworkElement { DataContext: TreeRow row } button)
+        if (_panel is not { } panel || sender is not FrameworkElement { DataContext: TreeRow row, Tag: MenuAction action } button)
         {
             return;
         }
 
         var host = FindHost(button);
-        host?.OpenColorPicker(button, color => panel.Tree.ColorCommand.Execute(new RowColor(row, color)));
+        host?.SetColorAnchor(button);
+        try
+        {
+            await panel.Tree.RunToolAsync(row, action);
+        }
+        finally
+        {
+            host?.SetColorAnchor(null);
+        }
     }
 
+    private void OnToolShown(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        RefreshTool(sender);
+    }
+
+    private void OnToolHover(object sender, MouseEventArgs e)
+    {
+        RefreshTool(sender);
+    }
+
+    private void RefreshTool(object sender)
+    {
+        if (_panel is not { } panel || sender is not Button { DataContext: TreeRow row, Tag: MenuAction action } button)
+        {
+            return;
+        }
+
+        var reason = panel.Tree.ReasonFor(row, action);
+        button.IsEnabled = reason is null;
+        button.ToolTip = reason ?? ToolTipOf(action);
+    }
+
+    private static string ToolTipOf(MenuAction action)
+    {
+        return action == MenuAction.Color ? "Color…" : action.ToString();
+    }
     private static ModelContextView? FindHost(DependencyObject? node)
     {
         while (node is not null and not ModelContextView)
@@ -154,24 +187,6 @@ public partial class TreeTabView : UserControl
     private void OnEyeMouseLeave(object sender, MouseEventArgs e)
     {
         _panel?.Tree.ClearHighlight();
-    }
-
-    private void OnRowMenuClick(object sender, RoutedEventArgs e)
-    {
-        if (_panel is null || RowList.ContextMenu is not { } menu
-                           || sender is not FrameworkElement { DataContext: TreeRow row } button)
-        {
-            return;
-        }
-
-        _panel.Tree.OpenMenu(row);
-        ApplySelection();
-        var corner = button.TranslatePoint(new Point(0, button.ActualHeight), RowList);
-        menu.PlacementTarget = RowList;
-        menu.Placement = PlacementMode.Relative;
-        menu.HorizontalOffset = corner.X;
-        menu.VerticalOffset = corner.Y;
-        menu.IsOpen = true;
     }
 
     private async void OnRowsKeyDown(object sender, KeyEventArgs e)

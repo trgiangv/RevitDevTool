@@ -61,6 +61,23 @@ internal sealed class PanelUi : IDisposable
         button.AsButton().Invoke();
     }
 
+    public System.Windows.Controls.ContextMenu OpenRowMenu(string rowName)
+    {
+        var menu = WpfSta.Invoke(() =>
+        {
+            var tabs = (System.Windows.Controls.TabControl)View.FindName("Tabs");
+            var tree = (TreeTabView)((System.Windows.Controls.TabItem)tabs.Items[0]).Content;
+            var list = (System.Windows.Controls.Control)tree.FindName("RowList");
+            var row = Panel.Tree.Rows.First(row => row.Text == rowName && row.Kind == TreeRowKind.Group);
+            Panel.Tree.OpenMenu(row);
+            list.ContextMenu!.PlacementTarget = list;
+            list.ContextMenu.IsOpen = true;
+            return list.ContextMenu;
+        });
+        Assert.IsTrue(ThemeHost.WaitFor(() => menu.IsOpen), "The row menu did not open.");
+        return menu;
+    }
+
     public void Collapse(string header)
     {
         PressIn(Host.Row(header), "Tree.Row.Expand");

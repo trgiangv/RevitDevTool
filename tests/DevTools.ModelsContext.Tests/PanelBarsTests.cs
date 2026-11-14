@@ -188,13 +188,13 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task TitleShowsViewName()
+    public async Task ViewNameFollowsActiveView()
     {
         using var fixture = await PanelFixture.OpenAsync();
 
         fixture.Model.RaiseViewActivated(fixture.Model.View with { ViewId = "view-2", Name = "3D" });
         fixture.Settle();
 
-        Assert.AreEqual("Model Context · 3D", fixture.Panel.Title);
+        Assert.AreEqual("3D", fixture.Panel.ViewName);
     }
 }

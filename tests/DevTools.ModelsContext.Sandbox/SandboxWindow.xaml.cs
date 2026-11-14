@@ -21,6 +21,8 @@ public partial class SandboxWindow : Window
         }
     }
 
+    internal SandboxRun? CurrentRun => _run;
+
     internal async Task<IReadOnlyList<string>> MeasureAsync(SandboxSize size, Action<string> log)
     {
         SetSize(size);

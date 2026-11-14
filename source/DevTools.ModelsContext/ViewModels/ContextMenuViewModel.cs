@@ -18,6 +18,8 @@ public enum MenuAction
 
 public sealed class MenuItemViewModel : ObservableObject
 {
+    public const string LinkCommandsNote = "Goes through link commands";
+
     private string? _disabledReason;
     private string _iconKey;
     private bool _isVisible = true;
@@ -59,6 +61,8 @@ public sealed class MenuItemViewModel : ObservableObject
 
     public bool IsEnabled => DisabledReason is null;
 
+    public string? ToolTipText => DisabledReason ?? (UsesReferenceCommands ? LinkCommandsNote : null);
+
     public string? DisabledReason
     {
         get => _disabledReason;
@@ -67,6 +71,7 @@ public sealed class MenuItemViewModel : ObservableObject
             if (SetProperty(ref _disabledReason, value))
             {
                 OnPropertyChanged(nameof(IsEnabled));
+                OnPropertyChanged(nameof(ToolTipText));
                 Command.NotifyCanExecuteChanged();
             }
         }
@@ -75,7 +80,13 @@ public sealed class MenuItemViewModel : ObservableObject
     public bool UsesReferenceCommands
     {
         get => _usesReferenceCommands;
-        internal set => SetProperty(ref _usesReferenceCommands, value);
+        internal set
+        {
+            if (SetProperty(ref _usesReferenceCommands, value))
+            {
+                OnPropertyChanged(nameof(ToolTipText));
+            }
+        }
     }
 
     public IAsyncRelayCommand Command { get; }
@@ -148,6 +159,8 @@ public sealed class ContextMenuViewModel : ObservableObject
         private set => SetProperty(ref _message, value);
     }
 
+    public MenuItemViewModel ResetSeparator => _resetSeparator;
+
     public MenuItemViewModel this[MenuAction action] => _byAction[action];
 
     public async Task<bool> RunShortcutAsync(string key)
@@ -167,32 +180,21 @@ public sealed class ContextMenuViewModel : ObservableObject
     {
         _target = target;
         Message = null;
-        var empty = target.IsEmpty ? VisibilityReasons.Nothing : null;
         var select = this[MenuAction.SelectInHost];
         select.IsVisible = !target.IsSyncing;
-        select.DisabledReason = empty;
-        this[MenuAction.Zoom].DisabledReason = empty;
-        this[MenuAction.SectionBox].DisabledReason = empty ?? (_visibility.View?.Is3D == true ? null : NeedsThreeDView);
-
         var hideShow = this[MenuAction.HideShow];
         hideShow.Text = target.IsHidden ? "Show" : "Hide";
         hideShow.IconKey = target.IsHidden ? "Show" : "Hide";
-        Plan(MenuAction.Isolate, VisibilityAction.Isolate);
-        Plan(MenuAction.HideShow, target.IsHidden ? VisibilityAction.Show : VisibilityAction.Hide);
-        Plan(MenuAction.Halftone, VisibilityAction.Halftone);
-        Plan(MenuAction.Color, VisibilityAction.Color);
+        foreach (var item in Items.Where(item => !item.IsSeparator))
+        {
+            var (reason, usesReferences) = Evaluate(target, item.Action!.Value);
+            item.DisabledReason = reason;
+            item.UsesReferenceCommands = usesReferences;
+        }
 
         var reset = _temporaryBar.IsVisible;
         this[MenuAction.ResetView].IsVisible = reset;
         _resetSeparator.IsVisible = reset;
-        this[MenuAction.ResetView].DisabledReason = null;
-        if (_runtime.IsBusy)
-        {
-            foreach (var item in Items.Where(item => !item.IsSeparator))
-            {
-                item.DisabledReason = _runtime.BusyText;
-            }
-        }
     }
 
     internal void Refresh()
@@ -203,13 +205,38 @@ public sealed class ContextMenuViewModel : ObservableObject
         }
     }
 
-    private void Plan(MenuAction item, VisibilityAction action)
+    internal string? ReasonFor(MenuTarget target, MenuAction action)
     {
-        var plan = _visibility.Plan(_target!.Request(action));
-        this[item].DisabledReason = plan.DisabledReason;
-        this[item].UsesReferenceCommands = plan.UsesReferenceCommands;
+        return Evaluate(target, action).Reason;
     }
 
+    private (string? Reason, bool UsesReferenceCommands) Evaluate(MenuTarget target, MenuAction action)
+    {
+        if (_runtime.IsBusy)
+        {
+            return (_runtime.BusyText, false);
+        }
+
+        var empty = target.IsEmpty ? VisibilityReasons.Nothing : null;
+        switch (action)
+        {
+            case MenuAction.SelectInHost or MenuAction.Zoom:
+                return (empty, false);
+            case MenuAction.SectionBox:
+                return (empty ?? (_visibility.View?.Is3D == true ? null : NeedsThreeDView), false);
+            case MenuAction.ResetView:
+                return (null, false);
+            default:
+                var plan = _visibility.Plan(target.Request(action switch
+                {
+                    MenuAction.Isolate => VisibilityAction.Isolate,
+                    MenuAction.HideShow => target.IsHidden ? VisibilityAction.Show : VisibilityAction.Hide,
+                    MenuAction.Halftone => VisibilityAction.Halftone,
+                    _ => VisibilityAction.Color
+                }));
+                return (plan.DisabledReason, plan.UsesReferenceCommands);
+        }
+    }
     private MenuItemViewModel Add(MenuAction action, string text, string icon, string? shortcut, Func<Task> execute)
     {
         var item = new MenuItemViewModel(action, text, icon, shortcut, () => _runtime.RunAsync(execute));

@@ -13,9 +13,19 @@ internal static class Program
         PresentationTraceSources.DataBindingSource.Listeners.Add(new ConsoleTraceListener());
         PresentationTraceSources.DataBindingSource.Switch.Level = SourceLevels.Warning;
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
-        var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal));
+        var shots = Array.IndexOf(args, "--shots");
+        if (args.Contains("--dark", StringComparer.Ordinal))
+        {
+            DevTools.UI.Theme.ThemeManager.Current.ApplySettingsTheme(DevTools.UI.Theme.AppTheme.Dark);
+        }
+
+        var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal) && shots < 0);
         var exitCode = 0;
-        if (args.Contains("--measure", StringComparer.Ordinal))
+        if (shots >= 0)
+        {
+            window.Loaded += async (_, _) => exitCode = await ShotRun.CaptureAsync(window, app, args[shots + 1]);
+        }
+        else if (args.Contains("--measure", StringComparer.Ordinal))
         {
             window.Loaded += async (_, _) => exitCode = await MeasureAsync(window, app);
         }

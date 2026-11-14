@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext"
@@ -15,10 +16,13 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
                 <views:ModelContextResources />
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="DocumentsBoxStyle"
+                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
                    BasedOn="{StaticResource SummaryCheckComboBoxStyle}"
                    TargetType="c:SummaryCheckComboBox">
                 <Style.Triggers>
@@ -29,13 +33,16 @@
             </Style>
 
             <Style x:Key="DocumentItemStyle"
+                   d:DataContext="{d:DesignInstance vm:DocumentItemViewModel}"
                    BasedOn="{StaticResource CheckComboBoxItemBaseStyle}"
                    TargetType="hc:CheckComboBoxItem">
                 <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
                 <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
             </Style>
 
-            <Style x:Key="TemporaryBarStyle" TargetType="Border">
+            <Style x:Key="TemporaryBarStyle"
+                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
+                   TargetType="Border">
                 <Setter Property="Margin" Value="0,8,0,0" />
                 <Setter Property="Padding" Value="8,6" />
                 <Setter Property="Background" Value="{DynamicResource LightWarningBrush}" />
@@ -49,7 +56,9 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="ConfirmPanelStyle" TargetType="StackPanel">
+            <Style x:Key="ConfirmPanelStyle"
+                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
+                   TargetType="StackPanel">
                 <Setter Property="Margin" Value="0,6,0,0" />
                 <Setter Property="Visibility" Value="Collapsed" />
                 <Style.Triggers>
@@ -59,7 +68,9 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="UpdatingBarStyle" TargetType="ProgressBar">
+            <Style x:Key="UpdatingBarStyle"
+                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
+                   TargetType="ProgressBar">
                 <Setter Property="Height" Value="2" />
                 <Setter Property="IsIndeterminate" Value="False" />
                 <Setter Property="Visibility" Value="Collapsed" />
@@ -77,17 +88,30 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <StackPanel>
-            <TextBlock AutomationProperties.AutomationId="ModelContext.Title"
-                       FontSize="14"
-                       FontWeight="SemiBold"
-                       Text="{Binding Title}"
-                       TextTrimming="CharacterEllipsis" />
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock VerticalAlignment="Center"
+                           AutomationProperties.AutomationId="ModelContext.Title"
+                           FontSize="14"
+                           FontWeight="SemiBold"
+                           Text="{x:Static vm:ModelContextViewModel.PanelTitle}" />
+                <TextBlock Grid.Column="1"
+                           Margin="8,0,0,0"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"
+                           AutomationProperties.AutomationId="ModelContext.ViewName"
+                           Style="{StaticResource SecondaryText}"
+                           Text="{Binding ViewName}" />
+            </Grid>
             <TextBlock AutomationProperties.AutomationId="ModelContext.Busy"
                        Foreground="{DynamicResource WarningBrush}"
                        Style="{StaticResource ErrorText}"
@@ -96,7 +120,6 @@
                          AutomationProperties.AutomationId="ModelContext.Updating"
                          Style="{StaticResource UpdatingBarStyle}" />
         </StackPanel>
-
         <Grid Grid.Row="1" Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -139,7 +162,7 @@
                                     Style="{StaticResource DocumentsBoxStyle}" />
         </Grid>
 
-        <Border Grid.Row="2" Style="{StaticResource TemporaryBarStyle}">
+        <Border Grid.Row="3" Style="{StaticResource TemporaryBarStyle}">
             <StackPanel>
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -184,10 +207,11 @@
         </Border>
 
         <TabControl x:Name="Tabs"
-                    Grid.Row="3"
+                    Grid.Row="2"
                     Margin="0,8,0,0"
                     AutomationProperties.AutomationId="ModelContext.Tabs"
-                    SelectionChanged="OnTabChanged">
+                    SelectionChanged="OnTabChanged"
+                    Style="{StaticResource TabControlSliding}">
             <TabItem AutomationProperties.AutomationId="ModelContext.Tab.Tree" Header="Tree">
                 <views:TreeTabView />
             </TabItem>
@@ -202,16 +226,14 @@
                    Style="{StaticResource ErrorText}"
                    Text="{Binding Message}" />
 
-        <Canvas Grid.RowSpan="5" IsHitTestVisible="False">
-            <c:ColorPicker x:Name="ColorPicker"
-                           Width="24"
-                           Height="0"
-                           MinHeight="0"
-                           AutomationProperties.AutomationId="ModelContext.ColorPicker"
-                           CloseOnSelectedColorChanged="True"
-                           IsAdvancedTabVisible="False"
-                           Opacity="0"
-                           SelectedColorChanged="OnPickerColorChanged" />
-        </Canvas>
+        <Popup x:Name="ColorPopup"
+               d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
+               Placement="Bottom"
+               StaysOpen="False">
+            <hc:ColorPicker x:Name="ColorPicker"
+                            AutomationProperties.AutomationId="ModelContext.ColorPicker"
+                            Canceled="OnColorCanceled"
+                            Confirmed="OnColorConfirmed" />
+        </Popup>
     </Grid>
 </UserControl>

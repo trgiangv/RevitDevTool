@@ -196,16 +196,94 @@ public sealed class TreeTabTests
     }
 
     [TestMethod]
-    public async Task RowColorRunsColorPlan()
+    public async Task ColorToolAsksThenApplies()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await fixture.Tree.ColorCommand.ExecuteAsync(new RowColor(fixture.Group(Current, "Ducts"), new RgbColor(255, 0, 0)));
+        var requested = 0;
+        fixture.Panel.ContextMenu.ColorRequested += (_, _) => requested++;
+
+        await fixture.Tree.RunToolAsync(fixture.Group(Current, "Ducts"), MenuAction.Color);
+        await fixture.Panel.ContextMenu.ApplyColorCommand.ExecuteAsync(new RgbColor(255, 0, 0));
 
         var plan = fixture.Model.ExecutedPlans.Single();
+        Assert.AreEqual(1, requested);
         Assert.AreEqual(VisibilityAction.Color, plan.Action);
         Assert.AreEqual(new RgbColor(255, 0, 0), plan.Color);
     }
 
+    [TestMethod]
+    public async Task ToolActsOnWholeSelection()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+        var walls = fixture.Group(Current, "Walls");
+        fixture.Tree.SetSelectedRows([ducts, walls]);
+
+        await fixture.Tree.RunToolAsync(ducts, MenuAction.Isolate);
+
+        var plan = fixture.Model.ExecutedPlans.Single();
+        Assert.AreEqual(VisibilityAction.Isolate, plan.Action);
+        CollectionAssert.AreEquivalent(new[] { ducts, walls }, fixture.Tree.SelectedRows.ToList());
+    }
+
+    [TestMethod]
+    public async Task ToolOutsideSelectionSelectsRow()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+        fixture.Tree.SetSelectedRows([fixture.Group(Current, "Walls")]);
+
+        await fixture.Tree.RunToolAsync(ducts, MenuAction.Isolate);
+
+        CollectionAssert.AreEqual(new[] { ducts }, fixture.Tree.SelectedRows.ToList());
+        Assert.HasCount(1, fixture.Model.ExecutedPlans);
+    }
+
+    [TestMethod]
+    public async Task ToolAndMenuShareReason()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Mep]);
+        var linked = fixture.Group(FakeModelGenerator.Mep, "Ducts");
+
+        var tool = fixture.Tree.ReasonFor(linked, MenuAction.Halftone);
+        fixture.Tree.OpenMenu(linked);
+
+        Assert.IsNotNull(tool);
+        Assert.AreEqual(fixture.Panel.ContextMenu[MenuAction.Halftone].DisabledReason, tool);
+        Assert.AreEqual(fixture.Panel.ContextMenu[MenuAction.Isolate].DisabledReason,
+            fixture.Tree.ReasonFor(linked, MenuAction.Isolate));
+    }
+
+    [TestMethod]
+    public async Task DisabledToolReportsReason()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Mep]);
+
+        await fixture.Tree.RunToolAsync(fixture.Group(FakeModelGenerator.Mep, "Ducts"), MenuAction.Halftone);
+
+        Assert.AreEqual(VisibilityReasons.LinkChildOnlyShowIsolate, fixture.Tree.Message);
+        Assert.IsEmpty(fixture.Model.ExecutedPlans);
+    }
+
+    [TestMethod]
+    public async Task InstanceRowHasNoCount()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+        await fixture.Tree.ExpandAsync(ducts);
+        while (!fixture.Tree.Rows.Any(row => row.Kind == TreeRowKind.Instance))
+        {
+            await fixture.Tree.ExpandAsync(fixture.Tree.Rows.First(row =>
+                row.HasChildren && !row.IsExpanded && row.Level > ducts.Level));
+        }
+
+        var instance = fixture.Tree.Rows.First(row => row.Kind == TreeRowKind.Instance);
+
+        Assert.IsFalse(instance.HasCount);
+        Assert.IsTrue(ducts.HasCount);
+    }
     [TestMethod]
     public async Task MenuColorAsksThenApplies()
     {

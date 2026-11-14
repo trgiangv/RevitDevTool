@@ -1,17 +1,18 @@
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.ViewModels;
+using HandyControl.Data;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
 namespace DevTools.Presentation.Views.ModelsContext;
 
 public partial class ModelContextView : UserControl
 {
-    private Action<RgbColor>? _applyColor;
+    private FrameworkElement? _colorAnchor;
     private ModelContextViewModel? _panel;
-    private bool _isResettingColor;
     private bool _isSyncing;
 
     public ModelContextView()
@@ -127,41 +128,39 @@ public partial class ModelContextView : UserControl
         _panel.SelectedTab = (PanelTab)Tabs.SelectedIndex;
     }
 
-    internal void OpenColorPicker(FrameworkElement anchor, Action<RgbColor> apply)
+    internal void SetColorAnchor(FrameworkElement? anchor)
     {
-        var corner = anchor.TranslatePoint(new Point(0, anchor.ActualHeight), (UIElement)ColorPicker.Parent);
-        Canvas.SetLeft(ColorPicker, corner.X);
-        Canvas.SetTop(ColorPicker, corner.Y);
-        _isResettingColor = true;
-        try
-        {
-            ColorPicker.SelectedColor = null;
-        }
-        finally
-        {
-            _isResettingColor = false;
-        }
-
-        _applyColor = apply;
-        ColorPicker.IsDropDownOpen = true;
+        _colorAnchor = anchor;
     }
 
     private void OnColorRequested(object? sender, EventArgs e)
     {
+        if (_colorAnchor is { IsVisible: true } anchor)
+        {
+            ColorPopup.PlacementTarget = anchor;
+            ColorPopup.Placement = PlacementMode.Bottom;
+        }
+        else
+        {
+            ColorPopup.PlacementTarget = null;
+            ColorPopup.Placement = PlacementMode.MousePoint;
+        }
+
+        _colorAnchor = null;
+        ColorPopup.IsOpen = true;
+    }
+
+    private void OnColorConfirmed(object sender, FunctionEventArgs<Color> e)
+    {
+        ColorPopup.IsOpen = false;
         if (_panel is { } panel)
         {
-            OpenColorPicker(Tabs, color => panel.ContextMenu.ApplyColorCommand.Execute(color));
+            panel.ContextMenu.ApplyColorCommand.Execute(new RgbColor(e.Info.R, e.Info.G, e.Info.B));
         }
     }
 
-    private void OnPickerColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
+    private void OnColorCanceled(object? sender, EventArgs e)
     {
-        if (_isResettingColor || e.NewValue is not { } color || _applyColor is not { } apply)
-        {
-            return;
-        }
-
-        _applyColor = null;
-        apply(new RgbColor(color.R, color.G, color.B));
+        ColorPopup.IsOpen = false;
     }
 }

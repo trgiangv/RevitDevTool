@@ -89,6 +89,18 @@ internal sealed class ThemeHost : IDisposable
         return element;
     }
 
+    public AutomationElement PopupRoot(System.Windows.Controls.Primitives.Popup popup)
+    {
+        var element = Retry.WhileNull(
+            () => WpfSta.Invoke(() => popup.Child is { } child && PresentationSource.FromVisual(child) is HwndSource source
+                ? source.Handle
+                : IntPtr.Zero) is var handle && handle != IntPtr.Zero ? _automation.FromHandle(handle) : null,
+            Timeout,
+            ignoreException: true).Result;
+        Assert.IsNotNull(element, "The popup has no window.");
+        return element;
+    }
+
     public AutomationElement Row(string name)
     {
         var list = FindInWindow("Tree.Rows");

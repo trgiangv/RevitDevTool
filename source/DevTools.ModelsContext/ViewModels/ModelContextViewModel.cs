@@ -81,16 +81,8 @@ public sealed class ModelContextViewModel : ObservableObject, IDisposable
     public string ViewName
     {
         get => _viewName;
-        private set
-        {
-            if (SetProperty(ref _viewName, value))
-            {
-                OnPropertyChanged(nameof(Title));
-            }
-        }
+        private set => SetProperty(ref _viewName, value);
     }
-
-    public string Title => ViewName.Length == 0 ? PanelTitle : $"{PanelTitle} · {ViewName}";
 
     public bool IsTemporaryBarVisible => TemporaryBar.IsVisible;
 

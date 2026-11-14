@@ -80,6 +80,8 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public bool IsEnabled => DisabledReason is null;
 
+    public bool HasCount => Kind is not (TreeRowKind.Instance or TreeRowKind.MorePage);
+
     public int Badge => IsExpanded ? 0 : SelectedInside;
 
     public bool ChildrenLoaded => Children is not null;

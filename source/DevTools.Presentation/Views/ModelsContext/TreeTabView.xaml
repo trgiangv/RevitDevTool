@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:c="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:model="clr-namespace:DevTools.ModelsContext.Model;assembly=DevTools.ModelsContext"
@@ -16,13 +17,30 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
                 <views:ModelContextResources />
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="TreeRowContainerStyle"
+                   d:DataContext="{d:DesignInstance model:TreeRow}"
                    BasedOn="{StaticResource FlatTreeListItemStyle}"
                    TargetType="ListBoxItem">
                 <Setter Property="AutomationProperties.Name" Value="{Binding Text, Mode=OneTime}" />
+            </Style>
+
+            <Style x:Key="RowBadgeStyle"
+                   d:DataContext="{d:DesignInstance model:TreeRow}"
+                   BasedOn="{StaticResource TagBaseStyle}"
+                   TargetType="hc:Tag">
+                <Setter Property="ShowCloseButton" Value="False" />
+            </Style>
+
+            <Style x:Key="RowButtonStyle"
+                   d:DataContext="{d:DesignInstance model:TreeRow}"
+                   BasedOn="{StaticResource ButtonIcon.Small}"
+                   TargetType="Button">
+                <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" />
             </Style>
 
             <DataTemplate x:Key="TreeRowTemplate" DataType="{x:Type model:TreeRow}">
@@ -35,8 +53,8 @@
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="24" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="24" />
                     </Grid.ColumnDefinitions>
 
                     <Border Width="{Binding Indent, Mode=OneTime}" />
@@ -49,13 +67,13 @@
                             Command="{Binding DataContext.Tree.ToggleExpandCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             RenderTransformOrigin="0.5,0.5"
-                            Style="{StaticResource ButtonIcon.Small}" />
+                            Style="{StaticResource RowButtonStyle}" />
 
                     <Path x:Name="LevelIcon"
                           Grid.Column="2"
                           Width="12"
                           Height="12"
-                          Fill="{Binding Foreground, ElementName=RowText}"
+                          Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                           Stretch="Uniform" />
 
                     <TextBlock x:Name="RowText"
@@ -75,44 +93,77 @@
                             Style="{StaticResource PanelLinkButton}"
                             Visibility="Collapsed" />
 
-                    <TextBlock x:Name="CountText"
-                               Grid.Column="4"
-                               Margin="6,0"
-                               VerticalAlignment="Center"
-                               Opacity="0.6"
-                               Text="{Binding CountText, Mode=OneTime}" />
-
-                    <Border x:Name="BadgeBox"
-                            Grid.Column="5"
-                            Height="14"
-                            MinWidth="16"
-                            Margin="0,0,4,0"
-                            Padding="4,0"
-                            VerticalAlignment="Center"
+                    <hc:Tag x:Name="BadgeBox"
+                            Grid.Column="4"
+                            Height="16"
+                            Margin="4,0,0,0"
+                            Padding="5,0"
                             AutomationProperties.AutomationId="Tree.Row.Badge"
                             Background="{DynamicResource PrimaryBrush}"
-                            BorderBrush="{DynamicResource TextIconBrush}"
-                            BorderThickness="1"
-                            CornerRadius="7">
-                        <TextBlock HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   FontSize="10"
-                                   Foreground="{DynamicResource TextIconBrush}"
-                                   Text="{Binding Badge, Mode=OneTime}" />
-                    </Border>
+                            Content="{Binding Badge, Mode=OneTime, StringFormat=N0}"
+                            FontSize="10"
+                            Foreground="{DynamicResource TextIconBrush}"
+                            IsHitTestVisible="False"
+                            Style="{StaticResource RowBadgeStyle}" />
+
+                    <TextBlock x:Name="CountText"
+                               Grid.Column="5"
+                               MinWidth="50"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"
+                               AutomationProperties.AutomationId="Tree.Row.Count"
+                               Opacity="0.6"
+                               Text="{Binding CountText, Mode=OneTime}"
+                               TextAlignment="Right" />
 
                     <Ellipse x:Name="LinkDot"
                              Grid.Column="6"
                              Width="6"
                              Height="6"
-                             Margin="0,0,4,0"
+                             Margin="4,0,0,0"
                              VerticalAlignment="Center"
                              Fill="{DynamicResource WarningBrush}"
                              ToolTip="Goes through link commands"
                              Visibility="Collapsed" />
 
+                    <StackPanel x:Name="Actions"
+                                Grid.Column="7"
+                                Orientation="Horizontal"
+                                Visibility="Collapsed">
+                        <Button x:Name="Isolate"
+                                hc:IconElement.Geometry="{StaticResource Isolate}"
+                                AutomationProperties.AutomationId="Tree.Row.Isolate"
+                                Click="OnToolClick"
+                                IsVisibleChanged="OnToolShown"
+                                MouseEnter="OnToolHover"
+                                Style="{StaticResource RowButtonStyle}"
+                                Tag="{x:Static vm:MenuAction.Isolate}"
+                                ToolTip="Isolate"
+                                ToolTipService.ShowOnDisabled="True" />
+                        <Button x:Name="Halftone"
+                                hc:IconElement.Geometry="{StaticResource Halftone}"
+                                AutomationProperties.AutomationId="Tree.Row.Halftone"
+                                Click="OnToolClick"
+                                IsVisibleChanged="OnToolShown"
+                                MouseEnter="OnToolHover"
+                                Style="{StaticResource RowButtonStyle}"
+                                Tag="{x:Static vm:MenuAction.Halftone}"
+                                ToolTip="Halftone"
+                                ToolTipService.ShowOnDisabled="True" />
+                        <Button x:Name="Color"
+                                hc:IconElement.Geometry="{StaticResource ColorDrop}"
+                                AutomationProperties.AutomationId="Tree.Row.Color"
+                                Click="OnToolClick"
+                                IsVisibleChanged="OnToolShown"
+                                MouseEnter="OnToolHover"
+                                Style="{StaticResource RowButtonStyle}"
+                                Tag="{x:Static vm:MenuAction.Color}"
+                                ToolTip="Color…"
+                                ToolTipService.ShowOnDisabled="True" />
+                    </StackPanel>
+
                     <Button x:Name="Eye"
-                            Grid.Column="7"
+                            Grid.Column="8"
                             hc:IconElement.Geometry="{StaticResource EyeOpenGeometry}"
                             AutomationProperties.AutomationId="Tree.Row.Eye"
                             AutomationProperties.ItemStatus="{Binding Eye, Mode=OneTime}"
@@ -120,42 +171,9 @@
                             CommandParameter="{Binding}"
                             MouseEnter="OnEyeMouseEnter"
                             MouseLeave="OnEyeMouseLeave"
-                            Style="{StaticResource ButtonIcon.Small}"
+                            Style="{StaticResource RowButtonStyle}"
                             ToolTip="Hide" />
-
-                    <StackPanel x:Name="Actions"
-                                Grid.Column="8"
-                                Orientation="Horizontal"
-                                Visibility="Collapsed">
-                        <Button x:Name="Isolate"
-                                hc:IconElement.Geometry="{StaticResource Isolate}"
-                                AutomationProperties.AutomationId="Tree.Row.Isolate"
-                                Command="{Binding DataContext.Tree.IsolateCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
-                                CommandParameter="{Binding}"
-                                Style="{StaticResource ButtonIcon.Small}"
-                                ToolTip="Isolate" />
-                        <Button x:Name="Halftone"
-                                hc:IconElement.Geometry="{StaticResource Halftone}"
-                                AutomationProperties.AutomationId="Tree.Row.Halftone"
-                                Command="{Binding DataContext.Tree.HalftoneCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
-                                CommandParameter="{Binding}"
-                                Style="{StaticResource ButtonIcon.Small}"
-                                ToolTip="Halftone" />
-                        <Button x:Name="Color"
-                                hc:IconElement.Geometry="{StaticResource ColorDrop}"
-                                AutomationProperties.AutomationId="Tree.Row.Color"
-                                Click="OnRowColorClick"
-                                Style="{StaticResource ButtonIcon.Small}"
-                                ToolTip="Color…" />
-                        <Button x:Name="RowMenu"
-                                hc:IconElement.Geometry="{StaticResource More}"
-                                AutomationProperties.AutomationId="Tree.Row.Menu"
-                                Click="OnRowMenuClick"
-                                Style="{StaticResource ButtonIcon.Small}"
-                                ToolTip="Actions" />
-                    </StackPanel>
                 </Grid>
-
                 <DataTemplate.Triggers>
 
                     <DataTrigger Binding="{Binding HasChildren}" Value="False">
@@ -200,6 +218,9 @@
                     <DataTrigger Binding="{Binding Badge}" Value="0">
                         <Setter TargetName="BadgeBox" Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
+                    <DataTrigger Binding="{Binding HasCount}" Value="False">
+                        <Setter TargetName="CountText" Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
                     <DataTrigger Binding="{Binding IsInsideLink}" Value="True">
                         <Setter TargetName="LinkDot" Property="Visibility" Value="Visible" />
                         <Setter TargetName="Halftone" Property="Visibility" Value="Collapsed" />
@@ -238,6 +259,7 @@
                     </DataTrigger>
                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
                         <Setter TargetName="Actions" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="BadgeBox" Property="Visibility" Value="Collapsed" />
                         <Setter TargetName="RowGrid" Property="Background" Value="{x:Null}" />
                     </DataTrigger>
 
@@ -256,6 +278,7 @@
             </DataTemplate>
 
             <Style x:Key="HintButtonStyle"
+                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
@@ -265,7 +288,9 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="SyncPanelStyle" TargetType="StackPanel">
+            <Style x:Key="SyncPanelStyle"
+                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
+                   TargetType="StackPanel">
                 <Setter Property="Orientation" Value="Horizontal" />
                 <Setter Property="Margin" Value="8,0,0,0" />
                 <Style.Triggers>
@@ -276,6 +301,7 @@
             </Style>
 
             <Style x:Key="ShowInTreeStyle"
+                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
@@ -286,6 +312,7 @@
             </Style>
 
             <Style x:Key="ClearStyle"
+                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
@@ -341,7 +368,7 @@
                         PreviewKeyDown="OnRowsKeyDown"
                         SelectionChanged="OnSelectionChanged">
             <c:FlatTreeList.ContextMenu>
-                <views:ModelContextMenu />
+                <views:ModelContextMenu d:DataContext="{d:DesignInstance vm:ModelContextViewModel}" />
             </c:FlatTreeList.ContextMenu>
         </c:FlatTreeList>
 

@@ -7,8 +7,6 @@ using System.Text.RegularExpressions;
 
 namespace DevTools.ModelsContext.ViewModels;
 
-public sealed record RowColor(TreeRow Row, RgbColor Color);
-
 public sealed class TreeTabViewModel : ObservableObject, IDisposable
 {
     public const int InstancePageSize = 200;
@@ -64,9 +62,6 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         ToggleExpandCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ToggleExpandAsync(row)));
         LoadMoreCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => LoadMoreAsync(row)));
         ToggleEyeCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ToggleEyeAsync(row)));
-        IsolateCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ActAsync(row, VisibilityAction.Isolate)));
-        HalftoneCommand = new AsyncRelayCommand<TreeRow?>(row => Run(() => ActAsync(row, VisibilityAction.Halftone)));
-        ColorCommand = new AsyncRelayCommand<RowColor?>(request => Run(() => ColorAsync(request)));
         ClearSelectionCommand = new AsyncRelayCommand(() => Run(ClearSelectionAsync));
         ShowInTreeCommand = new RelayCommand(ShowInTree);
         ExpandAllCommand = new AsyncRelayCommand(() => Run(ExpandAllAsync));
@@ -89,12 +84,6 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
     public IAsyncRelayCommand<TreeRow?> LoadMoreCommand { get; }
 
     public IAsyncRelayCommand<TreeRow?> ToggleEyeCommand { get; }
-
-    public IAsyncRelayCommand<TreeRow?> IsolateCommand { get; }
-
-    public IAsyncRelayCommand<TreeRow?> HalftoneCommand { get; }
-
-    public IAsyncRelayCommand<RowColor?> ColorCommand { get; }
 
     public IAsyncRelayCommand ClearSelectionCommand { get; }
 
@@ -312,9 +301,9 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         _highlighted.Clear();
     }
 
-    public string? ReasonFor(TreeRow row, VisibilityAction action)
+    public string? ReasonFor(TreeRow row, MenuAction action)
     {
-        return _visibility.Plan(VisibilityRequest.ForRows(action, row)).DisabledReason;
+        return _menu.ReasonFor(TargetOf(TargetsFor(row)), action);
     }
 
     public void OpenMenu(TreeRow? clicked)
@@ -325,9 +314,21 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
             RowSelectionChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        var rows = _selectedRows.Where(row => !row.IsHeader && row.Kind != TreeRowKind.MorePage).ToList();
-        var hidden = rows.Count > 0 && rows.All(row => row.Eye == RowEye.Hidden);
-        _menu.Open(new MenuTarget(rows, [], () => ElementsOf(rows), IsSyncing, hidden, _token));
+        _menu.Open(TargetOf(ActionableSelection()));
+    }
+
+    public async Task RunToolAsync(TreeRow row, MenuAction action)
+    {
+        OpenMenu(row);
+        var item = _menu[action];
+        if (!item.IsEnabled)
+        {
+            Message = item.DisabledReason;
+            return;
+        }
+
+        Message = null;
+        await item.Command.ExecuteAsync(null);
     }
 
     internal TreeState Capture()
@@ -673,15 +674,6 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         Message = await _visibility.RunAsync(new VisibilityRequest(action, TargetsFor(row), []), _token);
     }
 
-    private async Task ActAsync(TreeRow? row, VisibilityAction action)
-    {
-        if (row is null)
-        {
-            return;
-        }
-
-        Message = await _visibility.RunAsync(new VisibilityRequest(action, TargetsFor(row), []), _token);
-    }
 
     private static bool IsAffected(TreeRow row, HashSet<TreeRow> targets, HashSet<long> groups)
     {
@@ -696,22 +688,20 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
         return false;
     }
 
-    private async Task ColorAsync(RowColor? request)
+    private List<TreeRow> ActionableSelection()
     {
-        if (request is not { } color)
-        {
-            return;
-        }
-
-        Message = await _visibility.RunAsync(
-            new VisibilityRequest(VisibilityAction.Color, TargetsFor(color.Row), [], color.Color), _token);
+        return _selectedRows.Where(row => !row.IsHeader && row.Kind != TreeRowKind.MorePage).ToList();
     }
 
     private List<TreeRow> TargetsFor(TreeRow row)
     {
-        return _selectedRows.Contains(row)
-            ? _selectedRows.Where(selected => !selected.IsHeader && selected.Kind != TreeRowKind.MorePage).ToList()
-            : [row];
+        return _selectedRows.Contains(row) ? ActionableSelection() : [row];
+    }
+
+    private MenuTarget TargetOf(List<TreeRow> rows)
+    {
+        var hidden = rows.Count > 0 && rows.All(row => row.Eye == RowEye.Hidden);
+        return new MenuTarget(rows, [], () => ElementsOf(rows), IsSyncing, hidden, _token);
     }
 
     private async Task ClearSelectionAsync()

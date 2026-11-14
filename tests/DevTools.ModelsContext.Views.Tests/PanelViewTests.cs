@@ -84,18 +84,8 @@ public sealed class PanelViewTests
     {
         using var ui = PanelUi.Open();
         ui.Collapse("All models");
-        var menu = WpfSta.Invoke(() =>
-        {
-            var tabs = (TabControl)ui.View.FindName("Tabs");
-            var tree = (TreeTabView)((TabItem)tabs.Items[0]).Content;
-            return ((Control)tree.FindName("RowList")).ContextMenu!;
-        });
-        var row = ui.Host.Row("Ducts");
+        var menu = ui.OpenRowMenu("Ducts");
 
-        row.Patterns.SelectionItem.Pattern.Select();
-        ui.PressIn(row, "Tree.Row.Menu");
-
-        Assert.IsTrue(ThemeHost.WaitFor(() => menu.IsOpen), "The row menu did not open.");
         foreach (var id in new[] { "Zoom", "SectionBox", "Isolate", "HideShow", "Halftone", "Color" })
         {
             Assert.IsNotNull(ui.Host.FindInMenu(menu, "Menu." + id), id + " is missing.");
@@ -103,28 +93,83 @@ public sealed class PanelViewTests
     }
 
     [TestMethod]
+    public void MenuItemsShowIcons()
+    {
+        using var ui = PanelUi.Open();
+        ui.Collapse("All models");
+        var menu = ui.OpenRowMenu("Ducts");
+
+        var missing = WpfSta.Invoke(() => menu.Items.OfType<MenuItem>()
+            .Where(item => item.IsVisible && item.Icon is not System.Windows.Shapes.Path { Data: not null })
+            .Select(item => item.Header?.ToString())
+            .ToList());
+
+        Assert.IsEmpty(missing, string.Join(", ", missing));
+    }
+
+    [TestMethod]
+    public void MenuShowsShortcuts()
+    {
+        using var ui = PanelUi.Open();
+        ui.Collapse("All models");
+        var menu = ui.OpenRowMenu("Ducts");
+
+        var zoom = WpfSta.Invoke(() => menu.Items.OfType<MenuItem>().First(item => item.InputGestureText == "Z"));
+
+        Assert.IsTrue(WpfSta.Invoke(() => zoom.ActualWidth > 0), "Zoom has no width.");
+    }
+
+    [TestMethod]
+    public void RowHasNoMenuButton()
+    {
+        using var ui = PanelUi.Open();
+        ui.Collapse("All models");
+        var row = ui.Host.Row("Ducts");
+
+        row.Patterns.SelectionItem.Pattern.Select();
+
+        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Has(row, "Tree.Row.Color")));
+        Assert.IsFalse(ui.Has(row, "Tree.Row.Menu"));
+    }
+
+    [TestMethod]
+    public void IsolateToolRunsPlan()
+    {
+        using var ui = PanelUi.Open();
+        ui.Collapse("All models");
+
+        var row = ui.Host.Row("Ducts");
+        row.Patterns.SelectionItem.Pattern.Select();
+        ui.PressIn(row, "Tree.Row.Isolate");
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Model.ExecutedPlans.Any(plan => plan.Action == DevTools.ModelsContext.Model.VisibilityAction.Isolate)),
+            "The isolate tool did not run a plan.");
+    }
+
+    [TestMethod]
     public void RowColorOpensPicker()
     {
         using var ui = PanelUi.Open();
         ui.Collapse("All models");
-        var picker = WpfSta.Invoke(() => (DevTools.UI.Controls.ColorPicker)ui.View.FindName("ColorPicker"));
-        var row = ui.Host.Row("Ducts");
+        var popup = WpfSta.Invoke(() => (System.Windows.Controls.Primitives.Popup)ui.View.FindName("ColorPopup"));
+        var windows = WpfSta.Invoke(() => System.Windows.Application.Current.Windows.Count);
 
+        var row = ui.Host.Row("Ducts");
         row.Patterns.SelectionItem.Pattern.Select();
         ui.PressIn(row, "Tree.Row.Color");
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => picker.IsDropDownOpen), "The color picker did not open.");
-        var popup = WpfSta.Invoke(() => (System.Windows.Controls.Primitives.Popup)picker.Template.FindName("PART_Popup", picker));
-        var palette = ui.Host.FindInPopup(popup, "ColorPickerStandardPalette");
-        var swatch = Retry.WhileNull(() => palette.FindFirstDescendant(cf => cf.ByControlType(ControlType.ListItem)),
+        Assert.IsTrue(ThemeHost.WaitFor(() => popup.IsOpen), "The color picker did not open.");
+        Assert.AreEqual(windows, WpfSta.Invoke(() => System.Windows.Application.Current.Windows.Count));
+        var confirm = Retry.WhileNull(
+            () => ui.Host.PopupRoot(popup)
+                .FindFirstDescendant(cf => cf.ByControlType(ControlType.Button).And(cf.ByName("Confirm"))),
             TimeSpan.FromSeconds(5), ignoreException: true).Result;
-        Assert.IsNotNull(swatch, "The palette has no colors.");
-        swatch.Patterns.SelectionItem.Pattern.Select();
+        Assert.IsNotNull(confirm, "The picker has no confirm button.");
+        confirm.Patterns.Invoke.Pattern.Invoke();
 
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Model.ExecutedPlans.Any(plan => plan.Action == DevTools.ModelsContext.Model.VisibilityAction.Color)),
-            "Picking a color did not run a color plan.");
+            "Confirming a color did not run a color plan.");
     }
-
     [TestMethod]
     public void DocumentsBoxShowsOneLine()
     {
