@@ -269,7 +269,17 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   icons in `DevTools.UI` `Icons.xaml`, and add a guard test for other
   `;component/` URIs; prove with a build of the merged `RevitDevTool` host.
 - [ ] Phase 3 — controls, views, UI tests, sandbox, performance numbers.
-- [ ] Phase 4 — Revit adapter T0–T2, host tests, snapshot export.
+- [x] Phase 4 — Revit adapter T0–T2, pane, ribbon command, snapshot export
+  script (not yet run). Not run in a live Revit. Proof: Tools builds 0
+  warnings for 2022 (skips ModelsContext), 2023, 2025, 2027; merged host builds
+  for 2025 with ILRepack; core 105/105; `Build.Tests` 119/119. No host test
+  project (no repo pattern for Tools host tests).
+- [ ] Phase 4b — fixes before live run: Revit rule filters must run through
+  `GetElementFilter()` in their own document (a port method to evaluate a host
+  filter by id) instead of the read-back definition; custom filter save
+  errors reach the status line; hidden-id read-back must not walk every
+  element (panel-touched ids plus visible branches, cached per view, dropped by
+  `DocumentChanged`); a dedicated ribbon icon.
 - [ ] Phase 5 — spike; T3 queue or no-go path.
 - [ ] Phase 6 — product and architecture docs; 0062 Accepted.
 

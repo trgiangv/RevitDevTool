@@ -12,6 +12,11 @@
     <ProjectReference Include="..\DevTools.Presentation\DevTools.Presentation.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="ModelsContext/Scripts/**" />
+    <None Include="ModelsContext/Scripts/**" />
+    <Compile Remove="ModelsContext/**" Condition="'$(RevitVersion)' == '2022'" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
     <Using Include="CommunityToolkit.Mvvm.Input" />
   </ItemGroup>

@@ -1,0 +1,107 @@
+using DevTools.ModelsContext.ViewModels;
+using DevTools.Presentation.Views.ModelsContext;
+using DevTools.Settings;
+using RevitDevTool.Core;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Threading;
+
+namespace RevitDevTool.Tools.ModelsContext;
+
+public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig)
+{
+    private static readonly Guid PaneGuid = new("6C1E3B7A-52D4-4F0B-9E57-2E8B1C4D9A31");
+    private static readonly DockablePaneId PaneId = new(PaneGuid);
+
+    private readonly ContentControl _host = new();
+    private RevitModelEvents? _events;
+    private ModelContextViewModel? _panel;
+    private ScopeCache? _scopes;
+
+    public void Initialize(UIControlledApplication application)
+    {
+        if (_events is not null)
+        {
+            return;
+        }
+
+        _scopes = new ScopeCache();
+        _events = new RevitModelEvents(application, _scopes, Dispatcher.CurrentDispatcher);
+        _host.IsVisibleChanged += OnVisibleChanged;
+        DockablePaneProvider
+            .Register(application, PaneGuid, ModelContextViewModel.PanelTitle)
+            .SetConfiguration(data =>
+            {
+                data.FrameworkElement = _host;
+                data.VisibleByDefault = false;
+                data.InitialState = new DockablePaneState
+                {
+                    MinimumWidth = 320,
+                    DockPosition = DockPosition.Right,
+                    TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser
+                };
+            });
+        _events.Subscribe();
+    }
+
+    public void ToggleVisibility()
+    {
+        if (_events is null || !DockablePane.PaneIsRegistered(PaneId) || !DockablePane.PaneExists(PaneId))
+        {
+            return;
+        }
+
+        var pane = new DockablePane(PaneId);
+        if (pane.IsShown())
+        {
+            pane.Hide();
+        }
+        else
+        {
+            pane.Show();
+        }
+    }
+
+    public void Shutdown()
+    {
+        _host.IsVisibleChanged -= OnVisibleChanged;
+        _events?.Unsubscribe();
+        _panel?.Dispose();
+        _host.Content = null;
+        _panel = null;
+        _events = null;
+    }
+
+    private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_events is null || _scopes is null)
+        {
+            return;
+        }
+
+        var visible = (bool)e.NewValue;
+        _events.IsActive = visible;
+        if (visible && _panel is null)
+        {
+            Build(_events, _scopes);
+        }
+    }
+
+    private void Build(RevitModelEvents events, ScopeCache scopes)
+    {
+        var services = new ModelContextServices(
+            new RevitModelSource(scopes),
+            events,
+            new RevitSelectionPort(),
+            new RevitViewActions(),
+            new RevitFilterEvaluator(),
+            new RevitFilterCatalog(),
+            new CustomFilterStore(fileConfig),
+            new SystemClock(),
+            new DispatcherScheduler(_host.Dispatcher));
+        _panel = new ModelContextViewModel(services) { IsPaneVisible = false };
+        var view = new ModelContextView { DataContext = _panel };
+        view.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "RegionBrush");
+        _host.Content = view;
+    }
+}

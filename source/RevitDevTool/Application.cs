@@ -9,6 +9,9 @@ using Nice3point.Revit.Extensions.UI;
 using RevitDevTool.Commands;
 using RevitDevTool.Controllers;
 using RevitDevTool.Tools.CommandBrowser;
+#if REVIT2023_OR_GREATER
+using RevitDevTool.Tools.ModelsContext;
+#endif
 using System.IO;
 using ZLogger;
 
@@ -63,6 +66,9 @@ public class Application : IExternalApplication
         {
             Host.GetService<PanelController>().Shutdown();
             Host.GetService<CommandBrowserController>().Shutdown();
+#if REVIT2023_OR_GREATER
+            Host.GetService<ModelsContextPane>().Shutdown();
+#endif
             Host.Stop();
         }
         catch
@@ -83,6 +89,9 @@ public class Application : IExternalApplication
             _startup?.Mark("ApplicationInitialized");
             Host.GetService<PanelController>().Initialize(_application);
             Host.GetService<CommandBrowserController>().Initialize(_application);
+#if REVIT2023_OR_GREATER
+            Host.GetService<ModelsContextPane>().Initialize(_application);
+#endif
 
             _startup?.Dispose();
             _startup = null;
@@ -130,5 +139,12 @@ public class Application : IExternalApplication
             .SetLargeImage("/DevTools.UI;component/Resources/Icons/Commands-32-Light.png")
             .SetImage("/DevTools.UI;component/Resources/Icons/Commands-16-Light.png")
             .SetToolTip("Search and run any Revit ribbon command");
+#if REVIT2023_OR_GREATER
+
+        stack.AddPushButton<ModelContextCommand>("Model Context")
+            .SetLargeImage("/DevTools.UI;component/Resources/Icons/Commands-32-Light.png")
+            .SetImage("/DevTools.UI;component/Resources/Icons/Commands-16-Light.png")
+            .SetToolTip("Show or hide the Model Context panel");
+#endif
     }
 }

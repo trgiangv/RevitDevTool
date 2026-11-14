@@ -126,6 +126,9 @@ internal static class RevitServiceRegistration
             services.AddSingleton<CommandBrowserController>();
             services.AddSingleton<ToolWindowService>();
             services.AddSingleton<ElementFinderViewModel>();
+#if REVIT2023_OR_GREATER
+            services.AddSingleton<RevitDevTool.Tools.ModelsContext.ModelsContextPane>();
+#endif
 
             return builder;
         }
