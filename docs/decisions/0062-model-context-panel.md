@@ -88,18 +88,18 @@ marked *verified* (read from the Revit API assemblies 2023.0–2027) or
 One dockable pane, 320 px design width, HandyControl Light and Dark (primary
 `#326CF3`, radius 4, 12 px text). Top to bottom:
 
-1. **Pane title** with the active view name.
-2. **Context bar.** Scope as three icon buttons in a `ButtonGroup`
+1. **Context bar.** Scope as three icon buttons in a `ButtonGroupSolid`
    (Selection, Active view, Whole model) and one `CheckComboBox` of documents.
-   Every tab reads this bar.
-3. **Tabs:** Tree (browse, select, and show, hide, isolate, halftone, color in
-   the active view) and Filter.
-4. **Temporary bar** (yellow), only while the view is in a temporary mode:
+   Every tab reads this bar. The panel has no title line: Revit's pane caption
+   and the active view already name it.
+2. **Tabs:** Explorer (browse, select, and show, hide, isolate, halftone, color in
+   the active view) and Filter, `TabControlSliding` without a border.
+3. **Temporary bar** (yellow), only while the view is in a temporary mode:
    *Temporary · N changes* with **Keep** and **Reset**.
 There is no fixed actions bar. Actions live in one **context menu** with an
 icon per item, opened on the target itself:
 
-- **Tree:** right-click on the selected rows (or Shift+F10 / the Menu key). A
+- **Explorer:** right-click on the selected rows (or Shift+F10 / the Menu key). A
   right-click on an unselected row selects it first.
 - **Filter:** right-click on the result row, or its **⋯** button.
 
@@ -107,7 +107,7 @@ Menu items, top to bottom, each with its icon:
 
 | Item | Does |
 |------|------|
-| Select in Revit | Sends the target to the Revit selection (one way). Hidden while the tab syncs on its own (Tree Sync on, Filter Live on), shown when sync pauses. |
+| Select in Revit | Sends the target to the Revit selection (one way). Hidden while the tab syncs on its own (Explorer Sync on, Filter Live on), shown when sync pauses. |
 | Zoom | Zooms the active view to the target. |
 | Section box | Sets the 3D view's section box around the target (3D views only). |
 | — | |
@@ -133,14 +133,14 @@ that cannot run shows disabled with a one-line tooltip giving the reason.
   model** everywhere in the panel; links show their file name. One entry per
   link instance; duplicate file names get an instance suffix. Entries are `DocumentKey`s (§11), not `Document`
   objects.
-- The box shows one line: ticked document names joined by commas, cut with an
-  ellipsis, full list in the tooltip. `DevTools.UI/Controls/CheckComboBox`
-  carries a private fork of HandyControl's `CheckComboBox` with a one-line
-  summary instead of tags, an "All" item that stays in sync without a tag panel,
-  and "All" that skips disabled entries (§12 fork rule).
+- The box is the stock HandyControl `CheckComboBox` with its default style:
+  each ticked document shows as a tag, and tags wrap onto more lines when they
+  do not fit. The view keeps the rules below; the control is not forked.
 - Default: the current document only. Links are opt-in; newly loaded links
-  start unticked. At least one entry stays ticked. Unloaded links show
-  disabled and "All" skips them.
+  start unticked. At least one entry stays ticked: unticking the last one, from
+  the list, "All" or its tag, is refused and the current model is the one kept.
+  Unloaded links show disabled and keep their tick state: "All" and tag close
+  skip them.
 - The UI never splits the panel into host and link areas. Where data comes from shows only in
   counts and tooltips.
 - With Scope = Selection the selection decides the documents: the documents
@@ -148,7 +148,10 @@ that cannot run shows disabled with a one-line tooltip giving the reason.
   ticked list returns with Active view or Whole model.
 - The ticked list is kept in memory per document session, not in settings.
 
-### 4. Tree
+### 4. Explorer
+
+The tab is named for what the user does (browse the model), not for its
+control; its rows still form a tree.
 
 - Levels: **Model › Category › Family › Type › Instance**, one icon per level.
   Only ticked documents appear, *Current model* first, then links.
@@ -176,7 +179,7 @@ that cannot run shows disabled with a one-line tooltip giving the reason.
 - Rows: 28 px, stock HandyControl selection look (solid primary, white text).
 - The Instance level loads on expand and pages ("200 of 1,402 · more").
 - **Status line** at the bottom-left: *N selected* and **Clear**. When part of
-  the selection is in documents that are not ticked, it adds **Show in tree**,
+  the selection is in documents that are not ticked, it adds **Show in Explorer**,
   which ticks those documents and reveals the rows.
 - Search matches only the text shown on rows: model, category, family, type
   and instance names, and Element Id (`TokenParser`, so `linkInstanceId@id`
@@ -205,7 +208,8 @@ One mode: categories plus rules.
   - Switching away from a filter with unsaved changes asks inline
     (Save · Discard), not in a dialog.
 - **Categories:** checkbox list with counts and search, folds to a summary
-  line. Checked categories are always "any of".
+  line. *All · None* tick or untick the categories the search shows. Checked
+  categories are always "any of".
 - **Rules:** a set matches **All (AND)** or **Any (OR)**; sets nest (+ Set).
   Each rule is parameter, operator, value, on two lines. Operators follow
   Revit's names and the parameter's storage type (equals … does not end with,
@@ -214,7 +218,8 @@ One mode: categories plus rules.
   the document it runs in; ElementId values (Level, Phase) pick by name. The
   value dropdown lists real values in the checked documents with counts and a
   `[No parameter]` row (value index, §11). **+ Rule** and **+ Set** are small
-  icon buttons.
+  icon-and-text buttons under each set, hidden for read-only filters. With no
+  rules the box says every element of the checked categories matches.
 - **Revit filters** open read only. A rule-based filter runs in its own
   document (`GetElementFilter()` AND `ElementMulticategoryFilter(GetCategories())`);
   its rules display read only through a reader that turns
@@ -234,7 +239,7 @@ One mode: categories plus rules.
 
 ### 6. Selection sync
 
-- **Tree: Sync** (two ways), **Filter: Live** (result to Revit only). Switch
+- **Explorer: Sync** (two ways), **Filter: Live** (result to Revit only). Switch
   states live in memory per session.
 - **Sync on:** selecting tree rows selects in Revit (a Type or Category row
   selects all its instances); selecting in Revit opens and highlights rows. Up
@@ -290,6 +295,13 @@ it sits in, and never on anything else:
   show the eye as hidden by *All models* and are disabled until it is shown
   again.
 - Hovering an eye highlights every row the click will change.
+- A row the panel colored keeps its Color button visible as a swatch of that
+  color (tooltip *Color: #RRGGBB · click to change*); a halftoned row keeps
+  Halftone visible in the accent color. Child rows, and category rows under a
+  colored *All models* category, show the same marker. The marker reflects
+  only overrides the panel applied in this temporary session: Reset, Keep, an
+  undo, or closing the model clears it, and changes made directly in Revit are
+  not shown.
 
 ### 8. Visibility: temporary first
 
@@ -361,11 +373,11 @@ DevTools.ModelsContext               core, no host API, no WPF
                 VisibilityPlanner, SelectionGuard, TemporaryJournal, Debouncer
    Ports/       IModelSource, IModelEvents, ISelectionPort, IViewActions,
                 IFilterEvaluator, IHostFilterCatalog, ICustomFilterStore, IClock
-   ViewModels/  ModelContextViewModel, ContextBar, TreeTab, FilterTab,
+   ViewModels/  ModelContextViewModel, ContextBar, ExplorerTab, FilterTab,
                 TemporaryBar, ContextMenu
 DevTools.Presentation/Views/ModelsContext
                                      XAML views on DevTools.UI; every control has an AutomationId
-DevTools.UI/Controls, Theme/Styles   FlatTreeList, SummaryCheckComboBox fork, Icons.xaml
+DevTools.UI/Controls, Theme/Styles   FlatTreeList, Icons.xaml
 RevitDevTool.Tools/ModelsContext     Revit adapter, implements the ports
    RevitModelSource, RevitModelEvents (event hub), RevitSelectionPort,
    RevitViewActions (T0–T2), PostCommandQueue (T3), RevitFilterEvaluator,
@@ -557,6 +569,10 @@ panel and never throws into Revit.
     without blocking the UI for more than 50 ms at a time, snapshot memory
     < 64 MB per million elements.
   - No `Document` retained after a model closes ten times.
+- **Diagnostics.** The panel logs through the host `ILogger`: failures shown to the
+  user at Error, timings (Revit-thread queue and run, slices) and ignored errors at
+  Trace, which the default Debug minimum drops. See
+  [verification.md](../agents/verification.md#model-context-diagnostics).
 
 ### 13. State and storage
 
@@ -567,7 +583,7 @@ panel and never throws into Revit.
 | Temporary changes count | Panel, per (DocumentKey, view) |
 | Section box | `View3D.GetSectionBox` |
 | T3 changes to linked elements | `TemporaryJournal`, in memory |
-| Document list, Tree Sync, Filter Live, selection mode | In memory per session |
+| Document list, Explorer Sync, Filter Live, selection mode | In memory per session |
 | Custom filters | Settings (`DevTools.Settings`) |
 
 - The journal stores `(linkInstance id, element UniqueId, action)`. It clears
@@ -618,8 +634,9 @@ panel and never throws into Revit.
   `tests/DevTools.ModelsContext.Sandbox` (standalone app).
 - Dockable pane registration: `RevitDevTool.Core` `DockablePaneProvider`
   (0007). Revit calls go through `RevitDevTool.Core` `RevitContextExecutor`.
-- Shared controls (flat tree list, row template, forked `CheckComboBox`, icon
-  geometries): `DevTools.UI/Controls`. `libs/HandyControl` is not edited.
+- Shared controls (flat tree list, row template, icon geometries):
+  `DevTools.UI/Controls`. The documents box is the stock HandyControl
+  `CheckComboBox`. `libs/HandyControl` is not edited.
 
 ## Alternatives Considered
 
@@ -639,7 +656,7 @@ panel and never throws into Revit.
 8. **Selection mode Intersect.** Overlaps Scope = Selection.
 9. **Host versus link UI.** Replaced by one documents list.
 10. **Inline "Save as custom filter" box.** Replaced by + / Delete / Save.
-11. **One global sync switch for Tree and Filter.** Tree syncs both ways and
+11. **One global sync switch for Explorer and Filter.** Explorer syncs both ways and
     Filter one way; each tab keeps its own.
 12. **Snapshot the selection for Scope = Selection.** Hiding Sync is simpler.
 13. **A fixed actions bar at the bottom** (Select, Isolate, Hide, Box, Zoom).
@@ -702,6 +719,12 @@ Tradeoffs:
 
 ## Follow-Up
 
+- Known gap, host log routing (separate session, DevTools.Logging): every
+  `ILogger` entry at or above the global minimum also goes to the user output
+  panel via `NotifyLoggerProvider` and can open the RevitDevTool pane, and the
+  minimum has no per-category filter. Model Context logs Trace (dropped by the
+  default Debug) and Error only for failures it shows; see
+  `docs/agents/verification.md` (Model Context diagnostics).
 - Spike on a live host with links, Revit 2023 and 2026. Step 1 decides T3.
   1. **Go/no-go:** `LookupCommandId` and `CanPostCommand` for Temporary
      Hide/Isolate Element and Category with link references selected; post

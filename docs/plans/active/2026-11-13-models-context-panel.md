@@ -42,9 +42,9 @@ In scope:
 - Views in `source/DevTools.Presentation/Views/ModelsContext/` (XAML; moved
   there in Phase 3d from a separate `DevTools.ModelsContext.Views` project,
   which the add-in ILRepack would have merged and broken its self pack URIs).
-- `DevTools.UI` controls: flat tree list, summary `CheckComboBox` template,
-  icon geometries; a private `CheckComboBox` fork in
-  `DevTools.UI/Controls/CheckComboBox` (`libs/HandyControl` is never edited).
+- `DevTools.UI` controls: flat tree list and icon geometries. The documents
+  box is the stock HandyControl `CheckComboBox` with tags
+  (`libs/HandyControl` is never edited).
 - `RevitDevTool.Tools/ModelsContext/` (Revit adapter T0–T2, pane, filter
   compiler and catalog).
 - Tests: `DevTools.ModelsContext.Tests`, `DevTools.ModelsContext.Views.Tests`,
@@ -134,13 +134,14 @@ Owner: `source/DevTools.ModelsContext/ViewModels`; VM tests in
 ### Phase 3 — Controls, views and sandbox (Sonnet; flat list by Opus)
 
 Owner: `source/DevTools.UI/Controls/FlatTreeList*`,
-`source/DevTools.UI/Controls/CheckComboBox/` (private fork; `libs/HandyControl`
-untouched), `source/DevTools.Presentation/Views/ModelsContext`,
+`source/DevTools.Presentation/Views/ModelsContext`,
 `tests/DevTools.ModelsContext.Views.Tests`, `tests/DevTools.ModelsContext.Sandbox`.
+`libs/HandyControl` stays untouched.
 
-- Phase 3a (shared controls) landed first: `SummaryCheckComboBox` fork with
-  "All" sync and disabled-skip, `FlatTreeList` styles (28 px, recycling),
-  panel icons; 6 FlaUI tests in `DevTools.HandyControl.Tests`.
+- Phase 3a (shared controls) landed first: `FlatTreeList` styles (28 px,
+  recycling) and panel icons, with FlaUI tests in `DevTools.HandyControl.Tests`.
+  The documents box is the stock HandyControl `CheckComboBox`; the view keeps
+  "All" off unloaded links and at least one ticked entry.
 
 - Views follow 0062 §2, §4, §5, §7, §12 and the canvas; every interactive
   element has an `AutomationId`.
@@ -148,8 +149,8 @@ untouched), `source/DevTools.Presentation/Views/ModelsContext`,
   model, light / dark theme, and a "slow host" delay.
 - Expected UI tests (FlaUI by AutomationId, UIA patterns, no mouse events):
   tabs are Tree and Filter; group header has no controls; eye toggles row;
-  context menu lists actions; documents box shows one line; All tracks manual
-  ticks.
+  context menu lists actions; ticks show as tags; All skips unloaded links;
+  the last tag cannot close.
 - Performance check in the sandbox against §12, at 100k with three links and
   at 1M across five documents (first rows, expand, longest UI stall, memory
   per million); record numbers here.
@@ -226,8 +227,8 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   net8.0-windows and net10.0-windows; Tools builds for 2025.
 - [x] Phase 2 — view models and tests. Proof: `DevTools.ModelsContext.Tests`
   74/74 on net48, net8.0-windows and net10.0-windows; Tools builds for 2025.
-- [x] Phase 3a — shared controls (`SummaryCheckComboBox` fork, `FlatTreeList`,
-  icons). Proof: `DevTools.HandyControl.Tests` 19/19 on all three TFMs.
+- [x] Phase 3a — shared controls (`FlatTreeList`, icons; the documents box
+  later moved to the stock HandyControl `CheckComboBox`). Proof: `DevTools.HandyControl.Tests` 19/19 on all three TFMs.
 - [x] Phase 3b — lifecycle, version rule, quick counts, port gaps. Proof:
   `DevTools.ModelsContext.Tests` 94/94 on all three TFMs; 1M elements across 5
   documents: generate 78 ms, build 181 ms, aggregate 91 ms, snapshot 57.7 MB
