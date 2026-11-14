@@ -62,6 +62,23 @@ public sealed class PlannerTests
     }
 
     [TestMethod]
+    public void CheckMatchesPlanForLinkChild()
+    {
+        var snapshot = TestModel.Snapshot(Mep);
+        var row = TestModel.GroupRow(snapshot, Mep, TestModel.Ducts);
+        var planner = TestModel.Planner(TestModel.SmallData, Mep);
+
+        foreach (var action in new[] { VisibilityAction.Isolate, VisibilityAction.Halftone })
+        {
+            var request = VisibilityRequest.ForRows(action, row);
+            var plan = planner.Plan(request);
+            var check = planner.Check(request);
+            Assert.AreEqual(plan.DisabledReason, check.DisabledReason);
+            Assert.AreEqual(plan.UsesReferenceCommands, check.UsesReferenceCommands);
+        }
+    }
+
+    [TestMethod]
     public void HalftoneOnLinkChildIsDisabled()
     {
         var snapshot = TestModel.Snapshot(Mep);

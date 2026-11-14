@@ -100,7 +100,7 @@
                             Padding="5,0"
                             AutomationProperties.AutomationId="Tree.Row.Badge"
                             Background="{DynamicResource PrimaryBrush}"
-                            Content="{Binding Badge, Mode=OneTime, StringFormat=N0}"
+                            Content="{Binding Badge, StringFormat=N0}"
                             FontSize="10"
                             Foreground="{DynamicResource TextIconBrush}"
                             IsHitTestVisible="False"
@@ -113,7 +113,7 @@
                                VerticalAlignment="Center"
                                AutomationProperties.AutomationId="Tree.Row.Count"
                                Opacity="0.6"
-                               Text="{Binding CountText, Mode=OneTime}"
+                               Text="{Binding CountText}"
                                TextAlignment="Right" />
 
                     <Ellipse x:Name="LinkDot"
@@ -166,7 +166,7 @@
                             Grid.Column="8"
                             hc:IconElement.Geometry="{StaticResource EyeOpenGeometry}"
                             AutomationProperties.AutomationId="Tree.Row.Eye"
-                            AutomationProperties.ItemStatus="{Binding Eye, Mode=OneTime}"
+                            AutomationProperties.ItemStatus="{Binding Eye}"
                             Command="{Binding DataContext.Tree.ToggleEyeCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             MouseEnter="OnEyeMouseEnter"

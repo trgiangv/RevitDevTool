@@ -50,6 +50,11 @@ public sealed class VisibilityController
         return _runtime.Planner.Plan(request);
     }
 
+    public VisibilityCheck Check(VisibilityRequest request)
+    {
+        return _runtime.Planner.Check(request);
+    }
+
     public bool IsGroupHidden(long groupId)
     {
         return Current?.Groups.ContainsKey(groupId) == true;

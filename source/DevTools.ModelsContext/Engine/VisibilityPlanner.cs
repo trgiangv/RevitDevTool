@@ -8,13 +8,28 @@ public sealed class VisibilityPlanner(
 {
     public VisibilityPlan Plan(VisibilityRequest request)
     {
-        var builder = new Builder(request.Action);
+        var builder = new Builder(request.Action, collect: true);
+        var reason = Fill(builder, request);
+        return reason is null
+            ? builder.Build(request.Color)
+            : VisibilityPlan.Disabled(request.Action, reason);
+    }
+
+    public VisibilityCheck Check(VisibilityRequest request)
+    {
+        var builder = new Builder(request.Action, collect: false);
+        var reason = Fill(builder, request);
+        return new VisibilityCheck(reason, reason is null && builder.TouchesLink);
+    }
+
+    private string? Fill(Builder builder, VisibilityRequest request)
+    {
         foreach (var row in request.Rows)
         {
             var reason = AddRow(builder, row);
             if (reason is not null)
             {
-                return VisibilityPlan.Disabled(request.Action, reason);
+                return reason;
             }
         }
 
@@ -23,13 +38,11 @@ public sealed class VisibilityPlanner(
             var reason = AddElement(builder, element);
             if (reason is not null)
             {
-                return VisibilityPlan.Disabled(request.Action, reason);
+                return reason;
             }
         }
 
-        return builder.IsEmpty
-            ? VisibilityPlan.Disabled(request.Action, VisibilityReasons.Nothing)
-            : builder.Build(request.Color);
+        return builder.IsEmpty ? VisibilityReasons.Nothing : null;
     }
 
     private static bool IsAppearance(VisibilityAction action)
@@ -83,7 +96,15 @@ public sealed class VisibilityPlanner(
             return VisibilityReasons.Updating;
         }
 
-        builder.Ids(key).UnionWith(snapshot.IdsUnder(row.Path));
+        if (builder.Collect)
+        {
+            builder.Ids(key).UnionWith(snapshot.IdsUnder(row.Path));
+        }
+        else
+        {
+            builder.Touch(key);
+        }
+
         return null;
     }
 
@@ -113,7 +134,15 @@ public sealed class VisibilityPlanner(
             return check;
         }
 
-        builder.Ids(element.Document).Add(element.Id);
+        if (builder.Collect)
+        {
+            builder.Ids(element.Document).Add(element.Id);
+        }
+        else
+        {
+            builder.Touch(element.Document);
+        }
+
         return null;
     }
 
@@ -134,17 +163,28 @@ public sealed class VisibilityPlanner(
             : VisibilityReasons.ReferenceCommandsUnavailable;
     }
 
-    private sealed class Builder(VisibilityAction action)
+    private sealed class Builder(VisibilityAction action, bool collect)
     {
         private readonly Dictionary<DocumentKey, HashSet<long>> _ids = [];
+        private readonly HashSet<DocumentKey> _touched = [];
 
         public VisibilityAction Action { get; } = action;
+
+        public bool Collect { get; } = collect;
 
         public Dictionary<long, string> Groups { get; } = [];
 
         public List<DocumentKey> AttachedModels { get; } = [];
 
-        public bool IsEmpty => Groups.Count == 0 && AttachedModels.Count == 0 && _ids.Values.All(ids => ids.Count == 0);
+        public bool IsEmpty => Groups.Count == 0 && AttachedModels.Count == 0 && _touched.Count == 0
+                               && _ids.Values.All(ids => ids.Count == 0);
+
+        public bool TouchesLink => _touched.Any(key => !key.IsCurrentModel);
+
+        public void Touch(DocumentKey key)
+        {
+            _touched.Add(key);
+        }
 
         public HashSet<long> Ids(DocumentKey key)
         {

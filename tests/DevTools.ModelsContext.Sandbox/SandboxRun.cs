@@ -125,6 +125,35 @@ internal sealed class SandboxRun : IDisposable
         expandMs = watch.Elapsed.TotalMilliseconds;
         Report($"expand again {expandMs:F0} ms (view model {modelMs:F0} ms, layout {expandMs - modelMs:F0} ms), longest stall {stall.TakeMax():F0} ms");
 
+        var current = tree.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
+        var category = tree.Rows.First(row => row.Kind == TreeRowKind.Group);
+        watch.Restart();
+        foreach (var action in new[] { MenuAction.Isolate, MenuAction.Halftone, MenuAction.Color })
+        {
+            tree.ReasonFor(category, action);
+        }
+
+        var hoverMs = watch.Elapsed.TotalMilliseconds;
+        watch.Restart();
+        tree.OpenMenu(current);
+        tree.OpenMenu(category);
+        Report($"row tools on hover {hoverMs:F1} ms, open menu twice {watch.Elapsed.TotalMilliseconds:F1} ms");
+
+        var resets = 0;
+        void OnRows(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e) => resets++;
+        tree.Rows.CollectionChanged += OnRows;
+        await Idle();
+        stall.TakeMax();
+        foreach (var row in tree.Rows.Where(row => row.Kind == TreeRowKind.Group).Take(5).ToList())
+        {
+            tree.SetSelectedRows([row]);
+            await Task.Delay(400);
+            await Idle();
+        }
+
+        tree.Rows.CollectionChanged -= OnRows;
+        Report($"click 5 rows with sync: row list rebuilt {resets} times, longest stall {stall.TakeMax():F0} ms");
+
         var list = Find<DevTools.UI.Controls.FlatTreeList>(view);
         Report($"realized row containers {CountContainers(list)} of {tree.Rows.Count} rows");
         stall.Stop();

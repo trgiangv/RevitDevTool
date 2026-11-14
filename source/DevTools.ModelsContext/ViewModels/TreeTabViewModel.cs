@@ -1108,7 +1108,28 @@ public sealed class TreeTabViewModel : ObservableObject, IDisposable
 
         var visible = new List<TreeRow>();
         Flatten(_roots, false, visible);
-        Rows.ReplaceAll(visible);
+        if (!IsSameOrder(visible))
+        {
+            Rows.ReplaceAll(visible);
+        }
+    }
+
+    private bool IsSameOrder(List<TreeRow> visible)
+    {
+        if (visible.Count != Rows.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < visible.Count; index++)
+        {
+            if (!ReferenceEquals(visible[index], Rows[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private void ApplyState(TreeRow row)

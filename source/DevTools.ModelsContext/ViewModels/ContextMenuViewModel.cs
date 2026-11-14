@@ -227,14 +227,14 @@ public sealed class ContextMenuViewModel : ObservableObject
             case MenuAction.ResetView:
                 return (null, false);
             default:
-                var plan = _visibility.Plan(target.Request(action switch
+                var check = _visibility.Check(target.Request(action switch
                 {
                     MenuAction.Isolate => VisibilityAction.Isolate,
                     MenuAction.HideShow => target.IsHidden ? VisibilityAction.Show : VisibilityAction.Hide,
                     MenuAction.Halftone => VisibilityAction.Halftone,
                     _ => VisibilityAction.Color
                 }));
-                return (plan.DisabledReason, plan.UsesReferenceCommands);
+                return (check.DisabledReason, check.UsesReferenceCommands);
         }
     }
     private MenuItemViewModel Add(MenuAction action, string text, string icon, string? shortcut, Func<Task> execute)

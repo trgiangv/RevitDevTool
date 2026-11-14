@@ -8,9 +8,21 @@ public sealed class TreeRow : INotifyPropertyChanged
     public const double IndentPerLevel = 14;
 
     private static readonly PropertyChangedEventArgs HighlightChanged = new(nameof(IsHighlighted));
+    private static readonly PropertyChangedEventArgs CountTextChanged = new(nameof(CountText));
+    private static readonly PropertyChangedEventArgs BadgeChanged = new(nameof(Badge));
+    private static readonly PropertyChangedEventArgs ExpandedChanged = new(nameof(IsExpanded));
+    private static readonly PropertyChangedEventArgs HasChildrenChanged = new(nameof(HasChildren));
+    private static readonly PropertyChangedEventArgs EyeChanged = new(nameof(Eye));
+    private static readonly PropertyChangedEventArgs DisabledReasonChanged = new(nameof(DisabledReason));
+    private static readonly PropertyChangedEventArgs IsEnabledChanged = new(nameof(IsEnabled));
 
     private int _count;
     private string _countText = "0";
+    private int _selectedInside;
+    private bool _isExpanded;
+    private bool _hasChildren;
+    private RowEye _eye;
+    private string? _disabledReason;
     private bool _isHighlighted;
 
     public TreeRow(
@@ -58,31 +70,95 @@ public sealed class TreeRow : INotifyPropertyChanged
             {
                 _count = value;
                 _countText = value.ToString("N0", CultureInfo.CurrentCulture);
+                Raise(CountTextChanged);
             }
         }
     }
 
     public string CountText => _countText;
 
-    public int SelectedInside { get; set; }
+    public int SelectedInside
+    {
+        get => _selectedInside;
+        set
+        {
+            if (_selectedInside != value)
+            {
+                var badge = Badge;
+                _selectedInside = value;
+                RaiseBadgeIfChanged(badge);
+            }
+        }
+    }
 
-    public bool IsExpanded { get; set; }
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded != value)
+            {
+                var badge = Badge;
+                _isExpanded = value;
+                Raise(ExpandedChanged);
+                RaiseBadgeIfChanged(badge);
+            }
+        }
+    }
 
-    public bool HasChildren { get; set; }
+    public bool HasChildren
+    {
+        get => _hasChildren;
+        set
+        {
+            if (_hasChildren != value)
+            {
+                _hasChildren = value;
+                Raise(HasChildrenChanged);
+            }
+        }
+    }
 
     public IReadOnlyList<TreeRow>? Children { get; set; }
 
-    public RowEye Eye { get; set; }
+    public RowEye Eye
+    {
+        get => _eye;
+        set
+        {
+            if (_eye != value)
+            {
+                _eye = value;
+                Raise(EyeChanged);
+            }
+        }
+    }
 
     public string Key { get; init; } = string.Empty;
 
-    public string? DisabledReason { get; set; }
+    public string? DisabledReason
+    {
+        get => _disabledReason;
+        set
+        {
+            if (_disabledReason != value)
+            {
+                var wasEnabled = IsEnabled;
+                _disabledReason = value;
+                Raise(DisabledReasonChanged);
+                if (wasEnabled != IsEnabled)
+                {
+                    Raise(IsEnabledChanged);
+                }
+            }
+        }
+    }
 
-    public bool IsEnabled => DisabledReason is null;
+    public bool IsEnabled => _disabledReason is null;
 
     public bool HasCount => Kind is not (TreeRowKind.Instance or TreeRowKind.MorePage);
 
-    public int Badge => IsExpanded ? 0 : SelectedInside;
+    public int Badge => _isExpanded ? 0 : _selectedInside;
 
     public bool ChildrenLoaded => Children is not null;
 
@@ -98,8 +174,21 @@ public sealed class TreeRow : INotifyPropertyChanged
             if (_isHighlighted != value)
             {
                 _isHighlighted = value;
-                PropertyChanged?.Invoke(this, HighlightChanged);
+                Raise(HighlightChanged);
             }
         }
+    }
+
+    private void RaiseBadgeIfChanged(int before)
+    {
+        if (Badge != before)
+        {
+            Raise(BadgeChanged);
+        }
+    }
+
+    private void Raise(PropertyChangedEventArgs args)
+    {
+        PropertyChanged?.Invoke(this, args);
     }
 }

@@ -41,6 +41,24 @@ public sealed class SyncTests
     }
 
     [TestMethod]
+    public async Task RowClickKeepsRowsInPlace()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+        var resets = 0;
+        var badges = 0;
+        fixture.Tree.Rows.CollectionChanged += (_, _) => resets++;
+        ducts.PropertyChanged += (_, e) => badges += e.PropertyName == nameof(TreeRow.Badge) ? 1 : 0;
+
+        fixture.Tree.SetSelectedRows([ducts]);
+        fixture.Settle();
+
+        Assert.AreEqual(0, resets);
+        Assert.AreEqual(1, badges);
+        Assert.IsGreaterThan(0, ducts.Badge);
+    }
+
+    [TestMethod]
     public async Task SyncPausesAbove5000()
     {
         using var fixture = await PanelFixture.OpenAsync();

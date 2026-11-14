@@ -80,7 +80,7 @@
                                                           AutomationProperties.AutomationId="SummaryCheckComboBoxAll"
                                                           Content="{ex:Lang Key={x:Static langs:LangKeys.All}}"
                                                           IsEnabled="{TemplateBinding ShowSelectAllButton}"
-                                                          Style="{TemplateBinding ItemContainerStyle}"
+                                                          Style="{StaticResource CheckComboBoxItemBaseStyle}"
                                                           Visibility="{Binding ShowSelectAllButton, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource Boolean2VisibilityConverter}}" />
                                     <ScrollViewer x:Name="DropDownScrollViewer" Grid.Row="1">
                                         <ItemsPresenter x:Name="ItemsPresenter"
