@@ -64,3 +64,35 @@ Get-ChildItem "$env:APPDATA\RevitDevTool\logs\log_*.log" |
 # Host logs, custom LogFolder, code_mode temp files, and Revit journals
 scripts/collect-logs.ps1
 ```
+
+### Model Context diagnostics
+
+The Model Context panel logs through the host `ILogger` under the category
+`RevitDevTool.Tools.ModelsContext.ModelsContextPane`. A failure the panel shows the
+user is logged at Error with its exception. Everything else is Trace, which the
+default minimum (Debug) drops before any formatting.
+
+To see Trace lines, set Settings → Logging level to `Trace`, reproduce, then set it
+back. They go wherever host log entries go, including the file log. Lines to look for:
+
+- `Revit <Operation>: queue N ms, run M ms`: one Revit-thread call. A long queue
+  means Revit was busy; a long run means the call itself stalled Revit. Inside a
+  sliced operation only slices that run 250 ms or more get their own line.
+- `Revit Read|Count|Catalog|Match|Values|Hidden <document>: N items in S slices,
+  queue … run … (max …)`: one sliced operation, summed.
+- `Snapshot`, `Snapshot reload`, `Parameter catalog`, `Value counts`, `Filter`,
+  `Visibility`, `Context load`, `Selection sent/received`, `Explorer publish/expand`:
+  panel steps with their size and time.
+- `<Operation> <subject>: error ignored` and `<Operation> <subject>: N of M failed`:
+  errors the panel skipped (the exception is attached).
+
+`dotnet run --project tests/DevTools.ModelsContext.Sandbox -- --measure --trace` prints the same panel
+Trace lines to the console without Revit.
+
+Known gap: host log routing is global. Any `ILogger` entry at or above the minimum
+level also reaches the user output panel through `NotifyLoggerProvider`
+(`IsEnabled` is true for every level but None) and can open the RevitDevTool pane
+(`PanelController.OnTraceReceived`). The minimum level is one key for every
+provider, with no per-category filter. So a Model Context Error, or every Trace
+line while the level is `Trace`, also shows in the output panel. Fixing this is a
+DevTools.Logging change tracked in 0062 Follow-Up.
