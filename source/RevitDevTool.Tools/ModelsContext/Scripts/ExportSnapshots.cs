@@ -45,6 +45,37 @@ public class Command : IExternalCommand
 
     private static string Write(string folder, string name, string source, Document document)
     {
+        var categories = ModelCategoryIds(document);
+        var modelCategories = new HashSet<long>(categories.Select(Value));
+        var types = new StringBuilder();
+        var rows = new StringBuilder();
+        var knownTypes = new HashSet<long>();
+        foreach (var element in new FilteredElementCollector(document).WherePasses(ModelFilter(document, categories)))
+        {
+            var category = element.Category;
+            if (category == null || !modelCategories.Contains(Value(category.Id)))
+            {
+                continue;
+            }
+
+            var typeId = element.GetTypeId();
+            var typeValue = typeId == ElementId.InvalidElementId ? NoTypeBase + Value(category.Id) : Value(typeId);
+            if (knownTypes.Add(typeValue))
+            {
+                AppendType(types, document, category, typeId, typeValue);
+            }
+
+            AppendRow(rows, element, typeValue);
+        }
+
+        var json = "{\"source\":" + Quote(source) + ",\"groupingDepth\":3,\"types\":[" + types + "],\"elements\":[" + rows + "]}";
+        var path = Path.Combine(folder, name + ".snapshot.json");
+        File.WriteAllText(path, json, new UTF8Encoding(false));
+        return path;
+    }
+
+    private static List<ElementId> ModelCategoryIds(Document document)
+    {
         var categories = new List<ElementId>();
         foreach (Category category in document.Settings.Categories)
         {
@@ -54,6 +85,11 @@ public class Command : IExternalCommand
             }
         }
 
+        return categories;
+    }
+
+    private static ElementFilter ModelFilter(Document document, List<ElementId> categories)
+    {
         var filters = new List<ElementFilter>
         {
             new ElementMulticategoryFilter(categories),
@@ -64,53 +100,38 @@ public class Command : IExternalCommand
             .Cast<DesignOption>()
             .Where(option => !option.IsPrimary)
             .Select(option => (ElementFilter)new ElementDesignOptionFilter(option.Id, true)));
-        var modelCategories = new HashSet<long>(categories.Select(Value));
-        var types = new StringBuilder();
-        var rows = new StringBuilder();
-        var knownTypes = new HashSet<long>();
-        foreach (var element in new FilteredElementCollector(document).WherePasses(new LogicalAndFilter(filters)))
+        return new LogicalAndFilter(filters);
+    }
+
+    private static void AppendType(StringBuilder types, Document document, Category category, ElementId typeId,
+        long typeValue)
+    {
+        var elementType = typeId == ElementId.InvalidElementId ? null : document.GetElement(typeId) as ElementType;
+        AppendSeparator(types);
+        types.Append("{\"typeId\":").Append(typeValue.ToString(CultureInfo.InvariantCulture))
+            .Append(",\"groupId\":").Append(Value(category.Id).ToString(CultureInfo.InvariantCulture))
+            .Append(",\"group\":").Append(Quote(category.Name))
+            .Append(",\"family\":").Append(Quote(elementType != null ? elementType.FamilyName : NoType))
+            .Append(",\"type\":").Append(Quote(elementType != null ? elementType.Name : NoType))
+            .Append('}');
+    }
+
+    private static void AppendRow(StringBuilder rows, Element element, long typeValue)
+    {
+        AppendSeparator(rows);
+        rows.Append('[').Append(Value(element.Id).ToString(CultureInfo.InvariantCulture))
+            .Append(',').Append(typeValue.ToString(CultureInfo.InvariantCulture))
+            .Append(',').Append(Value(element.LevelId).ToString(CultureInfo.InvariantCulture))
+            .Append(',').Append(element.WorksetId.IntegerValue.ToString(CultureInfo.InvariantCulture))
+            .Append(']');
+    }
+
+    private static void AppendSeparator(StringBuilder builder)
+    {
+        if (builder.Length > 0)
         {
-            var category = element.Category;
-            if (category == null || !modelCategories.Contains(Value(category.Id)))
-            {
-                continue;
-            }
-
-            var categoryId = Value(category.Id);
-            var typeId = element.GetTypeId();
-            var typeValue = typeId == ElementId.InvalidElementId ? NoTypeBase + categoryId : Value(typeId);
-            if (knownTypes.Add(typeValue))
-            {
-                var elementType = typeId == ElementId.InvalidElementId ? null : document.GetElement(typeId) as ElementType;
-                if (types.Length > 0)
-                {
-                    types.Append(',');
-                }
-
-                types.Append("{\"typeId\":").Append(typeValue.ToString(CultureInfo.InvariantCulture))
-                    .Append(",\"groupId\":").Append(categoryId.ToString(CultureInfo.InvariantCulture))
-                    .Append(",\"group\":").Append(Quote(category.Name))
-                    .Append(",\"family\":").Append(Quote(elementType != null ? elementType.FamilyName : NoType))
-                    .Append(",\"type\":").Append(Quote(elementType != null ? elementType.Name : NoType))
-                    .Append('}');
-            }
-
-            if (rows.Length > 0)
-            {
-                rows.Append(',');
-            }
-
-            rows.Append('[').Append(Value(element.Id).ToString(CultureInfo.InvariantCulture))
-                .Append(',').Append(typeValue.ToString(CultureInfo.InvariantCulture))
-                .Append(',').Append(Value(element.LevelId).ToString(CultureInfo.InvariantCulture))
-                .Append(',').Append(element.WorksetId.IntegerValue.ToString(CultureInfo.InvariantCulture))
-                .Append(']');
+            builder.Append(',');
         }
-
-        var json = "{\"source\":" + Quote(source) + ",\"groupingDepth\":3,\"types\":[" + types + "],\"elements\":[" + rows + "]}";
-        var path = Path.Combine(folder, name + ".snapshot.json");
-        File.WriteAllText(path, json, new UTF8Encoding(false));
-        return path;
     }
 
     private static long Value(ElementId id)

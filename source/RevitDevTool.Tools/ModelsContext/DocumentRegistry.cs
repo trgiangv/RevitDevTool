@@ -1,4 +1,6 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Model;
+using Nice3point.Revit.Extensions;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
@@ -22,7 +24,7 @@ internal static class DocumentRegistry
 
     public static DocumentKey KeyOf(Document model, RevitLinkInstance instance)
     {
-        return DocumentKey.Link(ModelIdOf(model), RevitIds.ValueOf(instance.Id));
+        return DocumentKey.Link(ModelIdOf(model), instance.Id.ToLong());
     }
 
     public static SourceId SourceOf(Document model)
@@ -71,7 +73,7 @@ internal static class DocumentRegistry
             return new ResolvedDocument(model, null, model);
         }
 
-        if (model.GetElement(RevitIds.From(key.LinkInstanceId)) is not RevitLinkInstance instance
+        if (model.GetElement(key.LinkInstanceId.ToElementId()) is not RevitLinkInstance instance
             || instance.GetLinkDocument() is not { } linkDocument)
         {
             return null;
@@ -82,7 +84,7 @@ internal static class DocumentRegistry
 
     public static ResolvedDocument Require(UIApplication application, DocumentKey key)
     {
-        return Resolve(application, key) ?? throw new InvalidOperationException(RevitCall.NotOpen);
+        return Resolve(application, key) ?? throw new InvalidOperationException(RevitErrors.NotOpen);
     }
 
     public static Document? ResolveSource(UIApplication application, SourceId source)
@@ -105,12 +107,20 @@ internal static class DocumentRegistry
 
     public static Document RequireSource(UIApplication application, SourceId source)
     {
-        return ResolveSource(application, source) ?? throw new InvalidOperationException(RevitCall.NotOpen);
+        return ResolveSource(application, source) ?? throw new InvalidOperationException(RevitErrors.NotOpen);
     }
 
     public static ResolvedDocument? ActiveModel(UIApplication application)
     {
         return application.ActiveUIDocument?.Document is { } model ? new ResolvedDocument(model, null, model) : null;
+    }
+
+    public static IEnumerable<IGrouping<DocumentKey, ElementRef>> GroupByDocument(
+        Document model,
+        IEnumerable<ElementRef> elements)
+    {
+        var modelId = ModelIdOf(model);
+        return elements.Where(element => element.Document.ModelId == modelId).GroupBy(element => element.Document);
     }
 
     public static bool IsActive(UIApplication application, DocumentKey key)
@@ -133,8 +143,9 @@ internal static class DocumentRegistry
                 ? null
                 : ModelPathUtils.ConvertModelPathToUserVisiblePath(reference.GetAbsolutePath());
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Link path", instance.Id);
             return null;
         }
     }

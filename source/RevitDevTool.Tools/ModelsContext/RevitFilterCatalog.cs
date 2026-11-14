@@ -1,5 +1,7 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Ports;
+using Nice3point.Revit.Extensions;
 using System.Globalization;
 using RevitFilterRule = Autodesk.Revit.DB.FilterRule;
 using RuleNode = DevTools.ModelsContext.Model.FilterRule;
@@ -13,7 +15,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
 
     public Task<IReadOnlyList<HostFilterInfo>> GetFiltersAsync(DocumentKey document, CancellationToken cancellationToken)
     {
-        return RevitCall.RunAsync<IReadOnlyList<HostFilterInfo>>(application =>
+        return RevitProfiler.RunAsync<IReadOnlyList<HostFilterInfo>>("Host filters", application =>
         {
             var resolved = DocumentRegistry.Require(application, document);
             var inView = FiltersInView(application, document, resolved);
@@ -28,7 +30,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
                 };
                 if (kind is { } filterKind)
                 {
-                    var id = RevitIds.ValueOf(element.Id);
+                    var id = element.Id.ToLong();
                     filters.Add(new HostFilterInfo(document, id, element.Name, filterKind, inView.Contains(id)));
                 }
             }
@@ -39,10 +41,10 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
 
     public Task<FilterDefinition?> ReadAsync(DocumentKey document, long filterId, CancellationToken cancellationToken)
     {
-        return RevitCall.RunAsync(application =>
+        return RevitProfiler.RunAsync("Read host filter", application =>
         {
             var target = DocumentRegistry.Require(application, document).Target;
-            if (target.GetElement(RevitIds.From(filterId)) is not ParameterFilterElement filter)
+            if (target.GetElement(filterId.ToElementId()) is not ParameterFilterElement filter)
             {
                 return null;
             }
@@ -50,7 +52,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
             var categories = filter.GetCategories();
             var reader = new RuleReader(target, categories);
             var root = filter.GetElementFilter() is { } elementFilter ? reader.Read(elementFilter) : null;
-            return new FilterDefinition(RevitIds.ValuesOf(categories), root switch
+            return new FilterDefinition(categories.Select(id => id.ToLong()).ToList(), root switch
             {
                 FilterSet set => set,
                 null => FilterSet.All(),
@@ -65,14 +67,14 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
         IReadOnlyCollection<long>? scope,
         CancellationToken cancellationToken)
     {
-        var candidates = await RevitCall.RunAsync(application =>
+        var candidates = await RevitProfiler.RunAsync("Host filter candidates", application =>
         {
             var target = DocumentRegistry.Require(application, document).Target;
-            var ids = target.GetElement(RevitIds.From(filterId)) switch
+            var ids = target.GetElement(filterId.ToElementId()) switch
             {
                 ParameterFilterElement rule when rule.GetCategories() is { Count: > 0 } categories =>
                     ElementReader.CollectIds(target, categories),
-                SelectionFilterElement selection => RevitIds.ValuesOf(selection.GetElementIds()).ToArray(),
+                SelectionFilterElement selection => selection.GetElementIds().Select(id => id.ToLong()).ToArray(),
                 _ => []
             };
             return RevitFilterEvaluator.InScope(ids, scope);
@@ -83,11 +85,11 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
 
     private static List<long> Match(Document target, List<ElementId> chunk, long filterId)
     {
-        return target.GetElement(RevitIds.From(filterId)) switch
+        return target.GetElement(filterId.ToElementId()) switch
         {
             ParameterFilterElement rule when rule.GetElementFilter() is { } elementFilter =>
-                RevitIds.ValuesOf(new FilteredElementCollector(target, chunk).WherePasses(elementFilter).ToElementIds()),
-            ParameterFilterElement or SelectionFilterElement => RevitIds.ValuesOf(chunk),
+                new FilteredElementCollector(target, chunk).WherePasses(elementFilter).ToElementIds().Select(id => id.ToLong()).ToList(),
+            ParameterFilterElement or SelectionFilterElement => chunk.Select(id => id.ToLong()).ToList(),
             _ => []
         };
     }
@@ -103,13 +105,14 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
         {
             if (resolved.Link is null)
             {
-                return [.. RevitIds.ValuesOf(view.GetFilters())];
+                return [.. view.GetFilters().Select(id => id.ToLong())];
             }
 
             return LinkedViewFilters(view, resolved);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "View filters", document);
             return [];
         }
     }
@@ -124,7 +127,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
             return [];
         }
 
-        return [.. RevitIds.ValuesOf(linkedView.GetFilters())];
+        return [.. linkedView.GetFilters().Select(id => id.ToLong())];
 #else
         return [];
 #endif
@@ -197,8 +200,9 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
                     return UnitFormatUtils.Format(document.GetUnits(), spec, value, false);
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
+                RevitProfiler.Logger.Swallowed(exception, "Format number", key.Name);
             }
 
             return value.ToString(CultureInfo.CurrentCulture);
@@ -206,35 +210,58 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
 
         private string ReferenceText(ElementId id)
         {
-            return document.GetElement(id)?.Name ?? RevitIds.ValueOf(id).ToString(CultureInfo.InvariantCulture);
+            return document.GetElement(id)?.Name ?? id.ToString();
         }
 
         private static FilterOperator? StringOperator(FilterStringRuleEvaluator evaluator, bool negated)
         {
-            return evaluator switch
+            FilterOperator? op = evaluator switch
             {
-                FilterStringEquals => negated ? FilterOperator.NotEqual : FilterOperator.Equal,
-                FilterStringContains => negated ? FilterOperator.NotContains : FilterOperator.Contains,
-                FilterStringBeginsWith => negated ? FilterOperator.NotBeginsWith : FilterOperator.BeginsWith,
-                FilterStringEndsWith => negated ? FilterOperator.NotEndsWith : FilterOperator.EndsWith,
-                FilterStringGreater => negated ? FilterOperator.LessOrEqual : FilterOperator.Greater,
-                FilterStringGreaterOrEqual => negated ? FilterOperator.Less : FilterOperator.GreaterOrEqual,
-                FilterStringLess => negated ? FilterOperator.GreaterOrEqual : FilterOperator.Less,
-                FilterStringLessOrEqual => negated ? FilterOperator.Greater : FilterOperator.LessOrEqual,
+                FilterStringEquals => FilterOperator.Equal,
+                FilterStringContains => FilterOperator.Contains,
+                FilterStringBeginsWith => FilterOperator.BeginsWith,
+                FilterStringEndsWith => FilterOperator.EndsWith,
+                FilterStringGreater => FilterOperator.Greater,
+                FilterStringGreaterOrEqual => FilterOperator.GreaterOrEqual,
+                FilterStringLess => FilterOperator.Less,
+                FilterStringLessOrEqual => FilterOperator.LessOrEqual,
                 _ => null
             };
+            return Negate(op, negated);
         }
 
         private static FilterOperator? NumericOperator(FilterNumericRuleEvaluator evaluator, bool negated)
         {
-            return evaluator switch
+            FilterOperator? op = evaluator switch
             {
-                FilterNumericEquals => negated ? FilterOperator.NotEqual : FilterOperator.Equal,
-                FilterNumericGreater => negated ? FilterOperator.LessOrEqual : FilterOperator.Greater,
-                FilterNumericGreaterOrEqual => negated ? FilterOperator.Less : FilterOperator.GreaterOrEqual,
-                FilterNumericLess => negated ? FilterOperator.GreaterOrEqual : FilterOperator.Less,
-                FilterNumericLessOrEqual => negated ? FilterOperator.Greater : FilterOperator.LessOrEqual,
+                FilterNumericEquals => FilterOperator.Equal,
+                FilterNumericGreater => FilterOperator.Greater,
+                FilterNumericGreaterOrEqual => FilterOperator.GreaterOrEqual,
+                FilterNumericLess => FilterOperator.Less,
+                FilterNumericLessOrEqual => FilterOperator.LessOrEqual,
                 _ => null
+            };
+            return Negate(op, negated);
+        }
+
+        private static FilterOperator? Negate(FilterOperator? op, bool negated)
+        {
+            if (!negated || op is not { } positive)
+            {
+                return op;
+            }
+
+            return positive switch
+            {
+                FilterOperator.Equal => FilterOperator.NotEqual,
+                FilterOperator.Contains => FilterOperator.NotContains,
+                FilterOperator.BeginsWith => FilterOperator.NotBeginsWith,
+                FilterOperator.EndsWith => FilterOperator.NotEndsWith,
+                FilterOperator.Greater => FilterOperator.LessOrEqual,
+                FilterOperator.GreaterOrEqual => FilterOperator.Less,
+                FilterOperator.Less => FilterOperator.GreaterOrEqual,
+                FilterOperator.LessOrEqual => FilterOperator.Greater,
+                _ => positive
             };
         }
     }

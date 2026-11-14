@@ -1,8 +1,10 @@
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI.Events;
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Ports;
+using Nice3point.Revit.Extensions;
 using RevitDevTool.Core;
 using System.Windows.Threading;
 
@@ -89,8 +91,9 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
             {
                 raise();
             }
-            catch (Exception)
+            catch (Exception exception)
             {
+                RevitProfiler.Logger.Swallowed(exception, "Panel event", raise.Method.Name);
             }
         }));
     }
@@ -126,8 +129,9 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
                 e.Operation is UndoOperation.TransactionUndone or UndoOperation.TransactionRedone);
             Post(() => ElementsChanged?.Invoke(this, delta));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Document changed", e.Operation);
         }
     }
 
@@ -139,11 +143,11 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
         bool undoRedo)
     {
         var source = DocumentRegistry.SourceOf(model);
-        var deletedIds = RevitIds.ValuesOf(deleted);
+        var deletedIds = deleted.Select(id => id.ToLong()).ToList();
         if (added.Count + modified.Count + deleted.Count > DeltaApplier.DirtyThreshold)
         {
-            deletedIds.AddRange(RevitIds.ValuesOf(added));
-            deletedIds.AddRange(RevitIds.ValuesOf(modified));
+            deletedIds.AddRange(added.Select(id => id.ToLong()));
+            deletedIds.AddRange(modified.Select(id => id.ToLong()));
             return new ElementDelta(source, [], [], [], deletedIds, undoRedo);
         }
 
@@ -188,52 +192,10 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
             return;
         }
 
-        var documentsChanged = false;
-        var parametersChanged = false;
-        var statuses = new List<LinkStatusChange>();
-        foreach (var id in added)
-        {
-            switch (model.GetElement(id))
-            {
-                case RevitLinkInstance:
-                    keys.Links.Add(RevitIds.ValueOf(id));
-                    documentsChanged = true;
-                    break;
-                case RevitLinkType:
-                    documentsChanged = true;
-                    break;
-                case ParameterElement:
-                    keys.Parameters.Add(RevitIds.ValueOf(id));
-                    parametersChanged = true;
-                    break;
-            }
-        }
-
-        foreach (var id in modified)
-        {
-            switch (model.GetElement(id))
-            {
-                case RevitLinkType type:
-                    statuses.AddRange(new FilteredElementCollector(model)
-                        .OfClass(typeof(RevitLinkInstance))
-                        .Cast<RevitLinkInstance>()
-                        .Where(instance => instance.GetTypeId() == type.Id)
-                        .Select(instance => new LinkStatusChange(DocumentRegistry.KeyOf(model, instance),
-                            instance.GetLinkDocument() is null ? LinkStatus.Unloaded : LinkStatus.Reloaded)));
-                    break;
-                case ParameterElement:
-                    parametersChanged = true;
-                    break;
-            }
-        }
-
-        foreach (var id in RevitIds.ValuesOf(deleted))
-        {
-            documentsChanged |= keys.Links.Remove(id);
-            parametersChanged |= keys.Parameters.Remove(id);
-        }
-
-        if (parametersChanged)
+        var addedChange = TrackAdded(model, keys, added);
+        var (statuses, parametersModified) = ReadModified(model, modified);
+        var deletedChange = TrackDeleted(keys, deleted);
+        if (addedChange.Parameters || parametersModified || deletedChange.Parameters)
         {
             Post(() => ParameterDefinitionsChanged?.Invoke(this, source));
         }
@@ -243,10 +205,83 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
             Post(() => LinkStatusChanged?.Invoke(this, status));
         }
 
-        if (documentsChanged)
+        if (addedChange.Documents || deletedChange.Documents)
         {
             Post(() => DocumentsChanged?.Invoke(this, EventArgs.Empty));
         }
+    }
+
+    private static (bool Documents, bool Parameters) TrackAdded(
+        Document model,
+        ModelKeys keys,
+        ICollection<ElementId> added)
+    {
+        var documents = false;
+        var parameters = false;
+        foreach (var id in added)
+        {
+            switch (model.GetElement(id))
+            {
+                case RevitLinkInstance:
+                    keys.Links.Add(id.ToLong());
+                    documents = true;
+                    break;
+                case RevitLinkType:
+                    documents = true;
+                    break;
+                case ParameterElement:
+                    keys.Parameters.Add(id.ToLong());
+                    parameters = true;
+                    break;
+            }
+        }
+
+        return (documents, parameters);
+    }
+
+    private static (List<LinkStatusChange> Statuses, bool Parameters) ReadModified(
+        Document model,
+        ICollection<ElementId> modified)
+    {
+        var statuses = new List<LinkStatusChange>();
+        var parameters = false;
+        foreach (var id in modified)
+        {
+            switch (model.GetElement(id))
+            {
+                case RevitLinkType type:
+                    statuses.AddRange(LinkStatusesOf(model, type));
+                    break;
+                case ParameterElement:
+                    parameters = true;
+                    break;
+            }
+        }
+
+        return (statuses, parameters);
+    }
+
+    private static IEnumerable<LinkStatusChange> LinkStatusesOf(Document model, RevitLinkType type)
+    {
+        return new FilteredElementCollector(model)
+            .OfClass(typeof(RevitLinkInstance))
+            .Cast<RevitLinkInstance>()
+            .Where(instance => instance.GetTypeId() == type.Id)
+            .Select(instance => new LinkStatusChange(DocumentRegistry.KeyOf(model, instance),
+                instance.GetLinkDocument() is null ? LinkStatus.Unloaded : LinkStatus.Reloaded));
+    }
+
+    private static (bool Documents, bool Parameters) TrackDeleted(ModelKeys keys, ICollection<ElementId> deleted)
+    {
+        var documents = false;
+        var parameters = false;
+        foreach (var id in deleted.Select(id => id.ToLong()))
+        {
+            documents |= keys.Links.Remove(id);
+            parameters |= keys.Parameters.Remove(id);
+        }
+
+        return (documents, parameters);
     }
 
     private ModelKeys KeysOf(Document model)
@@ -258,8 +293,8 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
         }
 
         keys = new ModelKeys(
-            [.. RevitIds.ValuesOf(new FilteredElementCollector(model).OfClass(typeof(RevitLinkInstance)).ToElementIds())],
-            [.. RevitIds.ValuesOf(new FilteredElementCollector(model).OfClass(typeof(ParameterElement)).ToElementIds())]);
+            [.. new FilteredElementCollector(model).OfClass(typeof(RevitLinkInstance)).ToElementIds().Select(id => id.ToLong())],
+            [.. new FilteredElementCollector(model).OfClass(typeof(ParameterElement)).ToElementIds().Select(id => id.ToLong())]);
         _keys.Add(modelId, keys);
         return keys;
     }
@@ -276,11 +311,12 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
             var model = e.GetDocument();
             var selection = new HashSet<ElementRef>(RevitSelectionPort.ToRefs(model, e.GetReferences()));
             var key = DocumentRegistry.KeyOf(model);
-            selection.UnionWith(e.GetSelectedElements().Select(id => new ElementRef(key, RevitIds.ValueOf(id))));
+            selection.UnionWith(e.GetSelectedElements().Select(id => new ElementRef(key, id.ToLong())));
             Post(() => SelectionChanged?.Invoke(this, selection));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Selection changed", _activeModel);
         }
     }
 
@@ -302,8 +338,9 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
 
             Post(() => ViewActivated?.Invoke(this, view));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "View activated", _activeModel);
         }
     }
 
@@ -328,8 +365,9 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
             var key = DocumentKey.Current(modelId);
             Post(() => DocumentClosing?.Invoke(this, key));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Document closing", _activeModel);
         }
     }
 
@@ -346,8 +384,9 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
             SetBusy(!open);
             Post(() => DocumentsChanged?.Invoke(this, EventArgs.Empty));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Document closed", _activeModel);
         }
     }
 
@@ -383,8 +422,9 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
             var key = DocumentRegistry.KeyOf(model);
             Post(() => ModelSynced?.Invoke(this, key));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Model synced", _activeModel);
         }
     }
 

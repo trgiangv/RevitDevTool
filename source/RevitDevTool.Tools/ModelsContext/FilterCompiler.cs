@@ -1,4 +1,6 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Model;
+using Nice3point.Revit.Extensions;
 using System.Globalization;
 using RevitFilterRule = Autodesk.Revit.DB.FilterRule;
 using RuleNode = DevTools.ModelsContext.Model.FilterRule;
@@ -213,7 +215,7 @@ internal sealed class FilterCompiler(Document document, ICollection<ElementId> c
     {
         if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
         {
-            return [RevitIds.From(id)];
+            return [id.ToElementId()];
         }
 
         var named = new List<ElementId>();
@@ -248,8 +250,9 @@ internal sealed class FilterCompiler(Document document, ICollection<ElementId> c
                     return true;
                 }
             }
-            catch (Exception)
+            catch (Exception exception)
             {
+                RevitProfiler.Logger.Swallowed(exception, "Parse number", rule.Parameter.Name);
             }
         }
 

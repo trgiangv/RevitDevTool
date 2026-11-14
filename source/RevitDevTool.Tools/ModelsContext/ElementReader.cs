@@ -1,4 +1,6 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Model;
+using Nice3point.Revit.Extensions;
 using System.Diagnostics;
 using DocumentVersion = DevTools.ModelsContext.Model.DocumentVersion;
 using ElementRecord = DevTools.ModelsContext.Model.ElementRecord;
@@ -13,7 +15,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
     private const long NoTypeBase = -1_000_000_000_000L;
     private const string NoType = "No type";
 
-    private readonly HashSet<long> _modelCategories = [.. RevitIds.ValuesOf(ModelCategoryIds(document))];
+    private readonly HashSet<long> _modelCategories = [.. ModelCategoryIds(document).Select(id => id.ToLong())];
 
     public List<TypeRecord> Types { get; } = [];
 
@@ -62,7 +64,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
         return new FilteredElementCollector(document)
             .WherePasses(ModelFilter(document, categories))
             .ToElementIds()
-            .Select(RevitIds.ValueOf)
+            .Select(id => id.ToLong())
             .ToArray();
     }
 
@@ -74,8 +76,9 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
                 ? new DocumentVersion(version.VersionGUID.ToString(), version.NumberOfSaves)
                 : null;
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Document version", document.Title);
             return null;
         }
     }
@@ -86,7 +89,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
         var index = start;
         while (index < ids.Count && index - start < SliceSize && watch.Elapsed < SliceTime)
         {
-            if (document.GetElement(RevitIds.From(ids[index])) is { } element)
+            if (document.GetElement(ids[index].ToElementId()) is { } element)
             {
                 Read(element);
             }
@@ -110,14 +113,14 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
             return;
         }
 
-        var categoryId = RevitIds.ValueOf(category.Id);
+        var categoryId = category.Id.ToLong();
         if (!_modelCategories.Contains(categoryId))
         {
             return;
         }
 
         var typeId = element.GetTypeId();
-        var typeValue = typeId == ElementId.InvalidElementId ? NoTypeBase + categoryId : RevitIds.ValueOf(typeId);
+        var typeValue = typeId == ElementId.InvalidElementId ? NoTypeBase + categoryId : typeId.ToLong();
         if (knownTypes.Add(typeValue))
         {
             var elementType = typeId == ElementId.InvalidElementId ? null : document.GetElement(typeId) as ElementType;
@@ -125,7 +128,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
                 elementType?.FamilyName ?? NoType, elementType?.Name ?? NoType));
         }
 
-        Elements.Add(new ElementRecord(RevitIds.ValueOf(element.Id), typeValue, RevitIds.ValueOf(element.LevelId),
+        Elements.Add(new ElementRecord(element.Id.ToLong(), typeValue, element.LevelId.ToLong(),
             element.WorksetId.IntegerValue));
     }
 
@@ -136,13 +139,13 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
             return;
         }
 
-        var categoryId = RevitIds.ValueOf(category.Id);
+        var categoryId = category.Id.ToLong();
         if (!_modelCategories.Contains(categoryId))
         {
             return;
         }
 
-        var typeValue = RevitIds.ValueOf(type.Id);
+        var typeValue = type.Id.ToLong();
         knownTypes.Add(typeValue);
         Types.Add(new TypeRecord(typeValue, categoryId, category.Name, type.FamilyName, type.Name));
     }

@@ -1,4 +1,6 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Model;
+using Nice3point.Revit.Extensions;
 using System.Globalization;
 
 namespace RevitDevTool.Tools.ModelsContext;
@@ -7,11 +9,11 @@ internal static class ParameterResolver
 {
     private const int SpecSampleSize = 500;
 
-    public static ParameterInfo? InfoOf(Document document, ElementId parameterId)
+    public static ParameterInfo? InfoOf(Document document, ElementId parameterId, FailureTally? failures = null)
     {
         try
         {
-            var value = RevitIds.ValueOf(parameterId);
+            var value = parameterId.ToLong();
             if (value < 0)
             {
                 var builtIn = (BuiltInParameter)(int)value;
@@ -31,8 +33,17 @@ internal static class ParameterResolver
             return new ParameterInfo(new ParameterKey(definition.Name, null, shared), definition.Name,
                 KindOf(definition.GetDataType()));
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            if (failures is not null)
+            {
+                failures.Add(exception);
+            }
+            else
+            {
+                RevitProfiler.Logger.Swallowed(exception, "Parameter info", parameterId);
+            }
+
             return null;
         }
     }
@@ -40,7 +51,7 @@ internal static class ParameterResolver
     public static ParameterKey KeyOf(Document document, ElementId parameterId)
     {
         return InfoOf(document, parameterId)?.Key
-               ?? new ParameterKey(RevitIds.ValueOf(parameterId).ToString(CultureInfo.InvariantCulture));
+               ?? new ParameterKey(parameterId.ToString());
     }
 
     public static ElementId? IdOf(Document document, ParameterKey key)
@@ -95,7 +106,7 @@ internal static class ParameterResolver
     {
         try
         {
-            if (RevitIds.ValueOf(parameterId) > 0)
+            if (parameterId.ToLong() > 0)
             {
                 return (document.GetElement(parameterId) as ParameterElement)?.GetDefinition()?.GetDataType();
             }
@@ -110,8 +121,9 @@ internal static class ParameterResolver
                 }
             }
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Parameter spec", key.Name);
         }
 
         return null;
@@ -148,8 +160,9 @@ internal static class ParameterResolver
                 return ValueKind.ElementId;
             }
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            RevitProfiler.Logger.Swallowed(exception, "Value kind", spec.TypeId);
         }
 
         return ValueKind.Text;
@@ -175,6 +188,6 @@ internal static class ParameterResolver
 
         return document.GetElement(id)?.Name
                ?? parameter.AsValueString()
-               ?? RevitIds.ValueOf(id).ToString(CultureInfo.InvariantCulture);
+               ?? id.ToString();
     }
 }

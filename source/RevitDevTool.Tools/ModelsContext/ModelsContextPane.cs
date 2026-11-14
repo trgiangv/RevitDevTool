@@ -1,6 +1,8 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.ViewModels;
 using DevTools.Presentation.Views.ModelsContext;
 using DevTools.Settings;
+using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,7 +10,7 @@ using System.Windows.Threading;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
-public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig)
+public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig, ILogger<ModelsContextPane> logger)
 {
     private static readonly Guid PaneGuid = new("6C1E3B7A-52D4-4F0B-9E57-2E8B1C4D9A31");
     private static readonly DockablePaneId PaneId = new(PaneGuid);
@@ -25,6 +27,7 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig)
             return;
         }
 
+        RevitProfiler.Use(logger);
         _scopes = new ScopeCache();
         _events = new RevitModelEvents(application, _scopes, Dispatcher.CurrentDispatcher);
         _host.IsVisibleChanged += OnVisibleChanged;
@@ -89,6 +92,7 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig)
 
     private void Build(RevitModelEvents events, ScopeCache scopes)
     {
+        using var timer = TraceTimer.Start(logger, "Panel build");
         var services = new ModelContextServices(
             new RevitModelSource(scopes),
             events,
@@ -98,7 +102,8 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig)
             new RevitFilterCatalog(),
             new CustomFilterStore(fileConfig),
             new SystemClock(),
-            new DispatcherScheduler(_host.Dispatcher));
+            new DispatcherScheduler(_host.Dispatcher),
+            logger);
         _panel = new ModelContextViewModel(services) { IsPaneVisible = false };
         var view = new ModelContextView { DataContext = _panel };
         view.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "RegionBrush");

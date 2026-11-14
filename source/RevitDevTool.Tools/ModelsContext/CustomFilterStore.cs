@@ -20,7 +20,7 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
         }
         catch (Exception exception)
         {
-            throw new InvalidOperationException(exception.Message);
+            throw new InvalidOperationException(exception.Message, exception);
         }
     }
 
@@ -40,7 +40,7 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
         }
         catch (Exception exception)
         {
-            throw new InvalidOperationException(exception.Message);
+            throw new InvalidOperationException(exception.Message, exception);
         }
     }
 
