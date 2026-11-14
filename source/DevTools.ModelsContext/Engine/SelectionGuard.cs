@@ -8,8 +8,7 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
     public static readonly TimeSpan DefaultWindow = TimeSpan.FromSeconds(2);
 
     private readonly object _gate = new();
-    private HashSet<ElementRef>? _sent;
-    private DateTimeOffset _sentAt;
+    private readonly List<(HashSet<ElementRef> Elements, DateTimeOffset SentAt)> _sent = [];
 
     public SelectionGuard(IClock clock)
         : this(clock, DefaultWindow)
@@ -22,7 +21,8 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
         {
             lock (_gate)
             {
-                return _sent is not null && !IsExpired();
+                Prune();
+                return _sent.Count > 0;
             }
         }
     }
@@ -31,8 +31,8 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
     {
         lock (_gate)
         {
-            _sent = [.. elements];
-            _sentAt = clock.Now;
+            Prune();
+            _sent.Add(([.. elements], clock.Now));
         }
     }
 
@@ -40,23 +40,15 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
     {
         lock (_gate)
         {
-            if (_sent is null)
+            Prune();
+            var set = incoming.ToList();
+            var index = _sent.FindLastIndex(sent => sent.Elements.SetEquals(set));
+            if (index < 0)
             {
                 return false;
             }
 
-            if (IsExpired())
-            {
-                _sent = null;
-                return false;
-            }
-
-            if (!_sent.SetEquals(incoming))
-            {
-                return false;
-            }
-
-            _sent = null;
+            _sent.RemoveRange(0, index + 1);
             return true;
         }
     }
@@ -65,12 +57,13 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
     {
         lock (_gate)
         {
-            _sent = null;
+            _sent.Clear();
         }
     }
 
-    private bool IsExpired()
+    private void Prune()
     {
-        return clock.Now - _sentAt > window;
+        var now = clock.Now;
+        _sent.RemoveAll(sent => now - sent.SentAt > window);
     }
 }

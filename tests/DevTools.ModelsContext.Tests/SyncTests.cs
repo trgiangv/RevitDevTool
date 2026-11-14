@@ -84,6 +84,41 @@ public sealed class SyncTests
     }
 
     [TestMethod]
+    public async Task LateEchoKeepsNewClick()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.EchoSelection = false;
+        var ducts = fixture.Group(Current, "Ducts");
+        var pipes = fixture.Group(Current, "Pipes");
+        fixture.Explorer.SetSelectedRows([ducts]);
+        fixture.Settle();
+        var first = await fixture.Model.GetSelectionAsync(CancellationToken.None);
+        fixture.Explorer.SetSelectedRows([pipes]);
+        fixture.Settle();
+
+        fixture.Model.RaiseSelectionChanged(first);
+        fixture.Settle();
+
+        CollectionAssert.AreEqual(new[] { pipes }, fixture.Explorer.SelectedRows.ToList());
+        Assert.AreEqual(pipes.Count, fixture.Explorer.SelectedCount);
+    }
+
+    [TestMethod]
+    public async Task ClickWinsOverHostEvent()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+
+        fixture.Model.RaiseSelectionChanged(fixture.Elements(Current, 2));
+        fixture.Explorer.SetSelectedRows([ducts]);
+        fixture.Settle();
+
+        CollectionAssert.AreEqual(new[] { ducts }, fixture.Explorer.SelectedRows.ToList());
+        var selection = await fixture.Model.GetSelectionAsync(CancellationToken.None);
+        Assert.AreEqual(ducts.Count, selection.Count);
+    }
+
+    [TestMethod]
     public async Task SyncPausesAbove5000()
     {
         using var fixture = await PanelFixture.OpenAsync();

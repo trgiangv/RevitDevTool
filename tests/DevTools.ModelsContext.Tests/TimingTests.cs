@@ -36,6 +36,20 @@ public sealed class TimingTests
     }
 
     [TestMethod]
+    public void OlderEchoIsDropped()
+    {
+        var guard = new SelectionGuard(new FakeClock());
+        ElementRef[] next = [new(FakeModelGenerator.Current, 3)];
+
+        guard.RecordSent(Sent);
+        guard.RecordSent(next);
+
+        Assert.IsTrue(guard.ShouldDrop(Sent));
+        Assert.IsTrue(guard.ShouldDrop(next));
+        Assert.IsFalse(guard.ShouldDrop(Sent));
+    }
+
+    [TestMethod]
     public void ExpiredGuardDropsNothing()
     {
         var clock = new FakeClock();

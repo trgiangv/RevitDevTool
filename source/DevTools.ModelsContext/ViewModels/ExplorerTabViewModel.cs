@@ -39,6 +39,8 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private HashSet<TreeRow>? _searchHits;
     private HashSet<TreeRow> _searchMatches = [];
     private HashSet<ElementRef> _selectedElements = [];
+    private int _selectionVersion;
+    private int _sendsInFlight;
     private CancellationToken _token;
 
     internal ExplorerTabViewModel(
@@ -115,6 +117,8 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     public bool HasSelection => SelectedCount > 0;
 
+    internal bool IsLocalSelectionPending => _sendDebouncer.IsPending || _sendsInFlight > 0;
+
     public string StatusText => IsUpdating
         ? "Updating…"
         : string.Format(CultureInfo.CurrentCulture, "{0:N0} selected", SelectedCount);
@@ -190,6 +194,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     public void SetSelectedRows(IEnumerable<TreeRow> rows)
     {
+        _selectionVersion++;
         _selectedRows.Clear();
         _selectedRows.UnionWith(rows);
         if (IsSyncOn && IsSyncVisible && !_runtime.IsBusy)
@@ -321,6 +326,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     internal void Reset(ExplorerState state)
     {
         _pending = state;
+        _selectionVersion++;
         ClearHighlight();
         _data = ContextData.Empty;
         _roots = [];
@@ -402,6 +408,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         var state = _pending ?? Capture();
         _data = data;
         _token = cancellationToken;
+        _selectionVersion++;
         _instanceIds.Clear();
         _selectedRows.Clear();
         _roots = [];
@@ -423,7 +430,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         if (_revealPending)
         {
             _revealPending = false;
-            await RevealSelectionAsync(OpenPathLimit);
+            _selectedRows.UnionWith(await RevealSelectionAsync(OpenPathLimit));
         }
 
         await ReadHiddenAsync();
@@ -436,6 +443,12 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     internal async Task ApplyHostSelectionAsync(IReadOnlyCollection<ElementRef> incoming)
     {
+        if (IsLocalSelectionPending)
+        {
+            return;
+        }
+
+        var version = ++_selectionVersion;
         _selectedElements = [.. incoming];
         SyncHint = null;
         RaiseSelectionCounts();
@@ -454,16 +467,23 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         IsSyncPaused = false;
-        _selectedRows.Clear();
+        var revealed = new List<TreeRow>();
         if (_selectedElements.Count <= OpenPathLimit)
         {
-            await RevealSelectionAsync(OpenPathLimit);
+            revealed = await RevealSelectionAsync(OpenPathLimit);
         }
         else
         {
             SyncHint = TooManyHint;
         }
 
+        if (version != _selectionVersion)
+        {
+            return;
+        }
+
+        _selectedRows.Clear();
+        _selectedRows.UnionWith(revealed);
         await ReadHiddenAsync();
         Publish();
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
@@ -739,8 +759,15 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private async Task RevealAllAsync()
     {
         SyncHint = null;
+        var version = ++_selectionVersion;
+        var revealed = await RevealSelectionAsync(int.MaxValue);
+        if (version != _selectionVersion)
+        {
+            return;
+        }
+
         _selectedRows.Clear();
-        await RevealSelectionAsync(int.MaxValue);
+        _selectedRows.UnionWith(revealed);
         await ReadHiddenAsync();
         Publish();
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
@@ -761,7 +788,22 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         IsSyncPaused = false;
-        await _runtime.SelectAsync(elements, _token);
+        var version = _selectionVersion;
+        _sendsInFlight++;
+        try
+        {
+            await _runtime.SelectAsync(elements, _token);
+        }
+        finally
+        {
+            _sendsInFlight--;
+        }
+
+        if (version != _selectionVersion)
+        {
+            return;
+        }
+
         _selectedElements = [.. elements];
         SyncHint = null;
         RaiseSelectionCounts();
@@ -778,15 +820,18 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CanShowInExplorer));
     }
 
-    private async Task RevealSelectionAsync(int limit)
+    private async Task<List<TreeRow>> RevealSelectionAsync(int limit)
     {
-        foreach (var element in _selectedElements.Take(limit))
+        var rows = new List<TreeRow>();
+        foreach (var element in _selectedElements.Take(limit).ToList())
         {
             if (await RevealAsync(element) is { } row)
             {
-                _selectedRows.Add(row);
+                rows.Add(row);
             }
         }
+
+        return rows;
     }
 
     private async Task<TreeRow?> RevealAsync(ElementRef element)
