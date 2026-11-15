@@ -49,6 +49,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         _viewDebouncer = new Debouncer(scheduler, EventDelay, () => _ = _runtime.RunAsync(OnViewSettledAsync));
         _runtime.Failed += OnFailed;
         ContextBar.Changed += OnContextChanged;
+        ContextBar.Refused += OnFailed;
         TemporaryBar.PropertyChanged += OnTemporaryBarChanged;
         var events = services.Events;
         events.SelectionChanged += OnSelectionChanged;
@@ -76,7 +77,21 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     public bool IsTemporaryBarVisible => TemporaryBar.IsVisible;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsExplorerTab))]
+    [NotifyPropertyChangedFor(nameof(IsFilterTab))]
     public partial PanelTab SelectedTab { get; set; }
+
+    public bool IsExplorerTab
+    {
+        get => SelectedTab == PanelTab.Explorer;
+        set => SelectTabWhen(value, PanelTab.Explorer);
+    }
+
+    public bool IsFilterTab
+    {
+        get => SelectedTab == PanelTab.Filter;
+        set => SelectTabWhen(value, PanelTab.Filter);
+    }
 
     [ObservableProperty]
     public partial bool IsUpdating { get; private set; }
@@ -151,6 +166,14 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     partial void OnSelectedTabChanged(PanelTab value)
     {
         _ = _runtime.RunAsync(value == PanelTab.Explorer ? ResyncExplorerAsync : Filter.ActivateAsync);
+    }
+
+    private void SelectTabWhen(bool value, PanelTab tab)
+    {
+        if (value)
+        {
+            SelectedTab = tab;
+        }
     }
 
     partial void OnIsBusyChanged(bool value)
@@ -464,7 +487,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     {
         _active = null;
         OnPropertyChanged(nameof(ActiveModel));
-        Explorer.Reset(ExplorerState.Fresh(Explorer.IsSyncOn));
+        Explorer.Reset(ExplorerState.Fresh(Explorer.IsSelectionSyncOn));
         Filter.Reset(new FilterState(null, Filter.IsLiveOn));
         SetDocumentsQuietly([], null);
         SetView(null);
@@ -483,6 +506,11 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     private void OnContextChanged(object? sender, EventArgs e)
     {
+        if (Message == ContextBarViewModel.LastDocumentHint)
+        {
+            Message = null;
+        }
+
         if (!_suppressContextChanged)
         {
             _ = RefreshAsync();

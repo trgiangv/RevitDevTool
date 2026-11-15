@@ -62,7 +62,7 @@ public sealed class PanelBarsTests
     public async Task SelectHiddenWhileSyncOn()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Explorer.IsSyncOn = true;
+        fixture.Explorer.IsSelectionSyncOn = true;
 
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
@@ -73,7 +73,7 @@ public sealed class PanelBarsTests
     public async Task SelectShownWhileSyncOff()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Explorer.IsSyncOn = false;
+        fixture.Explorer.IsSelectionSyncOn = false;
 
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
@@ -281,6 +281,134 @@ public sealed class PanelBarsTests
         current.IsChecked = false;
 
         Assert.IsTrue(current.IsChecked);
+    }
+
+    [TestMethod]
+    public async Task LastUntickShowsHint()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var current = fixture.Panel.ContextBar.Documents.Single(item => item.Key == Current);
+
+        current.IsChecked = false;
+
+        Assert.AreEqual(ContextBarViewModel.LastDocumentHint, fixture.Panel.Message);
+    }
+
+    [TestMethod]
+    public async Task HintClearsOnNextTick()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Documents.Single(item => item.Key == Current).IsChecked = false;
+
+        fixture.Panel.ContextBar.Documents.Single(item => item.Key == Mep).IsChecked = true;
+
+        Assert.IsNull(fixture.Panel.Message);
+    }
+
+    [TestMethod]
+    public async Task CurrentModelUnticksWithLink()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+
+        UntickCurrentForMep(fixture);
+
+        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+    }
+
+    [TestMethod]
+    public async Task LastLinkStaysTicked()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        UntickCurrentForMep(fixture);
+        var mep = fixture.Panel.ContextBar.Documents.Single(item => item.Key == Mep);
+
+        mep.IsChecked = false;
+
+        Assert.IsTrue(mep.IsChecked);
+    }
+
+    [TestMethod]
+    public async Task DocumentRefreshKeepsCurrentUnticked()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        UntickCurrentForMep(fixture);
+
+        fixture.Model.RaiseDocumentsChanged();
+        fixture.Settle();
+
+        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+    }
+
+    [TestMethod]
+    public async Task ViewChangeKeepsCurrentUnticked()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        UntickCurrentForMep(fixture);
+
+        fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", false));
+        fixture.Settle();
+
+        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+    }
+
+    [TestMethod]
+    public async Task LinkReloadKeepsCurrentUnticked()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        UntickCurrentForMep(fixture);
+
+        fixture.Model.SetLoaded(Mep, false);
+        fixture.Settle();
+        fixture.Model.SetLoaded(Mep, true);
+        fixture.Settle();
+
+        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+    }
+
+    [TestMethod]
+    public async Task ExplorerSkipsUntickedCurrent()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+
+        UntickCurrentForMep(fixture);
+
+        var rows = fixture.Explorer.Rows;
+        Assert.IsTrue(rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep));
+        Assert.IsFalse(rows.Any(row => row.Kind == TreeRowKind.CurrentModelHeader || (row.Document == Current && row.Kind == TreeRowKind.Group)));
+    }
+
+    [TestMethod]
+    public async Task FilterSkipsUntickedCurrent()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        UntickCurrentForMep(fixture);
+        filter.AddCommand.Execute(null);
+
+        filter.Categories.First(category => category.Name == "Ducts").IsChecked = true;
+        fixture.Settle();
+
+        Assert.IsNotEmpty(filter.Result);
+        Assert.IsTrue(filter.Result.All(element => element.Document == Mep));
+    }
+
+    [TestMethod]
+    public async Task FilterSwitchSelectsFilterTab()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+
+        fixture.Panel.IsFilterTab = true;
+
+        Assert.AreEqual(PanelTab.Filter, fixture.Panel.SelectedTab);
+        Assert.IsFalse(fixture.Panel.IsExplorerTab);
+    }
+
+    private static void UntickCurrentForMep(PanelFixture fixture)
+    {
+        var bar = fixture.Panel.ContextBar;
+        bar.Tick([Mep]);
+        bar.Documents.Single(item => item.Key == Current).IsChecked = false;
+        fixture.Settle();
     }
 
     [TestMethod]

@@ -33,7 +33,7 @@ public sealed class SyncTests
         fixture.Model.RaiseSelectionChanged(fixture.Elements(Current, 60));
         fixture.Settle();
 
-        Assert.AreEqual(ExplorerTabViewModel.TooManyHint, fixture.Explorer.SyncHint);
+        Assert.AreEqual(ExplorerTabViewModel.TooManyHint, fixture.Explorer.SelectionSyncHint);
         Assert.IsEmpty(fixture.Explorer.SelectedRows);
         Assert.IsFalse(fixture.Explorer.Rows.Any(row => row.Kind == TreeRowKind.Instance));
         Assert.AreEqual(60, fixture.Explorer.Rows.Where(row => row.Kind == TreeRowKind.Group && row.Document == Current)
@@ -158,7 +158,7 @@ public sealed class SyncTests
         fixture.Settle();
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
-        Assert.IsTrue(fixture.Explorer.IsSyncPaused);
+        Assert.IsTrue(fixture.Explorer.IsSelectionSyncPaused);
         Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.SelectInHost].IsVisible);
     }
 
@@ -183,8 +183,8 @@ public sealed class SyncTests
 
         fixture.Panel.ContextBar.Scope = ScopeKind.Selection;
 
-        Assert.IsFalse(fixture.Explorer.IsSyncVisible);
-        Assert.IsFalse(fixture.Explorer.IsSyncing);
+        Assert.IsFalse(fixture.Explorer.IsSelectionSyncVisible);
+        Assert.IsFalse(fixture.Explorer.IsSelectionSyncing);
     }
 
     [TestMethod]

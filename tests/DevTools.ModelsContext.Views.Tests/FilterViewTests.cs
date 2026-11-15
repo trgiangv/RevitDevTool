@@ -56,7 +56,7 @@ public sealed class FilterViewTests
     public void ReadOnlyHidesAddButtons()
     {
         using var ui = PanelUi.Open();
-        ui.ShowTab("ModelContext.Tab.Filter");
+        ui.ShowView("ModelContext.View.Filter");
         WpfSta.Invoke(() => ui.Panel.Filter.SelectedSource =
             ui.Panel.Filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased));
 
@@ -91,7 +91,7 @@ public sealed class FilterViewTests
     private static PanelUi OpenFilter()
     {
         var ui = PanelUi.Open();
-        ui.ShowTab("ModelContext.Tab.Filter");
+        ui.ShowView("ModelContext.View.Filter");
         ui.Press("Filter.Add");
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.SelectedSource is { IsCustom: true }),
             "No custom filter was added.");

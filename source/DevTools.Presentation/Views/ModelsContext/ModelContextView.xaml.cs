@@ -48,7 +48,6 @@ public partial class ModelContextView : UserControl
         _panel.ContextBar.PropertyChanged += OnContextBarChanged;
         _panel.ContextBar.Documents.CollectionChanged += OnDocumentsChanged;
         _panel.ContextMenu.ColorRequested += OnColorRequested;
-        Tabs.SelectedIndex = (int)_panel.SelectedTab;
         SyncDocuments();
     }
 
@@ -76,7 +75,7 @@ public partial class ModelContextView : UserControl
         _isSyncing = true;
         try
         {
-            foreach (var item in _panel.ContextBar.Documents.Where(item => item.IsEnabled).OrderBy(item => item.Key.IsCurrentModel).ToList())
+            foreach (var item in _panel.ContextBar.Documents.Where(item => item.IsEnabled).Reverse().OrderByDescending(selected.Contains).ToList())
             {
                 item.IsChecked = selected.Contains(item);
             }
@@ -116,16 +115,6 @@ public partial class ModelContextView : UserControl
         {
             _isSyncing = false;
         }
-    }
-
-    private void OnTabChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (!ReferenceEquals(e.OriginalSource, Tabs) || _panel is null || Tabs.SelectedIndex < 0)
-        {
-            return;
-        }
-
-        _panel.SelectedTab = (PanelTab)Tabs.SelectedIndex;
     }
 
     internal void SetColorAnchor(FrameworkElement? anchor)

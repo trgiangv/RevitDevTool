@@ -37,6 +37,7 @@ public sealed class DocumentItemViewModel : ObservableObject
             if (!_owner.CanChange(this, value))
             {
                 OnPropertyChanged();
+                _owner.OnRefused(value);
                 return;
             }
 
@@ -69,9 +70,13 @@ public sealed partial class ContextBarViewModel : ObservableObject
 {
     public const string CurrentModelLabel = "Current model";
 
+    public const string LastDocumentHint = "Keep at least one document ticked.";
+
     private int _batch;
 
     public event EventHandler? Changed;
+
+    public event EventHandler<string>? Refused;
 
     public ObservableCollection<DocumentItemViewModel> Documents { get; } = [];
 
@@ -149,10 +154,9 @@ public sealed partial class ContextBarViewModel : ObservableObject
             Documents.Add(item);
         }
 
-        if (!Documents.Any(item => item.IsChecked && item.IsEnabled))
+        if (!Documents.Any(item => item.IsChecked))
         {
-            (Documents.FirstOrDefault(item => item.Key.IsCurrentModel && item.IsEnabled)
-             ?? Documents.FirstOrDefault(item => item.IsEnabled))?.SetChecked(true);
+            Documents.FirstOrDefault(item => item.IsEnabled)?.SetChecked(true);
         }
 
         _batch--;
@@ -184,6 +188,14 @@ public sealed partial class ContextBarViewModel : ObservableObject
         }
 
         return Documents.Any(other => !ReferenceEquals(other, item) && other.IsChecked && other.IsEnabled);
+    }
+
+    internal void OnRefused(bool value)
+    {
+        if (!value)
+        {
+            Refused?.Invoke(this, LastDocumentHint);
+        }
     }
 
     internal void OnTicksChanged()

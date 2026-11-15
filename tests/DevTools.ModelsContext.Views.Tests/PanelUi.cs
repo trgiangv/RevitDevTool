@@ -68,8 +68,7 @@ internal sealed class PanelUi : IDisposable
     {
         var menu = WpfSta.Invoke(() =>
         {
-            var tabs = (System.Windows.Controls.TabControl)View.FindName("Tabs");
-            var explorer = (ExplorerTabView)((System.Windows.Controls.TabItem)tabs.Items[0]).Content;
+            var explorer = (ExplorerTabView)View.FindName("ExplorerView");
             var list = (System.Windows.Controls.Control)explorer.FindName("RowList");
             var row = Panel.Explorer.Rows.First(row => row.Text == rowName && row.Kind == TreeRowKind.Group);
             Panel.Explorer.OpenMenu(row);
@@ -86,7 +85,7 @@ internal sealed class PanelUi : IDisposable
         PressIn(Host.Row(header), "Explorer.Row.Expand");
     }
 
-    public void ShowTab(string automationId)
+    public void ShowView(string automationId)
     {
         Host.FindInWindow(automationId).Patterns.SelectionItem.Pattern.Select();
     }

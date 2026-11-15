@@ -49,12 +49,12 @@ internal sealed class PanelSession(DocumentKey model)
 
 internal readonly record struct JobTicket(PanelSession Session, int Generation, CancellationToken Token);
 
-internal sealed record ExplorerState(HashSet<string> Expanded, HashSet<string> Roots, bool IsSyncOn)
+internal sealed record ExplorerState(HashSet<string> Expanded, HashSet<string> Roots, bool IsSelectionSyncOn)
 {
-    public static ExplorerState Fresh(bool isSyncOn)
+    public static ExplorerState Fresh(bool isSelectionSyncOn)
     {
         return new ExplorerState(new HashSet<string>(StringComparer.Ordinal), new HashSet<string>(StringComparer.Ordinal),
-            isSyncOn);
+            isSelectionSyncOn);
     }
 }
 

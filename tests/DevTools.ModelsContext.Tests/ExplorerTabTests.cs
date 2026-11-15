@@ -65,6 +65,65 @@ public sealed class ExplorerTabTests
     }
 
     [TestMethod]
+    public async Task ExpandAllStopsAtTypes()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+
+        await fixture.Explorer.ExpandTreeAsync();
+
+        var rows = fixture.Explorer.Rows;
+        Assert.IsTrue(rows.Any(row => row.Kind == TreeRowKind.Type));
+        Assert.IsFalse(rows.Any(row => row.Kind == TreeRowKind.Instance));
+        Assert.IsTrue(rows.Where(row => row.HasChildren && row.Kind != TreeRowKind.Type).All(row => row.IsExpanded));
+    }
+
+    [TestMethod]
+    public async Task ExpandAllRebuildsRowsOnce()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var events = new List<NotifyCollectionChangedAction>();
+        fixture.Explorer.Rows.CollectionChanged += (_, args) => events.Add(args.Action);
+
+        await fixture.Explorer.ExpandTreeAsync();
+
+        CollectionAssert.AreEqual(new[] { NotifyCollectionChangedAction.Reset }, events);
+    }
+
+    [TestMethod]
+    public async Task CollapseAllLeavesRoots()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        await fixture.Explorer.ExpandTreeAsync();
+
+        fixture.Explorer.CollapseTree();
+
+        Assert.IsTrue(fixture.Explorer.Rows.All(row => row.Level == 0 && !row.IsExpanded));
+    }
+
+    [TestMethod]
+    public async Task ExpandAllSurvivesRefresh()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        await fixture.Explorer.ExpandTreeAsync();
+        var expanded = fixture.Explorer.Rows.Count;
+
+        await fixture.Panel.RefreshAsync();
+
+        Assert.HasCount(expanded, fixture.Explorer.Rows);
+    }
+
+    [TestMethod]
+    public async Task CollapseAllSurvivesRefresh()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Explorer.CollapseTree();
+
+        await fixture.Panel.RefreshAsync();
+
+        Assert.IsTrue(fixture.Explorer.Rows.All(row => row.Level == 0));
+    }
+
+    [TestMethod]
     public async Task CollapseRemovesDeeperRows()
     {
         using var fixture = await PanelFixture.OpenAsync();

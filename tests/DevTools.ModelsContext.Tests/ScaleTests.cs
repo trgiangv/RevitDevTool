@@ -42,6 +42,27 @@ public sealed class ScaleTests
         Assert.IsLessThan(64.0, perMillion);
     }
 
+    [TestMethod]
+    [DataRow(26_000)]
+    [DataRow(50_000)]
+    public async Task ExpandAllStaysFast(int elements)
+    {
+        var data = FakeModelGenerator.Generate(new FakeModelOptions { CurrentElements = elements, LinkElements = 2_000 });
+        using var fixture = await PanelFixture.OpenAsync(data);
+
+        var expand = Stopwatch.StartNew();
+        await fixture.Explorer.ExpandTreeAsync();
+        expand.Stop();
+        var rows = fixture.Explorer.Rows.Count;
+        var collapse = Stopwatch.StartNew();
+        fixture.Explorer.CollapseTree();
+        collapse.Stop();
+
+        Log("Expand all on {0:N0} elements: {1:N0} rows in {2:N0} ms, collapse all in {3:N0} ms",
+            elements, rows, expand.ElapsedMilliseconds, collapse.ElapsedMilliseconds);
+        Assert.IsLessThan(1_000L, expand.ElapsedMilliseconds);
+    }
+
     private void Log(string format, params object[] values)
     {
         var line = string.Format(CultureInfo.InvariantCulture, format, values);

@@ -228,7 +228,7 @@
                         <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource ElementType}" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding Kind}" Value="{x:Static model:TreeRowKind.Instance}">
-                        <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource Box}" />
+                        <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource Cube}" />
                     </DataTrigger>
 
                     <DataTrigger Binding="{Binding Badge}" Value="0">
@@ -318,19 +318,18 @@
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding Explorer.SyncHint}" Value="{x:Null}">
+                    <DataTrigger Binding="{Binding Explorer.SelectionSyncHint}" Value="{x:Null}">
                         <Setter Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="SyncPanelStyle"
+            <Style x:Key="SelectionSyncToggleStyle"
                    d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
-                   TargetType="StackPanel">
-                <Setter Property="Orientation" Value="Horizontal" />
-                <Setter Property="Margin" Value="8,0,0,0" />
+                   BasedOn="{StaticResource ToggleButtonPrimary}"
+                   TargetType="ToggleButton">
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding Explorer.IsSyncVisible}" Value="False">
+                    <DataTrigger Binding="{Binding Explorer.IsSelectionSyncVisible}" Value="False">
                         <Setter Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                 </Style.Triggers>
@@ -368,31 +367,51 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Grid Margin="0,8,0,4">
+        <Grid Margin="0,0,0,4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBox hc:InfoElement.Placeholder="Search"
-                     hc:InfoElement.ShowClearButton="True"
-                     AutomationProperties.AutomationId="Explorer.Search"
-                     Style="{StaticResource TextBoxExtend}"
-                     Text="{Binding Explorer.SearchText, UpdateSourceTrigger=PropertyChanged}" />
-            <StackPanel Grid.Column="1" Style="{StaticResource SyncPanelStyle}">
-                <TextBlock VerticalAlignment="Center" Text="Sync" />
-                <ToggleButton Margin="6,0,0,0"
-                              AutomationProperties.AutomationId="Explorer.Sync"
-                              AutomationProperties.Name="Sync"
-                              IsChecked="{Binding Explorer.IsSyncOn}"
-                              Style="{StaticResource ToggleButtonSwitch.Small}" />
-            </StackPanel>
+            <hc:SearchBar x:Name="SearchBox"
+                          hc:InfoElement.Placeholder="Search"
+                          hc:InfoElement.ShowClearButton="True"
+                          AutomationProperties.AutomationId="Explorer.Search"
+                          Style="{StaticResource SearchBarPlus}"
+                          Text="{Binding Explorer.SearchText, UpdateSourceTrigger=PropertyChanged}" />
+            <Button Grid.Column="1"
+                    Margin="4,0,0,0"
+                    hc:IconElement.Geometry="{StaticResource Expand}"
+                    AutomationProperties.AutomationId="Explorer.ExpandAll"
+                    AutomationProperties.Name="Expand all"
+                    Command="{Binding Explorer.ExpandAllCommand}"
+                    Style="{StaticResource ButtonIcon.Small}"
+                    ToolTip="Expand all down to types" />
+            <Button Grid.Column="2"
+                    hc:IconElement.Geometry="{StaticResource Collapse}"
+                    AutomationProperties.AutomationId="Explorer.CollapseAll"
+                    AutomationProperties.Name="Collapse all"
+                    Command="{Binding Explorer.CollapseAllCommand}"
+                    Style="{StaticResource ButtonIcon.Small}"
+                    ToolTip="Collapse all" />
+            <ToggleButton Grid.Column="3"
+                          Margin="4,0,0,0"
+                          hc:IconElement.Geometry="{StaticResource SelectionSync}"
+                          hc:IconElement.Height="14"
+                          hc:IconElement.Width="14"
+                          AutomationProperties.AutomationId="Explorer.SelectionSync"
+                          AutomationProperties.Name="Selection sync"
+                          IsChecked="{Binding Explorer.IsSelectionSyncOn}"
+                          Style="{StaticResource SelectionSyncToggleStyle}"
+                          ToolTip="Selection sync: tree and Revit select together" />
         </Grid>
 
         <Button Grid.Row="1"
                 Margin="0,0,0,4"
                 AutomationProperties.AutomationId="Explorer.Hint"
-                Command="{Binding Explorer.ExpandAllCommand}"
-                Content="{Binding Explorer.SyncHint}"
+                Command="{Binding Explorer.RevealAllCommand}"
+                Content="{Binding Explorer.SelectionSyncHint}"
                 Style="{StaticResource HintButtonStyle}" />
 
         <c:FlatTreeList x:Name="RowList"
@@ -415,9 +434,8 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <TextBlock VerticalAlignment="Center"
-                       AutomationProperties.AutomationId="Explorer.Status"
-                       Style="{StaticResource SecondaryText}"
+            <TextBlock AutomationProperties.AutomationId="Explorer.Status"
+                       Style="{StaticResource TextBlockDefaultSecLight}"
                        Text="{Binding Explorer.StatusText}" />
             <Button Grid.Column="1"
                     Margin="8,0,0,0"

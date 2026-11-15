@@ -12,11 +12,12 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 {
     public const int InstancePageSize = 200;
     public const int OpenPathLimit = 50;
-    public const int SyncPauseLimit = 5000;
+    public const int SelectionSyncPauseLimit = 5000;
     public const string AllModelsText = "All models";
-    public const string TooManyHint = "Too many to expand · Expand all";
+    public const string ExpandAllText = "Expand all";
+    public const string TooManyHint = "Too many to reveal · Reveal all";
 
-    public static readonly TimeSpan SyncDelay = TimeSpan.FromMilliseconds(200);
+    public static readonly TimeSpan SelectionSyncDelay = TimeSpan.FromMilliseconds(200);
     public static readonly TimeSpan SearchDelay = TimeSpan.FromMilliseconds(150);
 
     private static readonly Regex IdToken = new(@"^(?:(\d+)@)?(\d+)$", RegexOptions.CultureInvariant);
@@ -32,7 +33,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private readonly Dictionary<DocumentKey, DocumentState> _states = [];
     private readonly VisibilityController _visibility;
     private ContextData _data = ContextData.Empty;
-    private bool _isSyncOn = true;
+    private bool _isSelectionSyncOn = true;
     private ExplorerState? _pending;
     private bool _revealPending;
     private List<TreeRow> _roots = [];
@@ -54,7 +55,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _visibility = visibility;
         _bar = bar;
         _menu = menu;
-        _sendDebouncer = new Debouncer(runtime.Services.Scheduler, SyncDelay,
+        _sendDebouncer = new Debouncer(runtime.Services.Scheduler, SelectionSyncDelay,
             () => _ = _runtime.RunAsync(SendSelectionAsync));
         _searchDebouncer = new Debouncer(runtime.Services.Scheduler, SearchDelay,
             () => _ = _runtime.RunAsync(ApplySearchAsync));
@@ -84,18 +85,18 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
     } = string.Empty;
 
-    public bool IsSyncOn
+    public bool IsSelectionSyncOn
     {
-        get => _isSyncOn;
+        get => _isSelectionSyncOn;
         set
         {
-            if (!SetProperty(ref _isSyncOn, value))
+            if (!SetProperty(ref _isSelectionSyncOn, value))
             {
                 return;
             }
 
-            IsSyncPaused = false;
-            OnPropertyChanged(nameof(IsSyncing));
+            IsSelectionSyncPaused = false;
+            OnPropertyChanged(nameof(IsSelectionSyncing));
             if (value)
             {
                 _sendDebouncer.Trigger();
@@ -103,16 +104,16 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
     }
 
-    public bool IsSyncVisible => _bar.Scope != ScopeKind.Selection;
+    public bool IsSelectionSyncVisible => _bar.Scope != ScopeKind.Selection;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSyncing))]
-    public partial bool IsSyncPaused { get; private set; }
+    [NotifyPropertyChangedFor(nameof(IsSelectionSyncing))]
+    public partial bool IsSelectionSyncPaused { get; private set; }
 
-    public bool IsSyncing => IsSyncOn && IsSyncVisible && !IsSyncPaused;
+    public bool IsSelectionSyncing => IsSelectionSyncOn && IsSelectionSyncVisible && !IsSelectionSyncPaused;
 
     [ObservableProperty]
-    public partial string? SyncHint { get; private set; }
+    public partial string? SelectionSyncHint { get; private set; }
 
     public int SelectedCount => RowElements.Count;
 
@@ -124,7 +125,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     public string StatusText => string.Format(CultureInfo.CurrentCulture, "{0:N0} selected", SelectedCount);
 
-    public bool CanShowInExplorer => IsSyncVisible && _selectedElements.Any(element => _data.Find(element.Document) is null);
+    public bool CanShowInExplorer => IsSelectionSyncVisible && _selectedElements.Any(element => _data.Find(element.Document) is null);
 
     [ObservableProperty]
     public partial string? Message { get; private set; }
@@ -189,13 +190,35 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         Rows.ReplaceRange(index, end - index, [row]);
     }
 
+    public async Task ExpandTreeAsync()
+    {
+        var timer = TraceTimer.Start(_runtime.Logger);
+        foreach (var root in _roots)
+        {
+            await ExpandBranchAsync(root);
+        }
+
+        await ReadHiddenAsync();
+        Publish();
+        if (timer.IsEnabled)
+        {
+            _runtime.Logger.RowExpanded(ExpandAllText, Rows.Count, timer.ElapsedMs);
+        }
+    }
+
+    public void CollapseTree()
+    {
+        CollapseBranch(_roots);
+        Publish();
+    }
+
     public void SetSelectedRows(IEnumerable<TreeRow> rows)
     {
         _selectionVersion++;
         _selectedRows.Clear();
         _selectedRows.UnionWith(rows);
         RaiseSelectionCounts();
-        if (IsSyncOn && IsSyncVisible && !_runtime.IsBusy)
+        if (IsSelectionSyncOn && IsSelectionSyncVisible && !_runtime.IsBusy)
         {
             ClearBadges(_roots);
             _sendDebouncer.Trigger();
@@ -313,12 +336,12 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     {
         if (_pending is { } pending)
         {
-            return pending with { IsSyncOn = _isSyncOn };
+            return pending with { IsSelectionSyncOn = _isSelectionSyncOn };
         }
 
         var expanded = new HashSet<string>(StringComparer.Ordinal);
         CollectExpanded(_roots, expanded);
-        return new ExplorerState(expanded, new HashSet<string>(_roots.Select(KeyOf), StringComparer.Ordinal), _isSyncOn);
+        return new ExplorerState(expanded, new HashSet<string>(_roots.Select(KeyOf), StringComparer.Ordinal), _isSelectionSyncOn);
     }
 
     internal void Reset(ExplorerState state)
@@ -335,13 +358,13 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _searchHits = null;
         _searchMatches = [];
         _revealPending = false;
-        SyncHint = null;
-        IsSyncPaused = false;
-        if (_isSyncOn != state.IsSyncOn)
+        SelectionSyncHint = null;
+        IsSelectionSyncPaused = false;
+        if (_isSelectionSyncOn != state.IsSelectionSyncOn)
         {
-            _isSyncOn = state.IsSyncOn;
-            OnPropertyChanged(nameof(IsSyncOn));
-            OnPropertyChanged(nameof(IsSyncing));
+            _isSelectionSyncOn = state.IsSelectionSyncOn;
+            OnPropertyChanged(nameof(IsSelectionSyncOn));
+            OnPropertyChanged(nameof(IsSelectionSyncing));
         }
 
         _sendDebouncer.Cancel();
@@ -434,8 +457,8 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
         await ReadHiddenAsync();
         RaiseSelectionCounts();
-        OnPropertyChanged(nameof(IsSyncVisible));
-        OnPropertyChanged(nameof(IsSyncing));
+        OnPropertyChanged(nameof(IsSelectionSyncVisible));
+        OnPropertyChanged(nameof(IsSelectionSyncing));
         OnPropertyChanged(nameof(CanShowInExplorer));
         Publish();
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
@@ -450,23 +473,23 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
         var version = ++_selectionVersion;
         _selectedElements = [.. incoming];
-        SyncHint = null;
+        SelectionSyncHint = null;
         RaiseSelectionCounts();
         ComputeSelected();
-        if (!IsSyncOn || !IsSyncVisible)
+        if (!IsSelectionSyncOn || !IsSelectionSyncVisible)
         {
             Publish();
             return;
         }
 
-        if (_selectedElements.Count > SyncPauseLimit)
+        if (_selectedElements.Count > SelectionSyncPauseLimit)
         {
-            IsSyncPaused = true;
+            IsSelectionSyncPaused = true;
             Publish();
             return;
         }
 
-        IsSyncPaused = false;
+        IsSelectionSyncPaused = false;
         var revealed = new List<TreeRow>();
         if (_selectedElements.Count <= OpenPathLimit)
         {
@@ -474,7 +497,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
         else
         {
-            SyncHint = TooManyHint;
+            SelectionSyncHint = TooManyHint;
         }
 
         if (version != _selectionVersion)
@@ -644,7 +667,20 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private Task ExpandAllAsync()
     {
-        return Run(RevealAllAsync);
+        return Run(ExpandTreeAsync);
+    }
+
+    [RelayCommand]
+    private void CollapseAll()
+    {
+        Message = null;
+        CollapseTree();
+    }
+
+    [RelayCommand]
+    private Task RevealAllAsync()
+    {
+        return Run(RevealEverySelectedAsync);
     }
 
     private async Task ToggleRowAsync(TreeRow? row)
@@ -726,14 +762,14 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private MenuTarget TargetOf(List<TreeRow> rows)
     {
         var hidden = rows.Count > 0 && rows.All(row => row.Eye == RowEye.Hidden);
-        return new MenuTarget(rows, [], () => ElementsOf(rows), IsSyncing, hidden, _token);
+        return new MenuTarget(rows, [], () => ElementsOf(rows), IsSelectionSyncing, hidden, _token);
     }
 
     private async Task ClearAllAsync()
     {
         _selectedRows.Clear();
         _selectedElements.Clear();
-        SyncHint = null;
+        SelectionSyncHint = null;
         await _runtime.SelectAsync([], _token);
         RaiseSelectionCounts();
         ComputeSelected();
@@ -757,9 +793,9 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _bar.Tick(missing);
     }
 
-    private async Task RevealAllAsync()
+    private async Task RevealEverySelectedAsync()
     {
-        SyncHint = null;
+        SelectionSyncHint = null;
         var version = ++_selectionVersion;
         var revealed = await RevealSelectionAsync(int.MaxValue);
         if (version != _selectionVersion)
@@ -777,19 +813,19 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     private async Task SendSelectionAsync()
     {
-        if (!IsSyncOn || !IsSyncVisible || _runtime.IsBusy)
+        if (!IsSelectionSyncOn || !IsSelectionSyncVisible || _runtime.IsBusy)
         {
             return;
         }
 
         var elements = RowElements;
-        if (elements.Count > SyncPauseLimit)
+        if (elements.Count > SelectionSyncPauseLimit)
         {
-            IsSyncPaused = true;
+            IsSelectionSyncPaused = true;
             return;
         }
 
-        IsSyncPaused = false;
+        IsSelectionSyncPaused = false;
         var version = _selectionVersion;
         _sendsInFlight++;
         try
@@ -807,7 +843,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         _selectedElements = [.. elements];
-        SyncHint = null;
+        SelectionSyncHint = null;
         RaiseSelectionCounts();
         ComputeSelected();
         Publish();
@@ -868,6 +904,39 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         return null;
+    }
+
+    private async Task ExpandBranchAsync(TreeRow row)
+    {
+        if (!row.HasChildren || HoldsInstances(row))
+        {
+            return;
+        }
+
+        await EnsureChildrenAsync(row);
+        row.IsExpanded = true;
+        foreach (var child in row.Children!)
+        {
+            await ExpandBranchAsync(child);
+        }
+    }
+
+    private bool HoldsInstances(TreeRow row)
+    {
+        return row.Kind == TreeRowKind.Type
+               || (row.Kind == TreeRowKind.Group && (DocumentOf(row)?.Snapshot.GroupingDepth ?? 0) < 2);
+    }
+
+    private static void CollapseBranch(IEnumerable<TreeRow> rows)
+    {
+        foreach (var row in rows)
+        {
+            row.IsExpanded = false;
+            if (row.Children is { } children)
+            {
+                CollapseBranch(children);
+            }
+        }
     }
 
     private async Task RestoreAsync(TreeRow row, HashSet<string> expanded)

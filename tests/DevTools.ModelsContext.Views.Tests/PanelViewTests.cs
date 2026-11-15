@@ -1,15 +1,13 @@
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
 using DevTools.Presentation.Views.ModelsContext;
+using DevTools.UI.Controls;
 using FlaUI.Core.Definitions;
 using FlaUI.Core.Tools;
-using System.Windows.Automation.Peers;
-using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Threading;
-using CheckComboBox = HandyControl.Controls.CheckComboBox;
-using Tag = HandyControl.Controls.Tag;
+using AutomationElement = FlaUI.Core.AutomationElements.AutomationElement;
 
 namespace DevTools.ModelsContext.Views.Tests;
 
@@ -18,44 +16,227 @@ namespace DevTools.ModelsContext.Views.Tests;
 public sealed class PanelViewTests
 {
     [TestMethod]
-    public void TabsAreExplorerAndFilter()
+    public void ViewSwitchShowsFilter()
     {
         using var ui = PanelUi.Open();
 
-        var tabs = ui.Host.FindInWindow("ModelContext.Tabs")
-            .FindAllDescendants(cf => cf.ByControlType(ControlType.TabItem))
-            .Select(tab => tab.Name)
-            .ToArray();
+        ui.ShowView("ModelContext.View.Filter");
 
-        CollectionAssert.AreEqual(new[] { "Explorer", "Filter" }, tabs);
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.SelectedTab == PanelTab.Filter), "The switch did not pick Filter.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => IsShown(ui, "FilterView") && !IsShown(ui, "ExplorerView")), "The body did not show Filter.");
+        Assert.IsNotNull(ui.Host.FindInWindow("Filter.Add"));
     }
 
     [TestMethod]
-    public void UpdatingBarOverlapsNothing()
+    public void ViewSwitchReturnsToExplorer()
+    {
+        using var ui = PanelUi.Open();
+        ui.ShowView("ModelContext.View.Filter");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.SelectedTab == PanelTab.Filter), "The switch did not pick Filter.");
+
+        ui.ShowView("ModelContext.View.Explorer");
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.SelectedTab == PanelTab.Explorer), "The switch did not pick Explorer.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => IsShown(ui, "ExplorerView") && !IsShown(ui, "FilterView")), "The body did not show Explorer.");
+    }
+
+    [TestMethod]
+    public void ScopeSwitchWorksThroughUia()
     {
         using var ui = PanelUi.Open();
 
-        var (bar, others) = WpfSta.Invoke(() =>
-        {
-            var progress = (ProgressBar)ui.View.FindName("UpdatingBar");
-            progress.Visibility = System.Windows.Visibility.Visible;
-            ui.View.UpdateLayout();
-            System.Windows.Rect BoundsOf(string name)
-            {
-                var element = (System.Windows.FrameworkElement)ui.View.FindName(name);
-                return element.TransformToAncestor(ui.View)
-                    .TransformBounds(new System.Windows.Rect(element.RenderSize));
-            }
+        ui.ShowView("ModelContext.Scope.ActiveView");
 
-            return (BoundsOf("UpdatingBar"), new[] { BoundsOf("Tabs"), BoundsOf("DocumentsBox") });
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.ContextBar.Scope == DevTools.ModelsContext.Model.ScopeKind.ActiveView),
+            "The scope did not change.");
+    }
+
+    [TestMethod]
+    public void SwitchRowFitsNarrowPane()
+    {
+        using var ui = PanelUi.Open();
+
+        var (right, width) = WpfSta.Invoke(() =>
+        {
+            var view = (System.Windows.FrameworkElement)ui.View.FindName("SwitchRow");
+            var bounds = view.TransformToAncestor(ui.View).TransformBounds(new System.Windows.Rect(view.RenderSize));
+            return (bounds.Right, ui.View.ActualWidth);
         });
 
-        Assert.IsGreaterThan(0, bar.Height);
-        foreach (var other in others)
+        Assert.IsLessThanOrEqualTo(width - 8, right, "The switch row runs past the pane.");
+    }
+
+    [TestMethod]
+    public void SelectionSyncButtonToggles()
+    {
+        using var ui = PanelUi.Open();
+        Assert.IsTrue(WpfSta.Invoke(() => ui.Panel.Explorer.IsSelectionSyncOn));
+
+        ui.Host.FindInWindow("Explorer.SelectionSync").Patterns.Toggle.Pattern.Toggle();
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => !ui.Panel.Explorer.IsSelectionSyncOn), "Selection sync did not turn off.");
+    }
+
+    [TestMethod]
+    public void SearchClearButtonEmptiesSearch()
+    {
+        using var ui = PanelUi.Open();
+        ui.Host.FindInWindow("Explorer.Search").Patterns.Value.Pattern.SetValue("duct");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.SearchText == "duct"), "Search text did not reach Explorer.");
+
+        WpfSta.Invoke(() =>
         {
-            Assert.IsFalse(bar.IntersectsWith(other) && System.Windows.Rect.Intersect(bar, other).Height > 0,
-                "The updating bar overlaps " + other);
-        }
+            var search = (global::HandyControl.Controls.SearchBar)((ExplorerTabView)ui.View.FindName("ExplorerView")).FindName("SearchBox");
+            var clear = (Button)search.Template.FindName("ButtonClear", search);
+            Assert.IsTrue(clear.IsEnabled, "The clear button has no handler.");
+            ((System.Windows.Input.RoutedCommand)clear.Command).Execute(clear.CommandParameter, clear);
+        });
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => string.IsNullOrEmpty(ui.Panel.Explorer.SearchText)), "The clear button left the search text.");
+    }
+
+    [TestMethod]
+    public void SearchRowSharesHeight()
+    {
+        using var ui = PanelUi.Open();
+
+        var heights = WpfSta.Invoke(() =>
+        {
+            var explorer = (ExplorerTabView)ui.View.FindName("ExplorerView");
+            explorer.UpdateLayout();
+            return new[] { "Explorer.Search", "Explorer.SelectionSync" }
+                .Select(id => Descendants(explorer).OfType<System.Windows.FrameworkElement>()
+                    .First(element => System.Windows.Automation.AutomationProperties.GetAutomationId(element) == id).ActualHeight)
+                .ToList();
+        });
+
+        Assert.AreEqual(heights[0], heights[1], "Search " + heights[0] + " vs selection sync " + heights[1]);
+    }
+
+    [TestMethod]
+    public void ExpandAllButtonOpensTypes()
+    {
+        using var ui = PanelUi.Open();
+
+        ui.Press("Explorer.ExpandAll");
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.Kind == DevTools.ModelsContext.Model.TreeRowKind.Type)),
+            "Expand all did not open the types.");
+    }
+
+    [TestMethod]
+    public void CollapseAllButtonLeavesRoots()
+    {
+        using var ui = PanelUi.Open();
+
+        ui.Press("Explorer.CollapseAll");
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.All(row => row.Level == 0)),
+            "Collapse all left child rows.");
+    }
+
+    [TestMethod]
+    public void UpdatingBarCentredInExplorer()
+    {
+        using var ui = PanelUi.Open();
+
+        AssertBarCentred(ui, "DocumentsBox", "Explorer.Search");
+    }
+
+    [TestMethod]
+    public void UpdatingBarCentredInFilter()
+    {
+        using var ui = PanelUi.Open();
+        ui.ShowView("ModelContext.View.Filter");
+        Assert.IsTrue(ThemeHost.WaitFor(() => IsShown(ui, "FilterView")), "The body did not show Filter.");
+
+        AssertBarCentred(ui, "DocumentsBox", "Filter.Source");
+    }
+
+    [TestMethod]
+    public void UpdatingBarCentredWithoutDocuments()
+    {
+        using var ui = PanelUi.Open();
+        ui.ShowView("ModelContext.Scope.Selection");
+        Assert.IsTrue(ThemeHost.WaitFor(() => !IsShown(ui, "DocumentsBox")), "The documents box stayed in Selection.");
+
+        AssertBarCentred(ui, "SwitchRow", "Explorer.Search");
+    }
+
+    [TestMethod]
+    public void DuplicateNameShowsStockError()
+    {
+        using var ui = PanelUi.Open();
+        WpfSta.Invoke(() =>
+        {
+            ui.Panel.Filter.AddCommand.Execute(null);
+            ui.Panel.Filter.SaveCommand.Execute(null);
+            ui.Panel.Filter.AddCommand.Execute(null);
+        });
+        ui.ShowView("ModelContext.View.Filter");
+
+        var hasError = WpfSta.Invoke(() =>
+        {
+            ui.Panel.Filter.EditName = "New filter 1";
+            ui.View.UpdateLayout();
+            var box = (TextBox)((FilterTabView)ui.View.FindName("FilterView")).FindName("NameBox");
+            return Validation.GetHasError(box);
+        });
+
+        Assert.IsTrue(hasError);
+    }
+
+    [TestMethod]
+    public void TextIgnoresHostForeground()
+    {
+        using var ui = PanelUi.Open();
+        WpfSta.Invoke(() => ui.Panel.Filter.AddCommand.Execute(null));
+        ui.ShowView("ModelContext.View.Filter");
+        WpfSta.Invoke(() =>
+        {
+            ui.Panel.Filter.CommitRename();
+            ui.Panel.Filter.Root.AddRuleCommand.Execute(null);
+            ui.Panel.Filter.Root.AddSetCommand.Execute(null);
+        });
+        var sentinel = System.Windows.Media.Colors.Magenta;
+
+        var leaks = WpfSta.Invoke(() =>
+        {
+            ui.Host.Window.Foreground = new System.Windows.Media.SolidColorBrush(sentinel);
+            ((ToggleButton)((FilterTabView)ui.View.FindName("FilterView")).FindName("CategoriesToggle")).IsChecked = true;
+            ui.View.UpdateLayout();
+            return Descendants(ui.View).OfType<TextBlock>()
+                .Where(text => text.IsVisible && text.Foreground is System.Windows.Media.SolidColorBrush { Color: var color } && color == sentinel)
+                .Select(text => string.IsNullOrEmpty(text.Text) ? text.Name : text.Text)
+                .ToList();
+        });
+
+        Assert.IsEmpty(leaks, "Text takes the host foreground: " + string.Join(", ", leaks));
+    }
+
+    [TestMethod]
+    public void MatchRowCentresText()
+    {
+        using var ui = PanelUi.Open();
+        ui.ShowView("ModelContext.View.Filter");
+        ui.Press("Filter.Add");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.SelectedSource is { IsCustom: true }), "No custom filter was added.");
+
+        var offsets = WpfSta.Invoke(() =>
+        {
+            ui.View.UpdateLayout();
+            var combo = Descendants(ui.View).OfType<ComboBox>()
+                .First(box => System.Windows.Automation.AutomationProperties.GetAutomationId(box) == "Filter.Set.Match" && box.IsVisible);
+            var row = (System.Windows.FrameworkElement)System.Windows.Media.VisualTreeHelper.GetParent(combo);
+            var middle = CentreY(combo, ui.View);
+            return Descendants(row).OfType<TextBlock>()
+                .Where(text => text.Text is "Match" or "of the following")
+                .Select(text => Math.Abs(CentreY(text, ui.View) - middle))
+                .ToList();
+        });
+
+        Assert.HasCount(2, offsets);
+        Assert.IsTrue(offsets.All(offset => offset < 1), "Match row text is off centre: " + string.Join(", ", offsets));
     }
 
     [TestMethod]
@@ -94,11 +275,10 @@ public sealed class PanelViewTests
     public void MenuListsActions()
     {
         using var ui = PanelUi.Open();
-        ui.ShowTab("ModelContext.Tab.Filter");
+        ui.ShowView("ModelContext.View.Filter");
         var menu = WpfSta.Invoke(() =>
         {
-            var tabs = (TabControl)ui.View.FindName("Tabs");
-            var filter = (FilterTabView)((TabItem)tabs.Items[1]).Content;
+            var filter = (FilterTabView)ui.View.FindName("FilterView");
             return ((Border)filter.FindName("ResultRow")).ContextMenu!;
         });
 
@@ -230,7 +410,6 @@ public sealed class PanelViewTests
     {
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
-        Assert.IsNotNull(ui.Host.FindInWindow("ModelContext.Documents"));
         var keys = new[] { FakeModelGenerator.ArchFirst, FakeModelGenerator.ArchSecond, FakeModelGenerator.Mep };
 
         WpfSta.Invoke(() => ui.Panel.ContextBar.Tick(keys));
@@ -240,10 +419,11 @@ public sealed class PanelViewTests
         {
             box.UpdateLayout();
             var labels = ui.Panel.ContextBar.Documents.Where(item => item.IsChecked).Select(item => item.Label).ToList();
-            var tags = Tags(box);
-            CollectionAssert.AreEquivalent(labels, tags.Select(tag => tag.Content?.ToString()).ToList());
+            var tags = Tags(box).Take(labels.Count - box.HiddenTagCount).ToList();
+            Assert.IsNotEmpty(tags, "No tag is shown.");
             foreach (var tag in tags)
             {
+                CollectionAssert.Contains(labels, tag.Content?.ToString());
                 var right = tag.TranslatePoint(new System.Windows.Point(tag.ActualWidth, 0), box).X;
                 Assert.IsTrue(right <= box.ActualWidth, tag.Content + " runs past the box. right=" + right);
             }
@@ -258,30 +438,27 @@ public sealed class PanelViewTests
         WpfSta.Invoke(() => ui.Panel.ContextBar.SetDocuments(ui.Panel.ContextBar.Documents
             .Select(item => item.Info with { IsLoaded = item.Key != FakeModelGenerator.Mep })
             .ToList()));
-        var popup = OpenDocuments(ui);
 
-        ToggleAll(ui, popup);
+        ToggleAll(ui);
 
         Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 3), "All did not tick only the loaded documents.");
         WpfSta.Invoke(() =>
         {
             var mep = ui.Panel.ContextBar.Documents.Single(item => item.Key == FakeModelGenerator.Mep);
             Assert.IsFalse(mep.IsChecked, "All ticked the unloaded link.");
-            Assert.IsFalse(((System.Windows.UIElement)box.ItemContainerGenerator.ContainerFromItem(mep)).IsEnabled,
-                "The unloaded link is not disabled.");
+            Assert.IsFalse(box.IsItemEnabled(mep), "The unloaded link is not disabled.");
         });
     }
 
     [TestMethod]
-    public void AllOffKeepsCurrentModel()
+    public void AllOffKeepsFirstDocument()
     {
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
-        var popup = OpenDocuments(ui);
-        ToggleAll(ui, popup);
+        ToggleAll(ui);
         Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 4), "All did not tick every document.");
 
-        ToggleAll(ui, popup);
+        ToggleAll(ui);
 
         Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "All off did not leave one document.");
         CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
@@ -292,13 +469,42 @@ public sealed class PanelViewTests
     {
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
-        Assert.IsTrue(ThemeHost.WaitFor(() => Tags(box).Count == 1), "The current model has no tag.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "The current model is not ticked.");
 
-        CloseTag(box, ContextBarViewModel.CurrentModelLabel);
+        CloseTag(ui, ContextBarViewModel.CurrentModelLabel);
 
         Assert.AreEqual(1, WpfSta.Invoke(() => box.SelectedItems.Count), "Closing the last tag changed the selection.");
         CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
-        Assert.AreEqual(1, WpfSta.Invoke(() => Tags(box).Count));
+        Assert.IsNotNull(TagRemove(ui, ContextBarViewModel.CurrentModelLabel), "The last tag disappeared.");
+    }
+
+    [TestMethod]
+    public void ClosedBoxUnticksCurrentModel()
+    {
+        using var ui = PanelUi.Open();
+        var box = DocumentsBox(ui);
+        ToggleItem(ui, WpfSta.Invoke(() => ui.Panel.ContextBar.LabelOf(FakeModelGenerator.Mep)));
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not tick.");
+
+        ToggleItem(ui, ContextBarViewModel.CurrentModelLabel);
+
+        Assert.IsFalse(WpfSta.Invoke(() => box.IsDropDownOpen), "The drop-down opened.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "Current model did not untick.");
+        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Mep }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
+    }
+
+    [TestMethod]
+    public void TagCloseUnticksCurrentModel()
+    {
+        using var ui = PanelUi.Open();
+        var box = DocumentsBox(ui);
+        WpfSta.Invoke(() => ui.Panel.ContextBar.Tick([FakeModelGenerator.Mep]));
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not tick.");
+
+        CloseTag(ui, ContextBarViewModel.CurrentModelLabel);
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "The current model tag did not close.");
+        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Mep }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
     }
 
     [TestMethod]
@@ -307,12 +513,11 @@ public sealed class PanelViewTests
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
         WpfSta.Invoke(() => ui.Panel.ContextBar.Tick([FakeModelGenerator.Mep]));
-        Assert.IsTrue(ThemeHost.WaitFor(() => Tags(box).Count == 2), "The link has no tag.");
-        var label = WpfSta.Invoke(() => ui.Panel.ContextBar.LabelOf(FakeModelGenerator.Mep));
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not tick.");
 
-        CloseTag(box, label);
+        CloseTag(ui, WpfSta.Invoke(() => ui.Panel.ContextBar.LabelOf(FakeModelGenerator.Mep)));
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Tags(box).Count == 1), "The link tag did not close.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "The link tag did not close.");
         CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
     }
 
@@ -351,46 +556,107 @@ public sealed class PanelViewTests
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Model.KeepCount == 1), "Keep did not run after the confirm.");
     }
 
-    private static CheckComboBox DocumentsBox(PanelUi ui)
+    private static bool IsShown(PanelUi ui, string name)
     {
-        return WpfSta.Invoke(() => (CheckComboBox)ui.View.FindName("DocumentsBox"));
+        return ((System.Windows.UIElement)ui.View.FindName(name)).IsVisible;
     }
 
-    private static List<Tag> Tags(CheckComboBox box)
+    private static void AssertBarCentred(PanelUi ui, string aboveName, string belowId)
     {
-        return ((Panel)box.Template.FindName("PART_Panel", box)).Children.OfType<Tag>().ToList();
-    }
-
-    private static Popup OpenDocuments(PanelUi ui)
-    {
-        var box = DocumentsBox(ui);
-        var popup = WpfSta.Invoke(() =>
+        var (bar, above, below) = WpfSta.Invoke(() =>
         {
-            box.IsDropDownOpen = true;
-            return (Popup)box.Template.FindName("PART_Popup", box);
+            var progress = (ProgressBar)ui.View.FindName("UpdatingBar");
+            progress.Visibility = System.Windows.Visibility.Visible;
+            ui.View.UpdateLayout();
+            var next = Descendants(ui.View).OfType<System.Windows.FrameworkElement>()
+                .First(element => element.IsVisible && System.Windows.Automation.AutomationProperties.GetAutomationId(element) == belowId);
+            return (BoundsOf(progress, ui.View), BoundsOf((System.Windows.FrameworkElement)ui.View.FindName(aboveName), ui.View), BoundsOf(next, ui.View));
         });
-        Assert.IsTrue(ThemeHost.WaitFor(() => popup.IsOpen), "The documents drop-down did not open.");
-        return popup;
+
+        Assert.IsGreaterThan(0, bar.Height);
+        Assert.IsGreaterThanOrEqualTo(above.Bottom, bar.Top, "The updating bar overlaps " + aboveName);
+        Assert.IsLessThanOrEqualTo(below.Top, bar.Bottom, "The updating bar overlaps " + belowId);
+        var gapMiddle = (above.Bottom + below.Top) / 2;
+        var barMiddle = (bar.Top + bar.Bottom) / 2;
+        Assert.IsLessThan(0.5, Math.Abs(gapMiddle - barMiddle), $"The bar sits at {barMiddle}, the gap middle is {gapMiddle}.");
     }
 
-    private static void ToggleAll(PanelUi ui, Popup popup)
+    private static System.Windows.Rect BoundsOf(System.Windows.FrameworkElement element, System.Windows.Media.Visual root)
     {
-        var all = ui.Host.FindInPopup(popup, "PART_SelectAll")
-            .FindFirstDescendant(cf => cf.ByControlType(ControlType.CheckBox));
-        Assert.IsNotNull(all, "The All item has no check box.");
+        return element.TransformToAncestor(root).TransformBounds(new System.Windows.Rect(element.RenderSize));
+    }
+
+    private static double CentreY(System.Windows.FrameworkElement element, System.Windows.Media.Visual root)
+    {
+        var bounds = BoundsOf(element, root);
+        return (bounds.Top + bounds.Bottom) / 2;
+    }
+
+    private static IEnumerable<System.Windows.DependencyObject> Descendants(System.Windows.DependencyObject root)
+    {
+        var queue = new Queue<System.Windows.DependencyObject>();
+        queue.Enqueue(root);
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            yield return current;
+            for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(current); index++)
+            {
+                queue.Enqueue(System.Windows.Media.VisualTreeHelper.GetChild(current, index));
+            }
+        }
+    }
+
+    private static TagCheckComboBox DocumentsBox(PanelUi ui)
+    {
+        return WpfSta.Invoke(() => (TagCheckComboBox)ui.View.FindName("DocumentsBox"));
+    }
+
+    private static List<TagCheckComboBoxTag> Tags(TagCheckComboBox box)
+    {
+        var overflow = box.PartAutomationId(TagCheckComboBox.MoreIdSuffix);
+        return ((Panel)box.Template.FindName("PART_Panel", box)).Children.OfType<TagCheckComboBoxTag>()
+            .Where(tag => System.Windows.Automation.AutomationProperties.GetAutomationId(tag) != overflow)
+            .ToList();
+    }
+
+    private static AutomationElement Box(PanelUi ui)
+    {
+        return ui.Host.FindInWindow("ModelContext.Documents");
+    }
+
+    private static void ToggleAll(PanelUi ui)
+    {
+        var box = Box(ui);
+        box.Patterns.ExpandCollapse.Pattern.Expand();
+        var all = Retry.WhileNull(
+            () => box.FindFirstDescendant(cf => cf.ByAutomationId("ModelContext.Documents.SelectAll")),
+            TimeSpan.FromSeconds(5), ignoreException: true).Result;
+        Assert.IsNotNull(all, "The box has no All toggle.");
         all.Patterns.Toggle.Pattern.Toggle();
     }
 
-    private static void CloseTag(CheckComboBox box, string label)
+    private static void ToggleItem(PanelUi ui, string label)
     {
-        WpfSta.Invoke(() =>
-        {
-            box.UpdateLayout();
-            var tag = Tags(box).Single(tag => tag.Content?.ToString() == label);
-            var close = (Button)tag.Template.FindName("ButtonClose", tag);
-            var peer = new ButtonAutomationPeer(close);
-            ((IInvokeProvider)peer.GetPattern(PatternInterface.Invoke)).Invoke();
-        });
+        var item = Retry.WhileNull(
+            () => Box(ui).FindFirstDescendant(cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(label))),
+            TimeSpan.FromSeconds(5), ignoreException: true).Result;
+        Assert.IsNotNull(item, label + " is not in the list.");
+        item.Patterns.Toggle.Pattern.Toggle();
+    }
+
+    private static AutomationElement? TagRemove(PanelUi ui, string label)
+    {
+        return Retry.WhileNull(
+            () => Box(ui).FindFirstDescendant(cf => cf.ByAutomationId("ModelContext.Documents.TagRemove").And(cf.ByName("Remove " + label))),
+            TimeSpan.FromSeconds(5), ignoreException: true).Result;
+    }
+
+    private static void CloseTag(PanelUi ui, string label)
+    {
+        var remove = TagRemove(ui, label);
+        Assert.IsNotNull(remove, label + " has no remove button.");
+        remove.Patterns.Invoke.Pattern.Invoke();
         WpfSta.Current.Invoke(() => { }, DispatcherPriority.ContextIdle);
     }
 }

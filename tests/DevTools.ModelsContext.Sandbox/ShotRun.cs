@@ -22,7 +22,7 @@ internal static class ShotRun
             var panel = window.CurrentRun!.Panel;
             var explorer = panel.Explorer;
             var view = (ModelContextView)window.Host.Content;
-            var list = (ListBox)((ExplorerTabView)((TabItem)((TabControl)view.FindName("Tabs")).Items[0]).Content).FindName("RowList");
+            var list = (ListBox)((ExplorerTabView)view.FindName("ExplorerView")).FindName("RowList");
 
             await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.AllModelsHeader));
             var theme = ThemeManager.Current.ActualApplicationTheme;
@@ -126,13 +126,15 @@ internal static class ShotRun
     private static async Task CaptureFilterAsync(SandboxWindow window, ModelContextViewModel panel, ModelContextView view,
         string directory, AppTheme theme)
     {
-        var tabs = (TabControl)view.FindName("Tabs");
-        tabs.SelectedIndex = 1;
-        var filterView = (FilterTabView)((TabItem)tabs.Items[1]).Content;
+        panel.IsFilterTab = true;
+        var filterView = (FilterTabView)view.FindName("FilterView");
         var filter = panel.Filter;
         filter.AddCommand.Execute(null);
         await Settle(500);
-        filter.CommitRename();
+        filter.EditName = " ";
+        await Settle(500);
+        Save(window, Path.Combine(directory, $"{theme}-filter-name-error.png"));
+        filter.CancelRename();
         foreach (var category in filter.Categories.Take(3))
         {
             category.IsChecked = true;

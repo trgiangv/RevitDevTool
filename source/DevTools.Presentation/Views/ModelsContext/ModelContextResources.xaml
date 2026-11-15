@@ -1,7 +1,11 @@
 <ResourceDictionary x:Class="DevTools.Presentation.Views.ModelsContext.ModelContextResources"
                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:theme="clr-namespace:DevTools.UI.Theme;assembly=DevTools.UI">
 
+    <ResourceDictionary.MergedDictionaries>
+        <theme:ControlsResources />
+    </ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="PanelLinkButton" TargetType="Button">
         <Setter Property="Padding" Value="2,0" />
@@ -29,13 +33,10 @@
         </Setter>
     </Style>
 
-    <Style x:Key="SecondaryText" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}" />
-        <Setter Property="TextTrimming" Value="CharacterEllipsis" />
-    </Style>
-
-    <Style x:Key="ErrorText" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+    <Style x:Key="ErrorText"
+           BasedOn="{StaticResource TextBlockDefaultDanger}"
+           TargetType="TextBlock">
+        <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="TextWrapping" Value="Wrap" />
         <Style.Triggers>
             <Trigger Property="Text" Value="{x:Null}">
