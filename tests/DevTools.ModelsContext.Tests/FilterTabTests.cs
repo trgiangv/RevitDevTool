@@ -127,6 +127,53 @@ public sealed class FilterTabTests
     }
 
     [TestMethod]
+    public async Task EnterRenamesListItem()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.AddCommand.Execute(null);
+        filter.EditName = "Ducts only";
+
+        Assert.IsTrue(filter.CommitRename());
+
+        Assert.AreEqual("Ducts only", filter.SelectedSource!.Name);
+    }
+
+    [TestMethod]
+    public async Task RenameSavedFilter()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.AddCommand.Execute(null);
+        filter.SaveCommand.Execute(null);
+
+        filter.RenameCommand.Execute(null);
+        filter.EditName = "Ducts only";
+        filter.CommitRename();
+        filter.SaveCommand.Execute(null);
+
+        Assert.AreEqual("Ducts only", fixture.Model.Load().Single().Name);
+    }
+
+    [TestMethod]
+    public async Task DiscardRestoresSavedName()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.AddCommand.Execute(null);
+        filter.SaveCommand.Execute(null);
+        var saved = filter.SelectedSource!;
+        filter.BeginRename();
+        filter.EditName = "Renamed";
+        filter.CommitRename();
+
+        filter.SelectedSource = filter.Sources.First(source => !source.IsCustom);
+        filter.DiscardAndSwitchCommand.Execute(null);
+
+        Assert.AreEqual("New filter 1", saved.Name);
+    }
+
+    [TestMethod]
     public async Task SwitchAsksWhenUnsaved()
     {
         using var fixture = await PanelFixture.OpenAsync();

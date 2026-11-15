@@ -55,10 +55,11 @@
 
             <Style x:Key="SmallSecondaryText"
                    d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
-                   BasedOn="{StaticResource SecondaryText}"
+                   BasedOn="{StaticResource TextBlockDefaultSecLight}"
                    TargetType="TextBlock">
                 <Setter Property="FontSize" Value="11" />
-                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             </Style>
 
             <Style x:Key="AddButtonStyle"
@@ -94,15 +95,13 @@
                     <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
                     <TextBlock x:Name="Dirty"
                                Margin="4,0,0,0"
-                               VerticalAlignment="Center"
-                               Foreground="{DynamicResource PrimaryBrush}"
+                               Style="{StaticResource TextBlockDefaultPrimary}"
                                Text="●"
                                Visibility="Collapsed" />
                     <TextBlock x:Name="InView"
                                Margin="6,0,0,0"
-                               VerticalAlignment="Center"
                                FontSize="10"
-                               Style="{StaticResource SecondaryText}"
+                               Style="{StaticResource TextBlockDefaultSecLight}"
                                Text="in view"
                                Visibility="Collapsed" />
                 </StackPanel>
@@ -154,7 +153,7 @@
             <DataTemplate x:Key="RootSetTemplate" DataType="{x:Type vm:RuleSetViewModel}">
                 <StackPanel>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock VerticalAlignment="Center" Text="Match" />
+                        <TextBlock Style="{StaticResource TextBlockDefault}" Text="Match" />
                         <ComboBox Width="96"
                                   Margin="5,0"
                                   AutomationProperties.AutomationId="Filter.Set.Match"
@@ -164,7 +163,7 @@
                             <ComboBoxItem Content="All (AND)" Tag="{x:Static model:SetMatch.All}" />
                             <ComboBoxItem Content="Any (OR)" Tag="{x:Static model:SetMatch.Any}" />
                         </ComboBox>
-                        <TextBlock VerticalAlignment="Center" Text="of the following" />
+                        <TextBlock Style="{StaticResource TextBlockDefault}" Text="of the following" />
                     </StackPanel>
                     <Grid x:Name="NoRules"
                           Height="30"
@@ -223,12 +222,12 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock VerticalAlignment="Center"
-                                       FontWeight="SemiBold"
+                            <TextBlock FontWeight="SemiBold"
+                                       Style="{StaticResource TextBlockDefault}"
                                        Text="Set" />
                             <TextBlock Grid.Column="1"
                                        Margin="5,0,0,0"
-                                       VerticalAlignment="Center"
+                                       Style="{StaticResource TextBlockDefault}"
                                        Text="· match" />
                             <ComboBox Grid.Column="2"
                                       Width="96"
@@ -351,12 +350,12 @@
                                     Orientation="Horizontal">
                             <TextBlock x:Name="NoParameter"
                                        FontSize="10"
-                                       Style="{StaticResource SecondaryText}"
+                                       Style="{StaticResource TextBlockDefaultSecLight}"
                                        Text="{Binding NoParameterCount, StringFormat='[No parameter] · {0:N0}'}" />
                             <TextBlock x:Name="MoreValues"
                                        Margin="8,0,0,0"
                                        FontSize="10"
-                                       Style="{StaticResource SecondaryText}"
+                                       Style="{StaticResource TextBlockDefaultSecLight}"
                                        Text="more…"
                                        Visibility="Collapsed" />
                         </StackPanel>
@@ -384,8 +383,9 @@
 
             <DataTemplate DataType="{x:Type vm:UnsupportedRuleViewModel}">
                 <TextBlock Margin="0,6,0,0"
+                           HorizontalAlignment="Left"
                            AutomationProperties.AutomationId="Filter.Rule.Unsupported"
-                           Foreground="{DynamicResource WarningBrush}"
+                           Style="{StaticResource TextBlockDefaultWarning}"
                            Text="{Binding Description, StringFormat='Unsupported rule: {0}'}"
                            TextWrapping="Wrap" />
             </DataTemplate>
@@ -443,16 +443,13 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="BoxedNameStyle"
-                   d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
-                   TargetType="Border">
-                <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
-                <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="4" />
+            <Style x:Key="NameBoxStyle"
+                   BasedOn="{StaticResource TextBoxPlusBaseStyle}"
+                   TargetType="hc:TextBox">
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding Filter.NameError}" Value="{x:Null}">
-                        <Setter Property="BorderBrush" Value="Transparent" />
-                    </DataTrigger>
+                    <Trigger Property="Validation.HasError" Value="True">
+                        <Setter Property="Margin" Value="0,0,0,18" />
+                    </Trigger>
                 </Style.Triggers>
             </Style>
 
@@ -516,10 +513,11 @@
     </UserControl.Resources>
 
     <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="0,8,0,8">
+        <StackPanel Margin="0,0,0,8">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
@@ -534,8 +532,9 @@
                             <GroupStyle.HeaderTemplate>
                                 <DataTemplate DataType="{x:Type data:CollectionViewGroup}">
                                     <TextBlock Margin="4,4,0,2"
+                                               HorizontalAlignment="Left"
                                                FontWeight="SemiBold"
-                                               Opacity="0.6"
+                                               Style="{StaticResource TextBlockDefaultSecLight}"
                                                Text="{Binding Name}" />
                                 </DataTemplate>
                             </GroupStyle.HeaderTemplate>
@@ -550,12 +549,18 @@
                         Style="{StaticResource ButtonIcon.Small}"
                         ToolTip="New custom filter" />
                 <Button Grid.Column="2"
-                        hc:IconElement.Geometry="{StaticResource DeleteGeometry}"
+                        hc:IconElement.Geometry="{StaticResource Rename}"
+                        AutomationProperties.AutomationId="Filter.Rename"
+                        Command="{Binding Filter.RenameCommand}"
+                        Style="{StaticResource ButtonIcon.Small}"
+                        ToolTip="Rename custom filter (F2)" />
+                <Button Grid.Column="3"
+                        hc:IconElement.Geometry="{StaticResource TrashCan}"
                         AutomationProperties.AutomationId="Filter.Delete"
                         Command="{Binding Filter.DeleteCommand}"
                         Style="{StaticResource ButtonIcon.Small}"
                         ToolTip="Delete custom filter" />
-                <Button Grid.Column="3"
+                <Button Grid.Column="4"
                         hc:IconElement.Geometry="{StaticResource SaveGeometry}"
                         AutomationProperties.AutomationId="Filter.Save"
                         Command="{Binding Filter.SaveCommand}"
@@ -564,22 +569,20 @@
             </Grid>
 
             <StackPanel Style="{StaticResource WhenEditingName}">
-                <Border Style="{StaticResource BoxedNameStyle}">
-                    <TextBox x:Name="NameBox"
-                             AutomationProperties.AutomationId="Filter.Name"
-                             IsVisibleChanged="OnNameVisibleChanged"
-                             LostKeyboardFocus="OnNameLostFocus"
-                             PreviewKeyDown="OnNameKeyDown"
-                             Text="{Binding Filter.EditName, UpdateSourceTrigger=PropertyChanged}" />
-                </Border>
-                <TextBlock AutomationProperties.AutomationId="Filter.NameError"
-                           Style="{StaticResource ErrorText}"
-                           Text="{Binding Filter.NameError}" />
+                <hc:TextBox x:Name="NameBox"
+                            hc:InfoElement.Placeholder="Filter name"
+                            AutomationProperties.AutomationId="Filter.Name"
+                            AutomationProperties.HelpText="{Binding Filter.NameError, TargetNullValue=''}"
+                            IsVisibleChanged="OnNameVisibleChanged"
+                            LostKeyboardFocus="OnNameLostFocus"
+                            PreviewKeyDown="OnNameKeyDown"
+                            Style="{StaticResource NameBoxStyle}"
+                            Text="{Binding Filter.EditName, UpdateSourceTrigger=PropertyChanged}" />
             </StackPanel>
 
             <Border Style="{StaticResource WhenSwitchPending}">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock VerticalAlignment="Center" Text="Unsaved changes" />
+                    <TextBlock Style="{StaticResource TextBlockDefault}" Text="Unsaved changes" />
                     <Button Margin="8,0,0,0"
                             AutomationProperties.AutomationId="Filter.SaveSwitch"
                             Command="{Binding Filter.SaveAndSwitchCommand}"
@@ -599,9 +602,7 @@
             </Border>
 
             <StackPanel Style="{StaticResource WhenReadOnlyRow}">
-                <TextBlock VerticalAlignment="Center"
-                           Style="{StaticResource SecondaryText}"
-                           Text="Read only" />
+                <TextBlock Style="{StaticResource TextBlockDefaultSecLight}" Text="Read only" />
                 <Button Margin="8,0,0,0"
                         AutomationProperties.AutomationId="Filter.Duplicate"
                         Command="{Binding Filter.DuplicateCommand}"
@@ -628,8 +629,8 @@
                             <Path Style="{StaticResource CategoryChevronStyle}" />
                             <TextBlock Grid.Column="1"
                                        Margin="6,0,0,0"
-                                       VerticalAlignment="Center"
                                        FontWeight="SemiBold"
+                                       Style="{StaticResource TextBlockDefault}"
                                        Text="Categories" />
                             <TextBlock Grid.Column="2"
                                        Margin="6,0,0,0"
@@ -645,11 +646,11 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBox hc:InfoElement.Placeholder="Search categories"
-                                         hc:InfoElement.ShowClearButton="True"
-                                         AutomationProperties.AutomationId="Filter.CategorySearch"
-                                         Style="{StaticResource TextBoxExtend.Small}"
-                                         Text="{Binding Filter.CategorySearch, UpdateSourceTrigger=PropertyChanged}" />
+                                <hc:SearchBar hc:InfoElement.Placeholder="Search categories"
+                                              hc:InfoElement.ShowClearButton="True"
+                                              AutomationProperties.AutomationId="Filter.CategorySearch"
+                                              Style="{StaticResource SearchBarPlus.Small}"
+                                              Text="{Binding Filter.CategorySearch, UpdateSourceTrigger=PropertyChanged}" />
                                 <StackPanel Grid.Column="1"
                                             Margin="6,0,0,0"
                                             VerticalAlignment="Center"
@@ -707,10 +708,10 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock VerticalAlignment="Center"
-                                   AutomationProperties.AutomationId="Filter.ResultCount"
+                        <TextBlock AutomationProperties.AutomationId="Filter.ResultCount"
                                    FontSize="18"
                                    FontWeight="SemiBold"
+                                   Style="{StaticResource TextBlockDefault}"
                                    Text="{Binding Filter.ResultCount, StringFormat=N0}"
                                    Typography.NumeralAlignment="Tabular" />
                         <TextBlock Grid.Column="1"

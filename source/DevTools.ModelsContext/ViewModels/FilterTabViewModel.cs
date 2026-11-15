@@ -4,10 +4,11 @@ using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using System.Collections.ObjectModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace DevTools.ModelsContext.ViewModels;
 
-public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor, IDisposable
+public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEditor, IDisposable
 {
     public const int LivePauseLimit = 5000;
     public const string AllCategories = "All categories";
@@ -38,6 +39,11 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         Root = new RuleSetViewModel(this, true);
         _liveDebouncer = new Debouncer(runtime.Services.Scheduler, LiveDelay,
             () => _ = _runtime.RunAsync(EvaluateAsync));
+        ErrorsChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(NameError));
+            SaveCommand.NotifyCanExecuteChanged();
+        };
     }
 
     public ObservableCollection<FilterSourceItem> Sources { get; } = [];
@@ -76,6 +82,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
     [ObservableProperty]
     public partial string Name { get; private set; } = string.Empty;
 
+    [CustomValidation(typeof(FilterTabViewModel), nameof(CheckName))]
     public string EditName
     {
         get;
@@ -83,14 +90,12 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         {
             if (SetProperty(ref field, value ?? string.Empty))
             {
-                NameError = IsEditingName ? FilterNames.Validate(field, OtherNames()) : null;
+                ValidateName();
             }
         }
     } = string.Empty;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
-    public partial string? NameError { get; private set; }
+    public string? NameError => GetErrors(nameof(EditName)).FirstOrDefault()?.ErrorMessage;
 
     [ObservableProperty]
     public partial bool IsEditingName { get; private set; }
@@ -181,7 +186,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
 
         IsEditingName = true;
         EditName = Name;
-        NameError = FilterNames.Validate(EditName, OtherNames());
+        ValidateName();
     }
 
     public bool CommitRename()
@@ -191,7 +196,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
             return true;
         }
 
-        NameError = FilterNames.Validate(EditName, OtherNames());
+        ValidateName();
         if (NameError is not null)
         {
             return false;
@@ -203,6 +208,11 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         if (!string.Equals(trimmed, Name, StringComparison.Ordinal))
         {
             Name = trimmed;
+            if (_current is { IsCustom: true } item)
+            {
+                item.Name = trimmed;
+            }
+
             IsDirty = true;
         }
 
@@ -213,7 +223,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
     {
         IsEditingName = false;
         EditName = Name;
-        NameError = null;
+        ClearErrors(nameof(EditName));
     }
 
     public void LeaveRename()
@@ -221,6 +231,24 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         if (!CommitRename())
         {
             CancelRename();
+        }
+    }
+
+    public static ValidationResult? CheckName(string name, ValidationContext context)
+    {
+        var error = FilterNames.Validate(name, ((FilterTabViewModel)context.ObjectInstance).OtherNames());
+        return error is null ? ValidationResult.Success : new ValidationResult(error);
+    }
+
+    private void ValidateName()
+    {
+        if (IsEditingName)
+        {
+            ValidateProperty(EditName, nameof(EditName));
+        }
+        else
+        {
+            ClearErrors(nameof(EditName));
         }
     }
 
@@ -513,6 +541,10 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         if (_current is not null)
         {
             _current.IsDirty = false;
+            if (_current.Saved is { } saved)
+            {
+                _current.Name = saved.Name;
+            }
         }
 
         if (item is not null && !Sources.Contains(item))
@@ -522,6 +554,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
 
         _current = item;
         OnPropertyChanged(nameof(SelectedSource));
+        RenameCommand.NotifyCanExecuteChanged();
         DeleteCommand.NotifyCanExecuteChanged();
         DuplicateCommand.NotifyCanExecuteChanged();
         await LoadEditorAsync(item);
@@ -560,7 +593,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
             Name = item?.Name ?? string.Empty;
             IsEditingName = false;
             EditName = Name;
-            NameError = null;
+            ClearErrors(nameof(EditName));
             IsDirty = item is { IsCustom: true, Saved: null };
         }
         finally
@@ -587,7 +620,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         _liveDebouncer.Trigger();
     }
 
-    private bool CanDelete => _current is { IsCustom: true };
+    private bool IsCustomSelected => _current is { IsCustom: true };
 
     private bool CanDuplicate => _current is { Kind: FilterSourceKind.RuleBased };
 
@@ -611,7 +644,13 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         BeginRename();
     }
 
-    [RelayCommand(CanExecute = nameof(CanDelete))]
+    [RelayCommand(CanExecute = nameof(IsCustomSelected))]
+    private void Rename()
+    {
+        BeginRename();
+    }
+
+    [RelayCommand(CanExecute = nameof(IsCustomSelected))]
     private void Delete()
     {
         if (_current is not { IsCustom: true } item)
