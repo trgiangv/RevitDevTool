@@ -17,20 +17,45 @@ public sealed class JournalTests
         var journal = new TemporaryJournal();
 
         journal.Record(Current, View);
-        journal.Record(Current, View, [new JournalEntry(Linked, "uid-7", VisibilityAction.Hide)]);
+        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
 
         var state = journal.Get(Current, View);
         Assert.AreEqual(2, state.ChangeCount);
-        Assert.AreEqual(VisibilityAction.Hide, journal.ActionOf(Current, View, Linked));
+        Assert.AreEqual(Linked, state.LinkEntries.Single().Element);
     }
 
     [TestMethod]
     public void ResetClearsJournal()
     {
         var journal = new TemporaryJournal();
-        journal.Record(Current, View, [new JournalEntry(Linked, "uid-7", VisibilityAction.Hide)]);
+        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
 
         journal.Reset(Current, View);
+
+        Assert.AreEqual(JournalState.Empty, journal.Get(Current, View));
+    }
+
+    [TestMethod]
+    public void TemporaryResetKeepsLinkHides()
+    {
+        var journal = new TemporaryJournal();
+        journal.Record(Current, View);
+        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
+
+        journal.ResetTemporary(Current, View);
+
+        var state = journal.Get(Current, View);
+        Assert.AreEqual(1, state.ChangeCount);
+        Assert.HasCount(1, state.LinkEntries);
+    }
+
+    [TestMethod]
+    public void RemoveDropsShownEntries()
+    {
+        var journal = new TemporaryJournal();
+        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
+
+        journal.Remove(Current, View, [Linked]);
 
         Assert.AreEqual(JournalState.Empty, journal.Get(Current, View));
     }
@@ -39,19 +64,18 @@ public sealed class JournalTests
     public void UndoMarksJournalStale()
     {
         var journal = new TemporaryJournal();
-        journal.Record(Current, View, [new JournalEntry(Linked, "uid-7", VisibilityAction.Hide)]);
+        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
 
         journal.MarkStale(Current);
 
         Assert.IsTrue(journal.Get(Current, View).IsStale);
-        Assert.IsNull(journal.ActionOf(Current, View, Linked));
     }
 
     [TestMethod]
     public void LinkReloadClearsItsEntries()
     {
         var journal = new TemporaryJournal();
-        journal.Record(Current, View, [new JournalEntry(Linked, "uid-7", VisibilityAction.Hide)]);
+        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
 
         journal.ClearLink(FakeModelGenerator.Mep);
 

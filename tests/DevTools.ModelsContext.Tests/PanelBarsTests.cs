@@ -1,3 +1,4 @@
+using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
@@ -89,8 +90,136 @@ public sealed class PanelBarsTests
 
         var menu = fixture.Panel.ContextMenu;
         Assert.IsFalse(menu[MenuAction.Halftone].IsEnabled);
-        Assert.AreEqual(VisibilityReasons.LinkChildOnlyShowIsolate, menu[MenuAction.Halftone].DisabledReason);
-        Assert.IsTrue(menu[MenuAction.Isolate].UsesReferenceCommands);
+        Assert.AreEqual(VisibilityReasons.LinkChildOnlyHideShow, menu[MenuAction.Halftone].DisabledReason);
+        Assert.AreEqual(VisibilityReasons.LinkChildOnlyHideShow, menu[MenuAction.Isolate].DisabledReason);
+        Assert.AreEqual(VisibilityReasons.LinkChildOnlyHideShow, menu[MenuAction.Color].DisabledReason);
+        Assert.IsTrue(menu[MenuAction.HideShow].UsesReferenceCommands);
+    }
+
+    [TestMethod]
+    public async Task LinkChildHideRunsAndJournals()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Mep]);
+        var ducts = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Ducts")]);
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+
+        Assert.IsTrue(fixture.Model.ExecutedPlans.Single().UsesReferenceCommands);
+        CollectionAssert.AreEquivalent(ducts.ToList(),
+            fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList());
+        Assert.AreEqual(1, fixture.Panel.TemporaryBar.ChangeCount);
+    }
+
+    [TestMethod]
+    public async Task LinkChildShowUnhidesItsEntries()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Mep]);
+        var ducts = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Ducts")]);
+        var pipes = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Pipes")]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Pipes"));
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+
+        Assert.IsNull(fixture.Explorer.Message);
+        CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Model.ShownLinked.Single().ToList());
+        CollectionAssert.AreEquivalent(pipes.ToList(),
+            fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList());
+        Assert.AreEqual(0, fixture.Model.ResetCount);
+        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Pipes").Eye);
+    }
+
+    [TestMethod]
+    public async Task ShowWithoutUnhideIsDisabled()
+    {
+        using var fixture = await PanelFixture.OpenAsync(WithoutUnhide());
+        fixture.Panel.ContextBar.Tick([Mep]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+
+        fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
+
+        var item = fixture.Panel.ContextMenu[MenuAction.HideShow];
+        Assert.AreEqual("Show", item.Text);
+        Assert.AreEqual(VisibilityReasons.ShowFromReveal, item.DisabledReason);
+    }
+
+    [TestMethod]
+    public async Task ResetShowsJournaledLinkElements()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Mep]);
+        var group = fixture.Group(Mep, "Ducts");
+        var ducts = fixture.Explorer.ElementsOf([group]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(group);
+
+        await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
+
+        CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Model.ShownLinked.Single().ToList());
+        Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
+        Assert.IsFalse(fixture.Panel.IsTemporaryBarVisible);
+    }
+
+    [TestMethod]
+    public async Task ResetLeavesHidesWithoutUnhide()
+    {
+        using var fixture = await PanelFixture.OpenAsync(WithoutUnhide());
+        fixture.Panel.ContextBar.Tick([Mep]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+
+        await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
+
+        Assert.IsEmpty(fixture.Model.ShownLinked);
+        Assert.IsNotEmpty(fixture.Panel.Journal.LinkEntries);
+        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
+    }
+
+    [TestMethod]
+    public async Task KeepClearsJournalWithoutShow()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Mep]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+
+        await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
+        await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
+
+        Assert.IsEmpty(fixture.Model.ShownLinked);
+        Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
+    }
+
+    [TestMethod]
+    public async Task CurrentShowKeepsLinkHides()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Mep]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Doors"));
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+
+        Assert.AreEqual(1, fixture.Model.ResetCount);
+        Assert.IsFalse(fixture.Model.ExecutedPlans.Any(plan => plan.UsesReferenceCommands));
+        Assert.IsEmpty(fixture.Model.ShownLinked);
+        Assert.IsNotEmpty(fixture.Panel.Journal.LinkEntries);
+        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(2, fixture.Panel.TemporaryBar.ChangeCount);
+    }
+
+    private static FakeModelData WithoutUnhide()
+    {
+        var data = TestModel.SmallData;
+        return data with
+        {
+            Documents = data.Documents
+                .Select(document => document.Key.IsCurrentModel
+                    ? document
+                    : document with { Capabilities = document.Capabilities & ~DocumentCapabilities.ReferenceUnhide })
+                .ToList()
+        };
     }
 
     [TestMethod]

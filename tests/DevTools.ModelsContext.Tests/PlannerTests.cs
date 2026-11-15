@@ -54,7 +54,7 @@ public sealed class PlannerTests
         var row = TestModel.GroupRow(snapshot, Mep, TestModel.Ducts);
 
         var plan = TestModel.Planner(TestModel.SmallData, Mep)
-            .Plan(VisibilityRequest.ForRows(VisibilityAction.Isolate, row));
+            .Plan(VisibilityRequest.ForRows(VisibilityAction.Hide, row));
 
         var step = (ReferenceCommandStep)plan.Steps.Single();
         Assert.AreEqual(Mep, step.Document);
@@ -68,7 +68,7 @@ public sealed class PlannerTests
         var row = TestModel.GroupRow(snapshot, Mep, TestModel.Ducts);
         var planner = TestModel.Planner(TestModel.SmallData, Mep);
 
-        foreach (var action in new[] { VisibilityAction.Isolate, VisibilityAction.Halftone })
+        foreach (var action in Enum.GetValues<VisibilityAction>())
         {
             var request = VisibilityRequest.ForRows(action, row);
             var plan = planner.Plan(request);
@@ -79,15 +79,38 @@ public sealed class PlannerTests
     }
 
     [TestMethod]
-    public void HalftoneOnLinkChildIsDisabled()
+    public void LinkChildOnlyHidesAndShows()
     {
         var snapshot = TestModel.Snapshot(Mep);
         var row = TestModel.GroupRow(snapshot, Mep, TestModel.Ducts);
+        var planner = TestModel.Planner(TestModel.SmallData, Mep);
 
-        var plan = TestModel.Planner(TestModel.SmallData, Mep)
-            .Plan(VisibilityRequest.ForRows(VisibilityAction.Halftone, row));
+        foreach (var action in new[] { VisibilityAction.Isolate, VisibilityAction.Halftone, VisibilityAction.Color })
+        {
+            var plan = planner.Plan(VisibilityRequest.ForRows(action, row));
+            Assert.AreEqual(VisibilityReasons.LinkChildOnlyHideShow, plan.DisabledReason);
+        }
 
-        Assert.AreEqual(VisibilityReasons.LinkChildOnlyShowIsolate, plan.DisabledReason);
+        Assert.IsFalse(planner.Plan(VisibilityRequest.ForRows(VisibilityAction.Show, row)).IsDisabled);
+    }
+
+    [TestMethod]
+    public void ShowNeedsLinkUnhide()
+    {
+        var data = FakeModelGenerator.Generate(new FakeModelOptions
+        {
+            CurrentElements = 100,
+            LinkElements = 100,
+            LinkCapabilities = DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands
+        });
+        var planner = TestModel.Planner(data);
+        ElementRef[] elements = [new(Mep, 1)];
+
+        var show = planner.Plan(VisibilityRequest.ForElements(VisibilityAction.Show, elements));
+        var hide = planner.Plan(VisibilityRequest.ForElements(VisibilityAction.Hide, elements));
+
+        Assert.AreEqual(VisibilityReasons.ShowFromReveal, show.DisabledReason);
+        Assert.IsFalse(hide.IsDisabled);
     }
 
     [TestMethod]

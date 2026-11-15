@@ -11,7 +11,7 @@ public sealed record FakeModelOptions
     public int LinkElements { get; init; } = 20_000;
 
     public DocumentCapabilities LinkCapabilities { get; init; } =
-        DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands;
+        DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands | DocumentCapabilities.ReferenceUnhide;
 
     public string ModelId { get; init; } = FakeModelGenerator.ModelId;
 

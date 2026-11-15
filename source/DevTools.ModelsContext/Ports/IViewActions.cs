@@ -6,6 +6,8 @@ public interface IViewActions
 {
     Task ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken);
 
+    Task ShowLinkedAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken);
+
     Task KeepAsync(CancellationToken cancellationToken);
 
     Task ResetAsync(CancellationToken cancellationToken);

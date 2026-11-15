@@ -263,7 +263,7 @@ public sealed class ExplorerTabTests
 
         await fixture.Explorer.RunToolAsync(fixture.Group(FakeModelGenerator.Mep, "Ducts"), MenuAction.Halftone);
 
-        Assert.AreEqual(VisibilityReasons.LinkChildOnlyShowIsolate, fixture.Explorer.Message);
+        Assert.AreEqual(VisibilityReasons.LinkChildOnlyHideShow, fixture.Explorer.Message);
         Assert.IsEmpty(fixture.Model.ExecutedPlans);
     }
 

@@ -33,7 +33,7 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
     public partial bool IsConfirmingKeep { get; private set; }
 
     public string ConfirmText => string.Format(CultureInfo.CurrentCulture,
-        "{0:N0} hidden link elements become permanent. Undo them later with Reveal Hidden Elements.",
+        "{0:N0} link elements stay hidden in this view. Show them later with Reveal Hidden Elements.",
         _pendingLinkChanges);
 
     public async Task RefreshAsync(CancellationToken cancellationToken)

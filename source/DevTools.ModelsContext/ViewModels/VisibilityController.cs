@@ -39,8 +39,7 @@ public sealed class VisibilityController
 
     public JournalState Journal => View is null ? JournalState.Empty : _runtime.Journal.Get(View.Model, View.ViewId);
 
-    public int PendingLinkChanges => Journal.LinkEntries.Count(entry =>
-        entry.Action is VisibilityAction.Hide or VisibilityAction.Isolate);
+    public int PendingLinkChanges => Journal.LinkEntries.Count;
 
     private Ledger? Current => View is { } view && _ledgers.TryGetValue((view.Model, view.ViewId), out var ledger)
         ? ledger
@@ -140,11 +139,11 @@ public sealed class VisibilityController
         switch (plan.Action)
         {
             case VisibilityAction.Show:
-                ledger.Remove(plan);
-                ledger.Isolation = null;
-                await actions.ResetAsync(cancellationToken);
-                _runtime.Journal.Reset(view.Model, view.ViewId);
-                await ReapplyAsync(view, ledger, cancellationToken);
+                if (await ShowAsync(view, ledger, plan, cancellationToken) is { } reason)
+                {
+                    return reason;
+                }
+
                 break;
             case VisibilityAction.Hide:
                 await actions.ExecuteAsync(plan, cancellationToken);
@@ -200,6 +199,11 @@ public sealed class VisibilityController
         }
 
         await _runtime.Services.ViewActions.KeepAsync(cancellationToken);
+        if (View is { } view)
+        {
+            _runtime.Journal.Reset(view.Model, view.ViewId);
+        }
+
         await ClearAsync(cancellationToken);
     }
 
@@ -210,8 +214,69 @@ public sealed class VisibilityController
             return;
         }
 
-        await _runtime.Services.ViewActions.ResetAsync(cancellationToken);
+        var actions = _runtime.Services.ViewActions;
+        await actions.ResetAsync(cancellationToken);
+        if (View is { } view)
+        {
+            var shown = _runtime.Journal.Get(view.Model, view.ViewId).LinkEntries
+                .Select(entry => entry.Element)
+                .Where(element => CanUnhide(element.Document))
+                .ToList();
+            if (shown.Count > 0)
+            {
+                await actions.ShowLinkedAsync(shown, cancellationToken);
+            }
+
+            _runtime.Journal.ResetTemporary(view.Model, view.ViewId);
+            _runtime.Journal.Remove(view.Model, view.ViewId, shown);
+        }
+
         await ClearAsync(cancellationToken);
+    }
+
+    private async Task<string?> ShowAsync(
+        ViewInfo view,
+        Ledger ledger,
+        VisibilityPlan plan,
+        CancellationToken cancellationToken)
+    {
+        var journaled = _runtime.Journal.Get(view.Model, view.ViewId).LinkEntries
+            .Select(entry => entry.Element)
+            .ToHashSet();
+        var linked = plan.Steps.OfType<ReferenceCommandStep>()
+            .SelectMany(step => step.Ids.Select(id => new ElementRef(step.Document, id)))
+            .Where(journaled.Contains)
+            .ToList();
+        var temporary = plan.Steps.Any(step => step is not ReferenceCommandStep);
+        if (!temporary && linked.Count == 0)
+        {
+            return VisibilityReasons.Nothing;
+        }
+
+        var actions = _runtime.Services.ViewActions;
+        if (temporary)
+        {
+            ledger.Remove(plan);
+            ledger.Isolation = null;
+            await actions.ResetAsync(cancellationToken);
+            _runtime.Journal.ResetTemporary(view.Model, view.ViewId);
+            await ReapplyAsync(view, ledger, cancellationToken);
+        }
+
+        if (linked.Count > 0)
+        {
+            await actions.ShowLinkedAsync(linked, cancellationToken);
+            ledger.Elements.ExceptWith(linked);
+            _runtime.Journal.Remove(view.Model, view.ViewId, linked);
+        }
+
+        return null;
+    }
+
+    private bool CanUnhide(DocumentKey document)
+    {
+        return _runtime.Store.Find(document) is { } info
+               && info.Can(DocumentCapabilities.ReferenceCommands | DocumentCapabilities.ReferenceUnhide);
     }
 
     internal async Task<bool> ReadBackAsync(DocumentKey document, CancellationToken cancellationToken)
@@ -294,8 +359,13 @@ public sealed class VisibilityController
     {
         if (View is { } view)
         {
-            _runtime.Journal.Reset(view.Model, view.ViewId);
+            var remaining = _runtime.Journal.Get(view.Model, view.ViewId).LinkEntries;
             _ledgers.Remove((view.Model, view.ViewId));
+            if (remaining.Count > 0)
+            {
+                LedgerOf(view).Elements.UnionWith(remaining.Select(entry => entry.Element));
+            }
+
             _readBacks.Remove(KeyOf(view));
             await ReadBackAsync(view.Model.CurrentModel, cancellationToken);
         }
@@ -360,20 +430,24 @@ public sealed class VisibilityController
 
     private async Task RecordAsync(ViewInfo view, VisibilityPlan plan, CancellationToken cancellationToken)
     {
-        List<JournalEntry>? entries = null;
-        if (plan.Action is VisibilityAction.Hide or VisibilityAction.Isolate)
+        if (plan.Steps.Any(step => step is not ReferenceCommandStep))
         {
-            entries = [];
-            foreach (var step in plan.Steps.OfType<ReferenceCommandStep>())
-            {
-                var uniqueIds = await _runtime.Services.Source.GetUniqueIdsAsync(step.Document, step.Ids,
-                    cancellationToken);
-                entries.AddRange(step.Ids.Select(id => new JournalEntry(new ElementRef(step.Document, id),
-                    uniqueIds.TryGetValue(id, out var uniqueId) ? uniqueId : string.Empty, plan.Action)));
-            }
+            _runtime.Journal.Record(view.Model, view.ViewId);
         }
 
-        _runtime.Journal.Record(view.Model, view.ViewId, entries);
+        var entries = new List<JournalEntry>();
+        foreach (var step in plan.Steps.OfType<ReferenceCommandStep>())
+        {
+            var uniqueIds = await _runtime.Services.Source.GetUniqueIdsAsync(step.Document, step.Ids,
+                cancellationToken);
+            entries.AddRange(step.Ids.Select(id => new JournalEntry(new ElementRef(step.Document, id),
+                uniqueIds.TryGetValue(id, out var uniqueId) ? uniqueId : string.Empty)));
+        }
+
+        if (entries.Count > 0)
+        {
+            _runtime.Journal.RecordHidden(view.Model, view.ViewId, entries);
+        }
     }
 
     private sealed record Isolation(HashSet<ElementRef> Elements, HashSet<long> Groups, HashSet<DocumentKey> Links)
@@ -393,10 +467,6 @@ public sealed class VisibilityController
                         break;
                     case ElementsStep elements:
                         isolation.Elements.UnionWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
-                        break;
-                    case ReferenceCommandStep references:
-                        isolation.Elements.UnionWith(references.Ids.Select(id =>
-                            new ElementRef(references.Document, id)));
                         break;
                 }
             }
@@ -486,9 +556,6 @@ public sealed class VisibilityController
                     case ElementsStep elements:
                         Elements.ExceptWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
                         break;
-                    case ReferenceCommandStep references:
-                        Elements.ExceptWith(references.Ids.Select(id => new ElementRef(references.Document, id)));
-                        break;
                 }
             }
         }
@@ -527,12 +594,10 @@ public sealed class VisibilityController
             var steps = new List<VisibilityStep>();
             steps.AddRange(Groups.Select(pair => new GroupEverywhereStep(pair.Key, pair.Value)));
             steps.AddRange(Links.Select(link => new AttachedModelStep(link)));
-            foreach (var group in Elements.GroupBy(element => element.Document).OrderBy(group => !group.Key.IsCurrentModel))
+            foreach (var group in Elements.Where(element => element.Document.IsCurrentModel)
+                         .GroupBy(element => element.Document))
             {
-                var ids = group.Select(element => element.Id).OrderBy(id => id).ToList();
-                steps.Add(group.Key.IsCurrentModel
-                    ? new ElementsStep(group.Key, ids)
-                    : new ReferenceCommandStep(group.Key, ids));
+                steps.Add(new ElementsStep(group.Key, group.Select(element => element.Id).OrderBy(id => id).ToList()));
             }
 
             return steps.Count == 0 ? null : new VisibilityPlan(VisibilityAction.Hide, null, steps, null);

@@ -7,5 +7,6 @@ public enum DocumentCapabilities
     HideById = 1,
     HideGroupEverywhere = 2,
     WholeModel = 4,
-    ReferenceCommands = 8
+    ReferenceCommands = 8,
+    ReferenceUnhide = 16
 }

@@ -64,6 +64,10 @@ public sealed class FakeModel :
 
     public List<IReadOnlyList<long>> HiddenReads { get; } = [];
 
+    public HashSet<ElementRef> HiddenLinked { get; } = [];
+
+    public List<IReadOnlyList<ElementRef>> ShownLinked { get; } = [];
+
     public List<(DocumentKey Document, long FilterId)> HostEvaluations { get; } = [];
 
     public string? StoreError { get; set; }
@@ -223,6 +227,18 @@ public sealed class FakeModel :
         }
 
         ExecutedPlans.Add(plan);
+        foreach (var step in plan.Steps.OfType<ReferenceCommandStep>())
+        {
+            HiddenLinked.UnionWith(step.Ids.Select(id => new ElementRef(step.Document, id)));
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task ShowLinkedAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
+    {
+        ShownLinked.Add(elements.ToList());
+        HiddenLinked.ExceptWith(elements);
         return Task.CompletedTask;
     }
 

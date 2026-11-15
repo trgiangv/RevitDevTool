@@ -45,11 +45,6 @@ public sealed class VisibilityPlanner(
         return builder.IsEmpty ? VisibilityReasons.Nothing : null;
     }
 
-    private static bool IsAppearance(VisibilityAction action)
-    {
-        return action is VisibilityAction.Halftone or VisibilityAction.Color;
-    }
-
     private string? AddRow(Builder builder, TreeRow row)
     {
         return row.Kind switch
@@ -141,14 +136,19 @@ public sealed class VisibilityPlanner(
             return info.Can(DocumentCapabilities.HideById) ? null : VisibilityReasons.NotSupported;
         }
 
-        if (IsAppearance(action))
+        if (action is not (VisibilityAction.Hide or VisibilityAction.Show))
         {
-            return VisibilityReasons.LinkChildOnlyShowIsolate;
+            return VisibilityReasons.LinkChildOnlyHideShow;
         }
 
-        return info.Can(DocumentCapabilities.ReferenceCommands)
-            ? null
-            : VisibilityReasons.ReferenceCommandsUnavailable;
+        if (!info.Can(DocumentCapabilities.ReferenceCommands))
+        {
+            return VisibilityReasons.ReferenceCommandsUnavailable;
+        }
+
+        return action == VisibilityAction.Show && !info.Can(DocumentCapabilities.ReferenceUnhide)
+            ? VisibilityReasons.ShowFromReveal
+            : null;
     }
 
     private sealed class Builder(VisibilityAction action, bool collect)

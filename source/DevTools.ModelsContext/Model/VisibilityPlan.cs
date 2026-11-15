@@ -30,8 +30,10 @@ public static class VisibilityReasons
 {
     public const string HeaderHasNoActions = "Group headers have no actions.";
     public const string PageRowHasNoActions = "This row has no actions.";
-    public const string LinkChildOnlyShowIsolate = "Halftone and Color for a link are on its model row.";
+    public const string LinkChildOnlyHideShow =
+        "Inside a link, single elements can only be hidden and shown. Isolate, Halftone and Color are on the link's model row.";
     public const string ReferenceCommandsUnavailable = "Actions on single elements inside a link are not available.";
+    public const string ShowFromReveal = "Show these from Reveal Hidden Elements in Revit.";
     public const string NotLoaded = "This model is not loaded.";
     public const string NotSupported = "This model does not support this action.";
     public const string Updating = "Model data is updating.";

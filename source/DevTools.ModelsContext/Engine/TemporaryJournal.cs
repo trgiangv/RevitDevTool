@@ -2,7 +2,7 @@ using DevTools.ModelsContext.Model;
 
 namespace DevTools.ModelsContext.Engine;
 
-public sealed record JournalEntry(ElementRef Element, string UniqueId, VisibilityAction Action);
+public sealed record JournalEntry(ElementRef Element, string UniqueId);
 
 public sealed record JournalState(int ChangeCount, IReadOnlyList<JournalEntry> LinkEntries, bool IsStale)
 {
@@ -14,20 +14,23 @@ public sealed class TemporaryJournal
     private readonly object _gate = new();
     private readonly Dictionary<(DocumentKey Model, string ViewId), Page> _pages = [];
 
-    public void Record(DocumentKey model, string viewId, IEnumerable<JournalEntry>? linkEntries = null)
+    public void Record(DocumentKey model, string viewId)
+    {
+        lock (_gate)
+        {
+            PageOf(model.CurrentModel, viewId).TemporaryChanges++;
+        }
+    }
+
+    public void RecordHidden(DocumentKey model, string viewId, IEnumerable<JournalEntry> entries)
     {
         lock (_gate)
         {
             var page = PageOf(model.CurrentModel, viewId);
-            page.ChangeCount++;
-            if (linkEntries is null)
+            var batch = ++page.Batches;
+            foreach (var entry in entries)
             {
-                return;
-            }
-
-            foreach (var entry in linkEntries)
-            {
-                page.Entries[entry.Element] = entry;
+                page.Entries[entry.Element] = new Hidden(entry, batch);
             }
         }
     }
@@ -36,22 +39,43 @@ public sealed class TemporaryJournal
     {
         lock (_gate)
         {
-            return _pages.TryGetValue((model.CurrentModel, viewId), out var page)
-                ? new JournalState(page.ChangeCount, page.Entries.Values.ToList(), page.IsStale)
-                : JournalState.Empty;
+            if (!_pages.TryGetValue((model.CurrentModel, viewId), out var page))
+            {
+                return JournalState.Empty;
+            }
+
+            var changes = page.TemporaryChanges + page.Entries.Values.Select(hidden => hidden.Batch).Distinct().Count();
+            return new JournalState(changes, page.Entries.Values.Select(hidden => hidden.Entry).ToList(), page.IsStale);
         }
     }
 
-    public VisibilityAction? ActionOf(DocumentKey model, string viewId, ElementRef element)
+    public void ResetTemporary(DocumentKey model, string viewId)
     {
         lock (_gate)
         {
-            if (!_pages.TryGetValue((model.CurrentModel, viewId), out var page) || page.IsStale)
+            if (_pages.TryGetValue((model.CurrentModel, viewId), out var page))
             {
-                return null;
+                page.TemporaryChanges = 0;
+                DropIfEmpty(model.CurrentModel, viewId, page);
+            }
+        }
+    }
+
+    public void Remove(DocumentKey model, string viewId, IEnumerable<ElementRef> elements)
+    {
+        lock (_gate)
+        {
+            if (!_pages.TryGetValue((model.CurrentModel, viewId), out var page))
+            {
+                return;
             }
 
-            return page.Entries.TryGetValue(element, out var entry) ? entry.Action : null;
+            foreach (var element in elements)
+            {
+                page.Entries.Remove(element);
+            }
+
+            DropIfEmpty(model.CurrentModel, viewId, page);
         }
     }
 
@@ -99,6 +123,14 @@ public sealed class TemporaryJournal
         }
     }
 
+    private void DropIfEmpty(DocumentKey model, string viewId, Page page)
+    {
+        if (page.TemporaryChanges == 0 && page.Entries.Count == 0)
+        {
+            _pages.Remove((model, viewId));
+        }
+    }
+
     private Page PageOf(DocumentKey model, string viewId)
     {
         if (!_pages.TryGetValue((model, viewId), out var page))
@@ -110,11 +142,15 @@ public sealed class TemporaryJournal
         return page;
     }
 
+    private readonly record struct Hidden(JournalEntry Entry, int Batch);
+
     private sealed class Page
     {
-        public int ChangeCount { get; set; }
+        public int TemporaryChanges { get; set; }
 
-        public Dictionary<ElementRef, JournalEntry> Entries { get; } = [];
+        public int Batches { get; set; }
+
+        public Dictionary<ElementRef, Hidden> Entries { get; } = [];
 
         public bool IsStale { get; set; }
     }
