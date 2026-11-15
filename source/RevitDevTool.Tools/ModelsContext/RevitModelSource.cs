@@ -364,7 +364,9 @@ internal sealed class RevitModelSource(ScopeCache scopes) : IModelSource
         HashSet<long> ids;
         try
         {
-            ids = [.. ViewCollector(resolved, view).WhereElementIsNotElementType().ToElementIds().Select(id => id.ToLong())];
+            ids = ViewCollector(resolved, view) is { } collector
+                ? [.. collector.WhereElementIsNotElementType().ToElementIds().Select(id => id.ToLong())]
+                : [];
         }
         catch (Exception exception)
         {
@@ -386,10 +388,10 @@ internal sealed class RevitModelSource(ScopeCache scopes) : IModelSource
         return string.IsNullOrEmpty(element.Name) ? element.Category?.Name ?? string.Empty : element.Name;
     }
 
-    private static FilteredElementCollector ViewCollector(ResolvedDocument resolved, View view)
+    private static FilteredElementCollector? ViewCollector(ResolvedDocument resolved, View view)
     {
         return resolved.Link is { } link
-            ? new FilteredElementCollector(resolved.Model, view.Id, link.Id)
+            ? LinkElements.InView(resolved.Model, view, link.Id)
             : new FilteredElementCollector(resolved.Model, view.Id);
     }
 
@@ -481,14 +483,16 @@ internal sealed class RevitModelSource(ScopeCache scopes) : IModelSource
     {
         try
         {
-            return view is null
-                ? new FilteredElementCollector(resolved.Target)
+            if (view is null)
+            {
+                return new FilteredElementCollector(resolved.Target)
                     .WherePasses(ElementReader.ModelFilter(resolved.Target, [categoryId], options))
-                    .GetElementCount()
-                : ViewCollector(resolved, view)
-                    .OfCategoryId(categoryId)
-                    .WhereElementIsNotElementType()
                     .GetElementCount();
+            }
+
+            return ViewCollector(resolved, view) is { } collector
+                ? collector.OfCategoryId(categoryId).WhereElementIsNotElementType().GetElementCount()
+                : 0;
         }
         catch (Exception exception)
         {

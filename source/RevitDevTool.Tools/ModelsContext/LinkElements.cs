@@ -37,7 +37,12 @@ internal static class LinkElements
         foreach (var group in elements.GroupBy(element => element.Document))
         {
             var (instance, _) = RequireLink(model, group.Key);
-            var inView = new HashSet<long>(new FilteredElementCollector(model, view.Id, instance.Id)
+            if (InView(model, view, instance.Id) is not { } collector)
+            {
+                continue;
+            }
+
+            var inView = new HashSet<long>(collector
                 .WhereElementIsNotElementType()
                 .ToElementIds()
                 .Select(id => id.ToLong()));
@@ -45,6 +50,18 @@ internal static class LinkElements
         }
 
         return visible;
+    }
+
+    public static FilteredElementCollector? InView(Document model, View view, ElementId linkInstanceId)
+    {
+        return ShowsLinks(view) ? new FilteredElementCollector(model, view.Id, linkInstanceId) : null;
+    }
+
+    private static bool ShowsLinks(View view)
+    {
+        return !view.IsTemplate && view.ViewType is ViewType.FloorPlan or ViewType.CeilingPlan or ViewType.EngineeringPlan
+            or ViewType.AreaPlan or ViewType.Section or ViewType.Elevation or ViewType.Detail or ViewType.ThreeD
+            or ViewType.Walkthrough;
     }
 
     private static (RevitLinkInstance Instance, Document LinkDocument) RequireLink(Document model, DocumentKey link)
