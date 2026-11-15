@@ -4,9 +4,11 @@ Date: 2026-11-13
 
 ## Status
 
-**Proposed.** The behavior below is agreed. T3 (actions on single elements
-inside a link) waits on the go/no-go spike in Follow-Up. T0–T2, the tree, the
-filter engine and selection sync use public API only and do not wait.
+**Proposed.** The behavior below is agreed. The T3 spike (actions on single
+elements inside a link) ran on Revit 2026 on 2026-11-15: Hide and Show go,
+temporary hide, isolate and per-element overrides no-go (§5, §9). Revit 2023
+is still to run. T0–T2, the tree, the filter engine and selection sync use
+public API only.
 
 ## Context
 
@@ -43,17 +45,44 @@ marked *verified* (read from the Revit API assemblies 2023.0–2027) or
    view range and object styles. No version exposes per-category settings of
    Custom mode (verified). Revit 2023 cannot read a link's display mode; 2024
    cannot tell whether a Custom link uses host or linked view filters.
-5. The UI can Tab-select a linked element and hide, isolate or override it.
-   API code reaches those commands only through `Selection.SetReferences` with
-   `Reference.CreateLinkReference`, then `UIApplication.PostCommand`.
-   `PostableCommand` has `HideElements` and `OverrideByElement` but no
-   temporary hide or isolate (verified); the temporary commands need
-   `RevitCommandId.LookupCommandId`, and whether `CanPostCommand` accepts them
-   is unknown. `OverrideByElement` opens a modal dialog (believed).
+5. API code reaches a linked element only as a link reference
+   (`Reference.CreateLinkReference`) put in the selection with
+   `Selection.SetReferences`, then a Revit command. Spike on Revit 2026
+   (verified there):
+   - `PostCommand` accepts only `PostableCommand` members and external
+     commands. Any other id (`ID_TEMPHIDE_HIDE`, `ID_TEMPHIDE_ISOLATE`,
+     `ID_VIEW_UNHIDE_ELEMENTS`, `ID_VIEW_OVERRIDE_ELEMENTS_HALFTONE`) throws
+     `ArgumentException`, whatever the selection or view mode.
+   - `PostableCommand.HideElements` hides exactly the referenced linked
+     elements in the active view only (Hide in View, saved with the view).
+     References from several links and Current model elements go in one
+     command and one undo entry ("Hide/Isolate"). `SetReferences` of about
+     2,000 references takes about 100 ms. The command clears the selection.
+   - The internal, undocumented
+     `UIFrameworkServices.CommandHandlerService.invokeCommandHandler(string)`
+     runs a command synchronously inside the API call, from any focus
+     (verified from the panel's own button). `ID_VIEW_HIDE_ELEMENTS` hides the
+     referenced linked elements; `ID_VIEW_UNHIDE_ELEMENTS` unhides them, but
+     only while Reveal Hidden Elements is on, which the public
+     `View.EnableRevealHiddenMode` / `DisableTemporaryViewMode(RevealHiddenElements)`
+     switch in a transaction. A `TransactionGroup` around the steps makes one
+     undo entry.
+   - Posting `ToggleRevealHiddenElementsMode` from a dockable pane fails ("cannot
+     be invoked in this context": the view frame does not have focus), so the
+     first design (post, then wait for `Idling`) left Show waiting and is
+     dropped.
+   - Temporary Hide and Isolate (`ID_TEMPHIDE_HIDE`, `ID_TEMPHIDE_ISOLATE`)
+     ignore link references even through `invokeCommandHandler`, which runs
+     them for Current model elements. Revit has no temporary hide, isolate or
+     per-element override for a linked element.
+   - Temporary View Properties does not undo a Hide in View made while it is
+     on. `OverrideByElement` is postable but opens a modal dialog (not run).
 6. `FilteredElementCollector(hostDoc, viewId, linkInstanceId)` returns the
    linked elements visible for that link in a host view. It is in Revit 2023.1
-   and later, not in 2023.0 (verified). The first call per view can rebuild
-   view geometry and be slow.
+   and later, not in 2023.0 (verified). It drops elements hidden with Hide in
+   View and took 0–8 ms per link on a 38k-element link once the view was
+   drawn (verified, 2026); the first call in a new view can rebuild view
+   geometry and be slow.
 7. Temporary state is readable only per host element
    (`IsElementVisibleInTemporaryViewMode`). Nothing reports temporarily hidden
    categories or hidden linked elements (verified).
@@ -119,9 +148,9 @@ Menu items, top to bottom, each with its icon:
 | Reset view | Same as Reset on the temporary bar; shown only in temporary mode. |
 
 Items follow the tier rules (§9): an item that goes through T3 carries the
-orange dot, an item that cannot run on the target (Halftone on link rows below
-the model row, Section box in a 2D view) shows disabled with the reason as its
-tooltip. Every item also has a shortcut shown in the menu (Z, B, I, H).
+orange dot, an item that cannot run on the target (Isolate, Halftone and Color
+on link rows below the model row, Section box in a 2D view) shows disabled
+with the reason as its tooltip. Every item also has a shortcut shown in the menu (Z, B, I, H).
 
 An action or row that goes through T3 carries a small orange dot. A control
 that cannot run shows disabled with a one-line tooltip giving the reason.
@@ -282,16 +311,18 @@ it sits in, and never on anything else:
   are not covered until the eye is clicked again; Keep stores element hides,
   not a category hide.
 - A **link's** model row carries all four controls for the whole link instance
-  (T1). Rows below it offer Show and Isolate only (T3); Halftone and Color for
-  a link are on its model row.
+  (T1). Rows below it offer the eye only (T3, Hide in View, §8); Isolate,
+  Halftone and Color are disabled there with the reason, and Halftone and
+  Color for a link are on its model row.
 - The *All models* and *Current model* group rows are headers only, with no
   controls.
 - **Isolate** shows only that row's target and hides everything else
   temporarily in the active view, the same word and meaning as the Isolate
   action; Reset brings everything back.
 - The eye has three states: shown, hidden, and partly hidden (some elements of
-  the branch are hidden). It is read back from the view for Current model
-  rows and from the journal for link rows.
+  the branch are hidden). It is read back from the view: Current model rows
+  through the view's temporary state, link rows through the link view
+  collector (§5.6). The T3 journal only tells which link hides the panel made.
 - Rows the panel hid stay in the tree, dimmed with the eye off, even when the
   Active view collector no longer returns them, so they can always be shown
   again. Elements hidden outside the panel are found with Scope = Whole model.
@@ -314,21 +345,28 @@ permanent state, works when a view template locks Visibility/Graphics, and one
 call resets it.
 
 - Hide, isolate and show use `HideElementsTemporary`,
-  `IsolateElementsTemporary`, `HideCategoriesTemporary`,
-  `IsolateCategoriesTemporary`, and for linked elements the temporary UI
-  commands (T3).
+  `IsolateElementsTemporary`, `HideCategoriesTemporary` and
+  `IsolateCategoriesTemporary`.
+- Linked elements below a link's model row are the one exception: Revit has no
+  temporary hide for them (§5.5), so their eye uses Hide in View (T3, §10).
+  That hide is saved with the view at once and adds undo entries. The panel
+  records each one in the T3 journal; turning the eye back on unhides exactly
+  those elements. Elements the user hid in Revit are never unhidden by the
+  panel.
 - Halftone and Color run inside Temporary View Properties
   (`EnableTemporaryViewPropertiesMode` with the view's own id when it has no
   template, after `CanEnableTemporaryViewPropertiesMode`). Changes made there
   are dropped on exit, so Keep does not cover them.
 - **N changes** is counted by the panel; Revit cannot report it.
 - **Keep** converts hide/isolate to permanent
-  (`ConvertTemporaryHideIsolateToPermanent`). When T3 changes are pending, Keep
-  asks inline: *N hidden link elements become permanent. Undo them later with
-  Reveal Hidden Elements.* (Keep · Cancel).
+  (`ConvertTemporaryHideIsolateToPermanent`). When T3 hides are in the
+  journal, Keep asks inline: *N link elements stay hidden in this view. Show
+  them later with Reveal Hidden Elements.* (Keep · Cancel); Keep then clears
+  the journal.
 - **Reset** disables both `TemporaryHideIsolate` and `TemporaryViewProperties`
-  and clears the T3 journal. Revit also drops temporary state when the model
-  closes.
+  and unhides every journal entry of this view through the T3 queue, then
+  clears the journal. Revit also drops temporary state when the model closes;
+  T3 hides stay in the view after a close, as Keep would leave them.
 - **The eye** is one toggle on the clicked row, or on every selected row when
   the clicked row is selected. Revit has no per-element temporary unhide, so
   turning an eye back on resets temporary mode and re-applies the rest in one
@@ -341,7 +379,7 @@ call resets it.
 | T0 Current model | Its elements, or a Current model category row | API, by element id |
 | T1 Link instance | Target is a whole link | API on the `RevitLinkInstance` id |
 | T2 Category everywhere | An *All models* row | `HideCategoriesTemporary` / `IsolateCategoriesTemporary` / `SetCategoryOverrides` |
-| T3 Inside one link | One link's category, a rule result, instances | Evaluate in the link document, `SetReferences`, `PostCommand` |
+| T3 Inside one link | One link's category, a rule result, instances: Hide and Show only | Evaluate in the link document, `SetReferences`, Hide in View through the T3 queue (§10) |
 
 A result spanning documents splits: current-document matches go T0, link
 matches go T3. T2 never switches a link's display mode. Select, Box and Zoom
@@ -349,18 +387,33 @@ on linked elements always use public API (Zoom through
 `UIView.ZoomAndCenterRectangle` on the link box transformed by
 `GetTotalTransform`). Nested links are out of scope for T3.
 
-**If the go/no-go spike fails** (the temporary commands cannot be posted on
-link references), T3 visibility actions are removed: link rows keep Select,
-Box and Zoom, and their eyes and Isolate are disabled with the reason.
+**Spike result (2026).** Go for Hide and Show. No-go for Isolate, Halftone and
+Color below a link's model row: Revit has no command that applies them to a
+linked element (§5.5), so they show disabled with the reason. Hide and Show
+depend on an internal Revit call. The adapter probes for it once per session
+(`CommandHandlerService.invokeCommandHandler` found by reflection); when it is
+missing, link rows below the model row get no visibility actions
+(`ReferenceCommandsUnavailable`) and the panel logs the probe at Trace.
 
-### 10. PostCommand queue
+### 10. Linked hide and show (`LinkedHideShow`)
 
-- Single flight. `CanPostCommand` is checked first. Command ids resolve in one
-  place.
+- One synchronous Revit call per request, on the Revit thread like every other
+  view action: no `PostCommand`, no `Idling`, no queue.
 - The user's selection is snapshotted, replaced by link references, and
-  restored after the command runs.
-- Multi-step requests advance on `Idling` as a state machine; a request that
-  does not finish within a few idles is dropped and the journal marked stale.
+  restored afterwards. While the call runs, its selection changes are not
+  reported to the panel.
+- **Hide:** `TransactionGroup` "Model Context Hide": `SetReferences`,
+  `invokeCommandHandler("ID_VIEW_HIDE_ELEMENTS")`, read back with the link
+  view collector. One undo entry. Current model ids in the same request run
+  first through the temporary API in the same call.
+- **Show:** `TransactionGroup` "Model Context Show": `EnableRevealHiddenMode`,
+  `SetReferences` to the journal entries that are hidden,
+  `invokeCommandHandler("ID_VIEW_UNHIDE_ELEMENTS")`,
+  `DisableTemporaryViewMode(RevealHiddenElements)`, read back. One undo entry,
+  no visible flash. A view already in Reveal Hidden mode is left in it and not
+  read back.
+- A request whose read-back shows nothing changed fails with a one-line
+  message and the group rolls back.
 
 ### 11. Architecture
 
@@ -384,7 +437,7 @@ DevTools.Presentation/Views/ModelsContext
 DevTools.UI/Controls, Theme/Styles   FlatTreeList, Icons.xaml
 RevitDevTool.Tools/ModelsContext     Revit adapter, implements the ports
    RevitModelSource, RevitModelEvents (event hub), RevitSelectionPort,
-   RevitViewActions (T0–T2), PostCommandQueue (T3), RevitFilterEvaluator,
+   RevitViewActions (T0–T2), LinkedHideShow (T3), RevitFilterEvaluator,
    RevitFilterCatalog, DocumentRegistry, ModelsContextPane
 ```
 
@@ -502,8 +555,8 @@ storage type ("exists" = has value OR has no value). Parameter keys resolve in
 each document separately.
 
 **Events.** `RevitModelEvents` subscribes once to `SelectionChanged`,
-`DocumentChanged`, `ViewActivated`, `DocumentClosing` and, only while the T3
-queue is busy, `Idling`. Panel-level parts listen while the pane is visible;
+`DocumentChanged`, `ViewActivated` and `DocumentClosing`. Nothing subscribes
+to `Idling`. Panel-level parts listen while the pane is visible;
 tab-level handlers listen only while their tab is open, and a tab that comes
 back resyncs once. A hidden pane pauses everything.
 
@@ -590,9 +643,11 @@ panel and never throws into Revit.
 | Document list, Explorer Sync, Filter Live, selection mode | In memory per session |
 | Custom filters | Settings (`DevTools.Settings`) |
 
-- The journal stores `(linkInstance id, element UniqueId, action)`. It clears
-  with Reset, on `DocumentClosing` and on link reload; Undo/Redo marks it stale.
-  Link rows it does not know show the eye as unknown.
+- The journal stores `(view id, linkInstance id, element UniqueId)` for each
+  linked element the panel hid. Reset unhides and clears it; Keep and
+  `DocumentClosing` clear it without unhiding; a link reload re-resolves
+  UniqueIds and drops entries that no longer resolve; Undo/Redo marks it
+  stale until the next read-back.
 - A custom filter stores categories, sets and rules. A parameter is stored by
   `BuiltInParameter` name, shared parameter GUID, or name, in that order.
   Element ids are never stored.
@@ -645,8 +700,7 @@ panel and never throws into Revit.
 ## Alternatives Considered
 
 1. **Public API only (T0–T2).** Cannot hide one link's categories or act on
-   link-only data. Kept as the default wherever it is exact, and as the
-   fallback if the T3 spike fails.
+   link-only data. Kept as the default wherever it is exact.
 2. **PostCommand for everything.** No read-back, fragile timing, untestable.
 3. **View filters to apply rule results.** Each is a new project element.
    Rejected by §1.
@@ -695,8 +749,24 @@ panel and never throws into Revit.
     filtered views.
 22. **Switch links to By Linked View to keep them visible.** Changes link
     overrides behind the user's back.
-23. **Permanent `HideElements` for T3.** No API unhide; kept only as what Keep
-    produces after an explicit confirmation.
+23. **No T3 visibility at all** (link rows keep Select, Box and Zoom only).
+    Safe, but leaves links without per-element hide while Revit's own UI has
+    it. Kept as the fallback when the internal command call is missing (§9).
+24. **Temporary UI commands for T3** (`ID_TEMPHIDE_*` through `PostCommand`
+    or `invokeCommandHandler`). Not postable, and ignore link references
+    (§5.5).
+28. **`PostCommand` queue on `Idling`** (post Hide or the Reveal toggles, wait
+    for idles). Built and dropped: posted view-frame commands fail when the
+    panel has focus, the Show sequence waited until timeout, and a failed run
+    crashed Revit. The synchronous call (§10) replaces it.
+25. **Sandbox view** (duplicate the view, hide there, delete it to restore).
+    Moves the user to another view and creates and deletes view elements.
+26. **Undo or Temporary View Properties to restore T3 hides.** Undo works only
+    while the hide is the last change; Temporary View Properties does not undo
+    a Hide in View (§5.5).
+27. **CustomExporter or a whole-document diff to find hidden linked
+    elements.** The link view collector already drops them (§5.6); the journal
+    says which ones the panel hid.
 
 ## Consequences
 
@@ -704,7 +774,7 @@ Positive:
 
 - One way to reach elements in any document; links need no special UI.
 - Normal use leaves no trace in the saved model except what the user chose to
-  Keep.
+  Keep and T3 hides not yet shown again or reset.
 - Selecting by an existing Revit filter, including filters inside links.
 - Settings stay small: named custom filters only.
 - Caches hold plain data, so closed models and reloaded links are never
@@ -712,9 +782,13 @@ Positive:
 
 Tradeoffs:
 
-- T3 relies on PostCommand and may be cut by the spike.
-- Halftone and Color cannot target single elements or categories inside a
-  link; they apply to the whole link.
+- T3 hides are Hide in View: saved with the view at once and in the undo
+  history, not temporary. Each T3 Hide or Show is one undo entry.
+- T3 relies on an internal, undocumented Revit call that may change in any
+  release; each supported year needs a spike run, and the fallback is no
+  visibility actions below a link's model row.
+- Isolate, Halftone and Color cannot target single elements or categories
+  inside a link.
 - Turning one eye back on in temporary mode resets and re-applies, which may
   flicker.
 - Revit 2022 users do not get the panel. On 2023 two link hints are generic.
@@ -729,10 +803,13 @@ Tradeoffs:
   minimum has no per-category filter. Model Context logs Trace (dropped by the
   default Debug) and Error only for failures it shows; see
   `docs/agents/verification.md` (Model Context diagnostics).
-- Spike on a live host with links, Revit 2023 and 2026. Step 1 decides T3.
-  1. **Go/no-go:** `LookupCommandId` and `CanPostCommand` for Temporary
-     Hide/Isolate Element and Category with link references selected; post
-     each and record what it does to linked elements.
+- Spike on a live host with links, Revit 2023 and 2026.
+  1. **Go/no-go:** done on 2026 (Snowdon Towers HVAC, six links), results in
+     §5.5–§5.6 and §9. Still to run: the same Hide, Reveal + Unhide and
+     temporary checks on 2023, 2024, 2025 and 2027; Hide and Unhide on a view
+     whose template locks Visibility/Graphics; a view owned by another user
+     in a workshared model; and why hiding 500 references of the Architectural
+     link hid 548 elements (hosted or nested elements are the suspect).
   2. `SetReferences` with references to elements without graphics in the view
      (MEP systems, unplaced rooms).
   3. `HideCategoriesTemporary` / `IsolateCategoriesTemporary` with links in By
@@ -748,8 +825,7 @@ Tradeoffs:
      50k elements. Also check whether `FilteredElementCollector(doc, viewId)`
      returns elements hidden temporarily or permanently, and whether
      `HideElementsTemporary` accepts ids that are not in the view (§7).
-  7. Timing of post to `Idling` at about 1k references; `SetReferences` plus
-     Temporary Hide at about 10k and 50k; `HideElementsTemporary` for a
+  7. Timing of a T3 Hide and Show at about 1k, 10k and 50k references; `HideElementsTemporary` for a
      Current model category of about 50k elements.
   8. Undo and Redo visible in `DocumentChanged` with usable ids.
   9. Flicker of reset plus re-apply.

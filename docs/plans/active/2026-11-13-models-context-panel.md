@@ -188,10 +188,56 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
 ### Phase 5 — Spike and T3 (Opus, live host)
 
 - Run the 0062 Follow-Up spike on Revit 2023 and 2026; step 1 decides T3.
-- Go: `PostCommandQueue` (single flight, `Idling` state machine, selection
-  snapshot and restore) and journal wiring. No-go: disable link-row
+- Go: `LinkedHideShow` (one synchronous call per request, selection snapshot
+  and restore, 0062 §10) and journal wiring. No-go: disable link-row
   visibility with the reason, per 0062 §9.
 - Record each spike answer in this plan and amend 0062.
+
+Spike log, Revit 2026, 2026-11-15 (Snowdon Towers HVAC, six links, run on a
+duplicate of `{3D}` that was deleted afterwards):
+
+| Step | Result |
+|------|--------|
+| `LookupCommandId` for `ID_TEMPHIDE_HIDE/ISOLATE/HIDECAT/ISOLATECAT/RESET`, `ID_VIEW_UNHIDE_ELEMENTS`, `ID_VIEW_OVERRIDE_ELEMENTS_HALFTONE` | Ids resolve; `CanPostCommand` false with and without link references selected; `PostCommand` throws `ArgumentException` (only `PostableCommand` or external commands) |
+| `SetReferences` (5 link refs) + `PostableCommand.HideElements` | Hidden in that view only (link view collector 1466 → 1461; source view still 1466); selection cleared; undo entry "Hide/Isolate" |
+| Same with 1,969 refs from two links + 3 Current model ducts | One command, one undo entry; Structural 1466 → 0, Architectural 500 refs hid 548; ducts hidden; `SetReferences` 101 ms |
+| Temporary View Properties on, Hide, off | Hide survives the exit (no-go as a restore path) |
+| Reveal Hidden on + `PostCommand(ID_VIEW_UNHIDE_ELEMENTS)` | Same `ArgumentException` |
+| Reveal Hidden on + `invokeCommandHandler("ID_VIEW_UNHIDE_ELEMENTS")` | Unhides the 5; back to 1466 after Reveal off; undo entry "Hide/Isolate" |
+| Same with Reveal Hidden off | No effect |
+| `invokeCommandHandler("ID_TEMPHIDE_HIDE"/"ID_TEMPHIDE_ISOLATE")` with link refs | No effect; selection kept |
+| `invokeCommandHandler("ID_TEMPHIDE_HIDE")` with 3 Current model ducts | Temporarily hidden (control) |
+| Link view collector | 0–8 ms per link; drops Hide in View elements |
+
+Decision (user, 2026-11-15): T3 = Hide in View for link rows, Show through
+Reveal Hidden + `invokeCommandHandler`, journal-scoped Reset; Isolate,
+Halftone and Color on link rows disabled. 0062 §5, §7–§10, §13 amended.
+Remaining spike steps are in 0062 Follow-Up.
+
+Implementation, 2026-11-15: core (planner reasons, journal of hidden link
+elements, Show/Reset/Keep per 0062 §8) and adapter.
+
+- First adapter, `PostCommandQueue` (post + `Idling`): worked from MCP, failed
+  from the panel. The journal shows `API queue command
+  ID_VIEW_FRAME_REVEALHIDDEN cannot be invoked in this context` when the pane
+  has focus; Show timed out, and a later run crashed Revit (unhandled CLR
+  exception `0xe0434352` in an external event). Dropped.
+- Second spike: `View.EnableRevealHiddenMode` in a transaction, then
+  `invokeCommandHandler("ID_VIEW_UNHIDE_ELEMENTS")`, then
+  `DisableTemporaryViewMode` unhides synchronously in one call;
+  `invokeCommandHandler("ID_VIEW_HIDE_ELEMENTS")` hides synchronously; a
+  `TransactionGroup` makes one undo entry ("Model Context Show").
+- Adapter now `LinkedHideShow`. Live check on Revit 2026 through the panel
+  (FlaUI on `Explorer.Row.Eye` and `Temporary.Reset`, Scope = Selection with
+  5 linked beams): Hide hides 5/5, Show shows 5/5, Reset shows 5/5; undo has
+  one "Model Context Hide" and one "Model Context Show"; the selection is
+  kept; Revit stays responsive.
+- UIA gaps found while driving the panel: the scope radio buttons in
+  `ButtonGroupSolid` expose no Toggle/SelectionItem pattern, and the
+  documents `CheckComboBox` items cannot be ticked while the drop-down is
+  closed. Scope was set through the view model for this check.
+
+Not yet run live: Revit 2023–2025 and 2027.
 
 ### Phase 6 — Docs and acceptance
 
@@ -200,8 +246,9 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
 
 ## Risks And Recovery
 
-- T3 commands cannot be posted: the no-go path is already specified; nothing
-  in Phases 1–4 depends on T3.
+- T3 Show depends on an internal Revit call: when it is missing or has no
+  effect, link rows keep Hide and disable Show (0062 §9); nothing in Phases
+  1–4 depends on T3.
 - Flat list performance misses §12: measure in the sandbox in Phase 3 before
   the adapter; fall back to paging more aggressively, not to `TreeView`.
 - Link view collector ignores temporary hide: rows the panel hid stay in the
