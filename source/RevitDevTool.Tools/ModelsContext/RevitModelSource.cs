@@ -44,13 +44,26 @@ internal sealed class RevitModelSource(ScopeCache scopes) : IModelSource
                          .OfClass(typeof(RevitLinkInstance))
                          .Cast<RevitLinkInstance>())
             {
+                var loaded = instance.GetLinkDocument() is not null;
                 documents.Add(new DocumentInfo(DocumentRegistry.KeyOf(model, instance),
                     DocumentRegistry.LinkSourceOf(instance), DocumentRegistry.LinkNameOf(instance),
-                    instance.GetLinkDocument() is not null, DocumentCapabilities.WholeModel));
+                    loaded, LinkCapabilities(loaded)));
             }
 
             return documents;
         }, cancellationToken);
+    }
+
+    private static DocumentCapabilities LinkCapabilities(bool loaded)
+    {
+        if (!loaded)
+        {
+            return DocumentCapabilities.WholeModel;
+        }
+
+        return LinkedHideShow.IsAvailable
+            ? DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands | DocumentCapabilities.ReferenceUnhide
+            : DocumentCapabilities.WholeModel;
     }
 
     public async Task<DocumentSnapshot> BuildSnapshotAsync(

@@ -303,7 +303,7 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
     {
         try
         {
-            if (!IsActive)
+            if (!IsActive || LinkedHideShow.IsRunning)
             {
                 return;
             }

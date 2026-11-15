@@ -7,7 +7,6 @@ namespace RevitDevTool.Tools.ModelsContext;
 
 internal sealed class RevitViewActions : IViewActions
 {
-    public const string NeedsSpike = "Needs the T3 spike.";
     public const string Needs3DView = "Section box needs a 3D view.";
     public const string NoTemporaryProperties = "This view cannot take temporary overrides.";
     public const string ModelChanged = "The active model changed.";
@@ -24,12 +23,26 @@ internal sealed class RevitViewActions : IViewActions
             throw new InvalidOperationException(reason);
         }
 
-        if (plan.UsesReferenceCommands)
+        if (!plan.UsesReferenceCommands)
         {
-            throw new InvalidOperationException(NeedsSpike);
+            return RevitProfiler.RunAsync("Visibility", application => Execute(application, plan), cancellationToken);
         }
 
-        return RevitProfiler.RunAsync("Visibility", application => Execute(application, plan), cancellationToken);
+        if (plan.Action != VisibilityAction.Hide)
+        {
+            throw new InvalidOperationException(VisibilityReasons.LinkChildOnlyHideShow);
+        }
+
+        return HideWithLinksAsync(plan, cancellationToken);
+    }
+
+    public Task ShowLinkedAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
+    {
+        var linked = elements.Where(element => !element.Document.IsCurrentModel).ToList();
+        return linked.Count == 0
+            ? Task.CompletedTask
+            : RevitProfiler.RunAsync("Show links", application => LinkedHideShow.Show(application, linked),
+                cancellationToken);
     }
 
     public Task KeepAsync(CancellationToken cancellationToken)
@@ -196,6 +209,23 @@ internal sealed class RevitViewActions : IViewActions
         return (index, hidden);
     }
 
+    private static Task HideWithLinksAsync(VisibilityPlan plan, CancellationToken cancellationToken)
+    {
+        var apiSteps = plan.Steps.Where(step => step is not ReferenceCommandStep).ToList();
+        var linked = plan.Steps.OfType<ReferenceCommandStep>()
+            .SelectMany(step => step.Ids.Select(id => new ElementRef(step.Document, id)))
+            .ToList();
+        return RevitProfiler.RunAsync("Hide links", application =>
+        {
+            if (apiSteps.Count > 0)
+            {
+                Execute(application, plan with { Steps = apiSteps });
+            }
+
+            LinkedHideShow.Hide(application, linked);
+        }, cancellationToken);
+    }
+
     private static void Execute(UIApplication application, VisibilityPlan plan)
     {
         var (active, view) = RequireView(application);
@@ -266,7 +296,7 @@ internal sealed class RevitViewActions : IViewActions
         }
     }
 
-    private static (UIDocument Active, View View) RequireView(UIApplication application)
+    internal static (UIDocument Active, View View) RequireView(UIApplication application)
     {
         if (application.ActiveUIDocument is not { } active)
         {
