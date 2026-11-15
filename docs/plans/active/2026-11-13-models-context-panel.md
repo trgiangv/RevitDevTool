@@ -42,9 +42,8 @@ In scope:
 - Views in `source/DevTools.Presentation/Views/ModelsContext/` (XAML; moved
   there in Phase 3d from a separate `DevTools.ModelsContext.Views` project,
   which the add-in ILRepack would have merged and broken its self pack URIs).
-- `DevTools.UI` controls: flat tree list and icon geometries. The documents
-  box is the stock HandyControl `CheckComboBox` with tags
-  (`libs/HandyControl` is never edited).
+- `DevTools.UI` controls: flat tree list, `TagCheckComboBox` (the documents
+  box) and icon geometries (`libs/HandyControl` is never edited).
 - `RevitDevTool.Tools/ModelsContext/` (Revit adapter T0–T2, pane, filter
   compiler and catalog).
 - Tests: `DevTools.ModelsContext.Tests`, `DevTools.ModelsContext.Views.Tests`,
@@ -121,15 +120,15 @@ Owner: `source/DevTools.ModelsContext/ViewModels`; VM tests in
 
 - `ModelContextViewModel`, `ContextBar` (scope, documents, at least one
   ticked), `TreeTab` (flat rows, expand inserts a range with one Reset, paging
-  "200 of N · more", search on row text, Sync with 50 / 5,000 thresholds,
+  "200 of N · more", search on row text, Selection sync with 50 / 5,000 thresholds,
   status line), `FilterTab` (source list, custom filters with naming rules,
   sets, Live with baseline for Add/Remove, pause above 5,000), `TemporaryBar`
   (N changes, Keep confirm when T3 is pending, Reset), `ContextMenu` (items,
   hidden Select while syncing, disabled reasons, shortcuts).
-- Expected tests: tree expand inserts children; Sync opens path under 50;
-  Sync shows badges above 50; Live pauses above 5,000; name must be unique;
+- Expected tests: tree expand inserts children; Selection sync opens path under 50;
+  Selection sync shows badges above 50; Live pauses above 5,000; name must be unique;
   empty name blocks save; Keep asks when link changes pending; Select hidden
-  while Sync on.
+  while Selection sync on.
 
 ### Phase 3 — Controls, views and sandbox (Sonnet; flat list by Opus)
 
@@ -140,15 +139,15 @@ Owner: `source/DevTools.UI/Controls/FlatTreeList*`,
 
 - Phase 3a (shared controls) landed first: `FlatTreeList` styles (28 px,
   recycling) and panel icons, with FlaUI tests in `DevTools.HandyControl.Tests`.
-  The documents box is the stock HandyControl `CheckComboBox`; the view keeps
-  "All" off unloaded links and at least one ticked entry.
+  The documents box is the `DevTools.UI` `TagCheckComboBox` (Phase 5b); the
+  view keeps "All" off unloaded links and at least one ticked entry.
 
 - Views follow 0062 §2, §4, §5, §7, §12 and the canvas; every interactive
   element has an `AutomationId`.
 - Sandbox: opens the pane on the fake model; switches generated / replayed
   model, light / dark theme, and a "slow host" delay.
 - Expected UI tests (FlaUI by AutomationId, UIA patterns, no mouse events):
-  tabs are Tree and Filter; group header has no controls; eye toggles row;
+  the view switch shows Explorer and Filter; group header has no controls; eye toggles row;
   context menu lists actions; ticks show as tags; All skips unloaded links;
   the last tag cannot close.
 - Performance check in the sandbox against §12, at 100k with three links and
@@ -235,9 +234,43 @@ elements, Show/Reset/Keep per 0062 §8) and adapter.
 - UIA gaps found while driving the panel: the scope radio buttons in
   `ButtonGroupSolid` expose no Toggle/SelectionItem pattern, and the
   documents `CheckComboBox` items cannot be ticked while the drop-down is
-  closed. Scope was set through the view model for this check.
+  closed. Scope was set through the view model for this check. Both gaps are
+  closed in Phase 5b (`PanelButtonGroup` peer, `TagCheckComboBox` item peers).
 
 Not yet run live: Revit 2023–2025 and 2027.
+
+Third spike, 2026-11-15 (Isolate, Halftone and Color on linked elements,
+0062 §5.11): no internal isolate or override path; Revit refuses the temporary
+and override commands on link references (`canExecute` false), Halftone runs
+with no effect, and a `SelectionFilterElement` misses linked elements. A host
+view filter on `IFC_GUID` reaches linked elements but is not a usable key
+(case-insensitive rules collide, no link-instance distinction, 7,823 rules
+took 305 s to regenerate). Isolate by hiding the rest of the link works
+(7,818 hidden in about 730 ms, restore about 5.5 s) and stays a candidate
+until the edge cases in 0062 Follow-Up 8 are measured.
+
+### Phase 5b — Panel UI/UX revision (2026-11-15)
+
+- Explorer and Filter switch through an icon `ButtonGroup` next to the scope
+  group instead of a `TabControl`.
+- Sync becomes an icon toggle named Selection sync (two-way selection between
+  tree and Revit), renamed in code too.
+- The documents box is a new control in `DevTools.UI`: tags on one line with
+  `+N` overflow and a search box in the drop-down.
+- Current model is checked by default and can be unchecked like a link.
+- Expand all and Collapse all beside the Explorer search, timed at 26k and 50k
+  elements.
+- The design canvas (Panel and Selection sync artboards) is updated to match.
+- Done: the switch row (scope | view) fits 300 px; the documents box has its
+  own row below. `PanelButtonGroup` exposes the RadioButtons to UIA (the stock
+  `ButtonGroup` item peer hid Toggle/SelectionItem). The Current model could be
+  unticked only after another entry was ticked; the box and `SetDocuments`
+  favoured it (unticking "All" kept it, and a refresh with no loaded tick, as
+  during a link reload, re-ticked it). Now one rule for every entry: the last
+  tick stays. Expand all stops at Type rows: in the fake model it takes 2 ms for
+  542 rows at 26k and 50k elements; opening instances too took 152 ms (23,470
+  rows) at 26k and 281 ms (38,187 rows) at 50k, plus one Revit call per Type.
+  Proof: `DevTools.ModelsContext.Tests` and `DevTools.ModelsContext.Views.Tests`.
 
 ### Phase 6 — Docs and acceptance
 
