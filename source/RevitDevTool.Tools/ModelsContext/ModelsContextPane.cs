@@ -18,6 +18,7 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig, ILogg
     private readonly ContentControl _host = new();
     private RevitModelEvents? _events;
     private ModelContextViewModel? _panel;
+    private ParameterCache? _parameters;
     private ScopeCache? _scopes;
 
     public void Initialize(UIControlledApplication application)
@@ -29,7 +30,8 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig, ILogg
 
         RevitProfiler.Use(logger);
         _scopes = new ScopeCache();
-        _events = new RevitModelEvents(application, _scopes, Dispatcher.CurrentDispatcher);
+        _parameters = new ParameterCache();
+        _events = new RevitModelEvents(application, _scopes, _parameters, Dispatcher.CurrentDispatcher);
         _host.IsVisibleChanged += OnVisibleChanged;
         DockablePaneProvider
             .Register(application, PaneGuid, ModelContextViewModel.PanelTitle)
@@ -77,7 +79,7 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig, ILogg
 
     private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (_events is null || _scopes is null)
+        if (_events is null || _scopes is null || _parameters is null)
         {
             return;
         }
@@ -86,19 +88,19 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig, ILogg
         _events.IsActive = visible;
         if (visible && _panel is null)
         {
-            Build(_events, _scopes);
+            Build(_events, _scopes, _parameters);
         }
     }
 
-    private void Build(RevitModelEvents events, ScopeCache scopes)
+    private void Build(RevitModelEvents events, ScopeCache scopes, ParameterCache parameters)
     {
         using var timer = TraceTimer.Start(logger, "Panel build");
         var services = new ModelContextServices(
-            new RevitModelSource(scopes),
+            new RevitModelSource(scopes, parameters),
             events,
             new RevitSelectionPort(),
             new RevitViewActions(),
-            new RevitFilterEvaluator(),
+            new RevitFilterEvaluator(parameters),
             new RevitFilterCatalog(),
             new CustomFilterStore(fileConfig),
             new SystemClock(),

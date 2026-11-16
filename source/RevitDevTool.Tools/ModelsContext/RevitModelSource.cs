@@ -9,11 +9,9 @@ using ElementRecord = DevTools.ModelsContext.Model.ElementRecord;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
-internal sealed class RevitModelSource(ScopeCache scopes) : IModelSource
+internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache parameters) : IModelSource
 {
     public const string Revit = "Revit";
-
-    private const int CategoriesPerCatalogSlice = 20;
 
     private static readonly TreeSchema RevitSchema = new(["Category", "Family", "Type", "Instance"]);
 
@@ -236,34 +234,11 @@ internal sealed class RevitModelSource(ScopeCache scopes) : IModelSource
         return new ElementDelta(source, types, added.Elements, modified.Elements, changes.Deleted);
     }
 
-    public async Task<IReadOnlyList<ParameterInfo>> GetParameterCatalogAsync(
+    public Task<IReadOnlyList<ParameterInfo>> GetParameterCatalogAsync(
         SourceId source,
         CancellationToken cancellationToken)
     {
-        var categories = await RevitProfiler.RunAsync("Catalog categories", application =>
-                FilterableCategories(DocumentRegistry.RequireSource(application, source)),
-            cancellationToken).ConfigureAwait(false);
-        var seen = new HashSet<long>();
-        var catalog = new List<ParameterInfo>();
-        var stats = ProfileStats.Start("Catalog");
-        var failures = FailureTally.Start(RevitProfiler.Logger);
-        for (var start = 0; start < categories.Count; start += CategoriesPerCatalogSlice)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var chunk = categories.Skip(start).Take(CategoriesPerCatalogSlice).ToList();
-            var slice = await RevitProfiler.RunAsync("Catalog slice", application =>
-                    CatalogSlice(DocumentRegistry.RequireSource(application, source), chunk, seen, failures),
-                cancellationToken, stats).ConfigureAwait(false);
-            catalog.AddRange(slice);
-        }
-
-        failures?.Flush("Catalog", source, categories.Count);
-        stats?.Flush(source, categories.Count);
-        return catalog
-            .GroupBy(info => info.Key)
-            .Select(group => group.First())
-            .OrderBy(info => info.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+        return ParameterCatalogReader.ReadAsync(source, parameters, cancellationToken);
     }
 
     public Task<IReadOnlyDictionary<long, string>> GetUniqueIdsAsync(
@@ -393,46 +368,6 @@ internal sealed class RevitModelSource(ScopeCache scopes) : IModelSource
         return resolved.Link is { } link
             ? LinkElements.InView(resolved.Model, view, link.Id)
             : new FilteredElementCollector(resolved.Model, view.Id);
-    }
-
-    private static List<long> FilterableCategories(Document document)
-    {
-        var filterable = new HashSet<long>(ParameterFilterUtilities.GetAllFilterableCategories().Select(id => id.ToLong()));
-        return ElementReader.ModelCategoryIds(document).Select(id => id.ToLong()).Where(filterable.Contains).ToList();
-    }
-
-    private static List<ParameterInfo> CatalogSlice(
-        Document document,
-        List<long> categories,
-        HashSet<long> seen,
-        FailureTally? failures)
-    {
-        var found = new List<ParameterInfo>();
-        foreach (var category in categories)
-        {
-            foreach (var parameter in FilterableParameters(document, category, failures))
-            {
-                if (seen.Add(parameter.ToLong()) && ParameterResolver.InfoOf(document, parameter, failures) is { } info)
-                {
-                    found.Add(info);
-                }
-            }
-        }
-
-        return found;
-    }
-
-    private static ICollection<ElementId> FilterableParameters(Document document, long category, FailureTally? failures)
-    {
-        try
-        {
-            return ParameterFilterUtilities.GetFilterableParametersInCommon(document, [category.ToElementId()]);
-        }
-        catch (Exception exception)
-        {
-            failures?.Add(exception);
-            return [];
-        }
     }
 
     private static (int Next, List<GroupCount> Counts) CountSlice(

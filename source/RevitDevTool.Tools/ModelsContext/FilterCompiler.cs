@@ -1,4 +1,5 @@
 using DevTools.ModelsContext.Diagnostics;
+using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using Nice3point.Revit.Extensions;
 using System.Globalization;
@@ -59,6 +60,38 @@ internal abstract record Compiled
         };
     }
 
+    public static Compiled Not(Compiled compiled)
+    {
+        return compiled switch
+        {
+            MatchAll => None,
+            MatchNone => All,
+            Filter filter => new Filter(Invert(filter.Value)),
+            _ => compiled
+        };
+    }
+
+    public bool Passes(Element element)
+    {
+        return this switch
+        {
+            MatchAll => true,
+            Filter filter => filter.Value.PassesFilter(element),
+            _ => false
+        };
+    }
+
+    private static ElementFilter Invert(ElementFilter filter)
+    {
+        return filter switch
+        {
+            ElementParameterFilter parameter => new ElementParameterFilter(parameter.GetRules(), !parameter.Inverted),
+            LogicalAndFilter and => new LogicalOrFilter(and.GetFilters().Select(Invert).ToList()),
+            LogicalOrFilter or => new LogicalAndFilter(or.GetFilters().Select(Invert).ToList()),
+            _ => throw new NotSupportedException(filter.GetType().Name)
+        };
+    }
+
     public sealed record MatchAll : Compiled;
 
     public sealed record MatchNone : Compiled;
@@ -66,65 +99,159 @@ internal abstract record Compiled
     public sealed record Filter(ElementFilter Value) : Compiled;
 }
 
-internal sealed class FilterCompiler(Document document, ICollection<ElementId> categories)
+internal sealed class FilterPlan(Compiled native, Func<Element, bool>? exact)
+{
+    public Compiled Native { get; } = native;
+
+    public List<long> Match(Document target, List<ElementId> chunk)
+    {
+        if (chunk.Count == 0)
+        {
+            return [];
+        }
+
+        ICollection<ElementId> ids = Native switch
+        {
+            Compiled.MatchNone => new List<ElementId>(),
+            Compiled.Filter matcher => new FilteredElementCollector(target, chunk)
+                .WherePasses(matcher.Value)
+                .ToElementIds(),
+            _ => chunk
+        };
+        return exact is null
+            ? ids.Select(id => id.ToLong()).ToList()
+            : ids.Where(id => target.GetElement(id) is { } element && exact(element)).Select(id => id.ToLong()).ToList();
+    }
+}
+
+internal sealed class FilterCompiler(
+    Document target,
+    Units hostUnits,
+    ICollection<ElementId> categories,
+    Func<ResolvedParameter, IReadOnlyDictionary<string, int>> enumValues,
+    Func<ParameterKey, IReadOnlyCollection<long>?> knownIds)
 {
     private const double Tolerance = 1e-6;
 
-    private readonly Dictionary<ParameterKey, ElementId?> _parameters = [];
+    private readonly Dictionary<ParameterKey, IReadOnlyList<ResolvedParameter>> _parameters = [];
+    private readonly Dictionary<RuleNode, Compiled> _rules = [];
 
-    public Compiled Compile(FilterSet set)
+    public FilterPlan Plan(FilterSet root)
     {
-        if (set.Children.Count == 0)
+        if (!CaseSensitiveRules.Any(root))
         {
-            return Compiled.All;
+            return new FilterPlan(Compile(root, false), null);
         }
 
-        var parts = set.Children.Select(Compile).ToList();
-        return set.Match == SetMatch.All ? Compiled.And(parts) : Compiled.Or(parts);
+        var exact = Exact(root);
+        return new FilterPlan(Compile(CaseSensitiveRules.Widen(root), false), exact);
     }
 
-    private Compiled Compile(FilterNode node)
+    private Compiled Compile(FilterNode node, bool negate)
     {
         return node switch
         {
-            FilterSet set => Compile(set),
-            RuleNode rule => Compile(rule),
-            _ => Compiled.All
+            FilterSet set => CompileSet(set, negate),
+            RuleNode rule => negate ? Compiled.Not(Leaf(rule)) : Leaf(rule),
+            _ => negate ? Compiled.None : Compiled.All
         };
     }
 
-    private Compiled Compile(RuleNode rule)
+    private Compiled CompileSet(FilterSet set, bool negate)
     {
-        var parameterId = ParameterId(rule.Parameter);
-        if (parameterId is null)
+        var inverted = negate != set.Inverted;
+        if (set.Children.Count == 0)
+        {
+            return inverted ? Compiled.None : Compiled.All;
+        }
+
+        var parts = set.Children.Select(child => Compile(child, inverted)).ToList();
+        return (set.Match == SetMatch.All) != inverted ? Compiled.And(parts) : Compiled.Or(parts);
+    }
+
+    private Func<Element, bool> Exact(FilterNode node)
+    {
+        switch (node)
+        {
+            case FilterSet set:
+                {
+                    var children = set.Children.Select(Exact).ToList();
+                    var all = set.Match == SetMatch.All;
+                    return element => set.Inverted != (children.Count == 0
+                        || (all ? children.All(child => child(element)) : children.Any(child => child(element))));
+                }
+            case RuleNode rule when CaseSensitiveRules.IsCaseSensitive(rule)
+                                    && Resolve(rule.Parameter).Where(parameter => parameter.Storage == StorageType.String)
+                                        .ToList() is { Count: > 0 } texts:
+                return element =>
+                {
+                    var value = texts.Select(parameter => ParameterResolver.Find(element, parameter.Key, parameter.Id))
+                        .FirstOrDefault(found => found is not null);
+                    return TextRules.Matches(rule.Operator, value is not null, value?.AsString(), rule.Value, true);
+                };
+            case RuleNode rule:
+                {
+                    var leaf = Leaf(rule);
+                    return leaf.Passes;
+                }
+            default:
+                return _ => true;
+        }
+    }
+
+    private Compiled Leaf(RuleNode rule)
+    {
+        if (!_rules.TryGetValue(rule, out var compiled))
+        {
+            compiled = Build(rule);
+            _rules.Add(rule, compiled);
+        }
+
+        return compiled;
+    }
+
+    private Compiled Build(RuleNode rule)
+    {
+        var parameters = Resolve(rule.Parameter);
+        if (parameters.Count == 0)
         {
             return rule.Operator == FilterOperator.Missing ? Compiled.All : Compiled.None;
         }
 
+        return rule.Operator == FilterOperator.Missing
+            ? Compiled.Not(Compiled.Or(parameters.Select(parameter => Exists(parameter.Id))))
+            : Compiled.Or(parameters.Select(parameter => Compiled.And([Exists(parameter.Id), Build(parameter, rule)])));
+    }
+
+    private static Compiled Exists(ElementId id)
+    {
+        return Compiled.Or([
+            Pass(ParameterFilterRuleFactory.CreateHasValueParameterRule(id)),
+            Pass(ParameterFilterRuleFactory.CreateHasNoValueParameterRule(id))
+        ]);
+    }
+
+    private Compiled Build(ResolvedParameter parameter, RuleNode rule)
+    {
+        var id = parameter.Id;
         switch (rule.Operator)
         {
             case FilterOperator.HasValue:
-                return Pass(ParameterFilterRuleFactory.CreateHasValueParameterRule(parameterId));
+                return Pass(ParameterFilterRuleFactory.CreateHasValueParameterRule(id));
             case FilterOperator.HasNoValue:
-                return Pass(ParameterFilterRuleFactory.CreateHasNoValueParameterRule(parameterId));
+                return Pass(ParameterFilterRuleFactory.CreateHasNoValueParameterRule(id));
             case FilterOperator.Exists:
-                return Compiled.Or([
-                    Pass(ParameterFilterRuleFactory.CreateHasValueParameterRule(parameterId)),
-                    Pass(ParameterFilterRuleFactory.CreateHasNoValueParameterRule(parameterId))
-                ]);
-            case FilterOperator.Missing:
-                return Compiled.And([
-                    Pass(ParameterFilterRuleFactory.CreateHasValueParameterRule(parameterId), true),
-                    Pass(ParameterFilterRuleFactory.CreateHasNoValueParameterRule(parameterId), true)
-                ]);
+                return Exists(id);
         }
 
-        return rule.Kind switch
+        return parameter.Storage switch
         {
-            ValueKind.Text => Text(parameterId, rule),
-            ValueKind.Integer => Integer(parameterId, rule),
-            ValueKind.Number => Number(parameterId, rule),
-            _ => Reference(parameterId, rule)
+            StorageType.String => Text(id, rule),
+            StorageType.Integer when parameter.IsYesNo => YesNo(id, rule),
+            StorageType.Integer => Integer(parameter, rule),
+            StorageType.Double => Number(parameter, rule),
+            StorageType.ElementId => Reference(id, rule),
+            _ => Compiled.None
         };
     }
 
@@ -155,14 +282,33 @@ internal sealed class FilterCompiler(Document document, ICollection<ElementId> c
         return created is null ? Compiled.None : Pass(created);
     }
 
-    private static Compiled Integer(ElementId parameter, RuleNode rule)
+    private static Compiled YesNo(ElementId parameter, RuleNode rule)
     {
-        if (!TryParseInteger(rule.Value, out var value))
+        return ValueKinds.TryParseYesNo(rule.Value, out var value) ? IntegerRule(parameter, rule.Operator, value) : Compiled.None;
+    }
+
+    private Compiled Integer(ResolvedParameter parameter, RuleNode rule)
+    {
+        var text = rule.Value.Trim();
+        if (int.TryParse(text, NumberStyles.Integer, CultureInfo.CurrentCulture, out var value)
+            || int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
         {
-            return Compiled.None;
+            return IntegerRule(parameter.Id, rule.Operator, value);
         }
 
-        RevitFilterRule? created = rule.Operator switch
+        if (enumValues(parameter).TryGetValue(text, out value))
+        {
+            return IntegerRule(parameter.Id, rule.Operator, value);
+        }
+
+        return rule.Operator == FilterOperator.NotEqual
+            ? Pass(ParameterFilterRuleFactory.CreateHasValueParameterRule(parameter.Id))
+            : Compiled.None;
+    }
+
+    private static Compiled IntegerRule(ElementId parameter, FilterOperator op, int value)
+    {
+        RevitFilterRule? created = op switch
         {
             FilterOperator.Equal => ParameterFilterRuleFactory.CreateEqualsRule(parameter, value),
             FilterOperator.NotEqual => ParameterFilterRuleFactory.CreateNotEqualsRule(parameter, value),
@@ -175,23 +321,22 @@ internal sealed class FilterCompiler(Document document, ICollection<ElementId> c
         return created is null ? Compiled.None : Pass(created);
     }
 
-    private Compiled Number(ElementId parameter, RuleNode rule)
+    private Compiled Number(ResolvedParameter parameter, RuleNode rule)
     {
-        if (!TryParseNumber(parameter, rule, out var value))
+        if (!TryParseNumber(parameter, rule.Value, out var value))
         {
             return Compiled.None;
         }
 
+        var id = parameter.Id;
         RevitFilterRule? created = rule.Operator switch
         {
-            FilterOperator.Equal => ParameterFilterRuleFactory.CreateEqualsRule(parameter, value, Tolerance),
-            FilterOperator.NotEqual => ParameterFilterRuleFactory.CreateNotEqualsRule(parameter, value, Tolerance),
-            FilterOperator.Greater => ParameterFilterRuleFactory.CreateGreaterRule(parameter, value, Tolerance),
-            FilterOperator.GreaterOrEqual => ParameterFilterRuleFactory.CreateGreaterOrEqualRule(parameter, value,
-                Tolerance),
-            FilterOperator.Less => ParameterFilterRuleFactory.CreateLessRule(parameter, value, Tolerance),
-            FilterOperator.LessOrEqual => ParameterFilterRuleFactory.CreateLessOrEqualRule(parameter, value,
-                Tolerance),
+            FilterOperator.Equal => ParameterFilterRuleFactory.CreateEqualsRule(id, value, Tolerance),
+            FilterOperator.NotEqual => ParameterFilterRuleFactory.CreateNotEqualsRule(id, value, Tolerance),
+            FilterOperator.Greater => ParameterFilterRuleFactory.CreateGreaterRule(id, value, Tolerance),
+            FilterOperator.GreaterOrEqual => ParameterFilterRuleFactory.CreateGreaterOrEqualRule(id, value, Tolerance),
+            FilterOperator.Less => ParameterFilterRuleFactory.CreateLessRule(id, value, Tolerance),
+            FilterOperator.LessOrEqual => ParameterFilterRuleFactory.CreateLessOrEqualRule(id, value, Tolerance),
             _ => null
         };
         return created is null ? Compiled.None : Pass(created);
@@ -199,13 +344,13 @@ internal sealed class FilterCompiler(Document document, ICollection<ElementId> c
 
     private Compiled Reference(ElementId parameter, RuleNode rule)
     {
-        var targets = ReferenceTargets(rule.Value);
+        var targets = ReferenceTargets(rule.Value.Trim());
         return rule.Operator switch
         {
-            FilterOperator.Equal => Compiled.Or(targets.Select(target =>
-                Pass(ParameterFilterRuleFactory.CreateEqualsRule(parameter, target)))),
-            FilterOperator.NotEqual => Compiled.And(targets.Select(target =>
-                    Pass(ParameterFilterRuleFactory.CreateNotEqualsRule(parameter, target)))
+            FilterOperator.Equal => Compiled.Or(targets.Select(item =>
+                Pass(ParameterFilterRuleFactory.CreateEqualsRule(parameter, item)))),
+            FilterOperator.NotEqual => Compiled.And(targets.Select(item =>
+                    Pass(ParameterFilterRuleFactory.CreateNotEqualsRule(parameter, item)))
                 .Prepend(Pass(ParameterFilterRuleFactory.CreateHasValueParameterRule(parameter)))),
             _ => Compiled.None
         };
@@ -221,7 +366,7 @@ internal sealed class FilterCompiler(Document document, ICollection<ElementId> c
         var named = new List<ElementId>();
         foreach (var type in new[] { typeof(Level), typeof(Phase), typeof(Material) })
         {
-            named.AddRange(new FilteredElementCollector(document)
+            named.AddRange(new FilteredElementCollector(target)
                 .OfClass(type)
                 .Where(element => string.Equals(element.Name, value, StringComparison.Ordinal))
                 .Select(element => element.Id));
@@ -229,7 +374,7 @@ internal sealed class FilterCompiler(Document document, ICollection<ElementId> c
 
         if (named.Count == 0)
         {
-            named.AddRange(new FilteredElementCollector(document)
+            named.AddRange(new FilteredElementCollector(target)
                 .WhereElementIsElementType()
                 .Where(element => string.Equals(element.Name, value, StringComparison.Ordinal))
                 .Select(element => element.Id));
@@ -238,61 +383,36 @@ internal sealed class FilterCompiler(Document document, ICollection<ElementId> c
         return named;
     }
 
-    private bool TryParseNumber(ElementId parameter, RuleNode rule, out double value)
+    private bool TryParseNumber(ResolvedParameter parameter, string text, out double value)
     {
-        var text = rule.Value.Trim();
-        if (ParameterResolver.SpecOf(document, parameter, rule.Parameter, categories) is { } spec)
+        var trimmed = text.Trim();
+        if (parameter.Spec is { } spec && ParameterResolver.IsMeasurable(spec))
         {
             try
             {
-                if (UnitUtils.IsMeasurableSpec(spec) && UnitFormatUtils.TryParse(document.GetUnits(), spec, text, out value))
+                if (UnitFormatUtils.TryParse(hostUnits, spec, trimmed, out value))
                 {
                     return true;
                 }
             }
             catch (Exception exception)
             {
-                RevitProfiler.Logger.Swallowed(exception, "Parse number", rule.Parameter.Name);
+                RevitProfiler.Logger.Swallowed(exception, "Parse number", parameter.Key.Name);
             }
         }
 
-        return double.TryParse(text, NumberStyles.Float, CultureInfo.CurrentCulture, out value)
-               || double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+        return double.TryParse(trimmed, NumberStyles.Float, CultureInfo.CurrentCulture, out value)
+               || double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
     }
 
-    private static bool TryParseInteger(string text, out int value)
+    private IReadOnlyList<ResolvedParameter> Resolve(ParameterKey key)
     {
-        var trimmed = text.Trim();
-        if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.CurrentCulture, out value))
+        if (!_parameters.TryGetValue(key, out var parameters))
         {
-            return true;
+            parameters = ParameterResolver.Resolve(target, key, categories, knownIds(key));
+            _parameters.Add(key, parameters);
         }
 
-        if (string.Equals(trimmed, "yes", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(trimmed, "true", StringComparison.OrdinalIgnoreCase))
-        {
-            value = 1;
-            return true;
-        }
-
-        if (string.Equals(trimmed, "no", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(trimmed, "false", StringComparison.OrdinalIgnoreCase))
-        {
-            value = 0;
-            return true;
-        }
-
-        return false;
-    }
-
-    private ElementId? ParameterId(ParameterKey key)
-    {
-        if (!_parameters.TryGetValue(key, out var id))
-        {
-            id = ParameterResolver.IdOf(document, key);
-            _parameters.Add(key, id);
-        }
-
-        return id;
+        return parameters;
     }
 }

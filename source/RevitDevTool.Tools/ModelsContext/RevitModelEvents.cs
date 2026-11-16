@@ -10,7 +10,11 @@ using System.Windows.Threading;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
-internal sealed class RevitModelEvents(UIControlledApplication application, ScopeCache scopes, Dispatcher dispatcher)
+internal sealed class RevitModelEvents(
+    UIControlledApplication application,
+    ScopeCache scopes,
+    ParameterCache parameterCache,
+    Dispatcher dispatcher)
     : IModelEvents
 {
     private readonly Dictionary<string, ModelKeys> _keys = new(StringComparer.Ordinal);
@@ -187,6 +191,7 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
         if (added.Count + modified.Count + deleted.Count > DeltaApplier.DirtyThreshold)
         {
             _keys.Remove(DocumentRegistry.ModelIdOf(model));
+            parameterCache.Invalidate(source);
             Post(() => ParameterDefinitionsChanged?.Invoke(this, source));
             Post(() => DocumentsChanged?.Invoke(this, EventArgs.Empty));
             return;
@@ -197,7 +202,12 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
         var deletedChange = TrackDeleted(keys, deleted);
         if (addedChange.Parameters || parametersModified || deletedChange.Parameters)
         {
+            parameterCache.Invalidate(source);
             Post(() => ParameterDefinitionsChanged?.Invoke(this, source));
+        }
+        else
+        {
+            parameterCache.InvalidateValues(source);
         }
 
         foreach (var status in statuses)
@@ -233,13 +243,16 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
                     keys.Parameters.Add(id.ToLong());
                     parameters = true;
                     break;
+                case Family:
+                    parameters = true;
+                    break;
             }
         }
 
         return (documents, parameters);
     }
 
-    private static (List<LinkStatusChange> Statuses, bool Parameters) ReadModified(
+    private (List<LinkStatusChange> Statuses, bool Parameters) ReadModified(
         Document model,
         ICollection<ElementId> modified)
     {
@@ -252,7 +265,7 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
                 case RevitLinkType type:
                     statuses.AddRange(LinkStatusesOf(model, type));
                     break;
-                case ParameterElement:
+                case ParameterElement or Family:
                     parameters = true;
                     break;
             }
@@ -261,14 +274,20 @@ internal sealed class RevitModelEvents(UIControlledApplication application, Scop
         return (statuses, parameters);
     }
 
-    private static IEnumerable<LinkStatusChange> LinkStatusesOf(Document model, RevitLinkType type)
+    private List<LinkStatusChange> LinkStatusesOf(Document model, RevitLinkType type)
     {
-        return new FilteredElementCollector(model)
-            .OfClass(typeof(RevitLinkInstance))
-            .Cast<RevitLinkInstance>()
-            .Where(instance => instance.GetTypeId() == type.Id)
-            .Select(instance => new LinkStatusChange(DocumentRegistry.KeyOf(model, instance),
+        var statuses = new List<LinkStatusChange>();
+        foreach (var instance in new FilteredElementCollector(model)
+                     .OfClass(typeof(RevitLinkInstance))
+                     .Cast<RevitLinkInstance>()
+                     .Where(instance => instance.GetTypeId() == type.Id))
+        {
+            parameterCache.Invalidate(DocumentRegistry.LinkSourceOf(instance));
+            statuses.Add(new LinkStatusChange(DocumentRegistry.KeyOf(model, instance),
                 instance.GetLinkDocument() is null ? LinkStatus.Unloaded : LinkStatus.Reloaded));
+        }
+
+        return statuses;
     }
 
     private static (bool Documents, bool Parameters) TrackDeleted(ModelKeys keys, ICollection<ElementId> deleted)

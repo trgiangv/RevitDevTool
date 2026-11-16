@@ -1,0 +1,167 @@
+using DevTools.ModelsContext.Model;
+using DocumentVersion = DevTools.ModelsContext.Model.DocumentVersion;
+
+namespace RevitDevTool.Tools.ModelsContext;
+
+internal sealed record ValueEntry(
+    int Total,
+    IReadOnlyDictionary<string, int> Counts,
+    IReadOnlyDictionary<string, int> EnumValues);
+
+internal sealed class ParameterCache
+{
+    private readonly Dictionary<SourceId, Stamped<CatalogEntry>> _catalogs = [];
+    private readonly object _gate = new();
+    private readonly Dictionary<ValueKey, Stamped<ValueEntry>> _values = [];
+
+    public IReadOnlyList<ParameterInfo>? FindCatalog(SourceId source, DocumentVersion? version)
+    {
+        lock (_gate)
+        {
+            return _catalogs.TryGetValue(source, out var entry) && Same(entry.Version, version) ? entry.Value.Catalog : null;
+        }
+    }
+
+    public IReadOnlyCollection<long>? FindIds(SourceId source, DocumentVersion? version, ParameterKey key)
+    {
+        lock (_gate)
+        {
+            return _catalogs.TryGetValue(source, out var entry) && Same(entry.Version, version)
+                                                                 && entry.Value.Ids.TryGetValue(key, out var ids)
+                ? ids
+                : null;
+        }
+    }
+
+    public void StoreCatalog(
+        SourceId source,
+        DocumentVersion? version,
+        IReadOnlyList<ParameterInfo> catalog,
+        IReadOnlyDictionary<ParameterKey, IReadOnlyCollection<long>> ids)
+    {
+        lock (_gate)
+        {
+            _catalogs[source] = new Stamped<CatalogEntry>(version, new CatalogEntry(catalog, ids));
+        }
+    }
+
+    public ValueEntry? FindValues(SourceId source, ParameterKey parameter, IEnumerable<long> groups, DocumentVersion? version)
+    {
+        lock (_gate)
+        {
+            return _values.TryGetValue(KeyOf(source, parameter, groups), out var entry) && Same(entry.Version, version)
+                ? entry.Value
+                : null;
+        }
+    }
+
+    public void StoreValues(SourceId source, ParameterKey parameter, IEnumerable<long> groups, DocumentVersion? version,
+        ValueEntry values)
+    {
+        lock (_gate)
+        {
+            _values[KeyOf(source, parameter, groups)] = new Stamped<ValueEntry>(version, values);
+        }
+    }
+
+    public void Invalidate(SourceId source)
+    {
+        lock (_gate)
+        {
+            _catalogs.Remove(source);
+            DropValues(source);
+        }
+    }
+
+    public void InvalidateValues(SourceId source)
+    {
+        lock (_gate)
+        {
+            DropValues(source);
+        }
+    }
+
+    private void DropValues(SourceId source)
+    {
+        foreach (var key in _values.Keys.Where(key => key.Source == source).ToList())
+        {
+            _values.Remove(key);
+        }
+    }
+
+    private static bool Same(DocumentVersion? stored, DocumentVersion? current)
+    {
+        return stored is { } left ? current is { } right && left.IsSameAs(right) : current is null;
+    }
+
+    private static ValueKey KeyOf(SourceId source, ParameterKey parameter, IEnumerable<long> groups)
+    {
+        return new ValueKey(source, parameter, new GroupSet(groups));
+    }
+
+    private readonly record struct ValueKey(SourceId Source, ParameterKey Parameter, GroupSet Groups);
+
+    private readonly struct GroupSet : IEquatable<GroupSet>
+    {
+        private readonly long[] _ids;
+        private readonly int _hash;
+
+        public GroupSet(IEnumerable<long> groups)
+        {
+            var ids = groups.ToArray();
+            Array.Sort(ids);
+            var count = 0;
+            for (var i = 0; i < ids.Length; i++)
+            {
+                if (i == 0 || ids[i] != ids[count - 1])
+                {
+                    ids[count++] = ids[i];
+                }
+            }
+
+            Array.Resize(ref ids, count);
+            _ids = ids;
+            var hash = 17;
+            foreach (var id in ids)
+            {
+                hash = unchecked(hash * 31 + id.GetHashCode());
+            }
+
+            _hash = hash;
+        }
+
+        public bool Equals(GroupSet other)
+        {
+            if (_hash != other._hash || _ids.Length != other._ids.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < _ids.Length; i++)
+            {
+                if (_ids[i] != other._ids[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is GroupSet other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return _hash;
+        }
+    }
+
+    private sealed record Stamped<T>(DocumentVersion? Version, T Value);
+
+    private sealed record CatalogEntry(
+        IReadOnlyList<ParameterInfo> Catalog,
+        IReadOnlyDictionary<ParameterKey, IReadOnlyCollection<long>> Ids);
+}

@@ -54,18 +54,16 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
         if (node.Children is { } children)
         {
             return new FilterSet(node.Any ? SetMatch.Any : SetMatch.All,
-                children.Select(ToNode).OfType<FilterNode>().ToList());
+                children.Select(ToNode).OfType<FilterNode>().ToList(), node.Not);
         }
 
-        if (node.Parameter is not { } parameter
-            || !Enum.TryParse<ValueKind>(node.Kind, out var kind)
-            || !Enum.TryParse<FilterOperator>(node.Operator, out var op))
+        if (node.Parameter is not { } parameter || !Enum.TryParse<FilterOperator>(node.Operator, out var op))
         {
             return null;
         }
 
-        return new RuleNode(new ParameterKey(parameter.Name, parameter.BuiltInName, parameter.SharedId), kind, op,
-            node.Value ?? string.Empty);
+        return new RuleNode(new ParameterKey(parameter.Name, parameter.BuiltInName, parameter.SharedId, parameter.DataType),
+            op, node.Value ?? string.Empty, node.CaseSensitive);
     }
 
     private static StoredNode? FromNode(FilterNode node)
@@ -75,6 +73,7 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
             FilterSet set => new StoredNode
             {
                 Any = set.Match == SetMatch.Any,
+                Not = set.Inverted,
                 Children = set.Children.Select(FromNode).OfType<StoredNode>().ToList()
             },
             RuleNode rule => new StoredNode
@@ -83,11 +82,12 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
                 {
                     Name = rule.Parameter.Name,
                     BuiltInName = rule.Parameter.BuiltInName,
-                    SharedId = rule.Parameter.SharedId
+                    SharedId = rule.Parameter.SharedId,
+                    DataType = rule.Parameter.DataType
                 },
-                Kind = rule.Kind.ToString(),
                 Operator = rule.Operator.ToString(),
-                Value = rule.Value
+                Value = rule.Value,
+                CaseSensitive = rule.IsCaseSensitive
             },
             _ => null
         };
@@ -120,20 +120,23 @@ public sealed class StoredNode
     [JsonPropertyName("any")]
     public bool Any { get; set; }
 
+    [JsonPropertyName("not")]
+    public bool Not { get; set; }
+
     [JsonPropertyName("children")]
     public List<StoredNode>? Children { get; set; }
 
     [JsonPropertyName("parameter")]
     public StoredParameter? Parameter { get; set; }
 
-    [JsonPropertyName("kind")]
-    public string? Kind { get; set; }
-
     [JsonPropertyName("operator")]
     public string? Operator { get; set; }
 
     [JsonPropertyName("value")]
     public string? Value { get; set; }
+
+    [JsonPropertyName("caseSensitive")]
+    public bool CaseSensitive { get; set; }
 }
 
 [Serializable]
@@ -147,4 +150,7 @@ public sealed class StoredParameter
 
     [JsonPropertyName("sharedId")]
     public Guid? SharedId { get; set; }
+
+    [JsonPropertyName("dataType")]
+    public string? DataType { get; set; }
 }

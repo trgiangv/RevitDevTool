@@ -11,7 +11,6 @@ namespace RevitDevTool.Tools.ModelsContext;
 internal sealed class RevitFilterCatalog : IHostFilterCatalog
 {
     public const string GlobalParameterRule = "Global parameter association";
-    public const string InvertedFilter = "Inverted parameter filter";
 
     public Task<IReadOnlyList<HostFilterInfo>> GetFiltersAsync(DocumentKey document, CancellationToken cancellationToken)
     {
@@ -141,7 +140,8 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
             {
                 LogicalAndFilter and => new FilterSet(SetMatch.All, and.GetFilters().Select(Read).ToList()),
                 LogicalOrFilter or => new FilterSet(SetMatch.Any, or.GetFilters().Select(Read).ToList()),
-                ElementParameterFilter { Inverted: true } => new UnsupportedRule(InvertedFilter),
+                ElementParameterFilter { Inverted: true } parameters =>
+                    new FilterSet(SetMatch.All, parameters.GetRules().Select(rule => ReadRule(rule, false)).ToList(), true),
                 ElementParameterFilter parameters => ReadRules(parameters.GetRules()),
                 _ => new UnsupportedRule(filter.GetType().Name)
             };
@@ -167,35 +167,27 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
             var key = ParameterResolver.KeyOf(document, parameterId);
             return rule switch
             {
-                HasValueFilterRule => new RuleNode(key, KindOf(parameterId),
-                    negated ? FilterOperator.HasNoValue : FilterOperator.HasValue),
-                HasNoValueFilterRule => new RuleNode(key, KindOf(parameterId),
-                    negated ? FilterOperator.HasValue : FilterOperator.HasNoValue),
+                HasValueFilterRule => new RuleNode(key, negated ? FilterOperator.HasNoValue : FilterOperator.HasValue),
+                HasNoValueFilterRule => new RuleNode(key, negated ? FilterOperator.HasValue : FilterOperator.HasNoValue),
                 FilterStringRule text when StringOperator(text.GetEvaluator(), negated) is { } op =>
-                    new RuleNode(key, ValueKind.Text, op, text.RuleString),
+                    new RuleNode(key, op, text.RuleString),
                 FilterIntegerRule integer when NumericOperator(integer.GetEvaluator(), negated) is { } op =>
-                    new RuleNode(key, ValueKind.Integer, op,
-                        integer.RuleValue.ToString(CultureInfo.CurrentCulture)),
+                    new RuleNode(key, op, integer.RuleValue.ToString(CultureInfo.InvariantCulture)),
                 FilterDoubleRule number when NumericOperator(number.GetEvaluator(), negated) is { } op =>
-                    new RuleNode(key, ValueKind.Number, op, FormatNumber(parameterId, key, number.RuleValue)),
+                    new RuleNode(key, op, FormatNumber(key, number.RuleValue)),
                 FilterElementIdRule reference when NumericOperator(reference.GetEvaluator(), negated) is
                 { } op and (FilterOperator.Equal or FilterOperator.NotEqual) =>
-                    new RuleNode(key, ValueKind.ElementId, op, ReferenceText(reference.RuleValue)),
+                    new RuleNode(key, op, ReferenceText(reference.RuleValue)),
                 _ => new UnsupportedRule(rule.GetType().Name)
             };
         }
 
-        private ValueKind KindOf(ElementId parameterId)
-        {
-            return ParameterResolver.InfoOf(document, parameterId)?.Kind ?? ValueKind.Text;
-        }
-
-        private string FormatNumber(ElementId parameterId, ParameterKey key, double value)
+        private string FormatNumber(ParameterKey key, double value)
         {
             try
             {
-                if (ParameterResolver.SpecOf(document, parameterId, key, categories) is { } spec
-                    && UnitUtils.IsMeasurableSpec(spec))
+                if (ParameterResolver.Resolve(document, key, categories).FirstOrDefault()?.Spec is { } spec
+                    && ParameterResolver.IsMeasurable(spec))
                 {
                     return UnitFormatUtils.Format(document.GetUnits(), spec, value, false);
                 }

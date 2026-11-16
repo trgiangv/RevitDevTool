@@ -5,11 +5,91 @@ using System.Globalization;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
+internal sealed record ResolvedParameter(ElementId Id, ParameterKey Key, StorageType Storage, ForgeTypeId? Spec)
+{
+    public bool IsYesNo => ParameterResolver.IsYesNo(Spec);
+}
+
 internal static class ParameterResolver
 {
-    private const int SpecSampleSize = 500;
+    public static ParameterStorage StorageOf(StorageType storage)
+    {
+        return storage switch
+        {
+            StorageType.Integer => ParameterStorage.Integer,
+            StorageType.Double => ParameterStorage.Double,
+            StorageType.String => ParameterStorage.String,
+            StorageType.ElementId => ParameterStorage.ElementId,
+            _ => ParameterStorage.None
+        };
+    }
 
-    public static ParameterInfo? InfoOf(Document document, ElementId parameterId, FailureTally? failures = null)
+    public static ForgeTypeId? SpecOf(Definition? definition)
+    {
+        try
+        {
+            return definition?.GetDataType() is { } spec && !string.IsNullOrEmpty(spec.TypeId) ? spec : null;
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Parameter spec", definition?.Name);
+            return null;
+        }
+    }
+
+    public static string? DataTypeOf(ForgeTypeId? spec, StorageType? storage)
+    {
+        if (spec is null)
+        {
+            return storage?.ToString();
+        }
+
+        var typeId = spec.TypeId;
+        var dash = typeId.LastIndexOf('-');
+        return dash > typeId.IndexOf(':') && typeId.Substring(dash + 1).All(c => char.IsDigit(c) || c == '.')
+            ? typeId.Substring(0, dash)
+            : typeId;
+    }
+
+    public static bool IsYesNo(ForgeTypeId? spec)
+    {
+        return spec is not null && spec.Equals(SpecTypeId.Boolean.YesNo);
+    }
+
+    public static bool IsMeasurable(ForgeTypeId? spec)
+    {
+        try
+        {
+            return spec is not null && UnitUtils.IsMeasurableSpec(spec);
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Measurable spec", spec?.TypeId);
+            return false;
+        }
+    }
+
+    public static string? SpecLabel(ForgeTypeId? spec)
+    {
+        try
+        {
+            return spec is null ? null : LabelUtils.GetLabelForSpec(spec);
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Spec label", spec?.TypeId);
+            return null;
+        }
+    }
+
+    public static bool IsNamedValue(string? text)
+    {
+        return !string.IsNullOrWhiteSpace(text)
+               && !double.TryParse(text, NumberStyles.Any, CultureInfo.CurrentCulture, out _)
+               && !double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out _);
+    }
+
+    public static ParameterKey KeyOf(Document document, ElementId parameterId)
     {
         try
         {
@@ -17,68 +97,131 @@ internal static class ParameterResolver
             if (value < 0)
             {
                 var builtIn = (BuiltInParameter)(int)value;
-                var label = LabelUtils.GetLabelFor(builtIn);
-                return KindOf(document.get_TypeOfStorage(builtIn)) is { } kind
-                    ? new ParameterInfo(new ParameterKey(label, builtIn.ToString(), null), label, kind)
-                    : null;
+                return ParameterKey.BuiltIn(LabelUtils.GetLabelFor(builtIn), builtIn.ToString());
             }
 
-            if (document.GetElement(parameterId) is not ParameterElement element)
+            if (document.GetElement(parameterId) is ParameterElement element)
             {
-                return null;
+                var definition = element.GetDefinition();
+                return element is SharedParameterElement shared
+                    ? ParameterKey.Shared(definition.Name, shared.GuidValue)
+                    : ParameterKey.Named(definition.Name, DataTypeOf(SpecOf(definition), null));
             }
-
-            var definition = element.GetDefinition();
-            Guid? shared = element is SharedParameterElement sharedElement ? sharedElement.GuidValue : null;
-            return new ParameterInfo(new ParameterKey(definition.Name, null, shared), definition.Name,
-                KindOf(definition.GetDataType()));
         }
         catch (Exception exception)
         {
-            if (failures is not null)
-            {
-                failures.Add(exception);
-            }
-            else
-            {
-                RevitProfiler.Logger.Swallowed(exception, "Parameter info", parameterId);
-            }
-
-            return null;
+            RevitProfiler.Logger.Swallowed(exception, "Parameter key", parameterId);
         }
+
+        return new ParameterKey(parameterId.ToString());
     }
 
-    public static ParameterKey KeyOf(Document document, ElementId parameterId)
+    public static IReadOnlyCollection<long> IdsOf(
+        Document document,
+        ParameterKey key,
+        ICollection<ElementId> categories,
+        IReadOnlyCollection<long>? known)
     {
-        return InfoOf(document, parameterId)?.Key
-               ?? new ParameterKey(parameterId.ToString());
-    }
-
-    public static ElementId? IdOf(Document document, ParameterKey key)
-    {
-        if (key.BuiltInName is { } builtInName
-            && Enum.TryParse<BuiltInParameter>(builtInName, out var builtIn)
-            && builtIn != BuiltInParameter.INVALID)
+        if (key.BuiltInName is { } builtInName)
         {
-            return new ElementId(builtIn);
+            return Enum.TryParse<BuiltInParameter>(builtInName, out var builtIn) && builtIn != BuiltInParameter.INVALID
+                ? [new ElementId(builtIn).ToLong()]
+                : [];
         }
 
         if (key.SharedId is { } shared)
         {
-            return SharedParameterElement.Lookup(document, shared)?.Id;
+            return SharedParameterElement.Lookup(document, shared) is { } element ? [element.Id.ToLong()] : [];
         }
 
-        return new FilteredElementCollector(document)
-            .OfClass(typeof(ParameterElement))
-            .Cast<ParameterElement>()
-            .FirstOrDefault(element => string.Equals(element.GetDefinition()?.Name, key.Name, StringComparison.Ordinal))
-            ?.Id;
+        return known ?? NamedIds(document, key, categories);
     }
 
-    public static Parameter? Find(Element element, ParameterKey key)
+    public static IReadOnlyList<ResolvedParameter> Resolve(
+        Document document,
+        ParameterKey key,
+        ICollection<ElementId> categories,
+        IReadOnlyCollection<long>? known = null)
     {
-        return FindOn(element, key)
-               ?? (element.Document.GetElement(element.GetTypeId()) is { } type ? FindOn(type, key) : null);
+        var resolved = new List<ResolvedParameter>();
+        try
+        {
+            foreach (var value in IdsOf(document, key, categories, known))
+            {
+                var id = value.ToElementId();
+                var holds = new LogicalOrFilter(
+                    new ElementParameterFilter(ParameterFilterRuleFactory.CreateHasValueParameterRule(id)),
+                    new ElementParameterFilter(ParameterFilterRuleFactory.CreateHasNoValueParameterRule(id)));
+                var element = new FilteredElementCollector(document)
+                    .WherePasses(ElementReader.ModelFilter(document, categories))
+                    .WherePasses(holds)
+                    .FirstElement();
+                if (element is not null && Find(element, key, id) is { } parameter)
+                {
+                    resolved.Add(new ResolvedParameter(id, key, parameter.StorageType, SpecOf(parameter.Definition)));
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Resolve parameter", key.Name);
+        }
+
+        return resolved;
+    }
+
+    public static bool Matches(ParameterKey key, Parameter parameter)
+    {
+        return key.BuiltInName is null && key.SharedId is null && !parameter.IsShared
+               && parameter.Id.ToLong() > 0
+               && string.Equals(parameter.Definition?.Name, key.Name, StringComparison.Ordinal)
+               && Fits(key, SpecOf(parameter.Definition), parameter.StorageType);
+    }
+
+    private static HashSet<long> NamedIds(Document document, ParameterKey key, ICollection<ElementId> categories)
+    {
+        var ids = new HashSet<long>(new FilteredElementCollector(document)
+            .OfClass(typeof(ParameterElement))
+            .Cast<ParameterElement>()
+            .Where(element => element is not SharedParameterElement
+                              && element.GetDefinition() is { } definition
+                              && string.Equals(definition.Name, key.Name, StringComparison.Ordinal)
+                              && Fits(key, SpecOf(definition), null))
+            .Select(element => element.Id.ToLong()));
+        var sampled = new HashSet<long>();
+        foreach (var element in new FilteredElementCollector(document).WherePasses(ElementReader.ModelFilter(document, categories)))
+        {
+            var typeId = element.GetTypeId();
+            if (!sampled.Add(typeId != ElementId.InvalidElementId ? typeId.ToLong() : element.Category?.Id.ToLong() ?? 0))
+            {
+                continue;
+            }
+
+            AddNamed(ids, element, key);
+            if (document.GetElement(typeId) is { } type)
+            {
+                AddNamed(ids, type, key);
+            }
+        }
+
+        return ids;
+    }
+
+    private static void AddNamed(HashSet<long> ids, Element element, ParameterKey key)
+    {
+        foreach (var parameter in element.GetParameters(key.Name))
+        {
+            if (Matches(key, parameter))
+            {
+                ids.Add(parameter.Id.ToLong());
+            }
+        }
+    }
+
+    public static Parameter? Find(Element element, ParameterKey key, ElementId? id = null)
+    {
+        return FindOn(element, key, id)
+               ?? (element.Document.GetElement(element.GetTypeId()) is { } type ? FindOn(type, key, id) : null);
     }
 
     public static string? ValueText(Document document, Parameter parameter)
@@ -91,6 +234,7 @@ internal static class ParameterResolver
         var text = parameter.StorageType switch
         {
             StorageType.String => parameter.AsString(),
+            StorageType.Integer when IsYesNo(SpecOf(parameter.Definition)) => ValueKinds.YesNoText(parameter.AsInteger()),
             StorageType.Integer => parameter.AsValueString()
                                    ?? parameter.AsInteger().ToString(CultureInfo.InvariantCulture),
             StorageType.Double => parameter.AsValueString()
@@ -101,81 +245,36 @@ internal static class ParameterResolver
         return string.IsNullOrEmpty(text) ? null : text;
     }
 
-    public static ForgeTypeId? SpecOf(Document document, ElementId parameterId, ParameterKey key,
-        ICollection<ElementId> categories)
+    private static Parameter? FindOn(Element element, ParameterKey key, ElementId? id)
     {
-        try
+        if (key.BuiltInName is { } builtInName)
         {
-            if (parameterId.ToLong() > 0)
-            {
-                return (document.GetElement(parameterId) as ParameterElement)?.GetDefinition()?.GetDataType();
-            }
-
-            foreach (var element in new FilteredElementCollector(document)
-                         .WherePasses(ElementReader.ModelFilter(document, categories))
-                         .Take(SpecSampleSize))
-            {
-                if (Find(element, key)?.Definition?.GetDataType() is { } spec)
-                {
-                    return spec;
-                }
-            }
+            return Enum.TryParse<BuiltInParameter>(builtInName, out var builtIn) ? element.get_Parameter(builtIn) : null;
         }
-        catch (Exception exception)
+
+        if (key.SharedId is { } shared)
         {
-            RevitProfiler.Logger.Swallowed(exception, "Parameter spec", key.Name);
+            return element.get_Parameter(shared);
+        }
+
+        foreach (var parameter in element.GetParameters(key.Name))
+        {
+            if (id is not null
+                    ? parameter.Id == id
+                    : !parameter.IsShared && Fits(key, SpecOf(parameter.Definition), parameter.StorageType))
+            {
+                return parameter;
+            }
         }
 
         return null;
     }
 
-    public static ValueKind? KindOf(StorageType storage)
+    private static bool Fits(ParameterKey key, ForgeTypeId? spec, StorageType? storage)
     {
-        return storage switch
-        {
-            StorageType.String => ValueKind.Text,
-            StorageType.Integer => ValueKind.Integer,
-            StorageType.Double => ValueKind.Number,
-            StorageType.ElementId => ValueKind.ElementId,
-            _ => null
-        };
-    }
-
-    public static ValueKind KindOf(ForgeTypeId spec)
-    {
-        try
-        {
-            if (spec.Equals(SpecTypeId.Boolean.YesNo) || spec.Equals(SpecTypeId.Int.Integer))
-            {
-                return ValueKind.Integer;
-            }
-
-            if (UnitUtils.IsMeasurableSpec(spec))
-            {
-                return ValueKind.Number;
-            }
-
-            if (Category.IsBuiltInCategory(spec))
-            {
-                return ValueKind.ElementId;
-            }
-        }
-        catch (Exception exception)
-        {
-            RevitProfiler.Logger.Swallowed(exception, "Value kind", spec.TypeId);
-        }
-
-        return ValueKind.Text;
-    }
-
-    private static Parameter? FindOn(Element element, ParameterKey key)
-    {
-        if (key.BuiltInName is { } builtInName && Enum.TryParse<BuiltInParameter>(builtInName, out var builtIn))
-        {
-            return element.get_Parameter(builtIn);
-        }
-
-        return key.SharedId is { } shared ? element.get_Parameter(shared) : element.LookupParameter(key.Name);
+        return key.DataType is null
+               || (spec is null && storage is null)
+               || string.Equals(DataTypeOf(spec, storage), key.DataType, StringComparison.Ordinal);
     }
 
     private static string? ElementIdText(Document document, Parameter parameter)
