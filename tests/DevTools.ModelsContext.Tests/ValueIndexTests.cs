@@ -1,6 +1,8 @@
 using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Ports;
 using DevTools.ModelsContext.Tests.Shared;
+using Moq;
 
 namespace DevTools.ModelsContext.Tests;
 
@@ -48,6 +50,24 @@ public sealed class ValueIndexTests
 
         Assert.AreEqual(ValueIndexCache.DefaultCapacity, cache.Count);
         Assert.IsFalse(cache.Contains(Current, FakeParameters.Mark, [TestModel.Ducts]));
+    }
+
+    [TestMethod]
+    public async Task IndexSharedByMatchKey()
+    {
+        var evaluator = new Mock<IFilterEvaluator>();
+        evaluator.Setup(port => port.CountValuesAsync(Current, It.IsAny<ParameterKey>(), It.IsAny<IReadOnlyCollection<long>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ParameterValueCounts(3, new Dictionary<string, int> { ["M-001"] = 1, ["m-001"] = 2 }));
+        var cache = new ValueIndexCache(evaluator.Object);
+
+        await cache.GetAsync(Current, ParameterKey.BuiltIn("Mark", "ALL_MODEL_MARK"), [], CancellationToken.None);
+        var index = await cache.GetAsync(Current, ParameterKey.BuiltIn("Marque", "ALL_MODEL_MARK"), [],
+            CancellationToken.None);
+
+        Assert.HasCount(2, index.Values);
+        evaluator.Verify(port => port.CountValuesAsync(Current, It.IsAny<ParameterKey>(),
+            It.IsAny<IReadOnlyCollection<long>>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [TestMethod]

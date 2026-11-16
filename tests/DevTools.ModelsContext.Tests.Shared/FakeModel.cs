@@ -80,6 +80,8 @@ public sealed class FakeModel :
 
     public List<IReadOnlyCollection<ElementRef>> Boxed { get; } = [];
 
+    public Dictionary<SourceId, double> UnitFactors { get; } = [];
+
     public event EventHandler? DocumentsChanged;
 
     public event EventHandler<ElementDelta>? ElementsChanged;
@@ -314,12 +316,14 @@ public sealed class FakeModel :
         CancellationToken cancellationToken)
     {
         var snapshot = SnapshotOf(document);
+        var host = Data.Documents.FirstOrDefault(info => info.Key == DocumentKey.Current(document.ModelId));
+        var factor = host is not null && UnitFactors.TryGetValue(host.Source, out var hostFactor) ? hostFactor : 1;
         var groups = filter.Groups.ToHashSet();
         var inScope = scope as ISet<long> ?? scope?.ToHashSet();
         IReadOnlyCollection<long> ids = snapshot.Rows
             .Where(row => groups.Count == 0 || groups.Contains(snapshot.Groups[row.GroupIndex].GroupId))
             .Where(row => inScope is null || inScope.Contains(row.Id))
-            .Where(row => FakeFilterMatcher.Matches(snapshot, row, filter.Root, Data.Levels))
+            .Where(row => FakeFilterMatcher.Matches(snapshot, row, filter.Root, Data.Levels, factor))
             .Select(row => row.Id)
             .ToList();
         return Task.FromResult(ids);
@@ -368,7 +372,7 @@ public sealed class FakeModel :
     {
         FilterDefinition? definition = filterId == 1
             ? new FilterDefinition([],
-                FilterSet.All(new FilterRule(FakeParameters.Comments, ValueKind.Text, FilterOperator.HasValue),
+                FilterSet.All(new FilterRule(FakeParameters.Comments, FilterOperator.HasValue),
                     new UnsupportedRule("Global parameter association")))
             : null;
         return Task.FromResult(definition);

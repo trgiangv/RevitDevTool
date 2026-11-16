@@ -1,32 +1,110 @@
 using DevTools.ModelsContext.Model;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace DevTools.ModelsContext.Tests.Shared;
 
 public static class FakeParameters
 {
-    public static readonly ParameterKey Mark = new("Mark", "ALL_MODEL_MARK");
-    public static readonly ParameterKey Comments = new("Comments", "ALL_MODEL_INSTANCE_COMMENTS");
-    public static readonly ParameterKey Width = new("Width");
-    public static readonly ParameterKey Level = new("Level", "LEVEL_PARAM");
+    public const string LengthSpec = "spec:length";
+    public const string TextSpec = "spec:text";
+    public const string IntegerSpec = "spec:int";
+    public const string AngleSpec = "spec:angle";
+    public const string LeftDoors = "Doors Family 1";
+    public const string RightDoors = "Doors Family 2";
+
+    public static readonly ParameterKey Mark = ParameterKey.BuiltIn("Mark", "ALL_MODEL_MARK");
+    public static readonly ParameterKey Comments = ParameterKey.BuiltIn("Comments", "ALL_MODEL_INSTANCE_COMMENTS");
+    public static readonly ParameterKey Width = ParameterKey.Named("Width", LengthSpec);
+    public static readonly ParameterKey Level = ParameterKey.BuiltIn("Level", "LEVEL_PARAM");
+    public static readonly ParameterKey TextCode = ParameterKey.Named("Code", TextSpec);
+    public static readonly ParameterKey IntegerCode = ParameterKey.Named("Code", IntegerSpec);
+    public static readonly ParameterKey SwingAngle = ParameterKey.Named("Swing Angle", AngleSpec);
+    public static readonly ParameterKey Flag = ParameterKey.BuiltIn("Flag", "FLAG_PARAM");
+
+    private static readonly ConditionalWeakTable<DocumentSnapshot, IReadOnlyCollection<long>> SwingIdsBySnapshot = new();
+
+    private static readonly Dictionary<string, long> SwingAngleIds = new(StringComparer.Ordinal)
+    {
+        [LeftDoors] = 376576,
+        [RightDoors] = 376590
+    };
 
     private static readonly HashSet<string> SizedGroups = ["Ducts", "Pipes", "Cable Trays", "Conduits"];
 
     public static IReadOnlyList<ParameterInfo> Catalog(FakeSource source)
     {
         var groups = source.Types.Select(type => type.GroupName).ToHashSet(StringComparer.Ordinal);
+        var all = CategoriesOf(source, _ => true);
+        var isCurrent = source.Id == FakeModelGenerator.CurrentSource;
         var catalog = new List<ParameterInfo>
         {
-            new(Mark, "Mark", ValueKind.Text),
-            new(Comments, "Comments", ValueKind.Text),
-            new(Level, "Level", ValueKind.Text)
+            BuiltIn(Mark, ParameterStorage.String, "Text"),
+            BuiltIn(Comments, ParameterStorage.String, "Text"),
+            BuiltIn(Level, ParameterStorage.ElementId, null),
+            new(Flag, Flag.Name, ValueKind.YesNo, ParameterStorage.Integer, null, "Yes/No", ParameterOrigin.BuiltIn,
+                ParameterBinding.Instance),
+            isCurrent
+                ? Named(TextCode, ParameterStorage.String, "Text", ParameterOrigin.Project)
+                : Named(IntegerCode, ParameterStorage.Integer, "Integer", ParameterOrigin.Project)
         };
+        for (var index = 0; index < catalog.Count; index++)
+        {
+            catalog[index] = catalog[index] with { Categories = all };
+        }
+
+        if (groups.Contains("Doors"))
+        {
+            catalog.Add(Named(SwingAngle, ParameterStorage.Double, "Angle", ParameterOrigin.Family) with
+            {
+                Categories = CategoriesOf(source, name => name == "Doors")
+            });
+        }
+
         if (groups.Overlaps(SizedGroups))
         {
-            catalog.Add(new ParameterInfo(Width, "Width", ValueKind.Number));
+            var width = isCurrent
+                ? Named(Width, ParameterStorage.Double, "Length", ParameterOrigin.Project)
+                : Named(Width, ParameterStorage.Double, "Length", ParameterOrigin.Family) with
+                {
+                    Bindings = ParameterBinding.Type
+                };
+            catalog.Add(width with { Categories = CategoriesOf(source, SizedGroups.Contains) });
         }
 
         return catalog;
+    }
+
+    public static ValueKind KindOf(ParameterKey key)
+    {
+        return key.Name switch
+        {
+            "Width" or "Swing Angle" => ValueKind.Number,
+            "Level" => ValueKind.Reference,
+            "Flag" => ValueKind.YesNo,
+            _ => ValueKind.Text
+        };
+    }
+
+    public static IReadOnlyCollection<long> IdsOf(DocumentSnapshot snapshot, ParameterKey key)
+    {
+        return key == SwingAngle
+            ? SwingIdsBySnapshot.GetValue(snapshot,
+                rows => rows.Rows.Select(row => IdOf(rows, row, SwingAngle)).OfType<long>().Distinct().ToList())
+            : [0];
+    }
+
+    public static long? IdOf(DocumentSnapshot snapshot, ElementRow row, ParameterKey key)
+    {
+        if (key != SwingAngle)
+        {
+            return 0;
+        }
+
+        return SwingAngleIds.TryGetValue(snapshot.FamilyName(row.TypeIndex), out var id)
+               && snapshot.GroupName(row.GroupIndex) == "Doors"
+            ? id
+            : null;
     }
 
     public static bool TryGet(
@@ -47,6 +125,12 @@ public static class FakeParameters
             case "Width" when SizedGroups.Contains(snapshot.GroupName(row.GroupIndex)):
                 value = ((row.Id % 20 + 1) * 50).ToString(CultureInfo.InvariantCulture);
                 return true;
+            case "Swing Angle" when IdOf(snapshot, row, key) is not null:
+                value = row.Id % 4 == 0 ? string.Empty : (row.Id % 90).ToString(CultureInfo.InvariantCulture);
+                return true;
+            case "Flag":
+                value = ValueKinds.YesNoText((int)(row.Id % 2));
+                return true;
             case "Level":
                 value = levels.TryGetValue(row.LevelId, out var name) ? name : string.Empty;
                 return true;
@@ -54,5 +138,22 @@ public static class FakeParameters
                 value = string.Empty;
                 return false;
         }
+    }
+
+    private static CategoryIdSet CategoriesOf(FakeSource source, Func<string, bool> include)
+    {
+        return CategoryIdSet.Of(source.Types.Where(type => include(type.GroupName)).Select(type => type.GroupId));
+    }
+
+    private static ParameterInfo BuiltIn(ParameterKey key, ParameterStorage storage, string? label)
+    {
+        return new ParameterInfo(key, key.Name, ValueKinds.Infer(storage, false, false, false), storage, null, label,
+            ParameterOrigin.BuiltIn, ParameterBinding.Instance);
+    }
+
+    private static ParameterInfo Named(ParameterKey key, ParameterStorage storage, string label, ParameterOrigin origin)
+    {
+        return new ParameterInfo(key, key.Name, ValueKinds.Infer(storage, false, storage == ParameterStorage.Double, false),
+            storage, key.DataType, label, origin, ParameterBinding.Instance);
     }
 }

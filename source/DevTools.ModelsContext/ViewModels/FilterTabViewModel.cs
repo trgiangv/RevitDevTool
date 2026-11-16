@@ -19,7 +19,9 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
     private readonly ContextMenuViewModel _menu;
     private readonly PanelRuntime _runtime;
     private readonly VisibilityController _visibility;
+    private IReadOnlyList<ParameterInfo> _allParameters = [];
     private HashSet<ElementRef> _baseline = [];
+    private IReadOnlyList<(SourceId Source, IReadOnlyList<ParameterInfo> Catalog)> _catalogs = [];
     private FilterSourceItem? _current;
     private ContextData _data = ContextData.Empty;
     private bool _editingSources;
@@ -38,7 +40,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
         _menu = menu;
         Root = new RuleSetViewModel(this, true);
         _liveDebouncer = new Debouncer(runtime.Services.Scheduler, LiveDelay,
-            () => _ = _runtime.RunAsync(EvaluateAsync));
+            () => _ = _runtime.RunAsync(() => EvaluateAsync(true)));
         ErrorsChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(NameError));
@@ -293,6 +295,15 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
             }
         }
 
+        if (rule.Kind == ValueKind.YesNo)
+        {
+            rule.SetValues([
+                new ValueCount(ValueKinds.Yes, values.TryGetValue(ValueKinds.Yes, out var yes) ? yes : 0),
+                new ValueCount(ValueKinds.No, values.TryGetValue(ValueKinds.No, out var no) ? no : 0)
+            ], false, missing);
+            return;
+        }
+
         rule.SetValues(values
             .OrderByDescending(pair => pair.Value)
             .ThenBy(pair => pair.Key, StringComparer.CurrentCultureIgnoreCase)
@@ -313,7 +324,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
         _data = data;
         _token = cancellationToken;
         RebuildCategories();
-        Parameters = await LoadParametersAsync(cancellationToken);
+        await LoadParametersAsync(cancellationToken);
         await LoadSourcesAsync(cancellationToken);
     }
 
@@ -321,8 +332,14 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
     {
         if (_data.Documents.Any(document => document.Snapshot.Source == source))
         {
-            Parameters = await LoadParametersAsync(_token);
+            await LoadParametersAsync(_token);
         }
+    }
+
+    ParameterInfo? IFilterEditor.FindParameter(ParameterKey key)
+    {
+        return Parameters.FirstOrDefault(parameter => parameter.Key == key)
+               ?? _allParameters.FirstOrDefault(parameter => parameter.Key == key);
     }
 
     internal FilterState Capture()
@@ -348,23 +365,41 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
         Result = [];
     }
 
-    private async Task<IReadOnlyList<ParameterInfo>> LoadParametersAsync(CancellationToken cancellationToken)
+    private async Task LoadParametersAsync(CancellationToken cancellationToken)
     {
-        var merged = new Dictionary<ParameterKey, ParameterInfo>();
+        var catalogs = new List<(SourceId Source, IReadOnlyList<ParameterInfo> Catalog)>();
         foreach (var source in _data.Documents.Select(document => document.Snapshot.Source).Distinct())
         {
-            foreach (var parameter in await _runtime.ParametersAsync(source, cancellationToken))
-            {
-                if (!merged.ContainsKey(parameter.Key))
-                {
-                    merged.Add(parameter.Key, parameter);
-                }
-            }
+            catalogs.Add((source, await _runtime.ParametersAsync(source, cancellationToken)));
         }
 
-        return merged.Values
-            .OrderBy(parameter => parameter.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+        _catalogs = catalogs;
+        _allParameters = ParameterCatalog.Merge(catalogs.Select(item => item.Catalog).ToList());
+        UpdateParameters();
+    }
+
+    private void UpdateParameters()
+    {
+        var groups = CheckedGroups().ToHashSet();
+        if (groups.Count == 0)
+        {
+            Parameters = _allParameters;
+            return;
+        }
+
+        Parameters = ParameterCatalog.Merge(_catalogs
+            .Where(item => HasAnyGroup(item.Source, groups))
+            .Select(item => (IReadOnlyList<ParameterInfo>)item.Catalog
+                .Where(parameter => parameter.Categories.Overlaps(groups))
+                .ToList())
+            .ToList());
+    }
+
+    private bool HasAnyGroup(SourceId source, HashSet<long> groups)
+    {
+        return _data.Documents
+            .Where(document => document.Snapshot.Source == source)
+            .Any(document => document.Snapshot.Groups.Any(group => groups.Contains(group.GroupId)));
     }
 
     internal async Task ActivateAsync()
@@ -415,6 +450,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
 
     private void OnCategoryChanged()
     {
+        UpdateParameters();
         ((IFilterEditor)this).OnEdited();
     }
 
@@ -452,6 +488,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
 
         if (changed)
         {
+            UpdateParameters();
             ((IFilterEditor)this).OnEdited();
         }
     }
@@ -514,6 +551,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
             }
 
             OnPropertyChanged(nameof(SelectedSource));
+            await EvaluateAsync(false);
         }
     }
 
@@ -588,6 +626,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
                 category.SetChecked(groups.Contains(category.GroupId));
             }
 
+            UpdateParameters();
             OnPropertyChanged(nameof(CategorySummary));
             Root = RuleSetViewModel.From(definition.Root, this, IsReadOnly);
             Name = item?.Name ?? string.Empty;
@@ -741,6 +780,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
                     category.SetChecked(groups.Contains(category.GroupId));
                 }
 
+                UpdateParameters();
                 Root = RuleSetViewModel.From(definition.Root, this, false);
             }
             finally
@@ -755,10 +795,13 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
 
     private static FilterSet Strip(FilterSet set)
     {
-        return new FilterSet(set.Match, set.Children
-            .Where(child => child is not UnsupportedRule)
-            .Select(child => child is FilterSet nested ? Strip(nested) : child)
-            .ToList());
+        return set with
+        {
+            Children = set.Children
+                .Where(child => child is not UnsupportedRule)
+                .Select(child => child is FilterSet nested ? Strip(nested) : child)
+                .ToList()
+        };
     }
 
     [RelayCommand]
@@ -797,7 +840,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
         _baseline = [.. selection];
     }
 
-    private async Task EvaluateAsync()
+    private async Task EvaluateAsync(bool sync)
     {
         _evaluation?.Cancel();
         _evaluation?.Dispose();
@@ -812,7 +855,7 @@ public sealed partial class FilterTabViewModel : ObservableValidator, IFilterEdi
         }
 
         Result = result;
-        if (!IsLiveOn || _current is null || (_current.IsCustom && IsEmpty(Definition())))
+        if (!sync || !IsLiveOn || _current is null || (_current.IsCustom && IsEmpty(Definition())))
         {
             return;
         }

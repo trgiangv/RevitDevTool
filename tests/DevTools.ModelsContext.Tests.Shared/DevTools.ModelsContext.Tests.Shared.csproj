@@ -10,6 +10,10 @@
         <ProjectReference Include="..\..\source\DevTools.ModelsContext\DevTools.ModelsContext.csproj"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <PackageReference Include="Bogus"/>
+    </ItemGroup>
+
     <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
         <PackageReference Include="System.Text.Json"/>
     </ItemGroup>
