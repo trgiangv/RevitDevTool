@@ -10,8 +10,6 @@ namespace DevTools.Presentation.Views.ModelsContext;
 
 public partial class FilterTabView : UserControl
 {
-    public static readonly IReadOnlyList<ValueKind> ValueKinds = Enum.GetValues(typeof(ValueKind)).Cast<ValueKind>().ToList();
-
     public static readonly IReadOnlyList<ResultSelectionMode> Modes =
         Enum.GetValues(typeof(ResultSelectionMode)).Cast<ResultSelectionMode>().ToList();
 
@@ -93,6 +91,13 @@ public partial class FilterTabView : UserControl
         }
     }
 
+    private void OnValuesLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: RuleViewModel { Kind: ValueKind.Reference or ValueKind.Enumerated } rule })
+        {
+            _ = rule.LoadValuesCommand.ExecuteAsync(null);
+        }
+    }
     private void OnResultMenuOpening(object sender, ContextMenuEventArgs e)
     {
         _panel?.Filter.OpenResultMenu();

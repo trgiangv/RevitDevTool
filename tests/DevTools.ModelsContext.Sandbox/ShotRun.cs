@@ -155,7 +155,7 @@ internal static class ShotRun
         var rule = (RuleViewModel)filter.Root.Children[0];
         rule.SelectedParameter = rule.Parameters.FirstOrDefault();
         rule.Value = "SA";
-        rule.Kind = ValueKind.ElementId;
+        rule.IsCaseSensitive = true;
         filter.Root.AddSetCommand.Execute(null);
         var set = (RuleSetViewModel)filter.Root.Children[1];
         set.Match = SetMatch.Any;
@@ -163,6 +163,64 @@ internal static class ShotRun
         ((RuleViewModel)set.Children[0]).ParameterName = "Level";
         await Settle(700);
         Save(window, Path.Combine(directory, $"{theme}-filter-rules.png"));
+
+        await CaptureKindsAsync(window, filter, filterView, directory, theme);
+    }
+
+    private static async Task CaptureKindsAsync(SandboxWindow window, FilterTabViewModel filter, FilterTabView filterView,
+        string directory, AppTheme theme)
+    {
+        for (var wait = 0; wait < 40 && !filter.Parameters.Any(parameter => parameter.DisplayName == "Width"); wait++)
+        {
+            await Settle(250);
+        }
+
+        filter.Root.Children.Clear();
+        var names = new[] { "Mark", "Width", "Flag", "Level" };
+        foreach (var name in names)
+        {
+            filter.Root.AddRuleCommand.Execute(null);
+            var rule = (RuleViewModel)filter.Root.Children[^1];
+            rule.SelectedParameter = name == "Flag"
+                ? new ParameterInfo(ParameterKey.Named("Flag", "spec:yesno"), "Flag", ValueKind.YesNo,
+                    Origins: ParameterOrigin.Project, Bindings: ParameterBinding.Instance, SpecLabel: "Yes/No")
+                : rule.Parameters.FirstOrDefault(parameter => parameter.DisplayName == name) ?? rule.Parameters.First();
+            if (rule.Kind is ValueKind.Reference or ValueKind.Enumerated)
+            {
+                await rule.LoadValuesCommand.ExecuteAsync(null);
+            }
+        }
+
+        await Settle(700);
+        Save(window, Path.Combine(directory, $"{theme}-filter-kinds.png"));
+
+        var box = FindBox(filterView, "Filter.Rule.Parameter");
+        box.IsDropDownOpen = true;
+        await Settle(700);
+        var drop = box.Template.FindName("dropDownBorder", box) as FrameworkElement;
+        Save(window, Path.Combine(directory, $"{theme}-filter-picker.png"), drop);
+        box.IsDropDownOpen = false;
+    }
+
+    private static ComboBox FindBox(DependencyObject root, string automationId)
+    {
+        var queue = new Queue<DependencyObject>();
+        queue.Enqueue(root);
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            if (current is ComboBox box && System.Windows.Automation.AutomationProperties.GetAutomationId(box) == automationId)
+            {
+                return box;
+            }
+
+            for (var index = 0; index < VisualTreeHelper.GetChildrenCount(current); index++)
+            {
+                queue.Enqueue(VisualTreeHelper.GetChild(current, index));
+            }
+        }
+
+        throw new InvalidOperationException(automationId);
     }
 
     private static Task Settle(int milliseconds = 300)
@@ -170,7 +228,7 @@ internal static class ShotRun
         return Task.Delay(milliseconds);
     }
 
-    private static void Save(Window window, string path, ContextMenu? menu = null)
+    private static void Save(Window window, string path, FrameworkElement? menu = null)
     {
         const double Scale = 2;
         var width = window.ActualWidth;
@@ -179,7 +237,7 @@ internal static class ShotRun
         using (var context = visual.RenderOpen())
         {
             context.DrawRectangle(new VisualBrush(window), null, new Rect(0, 0, width, height));
-            if (menu is { IsOpen: true } && PresentationSource.FromVisual(menu) is { } source)
+            if (menu is not null && PresentationSource.FromVisual(menu) is { } source)
             {
                 var factor = source.CompositionTarget!.TransformToDevice.M11;
                 var at = menu.PointToScreen(new Point(0, 0));
