@@ -313,21 +313,54 @@ One mode: categories plus rules.
   line. *All · None* tick or untick the categories the search shows. Checked
   categories are always "any of".
 - **Rules:** a set matches **All (AND)** or **Any (OR)**; sets nest (+ Set).
-  Each rule is parameter, operator, value, on two lines. Operators follow
-  Revit's names and the parameter's storage type (equals … does not end with,
-  has a value / has no value) plus *parameter exists* / *parameter missing*.
-  Numeric input is parsed with `UnitFormatUtils.TryParse` against the units of
-  the document it runs in; ElementId values (Level, Phase) pick by name. The
-  value dropdown lists real values in the checked documents with counts and a
-  `[No parameter]` row (value index, §11). **+ Rule** and **+ Set** are small
+  A set can be inverted (NOT). Each rule is parameter, operator, value, on two
+  lines.
+  - **Parameter identity:** one match key per parameter: built-in by
+    `BuiltInParameter` name, shared by GUID, project and family parameters by
+    name plus data type (another data type is another parameter). Origin
+    (built-in, shared, project, family) and binding (instance, type) are tags,
+    not part of the key; the picker merges the ticked documents by key and
+    shows each item's tags and coverage (documents that have it / ticked).
+  - **Catalog per document:** `GetFilterableParametersInCommon` per category
+    plus one sampled element per type (one per category without a type) for
+    family parameters and built-in data types. The adapter caches it per
+    document and version and drops it on `DocumentChanged` touching parameter
+    elements or families, and on link reload. Each item records the categories
+    it was found for (filterable for that category, or carried by a sampled
+    element of it or by that element's type).
+  - **Picker follows the categories:** with categories checked, the picker
+    lists the union of parameters found for any checked category; with none
+    checked it lists all. Coverage then counts only ticked documents that
+    contain a checked category. A rule whose parameter drops out of the list
+    keeps its key, name and kind; the picker shows its name as text.
+  - **Kind** comes from the parameter, never from the user: Yes/No spec gives
+    YesNo; a measurable spec or a double gives Number; an ElementId gives
+    Reference; an integer with named values gives Enumerated; other integers give
+    Integer; strings give Text. Stored rules carry no kind.
+  - **Operators:** Text all; Number and Integer compare; YesNo, Reference and
+    Enumerated equal and not equal; every kind has has / has no value plus
+    *parameter exists* / *parameter missing*.
+  - **Run per document:** the key resolves in the target document to the real
+    parameter (id, storage, spec); a key it lacks gives no match there.
+    Numbers parse once with the active model's units and that value runs in
+    host and links. Yes/No is 1/0; Reference names resolve in the target
+    document; Enumerated text maps to its integer through the value index.
+  - **Case-sensitive text** (`Aa`, off by default): Revit string rules ignore
+    case, so a widened native pass returns a superset (positive leaves keep
+    their rule, negative leaves become *parameter exists*, flipped under an
+    inverted set), then an exact ordinal pass runs on that superset only.
+  The value dropdown lists real values in the checked documents with counts and a
+  `[No parameter]` row (value index, §11), cached per document, key and
+  categories with the document version. **+ Rule** and **+ Set** are small
   icon-and-text buttons under each set, hidden for read-only filters. With no
   rules the box says every element of the checked categories matches.
 - **Revit filters** open read only. A rule-based filter runs in its own
   document (`GetElementFilter()` AND `ElementMulticategoryFilter(GetCategories())`);
   its rules display read only through a reader that turns
   `ElementLogicalFilter` / `ElementParameterFilter` / `FilterRule` trees into
-  rule rows, with an *unsupported rule* row for rules it cannot show (global
-  parameter association). A selection filter gives `GetElementIds()`; missing
+  rule rows (an inverted parameter filter reads as an inverted set), with an
+  *unsupported rule* row for rules it cannot show (global parameter
+  association). A selection filter gives `GetElementIds()`; missing
   ids are skipped; in a link they become link references. A Current model
   filter is never run against a link document. *Duplicate* copies a Revit filter into a
   custom filter.
@@ -338,6 +371,9 @@ One mode: categories plus rules.
   Revit selection after a ~300 ms debounce. The selection when Live starts is
   the baseline for Add and Remove, so edits never accumulate. Live pauses above
   about 5,000 elements; *Select in Revit* then shows in the menu.
+- A model edit or a context refresh recounts the result whether or not Live
+  is on, but leaves the Revit selection alone, so an edit in Properties never
+  drops the element being edited.
 
 ### 6. Selection sync
 

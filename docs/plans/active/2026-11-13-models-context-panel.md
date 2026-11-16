@@ -272,6 +272,84 @@ until the edge cases in 0062 Follow-Up 8 are measured.
   rows) at 26k and 281 ms (38,187 rows) at 50k, plus one Revit call per Type.
   Proof: `DevTools.ModelsContext.Tests` and `DevTools.ModelsContext.Views.Tests`.
 
+### Phase 5c — Filter parameter identity and types (planned 2026-11-15)
+
+Goal: the rule's data type comes from the parameter, never from the user, and
+one rule works on host and link elements alike. Inputs: Revit 2026
+UIFramework decompile (the Edit Filter dialog is native; the managed side
+only asks native for operators, free-text vs dropdown, and (id, name) value
+lists per parameter id), and two in-house tools, ParameterMapper and
+PenetrationMapper (tags, sampling, name+type keys; neither caches).
+
+1. Spike (live Revit 2026, host + link), before code:
+   - Parameter.Id sign and `ParameterBindings` presence for a non-shared
+     family parameter on a project instance; whether `ElementParameterFilter`
+     with that id filters it.
+   - `Definition.GetDataType()` for built-ins read from a sampled element.
+   - Cost of sampling one element per family type and per category on the
+     HVAC sample and its six links.
+   - Result (Revit 2026, HVAC sample and six links): a non-shared family
+     parameter has a positive id, a `ParameterElement` with an
+     `InternalDefinition` in that document, and no entry in
+     `ParameterBindings` (6 to 234 per document). It is not in
+     `GetFilterableParametersInCommon`, yet `ElementParameterFilter` filters
+     on it natively (has value 37/37 host, 105/142 Architectural; `>=` matched
+     the in-memory count 105/105). So family parameters stay native; no
+     in-memory path is needed for them. Sampled built-ins give a data type for
+     270 of 348 (host). One collector pass per document took 11 to 272 ms
+     plus 4 to 57 ms to read the samples' parameters.
+2. Identity. `ParameterKey` becomes one match key per kind:
+   - Built-in: `BuiltInParameter` name. Shared: GUID.
+   - Project and Family (non-shared): name plus data type (`ForgeTypeId`
+     string). Same name with another data type is another key.
+   - Origin (Built-in, Shared, Project, Family) and binding (Instance, Type)
+     are tags on the merged item, not part of the key. A Family parameter in
+     one document and a Project parameter in another, same name and data
+     type, are one item with both tags (decided 2026-11-15).
+3. Catalog per document, cached:
+   - Enumerate with `GetFilterableParametersInCommon` per category, then add
+     family parameters and data types of built-ins from sampled elements (one
+     per family type, one per category without families).
+   - `ParameterInfo`: key, display name, origin, binding, storage type, spec,
+     kind, per document.
+   - Cache per `SourceId` and category; drop a document's entries on its
+     `DocumentChanged` (families, parameter elements, bindings) and on link
+     reload. The panel merges cached per-document lists by key and counts how
+     many ticked documents have each key (coverage).
+4. Kinds: Text, Integer, Number (with spec), YesNo, Reference (ElementId),
+   Enumerated (integer with named values). Derived, read-only; the Kind combo and
+   `FilterRule.Kind` go (stored filters drop the field).
+5. Operators and editors per kind: Text all; Number and Integer compare;
+   YesNo, Reference, Enumerated equal and not equal; every kind has has/no value.
+   YesNo is a Yes/No dropdown; Reference and Enumerated pick from the value index
+   by name; Number shows a unit hint and parses with host units once.
+6. Parameter picker: HC `AutoCompleteTextBox`, each item the name plus HC
+   stock labels for origin, binding, data type and coverage (as in the two
+   in-house tools).
+7. Compile per document: resolve the key in the target document to the real
+   parameter (id, storage, spec) and build the rule from that, not from a
+   stored kind. A key the document lacks, or a type that does not fit, gives
+   no match there. Family parameters compile to native rules like project
+   ones (spike 1).
+8. Value index cached per (document, key, categories) with the document
+   version; Reference names resolve in the owning document.
+8b. Case-sensitive text rules (Revit string rules are always
+   case-insensitive). An `Aa` toggle per text rule, off by default:
+   - Native pass with a widened tree: a positive leaf (equals, contains,
+     begins, ends) keeps its case-insensitive rule, which matches a superset;
+     a negative leaf (not equals, not contains...) becomes "has a value" in a
+     positive position. A leaf under an inverted set flips: it takes the
+     case-insensitive rule, which matches a subset there. The result is a
+     superset of the exact answer.
+   - Exact pass in memory on that superset only: read the value (instance,
+     then type) and test the whole tree with ordinal comparison.
+   - When the value index for that key is cached, equals and not equals come
+     from it directly (value to element ids), with no Revit call.
+9. Tests: fakes and sandbox follow the new model; tests per kind, operator
+   set, same name with two data types, family plus project with one name,
+   host versus link units. Live FlaUI check on Revit 2026 host and link.
+10. ADR 0062 Filter section rewritten.
+
 ### Phase 6 — Docs and acceptance
 
 - `docs/product/model-context.md`, `docs/architecture/ModelsContext/README.md`,
@@ -369,6 +447,33 @@ until the edge cases in 0062 Follow-Up 8 are measured.
   errors reach the status line; hidden-id read-back must not walk every
   element (panel-touched ids plus visible branches, cached per view, dropped by
   `DocumentChanged`); a dedicated ribbon icon.
+- [ ] Phase 5c — parameter identity and types.
+  - [x] Step 1 spike (recorded above).
+  - [x] Steps 2–5, 7, 8, 8b: match keys, merged catalog with origin, binding
+    and coverage tags, derived kinds and operator sets, adapter catalog and
+    value caches, per-document compile (host units, Yes/No, Enum map,
+    family parameters native), inverted sets, case-sensitive two-pass
+    evaluation. Proof: `DevTools.ModelsContext.Tests` 199/199 and
+    `Views.Tests` 40/40 (net10.0-windows); Tools builds for 2023 and 2026;
+    `build-host.ps1 -HostApp Revit -Year 2026` builds and deploys. Not run in
+    a live Revit yet.
+  - [x] Step 6: the picker is `DevTools.UI` `AutoCompleteComboBox` (own view
+    per control, max suggestions, error template hidden while open), items
+    with HC label tags; per-kind editors, `Aa` and NOT toggles.
+  - [x] Step 9 live FlaUI check (Revit 2026, HVAC sample, Architectural link,
+    Doors 142): Swing Angle (family parameter, two ids) has value 131,
+    missing 11, > 45° 130, = 90° 130, != 90° 1, <= 45° 1; Mark = "s10" 1
+    with `Aa` off and 0 with it on, = "S10" 1, != "S10" 141, != "s10" 142;
+    all match the API counts. Two fixes came from it: family parameter
+    elements are not returned by `OfClass(ParameterElement)`, so a name plus
+    data type key maps to the ids found on sampled elements; and a native
+    not-equals rule passes elements without the parameter, so each per-id
+    rule is ANDed with "has the parameter".
+  - [x] Picker by category: catalog items carry their category ids; the
+    picker lists the union for the checked categories (all when none), and a
+    rule keeps a parameter that drops out. Proof: `DevTools.ModelsContext.Tests`
+    and `Views.Tests` pass (net10.0-windows); not run in a live Revit yet.
+  - [ ] Step 10 remaining docs.
 - [ ] Phase 5 — spike; T3 queue or no-go path.
 - [ ] Phase 6 — product and architecture docs; 0062 Accepted.
 
