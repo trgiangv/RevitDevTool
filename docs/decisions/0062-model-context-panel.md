@@ -970,6 +970,7 @@ Tradeoffs:
 - Benchmark the flat tree list against the §12 targets on a model of about
   100k elements with two to three links, and on a generated 1M-element model
   across five documents in the sandbox.
-- After the spike, set Accepted or amend, then add
-  `docs/product/model-context.md` and `docs/architecture/ModelsContext/`.
+- After the spike, set Accepted or amend. Product and architecture docs:
+  [product/models-context.md](../product/models-context.md),
+  [architecture/ModelsContext](../architecture/ModelsContext/README.md).
 - Execution plan: [2026-11-13-models-context-panel](../plans/active/2026-11-13-models-context-panel.md).

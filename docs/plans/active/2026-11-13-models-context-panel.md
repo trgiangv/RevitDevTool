@@ -352,8 +352,7 @@ PenetrationMapper (tags, sampling, name+type keys; neither caches).
 
 ### Phase 6 — Docs and acceptance
 
-- `docs/product/model-context.md`, `docs/architecture/ModelsContext/README.md`,
-  test-matrix rows for the new suites; set 0062 to Accepted.
+- Product and architecture pages are done (Step 10). Left: test-matrix rows for the new suites; set 0062 to Accepted.
 
 ## Risks And Recovery
 
@@ -473,7 +472,10 @@ PenetrationMapper (tags, sampling, name+type keys; neither caches).
     picker lists the union for the checked categories (all when none), and a
     rule keeps a parameter that drops out. Proof: `DevTools.ModelsContext.Tests`
     and `Views.Tests` pass (net10.0-windows); not run in a live Revit yet.
-  - [ ] Step 10 remaining docs.
+  - [x] Step 10 docs: `docs/product/models-context.md` and
+    `docs/architecture/ModelsContext/` (README with Gotchas, snapshots, filters,
+    parameter-catalog, ui); linked from `ARCHITECTURE.md`, `agents/index.md`,
+    `product/README.md` and 0062.
 - [ ] Phase 5 — spike; T3 queue or no-go path.
 - [ ] Phase 6 — product and architecture docs; 0062 Accepted.
 

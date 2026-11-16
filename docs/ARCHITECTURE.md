@@ -29,6 +29,7 @@ stays `FileMetadata.*`; add-in DI lives in `RevitDevTool/Composition` /
 | PyTest bridge | [architecture/Execution/pytest-bridge.md](architecture/Execution/pytest-bridge.md) | [product/pytest-bridge.md](product/pytest-bridge.md) | [agents/mcp-pytest-bridge.md](agents/mcp-pytest-bridge.md) |
 | Logging | [architecture/Logging](architecture/Logging/README.md) | [product/logging.md](product/logging.md) | — |
 | Visualization | [architecture/Visualization](architecture/Visualization/README.md) | [product/visualization.md](product/visualization.md) | — |
+| Model Context panel | [architecture/ModelsContext](architecture/ModelsContext/README.md) | [product/models-context.md](product/models-context.md) | — |
 | MTP host testing | [architecture/Testing](architecture/Testing/README.md) | [product/host-testing.md](product/host-testing.md), [tunit-host-testing.md](product/tunit-host-testing.md) | [agents/host-testing.md](agents/host-testing.md) |
 | PythonDemo | [architecture/PythonDemo](architecture/PythonDemo/README.md) | — | — |
 

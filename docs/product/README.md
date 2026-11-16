@@ -17,6 +17,7 @@ notes belong in `docs/agents/`.
 | [tunit-host-testing.md](tunit-host-testing.md) | TUnit provider contract |
 | [logging.md](logging.md) | Logging sinks and redirection |
 | [visualization.md](visualization.md) | Revit-only DirectContext3D overlays |
+| [models-context.md](models-context.md) | Model Context panel: browse, filter, select and show/hide across the model and its links |
 
 ## Update Rule
 
