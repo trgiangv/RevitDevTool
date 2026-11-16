@@ -9,4 +9,10 @@
           IsTextSearchEnabled="False"
           PreviewKeyDown="ComboBox_PreviewKeyDown"
           StaysOpenOnEdit="True"
-          mc:Ignorable="d" />
+          mc:Ignorable="d">
+    <ComboBox.ItemsPanel>
+        <ItemsPanelTemplate>
+            <VirtualizingStackPanel />
+        </ItemsPanelTemplate>
+    </ComboBox.ItemsPanel>
+</ComboBox>

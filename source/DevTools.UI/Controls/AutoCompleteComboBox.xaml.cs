@@ -23,6 +23,8 @@ public partial class AutoCompleteComboBox
     private BindingEvaluator<string>? _itemTextEvaluator;
     private string? _cachedFilterQuery;
     private Predicate<object>? _cachedFilter;
+    private bool _isApplyingOwnView;
+    private ControlTemplate? _savedErrorTemplate;
 
     [UsedImplicitly]
     public TextBox? EditableTextBox
@@ -54,8 +56,25 @@ public partial class AutoCompleteComboBox
 
     protected override void OnItemsSourceChanged(IEnumerable oldValue, IEnumerable newValue)
     {
+        if (!_isApplyingOwnView && newValue is IList list and not ICollectionView)
+        {
+            _isApplyingOwnView = true;
+            try
+            {
+                SetCurrentValue(ItemsSourceProperty, new ListCollectionView(list));
+            }
+            finally
+            {
+                _isApplyingOwnView = false;
+            }
+
+            return;
+        }
+
         base.OnItemsSourceChanged(oldValue, newValue);
         _defaultItemsFilter = newValue is ICollectionView cv ? cv.Filter : null;
+        _cachedFilterQuery = null;
+        _cachedFilter = null;
     }
 
     #region Setting
@@ -134,7 +153,8 @@ public partial class AutoCompleteComboBox
 
             UpdateFilter();
 
-            if (controlOpen && !IsDropDownOpen && IsKeyboardFocusWithin && Items.Count > 0)
+            if (controlOpen && !IsDropDownOpen && IsKeyboardFocusWithin && Items.Count > 0
+                && Items.Count <= SettingOrDefault.MaxSuggestionCount)
             {
                 IsDropDownOpen = true;
             }
@@ -171,6 +191,12 @@ public partial class AutoCompleteComboBox
     {
         base.OnDropDownOpened(e);
 
+        if (Validation.GetHasError(this) && _savedErrorTemplate is null)
+        {
+            _savedErrorTemplate = Validation.GetErrorTemplate(this);
+            Validation.SetErrorTemplate(this, null);
+        }
+
         _debounceTimer?.Stop();
 
         UpdateSuggestionList(controlOpen: false);
@@ -178,6 +204,16 @@ public partial class AutoCompleteComboBox
         var textBox = EditableTextBox;
         if (textBox is not null)
             textBox.Select(textBox.SelectionStart + textBox.SelectionLength, 0);
+    }
+
+    protected override void OnDropDownClosed(EventArgs e)
+    {
+        base.OnDropDownClosed(e);
+        if (_savedErrorTemplate is not null)
+        {
+            Validation.SetErrorTemplate(this, _savedErrorTemplate);
+            _savedErrorTemplate = null;
+        }
     }
 
     private void ComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -284,7 +320,7 @@ public class AutoCompleteComboBoxSetting
     /// <summary>
     /// Delay before updating the suggestion list after typing. Zero = immediate.
     /// </summary>
-    public virtual TimeSpan Delay => TimeSpan.FromMilliseconds(300);
+    public virtual TimeSpan Delay => TimeSpan.FromMilliseconds(150);
 
     private static AutoCompleteComboBoxSetting _default = new();
 
