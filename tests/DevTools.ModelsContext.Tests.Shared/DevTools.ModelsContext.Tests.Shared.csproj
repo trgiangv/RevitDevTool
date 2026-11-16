@@ -12,6 +12,7 @@
 
     <ItemGroup>
         <PackageReference Include="Bogus"/>
+        <PackageReference Include="Moq"/>
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net48'">

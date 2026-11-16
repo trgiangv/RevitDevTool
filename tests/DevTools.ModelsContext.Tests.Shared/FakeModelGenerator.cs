@@ -1,3 +1,4 @@
+using Bogus;
 using DevTools.ModelsContext.Model;
 
 namespace DevTools.ModelsContext.Tests.Shared;
@@ -175,78 +176,36 @@ public static class FakeModelGenerator
         long idBase,
         IReadOnlyDictionary<long, string> levels)
     {
-        var random = new SeededRandom(seed);
-        var categories = Categories.Where(category => disciplines.IndexOf(category.Discipline) >= 0).ToList();
+        var random = new Randomizer(seed);
         var types = new List<TypeRecord>();
-        var typesByCategory = new List<List<TypeRecord>>();
-        var nextTypeId = idBase;
-        foreach (var category in categories)
+        var bag = new List<TypeRecord[]>();
+        foreach (var category in Categories.Where(category => disciplines.IndexOf(category.Discipline) >= 0))
         {
-            var list = new List<TypeRecord>();
-            var familyCount = 1 + random.Next(8);
-            for (var family = 1; family <= familyCount; family++)
-            {
-                var familyName = $"{category.Name} Family {family}";
-                var typeCount = 1 + random.Next(6);
-                for (var type = 1; type <= typeCount; type++)
-                {
-                    var record = new TypeRecord(nextTypeId++, category.Id, category.Name, familyName,
-                        $"{familyName} Type {type}");
-                    list.Add(record);
-                    types.Add(record);
-                }
-            }
-
-            typesByCategory.Add(list);
+            var ofCategory = Enumerable.Range(1, random.Number(1, 8))
+                .SelectMany(family => Enumerable.Range(1, random.Number(1, 6))
+                    .Select(type => (Family: $"{category.Name} Family {family}", Type: type)))
+                .Select((name, index) => new TypeRecord(idBase + types.Count + index, category.Id, category.Name,
+                    name.Family, $"{name.Family} Type {name.Type}"))
+                .ToArray();
+            types.AddRange(ofCategory);
+            bag.AddRange(Enumerable.Repeat(ofCategory, category.Weight));
         }
 
-        var totalWeight = categories.Sum(category => category.Weight);
+        var picks = bag.ToArray();
         var levelIds = levels.Keys.ToArray();
         var elements = new List<ElementRecord>(elementCount);
         var nextId = idBase + 100_000;
         for (var index = 0; index < elementCount; index++)
         {
-            var pick = random.Next(totalWeight);
-            var categoryIndex = 0;
-            while (pick >= categories[categoryIndex].Weight)
-            {
-                pick -= categories[categoryIndex].Weight;
-                categoryIndex++;
-            }
-
-            var candidates = typesByCategory[categoryIndex];
-            var skew = random.NextDouble();
-            var typeIndex = (int)(skew * skew * candidates.Count);
-            nextId += 1 + random.Next(3);
-            elements.Add(new ElementRecord(nextId, candidates[typeIndex].TypeId, levelIds[random.Next(levelIds.Length)],
-                1 + random.Next(4)));
+            var candidates = random.ArrayElement(picks);
+            var skew = random.Double();
+            nextId += random.Number(1, 3);
+            elements.Add(new ElementRecord(nextId, candidates[(int)(skew * skew * candidates.Length)].TypeId,
+                random.ArrayElement(levelIds), random.Number(1, 4)));
         }
 
         return new FakeSource(id, fileName, types, elements);
     }
 
     internal sealed record CategorySpec(long Id, string Name, char Discipline, int Weight);
-
-    private sealed class SeededRandom(int seed)
-    {
-        private ulong _state = (ulong)seed * 0x9E3779B97F4A7C15UL + 1;
-
-        public int Next(int maxExclusive)
-        {
-            return (int)(NextUInt64() % (ulong)maxExclusive);
-        }
-
-        public double NextDouble()
-        {
-            return (NextUInt64() >> 11) * (1.0 / (1UL << 53));
-        }
-
-        private ulong NextUInt64()
-        {
-            _state ^= _state << 13;
-            _state ^= _state >> 7;
-            _state ^= _state << 17;
-            return _state;
-        }
-    }
 }

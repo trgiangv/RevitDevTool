@@ -20,12 +20,12 @@ public sealed class PanelBarsTests
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         var asked = fixture.Panel.TemporaryBar.IsConfirmingKeep;
-        var keptBefore = fixture.Model.KeepCount;
+        var keptBefore = fixture.Actions.KeepCount;
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
 
         Assert.IsTrue(asked);
         Assert.AreEqual(0, keptBefore);
-        Assert.AreEqual(1, fixture.Model.KeepCount);
+        Assert.AreEqual(1, fixture.Actions.KeepCount);
     }
 
     [TestMethod]
@@ -37,7 +37,7 @@ public sealed class PanelBarsTests
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
 
         Assert.IsFalse(fixture.Panel.TemporaryBar.IsConfirmingKeep);
-        Assert.AreEqual(1, fixture.Model.KeepCount);
+        Assert.AreEqual(1, fixture.Actions.KeepCount);
     }
 
     [TestMethod]
@@ -55,7 +55,7 @@ public sealed class PanelBarsTests
         Assert.AreEqual(1, changes);
         Assert.AreEqual(0, bar.ChangeCount);
         Assert.IsFalse(fixture.Panel.IsTemporaryBarVisible);
-        Assert.AreEqual(1, fixture.Model.ResetCount);
+        Assert.AreEqual(1, fixture.Actions.ResetCount);
     }
 
     [TestMethod]
@@ -105,7 +105,7 @@ public sealed class PanelBarsTests
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        Assert.IsTrue(fixture.Model.ExecutedPlans.Single().UsesReferenceCommands);
+        Assert.IsTrue(fixture.Actions.ExecutedPlans.Single().UsesReferenceCommands);
         CollectionAssert.AreEquivalent(ducts.ToList(),
             fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList());
         Assert.AreEqual(1, fixture.Panel.TemporaryBar.ChangeCount);
@@ -124,10 +124,10 @@ public sealed class PanelBarsTests
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         Assert.IsNull(fixture.Explorer.Message);
-        CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Model.ShownLinked.Single().ToList());
+        CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Actions.ShownLinked.Single().ToList());
         CollectionAssert.AreEquivalent(pipes.ToList(),
             fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList());
-        Assert.AreEqual(0, fixture.Model.ResetCount);
+        Assert.AreEqual(0, fixture.Actions.ResetCount);
         Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
         Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Pipes").Eye);
     }
@@ -157,7 +157,7 @@ public sealed class PanelBarsTests
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
-        CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Model.ShownLinked.Single().ToList());
+        CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Actions.ShownLinked.Single().ToList());
         Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
         Assert.IsFalse(fixture.Panel.IsTemporaryBarVisible);
     }
@@ -171,7 +171,7 @@ public sealed class PanelBarsTests
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
-        Assert.IsEmpty(fixture.Model.ShownLinked);
+        Assert.IsEmpty(fixture.Actions.ShownLinked);
         Assert.IsNotEmpty(fixture.Panel.Journal.LinkEntries);
         Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
     }
@@ -186,7 +186,7 @@ public sealed class PanelBarsTests
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
 
-        Assert.IsEmpty(fixture.Model.ShownLinked);
+        Assert.IsEmpty(fixture.Actions.ShownLinked);
         Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
     }
 
@@ -201,9 +201,9 @@ public sealed class PanelBarsTests
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
-        Assert.AreEqual(1, fixture.Model.ResetCount);
-        Assert.IsFalse(fixture.Model.ExecutedPlans.Any(plan => plan.UsesReferenceCommands));
-        Assert.IsEmpty(fixture.Model.ShownLinked);
+        Assert.AreEqual(1, fixture.Actions.ResetCount);
+        Assert.IsFalse(fixture.Actions.ExecutedPlans.Any(plan => plan.UsesReferenceCommands));
+        Assert.IsEmpty(fixture.Actions.ShownLinked);
         Assert.IsNotEmpty(fixture.Panel.Journal.LinkEntries);
         Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
         Assert.AreEqual(2, fixture.Panel.TemporaryBar.ChangeCount);
@@ -258,7 +258,7 @@ public sealed class PanelBarsTests
         var ran = await fixture.Panel.ContextMenu.RunShortcutAsync("z");
 
         Assert.IsTrue(ran);
-        Assert.HasCount(1, fixture.Model.Zoomed);
+        Assert.HasCount(1, fixture.Actions.Zoomed);
     }
 
     [TestMethod]

@@ -1,5 +1,7 @@
 using DevTools.ModelsContext.Diagnostics;
+using DevTools.ModelsContext.Model;
 using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace DevTools.ModelsContext.Tests;
 
@@ -74,7 +76,8 @@ public sealed class LoggingTests
         var logger = new CollectingLogger(LogLevel.Debug);
         using var fixture = await PanelFixture.OpenAsync(logger: logger);
         fixture.Filter.AddCommand.Execute(null);
-        fixture.Model.StoreError = "Settings file is locked.";
+        fixture.CustomFilters.Setup(store => store.Save(It.IsAny<IReadOnlyList<CustomFilter>>()))
+            .Throws(new InvalidOperationException("Settings file is locked."));
 
         fixture.Filter.SaveCommand.Execute(null);
 

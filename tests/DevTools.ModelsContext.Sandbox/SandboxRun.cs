@@ -59,8 +59,8 @@ internal sealed class SandboxRun : IDisposable
         var data = BuildData(size);
         var model = new FakeModel(data);
         var source = SlowSource.Wrap(model, () => delay);
-        var services = new ModelContextServices(source, model, model, model, model, model, model, new SystemClock(),
-            new DispatcherScheduler(dispatcher), ConsoleLog.Current);
+        var services = new FakeHost(model).Services(new SystemClock(), new DispatcherScheduler(dispatcher),
+            ConsoleLog.Current, source);
         var panel = new ModelContextViewModel(services);
         panel.ContextBar.Scope = ScopeKind.WholeModel;
         return new SandboxRun(size, data, model, panel, dispatcher);

@@ -1,20 +1,30 @@
 using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Ports;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
 using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace DevTools.ModelsContext.Tests;
 
 internal sealed class PanelFixture : IDisposable
 {
-    private PanelFixture(FakeModel model, FakeClock clock, ModelContextViewModel panel)
+    private readonly FakeHost _host;
+
+    private PanelFixture(FakeHost host, FakeClock clock, ModelContextViewModel panel)
     {
-        Model = model;
+        _host = host;
         Clock = clock;
         Panel = panel;
     }
 
-    public FakeModel Model { get; }
+    public FakeModel Model => _host.Model;
+
+    public FakeViewActions Actions => _host.Actions;
+
+    public Mock<IHostFilterCatalog> HostFilters => _host.HostFilters;
+
+    public Mock<ICustomFilterStore> CustomFilters => _host.CustomFilters;
 
     public FakeClock Clock { get; }
 
@@ -36,11 +46,11 @@ internal sealed class PanelFixture : IDisposable
 
     public static PanelFixture Create(FakeModel model, ScopeKind scope = ScopeKind.WholeModel, ILogger? logger = null)
     {
+        var host = new FakeHost(model);
         var clock = new FakeClock();
-        var panel = new ModelContextViewModel(new ModelContextServices(model, model, model, model, model, model, model,
-            clock, clock, logger));
+        var panel = new ModelContextViewModel(host.Services(clock, clock, logger));
         panel.ContextBar.Scope = scope;
-        return new PanelFixture(model, clock, panel);
+        return new PanelFixture(host, clock, panel);
     }
 
     public TreeRow? FindGroup(DocumentKey document, string name)

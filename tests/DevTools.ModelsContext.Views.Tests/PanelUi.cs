@@ -15,9 +15,10 @@ internal sealed class PanelUi : IDisposable
         LinkElements = 2_000,
     }));
 
-    private PanelUi(FakeModel model, FakeClock clock, ModelContextViewModel panel, ModelContextView view, ThemeHost host)
+    private PanelUi(FakeHost fake, FakeClock clock, ModelContextViewModel panel, ModelContextView view, ThemeHost host)
     {
-        Model = model;
+        Model = fake.Model;
+        Actions = fake.Actions;
         Clock = clock;
         Panel = panel;
         View = view;
@@ -25,6 +26,8 @@ internal sealed class PanelUi : IDisposable
     }
 
     public FakeModel Model { get; }
+
+    public FakeViewActions Actions { get; }
 
     public FakeClock Clock { get; }
 
@@ -36,17 +39,16 @@ internal sealed class PanelUi : IDisposable
 
     public static PanelUi Open()
     {
-        var model = new FakeModel(Small.Value);
+        var fake = new FakeHost(new FakeModel(Small.Value));
         var clock = new FakeClock();
         var (panel, view) = WpfSta.Invoke(() =>
         {
-            var panel = new ModelContextViewModel(new ModelContextServices(model, model, model, model, model, model, model,
-                clock, clock));
+            var panel = new ModelContextViewModel(fake.Services(clock, clock));
             panel.ContextBar.Scope = ScopeKind.WholeModel;
             return (panel, new ModelContextView { DataContext = panel });
         });
         WpfSta.Run(() => panel.InitializeAsync(CancellationToken.None));
-        return new PanelUi(model, clock, panel, view, ThemeHost.Show(view));
+        return new PanelUi(fake, clock, panel, view, ThemeHost.Show(view));
     }
 
     public void Press(string automationId)

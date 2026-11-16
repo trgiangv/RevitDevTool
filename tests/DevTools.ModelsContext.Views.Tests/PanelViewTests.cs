@@ -265,7 +265,7 @@ public sealed class PanelViewTests
 
         ui.PressIn(ui.Host.Row("Ducts"), "Explorer.Row.Eye");
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Model.ExecutedPlans.Count == 1), "The eye did not run a plan.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.ExecutedPlans.Count == 1), "The eye did not run a plan.");
         Assert.IsTrue(
             ThemeHost.WaitForUi(() => ui.Host.Row("Ducts").FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Eye"))?.ItemStatus == "Hidden"),
             "The row did not show the hidden eye.");
@@ -357,7 +357,7 @@ public sealed class PanelViewTests
         row.Patterns.SelectionItem.Pattern.Select();
         ui.PressIn(row, "Explorer.Row.Isolate");
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Model.ExecutedPlans.Any(plan => plan.Action == DevTools.ModelsContext.Model.VisibilityAction.Isolate)),
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.ExecutedPlans.Any(plan => plan.Action == DevTools.ModelsContext.Model.VisibilityAction.Isolate)),
             "The isolate tool did not run a plan.");
     }
 
@@ -382,7 +382,7 @@ public sealed class PanelViewTests
         Assert.IsNotNull(confirm, "The picker has no confirm button.");
         confirm.Patterns.Invoke.Pattern.Invoke();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Model.ExecutedPlans.Any(plan => plan.Action == DevTools.ModelsContext.Model.VisibilityAction.Color)),
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.ExecutedPlans.Any(plan => plan.Action == DevTools.ModelsContext.Model.VisibilityAction.Color)),
             "Confirming a color did not run a color plan.");
     }
     [TestMethod]
@@ -549,11 +549,11 @@ public sealed class PanelViewTests
         ui.Press("Temporary.Keep");
 
         Assert.IsNotNull(ui.Host.FindInWindow("Temporary.ConfirmKeep"));
-        Assert.AreEqual(0, ui.Model.KeepCount);
+        Assert.AreEqual(0, ui.Actions.KeepCount);
 
         ui.Press("Temporary.ConfirmKeep");
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Model.KeepCount == 1), "Keep did not run after the confirm.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.KeepCount == 1), "Keep did not run after the confirm.");
     }
 
     private static bool IsShown(PanelUi ui, string name)

@@ -4,14 +4,7 @@ using System.Globalization;
 
 namespace DevTools.ModelsContext.Tests.Shared;
 
-public sealed class FakeModel :
-    IModelSource,
-    IModelEvents,
-    ISelectionPort,
-    IViewActions,
-    IFilterEvaluator,
-    IHostFilterCatalog,
-    ICustomFilterStore
+public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFilterEvaluator
 {
     public const string FakeHostName = "Fake host";
 
@@ -21,7 +14,6 @@ public sealed class FakeModel :
     private readonly Dictionary<SourceId, DocumentSnapshot> _snapshots = [];
     private readonly Dictionary<SourceId, FakeSource> _sources = [];
     private string _active;
-    private List<CustomFilter> _customFilters = [];
     private List<TaskCompletionSource<bool>>? _scopeGates;
     private IReadOnlyCollection<ElementRef> _selection = [];
     private TaskCompletionSource<bool>? _snapshotGate;
@@ -59,26 +51,6 @@ public sealed class FakeModel :
     public bool ReverseRebuilds { get; set; }
 
     public bool IsBusy { get; private set; }
-
-    public List<VisibilityPlan> ExecutedPlans { get; } = [];
-
-    public List<IReadOnlyList<long>> HiddenReads { get; } = [];
-
-    public HashSet<ElementRef> HiddenLinked { get; } = [];
-
-    public List<IReadOnlyList<ElementRef>> ShownLinked { get; } = [];
-
-    public List<(DocumentKey Document, long FilterId)> HostEvaluations { get; } = [];
-
-    public string? StoreError { get; set; }
-
-    public int KeepCount { get; private set; }
-
-    public int ResetCount { get; private set; }
-
-    public List<IReadOnlyCollection<ElementRef>> Zoomed { get; } = [];
-
-    public List<IReadOnlyCollection<ElementRef>> Boxed { get; } = [];
 
     public Dictionary<SourceId, double> UnitFactors { get; } = [];
 
@@ -221,94 +193,6 @@ public sealed class FakeModel :
         return Task.CompletedTask;
     }
 
-    public Task ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken)
-    {
-        if (plan.IsDisabled)
-        {
-            throw new InvalidOperationException(plan.DisabledReason);
-        }
-
-        ExecutedPlans.Add(plan);
-        foreach (var step in plan.Steps.OfType<ReferenceCommandStep>())
-        {
-            HiddenLinked.UnionWith(step.Ids.Select(id => new ElementRef(step.Document, id)));
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public Task ShowLinkedAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
-    {
-        ShownLinked.Add(elements.ToList());
-        HiddenLinked.ExceptWith(elements);
-        return Task.CompletedTask;
-    }
-
-    public Task KeepAsync(CancellationToken cancellationToken)
-    {
-        KeepCount++;
-        return Task.CompletedTask;
-    }
-
-    public Task ResetAsync(CancellationToken cancellationToken)
-    {
-        ResetCount++;
-        ExecutedPlans.Clear();
-        return Task.CompletedTask;
-    }
-
-    public Task ZoomAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
-    {
-        Zoomed.Add(elements);
-        return Task.CompletedTask;
-    }
-
-    public Task SectionBoxAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
-    {
-        if (!View.Is3D)
-        {
-            throw new InvalidOperationException("Section box needs a 3D view.");
-        }
-
-        Boxed.Add(elements);
-        return Task.CompletedTask;
-    }
-
-    public Task<TemporaryState?> ReadTemporaryStateAsync(CancellationToken cancellationToken)
-    {
-        var active = ExecutedPlans.Count > 0;
-        return Task.FromResult<TemporaryState?>(new TemporaryState(View, active, false));
-    }
-
-    public Task<IReadOnlyCollection<long>> GetIdsHiddenPermanentlyOrTemporarilyAsync(
-        DocumentKey document,
-        IReadOnlyCollection<long> candidates,
-        CancellationToken cancellationToken)
-    {
-        HiddenReads.Add(candidates.ToList());
-        var snapshot = SnapshotOf(document);
-        var hidden = new PlanTargets();
-        PlanTargets? kept = null;
-        foreach (var plan in ExecutedPlans)
-        {
-            if (plan.Action == VisibilityAction.Hide)
-            {
-                hidden.Add(plan, document, snapshot);
-            }
-            else if (plan.Action == VisibilityAction.Isolate)
-            {
-                kept = new PlanTargets();
-                kept.Add(plan, document, snapshot);
-            }
-        }
-
-        IReadOnlyCollection<long> ids = candidates
-            .Where(id => snapshot.TryGetRow(id, out var row)
-                         && (hidden.Contains(row) || (kept is not null && !kept.Contains(row))))
-            .ToList();
-        return Task.FromResult(ids);
-    }
-
     public Task<IReadOnlyCollection<long>> EvaluateAsync(
         DocumentKey document,
         FilterDefinition filter,
@@ -356,59 +240,6 @@ public sealed class FakeModel :
         return Task.FromResult(new ParameterValueCounts(total, values));
     }
 
-    public Task<IReadOnlyList<HostFilterInfo>> GetFiltersAsync(
-        DocumentKey document,
-        CancellationToken cancellationToken)
-    {
-        IReadOnlyList<HostFilterInfo> filters =
-        [
-            new(document, 1, "Commented", HostFilterKind.RuleBased, document.IsCurrentModel),
-            new(document, 2, "Picked", HostFilterKind.Selection, false)
-        ];
-        return Task.FromResult(filters);
-    }
-
-    public Task<FilterDefinition?> ReadAsync(DocumentKey document, long filterId, CancellationToken cancellationToken)
-    {
-        FilterDefinition? definition = filterId == 1
-            ? new FilterDefinition([],
-                FilterSet.All(new FilterRule(FakeParameters.Comments, FilterOperator.HasValue),
-                    new UnsupportedRule("Global parameter association")))
-            : null;
-        return Task.FromResult(definition);
-    }
-
-    public Task<IReadOnlyCollection<long>> EvaluateAsync(
-        DocumentKey document,
-        long filterId,
-        IReadOnlyCollection<long>? scope,
-        CancellationToken cancellationToken)
-    {
-        HostEvaluations.Add((document, filterId));
-        var inScope = scope as ISet<long> ?? scope?.ToHashSet();
-        IReadOnlyCollection<long> ids = SourceOf(document).Elements
-            .Take(filterId == 1 ? 7 : filterId == 2 ? 10 : 0)
-            .Select(element => element.Id)
-            .Where(id => inScope is null || inScope.Contains(id))
-            .ToList();
-        return Task.FromResult(ids);
-    }
-
-    public IReadOnlyList<CustomFilter> Load()
-    {
-        return _customFilters;
-    }
-
-    public void Save(IReadOnlyList<CustomFilter> filters)
-    {
-        if (StoreError is { } error)
-        {
-            throw new InvalidOperationException(error);
-        }
-
-        _customFilters = filters.ToList();
-    }
-
     public void AddModel(FakeModelData data)
     {
         _documents[data.CurrentModel.ModelId] = data.Documents.ToList();
@@ -432,16 +263,6 @@ public sealed class FakeModel :
         ActiveModelChanged?.Invoke(this, model);
     }
 
-    public void CloseModel(DocumentKey model)
-    {
-        DocumentClosing?.Invoke(this, model);
-        _documents.Remove(model.ModelId);
-        if (_active == model.ModelId)
-        {
-            _active = _documents.Keys.FirstOrDefault() ?? string.Empty;
-        }
-    }
-
     public void SetBusy(bool busy)
     {
         IsBusy = busy;
@@ -455,11 +276,6 @@ public sealed class FakeModel :
         list[index] = list[index] with { IsLoaded = loaded };
         RefreshData();
         LinkStatusChanged?.Invoke(this, new LinkStatusChange(link, loaded ? LinkStatus.Reloaded : LinkStatus.Unloaded));
-    }
-
-    public DocumentVersion VersionOf(SourceId source)
-    {
-        return _history[source][_history[source].Count - 1].Version;
     }
 
     public DocumentVersion SaveVersion(
@@ -567,6 +383,11 @@ public sealed class FakeModel :
         return _sources[DocumentOf(document).Source];
     }
 
+    public DocumentSnapshot SnapshotOf(DocumentKey document)
+    {
+        return SnapshotOf(DocumentOf(document).Source);
+    }
+
     private static ElementDelta Diff(SourceId source, IReadOnlyList<ElementRecord> before, IReadOnlyList<ElementRecord> after)
     {
         var old = before.ToDictionary(element => element.Id);
@@ -623,9 +444,9 @@ public sealed class FakeModel :
         return _documents[key.ModelId].First(document => document.Key == key);
     }
 
-    private DocumentSnapshot SnapshotOf(DocumentKey document)
+    private DocumentVersion VersionOf(SourceId source)
     {
-        return SnapshotOf(DocumentOf(document).Source);
+        return _history[source][_history[source].Count - 1].Version;
     }
 
     private DocumentSnapshot SnapshotOf(SourceId source)
@@ -649,31 +470,4 @@ public sealed class FakeModel :
     }
 
     private sealed record FakeVersion(DocumentVersion Version, IReadOnlyList<ElementRecord> Elements);
-
-    private sealed class PlanTargets
-    {
-        private readonly HashSet<int> _groups = [];
-        private readonly HashSet<long> _ids = [];
-
-        public void Add(VisibilityPlan plan, DocumentKey document, DocumentSnapshot snapshot)
-        {
-            foreach (var step in plan.Steps)
-            {
-                switch (step)
-                {
-                    case ElementsStep elements when elements.Document == document:
-                        _ids.UnionWith(elements.Ids);
-                        break;
-                    case GroupEverywhereStep group:
-                        _groups.Add(snapshot.GroupIndexOf(group.GroupId));
-                        break;
-                }
-            }
-        }
-
-        public bool Contains(ElementRow row)
-        {
-            return _ids.Contains(row.Id) || _groups.Contains(row.GroupIndex);
-        }
-    }
 }

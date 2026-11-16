@@ -136,7 +136,7 @@ public sealed class LifecycleTests
         Assert.AreEqual(VisibilityReasons.HostBusy(FakeModel.FakeHostName), isolate);
         Assert.IsFalse(zoom);
         Assert.AreEqual(VisibilityReasons.HostBusy(FakeModel.FakeHostName), message);
-        Assert.IsEmpty(fixture.Model.ExecutedPlans);
+        Assert.IsEmpty(fixture.Actions.ExecutedPlans);
         Assert.IsEmpty(await fixture.Model.GetSelectionAsync(CancellationToken.None));
     }
 
@@ -289,7 +289,7 @@ public sealed class LifecycleTests
         using var fixture = await PanelFixture.OpenAsync();
         var id = fixture.Explorer.ElementsOf([fixture.Group(Current, "Ducts")])[0].Id;
 
-        await fixture.Model.ExecuteAsync(new VisibilityPlan(VisibilityAction.Hide, null,
+        await fixture.Actions.ExecuteAsync(new VisibilityPlan(VisibilityAction.Hide, null,
             [new ElementsStep(Current, [id])], null), CancellationToken.None);
         fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
         fixture.Settle();
@@ -304,14 +304,14 @@ public sealed class LifecycleTests
         var explorer = fixture.Explorer;
         await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.AllModelsHeader));
         await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
-        fixture.Model.HiddenReads.Clear();
+        fixture.Actions.HiddenReads.Clear();
 
         fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", false));
         fixture.Settle();
-        var collapsed = fixture.Model.HiddenReads.Sum(read => read.Count);
+        var collapsed = fixture.Actions.HiddenReads.Sum(read => read.Count);
         await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
 
-        var asked = fixture.Model.HiddenReads.SelectMany(read => read).ToHashSet();
+        var asked = fixture.Actions.HiddenReads.SelectMany(read => read).ToHashSet();
         var inView = (await fixture.Model.CollectScopeAsync(Current, ScopeKind.ActiveView, CancellationToken.None))
             .ToHashSet();
         Assert.AreEqual(0, collapsed);

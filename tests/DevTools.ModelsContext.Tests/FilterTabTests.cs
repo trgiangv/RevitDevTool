@@ -1,6 +1,7 @@
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
+using Moq;
 using System.Collections.Specialized;
 
 namespace DevTools.ModelsContext.Tests;
@@ -218,7 +219,7 @@ public sealed class FilterTabTests
 
         filter.SaveCommand.Execute(null);
 
-        Assert.AreEqual("Ducts only", fixture.Model.Load().Single().Name);
+        Assert.AreEqual("Ducts only", fixture.CustomFilters.Object.Load().Single().Name);
         Assert.IsFalse(filter.IsDirty);
     }
 
@@ -248,7 +249,7 @@ public sealed class FilterTabTests
         filter.CommitRename();
         filter.SaveCommand.Execute(null);
 
-        Assert.AreEqual("Ducts only", fixture.Model.Load().Single().Name);
+        Assert.AreEqual("Ducts only", fixture.CustomFilters.Object.Load().Single().Name);
     }
 
     [TestMethod]
@@ -311,7 +312,8 @@ public sealed class FilterTabTests
 
         var expected = fixture.Elements(FakeModelGenerator.Current, 7);
         CollectionAssert.AreEquivalent(expected.ToList(), filter.Result.ToList());
-        CollectionAssert.Contains(fixture.Model.HostEvaluations, (FakeModelGenerator.Current, 1L));
+        fixture.HostFilters.Verify(host => host.EvaluateAsync(FakeModelGenerator.Current, 1,
+            It.IsAny<IReadOnlyCollection<long>?>(), It.IsAny<CancellationToken>()));
     }
 
     [TestMethod]
@@ -322,14 +324,15 @@ public sealed class FilterTabTests
         filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
         fixture.Settle();
         var before = filter.Result;
-        var evaluations = fixture.Model.HostEvaluations.Count;
+        fixture.HostFilters.Invocations.Clear();
 
         Category(filter, "Doors").IsChecked = true;
         fixture.Settle();
 
         Assert.IsFalse(filter.IsDirty);
         Assert.AreSame(before, filter.Result);
-        Assert.HasCount(evaluations, fixture.Model.HostEvaluations);
+        fixture.HostFilters.Verify(host => host.EvaluateAsync(It.IsAny<DocumentKey>(), It.IsAny<long>(),
+            It.IsAny<IReadOnlyCollection<long>?>(), It.IsAny<CancellationToken>()), Times.Never());
     }
 
     [TestMethod]
@@ -338,13 +341,14 @@ public sealed class FilterTabTests
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
         filter.AddCommand.Execute(null);
-        fixture.Model.StoreError = "Settings file is locked.";
+        fixture.CustomFilters.Setup(store => store.Save(It.IsAny<IReadOnlyList<CustomFilter>>()))
+            .Throws(new InvalidOperationException("Settings file is locked."));
 
         filter.SaveCommand.Execute(null);
 
         Assert.AreEqual("Settings file is locked.", fixture.Panel.Message);
         Assert.IsTrue(filter.IsDirty);
-        Assert.IsEmpty(fixture.Model.Load());
+        Assert.IsEmpty(fixture.CustomFilters.Object.Load());
     }
 
     [TestMethod]

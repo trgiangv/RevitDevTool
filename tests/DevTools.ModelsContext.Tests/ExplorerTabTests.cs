@@ -210,7 +210,7 @@ public sealed class ExplorerTabTests
 
         Assert.AreEqual(RowEye.Hidden, hidden);
         Assert.AreEqual(RowEye.Shown, fixture.Group(Current, "Ducts").Eye);
-        Assert.AreEqual(1, fixture.Model.ResetCount);
+        Assert.AreEqual(1, fixture.Actions.ResetCount);
     }
 
     [TestMethod]
@@ -264,7 +264,7 @@ public sealed class ExplorerTabTests
         await fixture.Explorer.RunToolAsync(fixture.Group(Current, "Ducts"), MenuAction.Color);
         await fixture.Panel.ContextMenu.ApplyColorCommand.ExecuteAsync(new RgbColor(255, 0, 0));
 
-        var plan = fixture.Model.ExecutedPlans.Single();
+        var plan = fixture.Actions.ExecutedPlans.Single();
         Assert.AreEqual(1, requested);
         Assert.AreEqual(VisibilityAction.Color, plan.Action);
         Assert.AreEqual(new RgbColor(255, 0, 0), plan.Color);
@@ -280,7 +280,7 @@ public sealed class ExplorerTabTests
 
         await fixture.Explorer.RunToolAsync(ducts, MenuAction.Isolate);
 
-        var plan = fixture.Model.ExecutedPlans.Single();
+        var plan = fixture.Actions.ExecutedPlans.Single();
         Assert.AreEqual(VisibilityAction.Isolate, plan.Action);
         CollectionAssert.AreEquivalent(new[] { ducts, walls }, fixture.Explorer.SelectedRows.ToList());
     }
@@ -295,7 +295,7 @@ public sealed class ExplorerTabTests
         await fixture.Explorer.RunToolAsync(ducts, MenuAction.Isolate);
 
         CollectionAssert.AreEqual(new[] { ducts }, fixture.Explorer.SelectedRows.ToList());
-        Assert.HasCount(1, fixture.Model.ExecutedPlans);
+        Assert.HasCount(1, fixture.Actions.ExecutedPlans);
     }
 
     [TestMethod]
@@ -323,7 +323,7 @@ public sealed class ExplorerTabTests
         await fixture.Explorer.RunToolAsync(fixture.Group(FakeModelGenerator.Mep, "Ducts"), MenuAction.Halftone);
 
         Assert.AreEqual(VisibilityReasons.LinkChildOnlyHideShow, fixture.Explorer.Message);
-        Assert.IsEmpty(fixture.Model.ExecutedPlans);
+        Assert.IsEmpty(fixture.Actions.ExecutedPlans);
     }
 
     [TestMethod]
@@ -356,7 +356,7 @@ public sealed class ExplorerTabTests
         await menu.ApplyColorCommand.ExecuteAsync(new RgbColor(0, 0, 255));
 
         Assert.AreEqual(1, requested);
-        Assert.AreEqual(new RgbColor(0, 0, 255), fixture.Model.ExecutedPlans.Single().Color);
+        Assert.AreEqual(new RgbColor(0, 0, 255), fixture.Actions.ExecutedPlans.Single().Color);
     }
 
     [TestMethod]

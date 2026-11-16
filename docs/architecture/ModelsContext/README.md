@@ -179,8 +179,12 @@ the measured spike: 0062 §5, §7–§10.
 ## Testing
 
 - **Core tests** (`tests/DevTools.ModelsContext.Tests`) run the engine and view
-  models on a fake model that implements every port, with a fake clock and
-  scheduler. Shared fakes live in `tests/DevTools.ModelsContext.Tests.Shared`.
+  models with a fake clock and scheduler. Shared fakes live in
+  `tests/DevTools.ModelsContext.Tests.Shared`: `FakeHost` wires them.
+  `FakeModel` and `FakeViewActions` are hand-written because their members
+  share state (snapshots, versions, gates, events, executed plans). Host
+  filters and the custom filter store are Moq mocks. Model data comes from a
+  seeded Bogus `Randomizer`, so a seed always gives the same model.
 - **View tests** (`tests/DevTools.ModelsContext.Views.Tests`) host the real XAML
   on the fake model and drive it through UI Automation by AutomationId (FlaUI,
   UIA patterns, no mouse events). `XamlGuardTests` blocks self `;component/`
