@@ -130,7 +130,7 @@ count.
     its items source` (dump `pe`, `VirtualizingStackPanel.MeasureChild`, control
     `RowList`), and Revit crash protection ended the session. The DirectContext3D
     `getBoundingBox` line in the journal is the add-in's visualizer and unrelated.
-    `RunAsync` now posts to `ModelContextServices.Context` when
+    `RunAsync` now posts to `IScheduler.Context` (the dispatcher context of the panel) when
     `SynchronizationContext.Current` is null. Tests never open a document inside a run.
 
 ## Layers and ports

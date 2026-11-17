@@ -44,12 +44,11 @@ internal sealed class PanelFixture : IDisposable
         return fixture;
     }
 
-    public static PanelFixture Create(FakeModel model, ScopeKind scope = ScopeKind.WholeModel, ILogger? logger = null,
-        SynchronizationContext? context = null)
+    public static PanelFixture Create(FakeModel model, ScopeKind scope = ScopeKind.WholeModel, ILogger? logger = null)
     {
         var host = new FakeHost(model);
         var clock = new FakeClock();
-        var panel = new ModelContextViewModel(host.Services(clock, clock, logger, null, context));
+        var panel = new ModelContextViewModel(host.Services(clock, clock, logger));
         panel.ContextBar.Scope = scope;
         return new PanelFixture(host, clock, panel);
     }

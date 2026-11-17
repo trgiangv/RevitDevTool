@@ -28,11 +28,10 @@ public sealed class FakeHost
         IClock clock,
         IScheduler scheduler,
         ILogger? logger = null,
-        IModelSource? source = null,
-        SynchronizationContext? context = null)
+        IModelSource? source = null)
     {
         return new ModelContextServices(source ?? Model, Model, Model, Actions, Model, HostFilters.Object,
-            CustomFilters.Object, clock, scheduler, logger, context);
+            CustomFilters.Object, clock, scheduler, logger);
     }
 
     private static Mock<IHostFilterCatalog> HostFiltersOf(FakeModel model)

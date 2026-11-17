@@ -18,11 +18,8 @@ public sealed class ModelContextServices(
     ICustomFilterStore customFilters,
     IClock clock,
     IScheduler scheduler,
-    ILogger? logger = null,
-    SynchronizationContext? context = null)
+    ILogger? logger = null)
 {
-    public SynchronizationContext? Context { get; } = context;
-
     public IModelSource Source { get; } = source;
 
     public IModelEvents Events { get; } = events;
@@ -135,13 +132,13 @@ internal sealed class PanelRuntime
 
     public Task RunAsync(Func<Task> work)
     {
-        if (SynchronizationContext.Current is not null || Services.Context is not { } context)
+        if (SynchronizationContext.Current is not null || Services.Scheduler.Context is not { } context)
         {
             return RunJobAsync(work);
         }
 
-        var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        context.Post(_ => RunJobAsync(work).ContinueWith(_ => done.SetResult(true), TaskScheduler.Default), null);
+        var done = new TaskCompletionSource<bool>();
+        context.Post(_ => RunJobAsync(work).ContinueWith(_ => done.SetResult(true), CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default), null);
         return done.Task;
     }
 
@@ -218,6 +215,8 @@ internal sealed class PanelRuntime
 
     private sealed class TrackedScheduler(IScheduler inner, PanelRuntime owner) : IScheduler
     {
+        public SynchronizationContext Context => inner.Context;
+
         public IDisposable Schedule(TimeSpan delay, Action action)
         {
             owner.Scheduled(1);

@@ -7,5 +7,7 @@ public interface IClock
 
 public interface IScheduler
 {
+    SynchronizationContext Context { get; }
+
     IDisposable Schedule(TimeSpan delay, Action action);
 }

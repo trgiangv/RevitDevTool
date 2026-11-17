@@ -5,6 +5,8 @@ namespace DevTools.Presentation.Views.ModelsContext;
 
 public sealed class DispatcherScheduler(Dispatcher dispatcher) : IScheduler
 {
+    public SynchronizationContext Context { get; } = new DispatcherSynchronizationContext(dispatcher);
+
     public IDisposable Schedule(TimeSpan delay, Action action)
     {
         var timer = new DispatcherTimer(DispatcherPriority.Normal, dispatcher) { Interval = delay };
