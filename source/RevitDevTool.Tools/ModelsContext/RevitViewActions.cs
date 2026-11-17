@@ -16,6 +16,8 @@ internal sealed class RevitViewActions : IViewActions
     private const double ZoomFactor = 1.25;
     private const double BoxFactor = 1.0;
 
+    private readonly Dictionary<(string Model, ElementId View), Dictionary<ElementId, OverrideGraphicSettings>> _prior = [];
+
     public Task ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken)
     {
         if (plan.DisabledReason is { } reason)
@@ -70,7 +72,9 @@ internal sealed class RevitViewActions : IViewActions
             var (active, view) = RequireView(application);
             var hideIsolate = view.IsTemporaryHideIsolateActive();
             var properties = IsPropertiesModeActive(view);
-            if (!hideIsolate && !properties)
+            var key = KeyOf(active.Document, view);
+            _prior.TryGetValue(key, out var prior);
+            if (!hideIsolate && !properties && prior is null)
             {
                 return;
             }
@@ -88,7 +92,16 @@ internal sealed class RevitViewActions : IViewActions
                 view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryViewProperties);
             }
 
+            foreach (var pair in prior ?? [])
+            {
+                if (active.Document.GetElement(pair.Key) is not null)
+                {
+                    view.SetElementOverrides(pair.Key, pair.Value);
+                }
+            }
+
             transaction.Commit();
+            _prior.Remove(key);
         }, cancellationToken);
     }
 
@@ -209,7 +222,7 @@ internal sealed class RevitViewActions : IViewActions
         return (index, hidden);
     }
 
-    private static Task HideWithLinksAsync(VisibilityPlan plan, CancellationToken cancellationToken)
+    private Task HideWithLinksAsync(VisibilityPlan plan, CancellationToken cancellationToken)
     {
         var apiSteps = plan.Steps.Where(step => step is not ReferenceCommandStep).ToList();
         var linked = plan.Steps.OfType<ReferenceCommandStep>()
@@ -226,7 +239,7 @@ internal sealed class RevitViewActions : IViewActions
         }, cancellationToken);
     }
 
-    private static void Execute(UIApplication application, VisibilityPlan plan)
+    private void Execute(UIApplication application, VisibilityPlan plan)
     {
         var (active, view) = RequireView(application);
         var model = active.Document;
@@ -236,6 +249,23 @@ internal sealed class RevitViewActions : IViewActions
         transaction.Start();
         ApplyAction(model, view, plan, ids, categories);
         transaction.Commit();
+    }
+
+    private static (string Model, ElementId View) KeyOf(Document model, View view)
+    {
+        return (DocumentRegistry.ModelIdOf(model), view.Id);
+    }
+
+    private Dictionary<ElementId, OverrideGraphicSettings> PriorOf(Document model, View view)
+    {
+        var key = KeyOf(model, view);
+        if (!_prior.TryGetValue(key, out var prior))
+        {
+            prior = [];
+            _prior.Add(key, prior);
+        }
+
+        return prior;
     }
 
     private static (List<ElementId> Ids, List<ElementId> Categories) CollectTargets(
@@ -274,7 +304,7 @@ internal sealed class RevitViewActions : IViewActions
         }
     }
 
-    private static void ApplyAction(
+    private void ApplyAction(
         Document model,
         View view,
         VisibilityPlan plan,
@@ -348,7 +378,7 @@ internal sealed class RevitViewActions : IViewActions
         var isolated = new List<ElementId>(ids);
         if (categories.Count > 0)
         {
-            isolated.AddRange(new FilteredElementCollector(model, view.Id)
+            isolated.AddRange(model.CollectElements(view.Id)
                 .WherePasses(new ElementMulticategoryFilter(categories))
                 .WhereElementIsNotElementType()
                 .ToElementIds());
@@ -357,7 +387,7 @@ internal sealed class RevitViewActions : IViewActions
         view.IsolateElementsTemporary(isolated);
     }
 
-    private static void Override(
+    private void Override(
         Document model,
         View view,
         VisibilityPlan plan,
@@ -366,8 +396,14 @@ internal sealed class RevitViewActions : IViewActions
     {
         EnsurePropertiesMode(view);
         var solid = plan.Action == VisibilityAction.Color ? SolidFillOf(model) : null;
+        var prior = PriorOf(model, view);
         foreach (var id in ids)
         {
+            if (!prior.ContainsKey(id))
+            {
+                prior.Add(id, view.GetElementOverrides(id));
+            }
+
             view.SetElementOverrides(id, Apply(view.GetElementOverrides(id), plan, solid));
         }
 
@@ -420,8 +456,8 @@ internal sealed class RevitViewActions : IViewActions
 
     private static ElementId? SolidFillOf(Document model)
     {
-        return new FilteredElementCollector(model)
-            .OfClass(typeof(FillPatternElement))
+        return model.CollectElements()
+            .OfClass<FillPatternElement>()
             .Cast<FillPatternElement>()
             .FirstOrDefault(pattern => pattern.GetFillPattern().IsSolidFill)
             ?.Id;

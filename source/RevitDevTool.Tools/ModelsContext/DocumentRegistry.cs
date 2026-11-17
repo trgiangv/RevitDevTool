@@ -1,6 +1,7 @@
 using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Model;
 using Nice3point.Revit.Extensions;
+using System.Collections.Concurrent;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
@@ -11,6 +12,8 @@ internal static class DocumentRegistry
     private const string ModelPrefix = "model:";
     private const string LinkPrefix = "link:";
     private const string UnsavedPrefix = "unsaved:";
+
+    private static readonly ConcurrentDictionary<DocumentKey, string> Labels = new();
 
     public static string ModelIdOf(Document model)
     {
@@ -43,6 +46,16 @@ internal static class DocumentRegistry
         return LinkSource(LinkPathOf(instance) ?? instance.Name);
     }
 
+    public static SourceId SourceOf(ResolvedDocument resolved)
+    {
+        return resolved.Link is { } link ? LinkSourceOf(link) : SourceOf(resolved.Model);
+    }
+
+    public static string LabelOf(DocumentKey key)
+    {
+        return Labels.TryGetValue(key, out var label) ? label : key.ToString();
+    }
+
     public static string LinkNameOf(RevitLinkInstance instance)
     {
         return instance.Document.GetElement(instance.GetTypeId())?.Name ?? instance.Name;
@@ -70,7 +83,7 @@ internal static class DocumentRegistry
 
         if (key.IsCurrentModel)
         {
-            return new ResolvedDocument(model, null, model);
+            return Remember(key, new ResolvedDocument(model, null, model));
         }
 
         if (model.GetElement(key.LinkInstanceId.ToElementId()) is not RevitLinkInstance instance
@@ -79,7 +92,17 @@ internal static class DocumentRegistry
             return null;
         }
 
-        return new ResolvedDocument(model, instance, linkDocument);
+        return Remember(key, new ResolvedDocument(model, instance, linkDocument));
+    }
+
+    private static ResolvedDocument Remember(DocumentKey key, ResolvedDocument resolved)
+    {
+        if (!Labels.ContainsKey(key))
+        {
+            Labels[key] = SourceOf(resolved).Label;
+        }
+
+        return resolved;
     }
 
     public static ResolvedDocument Require(UIApplication application, DocumentKey key)

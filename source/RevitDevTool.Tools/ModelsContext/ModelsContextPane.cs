@@ -72,7 +72,6 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig, ILogg
         _host.IsVisibleChanged -= OnVisibleChanged;
         _events?.Unsubscribe();
         _panel?.Dispose();
-        _host.Content = null;
         _panel = null;
         _events = null;
     }

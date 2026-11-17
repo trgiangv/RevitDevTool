@@ -17,6 +17,9 @@
     <Compile Remove="ModelsContext/**" Condition="'$(RevitVersion)' == '2022'" />
   </ItemGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="RevitDevTool.ModelsContext.LiveTests" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="CommunityToolkit.Mvvm.ComponentModel" />
     <Using Include="CommunityToolkit.Mvvm.Input" />
   </ItemGroup>

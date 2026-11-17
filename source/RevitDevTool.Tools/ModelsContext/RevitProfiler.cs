@@ -1,4 +1,5 @@
 using DevTools.ModelsContext.Diagnostics;
+using DevTools.ModelsContext.Model;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using RevitDevTool.Core;
@@ -68,6 +69,16 @@ internal static class RevitProfiler
         }, cancellationToken);
     }
 
+    public static string LabelOf<T>(T subject)
+    {
+        return subject switch
+        {
+            SourceId source => source.Label,
+            DocumentKey document => DocumentRegistry.LabelOf(document),
+            _ => subject?.ToString() ?? string.Empty
+        };
+    }
+
     private static void Report(ILogger logger, string operation, ProfileStats? stats, long queued, long started)
     {
         var queueMs = TraceTimer.MillisecondsBetween(queued, started);
@@ -113,8 +124,9 @@ internal sealed class ProfileStats
 
     public void Flush<T>(T subject, int items)
     {
+        var label = RevitProfiler.LabelOf(subject);
         var totalMs = TraceTimer.MillisecondsSince(_start);
         _logger.ZLogTrace(
-            $"Revit {_operation} {subject}: {items} items in {_calls} slices, queue {Math.Round(_queueMs, 1)} ms, run {Math.Round(_runMs, 1)} ms (max {_maxRunMs} ms), total {totalMs} ms");
+            $"Revit {_operation} {label}: {items} items in {_calls} slices, queue {Math.Round(_queueMs, 1)} ms, run {Math.Round(_runMs, 1)} ms (max {_maxRunMs} ms), total {totalMs} ms");
     }
 }

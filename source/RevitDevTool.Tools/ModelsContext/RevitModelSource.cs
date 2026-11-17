@@ -38,8 +38,8 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
                 return documents;
             }
 
-            foreach (var instance in new FilteredElementCollector(model)
-                         .OfClass(typeof(RevitLinkInstance))
+            foreach (var instance in model.CollectElements()
+                         .OfClass<RevitLinkInstance>()
                          .Cast<RevitLinkInstance>())
             {
                 var loaded = instance.GetLinkDocument() is not null;
@@ -72,7 +72,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
         var (ids, stamp) = await RevitProfiler.RunAsync("Snapshot ids", application =>
         {
             var document = DocumentRegistry.RequireSource(application, source);
-            return (ElementReader.CollectIds(document), ElementReader.VersionOf(document));
+            return (ElementReader.CollectAnyOption(document), ElementReader.VersionOf(document));
         }, cancellationToken).ConfigureAwait(false);
         progress?.Report(new SnapshotProgress(source, 0, ids.Length));
         var records = await ReadAsync(source, ids,
@@ -367,7 +367,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
     {
         return resolved.Link is { } link
             ? LinkElements.InView(resolved.Model, view, link.Id)
-            : new FilteredElementCollector(resolved.Model, view.Id);
+            : resolved.Model.CollectElements(view.Id);
     }
 
     private static (int Next, List<GroupCount> Counts) CountSlice(
@@ -420,7 +420,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
         {
             if (view is null)
             {
-                return new FilteredElementCollector(resolved.Target)
+                return resolved.Target.CollectElements()
                     .WherePasses(ElementReader.ModelFilter(resolved.Target, [categoryId], options))
                     .GetElementCount();
             }

@@ -1,3 +1,5 @@
+using DevTools.ModelsContext.Diagnostics;
+using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Ports;
 using Nice3point.Revit.Extensions;
@@ -8,70 +10,179 @@ namespace RevitDevTool.Tools.ModelsContext;
 
 internal sealed class RevitFilterEvaluator(ParameterCache cache) : IFilterEvaluator
 {
+    public const int MatchBatch = 500;
+    public const int FirstBatch = 100;
+    public const int MinBatch = 25;
+
     public async Task<IReadOnlyCollection<long>> EvaluateAsync(
         DocumentKey document,
         FilterDefinition filter,
         IReadOnlyCollection<long>? scope,
         CancellationToken cancellationToken)
     {
-        var (candidates, plan) = await RevitProfiler.RunAsync("Filter candidates", application =>
+        var raw = new Dictionary<ParameterKey, IReadOnlyDictionary<string, long[]>>();
+        while (true)
         {
-            var resolved = DocumentRegistry.Require(application, document);
-            var categories = Categories(filter.Groups);
-            var source = SourceOf(resolved);
-            var version = ElementReader.VersionOf(resolved.Target);
-            var compiler = new FilterCompiler(resolved.Target, resolved.Model.GetUnits(), categories,
-                parameter => EnumValuesOf(resolved, source, version, parameter.Key, filter.Groups, categories),
-                key => cache.FindIds(source, version, key));
-            var plan = compiler.Plan(filter.Root);
-            var ids = plan.Native is Compiled.MatchNone
-                ? Array.Empty<long>()
-                : InScope(ElementReader.CollectIds(resolved.Target, categories), scope);
-            return (ids, plan);
-        }, cancellationToken).ConfigureAwait(false);
-        return await MatchInSlicesAsync(document, candidates, plan.Match, cancellationToken).ConfigureAwait(false);
+            var prepared = await RevitProfiler.RunAsync("Filter candidates",
+                application => Prepare(DocumentRegistry.Require(application, document), filter, scope, raw),
+                cancellationToken).ConfigureAwait(false);
+            if (prepared.Plan is not { } plan)
+            {
+                foreach (var key in prepared.MissingValues)
+                {
+                    var values = await ValuesAsync(prepared.Source, key, filter.Groups,
+                        application => DocumentRegistry.Require(application, document).Target,
+                        cancellationToken).ConfigureAwait(false);
+                    raw[key] = values.RawValues;
+                }
+
+                continue;
+            }
+
+            return await MatchInSlicesAsync(document, prepared.Source.Label, prepared.Candidates, plan.Match,
+                cancellationToken, () => plan.NativeCount).ConfigureAwait(false);
+        }
+    }
+
+    private Prepared Prepare(
+        ResolvedDocument resolved,
+        FilterDefinition filter,
+        IReadOnlyCollection<long>? scope,
+        Dictionary<ParameterKey, IReadOnlyDictionary<string, long[]>> raw)
+    {
+        var timer = TraceTimer.Start(RevitProfiler.Logger);
+        var categories = Categories(filter.Groups);
+        var source = DocumentRegistry.SourceOf(resolved);
+        var version = ElementReader.VersionOf(resolved.Target);
+        var candidatesMs = 0.0;
+        var cached = false;
+        CandidateSet? candidates = null;
+        CandidateSet Candidates()
+        {
+            if (candidates is null)
+            {
+                var started = timer.ElapsedMs;
+                candidates = CandidatesOf(resolved.Target, source, version, filter.Groups, out cached);
+                candidatesMs += timer.ElapsedMs - started;
+            }
+
+            return candidates;
+        }
+
+        var compiler = new FilterCompiler(source.Label,
+            key => Resolve(resolved.Target, source, version, key, filter.Groups, categories),
+            key => raw.TryGetValue(key, out var known) ? known : cache.FindValues(source, key, filter.Groups, version)?.RawValues,
+            RuleValueParser.For(resolved.Model.GetUnits()),
+            new TypeFilters(() => Candidates().MembersIn(resolved.Target)));
+        var plan = compiler.Plan(filter.Root);
+        if (compiler.MissingValues.Count > 0)
+        {
+            return new Prepared(source, [], null, [.. compiler.MissingValues]);
+        }
+
+        var ids = plan.Native is Compiled.MatchNone ? Array.Empty<long>() : Candidates().InScope(scope);
+        RevitProfiler.Logger.FilterCompiled(source.Label, compiler.Rules, compiler.Unresolved, ids.Length,
+            plan.HasExactPass, Math.Round(timer.ElapsedMs - candidatesMs, 1), Math.Round(candidatesMs, 1), candidates is null ? "skipped" : cached ? "cached" : "collected");
+        return new Prepared(source, ids, plan, []);
+    }
+
+    private CandidateSet CandidatesOf(
+        Document target,
+        SourceId source,
+        DocumentVersion? version,
+        IReadOnlyCollection<long> groups,
+        out bool cached)
+    {
+        return cache.CandidatesOf(source, groups, version, () => ElementReader.CandidatesOf(target, Categories(groups)),
+            out cached);
+    }
+
+    private IReadOnlyList<ResolvedParameter> Resolve(
+        Document target,
+        SourceId source,
+        DocumentVersion? version,
+        ParameterKey key,
+        IReadOnlyList<long> groups,
+        ICollection<ElementId> categories)
+    {
+        if (cache.FindResolved(source, key, groups, version) is { } cached)
+        {
+            return cached;
+        }
+
+        var resolved = ParameterLocator.Resolve(target, key, categories, cache.FindIds(source, version, key));
+        cache.StoreResolved(source, key, groups, version, resolved);
+        return resolved;
     }
 
     internal static async Task<IReadOnlyCollection<long>> MatchInSlicesAsync(
         DocumentKey document,
+        string label,
         long[] candidates,
         Func<Document, List<ElementId>, List<long>> match,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<int>? native = null)
     {
         var result = new List<long>();
         var stats = ProfileStats.Start("Match");
+        var pace = new SlicePace(FirstBatch, MinBatch, MatchBatch);
         var index = 0;
         while (index < candidates.Length)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var start = index;
-            var (next, matches) = await RevitProfiler.RunAsync("Match slice", application =>
-            {
-                var target = DocumentRegistry.Require(application, document).Target;
-                var end = Math.Min(candidates.Length, start + ElementReader.SliceSize);
-                var chunk = candidates.Skip(start).Take(end - start)
-                    .Select(id => id.ToElementId())
-                    .Where(id => target.GetElement(id) is not null)
-                    .ToList();
-                return (end, chunk.Count == 0 ? new List<long>() : match(target, chunk));
-            }, cancellationToken, stats).ConfigureAwait(false);
+            var (next, matches) = await RevitProfiler.RunAsync("Match slice",
+                application => MatchSlice(DocumentRegistry.Require(application, document).Target, candidates, start, match,
+                    pace),
+                cancellationToken, stats).ConfigureAwait(false);
             result.AddRange(matches);
             index = next;
         }
 
-        stats?.Flush(document, candidates.Length);
+        if (stats is not null)
+        {
+            stats.Flush(label, candidates.Length);
+            RevitProfiler.Logger.Matched(label, candidates.Length, native?.Invoke() ?? result.Count, result.Count);
+        }
+
         return result;
     }
 
-    internal static long[] InScope(IEnumerable<long> ids, IReadOnlyCollection<long>? scope)
+    private static (int Next, List<long> Matches) MatchSlice(
+        Document target,
+        long[] candidates,
+        int start,
+        Func<Document, List<ElementId>, List<long>> match,
+        SlicePace pace)
     {
-        if (scope is null)
+        var watch = Stopwatch.StartNew();
+        var limit = Math.Min(candidates.Length, start + ElementReader.SliceSize);
+        var matches = new List<long>();
+        var position = start;
+        while (position < limit && watch.Elapsed < ElementReader.SliceTime)
         {
-            return ids.ToArray();
+            var batchStarted = watch.Elapsed;
+            var end = Math.Min(limit, position + pace.Next(ElementReader.SliceTime - batchStarted));
+            var chunk = new List<ElementId>(end - position);
+            for (var i = position; i < end; i++)
+            {
+                var id = candidates[i].ToElementId();
+                if (target.GetElement(id) is not null)
+                {
+                    chunk.Add(id);
+                }
+            }
+
+            if (chunk.Count > 0)
+            {
+                matches.AddRange(match(target, chunk));
+            }
+
+            pace.Record(end - position, watch.Elapsed - batchStarted);
+            position = end;
         }
 
-        var inScope = scope as ISet<long> ?? new HashSet<long>(scope);
-        return ids.Where(inScope.Contains).ToArray();
+        return (position, matches);
     }
 
     public async Task<ParameterValueCounts> CountValuesAsync(
@@ -80,111 +191,64 @@ internal sealed class RevitFilterEvaluator(ParameterCache cache) : IFilterEvalua
         IReadOnlyCollection<long> groups,
         CancellationToken cancellationToken)
     {
+        var values = await ValuesAsync(source, parameter, groups,
+            application => DocumentRegistry.RequireSource(application, source), cancellationToken).ConfigureAwait(false);
+        return new ParameterValueCounts(values.Total, values.Counts, values.Numbers);
+    }
+
+    public Task<string?> FormatExampleAsync(DocumentKey model, string spec, CancellationToken cancellationToken)
+    {
+        return RevitProfiler.RunAsync("Example value", application =>
+            RuleValueParser.Example(DocumentRegistry.Require(application, model).Model.GetUnits(), spec), cancellationToken);
+    }
+
+    private async Task<ValueEntry> ValuesAsync(
+        SourceId source,
+        ParameterKey parameter,
+        IReadOnlyCollection<long> groups,
+        Func<UIApplication, Document> target,
+        CancellationToken cancellationToken)
+    {
         var (candidates, version, cached) = await RevitProfiler.RunAsync("Value candidates", application =>
         {
-            var document = DocumentRegistry.RequireSource(application, source);
+            var document = target(application);
             var stamp = ElementReader.VersionOf(document);
             var entry = cache.FindValues(source, parameter, groups, stamp);
-            var ids = entry is null ? ElementReader.CollectIds(document, Categories(groups)) : Array.Empty<long>();
-            return (ids, stamp, entry);
+            var set = entry is null ? CandidatesOf(document, source, stamp, groups, out _) : null;
+            return (set, stamp, entry);
         }, cancellationToken).ConfigureAwait(false);
         if (cached is not null)
         {
-            return new ParameterValueCounts(cached.Total, cached.Counts);
+            return cached;
         }
 
-        var tally = new ValueTally(parameter);
+        var tally = new ValueReader(parameter, candidates!);
         var stats = ProfileStats.Start("Values");
         var index = 0;
-        while (index < candidates.Length)
+        while (index < candidates!.Ids.Length)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var start = index;
-            index = await RevitProfiler.RunAsync("Value slice", application =>
-                    tally.AddSlice(DocumentRegistry.RequireSource(application, source), candidates, start),
+            index = await RevitProfiler.RunAsync("Value slice",
+                application => tally.AddSlice(target(application), start),
                 cancellationToken, stats).ConfigureAwait(false);
         }
 
-        stats?.Flush(source, candidates.Length);
-        var values = tally.ToEntry(candidates.Length);
+        stats?.Flush(source, candidates.Ids.Length);
+        var values = tally.ToEntry();
         cache.StoreValues(source, parameter, groups, version, values);
-        return new ParameterValueCounts(values.Total, values.Counts);
+        return values;
     }
 
-    private static SourceId SourceOf(ResolvedDocument resolved)
-    {
-        return resolved.Link is { } link ? DocumentRegistry.LinkSourceOf(link) : DocumentRegistry.SourceOf(resolved.Model);
-    }
-
-    private IReadOnlyDictionary<string, int> EnumValuesOf(
-        ResolvedDocument resolved,
-        SourceId source,
-        DocumentVersion? version,
-        ParameterKey parameter,
-        IReadOnlyCollection<long> groups,
-        ICollection<ElementId> categories)
-    {
-        if (cache.FindValues(source, parameter, groups, version) is { } cached)
-        {
-            return cached.EnumValues;
-        }
-
-        var candidates = ElementReader.CollectIds(resolved.Target, categories);
-        var tally = new ValueTally(parameter);
-        var index = 0;
-        while (index < candidates.Length)
-        {
-            index = tally.AddSlice(resolved.Target, candidates, index, false);
-        }
-
-        var values = tally.ToEntry(candidates.Length);
-        cache.StoreValues(source, parameter, groups, version, values);
-        return values.EnumValues;
-    }
 
     private static List<ElementId> Categories(IEnumerable<long> groups)
     {
         return groups.Select(id => id.ToElementId()).ToList();
     }
 
-    private sealed class ValueTally(ParameterKey parameter)
-    {
-        private readonly Dictionary<string, int> _enumValues = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, int> _counts = new(StringComparer.Ordinal);
-
-        public int AddSlice(Document document, long[] candidates, int start, bool timed = true)
-        {
-            var watch = Stopwatch.StartNew();
-            var position = start;
-            while (position < candidates.Length && position - start < ElementReader.SliceSize
-                                                 && (!timed || watch.Elapsed < ElementReader.SliceTime))
-            {
-                Add(document, candidates[position]);
-                position++;
-            }
-
-            return position;
-        }
-
-        public ValueEntry ToEntry(int total)
-        {
-            return new ValueEntry(total, _counts, _enumValues);
-        }
-
-        private void Add(Document document, long id)
-        {
-            if (document.GetElement(id.ToElementId()) is not { } element
-                || ParameterResolver.Find(element, parameter) is not { } value
-                || ParameterResolver.ValueText(document, value) is not { } text)
-            {
-                return;
-            }
-
-            _counts[text] = _counts.TryGetValue(text, out var count) ? count + 1 : 1;
-            if (value.StorageType == StorageType.Integer && !_enumValues.ContainsKey(text))
-            {
-                _enumValues[text] = value.AsInteger();
-            }
-        }
-    }
+    private sealed record Prepared(
+        SourceId Source,
+        long[] Candidates,
+        FilterPlan? Plan,
+        IReadOnlyList<ParameterKey> MissingValues);
 }

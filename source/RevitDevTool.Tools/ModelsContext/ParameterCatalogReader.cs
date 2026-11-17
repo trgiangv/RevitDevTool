@@ -9,6 +9,8 @@ internal static class ParameterCatalogReader
 {
     private const int CategoriesPerSlice = 20;
 
+    public static readonly HashSet<long> Unfilterable = [(long)BuiltInParameter.REBAR_ELEM_LENGTH];
+
     public static async Task<IReadOnlyList<ParameterInfo>> ReadAsync(
         SourceId source,
         ParameterCache cache,
@@ -30,7 +32,7 @@ internal static class ParameterCatalogReader
         for (var start = 0; start < categories.Count; start += CategoriesPerSlice)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var chunk = categories.Skip(start).Take(CategoriesPerSlice).ToList();
+            var chunk = categories.GetRange(start, Math.Min(CategoriesPerSlice, categories.Count - start));
             await RevitProfiler.RunAsync("Catalog slice", application =>
                     facts.AddFilterable(DocumentRegistry.RequireSource(application, source), chunk, failures),
                 cancellationToken, stats).ConfigureAwait(false);
@@ -38,7 +40,7 @@ internal static class ParameterCatalogReader
 
         stats?.Flush(source, categories.Count);
         var ids = await RevitProfiler.RunAsync("Catalog sample ids", application =>
-                ElementReader.CollectIds(DocumentRegistry.RequireSource(application, source)),
+                ElementReader.CollectAnyOption(DocumentRegistry.RequireSource(application, source)),
             cancellationToken).ConfigureAwait(false);
         var samples = ProfileStats.Start("Catalog samples");
         var index = 0;
@@ -68,7 +70,9 @@ internal static class ParameterCatalogReader
 
     private sealed class CatalogFacts
     {
+        private readonly Dictionary<string, string?> _disciplines = new(StringComparer.Ordinal);
         private readonly Dictionary<long, Facts> _facts = [];
+        private readonly Dictionary<string, string?> _groups = new(StringComparer.Ordinal);
         private readonly HashSet<long> _sampled = [];
 
         public int AddFilterable(Document document, List<long> categories, FailureTally? failures)
@@ -101,32 +105,9 @@ internal static class ParameterCatalogReader
             while (index < ids.Length && index - start < ElementReader.SliceSize && watch.Elapsed < ElementReader.SliceTime)
             {
                 var id = ids[index++];
-                if (document.GetElement(id.ToElementId()) is not { } element)
+                if (document.GetElement(id.ToElementId()) is { } element)
                 {
-                    continue;
-                }
-
-                var typeId = element.GetTypeId();
-                var sampleKey = typeId != ElementId.InvalidElementId
-                    ? typeId.ToLong()
-                    : element.Category?.Id.ToLong() ?? id;
-                if (!_sampled.Add(sampleKey))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    var category = element.Category?.Id.ToLong();
-                    Observe(element, false, category);
-                    if (document.GetElement(typeId) is { } type)
-                    {
-                        Observe(type, true, category);
-                    }
-                }
-                catch (Exception exception)
-                {
-                    failures?.Add(exception);
+                    SampleOne(document, element, id, failures);
                 }
             }
 
@@ -142,53 +123,113 @@ internal static class ParameterCatalogReader
             var ids = new Dictionary<ParameterKey, HashSet<long>>();
             foreach (var pair in _facts)
             {
-                if (pair.Key < 0 && !pair.Value.IsFilterable)
+                if (IsListed(pair.Key, pair.Value)
+                    && TryInfoOf(document, pair.Key, pair.Value, bindings, failures) is { } info)
                 {
-                    continue;
-                }
-
-                try
-                {
-                    if (InfoOf(document, pair.Key, pair.Value, bindings) is { } info)
-                    {
-                        catalog.Add(info);
-                        if (!ids.TryGetValue(info.Key, out var known))
-                        {
-                            known = [];
-                            ids.Add(info.Key, known);
-                        }
-
-                        known.Add(pair.Key);
-                    }
-                }
-                catch (Exception exception)
-                {
-                    failures?.Add(exception);
+                    catalog.Add(info);
+                    IdsFor(ids, info.Key).Add(pair.Key);
                 }
             }
 
-            return (catalog
-                .GroupBy(info => info.Key)
-                .Select(group => group.Aggregate((left, right) => left with
-                {
-                    Origins = left.Origins | right.Origins,
-                    Bindings = left.Bindings | right.Bindings,
-                    Categories = left.Categories.Union(right.Categories)
-                }))
-                .OrderBy(info => info.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-                .ToList(), ids.ToDictionary(pair => pair.Key, pair => (IReadOnlyCollection<long>)pair.Value));
+            return (Merged(catalog), ids.ToDictionary(pair => pair.Key, pair => (IReadOnlyCollection<long>)pair.Value));
         }
 
-        private static ParameterInfo? InfoOf(Document document, long id, Facts facts,
+        private void SampleOne(Document document, Element element, long id, FailureTally? failures)
+        {
+            var typeId = element.GetTypeId();
+            if (!_sampled.Add(SampleKeyOf(element, typeId, id)))
+            {
+                return;
+            }
+
+            try
+            {
+                var category = element.Category?.Id.ToLong();
+                var type = document.GetElement(typeId);
+                var family = (type as FamilySymbol)?.FamilyName;
+                Observe(element, false, category, family);
+                if (type is not null)
+                {
+                    Observe(type, true, category, family);
+                }
+            }
+            catch (Exception exception)
+            {
+                failures?.Add(exception);
+            }
+        }
+
+        private static long SampleKeyOf(Element element, ElementId typeId, long id)
+        {
+            return typeId != ElementId.InvalidElementId
+                ? typeId.ToLong()
+                : element.Category?.Id.ToLong() ?? id;
+        }
+
+        private static bool IsListed(long id, Facts facts)
+        {
+            if (Unfilterable.Contains(id))
+            {
+                return false;
+            }
+
+            return id >= 0 || facts.IsFilterable || facts.Storage is { } storage && storage != StorageType.None;
+        }
+
+        private static HashSet<long> IdsFor(Dictionary<ParameterKey, HashSet<long>> ids, ParameterKey key)
+        {
+            if (!ids.TryGetValue(key, out var known))
+            {
+                known = [];
+                ids.Add(key, known);
+            }
+
+            return known;
+        }
+
+        private static List<ParameterInfo> Merged(List<ParameterInfo> catalog)
+        {
+            return catalog
+                .GroupBy(info => info.Key)
+                .Select(group => group.Aggregate(Merge))
+                .OrderBy(info => info.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+        }
+
+        private static ParameterInfo Merge(ParameterInfo left, ParameterInfo right)
+        {
+            return left with
+            {
+                Origins = left.Origins | right.Origins,
+                Bindings = left.Bindings | right.Bindings,
+                Categories = left.Categories.Union(right.Categories),
+                Group = left.Group ?? right.Group,
+                Discipline = left.Discipline ?? right.Discipline,
+                Families = left.Families.Concat(right.Families).Distinct(StringComparer.Ordinal)
+                    .OrderBy(name => name, StringComparer.CurrentCultureIgnoreCase).ToList()
+            };
+        }
+
+        private ParameterInfo? TryInfoOf(Document document, long id, Facts facts,
+            Dictionary<long, ParameterBinding> bindings, FailureTally? failures)
+        {
+            try
+            {
+                return InfoOf(document, id, facts, bindings);
+            }
+            catch (Exception exception)
+            {
+                failures?.Add(exception);
+                return null;
+            }
+        }
+
+        private ParameterInfo? InfoOf(Document document, long id, Facts facts,
             Dictionary<long, ParameterBinding> bindings)
         {
             if (id < 0)
             {
-                var builtIn = (BuiltInParameter)(int)id;
-                var storage = facts.Storage ?? document.get_TypeOfStorage(builtIn);
-                var label = LabelUtils.GetLabelFor(builtIn);
-                return Info(ParameterKey.BuiltIn(label, builtIn.ToString()), label, storage, facts.Spec, facts,
-                    ParameterOrigin.BuiltIn, facts.Observed);
+                return BuiltInInfo(document, (BuiltInParameter)(int)id, facts);
             }
 
             if (document.GetElement(id.ToElementId()) is not ParameterElement element
@@ -197,30 +238,61 @@ internal static class ParameterCatalogReader
                 return null;
             }
 
-            var spec = ParameterResolver.SpecOf(definition) ?? facts.Spec;
+            var spec = SpecInfo.SpecOf(definition) ?? facts.Spec;
+            facts.Group = SpecInfo.GroupOf(definition) ?? facts.Group;
             var bound = bindings.TryGetValue(id, out var binding);
-            var origin = element is SharedParameterElement
-                ? ParameterOrigin.Shared
-                : bound
-                    ? ParameterOrigin.Project
-                    : ParameterOrigin.Family;
+            var origin = OriginOf(element, bound);
             var key = element is SharedParameterElement shared
                 ? ParameterKey.Shared(definition.Name, shared.GuidValue)
-                : ParameterKey.Named(definition.Name, ParameterResolver.DataTypeOf(spec, spec is null ? facts.Storage : null));
+                : ParameterKey.Named(definition.Name, SpecInfo.DataTypeOf(spec, spec is null ? facts.Storage : null));
             return Info(key, definition.Name, facts.Storage, spec, facts, origin, bound ? binding : facts.Observed);
         }
 
-        private static ParameterInfo Info(ParameterKey key, string name, StorageType? storageType, ForgeTypeId? spec,
+        private ParameterInfo BuiltInInfo(Document document, BuiltInParameter builtIn, Facts facts)
+        {
+            var storage = facts.Storage ?? document.get_TypeOfStorage(builtIn);
+            var label = builtIn.ToLabel();
+            return Info(ParameterKey.BuiltIn(label, builtIn.ToString()), label, storage, facts.Spec, facts,
+                ParameterOrigin.BuiltIn, facts.Observed);
+        }
+
+        private static ParameterOrigin OriginOf(ParameterElement element, bool bound)
+        {
+            if (element is SharedParameterElement)
+            {
+                return ParameterOrigin.Shared;
+            }
+
+            return bound ? ParameterOrigin.Project : ParameterOrigin.Family;
+        }
+
+        private ParameterInfo Info(ParameterKey key, string name, StorageType? storageType, ForgeTypeId? spec,
             Facts facts, ParameterOrigin origin, ParameterBinding binding)
         {
-            var storage = storageType is { } known ? ParameterResolver.StorageOf(known) : ParameterStorage.None;
-            var kind = ValueKinds.Infer(storage, ParameterResolver.IsYesNo(spec), ParameterResolver.IsMeasurable(spec),
-                facts.HasNamedValues);
-            return new ParameterInfo(key, name, kind, storage, spec?.TypeId, ParameterResolver.SpecLabel(spec) ?? EnumText.Of(kind), origin,
+            var storage = storageType is { } known ? SpecInfo.StorageOf(known) : ParameterStorage.None;
+            var measurable = SpecInfo.IsMeasurable(spec);
+            var kind = ValueKinds.Infer(storage, SpecInfo.IsYesNo(spec), measurable, facts.HasNamedValues);
+            return new ParameterInfo(key, name, kind, storage, spec?.TypeId, SpecInfo.SpecLabel(spec) ?? EnumText.Of(kind), origin,
                 binding)
             {
-                Categories = CategoryIdSet.Of(facts.Categories)
+                Categories = CategoryIdSet.Of(facts.Categories),
+                Discipline = measurable ? Label(_disciplines, spec!, SpecInfo.DisciplineLabel) : null,
+                Group = facts.Group is { } group ? Label(_groups, group, SpecInfo.GroupLabel) : null,
+                Families = facts.Families.Count == 0
+                    ? []
+                    : facts.Families.OrderBy(family => family, StringComparer.CurrentCultureIgnoreCase).ToList()
             };
+        }
+
+        private static string? Label(Dictionary<string, string?> known, ForgeTypeId id, Func<ForgeTypeId, string?> label)
+        {
+            if (!known.TryGetValue(id.TypeId, out var text))
+            {
+                text = label(id);
+                known.Add(id.TypeId, text);
+            }
+
+            return text;
         }
 
         private static Dictionary<long, ParameterBinding> BindingsOf(Document document, FailureTally? failures)
@@ -250,25 +322,36 @@ internal static class ParameterCatalogReader
             return bindings;
         }
 
-        private void Observe(Element element, bool onType, long? category)
+        private void Observe(Element element, bool onType, long? category, string? family)
         {
             foreach (Parameter parameter in element.Parameters)
             {
-                var facts = FactsOf(parameter.Id.ToLong());
+                var parameterId = parameter.Id.ToLong();
+                var facts = FactsOf(parameterId);
                 if (category is { } id)
                 {
                     facts.Categories.Add(id);
                 }
 
+                if (family is not null && parameterId >= 0)
+                {
+                    facts.Families.Add(family);
+                }
+
                 facts.Storage ??= parameter.StorageType;
-                facts.Spec ??= ParameterResolver.SpecOf(parameter.Definition);
+                facts.Spec ??= SpecInfo.SpecOf(parameter.Definition);
+                if (!facts.GroupChecked)
+                {
+                    facts.GroupChecked = true;
+                    facts.Group = SpecInfo.GroupOf(parameter.Definition);
+                }
                 facts.Observed |= onType ? ParameterBinding.Type : ParameterBinding.Instance;
                 if (!facts.NamesChecked && parameter.StorageType == StorageType.Integer && parameter.HasValue
-                    && !ParameterResolver.IsYesNo(facts.Spec)
+                    && !SpecInfo.IsYesNo(facts.Spec)
                     && parameter.AsValueString() is { Length: > 0 } text)
                 {
                     facts.NamesChecked = true;
-                    facts.HasNamedValues = ParameterResolver.IsNamedValue(text);
+                    facts.HasNamedValues = ParameterDataTypes.IsNamedValue(text);
                 }
             }
         }
@@ -299,6 +382,12 @@ internal static class ParameterCatalogReader
 
         public bool HasNamedValues { get; set; }
 
+        public bool GroupChecked { get; set; }
+
+        public ForgeTypeId? Group { get; set; }
+
         public HashSet<long> Categories { get; } = [];
+
+        public HashSet<string> Families { get; } = new(StringComparer.Ordinal);
     }
 }

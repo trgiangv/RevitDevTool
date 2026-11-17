@@ -17,7 +17,7 @@ internal sealed class RevitModelEvents(
     Dispatcher dispatcher)
     : IModelEvents
 {
-    private readonly Dictionary<string, ModelKeys> _keys = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TrackedIds> _keys = new(StringComparer.Ordinal);
     private string? _activeModel;
     private bool _isBusy = true;
     private bool _subscribed;
@@ -87,7 +87,7 @@ internal sealed class RevitModelEvents(
         _subscribed = false;
     }
 
-    private void Post(Action raise)
+    private void Post(string name, Action raise)
     {
         dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
         {
@@ -97,7 +97,7 @@ internal sealed class RevitModelEvents(
             }
             catch (Exception exception)
             {
-                RevitProfiler.Logger.Swallowed(exception, "Panel event", raise.Method.Name);
+                RevitProfiler.Logger.Swallowed(exception, "Panel event", name);
             }
         }));
     }
@@ -110,11 +110,12 @@ internal sealed class RevitModelEvents(
         }
 
         _isBusy = busy;
-        Post(() => BusyChanged?.Invoke(this, busy));
+        Post(nameof(BusyChanged), () => BusyChanged?.Invoke(this, busy));
     }
 
     private void OnDocumentChanged(object? sender, DocumentChangedEventArgs e)
     {
+        var timer = TraceTimer.Start(RevitProfiler.Logger);
         try
         {
             var model = e.GetDocument();
@@ -124,14 +125,20 @@ internal sealed class RevitModelEvents(
             }
 
             scopes.Clear();
-            var added = e.GetAddedElementIds();
-            var modified = e.GetModifiedElementIds();
-            var deleted = e.GetDeletedElementIds();
-            var keys = KeysOf(model);
-            ReportStructure(model, keys, added, modified, deleted);
-            var delta = DeltaOf(model, added, modified, deleted,
+            var reader = new DocumentChangeReader(model, e.GetAddedElementIds(), e.GetModifiedElementIds(),
+                e.GetDeletedElementIds());
+            var report = reader.Read();
+            var source = DocumentRegistry.SourceOf(model);
+            var outcome = ChangeClassifier.Classify(report, () => KeysOf(model));
+            Apply(model, source, outcome);
+            var delta = reader.Delta(source, report,
                 e.Operation is UndoOperation.TransactionUndone or UndoOperation.TransactionRedone);
-            Post(() => ElementsChanged?.Invoke(this, delta));
+            Post(nameof(ElementsChanged), () => ElementsChanged?.Invoke(this, delta));
+            if (timer.IsEnabled)
+            {
+                RevitProfiler.Logger.DocumentChangeHandled(model.Title, report.Added, report.Modified,
+                    report.Deleted.Count, report.IsBulk, timer.ElapsedMs);
+            }
         }
         catch (Exception exception)
         {
@@ -139,71 +146,20 @@ internal sealed class RevitModelEvents(
         }
     }
 
-    private ElementDelta DeltaOf(
-        Document model,
-        ICollection<ElementId> added,
-        ICollection<ElementId> modified,
-        ICollection<ElementId> deleted,
-        bool undoRedo)
+    private void Apply(Document model, SourceId source, ChangeOutcome outcome)
     {
-        var source = DocumentRegistry.SourceOf(model);
-        var deletedIds = deleted.Select(id => id.ToLong()).ToList();
-        if (added.Count + modified.Count + deleted.Count > DeltaApplier.DirtyThreshold)
-        {
-            deletedIds.AddRange(added.Select(id => id.ToLong()));
-            deletedIds.AddRange(modified.Select(id => id.ToLong()));
-            return new ElementDelta(source, [], [], [], deletedIds, undoRedo);
-        }
-
-        var addedReader = new ElementReader(model, []);
-        foreach (var id in added)
-        {
-            if (model.GetElement(id) is { } element)
-            {
-                addedReader.Read(element);
-            }
-        }
-
-        var modifiedReader = new ElementReader(model, []);
-        foreach (var id in modified)
-        {
-            if (model.GetElement(id) is { } element)
-            {
-                modifiedReader.Read(element);
-            }
-        }
-
-        var types = addedReader.Types.Concat(modifiedReader.Types)
-            .GroupBy(type => type.TypeId)
-            .Select(group => group.Last())
-            .ToList();
-        return new ElementDelta(source, types, addedReader.Elements, modifiedReader.Elements, deletedIds, undoRedo);
-    }
-
-    private void ReportStructure(
-        Document model,
-        ModelKeys keys,
-        ICollection<ElementId> added,
-        ICollection<ElementId> modified,
-        ICollection<ElementId> deleted)
-    {
-        var source = DocumentRegistry.SourceOf(model);
-        if (added.Count + modified.Count + deleted.Count > DeltaApplier.DirtyThreshold)
+        if (outcome.IsBulk)
         {
             _keys.Remove(DocumentRegistry.ModelIdOf(model));
-            parameterCache.Invalidate(source);
-            Post(() => ParameterDefinitionsChanged?.Invoke(this, source));
-            Post(() => DocumentsChanged?.Invoke(this, EventArgs.Empty));
-            return;
         }
 
-        var addedChange = TrackAdded(model, keys, added);
-        var (statuses, parametersModified) = ReadModified(model, modified);
-        var deletedChange = TrackDeleted(keys, deleted);
-        if (addedChange.Parameters || parametersModified || deletedChange.Parameters)
+        var statuses = outcome.LinkTypes
+            .SelectMany(type => DocumentChangeReader.LinkStatusesOf(model, type, parameterCache))
+            .ToList();
+        if (outcome.DefinitionsChanged)
         {
             parameterCache.Invalidate(source);
-            Post(() => ParameterDefinitionsChanged?.Invoke(this, source));
+            Post(nameof(ParameterDefinitionsChanged), () => ParameterDefinitionsChanged?.Invoke(this, source));
         }
         else
         {
@@ -212,98 +168,16 @@ internal sealed class RevitModelEvents(
 
         foreach (var status in statuses)
         {
-            Post(() => LinkStatusChanged?.Invoke(this, status));
+            Post(nameof(LinkStatusChanged), () => LinkStatusChanged?.Invoke(this, status));
         }
 
-        if (addedChange.Documents || deletedChange.Documents)
+        if (outcome.DocumentsChanged)
         {
-            Post(() => DocumentsChanged?.Invoke(this, EventArgs.Empty));
+            Post(nameof(DocumentsChanged), () => DocumentsChanged?.Invoke(this, EventArgs.Empty));
         }
     }
 
-    private static (bool Documents, bool Parameters) TrackAdded(
-        Document model,
-        ModelKeys keys,
-        ICollection<ElementId> added)
-    {
-        var documents = false;
-        var parameters = false;
-        foreach (var id in added)
-        {
-            switch (model.GetElement(id))
-            {
-                case RevitLinkInstance:
-                    keys.Links.Add(id.ToLong());
-                    documents = true;
-                    break;
-                case RevitLinkType:
-                    documents = true;
-                    break;
-                case ParameterElement:
-                    keys.Parameters.Add(id.ToLong());
-                    parameters = true;
-                    break;
-                case Family:
-                    parameters = true;
-                    break;
-            }
-        }
-
-        return (documents, parameters);
-    }
-
-    private (List<LinkStatusChange> Statuses, bool Parameters) ReadModified(
-        Document model,
-        ICollection<ElementId> modified)
-    {
-        var statuses = new List<LinkStatusChange>();
-        var parameters = false;
-        foreach (var id in modified)
-        {
-            switch (model.GetElement(id))
-            {
-                case RevitLinkType type:
-                    statuses.AddRange(LinkStatusesOf(model, type));
-                    break;
-                case ParameterElement or Family:
-                    parameters = true;
-                    break;
-            }
-        }
-
-        return (statuses, parameters);
-    }
-
-    private List<LinkStatusChange> LinkStatusesOf(Document model, RevitLinkType type)
-    {
-        var statuses = new List<LinkStatusChange>();
-        foreach (var instance in new FilteredElementCollector(model)
-                     .OfClass(typeof(RevitLinkInstance))
-                     .Cast<RevitLinkInstance>()
-                     .Where(instance => instance.GetTypeId() == type.Id))
-        {
-            parameterCache.Invalidate(DocumentRegistry.LinkSourceOf(instance));
-            statuses.Add(new LinkStatusChange(DocumentRegistry.KeyOf(model, instance),
-                instance.GetLinkDocument() is null ? LinkStatus.Unloaded : LinkStatus.Reloaded));
-        }
-
-        return statuses;
-    }
-
-    private static (bool Documents, bool Parameters) TrackDeleted(ModelKeys keys, ICollection<ElementId> deleted)
-    {
-        var documents = false;
-        var parameters = false;
-        foreach (var id in deleted.Select(id => id.ToLong()))
-        {
-            documents |= keys.Links.Remove(id);
-            parameters |= keys.Parameters.Remove(id);
-        }
-
-        return (documents, parameters);
-    }
-
-    private ModelKeys KeysOf(Document model)
+    private TrackedIds KeysOf(Document model)
     {
         var modelId = DocumentRegistry.ModelIdOf(model);
         if (_keys.TryGetValue(modelId, out var keys))
@@ -311,9 +185,7 @@ internal sealed class RevitModelEvents(
             return keys;
         }
 
-        keys = new ModelKeys(
-            [.. new FilteredElementCollector(model).OfClass(typeof(RevitLinkInstance)).ToElementIds().Select(id => id.ToLong())],
-            [.. new FilteredElementCollector(model).OfClass(typeof(ParameterElement)).ToElementIds().Select(id => id.ToLong())]);
+        keys = DocumentChangeReader.TrackedOf(model);
         _keys.Add(modelId, keys);
         return keys;
     }
@@ -328,7 +200,7 @@ internal sealed class RevitModelEvents(
             }
 
             var selection = RevitSelectionPort.ToSelection(e.GetDocument(), e.GetReferences(), e.GetSelectedElements());
-            Post(() => SelectionChanged?.Invoke(this, selection));
+            Post(nameof(SelectionChanged), () => SelectionChanged?.Invoke(this, selection));
         }
         catch (Exception exception)
         {
@@ -349,10 +221,10 @@ internal sealed class RevitModelEvents(
             {
                 _activeModel = modelId;
                 var key = view.Model;
-                Post(() => ActiveModelChanged?.Invoke(this, key));
+                Post(nameof(ActiveModelChanged), () => ActiveModelChanged?.Invoke(this, key));
             }
 
-            Post(() => ViewActivated?.Invoke(this, view));
+            Post(nameof(ViewActivated), () => ViewActivated?.Invoke(this, view));
         }
         catch (Exception exception)
         {
@@ -379,7 +251,7 @@ internal sealed class RevitModelEvents(
             }
 
             var key = DocumentKey.Current(modelId);
-            Post(() => DocumentClosing?.Invoke(this, key));
+            Post(nameof(DocumentClosing), () => DocumentClosing?.Invoke(this, key));
         }
         catch (Exception exception)
         {
@@ -398,7 +270,7 @@ internal sealed class RevitModelEvents(
             }
 
             SetBusy(!open);
-            Post(() => DocumentsChanged?.Invoke(this, EventArgs.Empty));
+            Post(nameof(DocumentsChanged), () => DocumentsChanged?.Invoke(this, EventArgs.Empty));
         }
         catch (Exception exception)
         {
@@ -408,12 +280,12 @@ internal sealed class RevitModelEvents(
 
     private void OnDocumentOpened(object? sender, DocumentOpenedEventArgs e)
     {
-        Post(() => DocumentsChanged?.Invoke(this, EventArgs.Empty));
+        Post(nameof(DocumentsChanged), () => DocumentsChanged?.Invoke(this, EventArgs.Empty));
     }
 
     private void OnDocumentCreated(object? sender, DocumentCreatedEventArgs e)
     {
-        Post(() => DocumentsChanged?.Invoke(this, EventArgs.Empty));
+        Post(nameof(DocumentsChanged), () => DocumentsChanged?.Invoke(this, EventArgs.Empty));
     }
 
     private void OnSynchronized(object? sender, DocumentSynchronizedWithCentralEventArgs e)
@@ -436,13 +308,11 @@ internal sealed class RevitModelEvents(
             }
 
             var key = DocumentRegistry.KeyOf(model);
-            Post(() => ModelSynced?.Invoke(this, key));
+            Post(nameof(ModelSynced), () => ModelSynced?.Invoke(this, key));
         }
         catch (Exception exception)
         {
             RevitProfiler.Logger.Swallowed(exception, "Model synced", _activeModel);
         }
     }
-
-    private sealed record ModelKeys(HashSet<long> Links, HashSet<long> Parameters);
 }

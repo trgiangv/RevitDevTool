@@ -6,12 +6,15 @@ namespace RevitDevTool.Tools.ModelsContext;
 internal sealed record ValueEntry(
     int Total,
     IReadOnlyDictionary<string, int> Counts,
-    IReadOnlyDictionary<string, int> EnumValues);
+    IReadOnlyDictionary<string, long[]> RawValues,
+    IReadOnlyDictionary<string, NumberRange> Numbers);
 
 internal sealed class ParameterCache
 {
+    private readonly Dictionary<CandidateKey, Stamped<CandidateSet>> _candidates = [];
     private readonly Dictionary<SourceId, Stamped<CatalogEntry>> _catalogs = [];
     private readonly object _gate = new();
+    private readonly Dictionary<ValueKey, Stamped<IReadOnlyList<ResolvedParameter>>> _resolved = [];
     private readonly Dictionary<ValueKey, Stamped<ValueEntry>> _values = [];
 
     public IReadOnlyList<ParameterInfo>? FindCatalog(SourceId source, DocumentVersion? version)
@@ -64,6 +67,60 @@ internal sealed class ParameterCache
         }
     }
 
+    public IReadOnlyList<ResolvedParameter>? FindResolved(
+        SourceId source,
+        ParameterKey parameter,
+        IEnumerable<long> groups,
+        DocumentVersion? version)
+    {
+        lock (_gate)
+        {
+            return _resolved.TryGetValue(KeyOf(source, parameter, groups), out var entry) && Same(entry.Version, version)
+                ? entry.Value
+                : null;
+        }
+    }
+
+    public void StoreResolved(
+        SourceId source,
+        ParameterKey parameter,
+        IEnumerable<long> groups,
+        DocumentVersion? version,
+        IReadOnlyList<ResolvedParameter> resolved)
+    {
+        lock (_gate)
+        {
+            _resolved[KeyOf(source, parameter, groups)] = new Stamped<IReadOnlyList<ResolvedParameter>>(version, resolved);
+        }
+    }
+
+    public CandidateSet CandidatesOf(
+        SourceId source,
+        IEnumerable<long> groups,
+        DocumentVersion? version,
+        Func<CandidateSet> collect,
+        out bool cached)
+    {
+        var key = new CandidateKey(source, new GroupSet(groups));
+        lock (_gate)
+        {
+            if (_candidates.TryGetValue(key, out var entry) && Same(entry.Version, version))
+            {
+                cached = true;
+                return entry.Value;
+            }
+        }
+
+        var candidates = collect();
+        lock (_gate)
+        {
+            _candidates[key] = new Stamped<CandidateSet>(version, candidates);
+        }
+
+        cached = false;
+        return candidates;
+    }
+
     public void Invalidate(SourceId source)
     {
         lock (_gate)
@@ -87,6 +144,16 @@ internal sealed class ParameterCache
         {
             _values.Remove(key);
         }
+
+        foreach (var key in _resolved.Keys.Where(key => key.Source == source).ToList())
+        {
+            _resolved.Remove(key);
+        }
+
+        foreach (var key in _candidates.Keys.Where(key => key.Source == source).ToList())
+        {
+            _candidates.Remove(key);
+        }
     }
 
     private static bool Same(DocumentVersion? stored, DocumentVersion? current)
@@ -100,6 +167,8 @@ internal sealed class ParameterCache
     }
 
     private readonly record struct ValueKey(SourceId Source, ParameterKey Parameter, GroupSet Groups);
+
+    private readonly record struct CandidateKey(SourceId Source, GroupSet Groups);
 
     private readonly struct GroupSet : IEquatable<GroupSet>
     {

@@ -1,8 +1,6 @@
 using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Ports;
 using DevTools.Settings;
-using System.Text.Json.Serialization;
-using RuleNode = DevTools.ModelsContext.Model.FilterRule;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
@@ -12,15 +10,11 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
     {
         try
         {
-            return (fileConfig.Load<ModelContextFilters>()?.Filters ?? [])
-                .Where(filter => !string.IsNullOrWhiteSpace(filter.Name))
-                .Select(filter => new CustomFilter(filter.Name,
-                    new FilterDefinition(filter.Groups, ToSet(filter.Root))))
-                .ToList();
+            return StoredFilters.Read(fileConfig.Load<ModelContextFilters>());
         }
         catch (Exception exception)
         {
-            throw new InvalidOperationException(exception.Message, exception);
+            throw Failed(exception);
         }
     }
 
@@ -28,129 +22,17 @@ public sealed class CustomFilterStore(IFileConfig<PathOptions> fileConfig) : ICu
     {
         try
         {
-            fileConfig.Save(new ModelContextFilters
-            {
-                Filters = filters.Select(filter => new StoredFilter
-                {
-                    Name = filter.Name,
-                    Groups = [.. filter.Definition.Groups],
-                    Root = FromNode(filter.Definition.Root)
-                }).ToList()
-            });
+            fileConfig.Save(StoredFilters.Write(filters));
         }
         catch (Exception exception)
         {
-            throw new InvalidOperationException(exception.Message, exception);
+            throw Failed(exception);
         }
     }
 
-    private static FilterSet ToSet(StoredNode? node)
+    private InvalidOperationException Failed(Exception exception)
     {
-        return node is null ? FilterSet.All() : ToNode(node) as FilterSet ?? FilterSet.All();
+        return new InvalidOperationException(
+            $"{exception.Message} ({fileConfig.Options.GetSettingsPath<ModelContextFilters>()})", exception);
     }
-
-    private static FilterNode? ToNode(StoredNode node)
-    {
-        if (node.Children is { } children)
-        {
-            return new FilterSet(node.Any ? SetMatch.Any : SetMatch.All,
-                children.Select(ToNode).OfType<FilterNode>().ToList(), node.Not);
-        }
-
-        if (node.Parameter is not { } parameter || !Enum.TryParse<FilterOperator>(node.Operator, out var op))
-        {
-            return null;
-        }
-
-        return new RuleNode(new ParameterKey(parameter.Name, parameter.BuiltInName, parameter.SharedId, parameter.DataType),
-            op, node.Value ?? string.Empty, node.CaseSensitive);
-    }
-
-    private static StoredNode? FromNode(FilterNode node)
-    {
-        return node switch
-        {
-            FilterSet set => new StoredNode
-            {
-                Any = set.Match == SetMatch.Any,
-                Not = set.Inverted,
-                Children = set.Children.Select(FromNode).OfType<StoredNode>().ToList()
-            },
-            RuleNode rule => new StoredNode
-            {
-                Parameter = new StoredParameter
-                {
-                    Name = rule.Parameter.Name,
-                    BuiltInName = rule.Parameter.BuiltInName,
-                    SharedId = rule.Parameter.SharedId,
-                    DataType = rule.Parameter.DataType
-                },
-                Operator = rule.Operator.ToString(),
-                Value = rule.Value,
-                CaseSensitive = rule.IsCaseSensitive
-            },
-            _ => null
-        };
-    }
-}
-
-[Serializable]
-public sealed class ModelContextFilters
-{
-    [JsonPropertyName("filters")]
-    public List<StoredFilter> Filters { get; set; } = [];
-}
-
-[Serializable]
-public sealed class StoredFilter
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("groups")]
-    public List<long> Groups { get; set; } = [];
-
-    [JsonPropertyName("root")]
-    public StoredNode? Root { get; set; }
-}
-
-[Serializable]
-public sealed class StoredNode
-{
-    [JsonPropertyName("any")]
-    public bool Any { get; set; }
-
-    [JsonPropertyName("not")]
-    public bool Not { get; set; }
-
-    [JsonPropertyName("children")]
-    public List<StoredNode>? Children { get; set; }
-
-    [JsonPropertyName("parameter")]
-    public StoredParameter? Parameter { get; set; }
-
-    [JsonPropertyName("operator")]
-    public string? Operator { get; set; }
-
-    [JsonPropertyName("value")]
-    public string? Value { get; set; }
-
-    [JsonPropertyName("caseSensitive")]
-    public bool CaseSensitive { get; set; }
-}
-
-[Serializable]
-public sealed class StoredParameter
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("builtInName")]
-    public string? BuiltInName { get; set; }
-
-    [JsonPropertyName("sharedId")]
-    public Guid? SharedId { get; set; }
-
-    [JsonPropertyName("dataType")]
-    public string? DataType { get; set; }
 }

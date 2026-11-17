@@ -11,6 +11,7 @@ namespace RevitDevTool.Tools.ModelsContext;
 internal sealed class RevitFilterCatalog : IHostFilterCatalog
 {
     public const string GlobalParameterRule = "Global parameter association";
+    public const string InvertedRule = "Inverted rule without a negated operator";
 
     public Task<IReadOnlyList<HostFilterInfo>> GetFiltersAsync(DocumentKey document, CancellationToken cancellationToken)
     {
@@ -19,7 +20,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
             var resolved = DocumentRegistry.Require(application, document);
             var inView = FiltersInView(application, document, resolved);
             var filters = new List<HostFilterInfo>();
-            foreach (var element in new FilteredElementCollector(resolved.Target).OfClass(typeof(FilterElement)))
+            foreach (var element in resolved.Target.CollectElements().OfClass<FilterElement>())
             {
                 var kind = element switch
                 {
@@ -66,19 +67,20 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
         IReadOnlyCollection<long>? scope,
         CancellationToken cancellationToken)
     {
-        var candidates = await RevitProfiler.RunAsync("Host filter candidates", application =>
+        var (label, candidates) = await RevitProfiler.RunAsync("Host filter candidates", application =>
         {
-            var target = DocumentRegistry.Require(application, document).Target;
-            var ids = target.GetElement(filterId.ToElementId()) switch
+            var resolved = DocumentRegistry.Require(application, document);
+            var target = resolved.Target;
+            var candidates = target.GetElement(filterId.ToElementId()) switch
             {
                 ParameterFilterElement rule when rule.GetCategories() is { Count: > 0 } categories =>
-                    ElementReader.CollectIds(target, categories),
-                SelectionFilterElement selection => selection.GetElementIds().Select(id => id.ToLong()).ToArray(),
-                _ => []
+                    ElementReader.CandidatesOf(target, categories),
+                SelectionFilterElement selection => ElementReader.CandidatesAmong(target, selection.GetElementIds()),
+                _ => new CandidateSet([], [])
             };
-            return RevitFilterEvaluator.InScope(ids, scope);
+            return (DocumentRegistry.SourceOf(resolved).Label, candidates.InScope(scope));
         }, cancellationToken).ConfigureAwait(false);
-        return await RevitFilterEvaluator.MatchInSlicesAsync(document, candidates,
+        return await RevitFilterEvaluator.MatchInSlicesAsync(document, label, candidates,
             (target, chunk) => Match(target, chunk, filterId), cancellationToken).ConfigureAwait(false);
     }
 
@@ -87,7 +89,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
         return target.GetElement(filterId.ToElementId()) switch
         {
             ParameterFilterElement rule when rule.GetElementFilter() is { } elementFilter =>
-                new FilteredElementCollector(target, chunk).WherePasses(elementFilter).ToElementIds().Select(id => id.ToLong()).ToList(),
+                target.CollectElements(chunk).WherePasses(elementFilter).ToElementIds().Select(id => id.ToLong()).ToList(),
             ParameterFilterElement or SelectionFilterElement => chunk.Select(id => id.ToLong()).ToList(),
             _ => []
         };
@@ -140,8 +142,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
             {
                 LogicalAndFilter and => new FilterSet(SetMatch.All, and.GetFilters().Select(Read).ToList()),
                 LogicalOrFilter or => new FilterSet(SetMatch.Any, or.GetFilters().Select(Read).ToList()),
-                ElementParameterFilter { Inverted: true } parameters =>
-                    new FilterSet(SetMatch.All, parameters.GetRules().Select(rule => ReadRule(rule, false)).ToList(), true),
+                ElementParameterFilter { Inverted: true } parameters => ReadInverted(parameters.GetRules()),
                 ElementParameterFilter parameters => ReadRules(parameters.GetRules()),
                 _ => new UnsupportedRule(filter.GetType().Name)
             };
@@ -151,6 +152,17 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
         {
             var nodes = rules.Select(rule => ReadRule(rule, false)).ToList();
             return nodes.Count == 1 ? nodes[0] : new FilterSet(SetMatch.All, nodes);
+        }
+
+        private FilterNode ReadInverted(IList<RevitFilterRule> rules)
+        {
+            var nodes = rules.Select(rule => ReadRule(rule, true)).ToList();
+            if (nodes.Any(node => node is not RuleNode))
+            {
+                return new UnsupportedRule(InvertedRule);
+            }
+
+            return nodes.Count == 1 ? nodes[0] : new FilterSet(SetMatch.Any, nodes);
         }
 
         private FilterNode ReadRule(RevitFilterRule rule, bool negated)
@@ -164,17 +176,17 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
             }
 
             var parameterId = rule.GetRuleParameter();
-            var key = ParameterResolver.KeyOf(document, parameterId);
+            var key = ParameterLocator.KeyOf(document, parameterId);
             return rule switch
             {
-                HasValueFilterRule => new RuleNode(key, negated ? FilterOperator.HasNoValue : FilterOperator.HasValue),
-                HasNoValueFilterRule => new RuleNode(key, negated ? FilterOperator.HasValue : FilterOperator.HasNoValue),
+                HasValueFilterRule => new RuleNode(key, negated ? FilterOperator.Empty : FilterOperator.NotEmpty),
+                HasNoValueFilterRule => new RuleNode(key, negated ? FilterOperator.NotEmpty : FilterOperator.Empty),
                 FilterStringRule text when StringOperator(text.GetEvaluator(), negated) is { } op =>
                     new RuleNode(key, op, text.RuleString),
                 FilterIntegerRule integer when NumericOperator(integer.GetEvaluator(), negated) is { } op =>
                     new RuleNode(key, op, integer.RuleValue.ToString(CultureInfo.InvariantCulture)),
                 FilterDoubleRule number when NumericOperator(number.GetEvaluator(), negated) is { } op =>
-                    new RuleNode(key, op, FormatNumber(key, number.RuleValue)),
+                    new RuleNode(key, op, FormatNumber(key, number.RuleValue), Picked: NumberRange.Of(number.RuleValue)),
                 FilterElementIdRule reference when NumericOperator(reference.GetEvaluator(), negated) is
                 { } op and (FilterOperator.Equal or FilterOperator.NotEqual) =>
                     new RuleNode(key, op, ReferenceText(reference.RuleValue)),
@@ -186,8 +198,8 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
         {
             try
             {
-                if (ParameterResolver.Resolve(document, key, categories).FirstOrDefault()?.Spec is { } spec
-                    && ParameterResolver.IsMeasurable(spec))
+                if (ParameterLocator.Resolve(document, key, categories).FirstOrDefault()?.Spec is { } spec
+                    && SpecInfo.IsMeasurable(spec))
                 {
                     return UnitFormatUtils.Format(document.GetUnits(), spec, value, false);
                 }
@@ -202,7 +214,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
 
         private string ReferenceText(ElementId id)
         {
-            return document.GetElement(id)?.Name ?? id.ToString();
+            return document.GetElement(id)?.Name ?? Category.GetCategory(document, id)?.Name ?? id.ToString();
         }
 
         private static FilterOperator? StringOperator(FilterStringRuleEvaluator evaluator, bool negated)
