@@ -21,6 +21,7 @@ internal sealed class AcadHostAssemblies : HostAssemblies
             yield return typeof(Autodesk.AutoCAD.Ribbon.RibbonServices).Assembly; // AcWindows.dll
             yield return typeof(Autodesk.Windows.Palettes.PaletteSet).Assembly; // AdUiPalettes.dll
             yield return typeof(Autodesk.Windows.ComponentManager).Assembly; // AdWindows.dll
+            yield return typeof(DevTools.UI.Theme.ThemeManager).Assembly; // DevTools.UI.dll
         }
     }
 

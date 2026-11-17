@@ -15,11 +15,13 @@ namespace DevTools.Testing.Host.Runtime;
 /// Activates the framework runtime named by the manifest in the user's output, on the
 /// user's closure. Bind failures during activation or a run become the one-sentence stop.
 /// With <paramref name="shareFramework"/>, the framework is one host-wide copy shared with the
-/// session, and the session runs on the calling thread.
+/// session, and the session runs on the calling thread. The session binds
+/// <paramref name="hostAssemblies"/> to the host's loaded copies, never to copies in the output.
 /// </summary>
 internal sealed class OutputSessionFactory(
     TestFrameworkId frameworkId,
     ILogger logger,
+    IReadOnlyList<Assembly> hostAssemblies,
     Func<string, Assembly>? shareFramework = null) : ITestingRuntimeSessionFactory
 {
     public ITestingRuntimeSession Create(TestingGenerationManifest generation)
@@ -33,7 +35,7 @@ internal sealed class OutputSessionFactory(
 
         return IsolatedRuntimeActivator.Activate(
             generation,
-            CreatePlan(generation, shared, logger),
+            CreatePlan(generation, shared, hostAssemblies, logger),
             manifest.Entry,
             testAssembly => shared is null
                 ? [testAssembly, generation.ShadowAssemblyPath, generation.GenerationId]
@@ -51,6 +53,7 @@ internal sealed class OutputSessionFactory(
     internal static AssemblyIsolationPlan CreatePlan(
         TestingGenerationManifest generation,
         Assembly? shared,
+        IReadOnlyList<Assembly> hostAssemblies,
         ILogger logger)
     {
         var plan = AssemblyIsolationPlan.Create(generation.RuntimeAssemblyPath)
@@ -63,6 +66,7 @@ internal sealed class OutputSessionFactory(
             .AddManagedSource(new ManifestAssemblySource(
                 generation.ManagedAssemblies.Select(path => new AssemblyCandidate(path, Path.GetFullPath(generation.ShadowDirectory))),
                 bindsAnyVersion: true));
+        plan = hostAssemblies.Aggregate(plan, (current, assembly) => current.Share(assembly));
 
         return shared is null ? plan : plan.ShareWithClosure(shared);
     }

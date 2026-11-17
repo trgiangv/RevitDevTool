@@ -77,6 +77,18 @@ public sealed class NUnitAssemblyIsolationTests
     }
 
     [TestMethod]
+    public void Plan_binds_host_assemblies_over_output_copies()
+    {
+        var manifest = NUnitRuntimeTestEnvironment.BuildFixtureGeneration();
+        var framework = NUnitRuntimeTestEnvironment.LoadFramework(manifest);
+        var host = typeof(NullLogger).Assembly;
+
+        var plan = OutputSessionFactory.CreatePlan(manifest, framework, [host], NullLogger.Instance);
+
+        Assert.AreSame(host, ResolveParent(plan, host.GetName()));
+    }
+
+    [TestMethod]
     public void Plan_does_not_catalog_native_files_as_a_separate_identity_index()
     {
         using var workspace = new TempWorkspace();

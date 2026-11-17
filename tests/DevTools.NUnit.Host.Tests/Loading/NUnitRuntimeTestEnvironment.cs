@@ -19,12 +19,13 @@ internal static class NUnitRuntimeTestEnvironment
         NUnitFrameworkHostShare.GetOrLoadFromShadow(FrameworkPath(manifest), HostName);
 
     public static AssemblyIsolationPlan CreatePlan(TestingGenerationManifest manifest, Assembly framework) =>
-        OutputSessionFactory.CreatePlan(manifest, framework, NullLogger.Instance);
+        OutputSessionFactory.CreatePlan(manifest, framework, [], NullLogger.Instance);
 
     public static OutputSessionFactory CreateFactory() =>
         new(
             TestFrameworkId.NUnit,
             NullLogger.Instance,
+            [],
             frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, HostName));
 
     public static NUnitGenerationHarness CreateBuilder(string generationsRoot) =>

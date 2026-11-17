@@ -1,3 +1,4 @@
+using DevTools.AssemblyIsolation;
 using DevTools.Hosting;
 using DevTools.Ipc;
 using DevTools.Testing.Abstractions.Contracts;
@@ -9,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Reflection;
 
 namespace DevTools.Testing.Host;
 
@@ -49,6 +51,7 @@ public static class TestingHostingExtensions
                     return new OutputSessionFactory(
                         TestFrameworkId.NUnit,
                         TestingLogger(provider),
+                        HostAssembliesOf(provider),
                         frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, hostName));
                 });
             return services;
@@ -59,7 +62,7 @@ public static class TestingHostingExtensions
             AddFrameworkProvider(
                 services,
                 TestFrameworkId.TUnit,
-                provider => new OutputSessionFactory(TestFrameworkId.TUnit, TestingLogger(provider)));
+                provider => new OutputSessionFactory(TestFrameworkId.TUnit, TestingLogger(provider), HostAssembliesOf(provider)));
             return services;
         }
 
@@ -68,10 +71,13 @@ public static class TestingHostingExtensions
             AddFrameworkProvider(
                 services,
                 TestFrameworkId.MSTest,
-                provider => new OutputSessionFactory(TestFrameworkId.MSTest, TestingLogger(provider)));
+                provider => new OutputSessionFactory(TestFrameworkId.MSTest, TestingLogger(provider), HostAssembliesOf(provider)));
             return services;
         }
     }
+
+    private static IReadOnlyList<Assembly> HostAssembliesOf(IServiceProvider provider) =>
+        provider.GetService<HostAssemblies>()?.All() ?? [];
 
     private static ILogger TestingLogger(IServiceProvider provider) =>
         provider.GetService<ILoggerFactory>()?.CreateLogger("DevTools.Testing.Host") ?? NullLogger.Instance;

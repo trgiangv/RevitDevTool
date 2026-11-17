@@ -44,6 +44,11 @@ without allowing one feature's dependency policy to leak into another.
   MaterialDesignColors, Wpf.Ui, MahApps.Metro, ControlzEx,
   Microsoft.Xaml.Behaviors) are shared via `SharedSidecars` so another add-in
   does not load a second copy — a second copy breaks styling.
+- The product's own WPF library, `DevTools.UI`, is a `HostAssemblies` entry
+  of each host, so commands, scripts and test sessions (NUnit, TUnit, MSTest
+  generations) bind to the add-in's loaded copy. A second copy takes over
+  `/DevTools.UI;component/` resources, and the add-in's next control that loads
+  its XAML throws and closes the host.
 - Unresolved framework dependencies fall back to the CLR after private sources
   have declined the request.
 - Metadata discovery never executes the inspected assembly. When the host

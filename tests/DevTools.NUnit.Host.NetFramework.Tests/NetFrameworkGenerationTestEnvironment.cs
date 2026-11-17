@@ -75,6 +75,7 @@ public static class NetFrameworkGenerationTestEnvironment
         new OutputSessionFactory(
             TestFrameworkId.NUnit,
             NullLogger.Instance,
+            [],
             frameworkPath => NUnitFrameworkHostShare.GetOrLoadFromShadow(frameworkPath, "Revit"));
 
     private static void AddRuntime(string workspace)

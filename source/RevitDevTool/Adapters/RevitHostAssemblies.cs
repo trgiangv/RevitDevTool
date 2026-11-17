@@ -15,6 +15,7 @@ internal sealed class RevitHostAssemblies : HostAssemblies
             yield return typeof(UIFramework.ApplicationTheme).Assembly; // UIFramework.dll
             yield return typeof(Autodesk.Windows.ToolBars.QuickAccessRedoButton).Assembly; // AdWindows.dll
             yield return typeof(UIFrameworkServices.QuickAccessToolBarService).Assembly; // UIFrameworkServices.dll
+            yield return typeof(DevTools.UI.Theme.ThemeManager).Assembly; // DevTools.UI.dll
         }
     }
 
