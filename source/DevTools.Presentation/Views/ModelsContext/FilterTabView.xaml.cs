@@ -29,7 +29,7 @@ public partial class FilterTabView : UserControl
             return;
         }
 
-        var view = CollectionViewSource.GetDefaultView(_panel.Filter.Sources);
+        var view = CollectionViewSource.GetDefaultView(_panel.Filter.Library.Sources);
         if (view.GroupDescriptions.Count == 0)
         {
             view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(FilterSourceItem.GroupName)));
@@ -39,10 +39,10 @@ public partial class FilterTabView : UserControl
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
         base.OnPreviewKeyDown(e);
-        if (e.Key == Key.F2 && _panel is not null && !_panel.Filter.IsEditingName)
+        if (e.Key == Key.F2 && _panel is not null && !_panel.Filter.Library.IsEditingName)
         {
             e.Handled = true;
-            _panel.Filter.BeginRename();
+            _panel.Filter.Library.BeginRename();
         }
     }
 
@@ -69,35 +69,25 @@ public partial class FilterTabView : UserControl
         {
             case Key.Enter:
                 e.Handled = true;
-                _panel.Filter.CommitRename();
+                _panel.Filter.Library.CommitRename();
                 break;
             case Key.Escape:
                 e.Handled = true;
-                _panel.Filter.CancelRename();
+                _panel.Filter.Library.CancelRename();
                 break;
         }
     }
 
     private void OnNameLostFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
-        _panel?.Filter.LeaveRename();
+        if (e.NewFocus is null)
+        {
+            return;
+        }
+
+        _panel?.Filter.Library.LeaveRename();
     }
 
-    private void OnValuesOpened(object? sender, EventArgs e)
-    {
-        if (sender is FrameworkElement { DataContext: RuleViewModel rule })
-        {
-            _ = rule.LoadValuesCommand.ExecuteAsync(null);
-        }
-    }
-
-    private void OnValuesLoaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { DataContext: RuleViewModel { Kind: ValueKind.Reference or ValueKind.Enumerated } rule })
-        {
-            _ = rule.LoadValuesCommand.ExecuteAsync(null);
-        }
-    }
     private void OnResultMenuOpening(object sender, ContextMenuEventArgs e)
     {
         _panel?.Filter.OpenResultMenu();

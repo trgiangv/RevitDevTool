@@ -23,6 +23,8 @@ public partial class SandboxWindow : Window
 
     internal SandboxRun? CurrentRun => _run;
 
+    internal int ExtraParameters { get; set; }
+
     internal async Task<IReadOnlyList<string>> MeasureAsync(SandboxSize size, Action<string> log)
     {
         SetSize(size);
@@ -81,7 +83,7 @@ public partial class SandboxWindow : Window
             var size = (SandboxSize)SizeBox.SelectedIndex;
             var delay = TimeSpan.FromMilliseconds(int.Parse((string)((ComboBoxItem)DelayBox.SelectedItem).Tag));
             log($"loading {size} with host delay {delay.TotalMilliseconds:F0} ms");
-            _run = SandboxRun.Create(size, delay, Dispatcher);
+            _run = SandboxRun.Create(size, delay, Dispatcher, ExtraParameters);
             var view = new ModelContextView { DataContext = _run.Panel };
             Host.Content = view;
             return await _run.MeasureAsync(view, log);

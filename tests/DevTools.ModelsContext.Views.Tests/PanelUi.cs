@@ -37,7 +37,7 @@ internal sealed class PanelUi : IDisposable
 
     public ThemeHost Host { get; }
 
-    public static PanelUi Open()
+    public static PanelUi Open(double width = 320)
     {
         var fake = new FakeHost(new FakeModel(Small.Value));
         var clock = new FakeClock();
@@ -48,7 +48,7 @@ internal sealed class PanelUi : IDisposable
             return (panel, new ModelContextView { DataContext = panel });
         });
         WpfSta.Run(() => panel.InitializeAsync(CancellationToken.None));
-        return new PanelUi(fake, clock, panel, view, ThemeHost.Show(view));
+        return new PanelUi(fake, clock, panel, view, ThemeHost.Show(view, width));
     }
 
     public void Press(string automationId)

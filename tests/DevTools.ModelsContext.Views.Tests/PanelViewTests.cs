@@ -169,15 +169,15 @@ public sealed class PanelViewTests
         using var ui = PanelUi.Open();
         WpfSta.Invoke(() =>
         {
-            ui.Panel.Filter.AddCommand.Execute(null);
-            ui.Panel.Filter.SaveCommand.Execute(null);
-            ui.Panel.Filter.AddCommand.Execute(null);
+            ui.Panel.Filter.Library.AddCommand.Execute(null);
+            ui.Panel.Filter.Library.SaveCommand.Execute(null);
+            ui.Panel.Filter.Library.AddCommand.Execute(null);
         });
         ui.ShowView("ModelContext.View.Filter");
 
         var hasError = WpfSta.Invoke(() =>
         {
-            ui.Panel.Filter.EditName = "New filter 1";
+            ui.Panel.Filter.Library.EditName = "New filter 1";
             ui.View.UpdateLayout();
             var box = (TextBox)((FilterTabView)ui.View.FindName("FilterView")).FindName("NameBox");
             return Validation.GetHasError(box);
@@ -190,13 +190,13 @@ public sealed class PanelViewTests
     public void TextIgnoresHostForeground()
     {
         using var ui = PanelUi.Open();
-        WpfSta.Invoke(() => ui.Panel.Filter.AddCommand.Execute(null));
+        WpfSta.Invoke(() => ui.Panel.Filter.Library.AddCommand.Execute(null));
         ui.ShowView("ModelContext.View.Filter");
         WpfSta.Invoke(() =>
         {
-            ui.Panel.Filter.CommitRename();
-            ui.Panel.Filter.Root.AddRuleCommand.Execute(null);
-            ui.Panel.Filter.Root.AddSetCommand.Execute(null);
+            ui.Panel.Filter.Library.CommitRename();
+            ui.Panel.Filter.Root.AddConditionCommand.Execute(null);
+            ui.Panel.Filter.Root.AddGroupCommand.Execute(null);
         });
         var sentinel = System.Windows.Media.Colors.Magenta;
 
@@ -215,28 +215,30 @@ public sealed class PanelViewTests
     }
 
     [TestMethod]
-    public void MatchRowCentresText()
+    public void GroupHeaderCentresTitle()
     {
         using var ui = PanelUi.Open();
         ui.ShowView("ModelContext.View.Filter");
         ui.Press("Filter.Add");
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.SelectedSource is { IsCustom: true }), "No custom filter was added.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Library.SelectedSource is { IsCustom: true }), "No custom filter was added.");
+        ui.Press("Filter.Set.Add");
+        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Set.Remove") is not null), "The group did not show.");
 
         var offsets = WpfSta.Invoke(() =>
         {
             ui.View.UpdateLayout();
-            var combo = Descendants(ui.View).OfType<ComboBox>()
-                .First(box => System.Windows.Automation.AutomationProperties.GetAutomationId(box) == "Filter.Set.Match" && box.IsVisible);
-            var row = (System.Windows.FrameworkElement)System.Windows.Media.VisualTreeHelper.GetParent(combo);
-            var middle = CentreY(combo, ui.View);
+            var remove = Descendants(ui.View).OfType<Button>()
+                .First(button => System.Windows.Automation.AutomationProperties.GetAutomationId(button) == "Filter.Set.Remove" && button.IsVisible);
+            var row = (System.Windows.FrameworkElement)System.Windows.Media.VisualTreeHelper.GetParent(remove);
+            var middle = CentreY(remove, ui.View);
             return Descendants(row).OfType<TextBlock>()
-                .Where(text => text.Text is "Match" or "of the following")
+                .Where(text => text.Text == "Group")
                 .Select(text => Math.Abs(CentreY(text, ui.View) - middle))
                 .ToList();
         });
 
-        Assert.HasCount(2, offsets);
-        Assert.IsTrue(offsets.All(offset => offset < 1), "Match row text is off centre: " + string.Join(", ", offsets));
+        Assert.HasCount(1, offsets);
+        Assert.IsTrue(offsets.All(offset => offset < 1), "Group title is off centre: " + string.Join(", ", offsets));
     }
 
     [TestMethod]

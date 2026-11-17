@@ -129,13 +129,13 @@ internal static class ShotRun
         panel.IsFilterTab = true;
         var filterView = (FilterTabView)view.FindName("FilterView");
         var filter = panel.Filter;
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
         await Settle(500);
-        filter.EditName = " ";
+        filter.Library.EditName = " ";
         await Settle(500);
         Save(window, Path.Combine(directory, $"{theme}-filter-name-error.png"));
-        filter.CancelRename();
-        foreach (var category in filter.Categories.Take(3))
+        filter.Library.CancelRename();
+        foreach (var category in filter.Categories.Items.Take(3))
         {
             category.IsChecked = true;
         }
@@ -144,22 +144,22 @@ internal static class ShotRun
         toggle.IsChecked = true;
         await Settle(700);
         Save(window, Path.Combine(directory, $"{theme}-filter-categories.png"));
-        var mode = panel.Filter.Mode;
-        panel.Filter.Mode = ViewModels.ResultSelectionMode.Remove;
+        var mode = panel.Filter.Runner.Mode;
+        panel.Filter.Runner.Mode = ViewModels.ResultSelectionMode.Remove;
         await Settle();
         Save(window, Path.Combine(directory, $"{theme}-filter-remove.png"));
-        panel.Filter.Mode = mode;
+        panel.Filter.Runner.Mode = mode;
 
         toggle.IsChecked = false;
-        filter.Root.AddRuleCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
         var rule = (RuleViewModel)filter.Root.Children[0];
         rule.SelectedParameter = rule.Parameters.FirstOrDefault();
         rule.Value = "SA";
         rule.IsCaseSensitive = true;
-        filter.Root.AddSetCommand.Execute(null);
+        filter.Root.AddGroupCommand.Execute(null);
         var set = (RuleSetViewModel)filter.Root.Children[1];
         set.Match = SetMatch.Any;
-        set.AddRuleCommand.Execute(null);
+        set.AddConditionCommand.Execute(null);
         ((RuleViewModel)set.Children[0]).ParameterName = "Level";
         await Settle(700);
         Save(window, Path.Combine(directory, $"{theme}-filter-rules.png"));
@@ -170,7 +170,7 @@ internal static class ShotRun
     private static async Task CaptureKindsAsync(SandboxWindow window, FilterTabViewModel filter, FilterTabView filterView,
         string directory, AppTheme theme)
     {
-        for (var wait = 0; wait < 40 && !filter.Parameters.Any(parameter => parameter.DisplayName == "Width"); wait++)
+        for (var wait = 0; wait < 40 && !filter.Root.Parameters.Any(parameter => parameter.DisplayName == "Width"); wait++)
         {
             await Settle(250);
         }
@@ -179,7 +179,7 @@ internal static class ShotRun
         var names = new[] { "Mark", "Width", "Flag", "Level" };
         foreach (var name in names)
         {
-            filter.Root.AddRuleCommand.Execute(null);
+            filter.Root.AddConditionCommand.Execute(null);
             var rule = (RuleViewModel)filter.Root.Children[^1];
             rule.SelectedParameter = name == "Flag"
                 ? new ParameterInfo(ParameterKey.Named("Flag", "spec:yesno"), "Flag", ValueKind.YesNo,
@@ -200,16 +200,53 @@ internal static class ShotRun
         var drop = box.Template.FindName("dropDownBorder", box) as FrameworkElement;
         Save(window, Path.Combine(directory, $"{theme}-filter-picker.png"), drop);
         box.IsDropDownOpen = false;
+
+        await CaptureLogicAsync(window, filter, filterView, directory, theme);
+    }
+
+    private static async Task CaptureLogicAsync(SandboxWindow window, FilterTabViewModel filter, FilterTabView filterView,
+        string directory, AppTheme theme)
+    {
+        FilterExamples.UpperLevelDoorsWithoutMark(filter);
+        await Settle(700);
+        Save(window, Path.Combine(directory, $"{theme}-filter-logic.png"));
+
+        FilterExamples.ArchWallsOrMepDucts(filter);
+        await Settle(700);
+        Save(window, Path.Combine(directory, $"{theme}-filter-scope.png"));
+
+        var walls = (RuleSetViewModel)filter.Root.Children[0];
+        walls.SetCategoryScope([FilterExamples.Walls, FilterExamples.Doors]);
+        await Settle(500);
+        var box = Find<DevTools.UI.Controls.TagCheckComboBox>(filterView, "Filter.Set.Scope.Categories");
+        box.IsDropDownOpen = true;
+        await Settle(700);
+        var drop = (box.Template.FindName("PART_Popup", box) as System.Windows.Controls.Primitives.Popup)?.Child as FrameworkElement;
+        Save(window, Path.Combine(directory, $"{theme}-filter-scope-open.png"), drop);
+        box.IsDropDownOpen = false;
+        walls.SetCategoryScope(filter.Categories.Items.Select(item => item.GroupId).Take(8));
+        await Settle(500);
+        Save(window, Path.Combine(directory, $"{theme}-filter-scope-warning.png"));
+
+        FilterExamples.NestedWideScopes(filter);
+        await Settle(700);
+        Save(window, Path.Combine(directory, $"{theme}-filter-tags.png"));
     }
 
     private static ComboBox FindBox(DependencyObject root, string automationId)
+    {
+        return Find<ComboBox>(root, automationId);
+    }
+
+    private static T Find<T>(DependencyObject root, string automationId)
+        where T : FrameworkElement
     {
         var queue = new Queue<DependencyObject>();
         queue.Enqueue(root);
         while (queue.Count > 0)
         {
             var current = queue.Dequeue();
-            if (current is ComboBox box && System.Windows.Automation.AutomationProperties.GetAutomationId(box) == automationId)
+            if (current is T { IsVisible: true } box && System.Windows.Automation.AutomationProperties.GetAutomationId(box) == automationId)
             {
                 return box;
             }
@@ -228,7 +265,7 @@ internal static class ShotRun
         return Task.Delay(milliseconds);
     }
 
-    private static void Save(Window window, string path, FrameworkElement? menu = null)
+    internal static void Save(Window window, string path, FrameworkElement? menu = null)
     {
         const double Scale = 2;
         var width = window.ActualWidth;

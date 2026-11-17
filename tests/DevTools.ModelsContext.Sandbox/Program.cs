@@ -1,4 +1,5 @@
 using DevTools.ModelsContext.Tests.Shared;
+using DevTools.Presentation.Views.ModelsContext;
 using System.Diagnostics;
 using System.Windows;
 
@@ -19,14 +20,35 @@ internal static class Program
 
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         var shots = Array.IndexOf(args, "--shots");
+        var drag = Array.IndexOf(args, "--drag");
+        var dragShots = Array.IndexOf(args, "--drag-shots");
+        var pickerShots = Array.IndexOf(args, "--picker-shots");
         if (args.Contains("--dark", StringComparer.Ordinal))
         {
             DevTools.UI.Theme.ThemeManager.Current.ApplySettingsTheme(DevTools.UI.Theme.AppTheme.Dark);
         }
 
-        var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal) && shots < 0);
+        var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal) && shots < 0 && drag < 0 && dragShots < 0
+                                                 && pickerShots < 0);
+        var width = Array.IndexOf(args, "--width");
+        if (width >= 0)
+        {
+            window.Width = double.Parse(args[width + 1], System.Globalization.CultureInfo.InvariantCulture);
+        }
         var exitCode = 0;
-        if (shots >= 0)
+        if (drag >= 0)
+        {
+            window.Loaded += async (_, _) => exitCode = await DragRun.MouseAsync(window, app, args[drag + 1]);
+        }
+        else if (dragShots >= 0)
+        {
+            window.Loaded += async (_, _) => exitCode = await DragRun.ShotsAsync(window, app, args[dragShots + 1]);
+        }
+        else if (pickerShots >= 0)
+        {
+            window.Loaded += async (_, _) => exitCode = await PickerShotRun.CaptureAsync(window, app, args[pickerShots + 1]);
+        }
+        else if (shots >= 0)
         {
             window.Loaded += async (_, _) => exitCode = await ShotRun.CaptureAsync(window, app, args[shots + 1]);
         }
@@ -48,10 +70,14 @@ internal static class Program
         try
         {
             await window.Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ContextIdle);
+            window.ExtraParameters = FilterMeasure.ExtraParameters;
             foreach (var size in new[] { SandboxSize.Hundred, SandboxSize.Million })
             {
                 Console.WriteLine($"== {size}");
                 await window.MeasureAsync(size, Console.WriteLine);
+                Console.WriteLine("-- filter");
+                await FilterMeasure.RunAsync(window.CurrentRun!, (ModelContextView)window.Host.Content, window.Dispatcher,
+                    Console.WriteLine);
                 MeasureSnapshotMemory(size);
             }
 

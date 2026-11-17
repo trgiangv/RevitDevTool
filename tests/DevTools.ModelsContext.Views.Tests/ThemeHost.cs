@@ -65,6 +65,12 @@ internal sealed class ThemeHost : IDisposable
         return TryFind(Handle, automationId);
     }
 
+    public AutomationElement[] FindAllInWindow(string automationId)
+    {
+        var root = Handle();
+        return root == IntPtr.Zero ? [] : _automation.FromHandle(root).FindAllDescendants(cf => cf.ByAutomationId(automationId));
+    }
+
     public AutomationElement FindInMenu(ContextMenu menu, string automationId)
     {
         var element = Retry.WhileNull(() => TryFind(() => MenuHandle(menu), automationId), Timeout, ignoreException: true).Result;

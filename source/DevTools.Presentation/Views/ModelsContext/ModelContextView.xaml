@@ -11,6 +11,8 @@
              d:DataContext="{d:DesignInstance vm:ModelContextViewModel}"
              d:DesignHeight="800"
              d:DesignWidth="320"
+             AutomationProperties.AutomationId="ModelContext.Panel"
+             AutomationProperties.ItemStatus="{Binding Activity}"
              mc:Ignorable="d">
 
     <UserControl.Resources>

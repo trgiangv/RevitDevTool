@@ -54,10 +54,10 @@ internal sealed class SandboxRun : IDisposable
         return data with { Documents = [.. data.Documents, fifth] };
     }
 
-    public static SandboxRun Create(SandboxSize size, TimeSpan delay, Dispatcher dispatcher)
+    public static SandboxRun Create(SandboxSize size, TimeSpan delay, Dispatcher dispatcher, int extraParameters = 0)
     {
         var data = BuildData(size);
-        var model = new FakeModel(data);
+        var model = new FakeModel(data) { ExtraParameters = extraParameters };
         var source = SlowSource.Wrap(model, () => delay);
         var services = new FakeHost(model).Services(new SystemClock(), new DispatcherScheduler(dispatcher),
             ConsoleLog.Current, source);
