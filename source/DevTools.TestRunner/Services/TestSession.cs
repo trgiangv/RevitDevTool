@@ -9,6 +9,7 @@ namespace DevTools.TestRunner.Services;
 /// for that process pipe. Does not kill a reused session. Cancel or launch
 /// timeout kills only the process this run spawned.
 /// Wait/dialog lifetime is <see cref="HostLaunchWaiter"/> (pytest style).
+/// A host pid selects that running process only and never launches.
 /// Oldest-PID reuse stays Runner policy, not Hosting.
 /// </summary>
 public interface ITestSession
@@ -17,6 +18,7 @@ public interface ITestSession
         HostApp hostApp,
         string version,
         bool forceLaunch,
+        int? hostPid,
         TimeSpan launchTimeout,
         CancellationToken cancellationToken = default);
 }
@@ -27,13 +29,14 @@ public sealed class TestSession(IHostLaunchService launchService) : ITestSession
         HostApp hostApp,
         string version,
         bool forceLaunch,
+        int? hostPid,
         TimeSpan launchTimeout,
         CancellationToken cancellationToken = default)
     {
         var hostName = hostApp.ToString();
         if (!forceLaunch)
         {
-            var existing = Discover(hostName, version).FirstOrDefault();
+            var existing = Select(Discover(hostName, version), hostApp, version, hostPid);
             if (existing is not null)
                 return existing;
         }
@@ -69,6 +72,24 @@ public sealed class TestSession(IHostLaunchService launchService) : ITestSession
         {
             started.DialogResolver?.Dispose();
         }
+    }
+
+    /// <summary>
+    /// Picks the host to reuse from the matching pipes: the given pid, or the oldest
+    /// when no pid is given. A pid that is not among them stops the run.
+    /// </summary>
+    internal static TestHostPipe? Select(
+        IReadOnlyList<TestHostPipe> instances,
+        HostApp hostApp,
+        string version,
+        int? hostPid)
+    {
+        if (hostPid is not { } pid)
+            return instances.OrderBy(instance => instance.ProcessId).FirstOrDefault();
+
+        return instances.FirstOrDefault(instance => instance.ProcessId == pid)
+            ?? throw new InvalidOperationException(
+                $"Process {pid} is not a running {hostApp} {version} with the RevitDevTool test pipe.");
     }
 
     /// <summary>

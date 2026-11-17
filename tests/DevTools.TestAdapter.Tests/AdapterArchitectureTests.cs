@@ -570,6 +570,7 @@ public sealed class AdapterArchitectureTests
                      TestConfig.Keys.HostName,
                      TestConfig.Keys.HostVersion,
                      TestConfig.Keys.ForceLaunch,
+                     TestConfig.Keys.HostPid,
                      TestConfig.Keys.PerTestTimeoutSeconds,
                      TestConfig.Keys.LaunchTimeoutSeconds,
                      TestConfig.Keys.RunnerPath,

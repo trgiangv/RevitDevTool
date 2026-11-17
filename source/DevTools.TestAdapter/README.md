@@ -27,6 +27,11 @@ HostName: `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`,
 Default engine is NUnit. Set `TestingFramework` to `tunit` or `mstest`.
 Do not use `.runsettings`.
 
+With several matching hosts open, a run reuses the oldest process. Pass
+`--pid <host process id>` (or set `HostPid`) to run in one host process; that
+run never launches a host and stops with one sentence when the process is not a
+running host of `HostName` and `HostVersion`.
+
 ### NUnit (default)
 
 NUnit is one copy per host process. To run another NUnit version, restart the host.

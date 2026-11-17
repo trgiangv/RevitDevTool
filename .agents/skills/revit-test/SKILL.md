@@ -4,7 +4,7 @@ description: >
   Configure, write, and run NUnit, TUnit, or MSTest tests inside Revit, AutoCAD,
   Civil 3D, or a family document with RevitDevTool.TestAdapter (Microsoft Testing
   Platform). Use in a repo that references that package: project setup
-  (HostName, HostVersion, ForceLaunch), dotnet test filters and [Explicit] tests,
+  (HostName, HostVersion, ForceLaunch, --pid), dotnet test filters and [Explicit] tests,
   or MTP exit code 8 and zero tests discovered.
 ---
 
@@ -73,12 +73,14 @@ adapter starts or reuses the host; you do not start `Revit.exe` or `acad.exe`.
 dotnet test --project path/to/Host.Tests.csproj -c <Config> --filter MethodName --output Detailed
 dotnet test --project Host.Tests.csproj -c <Config> -- --filter MethodName --output Detailed
 dotnet test --project Host.Tests.csproj -c <Config> --list-tests
+dotnet test --project Host.Tests.csproj -c <Config> -- --pid 12345 --filter MethodName
 ```
 
 | Behavior | Detail |
 |----------|--------|
 | Discovery | `--list-tests` and Test Explorer refresh start no host |
-| Run | Starts or reuses a host (`ForceLaunch=false` still launches if none match) |
+| Run | Starts or reuses a host (`ForceLaunch=false` still launches if none match). With several matching hosts open it reuses the oldest process |
+| `--pid <n>` | Runs in that host process only and never launches. Fails with one sentence when `<n>` is not a running host of `HostName` and `HostVersion`, or when `ForceLaunch=true`. `HostPid` in the csproj or `hostPid` in `testconfig.json` does the same |
 | Passed stdout | `--output Detailed` shows Console, Trace, and `Assert.Pass` on passes; the default `Normal` expands failures only |
 | `--filter` | Method-name regex (NUnit `<name re="1">`); VSTest `FullyQualifiedName~` matches nothing |
 | `[Explicit]` | Selected only when `--filter` matches the method name |
@@ -87,7 +89,8 @@ Filters, `--filter-uid`, and exit 8: [mtp-filter.md](references/mtp-filter.md).
 
 ## Write tests
 
-Bodies run on the Autodesk API context. WPF `Dispatcher.Invoke` is not an API
+NUnit bodies run on the Autodesk API context; MSTest bodies do not
+([mstest.md](references/mstest.md)). WPF `Dispatcher.Invoke` is not an API
 context. Locate fixtures and outputs with `[CallerFilePath]`: test assemblies are
 stream-loaded, and NUnit's `TestContext.WorkDirectory` points at a generation
 shadow.
@@ -106,6 +109,7 @@ shadow.
 | `--filter FullyQualifiedName~…` or `Name=` matches nothing | Use `--filter MethodName` |
 | No passed stdout under `dotnet test` | Add `--output Detailed` |
 | `[Explicit]` never runs | Select it with `--filter MethodName` |
+| Run lands in the wrong of several open hosts | Pass `--pid <host process id>` |
 | Exit 8, zero tests | Wrong filter syntax, or the cwd `global.json` still selects VSTest |
 | `"did not find the TestRunner at '…'"` | Restore the RevitDevTool.TestAdapter package again |
 | `"needs the .NET 10 runtime or later"` | Install the .NET 10 runtime or later on the `dotnet test` machine |

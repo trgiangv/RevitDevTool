@@ -63,7 +63,12 @@ What to rebuild:
 
 ## Rules
 
-- Consumer properties: `HostName`, `HostVersion`, `ForceLaunch`, `PerTestTimeout`,
+- Host choice: without `--pid` the Runner reuses the oldest matching host process (`TestSession.Select`).
+  `--pid <n>` (or `HostPid` / `hostPid`) runs in that process only, never launches, and
+  fails with one sentence when it is not a running host of the kind and year or when
+  `ForceLaunch=true`. Unit tests: `TestSessionTests`, `RunnerCommandContextTests`,
+  `PidOptionTests`, `TestRunSettingsLoaderTests` (`Pid*`).
+- Consumer properties: `HostName`, `HostVersion`, `ForceLaunch`, `HostPid`, `PerTestTimeout`,
   `LaunchTimeout`, `TestingFramework` (`nunit` default, `tunit` or `mstest` opt-in).
   An `mstest` project is `Sdk="MSTest.Sdk"` (or `EnableMSTestRunner=true`).
 - Leave `RuntimeIdentifier` unset on net8 and net10 test projects: a RID on net8

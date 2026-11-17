@@ -1,1 +1,8 @@
 #nullable enable
+const DevTools.Testing.Abstractions.Config.TestConfig.Keys.HostPid = "hostPid" -> string!
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.HostPid.get -> int?
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.HostPid.init -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.Deconstruct(out string! HostName, out string! HostVersion, out bool ForceLaunch, out int PerTestTimeoutSeconds, out int LaunchTimeoutSeconds, out int? DebugParentPid, out int RequestTimeoutSeconds, out int? HostPid) -> void
+DevTools.Testing.Abstractions.Contracts.TestHostOptions.TestHostOptions(string! HostName, string! HostVersion, bool ForceLaunch, int PerTestTimeoutSeconds, int LaunchTimeoutSeconds, int? DebugParentPid = null, int RequestTimeoutSeconds = 0, int? HostPid = null) -> void
+*REMOVED*DevTools.Testing.Abstractions.Contracts.TestHostOptions.Deconstruct(out string! HostName, out string! HostVersion, out bool ForceLaunch, out int PerTestTimeoutSeconds, out int LaunchTimeoutSeconds, out int? DebugParentPid, out int RequestTimeoutSeconds) -> void
+*REMOVED*DevTools.Testing.Abstractions.Contracts.TestHostOptions.TestHostOptions(string! HostName, string! HostVersion, bool ForceLaunch, int PerTestTimeoutSeconds, int LaunchTimeoutSeconds, int? DebugParentPid = null, int RequestTimeoutSeconds = 0) -> void

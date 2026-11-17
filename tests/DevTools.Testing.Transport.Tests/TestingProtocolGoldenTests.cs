@@ -49,7 +49,7 @@ public sealed class TestingProtocolGoldenTests
             ["  spaced id  ", "xunit.v3://method/Theory(input: 1)/0"]);
         var invocation = new TestRunExecute(
             TestingProtocol.Sender,
-            new TestHostOptions("Revit", "2025", true, 60, 180, DebugParentPid: 4242),
+            new TestHostOptions("Revit", "2025", false, 60, 180, DebugParentPid: 4242, HostPid: 3400),
             request);
         var json = JsonSerializer.Serialize(invocation, TestingJsonContext.Default.TestRunExecute);
         var roundTrip = JsonSerializer.Deserialize(json, TestingJsonContext.Default.TestRunExecute);
@@ -61,6 +61,7 @@ public sealed class TestingProtocolGoldenTests
         Assert.AreEqual("Revit", roundTrip.Host.HostName);
         Assert.AreEqual(60, roundTrip.Host.PerTestTimeoutSeconds);
         Assert.AreEqual(4242, roundTrip.Host.DebugParentPid);
+        Assert.AreEqual(3400, roundTrip.Host.HostPid);
         Assert.Contains("\"run_id\":\"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee\"", json, StringComparison.Ordinal);
         Assert.DoesNotContain("testing/discover", json, StringComparison.Ordinal);
     }

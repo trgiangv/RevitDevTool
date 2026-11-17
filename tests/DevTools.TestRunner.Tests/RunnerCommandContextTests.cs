@@ -17,6 +17,7 @@ public sealed class RunnerCommandContextTests
             false,
             42,
             requestTimeoutSeconds: 0,
+            hostPid: null,
             out var context,
             out var error);
 
@@ -43,6 +44,7 @@ public sealed class RunnerCommandContextTests
             false,
             null,
             requestTimeoutSeconds: 0,
+            hostPid: null,
             out _,
             out var error);
 
@@ -64,6 +66,7 @@ public sealed class RunnerCommandContextTests
             false,
             null,
             requestTimeoutSeconds: 0,
+            hostPid: null,
             out _,
             out var error);
 
@@ -85,6 +88,7 @@ public sealed class RunnerCommandContextTests
             false,
             debugParentPid,
             requestTimeoutSeconds: 0,
+            hostPid: null,
             out _,
             out var error);
 
@@ -96,7 +100,7 @@ public sealed class RunnerCommandContextTests
     public void TryCreate_rejects_non_positive_per_test_timeout()
     {
         var created = RunnerCommandContext.TryCreate(
-            "Revit", "2026", false, 0, 180, false, null, 0, out _, out var error);
+            "Revit", "2026", false, 0, 180, false, null, 0, null, out _, out var error);
 
         Assert.IsFalse(created);
         Assert.AreEqual("Per-test timeout must be positive.", error);
@@ -106,9 +110,39 @@ public sealed class RunnerCommandContextTests
     public void TryCreate_rejects_negative_request_timeout()
     {
         var created = RunnerCommandContext.TryCreate(
-            "Revit", "2026", false, 60, 180, false, null, -1, out _, out var error);
+            "Revit", "2026", false, 60, 180, false, null, -1, null, out _, out var error);
 
         Assert.IsFalse(created);
         Assert.AreEqual("Request timeout cannot be negative.", error);
+    }
+
+    [TestMethod]
+    public void PidKeepsTheHost()
+    {
+        var created = RunnerCommandContext.TryCreate(
+            "Revit", "2026", false, 60, 180, false, null, 0, 3400, out var context, out var error);
+
+        Assert.IsTrue(created, error);
+        Assert.AreEqual(3400, context!.HostPid);
+    }
+
+    [TestMethod]
+    public void PidWithForceLaunchFails()
+    {
+        var created = RunnerCommandContext.TryCreate(
+            "Revit", "2026", true, 60, 180, false, null, 0, 3400, out _, out var error);
+
+        Assert.IsFalse(created);
+        Assert.AreEqual("Host pid selects a running host and cannot be combined with ForceLaunch.", error);
+    }
+
+    [TestMethod]
+    public void ZeroPidFails()
+    {
+        var created = RunnerCommandContext.TryCreate(
+            "Revit", "2026", false, 60, 180, false, null, 0, 0, out _, out var error);
+
+        Assert.IsFalse(created);
+        Assert.AreEqual("Host pid requires a positive process id.", error);
     }
 }

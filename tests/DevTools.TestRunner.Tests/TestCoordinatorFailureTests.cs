@@ -63,6 +63,7 @@ public sealed class TestCoordinatorFailureTests : RunnerTests
             HostApp hostApp,
             string version,
             bool forceLaunch,
+            int? hostPid,
             TimeSpan launchTimeout,
             CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("pipe unavailable");

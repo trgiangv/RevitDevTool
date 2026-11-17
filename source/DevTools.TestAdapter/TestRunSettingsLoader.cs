@@ -9,7 +9,8 @@ namespace DevTools.TestAdapter;
 /// Reads the host options the test csproj declared. Order per key: environment
 /// variable, the <c>devtools</c> section of a user-authored testconfig.json through MTP
 /// <see cref="IConfiguration"/>, then the <c>devtools.*</c> assembly metadata the package
-/// targets write into the testhost. The runner path comes from that metadata only.
+/// targets write into the testhost. The <c>--pid</c> option wins over every <c>hostPid</c> source.
+/// The runner path comes from that metadata only.
 /// </summary>
 internal static class TestRunSettingsLoader
 {
@@ -19,7 +20,7 @@ internal static class TestRunSettingsLoader
         "RevitDevTool.TestAdapter requires HostName and HostVersion. Declare them in the test .csproj, or author a '"
         + TestConfig.SectionName + "' section in " + TestConfig.FileName + " beside the .csproj.";
 
-    internal static TestRunSettings Load(IConfiguration configuration, Assembly? testAssembly = null)
+    internal static TestRunSettings Load(IConfiguration configuration, Assembly? testAssembly = null, string? hostPid = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         var metadata = ReadMetadata(testAssembly);
@@ -40,6 +41,7 @@ internal static class TestRunSettingsLoader
             throw new InvalidOperationException(MissingConfigMessage);
 
         bool.TryParse(ReadKey(configuration, metadata, TestConfig.Keys.ForceLaunch), out var forceLaunch);
+        var pid = ParsePid(hostPid ?? ReadKey(configuration, metadata, TestConfig.Keys.HostPid));
 
         var frameworkId = ReadKey(configuration, metadata, TestConfig.Keys.FrameworkId);
         if (string.IsNullOrWhiteSpace(frameworkId)
@@ -59,9 +61,20 @@ internal static class TestRunSettingsLoader
                 hostVersion.Trim(),
                 forceLaunch,
                 perTestTimeout,
-                launchTimeout),
+                launchTimeout,
+                HostPid: pid),
             parsed,
             TestingRunnerPaths.ExpandPath(runnerPath));
+    }
+
+    internal static int? ParsePid(string? value)
+    {
+        if (value is null || string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return int.TryParse(value.Trim(), out var pid) && pid > 0
+            ? pid
+            : throw new InvalidOperationException($"RevitDevTool.TestAdapter needs a positive host process id, got '{value.Trim()}'.");
     }
 
     internal static IReadOnlyDictionary<string, string> ReadMetadata(Assembly? assembly)

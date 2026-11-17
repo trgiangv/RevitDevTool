@@ -9,7 +9,8 @@ public sealed record RunnerCommandContext(
     int LaunchTimeoutSeconds,
     bool Debug,
     int? DebugParentPid,
-    int RequestTimeoutSeconds = 0)
+    int RequestTimeoutSeconds = 0,
+    int? HostPid = null)
 {
     public int EffectiveRequestTimeoutSeconds =>
         RequestTimeoutSeconds > 0 ? RequestTimeoutSeconds : PerTestTimeoutSeconds;
@@ -23,6 +24,7 @@ public sealed record RunnerCommandContext(
         bool debug,
         int? debugParentPid,
         int requestTimeoutSeconds,
+        int? hostPid,
         out RunnerCommandContext? context,
         out string? error)
     {
@@ -41,6 +43,18 @@ public sealed record RunnerCommandContext(
         if (debugParentPid is <= 0)
         {
             error = "Debug parent pid requires a positive process id.";
+            return false;
+        }
+
+        if (hostPid is <= 0)
+        {
+            error = "Host pid requires a positive process id.";
+            return false;
+        }
+
+        if (hostPid is not null && forceLaunch)
+        {
+            error = "Host pid selects a running host and cannot be combined with ForceLaunch.";
             return false;
         }
 
@@ -70,7 +84,8 @@ public sealed record RunnerCommandContext(
             launchTimeoutSeconds,
             debug || debugParentPid is not null,
             debugParentPid,
-            requestTimeoutSeconds);
+            requestTimeoutSeconds,
+            hostPid);
         return true;
     }
 }

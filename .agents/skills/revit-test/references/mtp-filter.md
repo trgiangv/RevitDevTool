@@ -3,6 +3,7 @@
 | Flag | Owner | What it becomes |
 |------|-------|-----------------|
 | `--filter` | adapter | Method name or substring. NUnit sends it as `<name re="1">`. TUnit and MSTest match method name, display name, full name, or a case-insensitive substring |
+| `--pid` | adapter | Process id of the running host to run in. A pid that is not a running host of `HostName` and `HostVersion` stops the run |
 | `--filter-uid` | MTP | Exact TestNode uid, sent to the host as `<test>` |
 | `--treenode-filter` | MTP | Discovered leaves under `/ns/type/method` (never the whole assembly) |
 | `--list-tests` | MTP | Text prints DisplayName; `json` includes `uid` |

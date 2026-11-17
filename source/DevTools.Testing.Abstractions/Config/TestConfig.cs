@@ -14,6 +14,7 @@ public static class TestConfig
         public const string HostName = "hostName";
         public const string HostVersion = "hostVersion";
         public const string ForceLaunch = "forceLaunch";
+        public const string HostPid = "hostPid";
         public const string PerTestTimeoutSeconds = "perTestTimeoutSeconds";
         public const string LaunchTimeoutSeconds = "launchTimeoutSeconds";
         public const string RunnerPath = "runnerPath";

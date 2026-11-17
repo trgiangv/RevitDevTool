@@ -110,7 +110,7 @@ public sealed class RunnerCommandsTests : RunnerTests
     {
         public int Calls { get; private set; }
 
-        public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
+        public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, int? hostPid, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
         {
             Calls++;
             throw new InvalidOperationException("A missing assembly must not activate a host.");

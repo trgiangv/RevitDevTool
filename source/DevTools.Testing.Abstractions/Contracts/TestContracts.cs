@@ -7,7 +7,8 @@ public sealed record TestHostOptions(
     int PerTestTimeoutSeconds,
     int LaunchTimeoutSeconds,
     int? DebugParentPid = null,
-    int RequestTimeoutSeconds = 0)
+    int RequestTimeoutSeconds = 0,
+    int? HostPid = null)
 {
     public int EffectiveRequestTimeoutSeconds =>
         RequestTimeoutSeconds > 0 ? RequestTimeoutSeconds : PerTestTimeoutSeconds;

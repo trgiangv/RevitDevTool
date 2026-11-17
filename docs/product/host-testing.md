@@ -17,7 +17,9 @@ NUnit-specific bridge protocol are not part of the supported product on
   [Framework versions](#framework-versions). Package props set
   `OutputType=Exe`. Declare `HostName`, `HostVersion`, optional `ForceLaunch`,
   `PerTestTimeout`, `LaunchTimeout`. `ForceLaunch=true` always starts a new host
-  (skip reuse). `PerTestTimeout` is the per-test budget after the host is ready; `testing/run`
+  (skip reuse). Without it the run reuses the oldest matching host process; the
+  `--pid <n>` option (or `HostPid`) runs in that one host process and never
+  launches. `PerTestTimeout` is the per-test budget after the host is ready; `testing/run`
   pipe wait = budget × test count. `LaunchTimeout` waits for the host pipe after
   process start. `TestingFramework` (`nunit` default, `tunit` or `mstest`
   opt-in) overrides the in-host engine without changing the NuGet. An `mstest`

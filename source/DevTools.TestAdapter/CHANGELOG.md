@@ -5,6 +5,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `--pid <n>` (or `HostPid`) runs the tests in that running host process. Without it the oldest matching host is reused, as before.
+- A `--pid` or `HostPid` run never launches a host. It stops with one sentence when that process is not a running host of the `HostName` and `HostVersion`, when the value is not a positive process id, or when it is combined with `ForceLaunch`.
+
+### Fixed
+
+- A test that loads WPF content from the DevTools.UI theme no longer fails in the host with a `XamlParseException`. The host now binds DevTools.UI to its own loaded copy instead of a second copy from the test output.
+
 ## [0.3.0]
 
 ### Changed

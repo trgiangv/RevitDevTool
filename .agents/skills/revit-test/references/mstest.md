@@ -17,6 +17,11 @@ Project setup: [project-setup.md](project-setup.md). Shared rules:
 `MSTest.Sdk` brings the framework; no other test adapter or `.runsettings`
 file is needed. `NetFxModuleInitializer` does not apply.
 
+In the host, MSTest runs test bodies on a thread-pool thread while the host's API
+thread waits: the active view reads null and external-event dispatch never runs.
+Use NUnit for tests that need the API context
+([test-matrix.md](../../../../docs/agents/test-matrix.md#current-gaps)).
+
 Selecting one test also runs its `[DependsOn]` prerequisites (method and
 class, transitive). Both the testhost discoverer and the in-host session add
 them before `--filter-uid`.

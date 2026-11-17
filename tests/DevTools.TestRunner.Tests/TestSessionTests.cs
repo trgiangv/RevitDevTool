@@ -23,6 +23,7 @@ public sealed class TestSessionTests : RunnerTests
             HostApp.Revit,
             "2025",
             forceLaunch: true,
+            hostPid: null,
             TimeSpan.FromSeconds(30),
             cts.Token);
 
@@ -32,6 +33,50 @@ public sealed class TestSessionTests : RunnerTests
         await Assert.ThrowsAsync<OperationCanceledException>(async () => await wait);
         Assert.IsTrue(process.WaitForExit(5000));
     }
+
+    [TestMethod]
+    public void NoPidReusesOldestHost()
+    {
+        var picked = TestSession.Select(Hosts, HostApp.Revit, "2026", hostPid: null);
+
+        Assert.AreEqual(1200, picked?.ProcessId);
+    }
+
+    [TestMethod]
+    public void PidPicksThatHost()
+    {
+        var picked = TestSession.Select(Hosts, HostApp.Revit, "2026", hostPid: 3400);
+
+        Assert.AreEqual("DevTools_Revit_2026_3400", picked?.PipeName);
+    }
+
+    [TestMethod]
+    public void UnknownPidStopsTheRun()
+    {
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            TestSession.Select(Hosts, HostApp.Revit, "2026", hostPid: 999));
+
+        Assert.AreEqual("Process 999 is not a running Revit 2026 with the RevitDevTool test pipe.", error.Message);
+    }
+
+    [TestMethod]
+    public void PidWithNoHostsStopsTheRun()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            TestSession.Select([], HostApp.Revit, "2026", hostPid: 3400));
+    }
+
+    [TestMethod]
+    public void NoHostsAndNoPidLaunches()
+    {
+        Assert.IsNull(TestSession.Select([], HostApp.Revit, "2026", hostPid: null));
+    }
+
+    private static readonly TestHostPipe[] Hosts =
+    [
+        new("DevTools_Revit_2026_3400", 3400),
+        new("DevTools_Revit_2026_1200", 1200),
+    ];
 
     private sealed class StubLaunchService(Process process) : IHostLaunchService
     {

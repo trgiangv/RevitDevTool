@@ -439,7 +439,10 @@ internal sealed class TestFramework : ITestFramework, IDataProducer
         if (_session is not null)
             return _session;
 
-        _settings = TestRunSettingsLoader.Load(RequireConfiguration(), System.Reflection.Assembly.GetEntryAssembly());
+        _settings = TestRunSettingsLoader.Load(
+            RequireConfiguration(),
+            System.Reflection.Assembly.GetEntryAssembly(),
+            ReadOption(TestCommandLineProvider.PidOptionName));
         if (_injectedTransport is not null)
         {
             _session = new TestRunSession(_injectedTransport);

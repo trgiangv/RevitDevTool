@@ -125,6 +125,7 @@
     <AssemblyMetadata Include="devtools.hostName" Value="$(HostName)" />
     <AssemblyMetadata Include="devtools.hostVersion" Value="$(HostVersion)" />
     <AssemblyMetadata Include="devtools.forceLaunch" Value="$(ForceLaunch)" />
+    <AssemblyMetadata Include="devtools.hostPid" Value="$(HostPid)" />
     <AssemblyMetadata Include="devtools.perTestTimeoutSeconds" Value="$(PerTestTimeout)" />
     <AssemblyMetadata Include="devtools.launchTimeoutSeconds" Value="$(LaunchTimeout)" />
     <AssemblyMetadata Include="devtools.runnerPath" Value="$([MSBuild]::NormalizePath('$(MSBuildThisFileDirectory)..\tools\runner\DevTools.TestRunner.exe'))" />

@@ -62,6 +62,7 @@ public sealed class RunnerCommands(
                 execute.Host.DebugParentPid is > 0,
                 execute.Host.DebugParentPid,
                 execute.Host.EffectiveRequestTimeoutSeconds,
+                execute.Host.HostPid,
                 out var context,
                 out var error))
             return await Execute(execute, context!, cancellationToken).ConfigureAwait(false);

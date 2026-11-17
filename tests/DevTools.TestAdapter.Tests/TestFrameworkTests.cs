@@ -236,6 +236,25 @@ public sealed class ProcessTestRunnerCliTests
 }
 
 [TestClass]
+public sealed class PidOptionTests
+{
+    [TestMethod]
+    [DataRow("3400", true)]
+    [DataRow("0", false)]
+    [DataRow("-5", false)]
+    [DataRow("abc", false)]
+    public void PidMustBePositive(string value, bool valid)
+    {
+        var provider = new TestCommandLineProvider();
+        var option = provider.GetCommandLineOptions().Single(o => o.Name == TestCommandLineProvider.PidOptionName);
+
+        var result = provider.ValidateOptionArgumentsAsync(option, [value]).GetAwaiter().GetResult();
+
+        Assert.AreEqual(valid, result.IsValid);
+    }
+}
+
+[TestClass]
 public sealed class TestRunSettingsLoaderTests
 {
     [TestMethod]
@@ -309,6 +328,45 @@ public sealed class TestRunSettingsLoaderTests
         Assert.AreEqual(TestFrameworkId.TUnit, options.FrameworkId);
     }
 
+    [TestMethod]
+    public void PidOptionBeatsConfiguration()
+    {
+        var options = TestRunSettingsLoader.Load(PidConfiguration("1200"), hostPid: "3400");
+
+        Assert.AreEqual(3400, options.Host.HostPid);
+    }
+
+    [TestMethod]
+    public void PidReadsFromConfiguration()
+    {
+        Assert.AreEqual(1200, TestRunSettingsLoader.Load(PidConfiguration("1200")).Host.HostPid);
+    }
+
+    [TestMethod]
+    public void NoPidKeepsReuse()
+    {
+        Assert.IsNull(TestRunSettingsLoader.Load(PidConfiguration(null)).Host.HostPid);
+    }
+
+    [TestMethod]
+    public void BadPidFails()
+    {
+        var ex = Assert.ThrowsExactly<InvalidOperationException>(
+            () => TestRunSettingsLoader.Load(PidConfiguration("abc")));
+
+        Assert.AreEqual("RevitDevTool.TestAdapter needs a positive host process id, got 'abc'.", ex.Message);
+    }
+
+    private static StubConfiguration PidConfiguration(string? pid) =>
+        new(new Dictionary<string, string?>
+        {
+            [TestConfig.Keys.Configuration(TestConfig.Keys.HostName)] = "Revit",
+            [TestConfig.Keys.Configuration(TestConfig.Keys.HostVersion)] = "2026",
+            [TestConfig.Keys.Configuration(TestConfig.Keys.PerTestTimeoutSeconds)] = "60",
+            [TestConfig.Keys.Configuration(TestConfig.Keys.LaunchTimeoutSeconds)] = "180",
+            [TestConfig.Keys.Configuration(TestConfig.Keys.FrameworkId)] = "nunit",
+            [TestConfig.Keys.Configuration(TestConfig.Keys.HostPid)] = pid,
+        });
     [TestMethod]
     public void Configuration_key_beats_metadata()
     {

@@ -57,6 +57,7 @@ public sealed class TestCoordinator(ITestSession session) : ITestCoordinator
                     hostApp,
                     context.HostVersion,
                     context.ForceLaunch,
+                    context.HostPid,
                     TimeSpan.FromSeconds(context.LaunchTimeoutSeconds),
                     cancellationToken)
                 .ConfigureAwait(false);

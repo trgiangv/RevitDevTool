@@ -36,7 +36,8 @@ MTP.MSBuild version.
 |----------|------|
 | `HostName` | `Revit`, `AutoCad`, `Civil3D`, `Plant3D`, `AcadArch`, `AcadMech`, `AcadElec`, `AcadMep`, `AcadMap3D` |
 | `HostVersion` | Year, e.g. `2025` |
-| `ForceLaunch` | `false` reuses a matching host and starts one if none. `true` always starts a new one |
+| `ForceLaunch` | `false` reuses a matching host (the oldest process) and starts one if none. `true` always starts a new one |
+| `HostPid` | Optional. Runs in that running host process only; never launches. Usually passed per run as `--pid` ([SKILL.md](../SKILL.md#run)) |
 | `PerTestTimeout` | Per-test budget in seconds. The pipe wait is about this times the tests in the run |
 | `LaunchTimeout` | Seconds to wait for a launched host's pipe |
 | `TestingFramework` | Default `nunit`. Set `tunit` or `mstest` |

@@ -84,7 +84,7 @@ public sealed class TestCoordinatorTests : RunnerTests
     {
         public int Calls { get; private set; }
 
-        public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
+        public Task<TestHostPipe> EnsurePipeAsync(HostApp hostApp, string version, bool forceLaunch, int? hostPid, TimeSpan launchTimeout, CancellationToken cancellationToken = default)
         {
             Calls++;
             Assert.AreEqual(HostApp.Revit, hostApp);
