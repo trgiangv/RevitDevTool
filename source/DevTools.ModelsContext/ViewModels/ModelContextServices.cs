@@ -18,8 +18,11 @@ public sealed class ModelContextServices(
     ICustomFilterStore customFilters,
     IClock clock,
     IScheduler scheduler,
-    ILogger? logger = null)
+    ILogger? logger = null,
+    SynchronizationContext? context = null)
 {
+    public SynchronizationContext? Context { get; } = context;
+
     public IModelSource Source { get; } = source;
 
     public IModelEvents Events { get; } = events;
@@ -130,7 +133,19 @@ internal sealed class PanelRuntime
         }
     }
 
-    public async Task RunAsync(Func<Task> work)
+    public Task RunAsync(Func<Task> work)
+    {
+        if (SynchronizationContext.Current is not null || Services.Context is not { } context)
+        {
+            return RunJobAsync(work);
+        }
+
+        var done = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        context.Post(_ => RunJobAsync(work).ContinueWith(_ => done.SetResult(true), TaskScheduler.Default), null);
+        return done.Task;
+    }
+
+    private async Task RunJobAsync(Func<Task> work)
     {
         Interlocked.Increment(ref _running);
         OnActivityChanged();

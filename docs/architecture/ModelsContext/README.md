@@ -74,7 +74,7 @@ count.
     still being undone. L2 checks the T3 split of a plan only
     (`expected.plannedTiers` in `visibility.json`); `VisibilityRun` fails any
     plan with a `ReferenceCommandStep` before it runs, and the guard test
-    `LinkTiersArePlanOnly` fails a T3 case without `plannedTiers`. L3 UI-07
+    `LinkTiersArePlanOnly` fails a T3 case without `plannedTiers`. L3 UI-06
     runs T3 from outside Revit through the panel's eye, the path a user takes.
 14. **One copy of `DevTools.UI` per Revit.** WPF resolves
     `/DevTools.UI;component/...` to the most recently loaded assembly named
@@ -110,8 +110,28 @@ count.
     Revit that is a fatal error (0xe0434352). The temporary bar's Reset once
     called `VisibilityController.ResetAsync` directly; when Show for linked
     elements failed ("Revit did not show these linked elements", active view a
-    sheet, L3 UI-07, 2026-11-17 21:51) Revit closed. `RunAsync` logs the error
+    sheet, L3 UI-06, 2026-11-17 21:51) Revit closed. `RunAsync` logs the error
     and shows it as the panel message.
+19. **A view opened inside a run is not drawn.** The view collector answers for an
+    undrawn view with far too many elements (L3 counted 1,669 Current model
+    elements instead of 917; EX-06 was Inconclusive). Revit draws it only after the
+    run returns, and `RefreshActiveView` does not change that. L2 therefore needs
+    `L3` open from an earlier run: `scripts/test-models-context.ps1` runs
+    `--filter OpensSampleView` first, then the full run. `SampleViews.Activate` stops as Inconclusive
+    otherwise; no retry.
+20. **Panel jobs always resume on the UI context.** `PanelRuntime.RunAsync` ran a
+    job on whatever thread called it. A document opened inside a test run
+    (`OpenAndActivateDocument` from `OpensSampleView`) raised pane visibility and view
+    changes with no ambient `SynchronizationContext`, so the `await` continuations
+    resumed on the pool and `ExplorerTabViewModel.Publish` changed `Rows` off the
+    dispatcher thread. Log: "CollectionView does not support changes to its
+    SourceCollection from a thread different from the Dispatcher thread". The next
+    layout pass threw `InvalidOperationException: An ItemsControl is inconsistent with
+    its items source` (dump `pe`, `VirtualizingStackPanel.MeasureChild`, control
+    `RowList`), and Revit crash protection ended the session. The DirectContext3D
+    `getBoundingBox` line in the journal is the add-in's visualizer and unrelated.
+    `RunAsync` now posts to `ModelContextServices.Context` when
+    `SynchronizationContext.Current` is null. Tests never open a document inside a run.
 
 ## Layers and ports
 
@@ -250,7 +270,7 @@ the measured spike: 0062 §5, §7–§10.
   URIs.
 - **Sandbox** (`tests/DevTools.ModelsContext.Sandbox`) opens the panel on a
   generated or replayed model without Revit. `--measure` prints timings,
-  `--shots <folder>` saves screenshots, `--dark` switches to the dark theme, and
+  `--shots <folder>` saves screenshots, every run opens in the dark theme (`--theme light` for the light one), and
   `--trace` prints the panel Trace lines.
 - **Live tests** run on the Snowdon sample in Revit: adapter tests in
   `tests/RevitDevTool.ModelsContext.LiveTests` (inside Revit, golden counts from an

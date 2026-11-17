@@ -104,7 +104,8 @@ public sealed class ModelsContextPane(IFileConfig<PathOptions> fileConfig, ILogg
             new CustomFilterStore(fileConfig),
             new SystemClock(),
             new DispatcherScheduler(_host.Dispatcher),
-            logger);
+            logger,
+            new DispatcherSynchronizationContext(_host.Dispatcher));
         _panel = new ModelContextViewModel(services) { IsPaneVisible = false };
         var view = new ModelContextView { DataContext = _panel };
         view.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "RegionBrush");
