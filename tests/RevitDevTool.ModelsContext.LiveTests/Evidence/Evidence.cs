@@ -70,6 +70,7 @@ internal static class Evidence
     private const string RootName = "models-context-tests";
     private const string LatestFile = "latest.txt";
     private const string ImageFolder = "images";
+    private const string ImagesFile = "images.on";
 
     private static readonly object Gate = new();
     private static readonly Lazy<string> LazyFolder = new(OpenFolder);
@@ -84,6 +85,8 @@ internal static class Evidence
     public static string Folder => LazyFolder.Value;
 
     public static CaseRecord? Current => _current;
+
+    public static bool Images => File.Exists(Path.Combine(Root(), ImagesFile));
 
     public static CaseRecord Begin(CaseItem item, string test)
     {
@@ -104,7 +107,7 @@ internal static class Evidence
                 Description = description,
                 Expected = expected,
                 ManualSteps = [.. manualSteps],
-                RequiredImages = [.. images]
+                RequiredImages = Layer == "L2" && !Images ? [] : [.. images]
             };
             _caseWatch = Stopwatch.StartNew();
             return _current;
@@ -269,8 +272,7 @@ internal static class Evidence
 
     private static string OpenFolder()
     {
-        var root = Path.Combine(RepositoryRoot(), "artifacts", RootName);
-        Directory.CreateDirectory(root);
+        var root = Root();
         var latest = Path.Combine(root, LatestFile);
         if (Layer != "L2" && File.Exists(latest))
         {
@@ -286,6 +288,13 @@ internal static class Evidence
         Directory.CreateDirectory(created);
         File.WriteAllText(latest, stamp);
         return created;
+    }
+
+    private static string Root()
+    {
+        var root = Path.Combine(RepositoryRoot(), "artifacts", RootName);
+        Directory.CreateDirectory(root);
+        return root;
     }
 
     private static string RepositoryRoot([CallerFilePath] string source = "")

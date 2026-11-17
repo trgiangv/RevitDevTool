@@ -23,6 +23,19 @@ internal static class VisibilityRun
 
     public static void Check(VisibilityCase item)
     {
+        try
+        {
+            Run(item);
+        }
+        catch (Exception exception) when (exception is not InconclusiveException)
+        {
+            Evidence.Image("failed", path => ViewImage.Export(SampleModel.Host, View, path));
+            throw;
+        }
+    }
+
+    private static void Run(VisibilityCase item)
+    {
         SampleViews.Switch(SampleViews.ThreeD);
         Reset();
         var expect = item.Expect;
@@ -290,7 +303,10 @@ internal static class VisibilityRun
 
     private static void Shot(string label)
     {
-        Evidence.Image(label, path => ViewImage.Export(SampleModel.Host, View, path));
+        if (Evidence.Images)
+        {
+            Evidence.Image(label, path => ViewImage.Export(SampleModel.Host, View, path));
+        }
     }
 
     private static string Describe(VisibilityPlan plan)

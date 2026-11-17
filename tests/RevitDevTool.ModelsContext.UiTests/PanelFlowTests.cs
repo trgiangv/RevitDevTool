@@ -34,29 +34,9 @@ public sealed class PanelFlowTests : RecordedTest
     }
 
     [TestMethod]
-    public void NumberRuleCountsGolden()
-    {
-        var flow = CaseFiles.Flow("UI-01");
-        Record(flow, () =>
-        {
-            var item = CaseFiles.Filter(flow.Cases[0]);
-            _panel.Shot("before");
-
-            Build(item);
-            _panel.Shot("after");
-
-            var parameter = _panel.Last("Filter.Rule.Parameter").Patterns.Value.Pattern.Value.Value;
-            var count = _panel.Count();
-            Evidence.Values($"Swing Angle; {item.ExpectedText}", $"{parameter}; {count}");
-            Assert.AreEqual(item.Filter.Rules![0].Parameter, parameter);
-            Assert.AreEqual(item.ExpectedCount, count);
-        });
-    }
-
-    [TestMethod]
     public void CaseToggleChangesCount()
     {
-        var flow = CaseFiles.Flow("UI-02");
+        var flow = CaseFiles.Flow("UI-01");
         Record(flow, () =>
         {
             var off = CaseFiles.Filter(flow.Cases[0]);
@@ -80,7 +60,7 @@ public sealed class PanelFlowTests : RecordedTest
     [TestMethod]
     public void ConnectorMakesOrGroup()
     {
-        var flow = CaseFiles.Flow("UI-03");
+        var flow = CaseFiles.Flow("UI-02");
         Record(flow, () =>
         {
             var item = CaseFiles.Filter(flow.Cases[0]);
@@ -98,13 +78,17 @@ public sealed class PanelFlowTests : RecordedTest
     [TestMethod]
     public void SavedFilterReloads()
     {
-        var flow = CaseFiles.Flow("UI-04");
+        var flow = CaseFiles.Flow("UI-03");
         Record(flow, () =>
         {
             var item = CaseFiles.Filter(flow.Cases[0]);
             var name = "uia-live " + Guid.NewGuid().ToString("N").Substring(0, 8);
             _panel.Shot("before");
             Build(item);
+            var parameter = _panel.Last("Filter.Rule.Parameter").Patterns.Value.Pattern.Value.Value;
+            var built = _panel.Count();
+            Assert.AreEqual(item.Filter.Rules![0].Parameter, parameter);
+            Assert.AreEqual(item.ExpectedCount, built);
             _panel.Find("Filter.Rename").Patterns.Invoke.Pattern.Invoke();
             _panel.SetValue(_panel.Find("Filter.Name"), name, false);
             _panel.Find("Filter.Save").Patterns.Invoke.Pattern.Invoke();
@@ -133,7 +117,7 @@ public sealed class PanelFlowTests : RecordedTest
     [TestMethod]
     public void LivePausesAboveLimit()
     {
-        var flow = CaseFiles.Flow("UI-05");
+        var flow = CaseFiles.Flow("UI-04");
         Record(flow, () =>
         {
             var item = CaseFiles.Filter(flow.Cases[0]);
@@ -165,12 +149,14 @@ public sealed class PanelFlowTests : RecordedTest
     [TestMethod]
     public void LinkHideShowsTemporaryBar()
     {
-        var flow = CaseFiles.Flow("UI-06");
+        var flow = CaseFiles.Flow("UI-05");
         Record(flow, () =>
         {
             _panel.Select("ModelContext.View.Explorer");
             try
             {
+                _panel.Find("Explorer.CollapseAll").Patterns.Invoke.Pattern.Invoke();
+                Evidence.Step("Collapsed all rows so the link model row is on screen.");
                 _panel.Shot("before");
                 var row = _panel.Item(_panel.Find("Explorer.Rows"),
                     cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(DocumentName(CaseFiles.Facts.LinkLabel))));
@@ -199,7 +185,7 @@ public sealed class PanelFlowTests : RecordedTest
     [TestMethod]
     public void LinkDoorsHideThenReset()
     {
-        var flow = CaseFiles.Flow("UI-07");
+        var flow = CaseFiles.Flow("UI-06");
         Record(flow, () =>
         {
             _panel.Select("ModelContext.View.Explorer");

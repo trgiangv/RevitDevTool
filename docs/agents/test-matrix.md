@@ -205,9 +205,9 @@ Use cases, golden counts on the Snowdon sample and the three layers (core with
 fakes in CI, adapter inside Revit, panel flows through FlaUI) are in
 [architecture/ModelsContext/test-matrix.md](../architecture/ModelsContext/test-matrix.md).
 `tests/RevitDevTool.ModelsContext.LiveTests` and `tests/RevitDevTool.ModelsContext.UiTests`
-need a live Revit with the sample open; their names do not end in `.Tests`, so CI
+need a live Revit 2026 (the run script starts it with the sample); their names do not end in `.Tests`, so CI
 does not run them. Run L2, then L3 in the same Revit; each run writes
-`report.md` and images to `artifacts/models-context-tests/`.
+`report.md` to `artifacts/models-context-tests/`; visibility images only for a failing case or with `-Images`.
 
 ## Commands
 

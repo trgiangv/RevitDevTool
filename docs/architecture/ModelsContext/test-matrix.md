@@ -68,9 +68,12 @@ each data row by its case id (`CountMatchesOracle(TX-01)`).
   spreads). Both go to the run folder.
 - Design options: Whole model counts main + primary options; Active view is
   exactly the view collector (any option), as the panel does.
-- The active-view rows switch to `L3` when needed. A view not yet open in the
-  session stops them as Inconclusive (Revit draws it only after the run
-  returns); an already-open view is switched to and counted.
+- The active-view rows call `SampleViews.Activate`: it switches to an already open
+  `L3` and refreshes it. A view opened inside a run is not drawn until the run returns
+  and the view collector then counts far too many Current model elements (SC-05
+  1,669 instead of 917), so `Activate` stops as Inconclusive when `L3` is not open.
+  `scripts/test-models-context.ps1` runs `ViewSetupTests.OpensSampleView` in a run of
+  its own first, then the suite. The script opens the sample by starting Revit with its path; a document is never opened inside a run (Gotcha 20).
 
 ### Evidence per run
 
@@ -82,11 +85,13 @@ its own results, so running L2 then L3 gives one folder:
 |------|-------|
 | `report.md` | Summary per layer with wall time, then per case: what it checks, steps done, expected, oracle, panel, timings, images, PASS/FAIL, *How to verify by hand* |
 | `results.json`, `results-L2.json`, `results-L3.json` | The same data, diffable |
-| `images/` | L2: the active view rendered with `Document.ExportImage` before, after and after reset of each visibility case. L3: the panel (UIA capture) and the Revit window, per image slot |
+| `images/` | L2 visibility: the active view rendered with `Document.ExportImage` (before, after, after reset) only with `-Images`, plus one `failed` image for a failing case. L3: the panel (UIA capture) and the Revit window, per image slot |
 | `mismatched-elements.md`, `sample-probe.json` | Diagnostics |
 
 The assertion (oracle or Revit API state) is the pass/fail source; images are
-evidence.
+evidence. `-Images` creates `artifacts/models-context-tests/images.on`, which L2 reads; without it
+visibility cases export nothing unless they fail, and the manual-verify steps of those cases
+need a run with `-Images` for picture evidence.
 
 ### Rules for adding a case
 
@@ -95,8 +100,9 @@ evidence.
    from the panel. A row where oracle = golden and the panel differs is a panel
    bug: list it under Mismatches, do not change the golden value.
 3. Write `manualSteps` a person can follow in Revit without the panel's code.
-4. Give every UI and visibility case `images` with at least `before` and
-   `after`; the run fails a case whose slots were not captured.
+4. Give every UI case `images` with at least `before` and `after`; the run fails a
+   case whose slots were not captured. Visibility cases list their slots too, but L2
+   requires them only in a run with `-Images`.
 5. L3 waits only on the readiness signal (`ItemStatus` Idle/Busy); no sleeps,
    no keys, no mouse, UIA patterns by AutomationId only. Never poll Revit's
    UIA tree while it is busy.
@@ -108,8 +114,7 @@ evidence.
    Never build a link view collector for a view other than the active one.
    L3 attaches to the Revit that ran L2 of the same run folder (Gotcha 14).
 8. `CaseRulesTests` (in the L3 project, runs without Revit) fails a case
-   without description, expected or manual steps, a duplicate id, a UI or
-   visibility case without `before`/`after` slots, a T3 case without
+   without description, expected or manual steps, a duplicate id, a UI case without `before`/`after` slots, a T3 case without
    `plannedTiers`, and a flow naming an unknown filter case.
 
 ### Readiness signal
@@ -135,10 +140,14 @@ categories box, typing the filter name, Save) waits on its own UIA state instead
 # L1
 dotnet run --project tests/DevTools.ModelsContext.Tests/DevTools.ModelsContext.Tests.csproj -f net10.0-windows
 dotnet run --project tests/DevTools.ModelsContext.Views.Tests/DevTools.ModelsContext.Views.Tests.csproj -f net10.0-windows
-# L2: Revit 2026 with the sample open; --pid picks that Revit when several are open
+# L2 then L3 in one command on Revit 2026; without -RevitPid the script starts Revit with the sample; with it the sample must already be open; -Images exports the full visibility image set.
+# Step 1 activates L3 in a run of its own so Revit draws it (Gotcha 19), step 2 is the full L2 run, step 3 is L3.
+# The deployed add-in must be current (scripts/build-host.ps1 -HostApp Revit -Year 2026).
+pwsh -File scripts/test-models-context.ps1 -RevitPid <revit pid>
+# L2 alone, by hand (open the sample, then run the OpensSampleView filter once per Revit session first)
+dotnet test --project tests/RevitDevTool.ModelsContext.LiveTests/RevitDevTool.ModelsContext.LiveTests.csproj -c Debug.Autodesk.2026 -- --pid <revit pid> --filter OpensSampleView
 dotnet test --project tests/RevitDevTool.ModelsContext.LiveTests/RevitDevTool.ModelsContext.LiveTests.csproj -c Debug.Autodesk.2026 -- --pid <revit pid>
-# L3 after L2: attaches to the Revit pid L2 recorded in the run folder;
-# the deployed add-in must be current (scripts/build-host.ps1 -HostApp Revit -Year 2026)
+# L3 alone: attaches to the Revit pid L2 recorded in the run folder
 dotnet run --project tests/RevitDevTool.ModelsContext.UiTests/RevitDevTool.ModelsContext.UiTests.csproj
 # Data rules only, no Revit needed
 dotnet run --project tests/RevitDevTool.ModelsContext.UiTests/RevitDevTool.ModelsContext.UiTests.csproj -- --filter CaseRulesTests
@@ -159,13 +168,11 @@ save the model.
 Expected values come from `Data/*.json` (recorded from the oracle on Revit 2026,
 2026-11-17). Change them there, not here alone.
 
-Measured on Revit 2026 (Snowdon HVAC + six links), 2026-11-17, run
-`20261117-222012`, L2 then L3 in one Revit session: L2 130 tests in about
-2 min 30 s, all PASS once `L3` had been drawn (SC-05 counts 1,669 for oracle
-and panel alike while `L3` is open but not yet redrawn after the visibility
-cases switch to `{3D}`; a rerun with `L3` active gives 917); L3 7 flows, all
-PASS, in 1 min 14 s, plus 6 data rule tests. L1 core 340 tests (net10, net48),
-views 102 tests. `L2 matrix` below means
+Measured on Revit 2026 (Snowdon HVAC + six links), 2026-11-18, run
+`20261118-002331`, `scripts/test-models-context.ps1` on a fresh Revit: L2 128 cases in
+162 s, all PASS (`SB-01` alone took 77 s before batching, the 15 visibility cases 59 s); L3 7 flows,
+all PASS, in 69 s, plus 7 data rule tests. L1 core 340 tests (net10, net48) in 3 s,
+views 101 tests in 51 s. `L2 matrix` below means
 `FilterMatrixTests.CountMatchesOracle(<id>)`.
 
 ### Context scope (L2 `FilterMatrixTests`, `ExplorerCountTests`)
@@ -173,7 +180,7 @@ views 102 tests. `L2 matrix` below means
 | ID | Use case | Docs | Expected | Test |
 |----|----------|------|----------|------|
 | SC-01 | Whole model, every model category | Current | 2,985 | L2 matrix |
-| SC-02 | Whole model, every model category | Arch | 7,746 | L2 matrix, L3 UI-05 |
+| SC-02 | Whole model, every model category | Arch | 7,746 | L2 matrix, L3 UI-04 |
 | SC-03 | Link unticked: Doors in the Current model only | Current | 0 | L2 matrix |
 | SC-04 | Link ticked: Doors in both | Both | 142 | L2 matrix |
 | SC-05 | Active view, every model category | Current | 917 | L2 matrix |
@@ -197,8 +204,8 @@ views 102 tests. `L2 matrix` below means
 | EX-07 | Active view ids = view collector (link through the host view) | same set | L2 `ExplorerMatchesOracle` |
 | EX-08 | Tree, paging 200, search, expand / collapse all | rows | L1 `ExplorerTabTests` |
 | EX-09 | Tiers T0–T3 planned per row | plan | L1 `PlannerTests` |
-| EX-10 | T1: link model row eye hides the link, Reset shows it | temporary bar "1", then gone | L3 UI-06 |
-| EX-12 | T3: eye on a category under a link hides those linked elements, Reset shows them | eye Hidden, bar "1", then eye Shown, no bar | L3 UI-07 |
+| EX-10 | T1: link model row eye hides the link, Reset shows it | temporary bar "1", then gone | L3 UI-05 |
+| EX-12 | T3: eye on a category under a link hides those linked elements, Reset shows them | eye Hidden, bar "1", then eye Shown, no bar | L3 UI-06 |
 | EX-11 | Selection sync under 50 / above 50 / above 5,000 | state | L1 `SyncTests` |
 
 ### Filter operators per value kind
@@ -208,8 +215,8 @@ Equipment in the Current model.
 
 | ID | Kind, storage | Rule | Expected | Test |
 |----|---------------|------|----------|------|
-| TX-01 | Text, instance built-in | Doors Mark = "s10" | 1 | L2 matrix, L3 UI-02 |
-| TX-02 | Text, Aa on | Mark = "s10" | 0 | L2 matrix, L3 UI-02 |
+| TX-01 | Text, instance built-in | Doors Mark = "s10" | 1 | L2 matrix, L3 UI-01 |
+| TX-02 | Text, Aa on | Mark = "s10" | 0 | L2 matrix, L3 UI-01 |
 | TX-03 | Text, Aa on | Mark = "S10" | 1 | L2 matrix |
 | TX-04 | Text, Aa on | Mark ≠ "S10" | 141 | L2 matrix |
 | TX-05 | Text, Aa on | Mark ≠ "s10" | 142 | L2 matrix |
@@ -229,8 +236,8 @@ Equipment in the Current model.
 | TX-19 | Text, Aa on | Mark begins with "S" | 22 | L2 matrix |
 | NU-01 | Number, family parameter (two ids) | Swing Angle not empty | 131 | L2 matrix |
 | NU-02 | Number | Swing Angle undefined | 11 | L2 matrix |
-| NU-03 | Number with unit | Swing Angle > 45° | 130 | L2 matrix, L3 UI-01 |
-| NU-04 | Number with unit | Swing Angle = 90° | 130 | L2 matrix, L3 UI-04 |
+| NU-03 | Number with unit | Swing Angle > 45° | 130 | L2 matrix |
+| NU-04 | Number with unit | Swing Angle = 90° | 130 | L2 matrix, L3 UI-03 |
 | NU-05 | Number | Swing Angle ≠ 90° | 1 | L2 matrix |
 | NU-06 | Number | Swing Angle ≤ 45° | 1 | L2 matrix |
 | NU-07 | Number | Swing Angle ≥ 90° | 130 | L2 matrix |
@@ -286,7 +293,7 @@ Equipment in the Current model.
 | ID | Use case | Expected | Test |
 |----|----------|----------|------|
 | GR-01 | AND: Swing Angle = 90° and Mark begins with S | 22 | L2 matrix |
-| GR-02 | OR: Mark = S10 or Swing Angle undefined | 12 | L2 matrix, L3 UI-03 |
+| GR-02 | OR: Mark = S10 or Swing Angle undefined | 12 | L2 matrix, L3 UI-02 |
 | GR-03 | Nested OR inside AND (Walls) | 96 | L2 matrix |
 | GR-04 | No rules: every checked element | 142 | L2 matrix |
 | GR-05 | Empty nested group is true | 142 | L2 matrix |
@@ -316,7 +323,7 @@ TX-02 to TX-05, TX-18, TX-19 above; widening and exact pass also in L1
 | LV-03 | Value edit (3 ducts get a comment), cache dropped as `DocumentChanged` does | 0 → 3 | L2 `ValueEditRecounts` |
 | LV-04 | Copied duct: candidates stay until the cache drops (version does not change per transaction) | n → n, then n + 1 | L2 `AddedElementCountsAfterRefresh` |
 | LV-05 | Live pauses above 5,000 | paused, nothing sent | L1 `LivePausesAbove5000` |
-| LV-06 | Live pause shows in the panel: switch and label *Live* unchanged, line *Paused: over 5,000 matches*; the line goes away under the limit, with no categories, with no filter, with Live off | SC-02 > 5,000 | L1 `PauseEnds*`, Views `PausedLine*`, L3 UI-05 |
+| LV-06 | Live pause shows in the panel: switch and label *Live* unchanged, line *Paused: over 5,000 matches*; the line goes away under the limit, with no categories, with no filter, with Live off | SC-02 > 5,000 | L1 `PauseEnds*` (logic), Views `PausedLineShowsOverLimit`, `PausedLineHidesUnderLimit` (binding), L3 UI-04 |
 | LV-07 | Add / Remove keep the baseline | selection | L1 `AddModeKeepsBaseline` |
 | LV-08 | Readiness: edit Busy, run Idle, generation grows | status | L1 `ActivityTests`, Views `ActivityViewTests` |
 
@@ -327,7 +334,7 @@ TX-02 to TX-05, TX-18, TX-19 above; widening and exact pass also in L1
 | CF-01 | New filter gets next free name, rename, unique, trimmed, Esc | state | L1 `FilterTabTests` (`NewFilterGetsNextName`, `NameMustBeUnique`, `EscRestoresLastName` …) |
 | CF-02 | Switch with unsaved changes asks | pending | L1 `SwitchAsksWhenUnsaved` |
 | CF-03 | Store round trip, scope kept, no `not` | equal | L1 `StoreKeepsScopeWithoutNot`, `CustomFilterLibraryTests` |
-| CF-04 | Save, switch away, reload: same count | NU-04 | L3 UI-04 |
+| CF-04 | Save, switch away, reload: same count | NU-04 | L3 UI-03 |
 
 ### Revit filters as sources
 
@@ -359,10 +366,10 @@ TX-02 to TX-05, TX-18, TX-19 above; widening and exact pass also in L1
 | PK-13 | Instance / Type sections with row counts, header not a list item and not selectable, sticky on scroll, exact name first | UI state | Views `PickerGroupsBySection`, `HeadersAreNotListItems`, `HeaderIsNotAnItem`, `HeaderStaysOnScroll`; HandyControl `ExactMatchComesFirst` |
 | PK-14 | Row: source icon per origin (none for built-in), category summary, no tags or warning colors | UI state | Views `RowIconFollowsSource`, `RowShowsCategorySummary`, `RowHasNoTagsOrWarnings` |
 | PK-15 | Tooltip rows present only with a value: built-in measured, built-in text, shared, project, family, yes/no; five then "+ N more" | rows | L1 `ParameterTipTests`, Views `TipShowsRowsAndLists` |
-| PK-16 | Rule card: no unit line, placeholder in the Current model's format, "Type" for a type parameter | UI state | L1 `PlaceholderUsesCurrentModel`, `TextHasNoPlaceholder`; Views `RuleCardHasNoUnitLine`, `ValueBoxShowsExample`, `ChosenTypeParameterShowsType` |
+| PK-16 | Rule card: placeholder in the Current model's format, "Type" for a type parameter | UI state | L1 `PlaceholderUsesCurrentModel`, `TextHasNoPlaceholder`; Views `ValueBoxShowsExample`, `ChosenTypeParameterShowsType` |
 | PK-10 | Value counts of Swing Angle on Doors | total 142, values 131 | L2 `CatalogMatchesFacts(PK-10)` |
 | PK-11 | Typing filters, ≤ 100 opens, tags, SetValue picks | UI state | Views `FilterViewTests` (`PickerTypingFiltersIgnoringCase`, `PickerValueSetsParameterName` …) |
-| PK-12 | Value pattern picks a parameter in Revit | "Swing Angle" | L3 UI-01 |
+| PK-12 | Value pattern picks a parameter in Revit | "Swing Angle" | L3 UI-03 |
 
 ### Visibility in the active 3D view (L2 `VisibilityMatchesApi`, `visibility.json`)
 
@@ -393,13 +400,12 @@ reset.
 
 | ID | Flow | Expected | Test |
 |----|------|----------|------|
-| UI-01 | Build NU-03 in the panel | parameter "Swing Angle", count = NU-03 | `NumberRuleCountsGolden` |
-| UI-02 | TX-01, then Aa on | TX-01, then TX-02 | `CaseToggleChangesCount` |
-| UI-03 | Connector to OR (GR-02) | GR-02 | `ConnectorMakesOrGroup` |
-| UI-04 | Save NU-04, new filter, reload | NU-04 | `SavedFilterReloads` |
-| UI-05 | All categories in the link (SC-02), then None | Live switch on, line *Paused: over 5,000 matches*, then no line | `LivePausesAboveLimit` |
-| UI-06 | Eye on the link model row, Reset | bar "1 change", then no bar | `LinkHideShowsTemporaryBar` |
-| UI-07 | Eye on Doors under the link (T3, Hide in View), Reset | eye Hidden and bar "1 change", then eye Shown and no bar | `LinkDoorsHideThenReset` |
+| UI-01 | TX-01, then Aa on | TX-01, then TX-02 | `CaseToggleChangesCount` |
+| UI-02 | Connector to OR (GR-02) | GR-02 | `ConnectorMakesOrGroup` |
+| UI-03 | Build NU-04 (picker takes "Swing Angle"), save, new filter, reload | parameter "Swing Angle", NU-04, NU-04 again | `SavedFilterReloads` |
+| UI-04 | All categories in the link (SC-02), then None | Live switch on, line *Paused: over 5,000 matches*, then no line | `LivePausesAboveLimit` |
+| UI-05 | Eye on the link model row, Reset | bar "1 change", then no bar | `LinkHideShowsTemporaryBar` |
+| UI-06 | Eye on Doors under the link (T3, Hide in View), Reset | eye Hidden and bar "1 change", then eye Shown and no bar | `LinkDoorsHideThenReset` |
 ## Mismatches found
 
 None open. List a row here (ID, expected from the oracle or the Revit API,

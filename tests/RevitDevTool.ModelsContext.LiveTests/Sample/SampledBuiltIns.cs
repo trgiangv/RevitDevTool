@@ -1,6 +1,7 @@
 using DevTools.ModelsContext.Model;
 using Nice3point.Revit.Extensions;
 using RevitDevTool.Tools.ModelsContext;
+using System.Diagnostics;
 using System.Text;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
@@ -33,51 +34,74 @@ internal static class SampledBuiltIns
     {
         var samples = Samples(document, out var excluded);
         var parser = RuleValueParser.For(document.GetUnits());
-        var candidates = new Dictionary<long, CandidateSet>();
-        int checkedSamples = 0, passed = 0;
+        var keys = samples.Keys.ToDictionary(parameter => parameter, Keys.BuiltIn);
+        var items = samples
+            .SelectMany(pair => pair.Value.Where(element => element.Category is not null).Select(element => (Parameter: pair.Key, Element: element, Text: ValueOf(document, element, keys[pair.Key]))))
+            .Where(item => item.Text is not null)
+            .ToList();
+        var totals = new Dictionary<BuiltInParameter, int>();
+        var passes = new Dictionary<BuiltInParameter, int>();
         var failures = new List<string>();
-        var failedParameters = new SortedDictionary<string, string>(StringComparer.Ordinal);
-        foreach (var pair in samples.OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal))
+        long sweepMs = 0, planMs = 0;
+        foreach (var category in items.GroupBy(item => item.Element.Category.Id.ToLong()).OrderBy(group => group.Key))
         {
-            var key = Keys.BuiltIn(pair.Key);
-            var groups = pair.Value
-                .Select(element => (Element: element, Text: ValueOf(document, element, key)))
-                .Where(item => item.Text is not null && item.Element.Category is not null)
-                .GroupBy(item => (Category: item.Element.Category.Id.ToLong(), Text: item.Text!));
-            int parameterPassed = 0, parameterTotal = 0;
-            var entries = new Dictionary<long, ValueEntry>();
-            foreach (var group in groups)
+            var set = ElementReader.CandidatesOf(document, [category.Key.ToElementId()]);
+            var watch = Stopwatch.StartNew();
+            var readers = category.Select(item => item.Parameter).Distinct().ToDictionary(parameter => parameter, parameter => new ValueReader(keys[parameter], set));
+            foreach (var id in set.Ids)
             {
-                var set = CandidatesOf(document, group.Key.Category, candidates);
-                var matched = Match(document, parser, key, group.Key.Category, group.Key.Text, set, group.Select(item => item.Element),
-                    entries);
-                foreach (var (element, text) in group)
+                if (document.GetElement(id.ToElementId()) is not { } candidate)
                 {
-                    parameterTotal++;
-                    if (matched.Contains(element.Id.ToLong()))
+                    continue;
+                }
+
+                foreach (var reader in readers.Values)
+                {
+                    reader.Add(candidate, id);
+                }
+            }
+
+            sweepMs += watch.ElapsedMilliseconds;
+            watch.Restart();
+            foreach (var parameterGroup in category.GroupBy(item => item.Parameter))
+            {
+                var key = keys[parameterGroup.Key];
+                var entry = readers[parameterGroup.Key].ToEntry();
+                var resolved = ParameterLocator.Resolve(document, key, [category.Key.ToElementId()]);
+                var compiler = new FilterCompiler(document.Title, _ => resolved, _ => entry.RawValues, parser, new TypeFilters(() => set.MembersIn(document)));
+                var isNumber = resolved.Any(parameter => parameter.Storage == StorageType.Double);
+                foreach (var valueGroup in parameterGroup.GroupBy(item => item.Text!))
+                {
+                    NumberRange? picked = isNumber && entry.Numbers.TryGetValue(valueGroup.Key, out var range) ? range : null;
+                    var plan = compiler.Plan(FilterSet.All(new DevTools.ModelsContext.Model.FilterRule(key, FilterOperator.Equal, valueGroup.Key, Picked: picked)));
+                    var matched = new HashSet<long>(plan.Match(document, valueGroup.Select(item => item.Element.Id).ToList()));
+                    foreach (var item in valueGroup)
                     {
-                        parameterPassed++;
-                    }
-                    else if (failures.Count < ListedFailures)
-                    {
-                        failures.Add($"  {pair.Key} element {element.Id} ({element.Category.Name}) value '{text}'");
+                        totals[item.Parameter] = totals.GetValueOrDefault(item.Parameter) + 1;
+                        if (matched.Contains(item.Element.Id.ToLong()))
+                        {
+                            passes[item.Parameter] = passes.GetValueOrDefault(item.Parameter) + 1;
+                        }
+                        else if (failures.Count < ListedFailures)
+                        {
+                            failures.Add($"  {item.Parameter} element {item.Element.Id} ({item.Element.Category.Name}) value '{item.Text}'");
+                        }
                     }
                 }
             }
 
-            checkedSamples += parameterTotal;
-            passed += parameterPassed;
-            if (parameterPassed != parameterTotal)
-            {
-                failedParameters[pair.Key.ToString()] = $"{parameterPassed} of {parameterTotal}";
-            }
+            planMs += watch.ElapsedMilliseconds;
         }
 
+        Evidence.Timing("sweep", sweepMs);
+        Evidence.Timing("plans", planMs);
+        var checkedSamples = totals.Values.Sum();
+        var passed = passes.Values.Sum();
         var failed = checkedSamples - passed;
         report.AppendLine($"{document.Title}: {samples.Count} sampled built-ins, samples {checkedSamples}, passed {passed}, failed {failed}, excluded {string.Join(", ", excluded)}");
-        foreach (var pair in failedParameters)
+        foreach (var pair in totals.Where(pair => passes.GetValueOrDefault(pair.Key) != pair.Value).OrderBy(pair => pair.Key.ToString(), StringComparer.Ordinal))
         {
-            report.AppendLine($"  {pair.Key}: {pair.Value}");
+            report.AppendLine($"  {pair.Key}: {passes.GetValueOrDefault(pair.Key)} of {pair.Value}");
         }
 
         foreach (var failure in failures)
@@ -87,7 +111,6 @@ internal static class SampledBuiltIns
 
         return (failed, checkedSamples);
     }
-
     private static Dictionary<BuiltInParameter, List<Element>> Samples(Document document, out SortedSet<string> excluded)
     {
         excluded = new SortedSet<string>(StringComparer.Ordinal);
@@ -150,53 +173,5 @@ internal static class SampledBuiltIns
     private static string? ValueOf(Document document, Element element, ParameterKey key)
     {
         return ParameterLocator.Find(element, key) is { } parameter ? ParameterValues.ValueText(document, parameter) : null;
-    }
-
-    private static CandidateSet CandidatesOf(Document document, long category, Dictionary<long, CandidateSet> known)
-    {
-        if (!known.TryGetValue(category, out var set))
-        {
-            known.Add(category, set = ElementReader.CandidatesOf(document, [category.ToElementId()]));
-        }
-
-        return set;
-    }
-
-    private static HashSet<long> Match(
-        Document document,
-        RuleValueParser parser,
-        ParameterKey key,
-        long category,
-        string text,
-        CandidateSet candidates,
-        IEnumerable<Element> elements,
-        Dictionary<long, ValueEntry> entries)
-    {
-        List<ElementId> categories = [category.ToElementId()];
-        var resolved = ParameterLocator.Resolve(document, key, categories);
-        ValueEntry Entry() => entries.TryGetValue(category, out var known) ? known : entries[category] = Values(document, key, candidates);
-        var compiler = new FilterCompiler(document.Title,
-            _ => resolved,
-            _ => Entry().RawValues,
-            parser,
-            new TypeFilters(() => candidates.MembersIn(document)));
-        NumberRange? picked = resolved.Any(parameter => parameter.Storage == StorageType.Double)
-                              && Entry().Numbers.TryGetValue(text, out var range)
-            ? range
-            : null;
-        var plan = compiler.Plan(FilterSet.All(new DevTools.ModelsContext.Model.FilterRule(key, FilterOperator.Equal, text, Picked: picked)));
-        return [.. plan.Match(document, elements.Select(element => element.Id).ToList())];
-    }
-
-    private static ValueEntry Values(Document document, ParameterKey key, CandidateSet candidates)
-    {
-        var reader = new ValueReader(key, candidates);
-        var position = 0;
-        while (position < candidates.Ids.Length)
-        {
-            position = reader.AddSlice(document, position);
-        }
-
-        return reader.ToEntry();
     }
 }

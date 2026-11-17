@@ -11,11 +11,13 @@ internal static class SampleViews
     public static void Activate()
     {
         var view = View;
-        var wasOpen = Active.GetOpenUIViews().Any(open => open.ViewId == view.Id);
-        if (Switch(view) && !wasOpen)
+        if (!Active.GetOpenUIViews().Any(open => open.ViewId == view.Id))
         {
-            Assert.Inconclusive($"Opened the view '{view.Name}'. Revit draws a newly opened view only after this run returns, so its link counts are not final yet; run again.");
+            Assert.Inconclusive($"'{view.Name}' is not open yet. Run scripts/test-models-context.ps1, which opens it in a run of its own first; Revit draws a newly opened view only after that run returns.");
         }
+
+        Switch(view);
+        Active.RefreshActiveView();
     }
 
     public static bool Switch(View view)

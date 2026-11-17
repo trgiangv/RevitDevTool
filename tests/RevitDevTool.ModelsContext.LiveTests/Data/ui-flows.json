@@ -2,19 +2,6 @@
   "cases": [
     {
       "id": "UI-01",
-      "description": "Build NU-03 in the panel (Doors, Swing Angle is greater than 45°) through UI Automation: the parameter picker takes 'Swing Angle' and the count equals the NU-03 golden",
-      "test": "NumberRuleCountsGolden",
-      "cases": ["NU-03"],
-      "expected": "parameter 'Swing Angle'; count = NU-03 expected",
-      "images": ["before", "after"],
-      "manualSteps": [
-        "Open 'Snowdon Towers Sample HVAC.rvt' with the Architectural link and the Model Context panel; Scope 'Whole model'; tick only the Architectural link.",
-        "Filter tab: + New filter, Categories Doors, + Condition, parameter 'Swing Angle', operator 'is greater than', value '45°'.",
-        "The count reads 130."
-      ]
-    },
-    {
-      "id": "UI-02",
       "description": "Aa changes the count: TX-01 (Mark equals 's10', Aa off) then turning Aa on gives TX-02",
       "test": "CaseToggleChangesCount",
       "cases": ["TX-01", "TX-02"],
@@ -26,7 +13,7 @@
       ]
     },
     {
-      "id": "UI-03",
+      "id": "UI-02",
       "description": "The top connector set to OR builds GR-02 (Mark equals S10 OR Swing Angle undefined)",
       "test": "ConnectorMakesOrGroup",
       "cases": ["GR-02"],
@@ -38,20 +25,20 @@
       ]
     },
     {
-      "id": "UI-04",
-      "description": "Save NU-04 as a custom filter, switch to a new filter, switch back: the saved filter reloads with the same count; the test deletes it",
+      "id": "UI-03",
+      "description": "Build NU-04 in the panel (the picker takes Swing Angle, the count equals NU-04), save it as a custom filter, switch to a new filter, switch back: the saved filter reloads with the same count; the test deletes it",
       "test": "SavedFilterReloads",
       "cases": ["NU-04"],
-      "expected": "NU-04 expected after reload",
+      "expected": "parameter 'Swing Angle'; NU-04 expected, and again after reload",
       "images": ["before", "saved", "after"],
       "manualSteps": [
         "Tick only the Architectural link. Build NU-04 (Doors, Swing Angle equals 90°): count 130.",
-        "Rename it (pencil), Save, then + New filter (Discard if asked).",
+        "The parameter box reads Swing Angle. Rename it (pencil), Save, then + New filter (Discard if asked).",
         "Pick the saved filter in the source list: count 130 again. Delete it with the trash button."
       ]
     },
     {
-      "id": "UI-05",
+      "id": "UI-04",
       "description": "Live pauses above 5,000 matches: every category in the Architectural link (SC-02) keeps the Live switch on and shows the line 'Paused: over 5,000 matches'; None clears it",
       "test": "LivePausesAboveLimit",
       "cases": ["SC-02"],
@@ -64,7 +51,7 @@
       ]
     },
     {
-      "id": "UI-06",
+      "id": "UI-05",
       "description": "T1 from the panel: the eye on the Architectural link row hides the link, the temporary bar shows one change, Reset removes the bar",
       "test": "LinkHideShowsTemporaryBar",
       "cases": [],
@@ -77,7 +64,7 @@
       ]
     },
     {
-      "id": "UI-07",
+      "id": "UI-06",
       "description": "T3 from the panel: the eye on Doors under the Architectural link hides the linked doors through Hide in View, the temporary bar shows one change, Reset shows them again",
       "test": "LinkDoorsHideThenReset",
       "cases": [],

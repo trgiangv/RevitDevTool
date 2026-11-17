@@ -6,7 +6,7 @@ namespace RevitDevTool.ModelsContext.UiTests;
 [TestClass]
 public sealed class CaseRulesTests
 {
-    private static readonly string[] ImageFiles = ["visibility.json", "ui-flows.json"];
+    private static readonly string[] ImageFiles = ["ui-flows.json"];
     private static readonly string[] RequiredImages = ["before", "after"];
 
     [TestMethod]
@@ -52,7 +52,7 @@ public sealed class CaseRulesTests
     }
 
     [TestMethod]
-    public void ActionCasesDeclareImages()
+    public void FlowsDeclareImages()
     {
         var problems = new List<string>();
         foreach (var (file, item) in AllCases().Where(pair => ImageFiles.Contains(pair.File)))
@@ -97,6 +97,26 @@ public sealed class CaseRulesTests
         var unknown = CaseFiles.Flows.SelectMany(flow => flow.Cases.Where(id => !known.Contains(id)).Select(id => $"{flow.Id} -> {id}")).ToList();
 
         Assert.IsEmpty(unknown, string.Join(", ", unknown));
+    }
+
+    [TestMethod]
+    public void EveryCaseIsInMatrix()
+    {
+        var matrix = File.ReadAllText(Path.Combine(RepoRoot(), "docs", "architecture", "ModelsContext", "test-matrix.md"));
+        var missing = AllCases().Select(pair => Text(pair.Item, "id")).Where(id => !matrix.Contains($"| {id} |", StringComparison.Ordinal)).ToList();
+
+        Assert.IsEmpty(missing, "Cases without a row in test-matrix.md: " + string.Join(", ", missing));
+    }
+
+    private static string RepoRoot()
+    {
+        var folder = new DirectoryInfo(AppContext.BaseDirectory);
+        while (folder is not null && !File.Exists(Path.Combine(folder.FullName, "RevitDevTool.slnx")))
+        {
+            folder = folder.Parent;
+        }
+
+        return folder?.FullName ?? throw new DirectoryNotFoundException("RevitDevTool.slnx not found above the test output.");
     }
 
     private static IEnumerable<(string File, JsonElement Item)> AllCases()

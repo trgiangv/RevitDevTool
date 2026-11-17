@@ -18,7 +18,11 @@ internal sealed class ValueReader(ParameterKey parameter, CandidateSet candidate
         while (position < ids.Length && position - start < ElementReader.SliceSize
                                      && watch.Elapsed < ElementReader.SliceTime)
         {
-            Add(document, ids[position]);
+            if (document.GetElement(ids[position].ToElementId()) is { } element)
+            {
+                Add(element, ids[position]);
+            }
+
             position++;
         }
 
@@ -31,11 +35,10 @@ internal sealed class ValueReader(ParameterKey parameter, CandidateSet candidate
             _raw.ToDictionary(pair => pair.Key, pair => pair.Value.ToArray(), StringComparer.Ordinal), _numbers);
     }
 
-    private void Add(Document document, long id)
+    public void Add(Element element, long id)
     {
-        if (document.GetElement(id.ToElementId()) is not { } element
-            || ParameterLocator.Find(element, parameter) is not { } value
-            || ParameterValues.ValueText(document, value) is not { } text)
+        if (ParameterLocator.Find(element, parameter) is not { } value
+            || ParameterValues.ValueText(element.Document, value) is not { } text)
         {
             return;
         }
