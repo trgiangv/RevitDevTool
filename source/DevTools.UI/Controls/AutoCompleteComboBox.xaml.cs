@@ -1,5 +1,6 @@
 using System.Collections;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -20,10 +21,15 @@ public partial class AutoCompleteComboBox
     private DispatcherTimer? _debounceTimer;
     private Predicate<object>? _defaultItemsFilter;
     private string? _previousText;
+    private static readonly char[] BindingPathMarks = ['(', '[', '/'];
     private BindingEvaluator<string>? _itemTextEvaluator;
+    private ConditionalWeakTable<object, string> _itemTexts = new();
+    private string? _itemTextPath;
+    private readonly Dictionary<(Type, string), PropertyDescriptor?> _textProperties = [];
     private string? _cachedFilterQuery;
     private Predicate<object>? _cachedFilter;
     private bool _isApplyingOwnView;
+    private FilteredItems? _ownItems;
     private ControlTemplate? _savedErrorTemplate;
 
     [UsedImplicitly]
@@ -40,9 +46,51 @@ public partial class AutoCompleteComboBox
     {
         if (item is null) return string.Empty;
 
-        _itemTextEvaluator ??= new BindingEvaluator<string>();
-        _itemTextEvaluator.SetBinding(item, TextSearch.GetTextPath(this));
-        return _itemTextEvaluator.Value ?? string.Empty;
+        var path = TextSearch.GetTextPath(this) ?? string.Empty;
+        if (!string.Equals(path, _itemTextPath, StringComparison.Ordinal))
+        {
+            _itemTextPath = path;
+            _itemTexts = new ConditionalWeakTable<object, string>();
+            _textProperties.Clear();
+        }
+
+        if (_itemTexts.TryGetValue(item, out var cached)) return cached;
+
+        var text = ReadItemText(item, path);
+        if (!item.GetType().IsValueType)
+        {
+            _itemTexts.Add(item, text);
+        }
+
+        return text;
+    }
+
+    private string ReadItemText(object item, string path)
+    {
+        if (path.Length == 0) return item.ToString() ?? string.Empty;
+
+        if (path.IndexOfAny(BindingPathMarks) >= 0)
+        {
+            _itemTextEvaluator ??= new BindingEvaluator<string>();
+            _itemTextEvaluator.SetBinding(item, path);
+            return _itemTextEvaluator.Value ?? string.Empty;
+        }
+
+        object? current = item;
+        foreach (var name in path.Split('.'))
+        {
+            if (current is null) break;
+            var type = current.GetType();
+            if (!_textProperties.TryGetValue((type, name), out var property))
+            {
+                property = TypeDescriptor.GetProperties(type)[name];
+                _textProperties[(type, name)] = property;
+            }
+
+            current = property?.GetValue(current);
+        }
+
+        return current?.ToString() ?? string.Empty;
     }
 
     public override void OnApplyTemplate()
@@ -58,24 +106,83 @@ public partial class AutoCompleteComboBox
     {
         if (!_isApplyingOwnView && newValue is IList list and not ICollectionView)
         {
-            _isApplyingOwnView = true;
-            try
-            {
-                SetCurrentValue(ItemsSourceProperty, new ListCollectionView(list));
-            }
-            finally
-            {
-                _isApplyingOwnView = false;
-            }
-
+            ApplyOwnItems(new FilteredItems(list));
             return;
         }
 
         base.OnItemsSourceChanged(oldValue, newValue);
+        if (!ReferenceEquals(newValue, _ownItems))
+        {
+            _ownItems = null;
+        }
+
         _defaultItemsFilter = newValue is ICollectionView cv ? cv.Filter : null;
+        _itemTexts = new ConditionalWeakTable<object, string>();
         _cachedFilterQuery = null;
         _cachedFilter = null;
     }
+
+    private void ApplyOwnItems(FilteredItems items)
+    {
+        _ownItems = items;
+        _isApplyingOwnView = true;
+        try
+        {
+            SetCurrentValue(ItemsSourceProperty, items);
+        }
+        finally
+        {
+            _isApplyingOwnView = false;
+        }
+    }
+
+    private void ApplyFilter(Predicate<object>? filter, string? exact = null)
+    {
+        if (_ownItems is { } items)
+        {
+            items.Apply(filter, string.IsNullOrEmpty(exact)
+                ? null
+                : item => string.Equals(GetItemText(item), exact, StringComparison.OrdinalIgnoreCase));
+            return;
+        }
+
+        using (Items.DeferRefresh())
+        {
+            Items.Filter = filter;
+        }
+    }
+
+    #region Grouping
+
+    public static readonly DependencyProperty GroupPathProperty = DependencyProperty.Register(
+        nameof(GroupPath), typeof(string), typeof(AutoCompleteComboBox),
+        new PropertyMetadata(null, (d, _) => ((AutoCompleteComboBox)d).ApplyGroups()));
+
+    public string? GroupPath
+    {
+        get => (string?)GetValue(GroupPathProperty);
+        set => SetValue(GroupPathProperty, value);
+    }
+
+    private void ApplyGroups()
+    {
+        Items.GroupDescriptions.Clear();
+        if (string.IsNullOrEmpty(GroupPath))
+        {
+            return;
+        }
+
+        var groups = new PropertyGroupDescription(GroupPath);
+        groups.SortDescriptions.Add(new SortDescription(nameof(CollectionViewGroup.Name), ListSortDirection.Ascending));
+        Items.GroupDescriptions.Add(groups);
+    }
+
+    protected override System.Windows.Automation.Peers.AutomationPeer OnCreateAutomationPeer()
+    {
+        return new AutoCompleteComboBoxAutomationPeer(this);
+    }
+
+    #endregion
 
     #region Setting
 
@@ -115,9 +222,8 @@ public partial class AutoCompleteComboBox
         var textBox = EditableTextBox;
 
         using (new TextBoxStateSaver(textBox))
-        using (Items.DeferRefresh())
         {
-            Items.Filter = filter;
+            ApplyFilter(filter, Text?.Trim());
         }
 
         textBox?.Select(textBox.SelectionStart + textBox.SelectionLength, 0);
@@ -131,34 +237,40 @@ public partial class AutoCompleteComboBox
 
         if (string.IsNullOrEmpty(text))
         {
-            if (controlOpen) IsDropDownOpen = false;
+            ClearSuggestions(controlOpen);
+            return;
+        }
+
+        if (SelectedItem is not null && GetItemText(SelectedItem) == text)
+        {
+            return;
+        }
+
+        using (new TextBoxStateSaver(EditableTextBox))
+        {
             SelectedItem = null;
-            using (Items.DeferRefresh())
-            {
-                Items.Filter = _defaultItemsFilter;
-            }
-            _cachedFilterQuery = null;
-            _cachedFilter = null;
         }
-        else if (SelectedItem is not null && GetItemText(SelectedItem) == text)
-        {
-            // ignore
-        }
-        else
-        {
-            using (new TextBoxStateSaver(EditableTextBox))
-            {
-                SelectedItem = null;
-            }
 
-            UpdateFilter();
-
-            if (controlOpen && !IsDropDownOpen && IsKeyboardFocusWithin && Items.Count > 0
-                && Items.Count <= SettingOrDefault.MaxSuggestionCount)
-            {
-                IsDropDownOpen = true;
-            }
+        UpdateFilter();
+        if (controlOpen && ShouldOpenSuggestions())
+        {
+            IsDropDownOpen = true;
         }
+    }
+
+    private void ClearSuggestions(bool controlOpen)
+    {
+        if (controlOpen) IsDropDownOpen = false;
+        SelectedItem = null;
+        ApplyFilter(_defaultItemsFilter);
+        _cachedFilterQuery = null;
+        _cachedFilter = null;
+    }
+
+    private bool ShouldOpenSuggestions()
+    {
+        return !IsDropDownOpen && IsKeyboardFocusWithin && Items.Count > 0
+               && Items.Count <= SettingOrDefault.MaxSuggestionCount;
     }
 
     private void OnTextChanged(object sender, TextChangedEventArgs e)
@@ -294,6 +406,58 @@ public partial class AutoCompleteComboBox
     }
 
     #endregion
+}
+
+public sealed class AutoCompleteComboBoxAutomationPeer(AutoCompleteComboBox owner)
+    : System.Windows.Automation.Peers.ComboBoxAutomationPeer(owner)
+{
+    protected override List<System.Windows.Automation.Peers.AutomationPeer>? GetChildrenCore()
+    {
+        var children = base.GetChildrenCore();
+        if (children is null || !children.OfType<System.Windows.Automation.Peers.GroupItemAutomationPeer>().Any())
+        {
+            return children;
+        }
+
+        var flat = new List<System.Windows.Automation.Peers.AutomationPeer>();
+        foreach (var child in children)
+        {
+            if (child is not System.Windows.Automation.Peers.GroupItemAutomationPeer { Owner: GroupItem group } peer)
+            {
+                flat.Add(child);
+                continue;
+            }
+
+            if (HeaderOf(group) is { } header
+                && System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(header) is { } headerPeer)
+            {
+                flat.Add(headerPeer);
+            }
+
+            flat.AddRange(peer.GetChildren() ?? []);
+        }
+
+        return flat;
+    }
+
+    private static StickyGroupHeader? HeaderOf(DependencyObject root)
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is StickyGroupHeader header)
+            {
+                return header;
+            }
+
+            if (child is not ItemsPresenter && HeaderOf(child) is { } nested)
+            {
+                return nested;
+            }
+        }
+
+        return null;
+    }
 }
 
 /// <summary>

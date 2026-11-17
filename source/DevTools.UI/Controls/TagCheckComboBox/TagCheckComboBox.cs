@@ -523,28 +523,50 @@ public class TagCheckComboBox : ListBox
         }
         else
         {
-            if (box._popup?.Child is { IsKeyboardFocusWithin: true })
-            {
-                box.Focus();
-            }
-
-            if (Mouse.LeftButton == MouseButtonState.Pressed && box.InputHitTest(Mouse.GetPosition(box)) is not null)
-            {
-                box._pressClosedAt = Environment.TickCount;
-            }
-
-            box.SetCurrentValue(SearchTextProperty, string.Empty);
-            box.Dispatcher.BeginInvoke(new Action(() => Mouse.Capture(null)), DispatcherPriority.Send);
+            box.OnDropDownClosed();
         }
 
-        if (UIElementAutomationPeer.FromElement(box) is TagCheckComboBoxAutomationPeer peer)
+        RaiseExpandState(box, isOpen);
+    }
+
+    private static void RaiseExpandState(TagCheckComboBox box, bool isOpen)
+    {
+        if (UIElementAutomationPeer.FromElement(box) is not TagCheckComboBoxAutomationPeer peer)
         {
-            peer.ResetChildrenCache();
-            peer.RaisePropertyChangedEvent(
-                ExpandCollapsePatternIdentifiers.ExpandCollapseStateProperty,
-                isOpen ? ExpandCollapseState.Collapsed : ExpandCollapseState.Expanded,
-                isOpen ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed);
+            return;
         }
+
+        peer.ResetChildrenCache();
+        peer.RaisePropertyChangedEvent(
+            ExpandCollapsePatternIdentifiers.ExpandCollapseStateProperty,
+            isOpen ? ExpandCollapseState.Collapsed : ExpandCollapseState.Expanded,
+            isOpen ? ExpandCollapseState.Expanded : ExpandCollapseState.Collapsed);
+    }
+
+    private void OnDropDownClosed()
+    {
+        if (_popup?.Child is { IsKeyboardFocusWithin: true })
+        {
+            Focus();
+        }
+
+        if (IsPressedOnField())
+        {
+            _pressClosedAt = Environment.TickCount;
+        }
+
+        SetCurrentValue(SearchTextProperty, string.Empty);
+        Dispatcher.BeginInvoke(new Action(ClearMouseCapture), DispatcherPriority.Send);
+    }
+
+    private bool IsPressedOnField()
+    {
+        return Mouse.LeftButton == MouseButtonState.Pressed && InputHitTest(Mouse.GetPosition(this)) is not null;
+    }
+
+    private static void ClearMouseCapture()
+    {
+        Mouse.Capture(null);
     }
 
     private static void OnSearchTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -693,7 +715,7 @@ public class TagCheckComboBox : ListBox
                 return false;
             }
 
-            source = source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
+            source = ParentOf(source);
         }
 
         return source is not null;
@@ -701,7 +723,7 @@ public class TagCheckComboBox : ListBox
 
     private TagCheckComboBoxTag? TagUnderRemove(MouseEventArgs e)
     {
-        if (_panel is null || _popup?.Child is UIElement child && child.InputHitTest(e.GetPosition(child)) is not null)
+        if (_panel is null || IsOverPopup(e))
         {
             return null;
         }
@@ -713,13 +735,28 @@ public class TagCheckComboBox : ListBox
             isRemove |= source is ButtonBase;
             if (source is TagCheckComboBoxTag tag)
             {
-                return isRemove && !ReferenceEquals(tag, _overflow) && tag.Tag is not null ? tag : null;
+                return isRemove && IsRemovableTag(tag) ? tag : null;
             }
 
-            source = source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
+            source = ParentOf(source);
         }
 
         return null;
+    }
+
+    private bool IsOverPopup(MouseEventArgs e)
+    {
+        return _popup?.Child is UIElement child && child.InputHitTest(e.GetPosition(child)) is not null;
+    }
+
+    private bool IsRemovableTag(TagCheckComboBoxTag tag)
+    {
+        return !ReferenceEquals(tag, _overflow) && tag.Tag is not null;
+    }
+
+    private static DependencyObject? ParentOf(DependencyObject source)
+    {
+        return source is Visual ? VisualTreeHelper.GetParent(source) : LogicalTreeHelper.GetParent(source);
     }
 
     private void FocusSearch()
@@ -844,15 +881,31 @@ public class TagCheckComboBox : ListBox
             AddPart(children, Box._panel);
             if (Box.IsDropDownOpen)
             {
-                AddPart(children, Box._search);
-                if (Box._selectAll is { IsVisible: true })
-                {
-                    AddPart(children, Box._selectAll);
-                }
+                AddDropDownParts(children);
             }
 
+            AddItemPeers(children, RealizedPeers());
+            return children.Count == 0 ? null : children;
+        }
+
+        private void AddDropDownParts(List<AutomationPeer> children)
+        {
+            AddPart(children, Box._search);
+            if (Box._selectAll is { IsVisible: true })
+            {
+                AddPart(children, Box._selectAll);
+            }
+        }
+
+        private Dictionary<object, AutomationPeer> RealizedPeers()
+        {
             var realized = new Dictionary<object, AutomationPeer>();
-            foreach (var peer in Box.IsDropDownOpen ? base.GetChildrenCore() ?? [] : [])
+            if (!Box.IsDropDownOpen || base.GetChildrenCore() is not { } peers)
+            {
+                return realized;
+            }
+
+            foreach (var peer in peers)
             {
                 if (peer is ItemAutomationPeer { Item: { } item } && !realized.ContainsKey(item))
                 {
@@ -860,6 +913,11 @@ public class TagCheckComboBox : ListBox
                 }
             }
 
+            return realized;
+        }
+
+        private void AddItemPeers(List<AutomationPeer> children, Dictionary<object, AutomationPeer> realized)
+        {
             var previous = new Dictionary<object, ItemAutomationPeer>(_virtualPeers);
             _virtualPeers.Clear();
             foreach (var item in Box.Items)
@@ -875,8 +933,6 @@ public class TagCheckComboBox : ListBox
                     children.Add(virtualPeer);
                 }
             }
-
-            return children.Count == 0 ? null : children;
         }
 
         private static void AddPart(List<AutomationPeer> children, UIElement? element)

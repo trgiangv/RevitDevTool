@@ -8,6 +8,7 @@
 
     <ResourceDictionary.MergedDictionaries>
         <theme:ControlsResources />
+        <ResourceDictionary Source="/DevTools.UI;component/Theme/Styles/SmallItems.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <Style x:Key="TagCheckComboBoxTagStyle"
@@ -207,6 +208,44 @@
             </Setter.Value>
         </Setter>
         <Setter Property="Template" Value="{StaticResource TagCheckComboBoxTemplate}" />
+    </Style>
+
+    <Style x:Key="TagCheckComboBoxTagStyle.Small"
+           BasedOn="{StaticResource Tag4CheckComboBoxStyle.Small}"
+           TargetType="hc:Tag">
+        <Setter Property="MaxWidth" Value="80" />
+        <Setter Property="Padding" Value="4,0" />
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="ContentTemplate">
+            <Setter.Value>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" />
+                </DataTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="TagCheckComboBoxItem.Small"
+           BasedOn="{StaticResource TagCheckComboBoxItemBaseStyle}"
+           TargetType="controls:TagCheckComboBoxItem">
+        <Setter Property="Padding" Value="6,0" />
+        <Setter Property="MinHeight" Value="{StaticResource SmallItemHeight}" />
+        <Setter Property="FontSize" Value="{StaticResource SmallItemFontSize}" />
+        <Style.Resources>
+            <Style BasedOn="{StaticResource CheckBoxBaseStyle}" TargetType="CheckBox">
+                <Setter Property="FontSize" Value="{StaticResource SmallItemFontSize}" />
+            </Style>
+        </Style.Resources>
+    </Style>
+
+    <Style x:Key="TagCheckComboBox.Small"
+           BasedOn="{StaticResource TagCheckComboBoxBaseStyle}"
+           TargetType="controls:TagCheckComboBox">
+        <Setter Property="TagStyle" Value="{StaticResource TagCheckComboBoxTagStyle.Small}" />
+        <Setter Property="TagSpacing" Value="2" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource TagCheckComboBoxItem.Small}" />
+        <Setter Property="Height" Value="20" />
+        <Setter Property="Padding" Value="10,0" />
     </Style>
 
     <Style BasedOn="{StaticResource TagCheckComboBoxBaseStyle}" TargetType="controls:TagCheckComboBox" />

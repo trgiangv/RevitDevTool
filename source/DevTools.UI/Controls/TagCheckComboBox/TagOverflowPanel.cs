@@ -54,35 +54,8 @@ public class TagOverflowPanel : Panel
     {
         var tags = Tags();
         var unbounded = new Size(double.PositiveInfinity, availableSize.Height);
-        var height = 0d;
-        foreach (var tag in tags)
-        {
-            tag.Measure(unbounded);
-            height = Math.Max(height, tag.DesiredSize.Height);
-        }
-
-        var visible = tags.Count;
-        var width = WidthOf(tags, visible);
-        if (width > availableSize.Width)
-        {
-            visible = tags.Count - 1;
-            while (visible >= 0)
-            {
-                var overflowWidth = MeasureOverflow(tags, visible, unbounded);
-                width = WidthOf(tags, visible) + (visible > 0 ? Spacing : 0) + overflowWidth;
-                if (visible == 0 || width <= availableSize.Width)
-                {
-                    break;
-                }
-
-                visible--;
-            }
-        }
-        else
-        {
-            MeasureOverflow(tags, visible, unbounded);
-        }
-
+        var height = MeasureTags(tags, unbounded);
+        var visible = FitVisible(tags, availableSize.Width, unbounded, out var width);
         VisibleCount = visible;
         HiddenCount = tags.Count - visible;
         if (_overflow is not null && HiddenCount > 0)
@@ -126,6 +99,46 @@ public class TagOverflowPanel : Panel
         return ReferenceEquals(child, _overflow)
             ? HiddenCount > 0
             : Tags().IndexOf(child) is var index && index >= 0 && index < VisibleCount;
+    }
+
+    private static double MeasureTags(List<UIElement> tags, Size unbounded)
+    {
+        var height = 0d;
+        foreach (var tag in tags)
+        {
+            tag.Measure(unbounded);
+            height = Math.Max(height, tag.DesiredSize.Height);
+        }
+
+        return height;
+    }
+
+    private int FitVisible(List<UIElement> tags, double available, Size unbounded, out double width)
+    {
+        width = WidthOf(tags, tags.Count);
+        if (width <= available)
+        {
+            MeasureOverflow(tags, tags.Count, unbounded);
+            return tags.Count;
+        }
+
+        for (var visible = tags.Count - 1; visible > 0; visible--)
+        {
+            width = WidthWithOverflow(tags, visible, unbounded);
+            if (width <= available)
+            {
+                return visible;
+            }
+        }
+
+        width = WidthWithOverflow(tags, 0, unbounded);
+        return 0;
+    }
+
+    private double WidthWithOverflow(List<UIElement> tags, int visible, Size unbounded)
+    {
+        var overflowWidth = MeasureOverflow(tags, visible, unbounded);
+        return WidthOf(tags, visible) + (visible > 0 ? Spacing : 0) + overflowWidth;
     }
 
     private static double Top(UIElement element, Size finalSize)
