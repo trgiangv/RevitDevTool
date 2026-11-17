@@ -31,6 +31,7 @@ using RevitDevTool.Tools.CommandBrowser.Services;
 using RevitDevTool.Tools.CommandBrowser.ViewModels;
 using RevitDevTool.Tools.ElementFinder;
 using RevitDevTool.Tools.Helpers;
+using RevitDevTool.Tools.ModelsContext;
 using RevitDevTool.View;
 using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel.Settings.Visualization;
@@ -127,7 +128,7 @@ internal static class RevitServiceRegistration
             services.AddSingleton<ToolWindowService>();
             services.AddSingleton<ElementFinderViewModel>();
 #if REVIT2023_OR_GREATER
-            services.AddSingleton<RevitDevTool.Tools.ModelsContext.ModelsContextPane>();
+            services.AddModelsContext();
 #endif
 
             return builder;

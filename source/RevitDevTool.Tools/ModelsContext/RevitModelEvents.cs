@@ -10,13 +10,10 @@ using System.Windows.Threading;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
-internal sealed class RevitModelEvents(
-    UIControlledApplication application,
-    ScopeCache scopes,
-    ParameterCache parameterCache,
-    Dispatcher dispatcher)
-    : IModelEvents
+internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache parameterCache, Dispatcher dispatcher)
+    : IRevitModelEvents
 {
+    private UIControlledApplication? _application;
     private readonly Dictionary<string, TrackedIds> _keys = new(StringComparer.Ordinal);
     private string? _activeModel;
     private bool _isBusy = true;
@@ -46,13 +43,14 @@ internal sealed class RevitModelEvents(
 
     public event EventHandler<SourceId>? ParameterDefinitionsChanged;
 
-    public void Subscribe()
+    public void Subscribe(UIControlledApplication application)
     {
         if (_subscribed)
         {
             return;
         }
 
+        _application = application;
         var controlled = application.ControlledApplication;
         controlled.DocumentChanged += OnDocumentChanged;
         controlled.DocumentClosing += OnDocumentClosing;
@@ -68,7 +66,7 @@ internal sealed class RevitModelEvents(
 
     public void Unsubscribe()
     {
-        if (!_subscribed)
+        if (!_subscribed || _application is not { } application)
         {
             return;
         }
