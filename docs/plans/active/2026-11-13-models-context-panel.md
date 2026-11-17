@@ -350,9 +350,94 @@ PenetrationMapper (tags, sampling, name+type keys; neither caches).
    host versus link units. Live FlaUI check on Revit 2026 host and link.
 10. ADR 0062 Filter section rewritten.
 
+### Phase 5d — Filter logic like Revizto (planned 2026-11-16)
+
+Goal: the rule builder reads like Revizto Find Objects, drops the NOT toggle,
+and can say "(in Arch.rvt, Walls: …) OR (in MEP.rvt, Ducts: …)". Reference:
+design canvas Flow 8 (Today screenshot, After mockups in HC Light sizes,
+examples 1–4, scope picker). ADR 0062 §5 holds the decisions.
+
+1. Model and store (clean cut):
+   - `FilterSet` loses `Inverted` and gains an optional scope: document
+     sources (`SourceId`, by file) and category ids; none = same as parent.
+   - Operators renamed: Missing → Undefined, Exists → Defined, HasNoValue →
+     Empty, HasValue → NotEmpty (labels: undefined, defined, empty, not empty).
+   - `CustomFilterStore` drops `not`, writes `scope`, and the new operator names.
+2. Engine:
+   - Per document, a group whose document scope leaves that document out is
+     false and is pruned before compiling; an unresolved group is false.
+   - A group's category scope compiles to `ElementMulticategoryFilter` ANDed
+     with its children. The fake matcher does the same over snapshots.
+   - `CaseSensitiveRules` and `FilterCompiler` lose the inverted-set paths.
+   - The Revit filter reader maps an inverted parameter filter to negated
+     operators with the match swapped, else an unsupported rule.
+3. View models:
+   - Group: `Match`, a `ToggleMatch` command, scope lists limited to the parent,
+     warning for values outside the parent, unresolved state, `IsExpanded`.
+   - Each child knows whether it shows the connector (all but the first) and its
+     text (the parent's match).
+   - The parameter list, coverage and value counts of a condition follow its
+     group's effective scope.
+   - `MoveTo(item, group, index)` with a guard against moving a group into
+     itself or its children; Move up / Move down use it.
+4. Views (HC stock styles only; shapes as on Flow 8):
+   - AND/OR `ButtonDefault.Small` between children; group header with grip,
+     "Group", collapse toggle, remove; scope row with two `TagCheckComboBox`es;
+     condition card on `RegionBrush` with the grip on its left edge, same two
+     rows as today; + Condition (`AddGeometry`) and + Group (`Stack`).
+   - Grip geometry (Fluent reorder dots) in `Icons.xaml`; drag behavior in
+     `DevTools.UI` (WPF DragDrop plus an insertion adorner in `PrimaryBrush`),
+     no new package; Alt+Up / Alt+Down key bindings.
+   - AutomationIds: `Filter.Set.Connector`, `Filter.Set.Scope.Documents`,
+     `Filter.Set.Scope.Categories`, `Filter.Set.Collapse`, `Filter.Item.Grip`,
+     `Filter.Set.Warning`; `Filter.Set.Not` goes.
+5. Tests:
+   - Core: connector toggle, scope narrowing and pruning per document, picker
+     per group scope, move guard, store round trip without `not`, operator
+     names, examples 1–4 from Flow 8 as filter trees on the fakes.
+   - Views (UIA, AutomationIds): connector click switches the group, scope
+     combos list only the parent's items, Alt+Up/Down reorders, no NOT control.
+   - Sandbox shots for examples 2 and 4 and the open scope picker, Light and
+     Dark; compared side by side with the Flow 8 mockups (FlaUI capture), and
+     put on the canvas next to them.
+6. Docs: product page and `docs/architecture/ModelsContext/filters.md` follow.
+7. Architecture and performance (review of HEAD f61733be, 2026-11-16):
+   - Before the views: split the filter view models so Phase 5d does not grow
+     them: `ParameterScopes` (core, memoised per scope), `CategoryPickerViewModel`,
+     `FilterLibraryViewModel` with a pure `CustomFilterLibrary`, `FilterRunner`
+     (evaluate, Live, baseline), one file per rule view model type, and a pure
+     `FilterTreeMoves`.
+   - Adapter, in parallel: index slices instead of `Skip/Take` (O(n²) on
+     net48) with the slice time cap; `EnumValuesOf` through the sliced count;
+     resolved parameters and reference targets cached per source and version;
+     `ParameterResolver` split with its pure parts in core; a
+     `DocumentChangeReader` and a core `ChangeClassifier`.
+   - Logging gaps: unresolved rule, compile cost, exact-pass superset vs exact
+     count, per-document result counts, Live paused, merge timing, delta batches,
+     document-change handler timing, event names in `Post`, per-document catch
+     in `Resolve`, file path in store errors.
+   - Budgets, measured in the sandbox (`--measure`, filter section, 100k and 1M,
+     3k parameters over 5 documents) and live on Revit 2026 with Trace on:
+
+     | Check | Budget |
+     |---|---|
+     | Group parameter list cold / warm | ≤ 5 ms / cache hit |
+     | Scope pruning per document | ≤ 1 ms |
+     | Picker keystroke, 3k items | ≤ 16 ms |
+     | Compile per document cold / warm | ≤ 50 ms / ≤ 5 ms |
+     | One Revit run | < 250 ms, target 30 ms per slice |
+     | Live edit to selection sent | ≤ 500 ms (300 ms debounce) |
+     | UI stall | < 50 ms |
+
+   - Later, off the Phase 5d path: `ModelContextViewModel` (event inbox,
+     context loader) and `ExplorerTabViewModel` (five parts) splits.
+
 ### Phase 6 — Docs and acceptance
 
-- Product and architecture pages are done (Step 10). Left: test-matrix rows for the new suites; set 0062 to Accepted.
+- Product and architecture pages are done (Step 10). Test matrix with golden
+  counts and the live suites (adapter inside Revit, FlaUI panel flows):
+  [test-matrix.md](../../architecture/ModelsContext/test-matrix.md). Left: record
+  the pending golden values from the first live run; set 0062 to Accepted.
 
 ## Risks And Recovery
 
@@ -476,6 +561,21 @@ PenetrationMapper (tags, sampling, name+type keys; neither caches).
     `docs/architecture/ModelsContext/` (README with Gotchas, snapshots, filters,
     parameter-catalog, ui); linked from `ARCHITECTURE.md`, `agents/index.md`,
     `product/README.md` and 0062.
+  - [x] Phase 5d live fixes (2026-11-17, Revit 2026): type parameters decide
+    *defined*, *empty* and *not empty* on the element types
+    ([filters.md](../../architecture/ModelsContext/filters.md#type-parameters));
+    sampled built-ins listed; candidate ids cached; slices paced to 30 ms;
+    Walls count 1,120 (curtain panels moved to their own category); item UIA
+    names; one document label in log lines. Panel and API agree: E1 207 (API
+    215 counts 8 walls in a secondary design option), E4 301, Reference Level =
+    L3 319, Fire Rating on walls and doors and Family Name on ducts for all
+    eight operators.
+  - [x] Flow 9 picker rows (2026-11-17): Instance / Type sections with sticky
+    headers, source icons, category summary, structured tooltip, no pills and
+    no coverage warning; typed numbers in the Current model's units, picked
+    numbers keep their stored range (L2 LU-01, PS-01, PS-02). Shutdown no longer
+    touches the pane's visual tree and temporary bar commands run through
+    `PanelRuntime.RunAsync` (README Gotchas 17, 18).
 - [ ] Phase 5 — spike; T3 queue or no-go path.
 - [ ] Phase 6 — product and architecture docs; 0062 Accepted.
 

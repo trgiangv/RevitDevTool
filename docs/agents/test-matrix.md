@@ -43,6 +43,7 @@ these Skips with a reason (`Assert.Inconclusive`); it does not fail.
 | Test data folder | `tests/TestDataDirectory.cs` (compiled into every `*.Tests` project) sets `REVITDEVTOOL_DATA_DIR` to `%TEMP%\RevitDevTool-TestData`, so `AppUtils.GetApplicationDataPath()` points there instead of `%AppData%\RevitDevTool`. Tests install, update, and remove packages in its pixi-env, uv-env, NuGet cache, and pydevd; the folder persists, so only the first run downloads. | Never point tests at the real `%AppData%\RevitDevTool`; they remove packages. Delete the folder to start clean. |
 | MCP client dispose on net48 | A pending named-pipe read ignores cancellation on .NET Framework, so `McpClient.DisposeAsync` waits about 5 s for its read loop. | In net48 tests, dispose the client pipe before the client (`NamedPipeIntegrationTests`). |
 | `NUnit.Host.NetFramework.Tests` about 13 s | Each test builds one to four fixture generations; hashing the freshly copied DLLs in `%TEMP%` takes 100–170 ms each, likely on-access antivirus scanning. The net10 `NUnit.Host.Tests` pays the same per generation. | Not a hang. If it grows, build each deterministic generation once per class with a static `Lazy`. |
+| MSTest bodies off the Revit API thread | In Revit, the MSTest runtime (`MSTestRuntimeSession`) runs test bodies on a thread-pool thread while the Revit thread waits for the run: `IsRevitInApiMode` is false, `UIDocument.ActiveView` comes back null, and `ExternalEvent` dispatch never runs (seen on Revit 2026, 2026-11-17). Read-only API calls seem to work, which hides it. | Use NUnit (the default) for host tests that need the API context or the active view. `RevitDevTool.ModelsContext.LiveTests` stays on NUnit for this reason. |
 | Downloads and network | Pixi, uv, pydevd, and package installs download into the test data folder; `ParserScriptTests` caches a python.org embed in `%TEMP%\RevitDevTool-ParserPython`. `PackageVersionChecker` tests use canned PyPI and conda-forge JSON through an `HttpClient`; its NuGet lookup runs `nuget.exe search` and has no offline test. | Download once per class or per folder, not per test. Skip only if the download throws. |
 
 ## Line coverage
@@ -197,6 +198,16 @@ Not in headless CI:
 - `ToolInvoke.py` on the host: payload mapping has some coverage; live Python.NET invoke is Catalog and host.
 
 `tests/RevitDevTool.PyServer.Tests/` is a small Python parser check.
+
+## Model Context
+
+Use cases, golden counts on the Snowdon sample and the three layers (core with
+fakes in CI, adapter inside Revit, panel flows through FlaUI) are in
+[architecture/ModelsContext/test-matrix.md](../architecture/ModelsContext/test-matrix.md).
+`tests/RevitDevTool.ModelsContext.LiveTests` and `tests/RevitDevTool.ModelsContext.UiTests`
+need a live Revit with the sample open; their names do not end in `.Tests`, so CI
+does not run them. Run L2, then L3 in the same Revit; each run writes
+`report.md` and images to `artifacts/models-context-tests/`.
 
 ## Commands
 

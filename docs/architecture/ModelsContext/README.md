@@ -15,6 +15,7 @@ Topic pages:
 | [filters.md](filters.md) | Filter model, parameter identity, family parameters, value kinds, compiling to Revit filters, case-sensitive rules |
 | [parameter-catalog.md](parameter-catalog.md) | Catalog per document, parameter and value caches, invalidation, measurements |
 | [ui.md](ui.md) | HandyControl conventions, `AutoCompleteComboBox`, validation, AutomationIds |
+| [test-matrix.md](test-matrix.md) | Use cases with golden counts on the Snowdon sample, L1 / L2 / L3 layers, oracle, readiness signal |
 
 ## Gotchas
 
@@ -26,7 +27,11 @@ count.
    natively (access violation, no managed exception) on the first filter call in
    such a view. Always go through `LinkElements.InView`, which returns `null` for
    template views and for every view type except plans, sections, elevations,
-   detail, 3D and walkthrough.
+   detail, 3D and walkthrough. The allowed types are only safe for the active
+   view: a probe that built this collector for every plan, section, elevation and
+   3D view of the HVAC model (most never opened in the session) crashed Revit
+   2026 the same way. Call it for the active view only, never in a loop over
+   views, and do not run view collectors on views of a link document either.
 2. **Family parameters are invisible to the usual lookups.** A non-shared family
    parameter has a positive id and a `ParameterElement`, but no
    `ParameterBindings` entry, it is not in `GetFilterableParametersInCommon`, and
@@ -36,27 +41,77 @@ count.
    parameter gets a different id per family. A rule compiles to an OR over all
    ids.
 4. **Native "not equals" passes elements that lack the parameter.** Every per-id
-   rule is ANDed with "parameter exists" (has value OR has no value).
-5. **Native string rules always ignore case.** Case-sensitive rules need a
+   rule is ANDed with *defined*.
+5. **Has-value rules do not see type parameters from an instance.** Value rules
+   do. *Defined*, *empty* and *not empty* of a type parameter are decided on
+   the element types and applied to the candidates by type
+   ([filters.md](filters.md#type-parameters)).
+6. **Native string rules always ignore case.** Case-sensitive rules need a
    widened native pass plus an exact pass in memory.
-6. **Do nothing inside `SelectionChanged`.** Revit forbids changing the
+7. **Do nothing inside `SelectionChanged`.** Revit forbids changing the
    selection or document there. The adapter only posts the ids to the WPF
    dispatcher; all work runs later.
-7. **No Revit object crosses a thread or a port.** Ports carry `DocumentKey`,
+8. **No Revit object crosses a thread or a port.** Ports carry `DocumentKey`,
    `SourceId`, `long` ids, strings and plain records. The adapter resolves a key
    to a `Document` on every call, and a closed or unloaded document resolves to
    nothing.
-8. **A document version does not change per transaction.** `GetDocumentVersion`
+9. **A document version does not change per transaction.** `GetDocumentVersion`
    changes on save or sync only, so caches of the Current model must also be
    dropped from `DocumentChanged`, not just by version stamp.
-9. **Several link instances share one link document.** Snapshots and parameter
+10. **Several link instances share one link document.** Snapshots and parameter
    caches are keyed by the link source (its path), not by the instance.
-10. **Implicit HandyControl styles do not apply in the Revit pane.** Give every
+11. **Implicit HandyControl styles do not apply in the Revit pane.** Give every
     label an explicit HC `TextBlock` style. Text inside list and combo rows has
     no style so it inherits the row foreground and stays readable when selected.
-11. **No self `;component/` URIs in `DevTools.Presentation`.** The add-in
+12. **No self `;component/` URIs in `DevTools.Presentation`.** The add-in
     ILRepacks it; only `/DevTools.UI;component/...` URIs survive. A guard test
     fails on any other.
+13. **Never run T3 (`LinkedHideShow`) from a test body.** Hide in View and its
+    Show go through the internal `invokeCommandHandler`, which runs a Revit UI
+    command re-entrantly inside the in-host test runner. After L2 runs that did
+    it, the test host answered "Host testing session is busy" to every later run,
+    and Revit's fatal-error journal shows the "Model Context Show" transaction
+    still being undone. L2 checks the T3 split of a plan only
+    (`expected.plannedTiers` in `visibility.json`); `VisibilityRun` fails any
+    plan with a `ReferenceCommandStep` before it runs, and the guard test
+    `LinkTiersArePlanOnly` fails a T3 case without `plannedTiers`. L3 UI-07
+    runs T3 from outside Revit through the panel's eye, the path a user takes.
+14. **One copy of `DevTools.UI` per Revit.** WPF resolves
+    `/DevTools.UI;component/...` to the most recently loaded assembly named
+    `DevTools.UI`. When an L2 run loaded its own copy beside the add-in's, the
+    next control the panel built for the first time (`AutoCompleteComboBox` at
+    *+ Condition*) threw "does not have a resource identified by the URI"
+    during layout, and Revit closed with a fatal error (0xe0434352; the Revit
+    crash dumps of 2026-11-17 10:18 and 10:32 hold that `XamlParseException`).
+    The host's `HostAssemblies` include `DevTools.UI`, and every test session
+    binds to those loaded copies instead of the copies in its output. L2 then
+    L3 in one Revit is the normal flow; L3 attaches to the Revit that ran L2 of
+    the same run folder.
+15. **Element overrides outlive Temporary View Properties.** The mode covers
+    template-controlled settings (category overrides) but not
+    `SetElementOverrides`: a T0 or T1 Color or Halftone stays in the view, and
+    is saved with it, after the mode ends. `RevitViewActions` therefore records
+    each element's overrides before its first change in a view and puts exactly
+    those back on Reset (VI-03, VI-04, VI-08 compare every touched element with
+    its state before the action).
+16. **Keep UI Automation off Revit while it is busy.** Wait for Revit to be idle
+    (the panel's `Idle <n>` signal) before any UIA call, and never poll the whole
+    desktop tree: a helper that clicks *Always Load* searches only Revit's
+    top-level dialogs (`#32770`) and stops once the model is open.
+17. **Do not touch the pane's visual tree in `OnShutdown`.** By then Revit has
+    torn down the dockable pane's render channel. `ModelsContextPane.Shutdown`
+    once set the host `Content` to null; the template change released visuals
+    on the dead channel and WPF ended Revit with `FailFast` ("Unrecoverable
+    system error", `DUCE.Channel.ReleaseOnChannel`) on a normal close
+    (2026-11-17 21:44). Shutdown only unsubscribes events and disposes the view
+    model.
+18. **Every panel command runs through `PanelRuntime.RunAsync`.** An exception
+    that leaves an `AsyncRelayCommand` is rethrown on the WPF dispatcher, and in
+    Revit that is a fatal error (0xe0434352). The temporary bar's Reset once
+    called `VisibilityController.ResetAsync` directly; when Show for linked
+    elements failed ("Revit did not show these linked elements", active view a
+    sheet, L3 UI-07, 2026-11-17 21:51) Revit closed. `RunAsync` logs the error
+    and shows it as the panel message.
 
 ## Layers and ports
 
@@ -65,21 +120,25 @@ DevTools.ModelsContext                  core: no Revit API, no WPF
   Model/       DocumentKey, SourceId, ElementRef, DocumentSnapshot, TreeRow,
                FilterDefinition, ParameterKey, ParameterInfo, ValueKind, ...
   Engine/      SnapshotStore, DeltaApplier, VersionRule, ScopeCounter,
-               ValueIndexCache, CaseSensitiveRules, VisibilityPlanner,
-               SelectionGuard, TemporaryJournal, Debouncer
+               ValueIndexCache, CaseSensitiveRules, FilterScopes, ParameterScopes,
+               FilterTreeMoves, VisibilityPlanner, SelectionGuard, TemporaryJournal,
+               Debouncer
   Ports/       IModelSource, IModelEvents, ISelectionPort, IViewActions,
                IFilterEvaluator, IHostFilterCatalog, ICustomFilterStore,
                IClock, IScheduler
-  ViewModels/  ModelContextViewModel, ContextBar, ExplorerTab, FilterTab,
-               RuleViewModels, TemporaryBar, ContextMenu, VisibilityController
+  ViewModels/  ModelContextViewModel, ContextBar, ExplorerTab, FilterTab
+               (FilterLibrary, CategoryPicker, FilterRunner, RuleSet / Rule /
+               UnsupportedRule view models), TemporaryBar, ContextMenu,
+               VisibilityController
   Diagnostics/ ModelContextLog, TraceTimer, FailureTally
 
 DevTools.Presentation/Views/ModelsContext   XAML views, DispatcherScheduler, SystemClock
 DevTools.UI/Controls                        FlatTreeList, TagCheckComboBox, AutoCompleteComboBox
+DevTools.UI/Behaviors                       DragReorder (drag and drop with insertion line), CheckedItems
 
 RevitDevTool.Tools/ModelsContext            Revit adapter
   RevitModelSource, RevitModelEvents, RevitSelectionPort, RevitViewActions,
-  LinkedHideShow, RevitFilterEvaluator, FilterCompiler, ParameterResolver,
+  LinkedHideShow, RevitFilterEvaluator, FilterCompiler, ParameterLocator, ParameterValues, ValueReader,
   ParameterCatalogReader, ParameterCache, RevitFilterCatalog, CustomFilterStore,
   DocumentRegistry, ElementReader, LinkElements, ScopeCache, RevitProfiler,
   ModelsContextPane
@@ -141,14 +200,14 @@ matching `SelectionChanged` echo, so the panel never reacts to its own change.
 
 ### Live versus refresh
 
-`FilterTabViewModel.EvaluateAsync(sync)` is the one evaluation path:
+`FilterRunner.EvaluateAsync(sync)` is the one evaluation path:
 
 - An edit (categories, rules, mode, source) triggers the Live debouncer, which
   evaluates with `sync: true` and sends the result to Revit.
 - A model edit or context refresh reloads the tab and evaluates with
   `sync: false`: the count updates, the selection does not. This is why an edit
   in Revit's Properties palette never drops the element being edited.
-- Live pauses above `LivePauseLimit` (5,000) and sends nothing for an empty
+- Live pauses above `FilterRunner.LivePauseLimit` (5,000) and sends nothing for an empty
   custom filter.
 
 ## Logging
@@ -193,9 +252,11 @@ the measured spike: 0062 §5, §7–§10.
   generated or replayed model without Revit. `--measure` prints timings,
   `--shots <folder>` saves screenshots, `--dark` switches to the dark theme, and
   `--trace` prints the panel Trace lines.
-- **Live checks** drive the panel inside Revit with FlaUI through the same
-  AutomationIds and compare counts with direct API queries. Results are recorded
-  in the plan and in [filters.md](filters.md#live-checks).
+- **Live tests** run on the Snowdon sample in Revit: adapter tests in
+  `tests/RevitDevTool.ModelsContext.LiveTests` (inside Revit, golden counts from an
+  API oracle) and a few panel flows in `tests/RevitDevTool.ModelsContext.UiTests`
+  (FlaUI from outside Revit, waiting on the `ModelContext.Panel` status). Rows,
+  golden values and commands: [test-matrix.md](test-matrix.md).
 
 ## Change rules
 

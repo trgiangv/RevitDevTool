@@ -29,9 +29,25 @@ no Revit object, so a closed model or reloaded link is never pinned. Parameter
 values are not in the snapshot.
 
 It is built in slices: one call collects the ids (model categories, no element
-types, no secondary design options) and the document version, then
+types, every design option) and the document version, then
 `ElementReader.ReadSlice` reads 5,000 elements or 30 ms per Revit call, and the
 builder aggregates on the thread pool.
+
+Counts follow the element's own category. A type used by elements of another
+category gets its own type row there: on the Architectural link 18 Curtain
+Panels are `Wall` elements of a basic wall type, and before this split they
+were counted under Walls (1,138 instead of 1,120).
+
+**Design options.** Each row carries `SecondaryOption` (the element's
+`DesignOption` is not primary). Secondary rows are in the snapshot so a view or
+a selection that shows them can count them, but they stay out of `Counts`,
+`InModel` and `ModelIdsUnder`, which is what Whole model reads. So Walls is
+1,120 in Whole model while `OfCategory(OST_Walls)` returns 1,128 (8 walls in
+"Continuous Bleachers no Stairs"); the Architectural link snapshot has 7,764
+rows, 18 of them secondary, and 7,746 counted. Active view and Selection count
+their id sets with `ScopeCounter`, which includes secondary rows. The rule per
+scope and the measured counts are in
+[filters.md](filters.md#design-options).
 
 While snapshots build, the Explorer shows first rows from a quick count per
 category (`CountGroupsAsync`) so the panel never waits on a full read.
@@ -63,6 +79,10 @@ shows up in the Current model as a modified `RevitLinkType`.
    cheaper.
 3. The panel applies queued deltas after a 200 ms debounce.
 
+When a `DesignOption` element is added or modified (Make Primary, a new
+option), the reader also re-reads every element in any design option, so the
+`SecondaryOption` flags follow the new primary through the normal replace path.
+
 `DeltaApplier` removes deleted ids, adds or replaces the rest, and marks the
 snapshot dirty instead of patching when a type moved to another category or
 family, or an element cannot be placed. Undo and redo use the same path and
@@ -90,7 +110,7 @@ not per transaction.
 
 ## Scopes
 
-- **Whole model** reads the snapshot directly.
+- **Whole model** reads the snapshot directly, without secondary-option rows.
 - **Active view** and **Selection** collect an id set per document and recount it
   against the snapshot rows in managed code.
 - Active view id sets are cached in `ScopeCache` per (document, view) and

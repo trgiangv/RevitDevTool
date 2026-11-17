@@ -16,6 +16,7 @@ is [`AGENTS.md`](../../AGENTS.md); work shape is [`WORKFLOW.md`](../WORKFLOW.md)
 | MCP or host pipe | [mcp-pytest-bridge.md](mcp-pytest-bridge.md), `docs/architecture/MCP/` | `DevTools.Ipc`, `DevTools.Mcp.*`, `DevTools.Daemon` |
 | Shared vs host code | [host-boundaries.md](host-boundaries.md) | `DevTools.*`, hosts |
 | Model Context panel | `docs/product/models-context.md`, `docs/architecture/ModelsContext/` (Gotchas first), `docs/decisions/0062-model-context-panel.md` | `DevTools.ModelsContext`, `DevTools.Presentation/Views/ModelsContext`, `RevitDevTool.Tools/ModelsContext` |
+| UI automation: AutomationIds, FlaUI view tests, live UI checks, screenshots, dialogs, other Windows apps | `ui-automation` skill, [test-matrix.md](test-matrix.md) | `tests/*.Views.Tests`, `tests/DevTools.HandyControl.Tests`, `.agents/skills/ui-automation/scripts/uia.ps1` |
 | Revit API and live execute | `revit-developer` skill, `docs/architecture/MCP/workflows.md` | MCP, rvtdocs-mcp |
 | Platform, IPC, packaging | `platform-change` skill | `source/DevTools.*`, `build/` |
 | Formatting and lint | [formatting-linting.md](formatting-linting.md) | `.editorconfig`, `scripts/format-lint.ps1` |

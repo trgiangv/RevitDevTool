@@ -83,6 +83,16 @@ back. They go wherever host log entries go, including the file log. Lines to loo
 - `Snapshot`, `Snapshot reload`, `Parameter catalog`, `Value counts`, `Filter`,
   `Visibility`, `Context load`, `Selection sent/received`, `Explorer publish/expand`:
   panel steps with their size and time.
+- `Filter <name> in <document>`: one document's match count and time;
+  `Filter <name>: Live paused at N matches`: Live stopped sending above the limit.
+- `Filter compiled <document>: … compile N ms, candidates M ms (cached|collected|skipped)`
+  and `Match <document>: C candidates, N native, M matched`: one document's
+  compile, its candidate ids (cached per document, categories and version), and
+  the native and exact match counts.
+- Every line names a document by its file name (`SourceId.Label`), for the
+  Current model and links alike.
+- `Parameters merged`, `Deltas applied`: parameter list refresh (catalogs,
+  parameters, cached scopes) and one batch of model edits applied to snapshots.
 - `<Operation> <subject>: error ignored` and `<Operation> <subject>: N of M failed`:
   errors the panel skipped (the exception is attached).
 

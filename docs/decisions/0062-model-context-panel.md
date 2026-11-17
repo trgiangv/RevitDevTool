@@ -260,8 +260,11 @@ control; its rows still form a tree.
 - Every row shows its branch count in grey, open or closed. Under Scope =
   Selection the counts are of the selection. A blue badge shows how many
   selected elements a closed row holds; open rows have no badge.
-- Whole model counts the main model and primary design options. Active view
-  counts what the view collector returns.
+- Whole model counts the main model and primary design options, like a Revit
+  schedule. Active view counts what the view collector returns, which follows
+  the view's design option settings; Selection counts what is selected. Explorer
+  and Filter use the same rule in every scope
+  ([filters.md](../architecture/ModelsContext/filters.md#design-options)).
 - Counts come from the document snapshot (§11). When a snapshot is older than
   the last model change it is rebuilding, a flat progress bar shows in the gap
   between the context bar and the body; it takes no space and covers nothing.
@@ -312,15 +315,34 @@ One mode: categories plus rules.
 - **Categories:** checkbox list with counts and search, folds to a summary
   line. *All · None* tick or untick the categories the search shows. Checked
   categories are always "any of".
-- **Rules:** a set matches **All (AND)** or **Any (OR)**; sets nest (+ Set).
-  A set can be inverted (NOT). Each rule is parameter, operator, value, on two
-  lines.
+- **Rules:** a visual condition builder after Revizto Find Objects (decided
+  2026-11-16, design canvas Flow 8). A **group** holds conditions and nested
+  groups. One **AND** or **OR** button sits between its children; it shows the
+  group's single match mode and a click switches the whole group, so a group
+  never mixes them and there is no precedence to guess. There is **no NOT**:
+  negation lives in the operators (does not equal, does not contain, empty,
+  undefined). Each condition is parameter, operator, value, on two lines, with a
+  drag grip on its left edge.
+  - **Search scope per group:** documents (by file, so every instance of a
+    link) and categories, as two `TagCheckComboBox`es under the group header.
+    Empty reads *Same as parent*. A scope only narrows its parent; the top
+    group's scope is the Documents box plus the Categories section. A value that
+    later drops out of the parent stays as a tag and the group shows a warning;
+    a saved document the model does not have marks the group *unresolved* and
+    it matches nothing.
+  - **Order:** drag by the grip, or Alt+Up / Alt+Down, moves a condition or a
+    group within its group or into another group, never into itself.
+  - **+ Condition** (plus icon) and **+ Group** (stack icon) sit under each
+    group; groups collapse and have a remove button.
   - **Parameter identity:** one match key per parameter: built-in by
     `BuiltInParameter` name, shared by GUID, project and family parameters by
     name plus data type (another data type is another parameter). Origin
     (built-in, shared, project, family) and binding (instance, type) are tags,
-    not part of the key; the picker merges the ticked documents by key and
-    shows each item's tags and coverage (documents that have it / ticked).
+    not part of the key; the picker merges the ticked documents by key. It
+    groups rows under *Instance* and *Type* headers, shows the name, a source
+    icon only for project, shared and family parameters, and the categories;
+    the tooltip lists the details and the models that have the parameter. A
+    parameter in only some models is not a warning: it matches where it exists.
   - **Catalog per document:** `GetFilterableParametersInCommon` per category
     plus one sampled element per type (one per category without a type) for
     family parameters and built-in data types. The adapter caches it per
@@ -328,37 +350,46 @@ One mode: categories plus rules.
     elements or families, and on link reload. Each item records the categories
     it was found for (filterable for that category, or carried by a sampled
     element of it or by that element's type).
-  - **Picker follows the categories:** with categories checked, the picker
-    lists the union of parameters found for any checked category; with none
-    checked it lists all. Coverage then counts only ticked documents that
-    contain a checked category. A rule whose parameter drops out of the list
+  - **Picker follows the group's scope:** the picker of a condition lists the
+    union of parameters found for any category in its group's effective scope
+    (documents and categories after narrowing); with no category in scope it
+    lists all. A rule whose parameter drops out of the list
     keeps its key, name and kind; the picker shows its name as text.
   - **Kind** comes from the parameter, never from the user: Yes/No spec gives
     YesNo; a measurable spec or a double gives Number; an ElementId gives
     Reference; an integer with named values gives Enumerated; other integers give
     Integer; strings give Text. Stored rules carry no kind.
   - **Operators:** Text all; Number and Integer compare; YesNo, Reference and
-    Enumerated equal and not equal; every kind has has / has no value plus
-    *parameter exists* / *parameter missing*.
+    Enumerated equal and not equal; every kind has *not empty* / *empty* (has a
+    value / has no value) plus *defined* / *undefined* (the element has the
+    parameter / does not), the words Revizto uses.
   - **Run per document:** the key resolves in the target document to the real
     parameter (id, storage, spec); a key it lacks gives no match there.
-    Numbers parse once with the active model's units and that value runs in
-    host and links. Yes/No is 1/0; Reference names resolve in the target
-    document; Enumerated text maps to its integer through the value index.
+    A typed number parses once in the Current model's units, the format the
+    value box placeholder shows, and that one internal value is used in every
+    document (within half a display step). A number picked from the value list
+    keeps the stored values behind its text and is never parsed again. This
+    replaces parsing in each target document's units, which gave one typed
+    value a different meaning per document. Yes/No is 1/0;
+    Reference and Enumerated text map to their stored ids or integers through
+    the value index.
   - **Case-sensitive text** (`Aa`, off by default): Revit string rules ignore
     case, so a widened native pass returns a superset (positive leaves keep
-    their rule, negative leaves become *parameter exists*, flipped under an
-    inverted set), then an exact ordinal pass runs on that superset only.
+    their rule, negative leaves become *defined*), then an exact ordinal pass
+    runs on that superset only.
   The value dropdown lists real values in the checked documents with counts and a
   `[No parameter]` row (value index, §11), cached per document, key and
-  categories with the document version. **+ Rule** and **+ Set** are small
-  icon-and-text buttons under each set, hidden for read-only filters. With no
-  rules the box says every element of the checked categories matches.
+  categories with the document version. **+ Condition** and **+ Group** are
+  small icon-and-text buttons under each group, hidden for read-only filters.
+  With no conditions the box says every element of the checked categories
+  matches.
 - **Revit filters** open read only. A rule-based filter runs in its own
   document (`GetElementFilter()` AND `ElementMulticategoryFilter(GetCategories())`);
   its rules display read only through a reader that turns
   `ElementLogicalFilter` / `ElementParameterFilter` / `FilterRule` trees into
-  rule rows (an inverted parameter filter reads as an inverted set), with an
+  rule rows (an inverted parameter filter reads as its rules with negated
+  operators and the match mode swapped, or as an unsupported rule when a rule
+  has no negated operator), with an
   *unsupported rule* row for rules it cannot show (global parameter
   association). A selection filter gives `GetElementIds()`; missing
   ids are skipped; in a link they become link references. A Current model
@@ -463,17 +494,22 @@ call resets it.
   panel.
 - Halftone and Color run inside Temporary View Properties
   (`EnableTemporaryViewPropertiesMode` with the view's own id when it has no
-  template, after `CanEnableTemporaryViewPropertiesMode`). Changes made there
-  are dropped on exit, so Keep does not cover them.
+  template, after `CanEnableTemporaryViewPropertiesMode`). Category overrides
+  made there are dropped on exit, so Keep does not cover them. Element
+  overrides (T0, T1) are not: measured on Revit 2026, a color set with
+  `SetElementOverrides` stays in the view after the mode ends. The adapter
+  records each element's overrides before the panel first changes them in a
+  view, and Reset puts those back, so Reset leaves the view exactly as it was.
 - **N changes** is counted by the panel; Revit cannot report it.
 - **Keep** converts hide/isolate to permanent
   (`ConvertTemporaryHideIsolateToPermanent`). When T3 hides are in the
   journal, Keep asks inline: *N link elements stay hidden in this view. Show
   them later with Reveal Hidden Elements.* (Keep · Cancel); Keep then clears
   the journal.
-- **Reset** disables both `TemporaryHideIsolate` and `TemporaryViewProperties`
-  and unhides every journal entry of this view through the T3 queue, then
-  clears the journal. Revit also drops temporary state when the model closes;
+- **Reset** disables both `TemporaryHideIsolate` and `TemporaryViewProperties`,
+  restores the element overrides recorded before the panel's Halftone and
+  Color, and unhides every journal entry of this view through the T3 queue,
+  then clears the journal. Revit also drops temporary state when the model closes;
   T3 hides stay in the view after a close, as Keep would leave them.
 - **The eye** is one toggle on the clicked row, or on every selected row when
   the clicked row is selected. Revit has no per-element temporary unhide, so

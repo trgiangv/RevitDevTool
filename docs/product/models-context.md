@@ -41,9 +41,9 @@ Three icon buttons decide which elements the panel counts and filters:
 
 | Scope | Elements |
 |-------|----------|
-| Selection | What is selected in Revit, from any document. The documents box hides: the selection decides the documents. |
-| Active view (default) | What the active view shows, per ticked document. Links count only in plan, ceiling, engineering, area, section, elevation, detail, 3D and walkthrough views; other views (sheets, schedules, legends, drafting) show no linked elements. |
-| Whole model | Every model element of the ticked documents, main model and primary design options. |
+| Selection | What is selected in Revit, from any document, including elements of a secondary design option shown in the view they were picked in. The documents box hides: the selection decides the documents. |
+| Active view (default) | What the active view shows, per ticked document, with the view's design option settings: a view that shows a secondary option counts that option and not the primary. Links count only in plan, ceiling, engineering, area, section, elevation, detail, 3D and walkthrough views; other views (sheets, schedules, legends, drafting) show no linked elements. |
+| Whole model | Every model element of the ticked documents, main model and primary design options, the same set a Revit schedule lists. Secondary options never count, match or get selected here. |
 
 Visibility actions always work on the active view, whatever the scope.
 
@@ -162,31 +162,59 @@ the link's linked view) shows "in view".
 
 ### Categories
 
-A checkbox list with counts and search, folded to a summary line. *All · None*
+A checkbox list with counts and search, folded to a summary line. An element
+counts under its own category (a wall used as a curtain panel counts as Curtain
+Panels). *All · None*
 tick or untick the categories the search shows. Checked categories always mean
 "any of". With no categories checked the filter looks at every model category.
 
-### Rules and sets
+### Conditions and groups
 
-- A set matches **All (AND)** or **Any (OR)** of its children. Sets nest
-  (**+ Set**), and **NOT** inverts a set.
-- Each rule is parameter, operator, value. With no rules every element of the
-  checked categories matches. A custom filter with no categories and no rules
-  matches nothing.
+- A **group** holds conditions and nested groups (**+ Condition**, **+ Group**).
+  One **AND** or **OR** button sits between its children. It shows the group's
+  match, and a click switches the whole group. There is no NOT: use the negative
+  operators (*does not equal*, *empty*, *undefined* ...).
+- Each condition is parameter, operator, value. With no conditions every element
+  of the checked categories matches. A custom filter with no categories and no
+  conditions matches nothing.
+- **Group scope**: each nested group can limit its documents (by file, so every
+  instance of a link) and its categories. Empty means *Same as parent*. A scope
+  only narrows its parent, and the lists offer only the parent's items.
+  - A value that is no longer in the parent stays as a tag and the group shows a
+    warning.
+  - A saved document the model does not have marks the group *unresolved*; it
+    matches nothing.
+  - Example: (Arch.rvt, Walls: Fire Rating = 2h) OR (MEP.rvt, Ducts: Insulation
+    undefined).
+- **Order**: drag a card by its six-dot grip, or focus the grip and press
+  Alt+Up / Alt+Down. A condition or a group moves within its group or into
+  another group, never into itself; a line shows where it will land.
+- **Collapse**: the arrow in a group header hides its children.
 - **Parameter picker**: type to search; the list opens on its own once 100 or
-  fewer items match (Ctrl+Space opens it any time). Each item shows tags:
-  origin (Built-in, Shared, Project, Family), binding (Instance, Type), data
-  type, and a red **x/y docs** tag when the parameter exists in only x of the y
-  ticked documents.
-- **The list follows the categories.** With categories checked it lists the
-  union of parameters found for any checked category, and coverage counts only
-  the ticked documents that contain one of them. With none checked it lists
-  all. A rule whose parameter drops out of the list keeps it and shows its name.
+  fewer items match (Ctrl+Space opens it any time). Rows sit under two headers,
+  **Instance · N** and **Type · N** (rows shown), which stay at the top while
+  scrolling and cannot be picked. A row is the parameter name, a source icon
+  for Project (green), Shared (blue) and Family (orange) parameters (built-in
+  shows none), and its categories on the right ("Doors, Windows +2"). A name
+  that matches the typed text exactly comes first in its section.
+- **Tooltip** on a row and on the chosen parameter: the name, then only the
+  facts it has (BuiltInParameter, GUID, Discipline, Type of parameter, Group),
+  the models that have it, and its categories (families for a family
+  parameter), five each then "+ N more".
+- A parameter that only some models have is not a warning: a rule on it
+  matches in the models that have it.
+- **The list follows the group's scope.** It lists the union of parameters
+  found for any category in the condition's group scope (its documents and
+  categories after narrowing). With no category in scope it lists all. Value counts
+  follow the same scope. A condition whose parameter drops out of the list keeps
+  it and shows its name.
+- Built-in parameters Revit can filter on are listed even when Revit's filter
+  dialog leaves them out (for example Reference Level on ducts).
 - One parameter is one item across documents: built-in by its built-in id,
   shared by GUID, project and family parameters by name plus data type. A
   family parameter and a project parameter with the same name and data type
-  are one item with both tags; the same name with another data type is another
-  item.
+  are one item; the same name with another data type is another item. The
+  chosen parameter box shows the source icon and "Type" for a type parameter.
 
 ### Operators and values
 
@@ -195,22 +223,26 @@ The value kind comes from the parameter, never from the user:
 | Kind | Operators | Value editor |
 |------|-----------|--------------|
 | Text | equals, does not equal, greater / less (or equal), contains, begins with, ends with, and their negations | Free text with suggestions |
-| Integer, Number | equals, does not equal, greater / less (or equal) | Free text; Number shows a unit hint and parses with the Current model's units |
+| Integer, Number | equals, does not equal, greater / less (or equal) | Free text with suggestions. A typed number is read in the Current model's units (the placeholder shows an example such as "300 mm") and means the same value in every model; equals matches every value that displays as the typed text there. A value picked from the list keeps the stored number behind it |
 | Yes/No | equals, does not equal | Yes / No |
 | Element (reference) | equals, does not equal | Pick from the values found |
 | Enum (integer with named values) | equals, does not equal | Pick from the names found |
 
-Every kind also has *has a value*, *has no value*, *parameter exists* and
-*parameter missing*, which need no value.
+Every kind also has *not empty*, *empty*, *defined* (the element has the
+parameter) and *undefined* (it does not), which need no value.
 
 - The value drop-down lists real values in the ticked documents with counts, at
   most 500 ("more…"), and a `[No parameter] · N` line.
 - **Aa** (Text only, off by default) makes the rule match case. Revit's own text
   rules ignore case; with Aa on, `= "S10"` no longer matches `s10`.
 - *does not equal* and the other negative operators skip elements that do not
-  have the parameter. Use *parameter missing* to find those.
+  have the parameter. Use *undefined* to find those.
 - A parameter that is missing in a document gives no match there (except for
-  *parameter missing*, which then matches every element of that document).
+  *undefined*, which then matches every element of that document).
+- Type parameters work like instance parameters: *empty*, *not empty*,
+  *defined* and *undefined* look at the element's type.
+- A Revit filter with an inverted rule reads as the negated operators with AND
+  and OR swapped; a rule with no negated operator reads as *Unsupported rule*.
 
 ### Result row
 
@@ -220,8 +252,12 @@ Every kind also has *has a value*, *has no value*, *parameter exists* and
   was turned on, so repeated edits never pile up.
 - **Live** (on by default): each edit of categories, rules, mode or source pushes
   the result to the Revit selection after about 300 ms. Above 5,000 matches Live
-  pauses (*Live paused · use Select in Revit*) and *Select in Revit* shows in the
-  menu.
+  pauses: the switch and its label *Live* stay as they are (your choice is
+  kept), one short warning line under the count reads *Paused: over 5,000
+  matches*, nothing is sent, and *Select in Revit* shows in the menu. The line
+  follows the state: it is gone as soon as the result is 5,000 or fewer (a
+  narrower filter, no categories, no filter selected) or Live is off, and Live
+  sends again by itself.
 - A model edit or a context refresh (scope, documents, view) only recounts. It
   never changes the Revit selection, so an edit in Properties never drops the
   element being edited.
