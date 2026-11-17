@@ -45,7 +45,7 @@ public sealed class FakeHost
             ]);
         catalog.Setup(host => host.ReadAsync(It.IsAny<DocumentKey>(), 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new FilterDefinition([],
-                FilterSet.All(new FilterRule(FakeParameters.Comments, FilterOperator.HasValue),
+                FilterSet.All(new FilterRule(FakeParameters.Comments, FilterOperator.NotEmpty),
                     new UnsupportedRule("Global parameter association"))));
         catalog.Setup(host => host.EvaluateAsync(It.IsAny<DocumentKey>(), It.IsAny<long>(),
                 It.IsAny<IReadOnlyCollection<long>?>(), It.IsAny<CancellationToken>()))

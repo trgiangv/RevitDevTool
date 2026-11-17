@@ -11,7 +11,7 @@ public static class FakeFilterTrees
     [
         FilterOperator.Equal, FilterOperator.NotEqual, FilterOperator.Greater, FilterOperator.Less,
         FilterOperator.Contains, FilterOperator.NotContains, FilterOperator.BeginsWith, FilterOperator.NotBeginsWith,
-        FilterOperator.EndsWith, FilterOperator.NotEndsWith, FilterOperator.HasValue
+        FilterOperator.EndsWith, FilterOperator.NotEndsWith, FilterOperator.NotEmpty
     ];
 
     public static IReadOnlyList<FilterSet> Generate(int count)
@@ -31,7 +31,7 @@ public static class FakeFilterTrees
         var children = Enumerable.Range(0, faker.Random.Int(1, 3))
             .Select(_ => depth < 2 && faker.Random.Bool(0.3f) ? (FilterNode)Set(faker, depth + 1) : Rule(faker))
             .ToList();
-        return new FilterSet(faker.PickRandom(SetMatch.All, SetMatch.Any), children, faker.Random.Bool(0.3f));
+        return new FilterSet(faker.PickRandom(SetMatch.All, SetMatch.Any), children);
     }
 
     private static FilterRule Rule(Faker faker)

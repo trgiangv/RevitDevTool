@@ -3,6 +3,7 @@ using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
 using Moq;
 using System.Collections.Specialized;
+using System.Globalization;
 
 namespace DevTools.ModelsContext.Tests;
 
@@ -14,14 +15,18 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.Root.AddRuleCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
         var rule = (RuleViewModel)filter.Root.Children[0];
 
         rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.DisplayName == "Width");
 
-        CollectionAssert.AreEquivalent(new[] { "Code", "Comments", "Flag", "Level", "Mark", "Swing Angle", "Width" },
-            filter.Parameters.Select(parameter => parameter.DisplayName).ToArray());
+        CollectionAssert.AreEquivalent(new[]
+            {
+                "Code", "Comments", "Fire Rating", "Flag", "Function", "Insulation", "Level", "Mark", "Swing Angle",
+                "System Type", "Width"
+            },
+            filter.Root.Parameters.Select(parameter => parameter.DisplayName).ToArray());
         Assert.AreEqual(ValueKind.Number, rule.Kind);
         Assert.AreEqual(FakeParameters.Width, rule.Parameter);
     }
@@ -33,13 +38,12 @@ public sealed class FilterTabTests
         fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
         fixture.Settle();
 
-        var parameters = fixture.Filter.Parameters;
+        var parameters = fixture.Filter.Root.Parameters;
         var width = parameters.Single(parameter => parameter.Key == FakeParameters.Width);
 
         Assert.AreEqual(ParameterOrigin.Project | ParameterOrigin.Family, width.Origins);
         Assert.AreEqual(ParameterBinding.Instance | ParameterBinding.Type, width.Bindings);
-        Assert.AreEqual(2, width.Coverage);
-        Assert.AreEqual(3, width.DocumentCount);
+        Assert.HasCount(2, width.Models);
         Assert.HasCount(2, parameters.Where(parameter => parameter.DisplayName == "Code").ToList());
     }
 
@@ -48,8 +52,8 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.Root.AddRuleCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
         var rule = (RuleViewModel)filter.Root.Children[0];
         rule.Operator = FilterOperator.Contains;
 
@@ -65,8 +69,8 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.Root.AddRuleCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
         var rule = (RuleViewModel)filter.Root.Children[0];
         rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.DisplayName == "Mark");
         rule.Value = "m-001";
@@ -82,33 +86,33 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.Root.AddRuleCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
         var rule = (RuleViewModel)filter.Root.Children[0];
         rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.DisplayName == "Comments");
         rule.Value = "Check";
         fixture.Settle();
-        var before = filter.Result.Count;
-        var removed = filter.Result.First(element => element.Document == FakeModelGenerator.Current);
+        var before = filter.Runner.Result.Count;
+        var removed = filter.Runner.Result.First(element => element.Document == FakeModelGenerator.Current);
         fixture.Model.EchoSelection = false;
         await fixture.Model.SelectAsync([], CancellationToken.None);
 
         fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, [removed.Id]));
         fixture.Settle();
 
-        Assert.AreEqual(before - 1, filter.Result.Count);
+        Assert.AreEqual(before - 1, filter.Runner.Result.Count);
         Assert.IsEmpty(await fixture.Model.GetSelectionAsync(CancellationToken.None));
     }
 
     [TestMethod]
-    public async Task HostUnitsParseLinkNumbers()
+    public async Task TypedNumberUsesCurrentUnits()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.UnitFactors[FakeModelGenerator.MepSource] = 1000;
         fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.Root.AddRuleCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
         var rule = (RuleViewModel)filter.Root.Children[0];
         rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.Key == FakeParameters.Width);
         rule.Value = "300";
@@ -119,7 +123,88 @@ public sealed class FilterTabTests
             FakeParameters.TryGet(snapshot, row, FakeParameters.Width, fixture.Model.Data.Levels, out var value)
             && value == "300");
         Assert.IsGreaterThan(0, expected);
-        Assert.AreEqual(expected, filter.Result.Count(element => element.Document == FakeModelGenerator.Mep));
+        Assert.AreEqual(expected, filter.Runner.Result.Count(element => element.Document == FakeModelGenerator.Mep));
+    }
+
+    [TestMethod]
+    public async Task PickedValueKeepsStoredNumber()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.DisplayFactors[FakeModelGenerator.MepSource] = 1000;
+        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        var filter = fixture.Filter;
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
+        var rule = (RuleViewModel)filter.Root.Children[0];
+        rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.Key == FakeParameters.Width);
+        await rule.LoadValuesCommand.ExecuteAsync(null);
+
+        rule.PickedValue = rule.Values.Single(value => value.Value == "0.3");
+        fixture.Settle();
+
+        var snapshot = TestModel.Snapshot(FakeModelGenerator.Mep);
+        var expected = snapshot.Rows.Count(row =>
+            FakeParameters.TryGet(snapshot, row, FakeParameters.Width, fixture.Model.Data.Levels, out var value)
+            && value == "300");
+        Assert.IsGreaterThan(0, expected);
+        Assert.AreEqual("0.3", rule.Value);
+        Assert.AreEqual(expected, filter.Runner.Result.Count(element => element.Document == FakeModelGenerator.Mep));
+    }
+
+    [TestMethod]
+    public async Task TypingDropsPickedNumber()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.DisplayFactors[FakeModelGenerator.MepSource] = 1000;
+        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        var filter = fixture.Filter;
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
+        var rule = (RuleViewModel)filter.Root.Children[0];
+        rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.Key == FakeParameters.Width);
+        await rule.LoadValuesCommand.ExecuteAsync(null);
+        rule.PickedValue = rule.Values.Single(value => value.Value == "0.3");
+
+        rule.Value = "0.35";
+        fixture.Settle();
+
+        Assert.IsNull(rule.Picked);
+        Assert.AreEqual(0, filter.Runner.Result.Count(element => element.Document == FakeModelGenerator.Mep));
+    }
+
+    [TestMethod]
+    public async Task PlaceholderUsesCurrentModel()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.Examples[FakeParameters.LengthSpec] = "1' - 0\"";
+        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        var filter = fixture.Filter;
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
+        var rule = (RuleViewModel)filter.Root.Children[0];
+
+        rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.Key == FakeParameters.Width);
+        fixture.Settle();
+
+        Assert.AreEqual("1' - 0\"", rule.ValueHint);
+        Assert.IsTrue(fixture.Model.ExampleRequests.All(model => model == FakeModelGenerator.Current));
+    }
+
+    [TestMethod]
+    public async Task TextHasNoPlaceholder()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
+        var rule = (RuleViewModel)filter.Root.Children[0];
+        rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.Key == FakeParameters.Width);
+        fixture.Settle();
+
+        rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.Key == FakeParameters.Mark);
+        fixture.Settle();
+
+        Assert.IsNull(rule.ValueHint);
     }
 
     [TestMethod]
@@ -127,10 +212,10 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.Root.AddSetCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddGroupCommand.Execute(null);
         var set = (RuleSetViewModel)filter.Root.Children[0];
-        set.AddRuleCommand.Execute(null);
+        set.AddConditionCommand.Execute(null);
         var rule = set.Children[0];
 
         rule.RemoveCommand.Execute(null);
@@ -138,7 +223,7 @@ public sealed class FilterTabTests
 
         Assert.AreEqual(0, set.Children.Count);
         Assert.AreEqual(0, filter.Root.Children.Count);
-        Assert.IsTrue(filter.IsDirty);
+        Assert.IsTrue(filter.Library.IsDirty);
     }
 
     [TestMethod]
@@ -146,7 +231,7 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        filter.Library.SelectedSource = filter.Library.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
         var rule = filter.Root.Children[0];
 
         Assert.IsFalse(rule.RemoveCommand.CanExecute(null));
@@ -157,13 +242,13 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.SaveCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Library.SaveCommand.Execute(null);
 
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
 
-        Assert.AreEqual("New filter 2", filter.Name);
-        Assert.IsTrue(filter.IsEditingName);
+        Assert.AreEqual("New filter 2", filter.Library.Name);
+        Assert.IsTrue(filter.Library.IsEditingName);
     }
 
     [TestMethod]
@@ -171,15 +256,15 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.SaveCommand.Execute(null);
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Library.SaveCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
 
-        filter.EditName = " new FILTER 1 ";
+        filter.Library.EditName = " new FILTER 1 ";
 
-        Assert.AreEqual(FilterNames.DuplicateName, filter.NameError);
-        Assert.IsFalse(filter.SaveCommand.CanExecute(null));
-        Assert.IsFalse(filter.CommitRename());
+        Assert.AreEqual(FilterNames.DuplicateName, filter.Library.NameError);
+        Assert.IsFalse(filter.Library.SaveCommand.CanExecute(null));
+        Assert.IsFalse(filter.Library.CommitRename());
     }
 
     [TestMethod]
@@ -187,12 +272,12 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
 
-        filter.EditName = "   ";
+        filter.Library.EditName = "   ";
 
-        Assert.AreEqual(FilterNames.EmptyName, filter.NameError);
-        Assert.IsFalse(filter.SaveCommand.CanExecute(null));
+        Assert.AreEqual(FilterNames.EmptyName, filter.Library.NameError);
+        Assert.IsFalse(filter.Library.SaveCommand.CanExecute(null));
     }
 
     [TestMethod]
@@ -200,13 +285,13 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.EditName = string.Empty;
+        filter.Library.AddCommand.Execute(null);
+        filter.Library.EditName = string.Empty;
 
-        filter.CancelRename();
+        filter.Library.CancelRename();
 
-        Assert.AreEqual("New filter 1", filter.EditName);
-        Assert.IsNull(filter.NameError);
+        Assert.AreEqual("New filter 1", filter.Library.EditName);
+        Assert.IsNull(filter.Library.NameError);
     }
 
     [TestMethod]
@@ -214,13 +299,13 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.EditName = "  Ducts only ";
+        filter.Library.AddCommand.Execute(null);
+        filter.Library.EditName = "  Ducts only ";
 
-        filter.SaveCommand.Execute(null);
+        filter.Library.SaveCommand.Execute(null);
 
         Assert.AreEqual("Ducts only", fixture.CustomFilters.Object.Load().Single().Name);
-        Assert.IsFalse(filter.IsDirty);
+        Assert.IsFalse(filter.Library.IsDirty);
     }
 
     [TestMethod]
@@ -228,12 +313,12 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.EditName = "Ducts only";
+        filter.Library.AddCommand.Execute(null);
+        filter.Library.EditName = "Ducts only";
 
-        Assert.IsTrue(filter.CommitRename());
+        Assert.IsTrue(filter.Library.CommitRename());
 
-        Assert.AreEqual("Ducts only", filter.SelectedSource!.Name);
+        Assert.AreEqual("Ducts only", filter.Library.SelectedSource!.Name);
     }
 
     [TestMethod]
@@ -241,13 +326,13 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.SaveCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
+        filter.Library.SaveCommand.Execute(null);
 
-        filter.RenameCommand.Execute(null);
-        filter.EditName = "Ducts only";
-        filter.CommitRename();
-        filter.SaveCommand.Execute(null);
+        filter.Library.RenameCommand.Execute(null);
+        filter.Library.EditName = "Ducts only";
+        filter.Library.CommitRename();
+        filter.Library.SaveCommand.Execute(null);
 
         Assert.AreEqual("Ducts only", fixture.CustomFilters.Object.Load().Single().Name);
     }
@@ -257,15 +342,15 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.SaveCommand.Execute(null);
-        var saved = filter.SelectedSource!;
-        filter.BeginRename();
-        filter.EditName = "Renamed";
-        filter.CommitRename();
+        filter.Library.AddCommand.Execute(null);
+        filter.Library.SaveCommand.Execute(null);
+        var saved = filter.Library.SelectedSource!;
+        filter.Library.BeginRename();
+        filter.Library.EditName = "Renamed";
+        filter.Library.CommitRename();
 
-        filter.SelectedSource = filter.Sources.First(source => !source.IsCustom);
-        filter.DiscardAndSwitchCommand.Execute(null);
+        filter.Library.SelectedSource = filter.Library.Sources.First(source => !source.IsCustom);
+        filter.Library.DiscardAndSwitchCommand.Execute(null);
 
         Assert.AreEqual("New filter 1", saved.Name);
     }
@@ -275,16 +360,16 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        var host = filter.Sources.First(source => !source.IsCustom);
+        filter.Library.AddCommand.Execute(null);
+        var host = filter.Library.Sources.First(source => !source.IsCustom);
 
-        filter.SelectedSource = host;
-        var asked = filter.IsSwitchPending;
-        filter.DiscardAndSwitchCommand.Execute(null);
+        filter.Library.SelectedSource = host;
+        var asked = filter.Library.IsSwitchPending;
+        filter.Library.DiscardAndSwitchCommand.Execute(null);
 
         Assert.IsTrue(asked);
-        Assert.AreSame(host, filter.SelectedSource);
-        Assert.IsFalse(filter.Sources.Any(source => source.IsCustom));
+        Assert.AreSame(host, filter.Library.SelectedSource);
+        Assert.IsFalse(filter.Library.Sources.Any(source => source.IsCustom));
     }
 
     [TestMethod]
@@ -293,10 +378,10 @@ public sealed class FilterTabTests
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
 
-        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        filter.Library.SelectedSource = filter.Library.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
 
         Assert.IsTrue(filter.IsReadOnly);
-        Assert.IsFalse(filter.DeleteCommand.CanExecute(null));
+        Assert.IsFalse(filter.Library.DeleteCommand.CanExecute(null));
         Assert.IsInstanceOfType<UnsupportedRuleViewModel>(filter.Root.Children[1]);
     }
 
@@ -305,13 +390,13 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        var host = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        var host = filter.Library.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
 
-        filter.SelectedSource = host;
+        filter.Library.SelectedSource = host;
         fixture.Settle();
 
         var expected = fixture.Elements(FakeModelGenerator.Current, 7);
-        CollectionAssert.AreEquivalent(expected.ToList(), filter.Result.ToList());
+        CollectionAssert.AreEquivalent(expected.ToList(), filter.Runner.Result.ToList());
         fixture.HostFilters.Verify(host => host.EvaluateAsync(FakeModelGenerator.Current, 1,
             It.IsAny<IReadOnlyCollection<long>?>(), It.IsAny<CancellationToken>()));
     }
@@ -321,16 +406,16 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        filter.Library.SelectedSource = filter.Library.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
         fixture.Settle();
-        var before = filter.Result;
+        var before = filter.Runner.Result;
         fixture.HostFilters.Invocations.Clear();
 
         Category(filter, "Doors").IsChecked = true;
         fixture.Settle();
 
-        Assert.IsFalse(filter.IsDirty);
-        Assert.AreSame(before, filter.Result);
+        Assert.IsFalse(filter.Library.IsDirty);
+        Assert.AreSame(before, filter.Runner.Result);
         fixture.HostFilters.Verify(host => host.EvaluateAsync(It.IsAny<DocumentKey>(), It.IsAny<long>(),
             It.IsAny<IReadOnlyCollection<long>?>(), It.IsAny<CancellationToken>()), Times.Never());
     }
@@ -340,14 +425,14 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
         fixture.CustomFilters.Setup(store => store.Save(It.IsAny<IReadOnlyList<CustomFilter>>()))
             .Throws(new InvalidOperationException("Settings file is locked."));
 
-        filter.SaveCommand.Execute(null);
+        filter.Library.SaveCommand.Execute(null);
 
         Assert.AreEqual("Settings file is locked.", fixture.Panel.Message);
-        Assert.IsTrue(filter.IsDirty);
+        Assert.IsTrue(filter.Library.IsDirty);
         Assert.IsEmpty(fixture.CustomFilters.Object.Load());
     }
 
@@ -356,7 +441,7 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
         var sent = new List<IReadOnlyCollection<ElementRef>>();
         fixture.Model.SelectionChanged += (_, selection) => sent.Add(selection);
 
@@ -366,7 +451,7 @@ public sealed class FilterTabTests
         fixture.Settle();
 
         Assert.HasCount(1, sent);
-        Assert.AreEqual(filter.ResultCount, sent[0].Count);
+        Assert.AreEqual(filter.Runner.ResultCount, sent[0].Count);
     }
 
     [TestMethod]
@@ -375,20 +460,87 @@ public sealed class FilterTabTests
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
         fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
         var sent = 0;
         fixture.Model.SelectionChanged += (_, _) => sent++;
 
-        foreach (var category in filter.Categories)
+        foreach (var category in filter.Categories.Items)
         {
             category.IsChecked = true;
         }
 
         fixture.Settle();
 
-        Assert.IsGreaterThan(FilterTabViewModel.LivePauseLimit, filter.ResultCount);
-        Assert.IsTrue(filter.IsLivePaused);
+        Assert.IsGreaterThan(FilterRunner.LivePauseLimit, filter.Runner.ResultCount);
+        Assert.IsTrue(filter.Runner.IsLivePaused);
+        Assert.IsTrue(filter.Runner.IsLiveOn);
+        StringAssert.Contains(FilterRunner.LivePausedText, FilterRunner.LivePauseLimit.ToString("N0", CultureInfo.CurrentCulture));
         Assert.AreEqual(0, sent);
+    }
+
+    [TestMethod]
+    public async Task PauseEndsUnderLimit()
+    {
+        using var fixture = await PausedAsync();
+        var filter = fixture.Filter;
+        var sent = 0;
+        fixture.Model.SelectionChanged += (_, _) => sent++;
+
+        filter.Categories.CheckNoneCommand.Execute(null);
+        Category(filter, "Doors").IsChecked = true;
+        fixture.Settle();
+
+        Assert.IsFalse(filter.Runner.IsLivePaused);
+        Assert.AreEqual(1, sent);
+    }
+
+    [TestMethod]
+    public async Task PauseEndsForEmptyFilter()
+    {
+        using var fixture = await PausedAsync();
+
+        fixture.Filter.Categories.CheckNoneCommand.Execute(null);
+        fixture.Settle();
+
+        Assert.AreEqual(0, fixture.Filter.Runner.ResultCount);
+        Assert.IsFalse(fixture.Filter.Runner.IsLivePaused);
+    }
+
+    [TestMethod]
+    public async Task PauseEndsWhenLiveOff()
+    {
+        using var fixture = await PausedAsync();
+
+        fixture.Filter.Runner.IsLiveOn = false;
+
+        Assert.IsFalse(fixture.Filter.Runner.IsLivePaused);
+    }
+
+    [TestMethod]
+    public async Task PauseEndsWithNoFilter()
+    {
+        using var fixture = await PausedAsync();
+
+        fixture.Filter.Library.DeleteCommand.Execute(null);
+        fixture.Settle();
+
+        Assert.IsNull(fixture.Filter.Library.SelectedSource);
+        Assert.IsFalse(fixture.Filter.Runner.IsLivePaused);
+    }
+
+    private static async Task<PanelFixture> PausedAsync()
+    {
+        var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        fixture.Filter.Library.AddCommand.Execute(null);
+        foreach (var category in fixture.Filter.Categories.Items)
+        {
+            category.IsChecked = true;
+        }
+
+        fixture.Settle();
+        Assert.IsTrue(fixture.Filter.Runner.IsLivePaused);
+        return fixture;
     }
 
     [TestMethod]
@@ -398,10 +550,10 @@ public sealed class FilterTabTests
         var filter = fixture.Filter;
         var baseline = fixture.Elements(FakeModelGenerator.Current, 1);
         fixture.Model.RaiseSelectionChanged(baseline);
-        filter.IsLiveOn = false;
-        filter.IsLiveOn = true;
-        filter.AddCommand.Execute(null);
-        filter.Mode = ResultSelectionMode.Add;
+        filter.Runner.IsLiveOn = false;
+        filter.Runner.IsLiveOn = true;
+        filter.Library.AddCommand.Execute(null);
+        filter.Runner.Mode = ResultSelectionMode.Add;
 
         Category(filter, "Roofs").IsChecked = true;
         fixture.Settle();
@@ -410,7 +562,7 @@ public sealed class FilterTabTests
         fixture.Settle();
 
         var selection = await fixture.Model.GetSelectionAsync(CancellationToken.None);
-        CollectionAssert.AreEquivalent(baseline.Union(filter.Result).ToList(), selection.ToList());
+        CollectionAssert.AreEquivalent(baseline.Union(filter.Runner.Result).ToList(), selection.ToList());
     }
 
     [TestMethod]
@@ -418,14 +570,14 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
-        filter.CategorySearch = "Doors";
+        filter.Library.AddCommand.Execute(null);
+        filter.Categories.Search = "Doors";
 
-        filter.CheckAllCommand.Execute(null);
+        filter.Categories.CheckAllCommand.Execute(null);
 
         CollectionAssert.AreEqual(new[] { "Doors" },
-            filter.Categories.Where(category => category.IsChecked).Select(category => category.Name).ToArray());
-        Assert.IsTrue(filter.IsDirty);
+            filter.Categories.Items.Where(category => category.IsChecked).Select(category => category.Name).ToArray());
+        Assert.IsTrue(filter.Library.IsDirty);
     }
 
     [TestMethod]
@@ -433,12 +585,12 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
         Category(filter, "Doors").IsChecked = true;
         Category(filter, "Windows").IsChecked = true;
-        filter.CategorySearch = "Doors";
+        filter.Categories.Search = "Doors";
 
-        filter.CheckNoneCommand.Execute(null);
+        filter.Categories.CheckNoneCommand.Execute(null);
 
         Assert.IsFalse(Category(filter, "Doors").IsChecked);
         Assert.IsTrue(Category(filter, "Windows").IsChecked);
@@ -449,13 +601,13 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
-        var before = filter.Categories.Where(category => category.IsChecked).ToList();
+        filter.Library.SelectedSource = filter.Library.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        var before = filter.Categories.Items.Where(category => category.IsChecked).ToList();
 
-        filter.CheckAllCommand.Execute(null);
+        filter.Categories.CheckAllCommand.Execute(null);
 
-        CollectionAssert.AreEqual(before, filter.Categories.Where(category => category.IsChecked).ToList());
-        Assert.IsFalse(filter.IsDirty);
+        CollectionAssert.AreEqual(before, filter.Categories.Items.Where(category => category.IsChecked).ToList());
+        Assert.IsFalse(filter.Library.IsDirty);
     }
 
     [TestMethod]
@@ -465,14 +617,14 @@ public sealed class FilterTabTests
         var filter = fixture.Filter;
         var bar = fixture.Panel.ContextBar;
         bar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
-        filter.SelectedSource = filter.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
+        filter.Library.SelectedSource = filter.Library.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
         fixture.Settle();
-        var expected = filter.Result;
-        filter.Sources.CollectionChanged += (_, change) =>
+        var expected = filter.Runner.Result;
+        filter.Library.Sources.CollectionChanged += (_, change) =>
         {
             if (change.Action == NotifyCollectionChangedAction.Reset)
             {
-                filter.SelectedSource = null;
+                filter.Library.SelectedSource = null;
             }
         };
 
@@ -484,8 +636,8 @@ public sealed class FilterTabTests
         fixture.Settle();
 
         Assert.IsNull(fixture.Panel.Message);
-        Assert.AreEqual("Commented", filter.SelectedSource?.Name);
-        CollectionAssert.AreEquivalent(expected.ToList(), filter.Result.ToList());
+        Assert.AreEqual("Commented", filter.Library.SelectedSource?.Name);
+        CollectionAssert.AreEquivalent(expected.ToList(), filter.Runner.Result.ToList());
     }
 
     [TestMethod]
@@ -533,13 +685,13 @@ public sealed class FilterTabTests
         var filter = fixture.Filter;
         Category(filter, "Doors").IsChecked = true;
 
-        filter.CheckNoneCommand.Execute(null);
+        filter.Categories.CheckNoneCommand.Execute(null);
 
         CollectionAssert.IsSubsetOf(new[] { FakeParameters.Width, FakeParameters.SwingAngle }, Keys(filter));
     }
 
     [TestMethod]
-    public async Task CoverageCountsCategoryDocuments()
+    public async Task ModelsListCategoryDocuments()
     {
         using var fixture = await OpenAllAsync();
         var filter = fixture.Filter;
@@ -553,7 +705,8 @@ public sealed class FilterTabTests
 
         ducts.IsChecked = true;
 
-        Assert.IsTrue(filter.Parameters.All(parameter => parameter.DocumentCount == expected));
+        var mark = filter.Root.Parameters.Single(parameter => parameter.Key == FakeParameters.Mark);
+        Assert.HasCount(expected, mark.Models);
     }
 
     [TestMethod]
@@ -562,7 +715,7 @@ public sealed class FilterTabTests
         using var fixture = await OpenAllAsync();
         var filter = fixture.Filter;
         Category(filter, "Doors").IsChecked = true;
-        filter.Root.AddRuleCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
         var rule = (RuleViewModel)filter.Root.Children[0];
         rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.Key == FakeParameters.SwingAngle);
         rule.Operator = FilterOperator.Greater;
@@ -582,18 +735,18 @@ public sealed class FilterTabTests
         var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
         fixture.Settle();
-        fixture.Filter.AddCommand.Execute(null);
+        fixture.Filter.Library.AddCommand.Execute(null);
         fixture.Settle();
         return fixture;
     }
 
     private static List<ParameterKey> Keys(FilterTabViewModel filter)
     {
-        return filter.Parameters.Select(parameter => parameter.Key).ToList();
+        return filter.Root.Parameters.Select(parameter => parameter.Key).ToList();
     }
 
     private static CategoryItemViewModel Category(FilterTabViewModel filter, string name)
     {
-        return filter.Categories.First(category => category.Name == name);
+        return filter.Categories.Items.First(category => category.Name == name);
     }
 }

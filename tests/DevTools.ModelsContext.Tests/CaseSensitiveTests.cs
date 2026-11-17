@@ -41,18 +41,6 @@ public sealed class CaseSensitiveTests
     }
 
     [TestMethod]
-    public async Task InvertedSetFlipsCaseRule()
-    {
-        var total = await CountAsync(FilterSet.All());
-
-        var notEquals = await CountAsync(FilterSet.Not(SetMatch.All, Mark(FilterOperator.Equal, "m-001", true)));
-        var notNotEquals = await CountAsync(FilterSet.Not(SetMatch.All, Mark(FilterOperator.NotEqual, "m-001", true)));
-
-        Assert.AreEqual(total, notEquals);
-        Assert.AreEqual(0, notNotEquals);
-    }
-
-    [TestMethod]
     public void WidenDropsCaseFlags()
     {
         var widened = CaseSensitiveRules.Widen(Trees()[0]);
@@ -86,11 +74,11 @@ public sealed class CaseSensitiveTests
         [
             FilterSet.All(Mark(FilterOperator.Equal, "M-001", true), Mark(FilterOperator.NotContains, "m-00", true)),
             FilterSet.Any(Mark(FilterOperator.BeginsWith, "m", true), Mark(FilterOperator.EndsWith, "1", true)),
-            FilterSet.Not(SetMatch.All, Mark(FilterOperator.Equal, "M-001", true)),
-            FilterSet.Not(SetMatch.Any, Mark(FilterOperator.NotEqual, "m-001", true),
-                FilterSet.Not(SetMatch.All, Mark(FilterOperator.Contains, "M-0", true))),
-            FilterSet.All(FilterSet.Not(SetMatch.Any, Mark(FilterOperator.Greater, "M-5", true)),
-                new FilterRule(FakeParameters.Comments, FilterOperator.HasValue))
+            FilterSet.All(Mark(FilterOperator.NotEqual, "M-001", true)),
+            FilterSet.Any(Mark(FilterOperator.NotEqual, "m-001", true),
+                FilterSet.All(Mark(FilterOperator.NotContains, "M-0", true))),
+            FilterSet.All(FilterSet.Any(Mark(FilterOperator.Greater, "M-5", true)),
+                new FilterRule(FakeParameters.Comments, FilterOperator.NotEmpty))
         ];
     }
 

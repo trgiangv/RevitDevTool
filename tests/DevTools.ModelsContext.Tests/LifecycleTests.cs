@@ -160,7 +160,7 @@ public sealed class LifecycleTests
         fixture.Model.RaiseParameterDefinitionsChanged(FakeModelGenerator.CurrentSource);
 
         Assert.AreEqual(reads + 1, fixture.Model.CatalogReads);
-        Assert.IsNotEmpty(fixture.Filter.Parameters);
+        Assert.IsNotEmpty(fixture.Filter.Root.Parameters);
     }
 
     [TestMethod]

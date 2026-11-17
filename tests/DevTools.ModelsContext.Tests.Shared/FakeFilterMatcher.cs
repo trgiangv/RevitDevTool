@@ -14,10 +14,15 @@ public static class FakeFilterMatcher
     {
         return node switch
         {
-            FilterSet set => set.Inverted != MatchesSet(snapshot, row, set, levels, hostUnitFactor),
+            FilterSet set => InCategories(snapshot, row, set.Scope) && MatchesSet(snapshot, row, set, levels, hostUnitFactor),
             FilterRule rule => MatchesRule(snapshot, row, rule, levels, hostUnitFactor),
             _ => false
         };
+    }
+
+    private static bool InCategories(DocumentSnapshot snapshot, ElementRow row, FilterScope? scope)
+    {
+        return scope is not { Categories.Count: > 0 } || scope.Categories.Contains(snapshot.Groups[row.GroupIndex].GroupId);
     }
 
     private static bool MatchesSet(
@@ -46,7 +51,7 @@ public static class FakeFilterMatcher
     {
         var ids = FakeParameters.IdsOf(snapshot, rule.Parameter);
         var own = FakeParameters.IdOf(snapshot, row, rule.Parameter);
-        if (rule.Operator == FilterOperator.Missing)
+        if (rule.Operator == FilterOperator.Undefined)
         {
             return !ids.Any(id => id == own && FakeParameters.TryGet(snapshot, row, rule.Parameter, levels, out _));
         }
@@ -67,9 +72,26 @@ public static class FakeFilterMatcher
             return TextRules.Matches(rule.Operator, exists, value, rule.Value, rule.IsCaseSensitive);
         }
 
-        if (!exists
-            || !double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var actual)
-            || !double.TryParse(rule.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var typed))
+        if (!exists || !double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var actual))
+        {
+            return false;
+        }
+
+        if (rule.Picked is { } picked)
+        {
+            return rule.Operator switch
+            {
+                FilterOperator.Equal => actual >= picked.Min && actual <= picked.Max,
+                FilterOperator.NotEqual => actual < picked.Min || actual > picked.Max,
+                FilterOperator.Greater => actual > picked.Max,
+                FilterOperator.GreaterOrEqual => actual >= picked.Min,
+                FilterOperator.Less => actual < picked.Min,
+                FilterOperator.LessOrEqual => actual <= picked.Max,
+                _ => false
+            };
+        }
+
+        if (!double.TryParse(rule.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var typed))
         {
             return false;
         }

@@ -179,25 +179,40 @@ public sealed partial class ContextMenuViewModel : ObservableObject
             return (_runtime.BusyText, false);
         }
 
-        var empty = target.IsEmpty ? VisibilityReasons.Nothing : null;
-        switch (action)
+        return action switch
         {
-            case MenuAction.SelectInHost or MenuAction.Zoom:
-                return (empty, false);
-            case MenuAction.SectionBox:
-                return (empty ?? (_visibility.View?.Is3D == true ? null : NeedsThreeDView), false);
-            case MenuAction.ResetView:
-                return (null, false);
-            default:
-                var check = _visibility.Check(target.Request(action switch
-                {
-                    MenuAction.Isolate => VisibilityAction.Isolate,
-                    MenuAction.HideShow => target.IsHidden ? VisibilityAction.Show : VisibilityAction.Hide,
-                    MenuAction.Halftone => VisibilityAction.Halftone,
-                    _ => VisibilityAction.Color
-                }));
-                return (check.DisabledReason, check.UsesReferenceCommands);
-        }
+            MenuAction.SelectInHost or MenuAction.Zoom => (EmptyReason(target), false),
+            MenuAction.SectionBox => (EmptyReason(target) ?? SectionBoxReason(), false),
+            MenuAction.ResetView => (null, false),
+            _ => CheckVisibility(target, action)
+        };
+    }
+
+    private static string? EmptyReason(MenuTarget target)
+    {
+        return target.IsEmpty ? VisibilityReasons.Nothing : null;
+    }
+
+    private string? SectionBoxReason()
+    {
+        return _visibility.View?.Is3D == true ? null : NeedsThreeDView;
+    }
+
+    private (string? Reason, bool UsesReferenceCommands) CheckVisibility(MenuTarget target, MenuAction action)
+    {
+        var check = _visibility.Check(target.Request(VisibilityActionOf(action, target.IsHidden)));
+        return (check.DisabledReason, check.UsesReferenceCommands);
+    }
+
+    private static VisibilityAction VisibilityActionOf(MenuAction action, bool isHidden)
+    {
+        return action switch
+        {
+            MenuAction.Isolate => VisibilityAction.Isolate,
+            MenuAction.HideShow => isHidden ? VisibilityAction.Show : VisibilityAction.Hide,
+            MenuAction.Halftone => VisibilityAction.Halftone,
+            _ => VisibilityAction.Color
+        };
     }
 
     private MenuItemViewModel Add(MenuAction action, string text, string icon, string? shortcut, Func<Task> execute)

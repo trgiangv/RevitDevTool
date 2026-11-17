@@ -55,9 +55,9 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _visibility = visibility;
         _bar = bar;
         _menu = menu;
-        _sendDebouncer = new Debouncer(runtime.Services.Scheduler, SelectionSyncDelay,
+        _sendDebouncer = new Debouncer(runtime.Scheduler, SelectionSyncDelay,
             () => _ = _runtime.RunAsync(SendSelectionAsync));
-        _searchDebouncer = new Debouncer(runtime.Services.Scheduler, SearchDelay,
+        _searchDebouncer = new Debouncer(runtime.Scheduler, SearchDelay,
             () => _ = _runtime.RunAsync(ApplySearchAsync));
         _visibility.Changed += (_, _) => OnVisibilityChanged();
         _visibility.VisibleIds = VisibleIdsOf;
@@ -245,16 +245,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
             switch (row.Kind)
             {
                 case TreeRowKind.AllModelsGroup:
-                    foreach (var document in _data.Documents)
-                    {
-                        var index = document.Snapshot.GroupIndexOf(row.Id);
-                        if (index >= 0)
-                        {
-                            elements.UnionWith(document.IdsUnder(RowPath.ForGroup(index))
-                                .Select(id => new ElementRef(document.Key, id)));
-                        }
-                    }
-
+                    AddAllModelsGroup(elements, row.Id);
                     break;
                 case TreeRowKind.LinkModel when row.Document is { } link:
                     elements.Add(new ElementRef(link.CurrentModel, link.LinkInstanceId));
@@ -269,6 +260,19 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         return elements.ToList();
+    }
+
+    private void AddAllModelsGroup(HashSet<ElementRef> elements, long groupId)
+    {
+        foreach (var document in _data.Documents)
+        {
+            var index = document.Snapshot.GroupIndexOf(groupId);
+            if (index >= 0)
+            {
+                elements.UnionWith(document.IdsUnder(RowPath.ForGroup(index))
+                    .Select(id => new ElementRef(document.Key, id)));
+            }
+        }
     }
 
     public void HighlightEyeTargets(TreeRow? row)
@@ -884,17 +888,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
             root.Kind is TreeRowKind.CurrentModelHeader or TreeRowKind.LinkModel && root.Document == element.Document);
         while (row is not null)
         {
-            await EnsureChildrenAsync(row);
-            row.IsExpanded = true;
-            var next = row.Children!.FirstOrDefault(child => child.Kind == TreeRowKind.Instance
-                ? child.Id == element.Id
-                : child.Kind != TreeRowKind.MorePage && scope.Snapshot.IsUnder(target, child.Path));
-            while (next is null && row.Children!.Count > 0 && row.Children[row.Children.Count - 1].Kind == TreeRowKind.MorePage)
-            {
-                var page = await AppendPageAsync(row);
-                next = page.FirstOrDefault(child => child.Kind == TreeRowKind.Instance && child.Id == element.Id);
-            }
-
+            var next = await ChildTowardAsync(row, element.Id, scope, target);
             if (next is { Kind: TreeRowKind.Instance })
             {
                 return next;
@@ -904,6 +898,40 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         return null;
+    }
+
+    private async Task<TreeRow?> ChildTowardAsync(TreeRow row, long id, DocumentScope scope, ElementRow target)
+    {
+        await EnsureChildrenAsync(row);
+        row.IsExpanded = true;
+        var next = row.Children!.FirstOrDefault(child => LeadsTo(child, id, scope, target));
+        while (next is null && EndsWithMorePage(row))
+        {
+            var page = await AppendPageAsync(row);
+            next = page.FirstOrDefault(child => IsInstance(child, id));
+        }
+
+        return next;
+    }
+
+    private static bool LeadsTo(TreeRow child, long id, DocumentScope scope, ElementRow target)
+    {
+        return child.Kind switch
+        {
+            TreeRowKind.Instance => child.Id == id,
+            TreeRowKind.MorePage => false,
+            _ => scope.Snapshot.IsUnder(target, child.Path)
+        };
+    }
+
+    private static bool IsInstance(TreeRow row, long id)
+    {
+        return row.Kind == TreeRowKind.Instance && row.Id == id;
+    }
+
+    private static bool EndsWithMorePage(TreeRow row)
+    {
+        return row.Children is { Count: > 0 } children && children[children.Count - 1].Kind == TreeRowKind.MorePage;
     }
 
     private async Task ExpandBranchAsync(TreeRow row)
@@ -1181,7 +1209,8 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
         if (scope.Ids is null)
         {
-            ids.AddRange(snapshot.Rows.Where(row => groups.Contains(row.GroupIndex)).Select(row => row.Id));
+            ids.AddRange(snapshot.Rows.Where(row => !row.SecondaryOption && groups.Contains(row.GroupIndex))
+                .Select(row => row.Id));
         }
         else
         {
@@ -1264,60 +1293,109 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     private void ApplyState(TreeRow row)
     {
-        if (DocumentOf(row) is { } document)
+        var document = DocumentOf(row);
+        if (document is not null)
         {
             row.DisabledReason = document.Info.IsLoaded ? null : VisibilityReasons.NotLoaded;
         }
 
         var stale = _visibility.Journal.IsStale;
+        ApplyKindState(row, document, stale);
+        ApplyOverride(row, stale);
+        if (row.Children is not { } children)
+        {
+            return;
+        }
+
+        foreach (var child in children)
+        {
+            ApplyState(child);
+        }
+    }
+
+    private void ApplyKindState(TreeRow row, DocumentScope? document, bool stale)
+    {
         switch (row.Kind)
         {
             case TreeRowKind.AllModelsHeader:
-                row.Count = _data.Documents.Sum(document => document.Counts.Count);
-                row.SelectedInside = _states.Values.Sum(state => state.Selected.Count);
-                row.Eye = RowEye.None;
+                ApplyAllModelsHeaderState(row);
                 break;
             case TreeRowKind.AllModelsGroup:
                 ApplyAllModelsState(row);
                 break;
-            case TreeRowKind.CurrentModelHeader or TreeRowKind.LinkModel when DocumentOf(row) is { } scope:
-                var state = _states[scope.Key];
-                row.Count = scope.Counts.Count;
-                row.SelectedInside = state.Selected.Count;
-                row.Eye = row.IsHeader ? RowEye.None
-                    : stale ? RowEye.Unknown
-                    : EyeOf(state.Hidden.Count, scope.Snapshot.ElementCount);
+            case TreeRowKind.CurrentModelHeader or TreeRowKind.LinkModel when document is not null:
+                ApplyModelState(row, document, stale);
                 break;
-            case TreeRowKind.Group or TreeRowKind.Family or TreeRowKind.Type when DocumentOf(row) is { } scope:
-                var keys = KeyPath(row.Path, scope.Snapshot.GroupingDepth);
-                var branch = _states[scope.Key];
-                row.Count = scope.Counts.CountAt(keys);
-                row.SelectedInside = branch.Selected.CountAt(keys);
-                row.Eye = GroupIdOf(row) is { } group && _visibility.IsGroupHidden(group) ? RowEye.HiddenByAllModels
-                    : stale && row.IsInsideLink ? RowEye.Unknown
-                    : EyeOf(branch.Hidden.CountAt(keys), scope.Snapshot.Counts.CountAt(keys));
+            case TreeRowKind.Group or TreeRowKind.Family or TreeRowKind.Type when document is not null:
+                ApplyBranchState(row, document, stale);
                 break;
-            case TreeRowKind.Instance when DocumentOf(row) is { } scope:
-                var element = new ElementRef(scope.Key, row.Id);
-                row.SelectedInside = _selectedElements.Contains(element) ? 1 : 0;
-                row.Eye = GroupIdOf(row) is { } owner && _visibility.IsGroupHidden(owner) ? RowEye.HiddenByAllModels
-                    : stale && row.IsInsideLink ? RowEye.Unknown
-                    : _states[scope.Key].HiddenIds.Contains(row.Id) ? RowEye.Hidden
-                    : RowEye.Shown;
+            case TreeRowKind.Instance when document is not null:
+                ApplyInstanceState(row, document, stale);
                 break;
             default:
                 row.Eye = RowEye.None;
                 break;
         }
+    }
 
-        ApplyOverride(row, stale);
-        if (row.Children is { } children)
+    private void ApplyAllModelsHeaderState(TreeRow row)
+    {
+        var count = 0;
+        foreach (var document in _data.Documents)
         {
-            foreach (var child in children)
-            {
-                ApplyState(child);
-            }
+            count += document.Counts.Count;
         }
+
+        var selected = 0;
+        foreach (var state in _states.Values)
+        {
+            selected += state.Selected.Count;
+        }
+
+        row.Count = count;
+        row.SelectedInside = selected;
+        row.Eye = RowEye.None;
+    }
+
+    private void ApplyModelState(TreeRow row, DocumentScope scope, bool stale)
+    {
+        var state = _states[scope.Key];
+        row.Count = scope.Counts.Count;
+        row.SelectedInside = state.Selected.Count;
+        row.Eye = row.IsHeader ? RowEye.None
+            : stale ? RowEye.Unknown
+            : EyeOf(state.Hidden.Count, scope.Snapshot.Counts.Count);
+    }
+
+    private void ApplyBranchState(TreeRow row, DocumentScope scope, bool stale)
+    {
+        var keys = KeyPath(row.Path, scope.Snapshot.GroupingDepth);
+        var branch = _states[scope.Key];
+        row.Count = scope.Counts.CountAt(keys);
+        row.SelectedInside = branch.Selected.CountAt(keys);
+        row.Eye = InheritedEye(row, stale) ?? EyeOf(branch.Hidden.CountAt(keys), scope.Snapshot.Counts.CountAt(keys));
+    }
+
+    private void ApplyInstanceState(TreeRow row, DocumentScope scope, bool stale)
+    {
+        row.SelectedInside = _selectedElements.Contains(new ElementRef(scope.Key, row.Id)) ? 1 : 0;
+        row.Eye = InheritedEye(row, stale)
+                  ?? (_states[scope.Key].HiddenIds.Contains(row.Id) ? RowEye.Hidden : RowEye.Shown);
+    }
+
+    private RowEye? InheritedEye(TreeRow row, bool stale)
+    {
+        if (IsHiddenByAllModels(row))
+        {
+            return RowEye.HiddenByAllModels;
+        }
+
+        return stale && row.IsInsideLink ? RowEye.Unknown : null;
+    }
+
+    private bool IsHiddenByAllModels(TreeRow row)
+    {
+        return GroupIdOf(row) is { } group && _visibility.IsGroupHidden(group);
     }
 
     private void ApplyOverride(TreeRow row, bool stale)
@@ -1426,20 +1504,12 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
             matches.Add(row);
         }
 
-        var depth = DocumentOf(row)?.Snapshot.GroupingDepth ?? 0;
-        var browse = row.Kind is TreeRowKind.AllModelsHeader or TreeRowKind.CurrentModelHeader or TreeRowKind.LinkModel
-            or TreeRowKind.Family || (row.Kind == TreeRowKind.Group && depth > 1);
-        if (browse)
+        if (SearchesInside(row))
         {
             await EnsureChildrenAsync(row);
         }
 
-        var any = false;
-        foreach (var child in row.Children ?? [])
-        {
-            any |= await CollectHitsAsync(child, text, hits, matches);
-        }
-
+        var any = await CollectChildHitsAsync(row, text, hits, matches);
         if (any)
         {
             row.IsExpanded = true;
@@ -1451,6 +1521,24 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         return self || any;
+    }
+
+    private async Task<bool> CollectChildHitsAsync(TreeRow row, string text, HashSet<TreeRow> hits, HashSet<TreeRow> matches)
+    {
+        var any = false;
+        foreach (var child in row.Children ?? [])
+        {
+            any |= await CollectHitsAsync(child, text, hits, matches);
+        }
+
+        return any;
+    }
+
+    private bool SearchesInside(TreeRow row)
+    {
+        return row.Kind is TreeRowKind.AllModelsHeader or TreeRowKind.CurrentModelHeader or TreeRowKind.LinkModel
+                   or TreeRowKind.Family
+               || (row.Kind == TreeRowKind.Group && (DocumentOf(row)?.Snapshot.GroupingDepth ?? 0) > 1);
     }
 
     private IEnumerable<ElementRef> ParseToken(string text)

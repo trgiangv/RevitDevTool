@@ -25,7 +25,7 @@ public sealed class FamilyParameterTests
         var snapshot = TestModel.Snapshot(Current);
         var expected = Doors(snapshot).Count(row => Value(snapshot, row) is { Length: > 0 });
 
-        Assert.AreEqual(expected, await CountAsync(FilterOperator.HasValue));
+        Assert.AreEqual(expected, await CountAsync(FilterOperator.NotEmpty));
     }
 
     [TestMethod]
@@ -34,7 +34,7 @@ public sealed class FamilyParameterTests
         var snapshot = TestModel.Snapshot(Current);
         var expected = Doors(snapshot).Count(row => !Has(snapshot, row));
 
-        Assert.AreEqual(expected, await CountAsync(FilterOperator.Missing));
+        Assert.AreEqual(expected, await CountAsync(FilterOperator.Undefined));
     }
 
     [TestMethod]

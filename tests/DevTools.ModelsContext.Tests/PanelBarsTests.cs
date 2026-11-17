@@ -163,6 +163,19 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
+    public async Task ResetFailureShowsMessage()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Mep]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        fixture.Actions.ResetError = "Reset failed in the host.";
+
+        await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
+
+        Assert.AreEqual("Reset failed in the host.", fixture.Panel.Message);
+    }
+
+    [TestMethod]
     public async Task ResetLeavesHidesWithoutUnhide()
     {
         using var fixture = await PanelFixture.OpenAsync(WithoutUnhide());
@@ -383,13 +396,13 @@ public sealed class PanelBarsTests
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
         UntickCurrentForMep(fixture);
-        filter.AddCommand.Execute(null);
+        filter.Library.AddCommand.Execute(null);
 
-        filter.Categories.First(category => category.Name == "Ducts").IsChecked = true;
+        filter.Categories.Items.First(category => category.Name == "Ducts").IsChecked = true;
         fixture.Settle();
 
-        Assert.IsNotEmpty(filter.Result);
-        Assert.IsTrue(filter.Result.All(element => element.Document == Mep));
+        Assert.IsNotEmpty(filter.Runner.Result);
+        Assert.IsTrue(filter.Runner.Result.All(element => element.Document == Mep));
     }
 
     [TestMethod]

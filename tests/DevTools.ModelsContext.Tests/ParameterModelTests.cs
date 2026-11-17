@@ -38,8 +38,8 @@ public sealed class ParameterModelTests
         CollectionAssert.AreEquivalent(new[]
         {
             FilterOperator.Equal, FilterOperator.NotEqual, FilterOperator.Greater, FilterOperator.GreaterOrEqual,
-            FilterOperator.Less, FilterOperator.LessOrEqual, FilterOperator.HasValue, FilterOperator.HasNoValue,
-            FilterOperator.Exists, FilterOperator.Missing
+            FilterOperator.Less, FilterOperator.LessOrEqual, FilterOperator.NotEmpty, FilterOperator.Empty,
+            FilterOperator.Defined, FilterOperator.Undefined
         }, FilterOperators.For(kind).ToArray());
     }
 
@@ -51,8 +51,8 @@ public sealed class ParameterModelTests
     {
         CollectionAssert.AreEquivalent(new[]
         {
-            FilterOperator.Equal, FilterOperator.NotEqual, FilterOperator.HasValue, FilterOperator.HasNoValue,
-            FilterOperator.Exists, FilterOperator.Missing
+            FilterOperator.Equal, FilterOperator.NotEqual, FilterOperator.NotEmpty, FilterOperator.Empty,
+            FilterOperator.Defined, FilterOperator.Undefined
         }, FilterOperators.For(kind).ToArray());
     }
 
@@ -71,24 +71,21 @@ public sealed class ParameterModelTests
         ]);
 
         Assert.HasCount(2, merged);
-        Assert.IsTrue(merged.All(parameter => parameter.Coverage == 1 && parameter.DocumentCount == 2));
     }
 
     [TestMethod]
     public void FamilyAndProjectMergeTags()
     {
         var merged = ParameterCatalog.Merge([
-            [Item(FakeParameters.Width, ParameterOrigin.Project, ParameterBinding.Instance)],
-            [Item(FakeParameters.Width, ParameterOrigin.Family, ParameterBinding.Type)],
-            [Item(FakeParameters.Mark, ParameterOrigin.BuiltIn)]
+            [Item(FakeParameters.Width, ParameterOrigin.Project, ParameterBinding.Instance) with { Models = ["A"] }],
+            [Item(FakeParameters.Width, ParameterOrigin.Family, ParameterBinding.Type) with { Models = ["B"] }],
+            [Item(FakeParameters.Mark, ParameterOrigin.BuiltIn) with { Models = ["C"] }]
         ]);
 
         var width = merged.Single(parameter => parameter.Key == FakeParameters.Width);
         Assert.AreEqual(ParameterOrigin.Project | ParameterOrigin.Family, width.Origins);
         Assert.AreEqual(ParameterBinding.Instance | ParameterBinding.Type, width.Bindings);
-        Assert.AreEqual(2, width.Coverage);
-        Assert.AreEqual(3, width.DocumentCount);
-        Assert.IsFalse(width.IsInAllDocuments);
+        CollectionAssert.AreEqual(new[] { "A", "B" }, width.Models.ToArray());
     }
 
     [TestMethod]
@@ -114,7 +111,6 @@ public sealed class ParameterModelTests
         foreach (var item in merged)
         {
             var owners = catalogs.Where(catalog => catalog.Any(other => other.Key == item.Key)).ToList();
-            Assert.AreEqual(owners.Count, item.Coverage);
             Assert.AreEqual(owners.SelectMany(catalog => catalog).Where(other => other.Key == item.Key)
                 .Aggregate(ParameterOrigin.None, (origins, other) => origins | other.Origins), item.Origins);
         }

@@ -27,7 +27,7 @@ public sealed class DocumentScope(
     {
         if (Ids is null)
         {
-            return Snapshot.Contains(id);
+            return Snapshot.InModel(id);
         }
 
         _idSet ??= Ids as HashSet<long> ?? [.. Ids];
@@ -38,14 +38,18 @@ public sealed class DocumentScope(
     {
         if (Ids is null)
         {
-            return Snapshot.IdsUnder(path);
+            return Snapshot.ModelIdsUnder(path);
         }
 
         return Ids.Where(id => Snapshot.TryGetRow(id, out var row) && Snapshot.IsUnder(row, path));
     }
 }
 
-public sealed class ContextData(ScopeKind scope, DocumentKey? currentModel, IReadOnlyList<DocumentScope> documents)
+public sealed class ContextData(
+    ScopeKind scope,
+    DocumentKey? currentModel,
+    IReadOnlyList<DocumentScope> documents,
+    IReadOnlyList<DocumentInfo>? known = null)
 {
     public static ContextData Empty { get; } = new(ScopeKind.ActiveView, null, []);
 
@@ -54,6 +58,11 @@ public sealed class ContextData(ScopeKind scope, DocumentKey? currentModel, IRea
     public DocumentKey? CurrentModel { get; } = currentModel;
 
     public IReadOnlyList<DocumentScope> Documents { get; } = documents;
+
+    public IReadOnlyList<DocumentInfo> Known { get; } = known ?? documents.Select(document => document.Info).ToList();
+
+    public HashSet<SourceId> KnownSources { get; } =
+        [.. (known ?? documents.Select(document => document.Info)).Select(info => info.Source)];
 
     public DocumentScope? Find(DocumentKey key)
     {

@@ -4,6 +4,7 @@ using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Ports;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Globalization;
 
 namespace DevTools.ModelsContext.ViewModels;
 
@@ -43,10 +44,14 @@ public sealed class ModelContextServices(
 internal sealed class PanelRuntime
 {
     private readonly Dictionary<SourceId, Task<IReadOnlyList<ParameterInfo>>> _parameters = [];
+    private int _generation;
+    private int _running;
+    private int _scheduled;
 
     public PanelRuntime(ModelContextServices services)
     {
         Services = services;
+        Scheduler = new TrackedScheduler(services.Scheduler, this);
         Store = new SnapshotStore(services.Source, services.Logger);
         Guard = new SelectionGuard(services.Clock);
         Values = new ValueIndexCache(services.Evaluator, logger: services.Logger);
@@ -67,11 +72,18 @@ internal sealed class PanelRuntime
 
     public VisibilityPlanner Planner { get; }
 
+    public IScheduler Scheduler { get; }
+
     public bool IsBusy { get; set; }
 
     public string BusyText => VisibilityReasons.HostBusy(Services.Source.HostName);
 
+    public PanelActivity Activity => new(Volatile.Read(ref _running) == 0 && Volatile.Read(ref _scheduled) == 0,
+        Volatile.Read(ref _generation));
+
     public event EventHandler<string>? Failed;
+
+    public event EventHandler? ActivityChanged;
 
     public Task<IReadOnlyList<ParameterInfo>> ParametersAsync(SourceId source, CancellationToken cancellationToken)
     {
@@ -94,7 +106,7 @@ internal sealed class PanelRuntime
     {
         var timer = TraceTimer.Start(Logger);
         var catalog = await Services.Source.GetParameterCatalogAsync(source, cancellationToken).ConfigureAwait(false);
-        Logger.CatalogRead(source, catalog.Count, timer.ElapsedMs);
+        Logger.CatalogRead(source.Label, catalog.Count, timer.ElapsedMs);
         return catalog;
     }
 
@@ -120,6 +132,8 @@ internal sealed class PanelRuntime
 
     public async Task RunAsync(Func<Task> work)
     {
+        Interlocked.Increment(ref _running);
+        OnActivityChanged();
         try
         {
             await work();
@@ -132,6 +146,23 @@ internal sealed class PanelRuntime
         {
             Fail(exception);
         }
+        finally
+        {
+            Interlocked.Increment(ref _generation);
+            Interlocked.Decrement(ref _running);
+            OnActivityChanged();
+        }
+    }
+
+    private void Scheduled(int delta)
+    {
+        Interlocked.Add(ref _scheduled, delta);
+        OnActivityChanged();
+    }
+
+    private void OnActivityChanged()
+    {
+        ActivityChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public bool TryRun(Action work)
@@ -168,5 +199,60 @@ internal sealed class PanelRuntime
         {
             Logger.SelectionSent(elements.Count, timer.ElapsedMs);
         }
+    }
+
+    private sealed class TrackedScheduler(IScheduler inner, PanelRuntime owner) : IScheduler
+    {
+        public IDisposable Schedule(TimeSpan delay, Action action)
+        {
+            owner.Scheduled(1);
+            var entry = new Entry(owner);
+            entry.Inner = inner.Schedule(delay, () =>
+            {
+                if (!entry.TryClose())
+                {
+                    return;
+                }
+
+                try
+                {
+                    action();
+                }
+                finally
+                {
+                    owner.Scheduled(-1);
+                }
+            });
+            return entry;
+        }
+    }
+
+    private sealed class Entry(PanelRuntime owner) : IDisposable
+    {
+        private int _closed;
+
+        public IDisposable? Inner { get; set; }
+
+        public bool TryClose()
+        {
+            return Interlocked.Exchange(ref _closed, 1) == 0;
+        }
+
+        public void Dispose()
+        {
+            if (TryClose())
+            {
+                Inner?.Dispose();
+                owner.Scheduled(-1);
+            }
+        }
+    }
+}
+
+public readonly record struct PanelActivity(bool IsIdle, int Generation)
+{
+    public override string ToString()
+    {
+        return (IsIdle ? "Idle " : "Busy ") + Generation.ToString(CultureInfo.InvariantCulture);
     }
 }

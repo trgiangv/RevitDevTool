@@ -21,6 +21,10 @@ public static class FakeParameters
     public static readonly ParameterKey IntegerCode = ParameterKey.Named("Code", IntegerSpec);
     public static readonly ParameterKey SwingAngle = ParameterKey.Named("Swing Angle", AngleSpec);
     public static readonly ParameterKey Flag = ParameterKey.BuiltIn("Flag", "FLAG_PARAM");
+    public static readonly ParameterKey Function = ParameterKey.BuiltIn("Function", "FUNCTION_PARAM");
+    public static readonly ParameterKey FireRating = ParameterKey.BuiltIn("Fire Rating", "FIRE_RATING");
+    public static readonly ParameterKey SystemType = ParameterKey.BuiltIn("System Type", "SYSTEM_TYPE");
+    public static readonly ParameterKey Insulation = ParameterKey.Named("Insulation", TextSpec);
 
     private static readonly ConditionalWeakTable<DocumentSnapshot, IReadOnlyCollection<long>> SwingIdsBySnapshot = new();
 
@@ -31,6 +35,9 @@ public static class FakeParameters
     };
 
     private static readonly HashSet<string> SizedGroups = ["Ducts", "Pipes", "Cable Trays", "Conduits"];
+    private static readonly HashSet<string> RatedGroups = ["Walls", "Doors"];
+    private static readonly string[] FireRatings = ["", "1h", "2h", "3h"];
+    private static readonly string[] Systems = ["Supply", "Return", "Exhaust"];
 
     public static IReadOnlyList<ParameterInfo> Catalog(FakeSource source)
     {
@@ -57,7 +64,37 @@ public static class FakeParameters
         {
             catalog.Add(Named(SwingAngle, ParameterStorage.Double, "Angle", ParameterOrigin.Family) with
             {
-                Categories = CategoriesOf(source, name => name == "Doors")
+                Categories = CategoriesOf(source, name => name == "Doors"),
+                Families = [LeftDoors, RightDoors],
+                Group = "Other"
+            });
+        }
+
+        if (groups.Contains("Walls"))
+        {
+            catalog.Add(BuiltIn(Function, ParameterStorage.String, "Text") with
+            {
+                Bindings = ParameterBinding.Type,
+                Categories = CategoriesOf(source, name => name == "Walls")
+            });
+        }
+
+        if (groups.Overlaps(RatedGroups))
+        {
+            catalog.Add(BuiltIn(FireRating, ParameterStorage.String, "Text") with
+            {
+                Bindings = ParameterBinding.Type,
+                Categories = CategoriesOf(source, RatedGroups.Contains)
+            });
+        }
+
+        if (groups.Contains("Ducts"))
+        {
+            var ducts = CategoriesOf(source, name => name == "Ducts");
+            catalog.Add(BuiltIn(SystemType, ParameterStorage.String, "Text") with { Categories = ducts });
+            catalog.Add(Named(Insulation, ParameterStorage.String, "Text", ParameterOrigin.Project) with
+            {
+                Categories = ducts
             });
         }
 
@@ -73,6 +110,23 @@ public static class FakeParameters
         }
 
         return catalog;
+    }
+
+    public static IReadOnlyList<ParameterInfo> Extra(FakeSource source, int count, int start)
+    {
+        var all = CategoriesOf(source, _ => true);
+        return Enumerable.Range(start, count)
+            .Select(index =>
+            {
+                var name = string.Format(CultureInfo.InvariantCulture, "Param {0:D4}", index);
+                return (index % 3 == 0
+                    ? Named(ParameterKey.Named(name, LengthSpec), ParameterStorage.Double, "Length", ParameterOrigin.Shared)
+                    : Named(ParameterKey.Named(name, TextSpec), ParameterStorage.String, "Text", ParameterOrigin.Project)) with
+                {
+                    Categories = all
+                };
+            })
+            .ToList();
     }
 
     public static ValueKind KindOf(ParameterKey key)
@@ -128,6 +182,18 @@ public static class FakeParameters
             case "Swing Angle" when IdOf(snapshot, row, key) is not null:
                 value = row.Id % 4 == 0 ? string.Empty : (row.Id % 90).ToString(CultureInfo.InvariantCulture);
                 return true;
+            case "Function" when snapshot.GroupName(row.GroupIndex) == "Walls":
+                value = row.Id % 3 == 0 ? "Interior" : "Exterior";
+                return true;
+            case "Fire Rating" when RatedGroups.Contains(snapshot.GroupName(row.GroupIndex)):
+                value = FireRatings[row.Id % FireRatings.Length];
+                return true;
+            case "System Type" when snapshot.GroupName(row.GroupIndex) == "Ducts":
+                value = Systems[row.Id % Systems.Length];
+                return true;
+            case "Insulation" when snapshot.GroupName(row.GroupIndex) == "Ducts" && row.Id % 2 == 0:
+                value = "Fiberglass";
+                return true;
             case "Flag":
                 value = ValueKinds.YesNoText((int)(row.Id % 2));
                 return true;
@@ -148,12 +214,20 @@ public static class FakeParameters
     private static ParameterInfo BuiltIn(ParameterKey key, ParameterStorage storage, string? label)
     {
         return new ParameterInfo(key, key.Name, ValueKinds.Infer(storage, false, false, false), storage, null, label,
-            ParameterOrigin.BuiltIn, ParameterBinding.Instance);
+            ParameterOrigin.BuiltIn, ParameterBinding.Instance)
+        {
+            Group = "Identity Data"
+        };
     }
 
     private static ParameterInfo Named(ParameterKey key, ParameterStorage storage, string label, ParameterOrigin origin)
     {
-        return new ParameterInfo(key, key.Name, ValueKinds.Infer(storage, false, storage == ParameterStorage.Double, false),
-            storage, key.DataType, label, origin, ParameterBinding.Instance);
+        var measured = storage == ParameterStorage.Double;
+        return new ParameterInfo(key, key.Name, ValueKinds.Infer(storage, false, measured, false),
+            storage, key.DataType, label, origin, ParameterBinding.Instance)
+        {
+            Discipline = measured ? "Common" : null,
+            Group = measured ? "Dimensions" : "Identity Data"
+        };
     }
 }

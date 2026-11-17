@@ -48,8 +48,15 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         return Task.CompletedTask;
     }
 
+    public string? ResetError { get; set; }
+
     public Task ResetAsync(CancellationToken cancellationToken)
     {
+        if (ResetError is { } error)
+        {
+            throw new InvalidOperationException(error);
+        }
+
         ResetCount++;
         ExecutedPlans.Clear();
         return Task.CompletedTask;

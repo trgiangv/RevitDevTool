@@ -75,11 +75,11 @@ public sealed class LoggingTests
     {
         var logger = new CollectingLogger(LogLevel.Debug);
         using var fixture = await PanelFixture.OpenAsync(logger: logger);
-        fixture.Filter.AddCommand.Execute(null);
+        fixture.Filter.Library.AddCommand.Execute(null);
         fixture.CustomFilters.Setup(store => store.Save(It.IsAny<IReadOnlyList<CustomFilter>>()))
             .Throws(new InvalidOperationException("Settings file is locked."));
 
-        fixture.Filter.SaveCommand.Execute(null);
+        fixture.Filter.Library.SaveCommand.Execute(null);
 
         var entry = logger.Entries.Single();
         Assert.AreEqual(LogLevel.Error, entry.Level);
@@ -98,6 +98,36 @@ public sealed class LoggingTests
         Assert.IsTrue(messages.Any(message => message.StartsWith("Snapshot ", StringComparison.Ordinal)));
         Assert.IsTrue(messages.Any(message => message.StartsWith("Context load ", StringComparison.Ordinal)));
         Assert.IsTrue(logger.Entries.All(entry => entry.Level == LogLevel.Trace));
+    }
+
+    [TestMethod]
+    public async Task FilterTracesPerDocument()
+    {
+        var logger = new CollectingLogger(LogLevel.Trace);
+        using var fixture = await PanelFixture.OpenAsync(logger: logger);
+        fixture.Filter.Library.AddCommand.Execute(null);
+
+        fixture.Filter.Categories.Items.First(category => category.Name == "Doors").IsChecked = true;
+        fixture.Settle();
+
+        var messages = logger.Entries.Select(entry => entry.Message).ToList();
+        Assert.IsTrue(messages.Any(message => message.StartsWith("Parameters merged: ", StringComparison.Ordinal)));
+        Assert.IsTrue(messages.Any(message => message.StartsWith("Filter New filter 1 in ", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public async Task LivePauseLogsLimit()
+    {
+        var logger = new CollectingLogger(LogLevel.Trace);
+        using var fixture = await PanelFixture.OpenAsync(logger: logger);
+        fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        fixture.Filter.Library.AddCommand.Execute(null);
+
+        fixture.Filter.Categories.CheckAllCommand.Execute(null);
+        fixture.Settle();
+
+        StringAssert.Contains(string.Join("\n", logger.Entries.Select(entry => entry.Message)),
+            "Live paused at");
     }
 
     private sealed class CollectingLogger(LogLevel minimum) : ILogger

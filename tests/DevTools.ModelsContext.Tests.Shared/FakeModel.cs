@@ -48,6 +48,8 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
 
     public bool EchoSelection { get; set; } = true;
 
+    public int ExtraParameters { get; set; }
+
     public bool ReverseRebuilds { get; set; }
 
     public bool IsBusy { get; private set; }
@@ -162,7 +164,19 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         CancellationToken cancellationToken)
     {
         CatalogReads++;
-        return Task.FromResult(FakeParameters.Catalog(_sources[source]));
+        var catalog = FakeParameters.Catalog(_sources[source]);
+        if (source == FakeModelGenerator.CurrentSource && ExtraCatalog.Count > 0)
+        {
+            catalog = [.. catalog, .. ExtraCatalog];
+        }
+
+        if (ExtraParameters > 0)
+        {
+            var start = _sources.Keys.ToList().IndexOf(source) * ExtraParameters * 3 / 4;
+            catalog = [.. catalog, .. FakeParameters.Extra(_sources[source], ExtraParameters, start)];
+        }
+
+        return Task.FromResult(catalog);
     }
 
     public Task<IReadOnlyDictionary<long, string>> GetUniqueIdsAsync(
@@ -223,6 +237,9 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         var wanted = groups.ToHashSet();
         var total = 0;
         var values = new Dictionary<string, int>(StringComparer.Ordinal);
+        var numbers = new Dictionary<string, NumberRange>(StringComparer.Ordinal);
+        var display = DisplayFactors.TryGetValue(source, out var factor) ? factor : 1;
+        var isNumber = FakeParameters.KindOf(parameter) == ValueKind.Number;
         foreach (var row in snapshot.Rows)
         {
             if (wanted.Count > 0 && !wanted.Contains(snapshot.Groups[row.GroupIndex].GroupId))
@@ -231,13 +248,39 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
             }
 
             total++;
-            if (FakeParameters.TryGet(snapshot, row, parameter, Data.Levels, out var value))
+            if (!FakeParameters.TryGet(snapshot, row, parameter, Data.Levels, out var value))
             {
-                values[value] = values.TryGetValue(value, out var count) ? count + 1 : 1;
+                continue;
             }
+
+            if (isNumber && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var stored))
+            {
+                value = (stored / display).ToString(CultureInfo.InvariantCulture);
+                numbers[value] = numbers.TryGetValue(value, out var range) ? range.With(stored) : NumberRange.Of(stored);
+            }
+
+            values[value] = values.TryGetValue(value, out var count) ? count + 1 : 1;
         }
 
-        return Task.FromResult(new ParameterValueCounts(total, values));
+        return Task.FromResult(new ParameterValueCounts(total, values, numbers));
+    }
+
+    public Dictionary<SourceId, double> DisplayFactors { get; } = [];
+
+    public List<ParameterInfo> ExtraCatalog { get; } = [];
+
+    public Dictionary<string, string> Examples { get; } = new(StringComparer.Ordinal)
+    {
+        [FakeParameters.LengthSpec] = "300 mm",
+        [FakeParameters.AngleSpec] = "60°"
+    };
+
+    public List<DocumentKey> ExampleRequests { get; } = [];
+
+    public Task<string?> FormatExampleAsync(DocumentKey model, string spec, CancellationToken cancellationToken)
+    {
+        ExampleRequests.Add(model);
+        return Task.FromResult(Examples.TryGetValue(spec, out var example) ? example : null);
     }
 
     public void AddModel(FakeModelData data)

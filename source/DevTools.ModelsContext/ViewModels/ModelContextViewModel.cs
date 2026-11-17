@@ -42,12 +42,13 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         ContextMenu = new ContextMenuViewModel(_runtime, _visibility, TemporaryBar);
         Explorer = new ExplorerTabViewModel(_runtime, _visibility, ContextBar, ContextMenu);
         Filter = new FilterTabViewModel(_runtime, _visibility, ContextMenu);
-        var scheduler = services.Scheduler;
+        var scheduler = _runtime.Scheduler;
         _selectionDebouncer = new Debouncer(scheduler, EventDelay, () => _ = _runtime.RunAsync(OnSelectionSettledAsync));
         _deltaDebouncer = new Debouncer(scheduler, EventDelay, () => _ = _runtime.RunAsync(OnElementsSettledAsync));
         _documentsDebouncer = new Debouncer(scheduler, EventDelay, () => _ = _runtime.RunAsync(ReloadDocumentsAsync));
         _viewDebouncer = new Debouncer(scheduler, EventDelay, () => _ = _runtime.RunAsync(OnViewSettledAsync));
         _runtime.Failed += OnFailed;
+        _runtime.ActivityChanged += OnActivityChanged;
         ContextBar.Changed += OnContextChanged;
         ContextBar.Refused += OnFailed;
         TemporaryBar.PropertyChanged += OnTemporaryBarChanged;
@@ -108,6 +109,8 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     [ObservableProperty]
     public partial bool IsPaneVisible { get; set; } = true;
 
+    public string Activity => _runtime.Activity.ToString();
+
     public DocumentKey? ActiveModel => _active?.Model;
 
     public int SessionCount => _sessions.Count;
@@ -137,6 +140,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     public void Dispose()
     {
+        _runtime.ActivityChanged -= OnActivityChanged;
         var events = _runtime.Services.Events;
         events.SelectionChanged -= OnSelectionChanged;
         events.ElementsChanged -= OnElementsChanged;
@@ -313,90 +317,15 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     private async Task LoadContextAsync(JobTicket ticket)
     {
-        var cancellationToken = ticket.Token;
         var timer = TraceTimer.Start(_runtime.Logger);
         IsUpdating = true;
         try
         {
-            var services = _runtime.Services;
-            var store = _runtime.Store;
             var scope = ContextBar.Scope;
-            IReadOnlyList<DocumentKey> keys = scope == ScopeKind.Selection
-                ? (await services.Selection.GetSelectionAsync(cancellationToken))
-                .Select(element => element.Document)
-                .Distinct()
-                .OrderBy(key => !key.IsCurrentModel)
-                .ToList()
-                : ContextBar.TickedDocuments;
-            if (!IsCurrent(ticket))
+            var count = await LoadScopeAsync(ticket, scope);
+            if (count >= 0 && timer.IsEnabled)
             {
-                return;
-            }
-
-            var loaded = keys.Where(key => store.Find(key) is { IsLoaded: true }).ToList();
-            if (scope != ScopeKind.Selection && loaded.Any(key => !store.IsReady(key)))
-            {
-                var quick = new List<QuickDocument>();
-                foreach (var key in loaded)
-                {
-                    var groups = await services.Source.CountGroupsAsync(key, scope, cancellationToken);
-                    quick.Add(new QuickDocument(key, ContextBar.LabelOf(key), groups));
-                }
-
-                if (!IsCurrent(ticket))
-                {
-                    return;
-                }
-
-                Explorer.ShowQuickCounts(quick, ContextBar.CurrentModel);
-            }
-
-            var documents = new List<DocumentScope>();
-            foreach (var key in keys)
-            {
-                if (store.Find(key) is not { } info)
-                {
-                    continue;
-                }
-
-                if (!info.IsLoaded)
-                {
-                    if (store.TryGet(key) is { } kept)
-                    {
-                        documents.Add(new DocumentScope(info, ContextBar.LabelOf(key), kept, null));
-                    }
-
-                    continue;
-                }
-
-                var snapshot = await store.GetAsync(key, null, cancellationToken);
-                if (!IsCurrent(ticket))
-                {
-                    return;
-                }
-
-                var ids = scope == ScopeKind.WholeModel
-                    ? null
-                    : await services.Source.CollectScopeAsync(key, scope, cancellationToken);
-                if (!IsCurrent(ticket))
-                {
-                    return;
-                }
-
-                documents.Add(new DocumentScope(info, ContextBar.LabelOf(key), snapshot, ids));
-            }
-
-            var data = new ContextData(scope, ContextBar.CurrentModel, documents);
-            await Explorer.LoadAsync(data, cancellationToken);
-            if (!IsCurrent(ticket))
-            {
-                return;
-            }
-
-            await Filter.LoadAsync(data, cancellationToken);
-            if (timer.IsEnabled)
-            {
-                _runtime.Logger.ContextLoaded(scope, documents.Count, timer.ElapsedMs);
+                _runtime.Logger.ContextLoaded(scope, count, timer.ElapsedMs);
             }
         }
         finally
@@ -406,6 +335,122 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
                 IsUpdating = false;
             }
         }
+    }
+
+    private async Task<int> LoadScopeAsync(JobTicket ticket, ScopeKind scope)
+    {
+        var keys = await KeysInScopeAsync(scope, ticket.Token);
+        if (!IsCurrent(ticket) || !await ShowQuickCountsAsync(ticket, scope, keys))
+        {
+            return -1;
+        }
+
+        if (await ReadDocumentsAsync(ticket, scope, keys) is not { } documents)
+        {
+            return -1;
+        }
+
+        var data = new ContextData(scope, ContextBar.CurrentModel, documents,
+            ContextBar.Documents.Select(item => item.Info).ToList());
+        await Explorer.LoadAsync(data, ticket.Token);
+        if (!IsCurrent(ticket))
+        {
+            return -1;
+        }
+
+        await Filter.LoadAsync(data, ticket.Token);
+        return documents.Count;
+    }
+
+    private async Task<IReadOnlyList<DocumentKey>> KeysInScopeAsync(ScopeKind scope, CancellationToken cancellationToken)
+    {
+        if (scope != ScopeKind.Selection)
+        {
+            return ContextBar.TickedDocuments;
+        }
+
+        var selection = await _runtime.Services.Selection.GetSelectionAsync(cancellationToken);
+        return selection
+            .Select(element => element.Document)
+            .Distinct()
+            .OrderBy(key => !key.IsCurrentModel)
+            .ToList();
+    }
+
+    private async Task<bool> ShowQuickCountsAsync(JobTicket ticket, ScopeKind scope, IReadOnlyList<DocumentKey> keys)
+    {
+        var store = _runtime.Store;
+        var loaded = keys.Where(key => store.Find(key) is { IsLoaded: true }).ToList();
+        if (scope == ScopeKind.Selection || loaded.TrueForAll(store.IsReady))
+        {
+            return true;
+        }
+
+        var quick = new List<QuickDocument>();
+        foreach (var key in loaded)
+        {
+            var groups = await _runtime.Services.Source.CountGroupsAsync(key, scope, ticket.Token);
+            quick.Add(new QuickDocument(key, ContextBar.LabelOf(key), groups));
+        }
+
+        if (!IsCurrent(ticket))
+        {
+            return false;
+        }
+
+        Explorer.ShowQuickCounts(quick, ContextBar.CurrentModel);
+        return true;
+    }
+
+    private async Task<List<DocumentScope>?> ReadDocumentsAsync(JobTicket ticket, ScopeKind scope,
+        IReadOnlyList<DocumentKey> keys)
+    {
+        var documents = new List<DocumentScope>();
+        foreach (var key in keys)
+        {
+            if (_runtime.Store.Find(key) is not { } info)
+            {
+                continue;
+            }
+
+            if (!info.IsLoaded)
+            {
+                AddKept(documents, info, key);
+                continue;
+            }
+
+            if (await ReadLoadedAsync(ticket, scope, info, key) is not { } document)
+            {
+                return null;
+            }
+
+            documents.Add(document);
+        }
+
+        return documents;
+    }
+
+    private void AddKept(List<DocumentScope> documents, DocumentInfo info, DocumentKey key)
+    {
+        if (_runtime.Store.TryGet(key) is { } kept)
+        {
+            documents.Add(new DocumentScope(info, ContextBar.LabelOf(key), kept, null));
+        }
+    }
+
+    private async Task<DocumentScope?> ReadLoadedAsync(JobTicket ticket, ScopeKind scope, DocumentInfo info,
+        DocumentKey key)
+    {
+        var snapshot = await _runtime.Store.GetAsync(key, null, ticket.Token);
+        if (!IsCurrent(ticket))
+        {
+            return null;
+        }
+
+        var ids = scope == ScopeKind.WholeModel
+            ? null
+            : await _runtime.Services.Source.CollectScopeAsync(key, scope, ticket.Token);
+        return IsCurrent(ticket) ? new DocumentScope(info, ContextBar.LabelOf(key), snapshot, ids) : null;
     }
 
     private async Task ResyncExplorerAsync()
@@ -488,7 +533,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         _active = null;
         OnPropertyChanged(nameof(ActiveModel));
         Explorer.Reset(ExplorerState.Fresh(Explorer.IsSelectionSyncOn));
-        Filter.Reset(new FilterState(null, Filter.IsLiveOn));
+        Filter.Reset(new FilterState(null, Filter.Runner.IsLiveOn));
         SetDocumentsQuietly([], null);
         SetView(null);
         IsUpdating = false;
@@ -497,6 +542,11 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     private void SetView(ViewInfo? view)
     {
         _visibility.View = view;
+    }
+
+    private void OnActivityChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(Activity));
     }
 
     private void OnFailed(object? sender, string message)
@@ -714,6 +764,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
             _deltas.Clear();
         }
 
+        var timer = TraceTimer.Start(_runtime.Logger);
         foreach (var delta in deltas)
         {
             _runtime.Store.Apply(delta);
@@ -723,6 +774,11 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
             {
                 _runtime.Journal.MarkStale(session.Model);
             }
+        }
+
+        if (timer.IsEnabled)
+        {
+            _runtime.Logger.DeltasApplied(deltas.Count, deltas.Sum(delta => delta.ChangedCount), timer.ElapsedMs);
         }
 
         await RefreshAsync();

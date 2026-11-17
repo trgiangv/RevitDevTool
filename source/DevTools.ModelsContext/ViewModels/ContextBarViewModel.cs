@@ -64,6 +64,11 @@ public sealed class DocumentItemViewModel : ObservableObject
         _isChecked = value;
         OnPropertyChanged(nameof(IsChecked));
     }
+
+    public override string ToString()
+    {
+        return Label;
+    }
 }
 
 public sealed partial class ContextBarViewModel : ObservableObject

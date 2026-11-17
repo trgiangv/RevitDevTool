@@ -126,6 +126,11 @@ public sealed partial class FilterSourceItem : ObservableObject
             ? other.IsCustom && string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)
             : other.Host is { } host && Host!.Document == host.Document && Host.Id == host.Id;
     }
+
+    public override string ToString()
+    {
+        return Name;
+    }
 }
 
 public sealed partial class CategoryItemViewModel : ObservableObject
@@ -163,5 +168,10 @@ public sealed partial class CategoryItemViewModel : ObservableObject
     internal void SetChecked(bool value)
     {
         SetProperty(ref _isChecked, value, nameof(IsChecked));
+    }
+
+    public override string ToString()
+    {
+        return Name;
     }
 }

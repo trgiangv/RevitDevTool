@@ -45,24 +45,24 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task KeepAsync()
+    private Task KeepAsync()
     {
         _pendingLinkChanges = _visibility.PendingLinkChanges;
         if (_pendingLinkChanges > 0)
         {
             OnPropertyChanged(nameof(ConfirmText));
             IsConfirmingKeep = true;
-            return;
+            return Task.CompletedTask;
         }
 
-        await _visibility.KeepAsync(CancellationToken.None);
+        return _runtime.RunAsync(() => _visibility.KeepAsync(CancellationToken.None));
     }
 
     [RelayCommand]
-    private async Task ConfirmKeepAsync()
+    private Task ConfirmKeepAsync()
     {
         IsConfirmingKeep = false;
-        await _visibility.KeepAsync(CancellationToken.None);
+        return _runtime.RunAsync(() => _visibility.KeepAsync(CancellationToken.None));
     }
 
     [RelayCommand]
@@ -72,9 +72,9 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ResetAsync()
+    private Task ResetAsync()
     {
         IsConfirmingKeep = false;
-        await _visibility.ResetAsync(CancellationToken.None);
+        return _runtime.RunAsync(() => _visibility.ResetAsync(CancellationToken.None));
     }
 }
