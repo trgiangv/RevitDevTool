@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <UseRevit>true</UseRevit>
+        <IsPackable>false</IsPackable>
+        <IsTestProject>true</IsTestProject>
+        <HostName>Revit</HostName>
+        <HostVersion>$(RevitVersion)</HostVersion>
+        <ForceLaunch>false</ForceLaunch>
+        <PerTestTimeout>600</PerTestTimeout>
+        <LaunchTimeout>360</LaunchTimeout>
+        <RuntimeIdentifier Condition="$(TargetFramework.StartsWith('net4'))">win-x64</RuntimeIdentifier>
+        <NoWarn>$(NoWarn);CA1707</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NUnit" />
+        <PackageReference Include="RevitDevTool.TestAdapter" />
+    </ItemGroup>
+
+    <ItemGroup Condition="$(TargetFramework.StartsWith('net4'))">
+        <PackageReference Include="System.Text.Json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="Data\**" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\source\RevitDevTool.Tools\RevitDevTool.Tools.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Using Include="NUnit.Framework" />
+    </ItemGroup>
+
+</Project>

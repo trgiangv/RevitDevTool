@@ -1,0 +1,79 @@
+{
+  "setup": {
+    "category": "OST_DuctCurves",
+    "text": { "parameter": "RBS_SYSTEM_CLASSIFICATION_PARAM", "value": "Supply" },
+    "mark": { "parameter": "ALL_MODEL_MARK", "value": "zz-no-such-mark" },
+    "reference": { "parameter": "PHASE_CREATED", "targetClass": "Phase" },
+    "selectionCount": 5,
+    "invertedReadBack": [
+      { "operator": "NotContains", "value": "Supply" },
+      { "operator": "NotEqual", "value": "zz-no-such-mark" }
+    ]
+  },
+  "cases": [
+    {
+      "id": "HF-01",
+      "description": "A Revit rule filter with an inverted AND (System Classification contains 'Supply' and Mark equals 'zz-no-such-mark') reads back as OR of the negated operators",
+      "expected": "OR of: System Classification does not contain 'Supply', Mark does not equal 'zz-no-such-mark'",
+      "manualSteps": [
+        "In 'Snowdon Towers Sample HVAC.rvt' (do not save) open View > Filters, create a rule-based filter for Ducts with an AND set inverted to NOT: System Classification contains Supply, Mark equals zz-no-such-mark.",
+        "In the Model Context panel Filter tab pick that filter in the source list.",
+        "The rule editor shows OR with 'does not contain Supply' and 'does not equal zz-no-such-mark'. Undo the filter creation afterwards."
+      ]
+    },
+    {
+      "id": "HF-02",
+      "description": "The read-back of that inverted filter counts the same ducts as Revit's own filter",
+      "expected": "panel count = Revit ElementFilter count",
+      "manualSteps": [
+        "With the filter of HF-01, read the panel count.",
+        "Apply the filter to a duplicate of view L3 (do not save) and compare: the ducts that stay visible after 'Filter: visible off' are the complement of the panel count."
+      ]
+    },
+    {
+      "id": "HF-03",
+      "description": "An inverted rule that has no negated operator (Phase Created greater than a phase) reads as one Unsupported rule",
+      "expected": "one Unsupported rule",
+      "manualSteps": [
+        "In a scratch copy, create a Ducts rule filter inverted to NOT with System Classification contains Supply and Phase Created is greater than a phase.",
+        "Pick it in the panel's source list: the editor shows one 'Unsupported rule' line and the filter is read only."
+      ]
+    },
+    {
+      "id": "HF-04",
+      "description": "An element id comparison rule (Phase Created greater than) is Unsupported",
+      "expected": "Unsupported rule",
+      "manualSteps": [
+        "In a scratch copy, create a Ducts rule filter with Phase Created is greater than a phase.",
+        "Pick it in the panel's source list: the rule shows as 'Unsupported rule'."
+      ]
+    },
+    {
+      "id": "HF-05",
+      "description": "A rule-based Revit filter (Ducts, System Classification contains 'Supply') runs natively in its document",
+      "expected": "panel ids count = Revit ElementFilter count",
+      "manualSteps": [
+        "In a scratch copy, create a Ducts rule filter System Classification contains Supply.",
+        "Pick it in the panel's source list and compare the count with a Duct schedule filtered by System Classification contains Supply."
+      ]
+    },
+    {
+      "id": "HF-06",
+      "description": "A selection filter returns exactly its stored element ids",
+      "expected": "the same 5 ids",
+      "manualSteps": [
+        "In a scratch copy select five ducts and click Save (Selection panel) to create a selection filter.",
+        "Pick it in the panel's source list: the count is 5 and Select selects the same five ducts."
+      ]
+    },
+    {
+      "id": "HF-07",
+      "description": "The source list holds both rule-based and selection filters with their kinds",
+      "expected": "RuleBased and Selection",
+      "manualSteps": [
+        "With the filters of HF-05 and HF-06 in a scratch copy, open the panel's source list.",
+        "Both appear under Revit filters; the rule-based one opens rules, the selection one shows its stored elements."
+      ]
+    }
+  ]
+}

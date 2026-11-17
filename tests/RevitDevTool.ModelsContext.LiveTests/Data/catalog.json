@@ -1,0 +1,162 @@
+{
+  "cases": [
+    {
+      "id": "PK-01",
+      "description": "Swing Angle (a family parameter with two ids in the Architectural link) is one picker item, kind Number, origin Family, binding Instance",
+      "check": "Item",
+      "docs": "Arch",
+      "parameter": "Swing Angle",
+      "count": 1,
+      "kind": "Number",
+      "origins": ["Family"],
+      "bindings": "Instance",
+      "expected": "one item: Number, Family, Instance",
+      "manualSteps": [
+        "Open the sample with the Architectural link and the Model Context panel; tick only the Architectural link.",
+        "Filter tab: + New filter, + Condition, open the parameter picker and type 'Swing'.",
+        "Exactly one 'Swing Angle' item is listed, tagged Family and Instance, and its value box takes an angle."
+      ]
+    },
+    {
+      "id": "PK-02",
+      "description": "Mark is a built-in text parameter bound to instances",
+      "check": "Item",
+      "docs": "Arch",
+      "parameter": "Mark",
+      "kind": "Text",
+      "origins": ["BuiltIn"],
+      "bindingsInclude": ["Instance"],
+      "expected": "Text, Built-in, Instance",
+      "manualSteps": [
+        "Tick only the Architectural link; Filter tab: + New filter, + Condition, type 'Mark' in the picker.",
+        "'Mark' is tagged Built-in and Instance; the operator list offers the text operators (contains, begins with ...) and the Aa toggle."
+      ]
+    },
+    {
+      "id": "PK-03",
+      "description": "Function is an enumerated parameter on wall types",
+      "check": "Item",
+      "docs": "Arch",
+      "parameter": "Function",
+      "kind": "Enumerated",
+      "bindingsInclude": ["Type"],
+      "expected": "Enumerated, Type",
+      "manualSteps": [
+        "Tick only the Architectural link; Filter tab: + New filter, Categories Walls, + Condition, type 'Function'.",
+        "'Function' is tagged Type; the operators are equals / does not equal / empty / defined, and the value box lists Interior, Exterior, Foundation ..."
+      ]
+    },
+    {
+      "id": "PK-04",
+      "description": "Room Bounding has the Yes/No kind from its spec",
+      "check": "Item",
+      "docs": "Arch",
+      "parameter": "Room Bounding",
+      "kind": "YesNo",
+      "expected": "YesNo",
+      "manualSteps": [
+        "Tick only the Architectural link; Filter tab: + New filter, Categories Walls, + Condition, pick 'Room Bounding'.",
+        "The value box offers Yes and No only."
+      ]
+    },
+    {
+      "id": "PK-05",
+      "description": "Reference Level on ducts is an element reference",
+      "check": "Item",
+      "docs": "Host",
+      "parameter": "Reference Level",
+      "kind": "Reference",
+      "expected": "Reference",
+      "manualSteps": [
+        "Tick only 'Current model'; Filter tab: + New filter, Categories Ducts, + Condition, pick 'Reference Level'.",
+        "The value box takes a level name (for example L3) and the operators are equality only."
+      ]
+    },
+    {
+      "id": "PK-06",
+      "description": "Actual Number of Risers stays an integer",
+      "check": "Item",
+      "docs": "Arch",
+      "parameter": "Actual Number of Risers",
+      "kind": "Integer",
+      "expected": "Integer",
+      "manualSteps": [
+        "Tick only the Architectural link; Filter tab: + New filter, Categories Stairs, + Condition, pick 'Actual Number of Risers'.",
+        "The operators include is greater than / is less than and the value box takes whole numbers."
+      ]
+    },
+    {
+      "id": "PK-07",
+      "description": "A shared parameter carried by a model element of the Architectural link is tagged Shared",
+      "check": "Item",
+      "docs": "Arch",
+      "parameter": "First shared",
+      "origins": ["Shared"],
+      "expected": "Shared",
+      "manualSteps": [
+        "Tick only the Architectural link; Filter tab: + New filter, + Condition, type the shared parameter name from sample-facts.json.",
+        "The item carries the Shared tag."
+      ]
+    },
+    {
+      "id": "PK-08",
+      "description": "Models across HVAC and Architectural: Mark is in both documents",
+      "check": "Models",
+      "parameter": "Mark",
+      "models": 2,
+      "expected": "2 models",
+      "manualSteps": [
+        "Tick 'Current model' and the Architectural link; Filter tab: + New filter, + Condition, type 'Mark'.",
+        "Hover 'Mark': the tooltip lists both models under Models."
+      ]
+    },
+    {
+      "id": "PK-09",
+      "description": "Models across HVAC and Architectural: Swing Angle is in one document only and shows no warning",
+      "check": "Models",
+      "parameter": "Swing Angle",
+      "models": 1,
+      "expected": "1 model",
+      "manualSteps": [
+        "Tick 'Current model' and the Architectural link; Filter tab: + New filter, + Condition, type 'Swing'.",
+        "'Swing Angle' has no warning color; its tooltip lists only the Architectural link under Models."
+      ]
+    },
+    {
+      "id": "PK-10",
+      "description": "Value counts of Swing Angle on Doors in the Architectural link",
+      "check": "ValueCount",
+      "docs": "Arch",
+      "parameter": "Swing Angle",
+      "category": "OST_Doors",
+      "total": 142,
+      "values": 131,
+      "expected": "total 142, elements with a value 131",
+      "manualSteps": [
+        "Tick only the Architectural link; Filter tab: + New filter, Categories Doors, + Condition, pick 'Swing Angle', operator equals.",
+        "Open the value box: the listed values add up to 131 doors out of 142 (11 doors have no Swing Angle).",
+        "Check without the panel: open 'Snowdon Towers Sample Architectural.rvt' (do not save), Doors schedule with field Swing Angle, sort and group by it, Grand totals > Count."
+      ]
+    },
+    {
+      "id": "CT-01",
+      "description": "Catalog build time of the HVAC model and the Architectural link, read from the panel's own Trace lines on a cold cache",
+      "check": "BuildTime",
+      "expected": "Trace lines recorded for both documents",
+      "manualSteps": [
+        "Settings > Logging level Trace, open the Model Context panel on the sample with the Architectural link ticked, Filter tab, + New filter, + Condition.",
+        "The log has 'Revit Catalog', 'Revit Catalog samples' and 'Revit Catalog build' lines for both documents; set the level back."
+      ]
+    },
+    {
+      "id": "SB-01",
+      "description": "Every built-in parameter that Revit's filter dialog does not list, sampled once per element type in all seven documents, finds its own value with an equals rule",
+      "check": "SampledBuiltIns",
+      "expected": "0 failures",
+      "manualSteps": [
+        "Pick any element in the sample (Current model or a link), pick a built-in parameter shown in Properties that View > Filters does not offer (for example a Phasing or Identity Data field).",
+        "In the panel make a filter on that element's category with that parameter equals the value shown in Properties: the element is in the result."
+      ]
+    }
+  ]
+}

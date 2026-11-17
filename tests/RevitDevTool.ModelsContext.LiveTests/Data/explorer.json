@@ -1,0 +1,114 @@
+{
+  "cases": [
+    {
+      "id": "EX-01",
+      "description": "Explorer count of Doors in the Architectural link (main model and primary design options)",
+      "check": "CategoryCount",
+      "docs": "Arch",
+      "category": "OST_Doors",
+      "expected": 142,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel.",
+        "Choose Scope 'Whole model' and tick the 'Architectural' link in the document list.",
+        "On the Explorer tab expand the Architectural link row: the Doors row shows 142.",
+        "Check without the panel: open 'Snowdon Towers Sample Architectural.rvt' (do not save), create a Doors schedule with 'Itemize every instance' on and Grand totals > Count; the total is 142 when every secondary design option is excluded (Visibility/Graphics > Design Options: each option set shows its primary)."
+      ]
+    },
+    {
+      "id": "EX-02",
+      "description": "Explorer count of Walls in the Architectural link (main model and primary design options)",
+      "check": "CategoryCount",
+      "docs": "Arch",
+      "category": "OST_Walls",
+      "expected": 1120,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel.",
+        "Choose Scope 'Whole model' and tick the 'Architectural' link in the document list.",
+        "On the Explorer tab expand the Architectural link row: the Walls row shows 1,120.",
+        "Check without the panel: open 'Snowdon Towers Sample Architectural.rvt' (do not save), create a Walls schedule with 'Itemize every instance' on and Grand totals > Count; walls in secondary design options are not counted."
+      ]
+    },
+    {
+      "id": "EX-03",
+      "description": "Explorer count of Ducts in the Current model",
+      "check": "CategoryCount",
+      "docs": "Host",
+      "category": "OST_DuctCurves",
+      "expected": 1053,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 and open the Model Context panel.",
+        "Choose Scope 'Whole model' and tick 'Current model' in the document list.",
+        "On the Explorer tab expand 'Current model': the Ducts row shows 1,053.",
+        "Check without the panel: create a Duct schedule (do not save) with 'Itemize every instance' on and Grand totals > Count; the total is 1,053."
+      ]
+    },
+    {
+      "id": "EX-04",
+      "description": "Snapshot rows per category equal the oracle's plain collector count, for the Current model and the Architectural link",
+      "check": "SnapshotPerCategory",
+      "docs": "Host,Arch",
+      "expected": "equal to the oracle for every category",
+      "manualSteps": [
+        "Open the sample with the Architectural link and the Model Context panel; Scope 'Whole model'.",
+        "On the Explorer tab expand 'Current model' and then the Architectural link; note each category count.",
+        "Pick any three categories and compare with a schedule of that category in the matching file (Grand totals > Count, do not save)."
+      ]
+    },
+    {
+      "id": "EX-05",
+      "description": "Quick counts (shown before the full snapshot loads) equal the oracle per category",
+      "check": "QuickCounts",
+      "docs": "Host,Arch",
+      "expected": "equal to the oracle for every category",
+      "manualSteps": [
+        "Open the sample with the Architectural link and the Model Context panel; Scope 'Whole model'.",
+        "Tick a document: the Explorer counts appear at once and must not change when loading finishes."
+      ]
+    },
+    {
+      "id": "EX-06",
+      "description": "Active view counts per category equal the view collector of view L3 (link elements through the host view)",
+      "check": "ViewCounts",
+      "docs": "Host,Arch",
+      "expected": "equal to the oracle for every category",
+      "manualSteps": [
+        "Make floor plan 'L3' the active view and choose Scope 'Active view' in the panel.",
+        "On the Explorer tab note the Current model category counts.",
+        "In view L3 drag a selection window over the whole plan and click Filter (Modify tab): the per-category counts of the Current model match the Explorer."
+      ]
+    },
+    {
+      "id": "EX-07",
+      "description": "Active view element ids equal the view collector of view L3",
+      "check": "ViewIds",
+      "docs": "Host,Arch",
+      "expected": "the same id set as the oracle",
+      "manualSteps": [
+        "Make floor plan 'L3' the active view and choose Scope 'Active view' in the panel.",
+        "On the Filter tab make a filter with no rules and Categories Ducts, then use the result row menu > Select: Revit selects exactly the ducts shown in L3."
+      ]
+    },
+    {
+      "id": "SC-09",
+      "description": "Secondary design options stay out of Whole model counts: the snapshot holds main model and primary option elements only",
+      "check": "SecondaryOptions",
+      "docs": "Arch",
+      "expected": "snapshot count = oracle main + primary count",
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample Architectural.rvt' (do not save) and open Manage > Design Options to see the option sets and their primary options.",
+        "In the HVAC model with the panel, Scope 'Whole model', tick the Architectural link: Walls shows 1,120, which excludes walls in secondary options."
+      ]
+    },
+    {
+      "id": "SC-10",
+      "description": "The document list holds the Current model first, then each loaded link",
+      "check": "DocumentList",
+      "docs": "All",
+      "expected": "the same documents as the model's loaded link instances, Current model first",
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' with its links loaded and open the Model Context panel.",
+        "The document list starts with 'Current model' and then lists each loaded link (compare with Manage > Manage Links)."
+      ]
+    }
+  ]
+}

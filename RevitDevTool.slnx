@@ -507,6 +507,12 @@
         <Project Path="tests/RevitDevTool.ExternalEvent.App/RevitDevTool.ExternalEvent.App.csproj">
             <Build Project="false" />
         </Project>
+        <Project Path="tests/RevitDevTool.ModelsContext.LiveTests/RevitDevTool.ModelsContext.LiveTests.csproj">
+            <Build Project="false" />
+        </Project>
+        <Project Path="tests/RevitDevTool.ModelsContext.UiTests/RevitDevTool.ModelsContext.UiTests.csproj">
+            <Build Project="false" />
+        </Project>
         <Project Path="tests/DevTools.AssemblyIsolation.Tests/DevTools.AssemblyIsolation.Tests.csproj">
             <BuildType Solution="Debug.Autodesk.2022|*" Project="Debug" />
             <BuildType Solution="Debug.Autodesk.2023|*" Project="Debug" />

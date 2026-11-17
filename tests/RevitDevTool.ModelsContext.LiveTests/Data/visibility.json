@@ -1,0 +1,249 @@
+{
+  "cases": [
+    {
+      "id": "VI-01",
+      "description": "T0 Explorer row: the eye on 'Current model > Ducts' hides the Current model ducts temporarily in {3D}; duct terminals and the link stay visible",
+      "tier": "T0",
+      "source": "ExplorerRow",
+      "action": "Hide",
+      "target": { "docs": "Host", "category": "OST_DuctCurves" },
+      "other": { "docs": "Host", "category": "OST_DuctTerminal" },
+      "expected": { "temporaryHideIsolate": true, "targetVisible": false, "otherVisible": true, "linkVisible": true },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' with the Architectural link and activate the 3D view '{3D}'.",
+        "Model Context panel, Explorer tab, Scope 'Whole model': click the eye on 'Current model > Ducts'.",
+        "Revit shows the cyan 'Temporary Hide/Isolate' frame; ducts disappear, duct terminals and the linked building stay.",
+        "Click Reset in the panel's temporary bar: the frame goes away and the ducts are back."
+      ]
+    },
+    {
+      "id": "VI-02",
+      "description": "T0 Explorer row: Isolate on 'Current model > Ducts' leaves only the Current model ducts in {3D}",
+      "tier": "T0",
+      "source": "ExplorerRow",
+      "action": "Isolate",
+      "target": { "docs": "Host", "category": "OST_DuctCurves" },
+      "other": { "docs": "Host", "category": "OST_DuctTerminal" },
+      "expected": { "temporaryHideIsolate": true, "targetVisible": true, "otherVisible": false, "linkVisible": false },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: hover 'Current model > Ducts' and click Isolate.",
+        "Only ducts stay visible; the linked building and duct terminals are hidden; the temporary frame shows.",
+        "Click Reset: everything is back."
+      ]
+    },
+    {
+      "id": "VI-03",
+      "description": "T0 Explorer row: Color red on 'Current model > Ducts' overrides each duct inside Temporary View Properties",
+      "tier": "T0",
+      "source": "ExplorerRow",
+      "action": "Color",
+      "color": { "r": 230, "g": 40, "b": 40 },
+      "target": { "docs": "Host", "category": "OST_DuctCurves" },
+      "other": { "docs": "Host", "category": "OST_DuctTerminal" },
+      "expected": { "temporaryProperties": true, "targetColor": true, "otherColor": false },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: hover 'Current model > Ducts', click Color and pick red (230, 40, 40).",
+        "Ducts draw red; the view title shows Temporary View Properties; duct terminals keep their color.",
+        "Click Reset: the colors and the temporary properties mode are gone."
+      ]
+    },
+    {
+      "id": "VI-04",
+      "description": "T0 filter result: Color on the RF-01 result (ducts on level L3) colors those ducts only",
+      "tier": "T0",
+      "source": "FilterResult",
+      "action": "Color",
+      "color": { "r": 40, "g": 160, "b": 60 },
+      "target": { "filterCase": "RF-01" },
+      "other": { "filterCase": "RF-02" },
+      "expected": { "temporaryProperties": true, "targetColor": true, "otherColor": false },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Filter tab: build RF-01 (Ducts, Reference Level equals L3) with only 'Current model' ticked.",
+        "Result row menu (...) > Color, pick green (40, 160, 60): the 319 ducts on L3 draw green, other ducts do not.",
+        "Click Reset in the temporary bar."
+      ]
+    },
+    {
+      "id": "VI-05",
+      "description": "T0 filter result: Hide on the RF-01 result hides the ducts on L3; ducts on other levels stay",
+      "tier": "T0",
+      "source": "FilterResult",
+      "action": "Hide",
+      "target": { "filterCase": "RF-01" },
+      "other": { "filterCase": "RF-02" },
+      "expected": { "temporaryHideIsolate": true, "targetVisible": false, "otherVisible": true, "linkVisible": true },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Filter tab: build RF-01 with only 'Current model' ticked.",
+        "Result row menu > Hide: the L3 ducts disappear inside the temporary frame.",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-06",
+      "description": "T1 link model row: the eye on the Architectural link hides the whole link instance temporarily",
+      "tier": "T1",
+      "source": "ExplorerRow",
+      "action": "Hide",
+      "target": { "link": true },
+      "other": { "docs": "Host", "category": "OST_DuctCurves" },
+      "expected": { "temporaryHideIsolate": true, "linkVisible": false, "otherVisible": true },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: click the eye on the Architectural link's model row.",
+        "The linked building disappears; HVAC ducts stay; the temporary bar shows 1 change.",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-07",
+      "description": "T1 link model row: Isolate keeps only the Architectural link instance",
+      "tier": "T1",
+      "source": "ExplorerRow",
+      "action": "Isolate",
+      "target": { "link": true },
+      "other": { "docs": "Host", "category": "OST_DuctCurves" },
+      "expected": { "temporaryHideIsolate": true, "linkVisible": true, "otherVisible": false },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: hover the Architectural link row and click Isolate.",
+        "Only the linked building stays; the HVAC elements are hidden.",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-08",
+      "description": "T1 link model row: Color overrides the Architectural link instance",
+      "tier": "T1",
+      "source": "ExplorerRow",
+      "action": "Color",
+      "color": { "r": 40, "g": 90, "b": 220 },
+      "target": { "link": true },
+      "other": { "docs": "Host", "category": "OST_DuctCurves" },
+      "expected": { "temporaryProperties": true, "targetColor": true, "otherColor": false },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: hover the Architectural link row, click Color and pick blue (40, 90, 220).",
+        "The whole linked building draws blue; ducts keep their color.",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-09",
+      "description": "T2 All models row: the eye on 'All models > Ducts' hides the Ducts category temporarily",
+      "tier": "T2",
+      "source": "ExplorerRow",
+      "action": "Hide",
+      "target": { "category": "OST_DuctCurves", "everywhere": true },
+      "other": { "docs": "Host", "category": "OST_DuctTerminal" },
+      "expected": { "temporaryHideIsolate": true, "targetVisible": false, "otherVisible": true, "linkVisible": true },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: click the eye on 'All models > Ducts'.",
+        "The Ducts category is hidden (in the Current model and in links that follow the host view).",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-10",
+      "description": "T2 All models row: Isolate on 'All models > Ducts' isolates the Ducts category",
+      "tier": "T2",
+      "source": "ExplorerRow",
+      "action": "Isolate",
+      "target": { "category": "OST_DuctCurves", "everywhere": true },
+      "other": { "docs": "Host", "category": "OST_DuctTerminal" },
+      "expected": { "temporaryHideIsolate": true, "targetVisible": true, "otherVisible": false },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: hover 'All models > Ducts' and click Isolate.",
+        "Only ducts stay visible.",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-11",
+      "description": "T2 All models row: Color on 'All models > Ducts' overrides the Ducts category",
+      "tier": "T2",
+      "source": "ExplorerRow",
+      "action": "Color",
+      "color": { "r": 230, "g": 150, "b": 20 },
+      "target": { "category": "OST_DuctCurves", "everywhere": true },
+      "other": { "docs": "Host", "category": "OST_DuctTerminal" },
+      "expected": { "temporaryProperties": true, "targetColor": true, "otherColor": false },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: hover 'All models > Ducts', click Color and pick orange (230, 150, 20).",
+        "Every duct draws orange (category override in Temporary View Properties).",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-12",
+      "description": "T2 All models row: the eye on 'All models > Doors' turns temporary hide on; Current model ducts stay. The linked doors disappear only in the image: the link view collector the API offers does not reflect a temporary category hide, so their state is recorded, not asserted",
+      "tier": "T2",
+      "source": "ExplorerRow",
+      "action": "Hide",
+      "target": { "category": "OST_Doors", "everywhere": true },
+      "other": { "docs": "Host", "category": "OST_DuctCurves" },
+      "linked": { "filterCase": "GR-02" },
+      "expected": { "temporaryHideIsolate": true, "otherVisible": true },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: click the eye on 'All models > Doors'.",
+        "The linked doors disappear (the link follows the host view); HVAC ducts stay.",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-13",
+      "description": "T3 filter result inside the link: Hide on the GR-02 result (12 Architectural doors) is planned as Hide in View (T3). L2 checks the plan only; running T3 inside the test runner crashed Revit",
+      "tier": "T3",
+      "source": "FilterResult",
+      "action": "Hide",
+      "target": { "filterCase": "GR-02" },
+      "other": { "docs": "Host", "category": "OST_DuctCurves" },
+      "expected": { "plannedTiers": ["T3"] },
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Activate '{3D}'. Filter tab: build GR-02 (Doors, OR: Mark equals S10, Swing Angle undefined) with only the Architectural link ticked.",
+        "Result row menu > Hide: the 12 linked doors disappear (Hide in View, one undo entry, marked with the orange T3 dot).",
+        "Click Reset in the temporary bar: the panel shows them again."
+      ]
+    },
+    {
+      "id": "VI-14",
+      "description": "T3 filter result inside the link: Color is refused with the reason that link elements only hide and show",
+      "tier": "T3",
+      "source": "FilterResult",
+      "action": "Color",
+      "color": { "r": 200, "g": 0, "b": 200 },
+      "target": { "filterCase": "GR-02" },
+      "expected": { "error": "Inside a link, single elements can only be hidden and shown. Isolate, Halftone and Color are on the link's model row." },
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Activate '{3D}'. Filter tab: build GR-02 with only the Architectural link ticked.",
+        "Result row menu: Color is disabled and its tooltip gives the reason; nothing changes in the view."
+      ]
+    },
+    {
+      "id": "VI-15",
+      "description": "Mixed filter result: Hide on the GS-02 result splits into Current model ducts (T0, temporary hide) and Architectural doors (T3, Hide in View). L2 checks the split only",
+      "tier": "T0+T3",
+      "source": "FilterResult",
+      "action": "Hide",
+      "target": { "filterCase": "GS-02" },
+      "other": { "docs": "Host", "category": "OST_DuctTerminal" },
+      "expected": { "plannedTiers": ["T0", "T3"] },
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Activate '{3D}'. Filter tab: build GS-02 with 'Current model' and the Architectural link ticked.",
+        "Result row menu > Hide: ducts disappear in the temporary frame and the linked doors disappear too.",
+        "Click Reset: both come back."
+      ]
+    }
+  ]
+}

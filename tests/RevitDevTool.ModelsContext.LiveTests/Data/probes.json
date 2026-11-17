@@ -1,0 +1,10 @@
+[
+  { "docs": "Host", "category": "OST_DuctCurves", "parameter": "Reference Level" },
+  { "docs": "Arch", "category": "OST_Walls", "parameter": "Base Constraint" },
+  { "docs": "Arch", "category": "OST_Doors", "parameter": "Phase Created" },
+  { "docs": "Arch", "category": "OST_Doors", "parameter": "Fire Rating" },
+  { "docs": "Arch", "category": "OST_Walls", "parameter": "Location Line" },
+  { "docs": "Arch", "category": "OST_Walls", "parameter": "Fire Rating" },
+  { "docs": "Arch", "category": "OST_Stairs", "parameter": "Actual Number of Risers" },
+  { "docs": "Host", "category": "OST_DuctCurves", "parameter": "Family Name" }
+]

@@ -1,0 +1,35 @@
+{
+  "hostTitle": "Snowdon Towers Sample HVAC",
+  "linkTitle": "Snowdon Towers Sample Architectural",
+  "linkLabel": "Architectural",
+  "viewName": "L3",
+  "threeDViewName": "{3D}",
+  "missingSource": "link:c:\\missing\\gone.rvt",
+  "categoryNames": {
+    "OST_Doors": "Doors",
+    "OST_Walls": "Walls",
+    "OST_DuctCurves": "Ducts",
+    "OST_Stairs": "Stairs"
+  },
+  "parameters": {
+    "Mark": { "builtIn": "ALL_MODEL_MARK" },
+    "Comments": { "builtIn": "ALL_MODEL_INSTANCE_COMMENTS" },
+    "Fire Rating": { "builtIn": "FIRE_RATING" },
+    "Type Mark": { "builtIn": "ALL_MODEL_TYPE_MARK" },
+    "Family Name": { "builtIn": "ALL_MODEL_FAMILY_NAME" },
+    "Function": { "builtIn": "FUNCTION_PARAM" },
+    "Location Line": { "builtIn": "WALL_KEY_REF_PARAM" },
+    "Room Bounding": { "builtIn": "WALL_ATTR_ROOM_BOUNDING" },
+    "Structural": { "builtIn": "WALL_STRUCTURAL_SIGNIFICANT" },
+    "Base Constraint": { "builtIn": "WALL_BASE_CONSTRAINT" },
+    "Unconnected Height": { "builtIn": "WALL_USER_HEIGHT_PARAM" },
+    "Width": { "builtIn": "WALL_ATTR_WIDTH_PARAM" },
+    "Actual Number of Risers": { "builtIn": "STAIRS_ACTUAL_NUM_RISERS" },
+    "Phase Created": { "builtIn": "PHASE_CREATED" },
+    "Reference Level": { "builtIn": "RBS_START_LEVEL_PARAM" },
+    "Length": { "builtIn": "CURVE_ELEM_LENGTH" },
+    "Slope": { "builtIn": "ROOF_SLOPE" },
+    "Swing Angle": { "name": "Swing Angle", "spec": "autodesk.spec.aec:angle" },
+    "First shared": { "sharedFirstIn": "Arch" }
+  }
+}

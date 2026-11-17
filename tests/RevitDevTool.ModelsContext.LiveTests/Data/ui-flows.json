@@ -1,0 +1,94 @@
+{
+  "cases": [
+    {
+      "id": "UI-01",
+      "description": "Build NU-03 in the panel (Doors, Swing Angle is greater than 45°) through UI Automation: the parameter picker takes 'Swing Angle' and the count equals the NU-03 golden",
+      "test": "NumberRuleCountsGolden",
+      "cases": ["NU-03"],
+      "expected": "parameter 'Swing Angle'; count = NU-03 expected",
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' with the Architectural link and the Model Context panel; Scope 'Whole model'; tick only the Architectural link.",
+        "Filter tab: + New filter, Categories Doors, + Condition, parameter 'Swing Angle', operator 'is greater than', value '45°'.",
+        "The count reads 130."
+      ]
+    },
+    {
+      "id": "UI-02",
+      "description": "Aa changes the count: TX-01 (Mark equals 's10', Aa off) then turning Aa on gives TX-02",
+      "test": "CaseToggleChangesCount",
+      "cases": ["TX-01", "TX-02"],
+      "expected": "TX-01 expected, then TX-02 expected",
+      "images": ["before", "after-off", "after"],
+      "manualSteps": [
+        "Tick only the Architectural link. Filter tab: + New filter, Categories Doors, + Condition Mark equals s10: count 1.",
+        "Turn Aa on in that rule: count 0."
+      ]
+    },
+    {
+      "id": "UI-03",
+      "description": "The top connector set to OR builds GR-02 (Mark equals S10 OR Swing Angle undefined)",
+      "test": "ConnectorMakesOrGroup",
+      "cases": ["GR-02"],
+      "expected": "GR-02 expected",
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Tick only the Architectural link. Filter tab: + New filter, Categories Doors, + Condition Mark equals S10, + Condition Swing Angle undefined.",
+        "Click the connector until it reads OR: count 12."
+      ]
+    },
+    {
+      "id": "UI-04",
+      "description": "Save NU-04 as a custom filter, switch to a new filter, switch back: the saved filter reloads with the same count; the test deletes it",
+      "test": "SavedFilterReloads",
+      "cases": ["NU-04"],
+      "expected": "NU-04 expected after reload",
+      "images": ["before", "saved", "after"],
+      "manualSteps": [
+        "Tick only the Architectural link. Build NU-04 (Doors, Swing Angle equals 90°): count 130.",
+        "Rename it (pencil), Save, then + New filter (Discard if asked).",
+        "Pick the saved filter in the source list: count 130 again. Delete it with the trash button."
+      ]
+    },
+    {
+      "id": "UI-05",
+      "description": "Live pauses above 5,000 matches: every category in the Architectural link (SC-02) keeps the Live switch on and shows the line 'Paused: over 5,000 matches'; None clears it",
+      "test": "LivePausesAboveLimit",
+      "cases": ["SC-02"],
+      "expected": "count = SC-02 expected; Live switch on; paused line shown; no line after None",
+      "images": ["before", "paused", "after"],
+      "manualSteps": [
+        "Tick only the Architectural link. Filter tab: + New filter, open Categories, click All.",
+        "The count reads 7,746. The Live switch stays on with its label Live, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
+        "Click None: the count reads 0 and the line is gone."
+      ]
+    },
+    {
+      "id": "UI-06",
+      "description": "T1 from the panel: the eye on the Architectural link row hides the link, the temporary bar shows one change, Reset removes the bar",
+      "test": "LinkHideShowsTemporaryBar",
+      "cases": [],
+      "expected": "temporary bar '1 change', then no bar after Reset",
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Explorer tab, Scope 'Whole model', Architectural link ticked: click the eye on the link's model row.",
+        "The linked building disappears in the active view and the temporary bar reads 1 change.",
+        "Click Reset: the link is back and the bar is gone."
+      ]
+    },
+    {
+      "id": "UI-07",
+      "description": "T3 from the panel: the eye on Doors under the Architectural link hides the linked doors through Hide in View, the temporary bar shows one change, Reset shows them again",
+      "test": "LinkDoorsHideThenReset",
+      "cases": [],
+      "category": "OST_Doors",
+      "expected": "eye Hidden and temporary bar '1 change', then eye Shown and no bar after Reset",
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link ticked: click Collapse all, expand the link's row, click the eye on its Doors row.",
+        "The linked doors disappear in the view, the eye on Doors is off and the temporary bar reads 1 change. In Revit, Reveal Hidden Elements shows the doors as hidden in the view.",
+        "Click Reset: the doors are back, the eye is on and the bar is gone."
+      ]
+    }
+  ]
+}

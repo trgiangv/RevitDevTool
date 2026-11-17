@@ -1,0 +1,141 @@
+{
+  "cases": [
+    {
+      "id": "SC-01",
+      "description": "Whole model, Current model, every model category",
+      "docs": "Host",
+      "scope": "WholeModel",
+      "filter": {},
+      "expected": 2985,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
+        "Choose Scope 'Whole model' in the panel.",
+        "In the document list tick only 'Current model'.",
+        "Open the Filter tab and click + (New custom filter).",
+        "Leave Categories empty (every model category counts).",
+        "Read the number before 'matches' in the result row: it must be 2985.",
+        "Check without the panel: Revit has no single count of every model element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
+      ]
+    },
+    {
+      "id": "SC-02",
+      "description": "Whole model, Architectural link, every model category",
+      "docs": "Arch",
+      "scope": "WholeModel",
+      "filter": {},
+      "expected": 7746,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
+        "Choose Scope 'Whole model' in the panel.",
+        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "Open the Filter tab and click + (New custom filter).",
+        "Leave Categories empty (every model category counts).",
+        "Read the number before 'matches' in the result row: it must be 7746.",
+        "Check without the panel: Revit has no single count of every model element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
+      ]
+    },
+    {
+      "id": "SC-03",
+      "description": "Whole model, link unticked: Doors in Current model only: Doors",
+      "docs": "Host",
+      "scope": "WholeModel",
+      "filter": {"categories":["OST_Doors"]},
+      "expected": 0,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
+        "Choose Scope 'Whole model' in the panel.",
+        "In the document list tick only 'Current model'.",
+        "Open the Filter tab and click + (New custom filter).",
+        "Open Categories and tick Doors.",
+        "Read the number before 'matches' in the result row: it must be 0.",
+        "Check without the panel: open Snowdon Towers Sample HVAC.rvt (do not save), create a schedule (View > Schedules > Schedule/Quantities) of Doors with 'Itemize every instance' on, turn on Grand totals > Count and read the total. Close the file without saving."
+      ]
+    },
+    {
+      "id": "SC-04",
+      "description": "Whole model, link ticked: Doors in both: Doors",
+      "docs": "Both",
+      "scope": "WholeModel",
+      "filter": {"categories":["OST_Doors"]},
+      "expected": 142,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
+        "Choose Scope 'Whole model' in the panel.",
+        "In the document list tick 'Current model' and the 'Architectural' link.",
+        "Open the Filter tab and click + (New custom filter).",
+        "Open Categories and tick Doors.",
+        "Read the number before 'matches' in the result row: it must be 142.",
+        "Check without the panel: open Snowdon Towers Sample HVAC.rvt with 'Include elements in links' ticked on the schedule (do not save), create a schedule (View > Schedules > Schedule/Quantities) of Doors with 'Itemize every instance' on, turn on Grand totals > Count and read the total. Close the file without saving."
+      ]
+    },
+    {
+      "id": "SC-05",
+      "description": "Active view, Current model, every model category",
+      "docs": "Host",
+      "scope": "ActiveView",
+      "filter": {},
+      "expected": 917,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
+        "Make floor plan 'L3' the active view, then choose Scope 'Active view' in the panel.",
+        "In the document list tick only 'Current model'.",
+        "Open the Filter tab and click + (New custom filter).",
+        "Leave Categories empty (every model category counts).",
+        "Read the number before 'matches' in the result row: it must be 917.",
+        "Check without the panel: in view L3 drag a selection window over the whole plan and click Filter (Modify tab); the dialog counts the Current model elements per category (every model category). Revit has no dialog that counts linked elements in a view, so the link part is checked by the oracle only."
+      ]
+    },
+    {
+      "id": "SC-06",
+      "description": "Active view, Architectural link, every model category",
+      "docs": "Arch",
+      "scope": "ActiveView",
+      "filter": {},
+      "expected": 780,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
+        "Make floor plan 'L3' the active view, then choose Scope 'Active view' in the panel.",
+        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "Open the Filter tab and click + (New custom filter).",
+        "Leave Categories empty (every model category counts).",
+        "Read the number before 'matches' in the result row: it must be 780.",
+        "Check without the panel: in view L3 drag a selection window over the whole plan and click Filter (Modify tab); the dialog counts the Current model elements per category (every model category). Revit has no dialog that counts linked elements in a view, so the link part is checked by the oracle only."
+      ]
+    },
+    {
+      "id": "SC-07",
+      "description": "Active view, Doors in both: Doors",
+      "docs": "Both",
+      "scope": "ActiveView",
+      "filter": {"categories":["OST_Doors"]},
+      "expected": 24,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
+        "Make floor plan 'L3' the active view, then choose Scope 'Active view' in the panel.",
+        "In the document list tick 'Current model' and the 'Architectural' link.",
+        "Open the Filter tab and click + (New custom filter).",
+        "Open Categories and tick Doors.",
+        "Read the number before 'matches' in the result row: it must be 24.",
+        "Check without the panel: in view L3 drag a selection window over the whole plan and click Filter (Modify tab); the dialog counts the Current model elements per category (Doors). Revit has no dialog that counts linked elements in a view, so the link part is checked by the oracle only."
+      ]
+    },
+    {
+      "id": "SC-08",
+      "description": "Active view, Swing Angle > 45 deg in both: Doors where Swing Angle is greater than \"45°\"",
+      "docs": "Both",
+      "scope": "ActiveView",
+      "filter": {"categories":["OST_Doors"],"rules":[{"parameter":"Swing Angle","operator":"Greater","value":"45°"}]},
+      "expected": 22,
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
+        "Make floor plan 'L3' the active view, then choose Scope 'Active view' in the panel.",
+        "In the document list tick 'Current model' and the 'Architectural' link.",
+        "Open the Filter tab and click + (New custom filter).",
+        "Open Categories and tick Doors.",
+        "Click + Condition, pick parameter 'Swing Angle', operator 'is greater than', value '45°'.",
+        "Read the number before 'matches' in the result row: it must be 22.",
+        "Check without the panel: in view L3 drag a selection window over the whole plan and click Filter (Modify tab); the dialog counts the Current model elements per category (Doors). Revit has no dialog that counts linked elements in a view, so the link part is checked by the oracle only."
+      ]
+    }
+  ]
+}
