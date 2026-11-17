@@ -156,7 +156,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
         var outcome = await ReloadCoreAsync(id, cancellationToken).ConfigureAwait(false);
         if (timer.IsEnabled)
         {
-            _logger.SnapshotReloaded(id, outcome, timer.ElapsedMs);
+            _logger.SnapshotReloaded(id.Label, outcome, timer.ElapsedMs);
         }
 
         return outcome;
@@ -169,7 +169,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
     {
         var timer = TraceTimer.Start(_logger);
         var snapshot = await source.BuildSnapshotAsync(id, progress, cancellationToken).ConfigureAwait(false);
-        _logger.SnapshotBuilt(id, snapshot.ElementCount, timer.ElapsedMs);
+        _logger.SnapshotBuilt(id.Label, snapshot.ElementCount, timer.ElapsedMs);
         return snapshot;
     }
 

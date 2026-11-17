@@ -33,20 +33,20 @@ public static partial class ModelContextLog
 
     [LoggerMessage(EventId = 10, Level = LogLevel.Trace,
         Message = "Snapshot {Source}: {Elements} elements in {ElapsedMs} ms")]
-    public static partial void SnapshotBuilt(this ILogger logger, SourceId source, int elements, double elapsedMs);
+    public static partial void SnapshotBuilt(this ILogger logger, string source, int elements, double elapsedMs);
 
     [LoggerMessage(EventId = 11, Level = LogLevel.Trace, Message = "Snapshot reload {Source}: {Outcome} in {ElapsedMs} ms")]
-    public static partial void SnapshotReloaded(this ILogger logger, SourceId source, ReloadOutcome outcome,
+    public static partial void SnapshotReloaded(this ILogger logger, string source, ReloadOutcome outcome,
         double elapsedMs);
 
     [LoggerMessage(EventId = 12, Level = LogLevel.Trace,
         Message = "Value counts {Source} {Parameter}: {Values} values over {Total} elements in {ElapsedMs} ms")]
-    public static partial void ValuesCounted(this ILogger logger, SourceId source, string parameter, int values,
+    public static partial void ValuesCounted(this ILogger logger, string source, string parameter, int values,
         int total, double elapsedMs);
 
     [LoggerMessage(EventId = 13, Level = LogLevel.Trace,
         Message = "Parameter catalog {Source}: {Parameters} parameters in {ElapsedMs} ms")]
-    public static partial void CatalogRead(this ILogger logger, SourceId source, int parameters, double elapsedMs);
+    public static partial void CatalogRead(this ILogger logger, string source, int parameters, double elapsedMs);
 
     [LoggerMessage(EventId = 14, Level = LogLevel.Trace, Message = "Selection sent: {Elements} elements in {ElapsedMs} ms")]
     public static partial void SelectionSent(this ILogger logger, int elements, double elapsedMs);
@@ -62,6 +62,24 @@ public static partial class ModelContextLog
     [LoggerMessage(EventId = 16, Level = LogLevel.Trace,
         Message = "Filter {Filter}: {Matches} matches in {ElapsedMs} ms")]
     public static partial void FilterEvaluated(this ILogger logger, string filter, int matches, double elapsedMs);
+
+    [LoggerMessage(EventId = 22, Level = LogLevel.Trace,
+        Message = "Filter {Filter} in {Source}: {Matches} matches in {ElapsedMs} ms")]
+    public static partial void FilterDocumentEvaluated(this ILogger logger, string filter, string source, int matches,
+        double elapsedMs);
+
+    [LoggerMessage(EventId = 23, Level = LogLevel.Trace,
+        Message = "Filter {Filter}: Live paused at {Matches} matches, limit {Limit}")]
+    public static partial void FilterLivePaused(this ILogger logger, string filter, int matches, int limit);
+
+    [LoggerMessage(EventId = 24, Level = LogLevel.Trace,
+        Message = "Parameters merged: {Catalogs} catalogs, {Parameters} parameters, {Scopes} scopes in {ElapsedMs} ms")]
+    public static partial void ParametersMerged(this ILogger logger, int catalogs, int parameters, int scopes,
+        double elapsedMs);
+
+    [LoggerMessage(EventId = 25, Level = LogLevel.Trace,
+        Message = "Deltas applied: {Batches} batches, {Elements} elements in {ElapsedMs} ms")]
+    public static partial void DeltasApplied(this ILogger logger, int batches, int elements, double elapsedMs);
 
     [LoggerMessage(EventId = 17, Level = LogLevel.Trace,
         Message = "Visibility {Action}: {Steps} steps, {Elements} elements in {ElapsedMs} ms")]

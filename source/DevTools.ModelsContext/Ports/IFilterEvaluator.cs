@@ -15,4 +15,6 @@ public interface IFilterEvaluator
         ParameterKey parameter,
         IReadOnlyCollection<long> groups,
         CancellationToken cancellationToken);
+
+    Task<string?> FormatExampleAsync(DocumentKey model, string spec, CancellationToken cancellationToken);
 }

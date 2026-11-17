@@ -1,3 +1,4 @@
+using DevTools.ModelsContext.Model;
 using Microsoft.Extensions.Logging;
 
 namespace DevTools.ModelsContext.Diagnostics;
@@ -33,7 +34,8 @@ public sealed class FailureTally
             return;
         }
 
-        _logger.SliceFailed(first, operation, subject?.ToString() ?? string.Empty, Failed, total);
+        _logger.SliceFailed(first, operation, subject is SourceId source ? source.Label : subject?.ToString() ?? string.Empty,
+            Failed, total);
         Failed = 0;
         First = null;
     }

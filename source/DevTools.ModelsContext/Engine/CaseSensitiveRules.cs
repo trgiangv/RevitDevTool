@@ -4,8 +4,6 @@ namespace DevTools.ModelsContext.Engine;
 
 public static class CaseSensitiveRules
 {
-    private static readonly FilterSet MatchNone = FilterSet.Not(SetMatch.All);
-
     public static bool IsCaseSensitive(FilterRule rule)
     {
         return rule.IsCaseSensitive && FilterOperators.NeedsValue(rule.Operator);
@@ -23,35 +21,23 @@ public static class CaseSensitiveRules
 
     public static FilterSet Widen(FilterSet set)
     {
-        return WidenSet(set, true);
+        return set with { Children = set.Children.Select(Widen).ToList() };
     }
 
-    private static FilterSet WidenSet(FilterSet set, bool positive)
-    {
-        var inner = set.Inverted ? !positive : positive;
-        return set with { Children = set.Children.Select(child => Widen(child, inner)).ToList() };
-    }
-
-    private static FilterNode Widen(FilterNode node, bool positive)
+    private static FilterNode Widen(FilterNode node)
     {
         return node switch
         {
-            FilterSet set => WidenSet(set, positive),
-            FilterRule rule when IsCaseSensitive(rule) => WidenRule(rule, positive),
+            FilterSet set => Widen(set),
+            FilterRule rule when IsCaseSensitive(rule) => WidenRule(rule),
             _ => node
         };
     }
 
-    private static FilterNode WidenRule(FilterRule rule, bool positive)
+    private static FilterNode WidenRule(FilterRule rule)
     {
-        var insensitive = rule with { IsCaseSensitive = false };
-        if (positive)
-        {
-            return FilterOperators.IsPositiveMatch(rule.Operator)
-                ? insensitive
-                : new FilterRule(rule.Parameter, FilterOperator.Exists);
-        }
-
-        return FilterOperators.IsNegative(rule.Operator) ? insensitive : MatchNone;
+        return FilterOperators.IsPositiveMatch(rule.Operator)
+            ? rule with { IsCaseSensitive = false }
+            : new FilterRule(rule.Parameter, FilterOperator.Defined);
     }
 }

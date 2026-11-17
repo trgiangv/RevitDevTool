@@ -9,7 +9,7 @@ public sealed record FilterDefinition(IReadOnlyList<long> Groups, FilterSet Root
 
 public abstract record FilterNode;
 
-public sealed record FilterSet(SetMatch Match, IReadOnlyList<FilterNode> Children, bool Inverted = false) : FilterNode
+public sealed record FilterSet(SetMatch Match, IReadOnlyList<FilterNode> Children, FilterScope? Scope = null) : FilterNode
 {
     public static FilterSet All(params FilterNode[] children)
     {
@@ -21,9 +21,21 @@ public sealed record FilterSet(SetMatch Match, IReadOnlyList<FilterNode> Childre
         return new FilterSet(SetMatch.Any, children);
     }
 
-    public static FilterSet Not(SetMatch match, params FilterNode[] children)
+    public FilterSet In(FilterScope scope)
     {
-        return new FilterSet(match, children, true);
+        return this with { Scope = scope };
+    }
+}
+
+public sealed record FilterScope(IReadOnlyList<SourceId> Documents, IReadOnlyList<long> Categories)
+{
+    public static FilterScope Same { get; } = new([], []);
+
+    public bool IsSame => Documents.Count == 0 && Categories.Count == 0;
+
+    public static FilterScope Of(IEnumerable<SourceId>? documents = null, IEnumerable<long>? categories = null)
+    {
+        return new FilterScope((documents ?? []).Distinct().ToList(), (categories ?? []).Distinct().ToList());
     }
 }
 
@@ -31,7 +43,8 @@ public sealed record FilterRule(
     ParameterKey Parameter,
     FilterOperator Operator,
     string Value = "",
-    bool IsCaseSensitive = false) : FilterNode;
+    bool IsCaseSensitive = false,
+    NumberRange? Picked = null) : FilterNode;
 
 public sealed record UnsupportedRule(string Description) : FilterNode;
 
@@ -94,8 +107,8 @@ public sealed record ParameterKey(string Name, string? BuiltInName = null, Guid?
 
 public enum SetMatch
 {
-    [Description("All (AND)")]
+    [Description("AND")]
     All,
-    [Description("Any (OR)")]
+    [Description("OR")]
     Any
 }

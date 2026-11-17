@@ -34,13 +34,78 @@ public sealed record ParameterInfo(
     string? Spec = null,
     string? SpecLabel = null,
     ParameterOrigin Origins = ParameterOrigin.None,
-    ParameterBinding Bindings = ParameterBinding.None,
-    int Coverage = 1,
-    int DocumentCount = 1)
+    ParameterBinding Bindings = ParameterBinding.None)
 {
+    public const int SummaryNames = 2;
+
     public CategoryIdSet Categories { get; init; } = CategoryIdSet.Empty;
 
-    public bool IsInAllDocuments => Coverage >= DocumentCount;
+    public string? Discipline { get; init; }
+
+    public string? Group { get; init; }
+
+    public IReadOnlyList<string> Families { get; init; } = [];
+
+    public IReadOnlyList<string> Models { get; init; } = [];
+
+    public IReadOnlyList<string> CategoryNames { get; init; } = [];
+
+    public bool IsMeasured => Discipline is not null;
+
+    public ParameterBinding Section => (Bindings & ParameterBinding.Instance) != 0 || Bindings == ParameterBinding.None
+        ? ParameterBinding.Instance
+        : ParameterBinding.Type;
+
+    public bool IsType => Section == ParameterBinding.Type;
+
+    public ParameterOrigin Source
+    {
+        get
+        {
+            if ((Origins & ParameterOrigin.Shared) != 0)
+            {
+                return ParameterOrigin.Shared;
+            }
+
+            if ((Origins & ParameterOrigin.Project) != 0)
+            {
+                return ParameterOrigin.Project;
+            }
+
+            return (Origins & ParameterOrigin.Family) != 0 ? ParameterOrigin.Family : ParameterOrigin.BuiltIn;
+        }
+    }
+
+    public string CategorySummary => Summary(CategoryNames);
+
+    public string SpokenName
+    {
+        get
+        {
+            var parts = new List<string>(3) { DisplayName };
+            if (Source != ParameterOrigin.BuiltIn)
+            {
+                parts.Add(EnumText.Of(Source));
+            }
+
+            if (IsType)
+            {
+                parts.Add(EnumText.Of(ParameterBinding.Type));
+            }
+
+            return string.Join(", ", parts);
+        }
+    }
+
+    public static string Summary(IReadOnlyList<string> names)
+    {
+        if (names.Count <= SummaryNames)
+        {
+            return string.Join(", ", names);
+        }
+
+        return string.Join(", ", names.Take(SummaryNames)) + " +" + (names.Count - SummaryNames).ToString(System.Globalization.CultureInfo.CurrentCulture);
+    }
 
     public override string ToString()
     {
@@ -65,12 +130,11 @@ public static class ParameterCatalog
 
                 merged[parameter.Key] = merged.TryGetValue(parameter.Key, out var known)
                     ? Combine(known, parameter)
-                    : parameter with { Coverage = 1 };
+                    : parameter;
             }
         }
 
         return merged.Values
-            .Select(parameter => parameter with { DocumentCount = catalogs.Count })
             .OrderBy(parameter => parameter.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(parameter => parameter.SpecLabel, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -84,10 +148,23 @@ public static class ParameterCatalog
             Storage = known.Storage == ParameterStorage.None ? other.Storage : known.Storage,
             Spec = known.Spec ?? other.Spec,
             SpecLabel = known.SpecLabel ?? other.SpecLabel,
+            Discipline = known.Discipline ?? other.Discipline,
+            Group = known.Group ?? other.Group,
             Origins = known.Origins | other.Origins,
             Bindings = known.Bindings | other.Bindings,
             Categories = known.Categories.Union(other.Categories),
-            Coverage = known.Coverage + 1
+            Families = Union(known.Families, other.Families),
+            Models = Union(known.Models, other.Models)
         };
+    }
+
+    private static IReadOnlyList<string> Union(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        if (right.Count == 0)
+        {
+            return left;
+        }
+
+        return left.Count == 0 ? right : left.Concat(right).Distinct(StringComparer.Ordinal).ToList();
     }
 }

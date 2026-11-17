@@ -47,7 +47,7 @@ public sealed class DocumentSnapshot
     {
         get
         {
-            const int elementRowBytes = 32;
+            const int elementRowBytes = 40;
             const int typeRowBytes = 24;
             const int groupRowBytes = 16;
             const int indexEntryBytes = 28;
@@ -85,6 +85,11 @@ public sealed class DocumentSnapshot
     public bool Contains(long id)
     {
         return _rowIndex.ContainsKey(id);
+    }
+
+    public bool InModel(long id)
+    {
+        return TryGetRow(id, out var row) && !row.SecondaryOption;
     }
 
     public int GroupIndexOf(long groupId)
@@ -151,9 +156,19 @@ public sealed class DocumentSnapshot
 
     public IEnumerable<long> IdsUnder(RowPath branch)
     {
+        return IdsUnder(branch, false);
+    }
+
+    public IEnumerable<long> ModelIdsUnder(RowPath branch)
+    {
+        return IdsUnder(branch, true);
+    }
+
+    private IEnumerable<long> IdsUnder(RowPath branch, bool modelOnly)
+    {
         if (branch.ElementId != RowPath.Unset)
         {
-            if (Contains(branch.ElementId))
+            if (TryGetRow(branch.ElementId, out var element) && !(modelOnly && element.SecondaryOption))
             {
                 yield return branch.ElementId;
             }
@@ -163,7 +178,7 @@ public sealed class DocumentSnapshot
 
         foreach (var row in _rows)
         {
-            if (IsUnder(row, branch))
+            if (!(modelOnly && row.SecondaryOption) && IsUnder(row, branch))
             {
                 yield return row.Id;
             }
@@ -244,7 +259,8 @@ public sealed class DocumentSnapshot
         }
 
         var old = _rows[index];
-        if (old.GroupIndex != row.GroupIndex || old.TypeIndex != row.TypeIndex)
+        if (old.GroupIndex != row.GroupIndex || old.TypeIndex != row.TypeIndex
+                                             || old.SecondaryOption != row.SecondaryOption)
         {
             Count(old, -1);
             Count(row, 1);
@@ -286,7 +302,8 @@ public sealed class DocumentSnapshot
             return false;
         }
 
-        row = new ElementRow(element.Id, _types[typeIndex].GroupIndex, typeIndex, element.LevelId, element.WorksetId);
+        row = new ElementRow(element.Id, _types[typeIndex].GroupIndex, typeIndex, element.LevelId, element.WorksetId,
+            element.SecondaryOption);
         return true;
     }
 
@@ -307,6 +324,11 @@ public sealed class DocumentSnapshot
 
     private void Count(ElementRow row, int amount)
     {
+        if (row.SecondaryOption)
+        {
+            return;
+        }
+
         Span<int> path = stackalloc int[TreeSchema.MaxGroupingDepth];
         var length = PathOf(row, path);
         Counts.Add(path[..length], amount);

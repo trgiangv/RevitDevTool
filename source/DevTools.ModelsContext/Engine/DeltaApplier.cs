@@ -25,20 +25,20 @@ public static class DeltaApplier
             return DeltaOutcome.Dirty;
         }
 
-        if (delta.ChangedCount > dirtyThreshold)
+        if (delta.ChangedCount <= dirtyThreshold && TryApply(snapshot, delta))
         {
-            snapshot.MarkDirty();
-            return DeltaOutcome.Dirty;
+            return DeltaOutcome.Applied;
         }
 
-        foreach (var type in delta.Types)
+        snapshot.MarkDirty();
+        return DeltaOutcome.Dirty;
+    }
+
+    private static bool TryApply(DocumentSnapshot snapshot, ElementDelta delta)
+    {
+        if (!TryUpsertTypes(snapshot, delta.Types))
         {
-            snapshot.UpsertType(type, out var moved);
-            if (moved)
-            {
-                snapshot.MarkDirty();
-                return DeltaOutcome.Dirty;
-            }
+            return false;
         }
 
         foreach (var id in delta.Deleted)
@@ -46,18 +46,36 @@ public static class DeltaApplier
             snapshot.Remove(id);
         }
 
-        foreach (var element in delta.Added.Concat(delta.Modified))
+        return TryUpsertElements(snapshot, delta.Added) && TryUpsertElements(snapshot, delta.Modified);
+    }
+
+    private static bool TryUpsertTypes(DocumentSnapshot snapshot, IReadOnlyList<TypeRecord> types)
+    {
+        foreach (var type in types)
+        {
+            snapshot.UpsertType(type, out var moved);
+            if (moved)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool TryUpsertElements(DocumentSnapshot snapshot, IReadOnlyList<ElementRecord> elements)
+    {
+        foreach (var element in elements)
         {
             var known = snapshot.Contains(element.Id)
                 ? snapshot.TryReplace(element)
                 : snapshot.TryAdd(element);
             if (!known)
             {
-                snapshot.MarkDirty();
-                return DeltaOutcome.Dirty;
+                return false;
             }
         }
 
-        return DeltaOutcome.Applied;
+        return true;
     }
 }

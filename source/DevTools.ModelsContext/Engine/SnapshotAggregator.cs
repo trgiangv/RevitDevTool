@@ -12,6 +12,11 @@ public static class SnapshotAggregator
         Span<int> path = stackalloc int[TreeSchema.MaxGroupingDepth];
         foreach (var row in snapshot.Rows)
         {
+            if (row.SecondaryOption)
+            {
+                continue;
+            }
+
             var length = snapshot.PathOf(row, path);
             root.Add(path[..length], 1);
         }

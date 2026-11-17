@@ -28,14 +28,14 @@ public enum FilterOperator
     EndsWith,
     [Description("does not end with")]
     NotEndsWith,
-    [Description("has a value")]
-    HasValue,
-    [Description("has no value")]
-    HasNoValue,
-    [Description("parameter exists")]
-    Exists,
-    [Description("parameter missing")]
-    Missing
+    [Description("not empty")]
+    NotEmpty,
+    [Description("empty")]
+    Empty,
+    [Description("defined")]
+    Defined,
+    [Description("undefined")]
+    Undefined
 }
 
 public static class FilterOperators
@@ -45,21 +45,21 @@ public static class FilterOperators
         FilterOperator.Equal, FilterOperator.NotEqual, FilterOperator.Greater, FilterOperator.GreaterOrEqual,
         FilterOperator.Less, FilterOperator.LessOrEqual, FilterOperator.Contains, FilterOperator.NotContains,
         FilterOperator.BeginsWith, FilterOperator.NotBeginsWith, FilterOperator.EndsWith,
-        FilterOperator.NotEndsWith, FilterOperator.HasValue, FilterOperator.HasNoValue, FilterOperator.Exists,
-        FilterOperator.Missing
+        FilterOperator.NotEndsWith, FilterOperator.NotEmpty, FilterOperator.Empty, FilterOperator.Defined,
+        FilterOperator.Undefined
     ];
 
     private static readonly FilterOperator[] Numeric =
     [
         FilterOperator.Equal, FilterOperator.NotEqual, FilterOperator.Greater, FilterOperator.GreaterOrEqual,
-        FilterOperator.Less, FilterOperator.LessOrEqual, FilterOperator.HasValue, FilterOperator.HasNoValue,
-        FilterOperator.Exists, FilterOperator.Missing
+        FilterOperator.Less, FilterOperator.LessOrEqual, FilterOperator.NotEmpty, FilterOperator.Empty,
+        FilterOperator.Defined, FilterOperator.Undefined
     ];
 
     private static readonly FilterOperator[] Equality =
     [
-        FilterOperator.Equal, FilterOperator.NotEqual, FilterOperator.HasValue, FilterOperator.HasNoValue,
-        FilterOperator.Exists, FilterOperator.Missing
+        FilterOperator.Equal, FilterOperator.NotEqual, FilterOperator.NotEmpty, FilterOperator.Empty,
+        FilterOperator.Defined, FilterOperator.Undefined
     ];
 
     public static IReadOnlyList<FilterOperator> For(ValueKind kind)
@@ -79,8 +79,8 @@ public static class FilterOperators
 
     public static bool NeedsValue(FilterOperator op)
     {
-        return op is not (FilterOperator.HasValue or FilterOperator.HasNoValue or FilterOperator.Exists
-            or FilterOperator.Missing);
+        return op is not (FilterOperator.NotEmpty or FilterOperator.Empty or FilterOperator.Defined
+            or FilterOperator.Undefined);
     }
 
     public static bool IsNegative(FilterOperator op)
@@ -98,9 +98,15 @@ public static class FilterOperators
 
 public static class TextRules
 {
+    public static bool IsOrder(FilterOperator op)
+    {
+        return op is FilterOperator.Greater or FilterOperator.GreaterOrEqual or FilterOperator.Less
+            or FilterOperator.LessOrEqual;
+    }
+
     public static bool Matches(FilterOperator op, bool exists, string? value, string target, bool caseSensitive)
     {
-        if (op == FilterOperator.Missing)
+        if (op == FilterOperator.Undefined)
         {
             return !exists;
         }
@@ -114,9 +120,9 @@ public static class TextRules
         var comparison = caseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
         return op switch
         {
-            FilterOperator.Exists => true,
-            FilterOperator.HasValue => text.Length > 0,
-            FilterOperator.HasNoValue => text.Length == 0,
+            FilterOperator.Defined => true,
+            FilterOperator.NotEmpty => text.Length > 0,
+            FilterOperator.Empty => text.Length == 0,
             FilterOperator.Equal => string.Equals(text, target, comparison),
             FilterOperator.NotEqual => !string.Equals(text, target, comparison),
             FilterOperator.Greater => string.Compare(text, target, comparison) > 0,

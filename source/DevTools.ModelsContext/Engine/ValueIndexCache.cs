@@ -101,7 +101,7 @@ public sealed class ValueIndexCache(
             .OrderByDescending(pair => pair.Value)
             .ThenBy(pair => pair.Key, StringComparer.CurrentCultureIgnoreCase)
             .Take(MaxValues + 1)
-            .Select(pair => new ValueCount(pair.Key, pair.Value))
+            .Select(pair => new ValueCount(pair.Key, pair.Value, StoredOf(counts, pair.Key)))
             .ToList();
         var hasMore = ordered.Count > MaxValues;
         if (hasMore)
@@ -110,6 +110,11 @@ public sealed class ValueIndexCache(
         }
 
         return new ValueIndex(ordered, hasMore, Math.Max(0, counts.Total - hits));
+    }
+
+    private static NumberRange? StoredOf(ParameterValueCounts counts, string value)
+    {
+        return counts.Numbers is { } numbers && numbers.TryGetValue(value, out var range) ? range : null;
     }
 
     private static Key KeyOf(SourceId source, ParameterKey parameter, IReadOnlyCollection<long> groups)
@@ -128,7 +133,7 @@ public sealed class ValueIndexCache(
             .ConfigureAwait(false);
         if (timer.IsEnabled)
         {
-            _logger.ValuesCounted(source, parameter.Name, counts.Values.Count, counts.Total, timer.ElapsedMs);
+            _logger.ValuesCounted(source.Label, parameter.Name, counts.Values.Count, counts.Total, timer.ElapsedMs);
         }
 
         return Summarize(counts);
