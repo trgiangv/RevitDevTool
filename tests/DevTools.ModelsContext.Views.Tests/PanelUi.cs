@@ -2,6 +2,7 @@ using DevTools.ModelsContext.Model;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.ViewModels;
 using DevTools.Presentation.Views.ModelsContext;
+using DevTools.UI.Theme;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Tools;
 
@@ -37,7 +38,7 @@ internal sealed class PanelUi : IDisposable
 
     public ThemeHost Host { get; }
 
-    public static PanelUi Open(double width = 320)
+    public static PanelUi Open(double width = 320, AppTheme theme = AppTheme.Dark)
     {
         var fake = new FakeHost(new FakeModel(Small.Value));
         var clock = new FakeClock();
@@ -48,7 +49,7 @@ internal sealed class PanelUi : IDisposable
             return (panel, new ModelContextView { DataContext = panel });
         });
         WpfSta.Run(() => panel.InitializeAsync(CancellationToken.None));
-        return new PanelUi(fake, clock, panel, view, ThemeHost.Show(view, width));
+        return new PanelUi(fake, clock, panel, view, ThemeHost.Show(view, width, theme: theme));
     }
 
     public void Press(string automationId)

@@ -1,3 +1,4 @@
+using DevTools.UI.Theme;
 using FlaUI.Core.Tools;
 using FlaUI.UIA3;
 using System.Windows;
@@ -19,7 +20,7 @@ internal sealed class ThemeHost : IDisposable
 
     public Window Window { get; }
 
-    public static ThemeHost Show(FrameworkElement content, double width = 320, double height = 800)
+    public static ThemeHost Show(FrameworkElement content, double width = 320, double height = 800, AppTheme theme = AppTheme.Dark)
     {
         return WpfSta.Invoke(() =>
         {
@@ -35,6 +36,7 @@ internal sealed class ThemeHost : IDisposable
             {
                 Source = new Uri("/DevTools.UI;component/Theme/Theme.xaml", UriKind.Relative),
             });
+            ThemeManager.Current.ApplySettingsTheme(theme);
             window.Content = content;
             window.Show();
             window.Activate();
@@ -81,18 +83,6 @@ internal sealed class ThemeHost : IDisposable
     public AutomationElement? TryFindInMenu(ContextMenu menu, string automationId)
     {
         return TryFind(() => MenuHandle(menu), automationId);
-    }
-
-    public AutomationElement FindInPopup(System.Windows.Controls.Primitives.Popup popup, string automationId)
-    {
-        var element = Retry.WhileNull(
-            () => TryFind(() => WpfSta.Invoke(() => popup.Child is { } child && PresentationSource.FromVisual(child) is HwndSource source
-                ? source.Handle
-                : IntPtr.Zero), automationId),
-            Timeout,
-            ignoreException: true).Result;
-        Assert.IsNotNull(element, automationId + " was not found in the popup.");
-        return element;
     }
 
     public AutomationElement PopupRoot(System.Windows.Controls.Primitives.Popup popup)

@@ -15,6 +15,7 @@ public partial class SandboxWindow : Window
     public SandboxWindow(bool autoLoad = true)
     {
         InitializeComponent();
+        ThemeToggle.IsChecked = ThemeManager.Current.ActualApplicationTheme == AppTheme.Dark;
         if (autoLoad)
         {
             Loaded += (_, _) => Reload();

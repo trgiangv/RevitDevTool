@@ -359,8 +359,10 @@ public sealed class FilterLogicTests
 
     private static DocumentSnapshot Snapshot(DocumentInfo document)
     {
-        return TestModel.Snapshot(document.Key);
+        return Snapshots.GetOrAdd(document.Key, TestModel.Snapshot);
     }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<DocumentKey, DocumentSnapshot> Snapshots = new();
 
     private static int Matching(DocumentInfo document, long? category, Func<ElementRow, bool> match)
     {

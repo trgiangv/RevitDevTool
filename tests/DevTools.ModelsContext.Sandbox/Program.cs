@@ -23,10 +23,9 @@ internal static class Program
         var drag = Array.IndexOf(args, "--drag");
         var dragShots = Array.IndexOf(args, "--drag-shots");
         var pickerShots = Array.IndexOf(args, "--picker-shots");
-        if (args.Contains("--dark", StringComparer.Ordinal))
-        {
-            DevTools.UI.Theme.ThemeManager.Current.ApplySettingsTheme(DevTools.UI.Theme.AppTheme.Dark);
-        }
+        var theme = Array.IndexOf(args, "--theme");
+        var light = theme >= 0 && string.Equals(args[theme + 1], "light", StringComparison.OrdinalIgnoreCase);
+        DevTools.UI.Theme.ThemeManager.Current.ApplySettingsTheme(light ? DevTools.UI.Theme.AppTheme.Light : DevTools.UI.Theme.AppTheme.Dark);
 
         var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal) && shots < 0 && drag < 0 && dragShots < 0
                                                  && pickerShots < 0);

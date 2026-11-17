@@ -537,6 +537,18 @@ public sealed class PanelViewTests
     }
 
     [TestMethod]
+    public void TemporaryBarShowsInLight()
+    {
+        using var ui = PanelUi.Open(theme: DevTools.UI.Theme.AppTheme.Light);
+        ui.Collapse("All models");
+
+        ui.PressIn(ui.Host.Row("Ducts"), "Explorer.Row.Eye");
+
+        Assert.AreEqual(DevTools.UI.Theme.AppTheme.Light, WpfSta.Invoke(() => DevTools.UI.Theme.ThemeManager.Current.ActualApplicationTheme));
+        Assert.IsNotNull(ui.Host.FindInWindow("Temporary.Reset"));
+    }
+
+    [TestMethod]
     public void KeepAsksForLinkChanges()
     {
         using var ui = PanelUi.Open();

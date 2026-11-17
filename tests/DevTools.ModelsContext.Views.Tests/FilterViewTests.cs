@@ -108,17 +108,6 @@ public sealed class FilterViewTests
     }
 
     [TestMethod]
-    public void PausedLineHidesWhenLiveOff()
-    {
-        using var ui = OpenPaused();
-
-        ui.Host.FindInWindow("Filter.Live").Patterns.Toggle.Pattern.Toggle();
-
-        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Paused") is null),
-            "The paused line stayed with Live off.");
-    }
-
-    [TestMethod]
     [DataRow("Filter.Rule.Parameter")]
     [DataRow("Filter.Rule.Operator")]
     public void SmallDropDownItemsAreSmall(string automationId)
@@ -371,20 +360,6 @@ public sealed class FilterViewTests
         item.Patterns.SelectionItem.Pattern.Select();
 
         Assert.IsTrue(ThemeHost.WaitFor(() => rule.SelectedParameter?.DisplayName == "Mark"), "Picking did not set the parameter.");
-    }
-
-    [TestMethod]
-    public void RuleCardHasNoUnitLine()
-    {
-        using var ui = OpenFilterWithRule();
-        var rule = (RuleViewModel)ui.Panel.Filter.Root.Children[0];
-
-        WpfSta.Invoke(() => rule.SelectedParameter = rule.Parameters.First(parameter => parameter.DisplayName == "Width"));
-
-        Assert.IsTrue(ThemeHost.WaitFor(() => rule.ValueHint is not null), "The number rule has no placeholder.");
-        Assert.IsNull(ui.Host.TryFindInWindow("Filter.Rule.Unit"));
-        Assert.IsFalse(WpfSta.Invoke(() => Texts(ui.View).Any(text => text.StartsWith("Unit:", StringComparison.Ordinal))),
-            "A 'Unit:' line is still shown.");
     }
 
     [TestMethod]

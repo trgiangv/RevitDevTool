@@ -113,7 +113,7 @@ pwsh -File $uia invoke -ProcessId $app.Id -Id Close
   `SetValue` avoids it entirely.
 - `BoundingRectangle` is in physical pixels for the monitor; a 150% display
   makes every rect 1.5x the XAML size. Compare sizes as ratios, or run at 100%.
-- Theme: run the same check in Light and Dark (the sandbox takes `--dark`, the
+- Theme: run the same check in Light and Dark (the sandbox opens Dark and takes `--theme light`, the
   panel has a theme toggle). Colors come from theme brushes, so a Dark-only
   bug is a missing `DynamicResource`, not a test issue.
 
