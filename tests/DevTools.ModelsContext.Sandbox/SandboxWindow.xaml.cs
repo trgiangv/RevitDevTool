@@ -85,8 +85,12 @@ public partial class SandboxWindow : Window
             var delay = TimeSpan.FromMilliseconds(int.Parse((string)((ComboBoxItem)DelayBox.SelectedItem).Tag));
             log($"loading {size} with host delay {delay.TotalMilliseconds:F0} ms");
             _run = SandboxRun.Create(size, delay, Dispatcher, ExtraParameters);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             var view = new ModelContextView { DataContext = _run.Panel };
+            var builtMs = watch.Elapsed.TotalMilliseconds;
             Host.Content = view;
+            UpdateLayout();
+            log($"view built {builtMs:F0} ms, first layout {watch.Elapsed.TotalMilliseconds - builtMs:F0} ms");
             return await _run.MeasureAsync(view, log);
         }
         finally

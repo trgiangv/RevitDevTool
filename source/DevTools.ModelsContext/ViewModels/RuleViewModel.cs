@@ -17,6 +17,7 @@ public sealed partial class RuleViewModel : FilterNodeViewModel
     private string? _pickedText;
     private bool _refreshing;
     private ParameterInfo? _selectedParameter;
+    private IReadOnlyList<ParameterInfo>? _shownParameters;
     private string _value;
 
     internal RuleViewModel(IFilterEditor editor, bool isReadOnly, FilterRule? rule = null)
@@ -182,7 +183,13 @@ public sealed partial class RuleViewModel : FilterNodeViewModel
         _refreshing = true;
         try
         {
-            OnPropertyChanged(nameof(Parameters));
+            // Each raise makes the picker rebuild its view of ~3k items.
+            if (!ReferenceEquals(Parameters, _shownParameters))
+            {
+                _shownParameters = Parameters;
+                OnPropertyChanged(nameof(Parameters));
+            }
+
             OnPropertyChanged(nameof(SelectedParameter));
             OnPropertyChanged(nameof(ParameterName));
         }

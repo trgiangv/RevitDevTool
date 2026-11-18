@@ -11,6 +11,8 @@ namespace DevTools.Presentation.Views.ModelsContext;
 
 public partial class ModelContextView : UserControl
 {
+    private const string FilterViewName = "FilterView";
+
     private FrameworkElement? _colorAnchor;
     private ModelContextViewModel? _panel;
     private bool _isSyncing;
@@ -34,6 +36,7 @@ public partial class ModelContextView : UserControl
     {
         if (_panel is not null)
         {
+            _panel.PropertyChanged -= OnPanelChanged;
             _panel.ContextBar.PropertyChanged -= OnContextBarChanged;
             _panel.ContextBar.Documents.CollectionChanged -= OnDocumentsChanged;
             _panel.ContextMenu.ColorRequested -= OnColorRequested;
@@ -45,10 +48,34 @@ public partial class ModelContextView : UserControl
             return;
         }
 
+        _panel.PropertyChanged += OnPanelChanged;
         _panel.ContextBar.PropertyChanged += OnContextBarChanged;
         _panel.ContextBar.Documents.CollectionChanged += OnDocumentsChanged;
         _panel.ContextMenu.ColorRequested += OnColorRequested;
         SyncDocuments();
+        EnsureFilterView();
+    }
+
+    private void OnPanelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ModelContextViewModel.IsFilterTab))
+        {
+            EnsureFilterView();
+        }
+    }
+
+    // Built on first use: it is about a third of the panel's first build.
+    private void EnsureFilterView()
+    {
+        if (_panel is not { IsFilterTab: true } || FindName(FilterViewName) is not null)
+        {
+            return;
+        }
+
+        var view = new FilterTabView { Style = (Style)FindResource("FilterBodyStyle") };
+        System.Windows.Automation.AutomationProperties.SetAutomationId(view, "ModelContext.Filter");
+        Body.Children.Add(view);
+        RegisterName(FilterViewName, view);
     }
 
     private void OnContextBarChanged(object? sender, PropertyChangedEventArgs e)

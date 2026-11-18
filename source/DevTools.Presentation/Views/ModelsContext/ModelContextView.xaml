@@ -241,9 +241,6 @@
             <views:ExplorerTabView x:Name="ExplorerView"
                                    AutomationProperties.AutomationId="ModelContext.Explorer"
                                    Style="{StaticResource ExplorerBodyStyle}" />
-            <views:FilterTabView x:Name="FilterView"
-                                 AutomationProperties.AutomationId="ModelContext.Filter"
-                                 Style="{StaticResource FilterBodyStyle}" />
         </Grid>
 
         <TextBlock Grid.Row="5"

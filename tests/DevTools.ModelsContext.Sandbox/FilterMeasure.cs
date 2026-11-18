@@ -7,6 +7,7 @@ using DevTools.UI.Controls;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -31,27 +32,24 @@ internal static class FilterMeasure
         await Idle();
         report($"filter parameters {filter.Root.Parameters.Count:N0} merged from {run.Data.Sources.Count} files over {run.Data.Documents.Count} documents");
 
-        stall.TakeMax();
-        var watch = Stopwatch.StartNew();
-        FilterExamples.UpperLevelDoorsWithoutMark(filter, FakeParameters.Comments);
-        await Idle();
-        report($"build example 2 {watch.Elapsed.TotalMilliseconds:F0} ms, longest stall {stall.TakeMax():F0} ms");
-
+        // The build itself starts an evaluation, so time the build and its result together.
         filter.Runner.IsLiveOn = true;
-        var first = await ResultAsync(filter.Runner, () => { }, Idle);
-        report($"example 2 evaluated {first.Ms:F0} ms (300 ms debounce), {first.Count:N0} matches, longest stall {stall.TakeMax():F0} ms");
+        await Idle();
+        stall.TakeMax();
+        var first = await ResultAsync(filter.Runner, () => FilterExamples.UpperLevelDoorsWithoutMark(filter, FakeParameters.Comments), Idle);
+        report($"build example 2 {first.ChangeMs:F0} ms + layout {first.LayoutMs:F0} ms, evaluated {first.Ms:F0} ms (300 ms debounce), {first.Count:N0} matches, longest stall {stall.TakeMax():F0} ms");
 
         var toggled = await ResultAsync(filter.Runner, () => filter.Root.Children[1].ToggleConnectorCommand.Execute(null), Idle);
         report($"connector toggle to result {toggled.Ms:F0} ms (300 ms debounce), {toggled.Count:N0} matches, longest stall {stall.TakeMax():F0} ms");
         filter.Root.Children[1].ToggleConnectorCommand.Execute(null);
 
-        watch.Restart();
+        var watch = Stopwatch.StartNew();
         filter.Root.Children[1].MoveUpCommand.Execute(null);
         await Idle();
         report($"Alt+Up move {watch.Elapsed.TotalMilliseconds:F1} ms, longest stall {stall.TakeMax():F0} ms");
 
         var fourth = await ResultAsync(filter.Runner, () => FilterExamples.ArchWallsOrMepDucts(filter), Idle);
-        report($"example 4 evaluated {fourth.Ms:F0} ms (300 ms debounce), {fourth.Count:N0} matches, longest stall {stall.TakeMax():F0} ms");
+        report($"example 4 built in {fourth.ChangeMs:F0} ms + layout {fourth.LayoutMs:F0} ms, evaluated {fourth.Ms:F0} ms (300 ms debounce), {fourth.Count:N0} matches, longest stall {stall.TakeMax():F0} ms");
         filter.Runner.IsLiveOn = false;
 
         await MeasurePickerAsync(filter, view, stall, Idle, report);
@@ -109,7 +107,7 @@ internal static class FilterMeasure
         filter.Root.AddConditionCommand.Execute(null);
         await idle();
         var box = Find<AutoCompleteComboBox>(view);
-        box.Focus();
+        FocusManager.SetFocusedElement(Window.GetWindow(box)!, box);
         stall.TakeMax();
         var watch = Stopwatch.StartNew();
         box.IsDropDownOpen = true;
@@ -181,7 +179,7 @@ internal static class FilterMeasure
         report($"picker keystroke replacing every visible row: median filter + layout {layouts[layouts.Count / 2]:F1} ms, until idle {totals[totals.Count / 2]:F0} ms, stall {stalls[stalls.Count / 2]:F0} ms over {totals.Count} keystrokes, {box.Items.Count:N0} items");
     }
 
-    private static async Task<(double Ms, int Count)> ResultAsync(FilterRunner runner, Action change, Func<Task> idle)
+    private static async Task<(double Ms, int Count, double ChangeMs, double LayoutMs)> ResultAsync(FilterRunner runner, Action change, Func<Task> idle)
     {
         var done = new TaskCompletionSource<bool>();
         void OnChanged(object? sender, PropertyChangedEventArgs e)
@@ -197,10 +195,17 @@ internal static class FilterMeasure
         try
         {
             change();
-            await Task.WhenAny(done.Task, Task.Delay(TimeSpan.FromSeconds(30)));
+            var changeMs = watch.Elapsed.TotalMilliseconds;
+            Application.Current.MainWindow?.UpdateLayout();
+            var layoutMs = watch.Elapsed.TotalMilliseconds - changeMs;
+            if (await Task.WhenAny(done.Task, Task.Delay(TimeSpan.FromSeconds(30))) != done.Task)
+            {
+                throw new TimeoutException("No filter result within 30 s.");
+            }
+
             var ms = watch.Elapsed.TotalMilliseconds;
             await idle();
-            return (ms, runner.ResultCount);
+            return (ms, runner.ResultCount, changeMs, layoutMs);
         }
         finally
         {

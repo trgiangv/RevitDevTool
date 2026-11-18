@@ -155,27 +155,25 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        var categories = await RevitProfiler.RunAsync("Count categories", application =>
-                ElementReader.ModelCategoryIds(DocumentRegistry.Require(application, document).Target).Select(id => id.ToLong()).ToList(),
+        // One collector per category walks the whole document each time (~100x slower on the sample).
+        var ids = await RevitProfiler.RunAsync("Count ids", application => CountIds(application, document, scope),
             cancellationToken).ConfigureAwait(false);
-        var counts = new List<GroupCount>();
+        var counts = new Dictionary<long, (string Name, int Count)>();
         var stats = ProfileStats.Start("Count");
         var failures = FailureTally.Start(RevitProfiler.Logger);
         var index = 0;
-        while (index < categories.Count)
+        while (index < ids.Length)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var start = index;
-            var (next, slice) = await RevitProfiler.RunAsync("Count slice", application =>
-                    CountSlice(application, document, scope, categories, start, failures), cancellationToken, stats)
+            index = await RevitProfiler.RunAsync("Count slice", application =>
+                    CountSlice(application, document, ids, start, counts, failures), cancellationToken, stats)
                 .ConfigureAwait(false);
-            counts.AddRange(slice);
-            index = next;
         }
 
-        failures?.Flush("Count", document, categories.Count);
-        stats?.Flush(document, categories.Count);
-        return counts;
+        failures?.Flush("Count", document, ids.Length);
+        stats?.Flush(document, ids.Length);
+        return counts.Select(pair => new GroupCount(pair.Key, pair.Value.Name, pair.Value.Count)).ToList();
     }
 
     public Task<DocumentVersion?> GetVersionAsync(SourceId source, CancellationToken cancellationToken)
@@ -370,70 +368,56 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
             : resolved.Model.CollectElements(view.Id);
     }
 
-    private static (int Next, List<GroupCount> Counts) CountSlice(
-        UIApplication application,
-        DocumentKey document,
-        ScopeKind scope,
-        IReadOnlyList<long> categories,
-        int start,
-        FailureTally? failures)
-    {
-        var resolved = DocumentRegistry.Require(application, document);
-        var view = scope == ScopeKind.ActiveView ? ActiveViewOf(application, document) : null;
-        if (scope == ScopeKind.ActiveView && view is null)
-        {
-            return (categories.Count, []);
-        }
-
-        var options = ElementReader.OptionFilters(resolved.Target);
-        var counts = new List<GroupCount>();
-        var watch = Stopwatch.StartNew();
-        var index = start;
-        while (index < categories.Count && (index == start || watch.Elapsed < ElementReader.SliceTime))
-        {
-            var group = categories[index];
-            var categoryId = group.ToElementId();
-            index++;
-            if (CountOf(resolved, view, categoryId, options, failures) is int count and > 0
-                && Category.GetCategory(resolved.Target, categoryId) is { } category)
-            {
-                counts.Add(new GroupCount(group, category.Name, count));
-            }
-        }
-
-        return (index, counts);
-    }
-
     private static View? ActiveViewOf(UIApplication application, DocumentKey document)
     {
         return DocumentRegistry.IsActive(application, document) ? application.ActiveUIDocument?.ActiveView : null;
     }
 
-    private static int? CountOf(
-        ResolvedDocument resolved,
-        View? view,
-        ElementId categoryId,
-        IReadOnlyList<ElementFilter> options,
+    private static long[] CountIds(UIApplication application, DocumentKey document, ScopeKind scope)
+    {
+        var resolved = DocumentRegistry.Require(application, document);
+        if (scope != ScopeKind.ActiveView)
+        {
+            return ElementReader.CollectIds(resolved.Target);
+        }
+
+        return ActiveViewOf(application, document) is { } view && ViewCollector(resolved, view) is { } collector
+            ? collector.WherePasses(ElementReader.AnyOptionFilter(resolved.Target)).ToElementIds().Select(id => id.ToLong()).ToArray()
+            : [];
+    }
+
+    private static int CountSlice(
+        UIApplication application,
+        DocumentKey document,
+        long[] ids,
+        int start,
+        Dictionary<long, (string Name, int Count)> counts,
         FailureTally? failures)
     {
-        try
+        var target = DocumentRegistry.Require(application, document).Target;
+        var watch = Stopwatch.StartNew();
+        var index = start;
+        while (index < ids.Length && (index == start || watch.Elapsed < ElementReader.SliceTime))
         {
-            if (view is null)
+            var id = ids[index];
+            index++;
+            try
             {
-                return resolved.Target.CollectElements()
-                    .WherePasses(ElementReader.ModelFilter(resolved.Target, [categoryId], options))
-                    .GetElementCount();
-            }
+                if (target.GetElement(id.ToElementId())?.Category is not { } category)
+                {
+                    continue;
+                }
 
-            return ViewCollector(resolved, view) is { } collector
-                ? collector.OfCategoryId(categoryId).WhereElementIsNotElementType().GetElementCount()
-                : 0;
+                var key = category.Id.ToLong();
+                counts[key] = counts.TryGetValue(key, out var known) ? (known.Name, known.Count + 1) : (category.Name, 1);
+            }
+            catch (Exception exception)
+            {
+                failures?.Add(exception);
+            }
         }
-        catch (Exception exception)
-        {
-            failures?.Add(exception);
-            return null;
-        }
+
+        return index;
     }
 
     internal sealed record ReadRecords(List<TypeRecord> Types, List<ElementRecord> Elements);

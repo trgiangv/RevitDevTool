@@ -50,7 +50,13 @@ scope and the measured counts are in
 [filters.md](filters.md#design-options).
 
 While snapshots build, the Explorer shows first rows from a quick count per
-category (`CountGroupsAsync`) so the panel never waits on a full read.
+category (`CountGroupsAsync`) so the panel never waits on a full read. The
+Revit adapter reads the ids in scope with one collector (Whole model:
+`ElementReader.CollectIds`; Active view: the view collector with the model
+category filter). It then reads each element's category in slices
+(`SliceTime`). A collector per category walks the whole document each time:
+136 categories took 0.3–2.5 s per Snowdon Towers document, against 5–28 ms for
+one pass (Revit 2026). L2 EX-05 went from 4,044 ms to 103 ms.
 
 ## Snapshot store
 
