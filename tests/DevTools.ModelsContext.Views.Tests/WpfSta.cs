@@ -22,6 +22,7 @@ internal static class WpfSta
                     ShutdownMode = System.Windows.ShutdownMode.OnExplicitShutdown,
                 };
                 dispatcher = Dispatcher.CurrentDispatcher;
+                DevTools.Testing.Ui.ForegroundGuard.Start();
             }
             catch (Exception ex)
             {

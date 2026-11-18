@@ -31,4 +31,7 @@
         <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Compile Include="..\Shared\ForegroundGuard.cs" Link="ForegroundGuard.cs" />
+    </ItemGroup>
 </Project>

@@ -169,7 +169,8 @@ public sealed class FilterLogicViewTests
         var group = WpfSta.Invoke(() => root.Children[1]);
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.FindAllInWindow("Filter.Item.Grip").Length == 2), "Two grips are not shown.");
 
-        ui.Host.FindAllInWindow("Filter.Item.Grip")[1].Focus();
+        // Logical focus only: a UIA Focus() would bring the test window to the front.
+        WpfSta.Invoke(() => FocusManager.SetFocusedElement(ui.Host.Window, Grips(ui).First(grip => grip.IsVisible && grip.DataContext is RuleSetViewModel)));
         Assert.IsTrue(ThemeHost.WaitFor(() => FocusedGrip(ui) is { DataContext: RuleSetViewModel }), "The group grip has no focus.");
 
         Assert.IsTrue(WpfSta.Invoke(() => Press(ui, Key.Up)), "Alt+Up is not bound on the focused card.");
@@ -211,6 +212,28 @@ public sealed class FilterLogicViewTests
     private static List<string> ItemNames(AutomationElement box)
     {
         return box.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem)).Select(item => item.Name).ToList();
+    }
+
+    private static List<System.Windows.Controls.Primitives.Thumb> Grips(PanelUi ui)
+    {
+        var grips = new List<System.Windows.Controls.Primitives.Thumb>();
+        var queue = new Queue<DependencyObject>([ui.Host.Window]);
+        while (queue.Count > 0)
+        {
+            var node = queue.Dequeue();
+            if (node is System.Windows.Controls.Primitives.Thumb thumb
+                && System.Windows.Automation.AutomationProperties.GetAutomationId(thumb) == "Filter.Item.Grip")
+            {
+                grips.Add(thumb);
+            }
+
+            for (var index = 0; index < VisualTreeHelper.GetChildrenCount(node); index++)
+            {
+                queue.Enqueue(VisualTreeHelper.GetChild(node, index));
+            }
+        }
+
+        return grips;
     }
 
     private static System.Windows.Controls.Primitives.Thumb? FocusedGrip(PanelUi ui)

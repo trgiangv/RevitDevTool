@@ -38,8 +38,8 @@ internal sealed class ThemeHost : IDisposable
             });
             ThemeManager.Current.ApplySettingsTheme(theme);
             window.Content = content;
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
             window.Show();
-            window.Activate();
             content.UpdateLayout();
             return new ThemeHost(window);
         });

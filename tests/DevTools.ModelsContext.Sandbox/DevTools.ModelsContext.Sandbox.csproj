@@ -18,4 +18,7 @@
         <ProjectReference Include="..\DevTools.ModelsContext.Tests.Shared\DevTools.ModelsContext.Tests.Shared.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <Compile Include="..\Shared\ForegroundGuard.cs" Link="ForegroundGuard.cs" />
+    </ItemGroup>
 </Project>

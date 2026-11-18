@@ -35,6 +35,11 @@ internal static class Program
             window.Width = double.Parse(args[width + 1], System.Globalization.CultureInfo.InvariantCulture);
         }
         var exitCode = 0;
+        if (args.Contains("--measure", StringComparer.Ordinal) || shots >= 0 || dragShots >= 0 || pickerShots >= 0)
+        {
+            DevTools.Testing.Ui.ForegroundGuard.Start();
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
+        }
         if (drag >= 0)
         {
             window.Loaded += async (_, _) => exitCode = await DragRun.MouseAsync(window, app, args[drag + 1]);

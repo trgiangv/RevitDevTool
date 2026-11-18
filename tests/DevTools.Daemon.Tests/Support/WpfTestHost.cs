@@ -56,7 +56,11 @@ public sealed class WpfSession : IDisposable
             var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
             app.Resources.MergedDictionaries.Add(SkinDictionary("SkinDefault.xaml"));
             app.Resources.MergedDictionaries.Add(SkinDictionary("Theme.xaml"));
-            app.Startup += (_, _) => _ready.Set();
+            app.Startup += (_, _) =>
+            {
+                DevTools.Testing.Ui.ForegroundGuard.Start();
+                _ready.Set();
+            };
             app.Run();
         }
         catch (Exception ex)

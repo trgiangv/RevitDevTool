@@ -33,6 +33,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
         {
             var state = CreateShellViewModel();
             var window = new MainWindow(state);
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
             window.Show();
 
             Assert.AreEqual($"DevTools Daemon {AppVersion.Current}", window.Title);
@@ -78,6 +79,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
 
             var state = CreateShellViewModel();
             var window = new MainWindow(state);
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
             window.Show();
             ThemeHelper.Apply(AppTheme.Dark);
             var background = (SolidColorBrush)window.Background;
@@ -186,6 +188,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
         {
             var state = CreateShellViewModel();
             var window = new MainWindow(state);
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
             window.Show();
             window.Close();
             Assert.IsFalse(window.IsVisible);
@@ -214,6 +217,7 @@ public sealed class WpfDesktopTests : WpfApplicationTestBase
         {
             var state = CreateShellViewModel();
             var window = new MainWindow(state);
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
             var tray = new TrayMenu(state, window);
             tray.ShowMainWindow();
 

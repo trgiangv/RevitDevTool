@@ -36,8 +36,8 @@ internal sealed class ThemeHost : IDisposable
                 Source = new Uri("/DevTools.UI;component/Theme/Theme.xaml", UriKind.Relative),
             });
             window.Content = content;
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
             window.Show();
-            window.Activate();
             content.UpdateLayout();
             return new ThemeHost(window);
         });

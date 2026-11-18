@@ -236,7 +236,7 @@ public sealed class TextEditorContextMenuTests
             Height = 200;
             WindowStyle = WindowStyle.None;
             ShowInTaskbar = false;
-            ShowActivated = false;
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(this);
         }
 
         public void Dispose() => Close();

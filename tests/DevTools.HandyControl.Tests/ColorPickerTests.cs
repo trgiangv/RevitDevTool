@@ -256,7 +256,6 @@ public sealed class ColorPickerTests
             return WpfSta.Invoke(() =>
             {
                 var window = ColorPickerTests.Show(out var picker);
-                window.Activate();
                 return new PickerUi(window, picker);
             });
         }
@@ -382,7 +381,7 @@ public sealed class ColorPickerTests
             Height = 480;
             WindowStyle = WindowStyle.None;
             ShowInTaskbar = false;
-            ShowActivated = false;
+            DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(this);
         }
 
         public void Dispose()
