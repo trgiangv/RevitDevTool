@@ -1,65 +1,73 @@
 using FlaUI.Core.AutomationElements;
-using FlaUI.Core.Capturing;
 using FlaUI.Core.Conditions;
 using FlaUI.Core.Definitions;
+using FlaUI.Core.Exceptions;
 using FlaUI.Core.Tools;
 using FlaUI.UIA3;
 using RevitDevTool.ModelsContext.LiveTests;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.InteropServices;
 
 namespace RevitDevTool.ModelsContext.UiTests;
 
 internal sealed class RevitPanel : IDisposable
 {
+    public const string RevitPidVariable = "MODELS_CONTEXT_REVIT_PID";
+
     private static readonly TimeSpan FindLimit = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan SettleLimit = TimeSpan.FromSeconds(90);
 
     private readonly UIA3Automation _automation;
+    private int _processId;
 
-    private RevitPanel(UIA3Automation automation, AutomationElement root, IntPtr window)
+    private RevitPanel(UIA3Automation automation, AutomationElement root, IntPtr window, IntPtr panelWindow)
     {
         _automation = automation;
         Root = root;
         Window = window;
+        PanelWindow = panelWindow;
     }
 
     public AutomationElement Root { get; }
 
     public IntPtr Window { get; }
 
+    public IntPtr PanelWindow { get; }
+
     public static RevitPanel Attach(string hostTitle)
     {
-        var l2 = Evidence.HostOf("L2");
-        var process = Process.GetProcessesByName("Revit")
-            .FirstOrDefault(candidate => (l2 is null || candidate.Id == l2)
-                && candidate.MainWindowTitle.Contains(hostTitle, StringComparison.OrdinalIgnoreCase));
-        if (process is null)
+        var host = Evidence.HostOf("L2")
+            ?? (int.TryParse(Environment.GetEnvironmentVariable(RevitPidVariable), out var given) ? given : null);
+        var candidates = Process.GetProcessesByName("Revit")
+            .Where(candidate => (host is null || candidate.Id == host)
+                && candidate.MainWindowTitle.Contains(hostTitle, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (candidates.Count == 0)
         {
-            Assert.Inconclusive(l2 is null
+            Assert.Inconclusive(host is null
                 ? $"Open '{hostTitle}.rvt' in Revit."
-                : $"Open '{hostTitle}.rvt' in the Revit that ran L2 of this run (PID {l2}).");
+                : $"Open '{hostTitle}.rvt' in the Revit with PID {host}.");
         }
 
-        Evidence.HostProcessId = process!.Id;
-        var automation = new UIA3Automation();
-        var application = FlaUI.Core.Application.Attach(process!);
-        var root = FindPanel(application, automation);
-        if (root is null)
+        if (candidates.Count > 1)
         {
-            var button = application.GetMainWindow(automation, FindLimit)?
-                .FindFirstDescendant(cf => cf.ByName(DevTools.ModelsContext.ViewModels.ModelContextViewModel.PanelTitle).And(cf.ByControlType(ControlType.Button)));
-            button?.Patterns.Invoke.PatternOrDefault?.Invoke();
-            root = Retry.WhileNull(() => FindPanel(application, automation), FindLimit, ignoreException: true).Result;
+            Assert.Inconclusive($"Several Revit processes show '{hostTitle}' (PIDs {string.Join(", ", candidates.Select(candidate => candidate.Id))}). Set {RevitPidVariable} or run L2 first.");
         }
 
-        if (root is null)
+        var process = candidates[0];
+        Evidence.HostProcessId = process.Id;
+        var automation = new UIA3Automation();
+        var application = FlaUI.Core.Application.Attach(process);
+        var found = Retry.WhileNull(() => FindPanel(application, automation), FindLimit, ignoreException: true).Result;
+        if (found is not var (root, panelWindow))
         {
             automation.Dispose();
-            Assert.Inconclusive("Show the Model Context panel in Revit (RevitDevTool tab, Model Context).");
+            Assert.Inconclusive("The Model Context panel is not shown. L2 ViewSetupTests.PreparesSample shows it through the Revit API (scripts/test-models-context.ps1 runs it first).");
+            throw new InvalidOperationException();
         }
 
-        return new RevitPanel(automation, root!, process!.MainWindowHandle);
+        return new RevitPanel(automation, root, process.MainWindowHandle, panelWindow) { _processId = process.Id };
     }
 
     public PanelActivity Activity => PanelActivity.Parse(Root.Properties.ItemStatus.ValueOrDefault);
@@ -74,7 +82,9 @@ internal sealed class RevitPanel : IDisposable
     public void Act(Action action)
     {
         var before = Settle();
+        var front = ForegroundProcess();
         action();
+        NoteFront(front);
         var done = Retry.WhileFalse(() => Activity is { IsIdle: true } activity && activity.Generation > before, SettleLimit,
             ignoreException: true).Result;
         Assert.IsTrue(done, $"The panel did not finish the action: {Root.Properties.ItemStatus.ValueOrDefault}");
@@ -93,9 +103,15 @@ internal sealed class RevitPanel : IDisposable
             ignoreException: true).Result;
     }
 
+    // A hidden element (Visibility.Hidden) stays in the UIA tree as offscreen; only on-screen ones count as shown.
     public AutomationElement? Shown(string automationId)
     {
-        return Root.FindFirstDescendant(cf => cf.ByAutomationId(automationId));
+        return Root.FindAllDescendants(cf => cf.ByAutomationId(automationId)).FirstOrDefault(element => !element.IsOffscreen);
+    }
+
+    public bool Gone(string automationId)
+    {
+        return Retry.WhileFalse(() => Shown(automationId) is null, FindLimit, ignoreException: true).Result;
     }
 
     public AutomationElement Last(string automationId)
@@ -103,7 +119,7 @@ internal sealed class RevitPanel : IDisposable
         var elements = Retry.WhileEmpty(() => Root.FindAllDescendants(cf => cf.ByAutomationId(automationId)), FindLimit,
             ignoreException: true).Result;
         Assert.IsTrue(elements is { Length: > 0 }, automationId + " was not found in the panel.");
-        return elements![^1];
+        return elements!.LastOrDefault(element => !element.IsOffscreen) ?? elements![^1];
     }
 
     public void Invoke(string automationId)
@@ -150,6 +166,25 @@ internal sealed class RevitPanel : IDisposable
         element.Patterns.Value.Pattern.SetValue(value);
     }
 
+    // Selects without opening the drop-down (an open one captures the mouse). WPF makes item containers
+    // only on the first open, so a never-opened combo box is opened for one Select.
+    public void Choose(AutomationElement combo, string name, bool runs = true)
+    {
+        var item = Choice(combo, name);
+        if (item.Patterns.SelectionItem.Pattern.IsSelected.Value)
+        {
+            return;
+        }
+
+        if (runs)
+        {
+            Act(() => SelectChoice(combo, name, item));
+            return;
+        }
+
+        SelectChoice(combo, name, item);
+    }
+
     public AutomationElement Item(AutomationElement container, Func<ConditionFactory, ConditionBase> condition)
     {
         var item = Retry.WhileNull(() => container.FindFirstDescendant(condition), FindLimit, ignoreException: true).Result;
@@ -165,7 +200,7 @@ internal sealed class RevitPanel : IDisposable
 
     public void Shot(string label)
     {
-        Evidence.Image(label, path => Capture.Element(Root).ToFile(path));
+        Evidence.Image(label, path => WindowShot.Save(PanelWindow, path, Root.BoundingRectangle));
         Evidence.Image(label + "-revit", path => WindowShot.Save(Window, path));
     }
 
@@ -174,13 +209,69 @@ internal sealed class RevitPanel : IDisposable
         _automation.Dispose();
     }
 
-    private static AutomationElement? FindPanel(FlaUI.Core.Application application, UIA3Automation automation)
+    private AutomationElement Choice(AutomationElement combo, string name)
+    {
+        var container = combo.Patterns.ItemContainer.Pattern;
+        var item = Retry.WhileNull(() => container.FindItemByProperty(null!, _automation.PropertyLibrary.Element.Name, name),
+            FindLimit, ignoreException: true).Result;
+        Assert.IsNotNull(item, $"No item '{name}' in {combo.AutomationId}.");
+        return item!;
+    }
+
+    private void SelectChoice(AutomationElement combo, string name, AutomationElement item)
+    {
+        try
+        {
+            item.Patterns.SelectionItem.Pattern.Select();
+            return;
+        }
+        catch (ElementNotAvailableException)
+        {
+        }
+
+        var drop = combo.Patterns.ExpandCollapse.Pattern;
+        try
+        {
+            drop.Expand();
+            Evidence.Step($"Opened {combo.AutomationId} for one Select: WPF had not made its items yet.");
+            Choice(combo, name).Patterns.SelectionItem.Pattern.Select();
+        }
+        finally
+        {
+            if (drop.ExpandCollapseState.Value != ExpandCollapseState.Collapsed)
+            {
+                drop.Collapse();
+            }
+        }
+    }
+
+    private void NoteFront(int front)
+    {
+        if (front != _processId && ForegroundProcess() == _processId)
+        {
+            Evidence.Step($"Revit came to the front during this action (the front window was in process {front}).");
+        }
+    }
+
+    private static int ForegroundProcess()
+    {
+        GetWindowThreadProcessId(GetForegroundWindow(), out var process);
+        return (int)process;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr window, out uint process);
+
+    private static (AutomationElement Panel, IntPtr Window)? FindPanel(FlaUI.Core.Application application, UIA3Automation automation)
     {
         foreach (var window in application.GetAllTopLevelWindows(automation))
         {
             if (window.FindFirstDescendant(cf => cf.ByAutomationId("ModelContext.Panel")) is { } panel)
             {
-                return panel;
+                return (panel, window.Properties.NativeWindowHandle.Value);
             }
         }
 

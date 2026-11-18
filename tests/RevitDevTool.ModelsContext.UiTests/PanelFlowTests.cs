@@ -168,7 +168,7 @@ public sealed class PanelFlowTests : RecordedTest
 
                 _panel.Invoke("Temporary.Reset");
                 Evidence.Step("Invoked Temporary.Reset.");
-                var gone = _panel.TryFind("Temporary.Text", TimeSpan.FromSeconds(1)) is null;
+                var gone = _panel.Gone("Temporary.Text");
                 _panel.Shot("reset");
                 Evidence.Values("temporary bar with 1 change, then no bar", $"'{bar}', then {(gone ? "no bar" : "bar still shown")}");
 
@@ -198,14 +198,14 @@ public sealed class PanelFlowTests : RecordedTest
 
                 _panel.Act(() => Eye(row).Patterns.Invoke.Pattern.Invoke());
                 Evidence.Step($"Invoked the eye on {category} under the Architectural link (T3, Hide in View).");
-                var hidden = Eye(LinkCategoryRow(category)).Properties.ItemStatus.Value;
+                var hidden = LinkEye(category).Properties.ItemStatus.Value;
                 var bar = _panel.Find("Temporary.Text").Name;
                 _panel.Shot("after");
 
                 _panel.Invoke("Temporary.Reset");
                 Evidence.Step("Invoked Temporary.Reset.");
-                var shown = Eye(LinkCategoryRow(category)).Properties.ItemStatus.Value;
-                var gone = _panel.Shown("Temporary.Text") is null;
+                var gone = _panel.Gone("Temporary.Text");
+                var shown = LinkEye(category).Properties.ItemStatus.Value;
                 _panel.Shot("reset");
                 Evidence.Values($"eye {nameof(RowEye.Hidden)}, temporary bar with 1 change; then eye {nameof(RowEye.Shown)}, no bar",
                     $"eye {hidden}, '{bar}'; then eye {shown}, {(gone ? "no bar" : "bar still shown")}");
@@ -255,11 +255,15 @@ public sealed class PanelFlowTests : RecordedTest
         return row!;
     }
 
-    private static AutomationElement LinkCategoryRow(string category)
+    // Explorer recycles rows when it rebuilds (after Reset): find row and eye in one try.
+    private static AutomationElement LinkEye(string category)
     {
-        var row = RowAfter(_panel.Find("Explorer.Rows"), DocumentName(CaseFiles.Facts.LinkLabel), category);
-        Assert.IsNotNull(row, $"The {category} row under the Architectural link is gone.");
-        return row!;
+        var link = DocumentName(CaseFiles.Facts.LinkLabel);
+        var eye = Retry.WhileNull(() => RowAfter(_panel.Find("Explorer.Rows"), link, category)
+                ?.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Eye")),
+            TimeSpan.FromSeconds(10), ignoreException: true).Result;
+        Assert.IsNotNull(eye, $"No eye on the {category} row under the Architectural link.");
+        return eye!;
     }
 
     private static AutomationElement? RowAfter(AutomationElement rows, string parent, string name)
@@ -314,15 +318,7 @@ public sealed class PanelFlowTests : RecordedTest
     private static void Switch(string name)
     {
         var before = _panel.Settle();
-        var source = _panel.Find("Filter.Source");
-        source.Patterns.ExpandCollapse.Pattern.Expand();
-        var item = _panel.Item(source, cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(name)));
-        item.Patterns.SelectionItem.Pattern.Select();
-        if (source.Patterns.ExpandCollapse.Pattern.ExpandCollapseState.Value == ExpandCollapseState.Expanded)
-        {
-            source.Patterns.ExpandCollapse.Pattern.Collapse();
-        }
-
+        _panel.Choose(_panel.Find("Filter.Source"), name, false);
         AcceptDiscard(before);
     }
 
@@ -331,7 +327,7 @@ public sealed class PanelFlowTests : RecordedTest
         AutomationElement? discard = null;
         var settled = Retry.WhileFalse(() =>
         {
-            discard = _panel.Root.FindFirstDescendant(cf => cf.ByAutomationId("Filter.DiscardSwitch"));
+            discard = _panel.Shown("Filter.DiscardSwitch");
             return discard is not null || _panel.Activity is { IsIdle: true } activity && activity.Generation > before;
         }, TimeSpan.FromSeconds(60), ignoreException: true).Result;
         Assert.IsTrue(settled, "The filter switch did not finish.");
@@ -350,7 +346,7 @@ public sealed class PanelFlowTests : RecordedTest
 
         _panel.SetValue(_panel.Last("Filter.Rule.Parameter"), rule.Parameter!);
         var op = (FilterOperator)Enum.Parse(typeof(FilterOperator), rule.Operator!);
-        ChooseOperator(EnumText.Of(op));
+        _panel.Choose(_panel.Last("Filter.Rule.Operator"), EnumText.Of(op));
         if (FilterOperators.NeedsValue(op))
         {
             _panel.SetValue(_panel.Last("Filter.Rule.Value"), rule.Value);
@@ -359,24 +355,6 @@ public sealed class PanelFlowTests : RecordedTest
         if (rule.CaseSensitive)
         {
             _panel.Toggle(_panel.Last("Filter.Rule.CaseSensitive"), true);
-        }
-    }
-
-    private static void ChooseOperator(string op)
-    {
-        var combo = _panel.Last("Filter.Rule.Operator");
-        combo.Patterns.ExpandCollapse.Pattern.Expand();
-        var item = _panel.Item(combo, cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(op)));
-        if (item.Patterns.SelectionItem.Pattern.IsSelected.Value)
-        {
-            combo.Patterns.ExpandCollapse.Pattern.Collapse();
-            return;
-        }
-
-        _panel.Act(() => item.Patterns.SelectionItem.Pattern.Select());
-        if (combo.Patterns.ExpandCollapse.Pattern.ExpandCollapseState.Value == ExpandCollapseState.Expanded)
-        {
-            combo.Patterns.ExpandCollapse.Pattern.Collapse();
         }
     }
 }

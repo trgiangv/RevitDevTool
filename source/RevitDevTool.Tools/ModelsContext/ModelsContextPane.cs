@@ -11,7 +11,7 @@ namespace RevitDevTool.Tools.ModelsContext;
 public sealed class ModelsContextPane(ModelContextServices services, IRevitModelEvents events, ILogger<ModelsContextPane> logger)
 {
     private static readonly Guid PaneGuid = new("6C1E3B7A-52D4-4F0B-9E57-2E8B1C4D9A31");
-    private static readonly DockablePaneId PaneId = new(PaneGuid);
+    public static readonly DockablePaneId PaneId = new(PaneGuid);
 
     private readonly ContentControl _host = new();
     private ModelContextViewModel? _panel;
