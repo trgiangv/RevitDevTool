@@ -15,7 +15,7 @@ namespace DevTools.Daemon.Mcp.Tools;
 [SupportedOSPlatform("windows")]
 public sealed class LaunchHostTool(IHostConnections sessions, IHostLaunchService launchService)
 {
-    private static readonly TimeSpan BridgeTimeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan BridgeTimeout = TimeSpan.FromMinutes(10);
     private static readonly string[] HostAppEnumNames =
         Enum.GetValues<HostApp>().Select(h => h.ToString()).ToArray();
 
