@@ -96,8 +96,10 @@ count.
     its state before the action).
 16. **Keep UI Automation off Revit while it is busy.** Wait for Revit to be idle
     (the panel's `Idle <n>` signal) before any UIA call, and never poll the whole
-    desktop tree: a helper that clicks *Always Load* searches only Revit's
-    top-level dialogs (`#32770`) and stops once the model is open.
+    desktop tree. UIA is for the panel's own controls only: Revit is started and
+    the sample opened through MCP `launch_host` (which answers the startup
+    dialogs), and the view and pane are prepared through the Revit API
+    ([test-matrix.md](test-matrix.md#setup-through-mcp-ui-automation-only-for-the-panel)).
 17. **Do not touch the pane's visual tree in `OnShutdown`.** By then Revit has
     torn down the dockable pane's render channel. `ModelsContextPane.Shutdown`
     once set the host `Content` to null; the template change released visuals
@@ -117,11 +119,11 @@ count.
     elements instead of 917; EX-06 was Inconclusive). Revit draws it only after the
     run returns, and `RefreshActiveView` does not change that. L2 therefore needs
     `L3` open from an earlier run: `scripts/test-models-context.ps1` runs
-    `--filter OpensSampleView` first, then the full run. `SampleViews.Activate` stops as Inconclusive
+    `--filter PreparesSample` first, then the full run. `SampleViews.Activate` stops as Inconclusive
     otherwise; no retry.
 20. **Panel jobs always resume on the UI context.** `PanelRuntime.RunAsync` ran a
     job on whatever thread called it. A document opened inside a test run
-    (`OpenAndActivateDocument` from `OpensSampleView`) raised pane visibility and view
+    (`OpenAndActivateDocument` in an earlier setup test) raised pane visibility and view
     changes with no ambient `SynchronizationContext`, so the `await` continuations
     resumed on the pool and `ExplorerTabViewModel.Publish` changed `Rows` off the
     dispatcher thread. Log: "CollectionView does not support changes to its
@@ -275,8 +277,10 @@ the measured spike: 0062 §5, §7–§10.
 - **Live tests** run on the Snowdon sample in Revit: adapter tests in
   `tests/RevitDevTool.ModelsContext.LiveTests` (inside Revit, golden counts from an
   API oracle) and a few panel flows in `tests/RevitDevTool.ModelsContext.UiTests`
-  (FlaUI from outside Revit, waiting on the `ModelContext.Panel` status). Rows,
-  golden values and commands: [test-matrix.md](test-matrix.md).
+  (FlaUI from outside Revit on the panel's controls only, waiting on the
+  `ModelContext.Panel` status). Revit and the sample are opened through MCP
+  `launch_host`; the test host on this machine is Revit 2024. Rows, golden values
+  and commands: [test-matrix.md](test-matrix.md).
 
 ## Change rules
 

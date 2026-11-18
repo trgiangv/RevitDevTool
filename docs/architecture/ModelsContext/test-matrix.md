@@ -13,7 +13,7 @@ Repo-wide test rules: [agents/test-matrix.md](../../agents/test-matrix.md).
 ```text
 L1 core + views, fakes      tests/DevTools.ModelsContext.Tests, .Views.Tests     CI, seconds
 L2 adapter inside Revit     tests/RevitDevTool.ModelsContext.LiveTests           live Revit, no UI
-L3 panel inside Revit       tests/RevitDevTool.ModelsContext.UiTests             live Revit, FlaUI
+L3 panel inside Revit       tests/RevitDevTool.ModelsContext.UiTests             live Revit, FlaUI on panel controls
 ```
 
 | Layer | Carries | Why here |
@@ -72,8 +72,10 @@ each data row by its case id (`CountMatchesOracle(TX-01)`).
   `L3` and refreshes it. A view opened inside a run is not drawn until the run returns
   and the view collector then counts far too many Current model elements (SC-05
   1,669 instead of 917), so `Activate` stops as Inconclusive when `L3` is not open.
-  `scripts/test-models-context.ps1` runs `ViewSetupTests.OpensSampleView` in a run of
-  its own first, then the suite. The script opens the sample by starting Revit with its path; a document is never opened inside a run (Gotcha 20).
+  `scripts/test-models-context.ps1` runs `ViewSetupTests.PreparesSample` in a run of
+  its own first (it activates `L3` and shows the Model Context pane through the Revit
+  API), then the suite. The sample is opened before the script through MCP
+  `launch_host`; a document is never opened inside a run (Gotcha 20).
 
 ### Evidence per run
 
@@ -93,6 +95,30 @@ evidence. `-Images` creates `artifacts/models-context-tests/images.on`, which L2
 visibility cases export nothing unless they fail, and the manual-verify steps of those cases
 need a run with `-Images` for picture evidence.
 
+### Setup through MCP, UI Automation only for the panel
+
+Everything that is not a click on the panel goes through MCP or the Revit API:
+
+| Step | How |
+|------|-----|
+| Start Revit | MCP `launch_host(hostApp="Revit", versionNumber="2024")`, without `filePath`. The startup dialogs (add-in security, Always Load) are answered by the host launcher. If it times out, Revit keeps starting: wait until `list_processes` shows the pid |
+| Open the sample | `code_mode`: `InvokeAsync("open_document", {filePath}, pid)`. Not `launch_host(filePath=...)`: on Revit 2024 a model opened at startup opens before the add-in registers its panes, and the panes are never created in that session (plan, Phase 7) |
+| Check the model, links, active view, counts by hand | `code_mode`: `execute_csharp_code` or `ReadAsync("revit://model/context", null, pid)` |
+| Activate `L3` and show the pane | L2 `ViewSetupTests.PreparesSample` (Revit API, its own run) |
+| Act on the panel (eye, Aa, connector, Save, Reset) and read its result | L3, FlaUI by AutomationId and UIA patterns |
+
+Use FlaUI only for the panel's own controls, which no API reaches. Do not use it
+to answer Revit dialogs, click the ribbon or open files.
+
+Panel preconditions a flow (and anyone checking the panel by hand) must meet:
+
+- The Filter editor (categories, conditions, groups) is read only until a custom
+  filter is selected. A flow starts with **+** (`Filter.Add`) and checks that the
+  source shows the new filter before it touches `Filter.Categories`.
+- L3 attaches to the Revit that L2 recorded, else to `MODELS_CONTEXT_REVIT_PID`
+  (the script sets it). With neither, it stops as Inconclusive when more than one
+  Revit shows the sample, so it never drives another session's panel.
+
 ### Rules for adding a case
 
 1. Put all data in `Data/*.json`; the test code holds the flow only.
@@ -105,7 +131,25 @@ need a run with `-Images` for picture evidence.
    requires them only in a run with `-Images`.
 5. L3 waits only on the readiness signal (`ItemStatus` Idle/Busy); no sleeps,
    no keys, no mouse, UIA patterns by AutomationId only. Never poll Revit's
-   UIA tree while it is busy.
+   UIA tree while it is busy. A collapsed or hidden control is still in the UIA
+   tree (offscreen): test presence with `Shown` / `Gone`, never with a bare
+   `FindFirstDescendant`.
+   L3 must not take the user's mouse, keyboard or screen, so a person can work
+   in other windows during a run:
+   - Pick a combo item with `RevitPanel.Choose`. It finds the item through
+     `ItemContainer` and selects it while the drop-down stays closed. A WPF combo
+     box makes its item containers only when the drop-down first opens. For a combo
+     box that never opened, `Choose` opens it for one `Select` and closes it in
+     `finally`, and the step log records it. An open drop-down holds the mouse
+     capture of Revit's UI thread. Never call `ExpandCollapse` or `Realize`
+     directly: `Realize` also opens the drop-down.
+   - Images come from `PrintWindow` of the window that holds the panel (`Shot`),
+     never from the screen. Another window on top does not show in the image.
+   - `RevitPanel.Act` records a step when Revit comes to the front during an
+     action. Run `20261118-130820` (Revit 2026) recorded it once, in UI-05 at
+     `Temporary.Reset`. Link hide and show run Revit's own UI commands
+     (`LinkedHideShow`). This is product behaviour, not the test. See Current gaps
+     in [docs/agents/test-matrix.md](../../agents/test-matrix.md).
 6. The model ends unmodified: edits run in rolled-back transactions and
    temporary modes are reset through the panel's own Reset; a test never
    repairs what the panel left behind.
@@ -140,21 +184,24 @@ categories box, typing the filter name, Save) waits on its own UIA state instead
 # L1
 dotnet run --project tests/DevTools.ModelsContext.Tests/DevTools.ModelsContext.Tests.csproj -f net10.0-windows
 dotnet run --project tests/DevTools.ModelsContext.Views.Tests/DevTools.ModelsContext.Views.Tests.csproj -f net10.0-windows
-# L2 then L3 in one command on Revit 2026; without -RevitPid the script starts Revit with the sample; with it the sample must already be open; -Images exports the full visibility image set.
-# Step 1 activates L3 in a run of its own so Revit draws it (Gotcha 19), step 2 is the full L2 run, step 3 is L3.
-# The deployed add-in must be current (scripts/build-host.ps1 -HostApp Revit -Year 2026).
+# 1. Deploy the current add-in for the test year.
+pwsh -File scripts/build-host.ps1 -HostApp Revit -Year 2024
+# 2. Through MCP (agent tool calls, not shell commands): launch_host(hostApp="Revit", versionNumber="2024"),
+#    then code_mode open_document(filePath="C:\Program Files\Autodesk\Revit 2024\Samples\Snowdon Towers Sample HVAC.rvt"); keep the pid.
+# 3. L2 then L3 in one command. Step 1 of the script prepares the sample in a run of its own
+#    (Gotcha 19), step 2 is the full L2 run, step 3 is L3. -Year 2026 for the 2026 host; -Images exports the full visibility image set.
 pwsh -File scripts/test-models-context.ps1 -RevitPid <revit pid>
-# L2 alone, by hand (open the sample, then run the OpensSampleView filter once per Revit session first)
-dotnet test --project tests/RevitDevTool.ModelsContext.LiveTests/RevitDevTool.ModelsContext.LiveTests.csproj -c Debug.Autodesk.2026 -- --pid <revit pid> --filter OpensSampleView
-dotnet test --project tests/RevitDevTool.ModelsContext.LiveTests/RevitDevTool.ModelsContext.LiveTests.csproj -c Debug.Autodesk.2026 -- --pid <revit pid>
+# L2 alone (run PreparesSample once per Revit session first)
+dotnet test --project tests/RevitDevTool.ModelsContext.LiveTests/RevitDevTool.ModelsContext.LiveTests.csproj -c Debug.Autodesk.2024 -- --pid <revit pid> --filter PreparesSample
+dotnet test --project tests/RevitDevTool.ModelsContext.LiveTests/RevitDevTool.ModelsContext.LiveTests.csproj -c Debug.Autodesk.2024 -- --pid <revit pid>
 # L3 alone: attaches to the Revit pid L2 recorded in the run folder
 dotnet run --project tests/RevitDevTool.ModelsContext.UiTests/RevitDevTool.ModelsContext.UiTests.csproj
 # Data rules only, no Revit needed
 dotnet run --project tests/RevitDevTool.ModelsContext.UiTests/RevitDevTool.ModelsContext.UiTests.csproj -- --filter CaseRulesTests
 ```
 
-Without `--pid` the adapter reuses the oldest Revit 2026 (or starts one), so pass
-it whenever another Revit 2026 is open. L2 writes its Revit pid to
+Always pass `--pid`: without it the adapter reuses the oldest Revit of the
+configuration's year, or starts one without the sample. L2 writes its Revit pid to
 `results-L2.json`; L3 attaches only to that process and stops as Inconclusive
 when it does not show the sample.
 
@@ -165,10 +212,22 @@ save the model.
 
 ## Matrix
 
-Expected values come from `Data/*.json` (recorded from the oracle on Revit 2026,
-2026-11-17). Change them there, not here alone.
+Expected values come from `Data/*.json` (recorded from the oracle on the Revit 2026
+sample, 2026-11-17). Change them there, not here alone.
 
-Measured on Revit 2026 (Snowdon HVAC + six links), 2026-11-18, run
+Revit 2024 is the test host on this machine (`-Year 2024` is the script default).
+The golden values were not yet checked against the Revit 2024 sample. On the first
+2024 run, a case where the oracle differs from the golden value means the 2024
+sample file differs, not that the panel is wrong: record it under Mismatches with
+both values and decide per-version golden values before changing `Data/*.json`.
+
+Last full run, Revit 2026 (Snowdon HVAC + six links), 2026-11-18, run
+`20261118-103516`, after the MCP setup and the L3 helper fixes: L2 130 cases in
+110 s, all PASS (SB-01 50 s, the 15 visibility cases 19 s); L3 6 flows, all PASS,
+plus 7 data rule tests, in 70 s. The same suite on Revit 2024 took 286 s for L2
+(visibility 97 s, SB-01 85 s).
+
+Earlier run, Revit 2026 (Snowdon HVAC + six links), 2026-11-18, run
 `20261118-002331`, `scripts/test-models-context.ps1` on a fresh Revit: L2 128 cases in
 162 s, all PASS (`SB-01` alone took 77 s before batching, the 15 visibility cases 59 s); L3 7 flows,
 all PASS, in 69 s, plus 7 data rule tests. L1 core 340 tests (net10, net48) in 3 s,
@@ -363,8 +422,8 @@ TX-02 to TX-05, TX-18, TX-19 above; widening and exact pass also in L1
 | PK-08 | Models: Mark in HVAC and Arch | 2 models | L2 `CatalogMatchesFacts(PK-08)` |
 | PK-09 | Models: Swing Angle in Arch only, no warning | 1 model | L2 `CatalogMatchesFacts(PK-09)` |
 | CT-01 | Catalog build time from the panel's Trace lines, cold cache | lines for both documents | L2 `CatalogMatchesFacts(CT-01)` ([parameter-catalog.md](parameter-catalog.md#build-time-with-the-tooltip-facts)) |
-| PK-13 | Instance / Type sections with row counts, header not a list item and not selectable, sticky on scroll, exact name first | UI state | Views `PickerGroupsBySection`, `HeadersAreNotListItems`, `HeaderIsNotAnItem`, `HeaderStaysOnScroll`; HandyControl `ExactMatchComesFirst` |
-| PK-14 | Row: source icon per origin (none for built-in), category summary, no tags or warning colors | UI state | Views `RowIconFollowsSource`, `RowShowsCategorySummary`, `RowHasNoTagsOrWarnings` |
+| PK-13 | Instance / Type sections with row counts, header not a list item and not selectable, sticky on scroll, exact name first; a header click collapses its section, the choice survives closing the picker, a search shows every section | UI state | Views `PickerGroupsBySection`, `HeadersAreNotListItems`, `HeaderIsNotAnItem`, `HeaderStaysOnScroll`, `HeaderCollapsesItsSectionAndKeepsIt`, `SearchShowsCollapsedSections`; HandyControl `ExactMatchComesFirst` |
+| PK-14 | Row: name and source icon per origin (none for built-in); categories only in the tooltip; no tags or warning colors | UI state | Views `RowIconFollowsSource`, `RowShowsNameOnly`, `RowHasNoTagsOrWarnings` |
 | PK-15 | Tooltip rows present only with a value: built-in measured, built-in text, shared, project, family, yes/no; five then "+ N more" | rows | L1 `ParameterTipTests`, Views `TipShowsRowsAndLists` |
 | PK-16 | Rule card: placeholder in the Current model's format, "Type" for a type parameter | UI state | L1 `PlaceholderUsesCurrentModel`, `TextHasNoPlaceholder`; Views `ValueBoxShowsExample`, `ChosenTypeParameterShowsType` |
 | PK-10 | Value counts of Swing Angle on Doors | total 142, values 131 | L2 `CatalogMatchesFacts(PK-10)` |
@@ -408,7 +467,25 @@ reset.
 | UI-06 | Eye on Doors under the link (T3, Hide in View), Reset | eye Hidden and bar "1 change", then eye Shown and no bar | `LinkDoorsHideThenReset` |
 ## Mismatches found
 
-None open. List a row here (ID, expected from the oracle or the Revit API,
+Open, Revit 2024 (run `20261118-093432`, pid 45728, 2026-11-18). L2 127 of 131
+passed; L3 5 of 6 after the helper fixes below (UI-01 failed once while the
+desktop was in use, then passed alone):
+
+| ID | Expected | Oracle | Panel | Cause |
+|----|----------|--------|-------|-------|
+| SC-02 | 7,746 | 7,700 | 7,700 | The 2024 Architectural sample has fewer elements; panel = oracle. Per-version golden values to decide |
+| SC-06 | 780 | 765 | 765 | Same sample difference (active view through the link); panel = oracle |
+| SB-01 | 0 failures | 11,612 samples | 4 failed | Structural link: `REBAR_MIN_LENGTH` and `REBAR_MAX_LENGTH` on two rebar sets do not find their own value (`11' - 10 3/8"`, `25' - 11 1/2"`). Not seen on 2026; to investigate |
+| UI-04 | 7,746 | — | 7,700 | Golden value from the 2026 sample (as SC-02) |
+
+Closed on 2026-11-18 (test helpers, not the panel): hidden controls stay in the
+UIA tree as offscreen elements. Three value editors share `Filter.Rule.Value`
+(two hidden), the hidden temporary bar keeps `Temporary.Text` ("0 changes"), and
+a hidden `Filter.DiscardSwitch` was invoked as if shown. `Shown`, `Gone` and
+`Last` in `RevitPanel` now take on-screen elements only (UI-01–UI-03, UI-05,
+UI-06).
+
+List a row here (ID, expected from the oracle or the Revit API,
 panel value, cause seen with `PrintCaseDifference`) when the panel differs;
 the expected value stays.
 

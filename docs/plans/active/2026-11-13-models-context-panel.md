@@ -33,6 +33,10 @@ lands.
 - Proof: `.agents/skills/build/SKILL.md`, `docs/agents/test-matrix.md`,
   `.agents/skills/revit-test/SKILL.md` for host tests,
   `.agents/skills/ci-change/SKILL.md` for new projects.
+- Live host: Revit 2024 on this machine. Revit is started and models are opened
+  through MCP (`launch_host`, `code_mode` with `open_document` and
+  `execute_csharp_code`); FlaUI drives only the panel's own controls
+  ([test-matrix](../../architecture/ModelsContext/test-matrix.md#setup-through-mcp-ui-automation-only-for-the-panel)).
 
 ## Scope
 
@@ -180,9 +184,8 @@ Owner: `source/RevitDevTool.Tools/ModelsContext/`, pane registration in
   line.
 - Snapshot export script for MCP `execute_csharp_code`, so real models replay
   in the sandbox.
-- Proof: build for 2023, 2025 and 2027 configs; host tests (MTP via
-  RevitDevTool.TestAdapter) for snapshot counts, filter compile and T0/T2
-  plans on a sample model with two link instances.
+- Proof: build for 2023, 2025 and 2027 configs. Host tests came later as L2
+  (NUnit inside Revit) and L3 (panel flows), see Phase 6.
 
 ### Phase 5 — Spike and T3 (Opus, live host)
 
@@ -237,7 +240,7 @@ elements, Show/Reset/Keep per 0062 §8) and adapter.
   closed. Scope was set through the view model for this check. Both gaps are
   closed in Phase 5b (`PanelButtonGroup` peer, `TagCheckComboBox` item peers).
 
-Not yet run live: Revit 2023–2025 and 2027.
+Not yet run live: Revit 2023, 2024, 2025 and 2027. Next: Revit 2024 (Phase 7).
 
 Third spike, 2026-11-15 (Isolate, Halftone and Color on linked elements,
 0062 §5.11): no internal isolate or override path; Revit refuses the temporary
@@ -432,12 +435,122 @@ examples 1–4, scope picker). ADR 0062 §5 holds the decisions.
    - Later, off the Phase 5d path: `ModelContextViewModel` (event inbox,
      context loader) and `ExplorerTabViewModel` (five parts) splits.
 
-### Phase 6 — Docs and acceptance
+### Phase 6 — Docs and live suites
 
-- Product and architecture pages are done (Step 10). Test matrix with golden
-  counts and the live suites (adapter inside Revit, FlaUI panel flows):
-  [test-matrix.md](../../architecture/ModelsContext/test-matrix.md). Left: record
-  the pending golden values from the first live run; set 0062 to Accepted.
+- Product and architecture pages are done (Phase 5c Step 10). Test matrix with
+  golden counts and the live suites (L2 adapter inside Revit, L3 panel flows):
+  [test-matrix.md](../../architecture/ModelsContext/test-matrix.md). Golden
+  values recorded from the oracle on the Revit 2026 sample (2026-11-17); last
+  full run 2026-11-18, L2 128/128 and L3 7/7.
+
+### Phase 7 — Revit 2024 live run and open spike steps
+
+Revit 2024 is the test host on this machine. Setup goes through MCP; FlaUI only
+clicks the panel.
+
+1. [x] Deploy: `scripts/build-host.ps1 -HostApp Revit -Year 2024`.
+2. [x] Open: MCP `launch_host(hostApp="Revit", versionNumber="2024")` without a
+   file, then `code_mode` `open_document` with the sample; check the
+   Architectural link is loaded through `code_mode`.
+3. [x] Run `scripts/test-models-context.ps1 -RevitPid <pid>` (`-Year 2024` is the
+   default). Any case where oracle ≠ golden means the 2024 sample differs:
+   list it under Mismatches in the test matrix with both values, then decide
+   per-version golden values (open decision) before changing `Data/*.json`.
+   Done: L2 127/131 and L3 5/6. The mismatches are listed in the test matrix.
+   Open: the per-version golden values decision, and SB-01 rebar on 2024.
+4. [ ] T3 spike step 1 on 2024 through `code_mode` `execute_csharp_code` (Hide in
+   View, Reveal + Unhide, temporary checks), and L3 UI-05/UI-06 for the panel
+   path. Record results here and in 0062. Partly done: L3 UI-05 and UI-06 pass
+   on 2024. The `code_mode` spike is not run.
+5. [ ] Open spike steps from 0062 Follow-Up that 2024 can answer: view template
+   locking V/G, 500 refs hid 548, link display modes, T3 timing at 1k/10k/50k.
+6. [x] Phase 5d budgets live with Trace on (the sandbox measures them in
+   `FilterMeasure`), and the first-load stall (target < 50 ms). Measured
+   2026-11-18 (performance pass below). Two fixes landed. Still over the 50 ms UI
+   budget: rule template layout and first load.
+7. [ ] Then 2023 (minimum version), 2025 and 2027 when a host is available; set
+   0062 to Accepted.
+
+First 2024 run, 2026-11-18 (results in the test matrix, Mismatches):
+
+- L2 127/131 in 287 s (2026: 162 s). Panel = oracle on every count; SC-02 and
+  SC-06 differ only from the 2026 golden values. SB-01 fails on two rebar
+  length built-ins in the Structural link. Slow cases: SB-01 85 s, visibility
+  about 97 s in all (VI-01 23 s, VI-11 18 s), quick counts (EX-05) 8.8 s.
+- L3 5/6 after fixing the test helpers (hidden controls stay in the UIA tree as
+  offscreen: rule value editors, temporary bar, discard prompt). UI-04 fails only
+  on the 2026 golden value. L3 rerun alone used to attach to any Revit showing
+  the sample (it picked the user's Revit 2025); it now needs the L2 pid or
+  `MODELS_CONTEXT_REVIT_PID` when more than one Revit shows the sample.
+- **Product bug, Revit 2024:** dockable panes registered in
+  `ApplicationInitialized` (Model Context and the main DevTools pane) are
+  created only when a document opens after that event. Revit started with a
+  model (double-click an .rvt, or `launch_host` with `filePath`) opens the
+  model first, so both panes stay "not created" for the session and the ribbon
+  buttons do nothing (`ToggleVisibility` returns when `PaneExists` is false).
+  Workaround in tests: `launch_host` without a file, then `open_document`.
+  Fix candidate: register the panes in `OnStartup`.
+- Revit 2026 rerun with the same changes (run `20261118-103516`, Revit started
+  with the sample through `launch_host`): L2 130/130 in 110 s, L3 6/6. Both panes
+  exist on 2026 when a model opens at startup, so the pane gap is 2024 only.
+  Revit 2024 runs the suite about 2.6 times slower (visibility about 5 times).
+- `launch_host`: on Revit 2026 (2026-11-18) the Claude Code client moved the call
+  to the background after 120 s, and the server then returned success
+  (`bridgeConnected: true`). On Revit 2024 the call timed out twice although
+  Revit came up and connected later. The server `BridgeTimeout`
+  (`LaunchHostTool.cs`) is now 10 min (was 2 min).
+- Performance pass (2026-11-18). Sandbox `--measure` in Release, 100k and 1M;
+  Revit 2026 live for quick counts:
+  - Quick counts (EX-05) took 4,044 ms on the panel side, while a full snapshot
+    took 133 ms. `CountGroupsAsync` ran one collector per model category (136),
+    and each walks the whole document. Fix: one id collector, then category reads
+    in 30 ms slices. EX-05 now takes 103 ms, and all 9 Explorer cases pass.
+  - `Parameters merged` (scope refresh) took 100–1,300 ms on the UI thread when
+    a filter was built. Every rule raised `Parameters` even when the list was the
+    same, and each picker regrouped about 3k items (about 50 ms each). Fixes:
+    `RuleViewModel` raises `Parameters` only for a new list, and
+    `AutoCompleteComboBox` groups only while the drop-down is open. Build of
+    example 4: 1,812 → 83 ms at 100k, and 197 → 46 ms at 1M. Merges now take
+    7–21 ms.
+  - Measure fix: `example 2 evaluated` sometimes waited the full 30 s. The
+    build's own evaluation finished before the wait started. The build and its
+    result are now timed together, and a missing result throws.
+  - Still over the 50 ms UI budget:
+    - Layout of new rule templates: 47–154 ms for 4–6 nodes, about 15–25 ms per
+      rule from the HandyControl templates. A filter loaded with many rules at
+      once shows it.
+    - First load: 100–300 ms longest stall. It was 33–59 ms in Phase 3d on a
+      quieter machine; three Revit sessions ran during this measure.
+    - `example 4` evaluated: 80–140 ms.
+  - Budget table, this pass:
+
+    | Check | Budget | 100k | 1M |
+    |---|---|---|---|
+    | Group parameter list cold / warm | ≤ 5 ms / hit | 5.2 / 0.08 ms, hit | 1.1 / 0.005 ms, hit |
+    | Scope pruning per document | ≤ 1 ms | 1.4 µs | 7 µs |
+    | Picker keystroke, 3k items | ≤ 16 ms | 18–21 ms median (filter + layout) | 17–22 ms |
+    | Live edit to result | ≤ 500 ms (300 ms debounce) | 333–433 ms | 340–476 ms |
+    | UI stall | < 50 ms | misses: see above | misses: see above |
+
+  - Header expand read-back (`GetIdsHiddenPermanentlyOrTemporarilyAsync`) asks
+    for all ids in scope on the first expand. It runs in slices and is cached per
+    view, so it causes no UI stall. Kept as is.
+- L3 no longer takes the user's mouse, keyboard or screen (2026-11-18, Revit 2026,
+  last run `20261118-133615`, 6 flows and 7 rules pass in 73 s; Revit stayed in
+  the background):
+  - `RevitPanel.Choose` selects combo items through `ItemContainer` with the
+    drop-down closed. WPF makes item containers only on the first open. A combo
+    that never opened is opened for one `Select`, closed in `finally`, and the
+    step log records it. `VirtualizedItem.Realize` also opens the drop-down, so it
+    does not help.
+  - `Shot` takes the panel image with `PrintWindow` and no longer reads the
+    screen.
+  - `Act` records a step when Revit comes to the front. This was seen once, at
+    UI-05 `Temporary.Reset` (link Unhide runs a Revit UI command). It is listed
+    in the agents test matrix, Current gaps.
+  - UI-06 finds the link row and its eye in one retry: Explorer recycles row
+    containers when it rebuilds after Reset, so a row read before then can lose
+    its eye (one failure, run `20261118-133340`).
 
 ## Risks And Recovery
 
@@ -511,12 +624,13 @@ examples 1–4, scope picker). ADR 0062 §5 holds the decisions.
   project, use no self `;component/` URI (x:Class resource dictionary), keep
   icons in `DevTools.UI` `Icons.xaml`, and add a guard test for other
   `;component/` URIs; prove with a build of the merged `RevitDevTool` host.
-- [ ] Phase 3 — controls, views, UI tests, sandbox, performance numbers.
+- [x] Phase 3 — controls, views, UI tests, sandbox, performance numbers
+  (3a–3d above).
 - [x] Phase 4 — Revit adapter T0–T2, pane, ribbon command, snapshot export
-  script (not yet run). Not run in a live Revit. Proof: Tools builds 0
+  script (the script is not yet run). Proof at the time: Tools builds 0
   warnings for 2022 (skips ModelsContext), 2023, 2025, 2027; merged host builds
-  for 2025 with ILRepack; core 105/105; `Build.Tests` 119/119. No host test
-  project (no repo pattern for Tools host tests).
+  for 2025 with ILRepack; core 105/105; `Build.Tests` 119/119. Live checks
+  came with L2/L3 (Phase 6).
 - [x] Phase 4b — done: `IHostFilterCatalog.EvaluateAsync` runs Revit filters
   in their own document (`GetElementFilter()` + categories, selection filters
   by stored ids); store errors reach the status line; read-back asks only
@@ -531,7 +645,7 @@ examples 1–4, scope picker). ADR 0062 §5 holds the decisions.
   errors reach the status line; hidden-id read-back must not walk every
   element (panel-touched ids plus visible branches, cached per view, dropped by
   `DocumentChanged`); a dedicated ribbon icon.
-- [ ] Phase 5c — parameter identity and types.
+- [x] Phase 5c — parameter identity and types.
   - [x] Step 1 spike (recorded above).
   - [x] Steps 2–5, 7, 8, 8b: match keys, merged catalog with origin, binding
     and coverage tags, derived kinds and operator sets, adapter catalog and
@@ -576,8 +690,58 @@ examples 1–4, scope picker). ADR 0062 §5 holds the decisions.
     numbers keep their stored range (L2 LU-01, PS-01, PS-02). Shutdown no longer
     touches the pane's visual tree and temporary bar commands run through
     `PanelRuntime.RunAsync` (README Gotchas 17, 18).
-- [ ] Phase 5 — spike; T3 queue or no-go path.
-- [ ] Phase 6 — product and architecture docs; 0062 Accepted.
+- [x] Phase 5d — filter logic: connector instead of NOT, group scope
+  (documents, categories), drag and Alt+Up/Down reorder, store without `not`,
+  renamed operators, view model splits (`ParameterScopes`, `FilterTreeMoves`,
+  `CustomFilterLibrary`, `FilterRunner`). Proof: L1 `FilterLogicTests`,
+  `FilterTreeMovesTests`, Views `FilterLogicViewTests`, `FilterDropTests`; L2
+  GS-01–GS-06 and GR-01–GR-06. Left: budgets (Phase 7 step 6); the
+  `ModelContextViewModel` and `ExplorerTabViewModel` splits stay "later".
+- [x] Phase 5 — spike on Revit 2026; T3 = Hide in View and Show through
+  `LinkedHideShow`; Isolate, Halftone and Color on link elements disabled.
+  Other years: Phase 7.
+- [x] Phase 6 — product and architecture docs; L2/L3 live suites; golden values
+  from the Revit 2026 sample.
+- [ ] Phase 7 — Revit 2024 live run, open spike steps, budgets; then 0062
+  Accepted. Steps 1–3 and 6 done; step 4 partly done; steps 5 and 7 open.
+  - [x] 2026-11-18, live runs: Revit 2024 L2 127/131 and L3 5/6 (mismatches
+    only from the sample version, plus SB-01 rebar). Revit 2026 L2 130/130 and
+    L3 6/6.
+  - [x] 2026-11-18, L3 leaves the user's mouse, keyboard and screen alone:
+    combo items are picked through ItemContainer, images come from PrintWindow,
+    and Revit coming to the front is recorded. The last run (Revit 2026) passed
+    13/13 in 73 s.
+  - [x] 2026-11-18, performance:
+    - Quick counts use one id collector plus slices: EX-05 went from 4,044 ms
+      to 103 ms.
+    - A rule raises `Parameters` only for a new list, and the picker groups
+      only while open: building example 4 went from 1,812 ms to 83 ms (100k).
+  - [x] 2026-11-18, picker: sections collapse and expand on a header click, the
+    choice is kept, and a search shows every section. Rows show the name only;
+    categories are in the tooltip. Proof: Views 103/103, core 341/341.
+  - [x] 2026-11-18: the `launch_host` bridge timeout is now 10 min (Daemon). It
+    takes effect after `pack daemon` and a reinstall.
+  - [x] 2026-11-18, first load: a CPU profile of the sandbox (dotnet-trace) put
+    about 45% of the first build in XAML parsing, 40% in first layout and
+    templates, and 15% in the first data load. `FilterTabView` is now built on
+    the first Filter tab open. View build went from 168–309 ms to 101–144 ms
+    cold, and first layout from 114–177 ms to 83–89 ms. Building the menu late
+    was tried and dropped: its items bound to the panel before their own
+    DataContext and logged binding errors. The section headers now use the
+    Categories box style.
+  - [ ] Open:
+    - Pre-warm the panel on Revit idle (hides about 80% of the first build at
+      about 0.3 s of idle time), and a lighter rule template.
+    - Revit 2026 visibility costs: VI-11 takes 2.5 s plus a 2.7 s reset. Reset
+      also writes prior element overrides to the permanent view.
+      `measure_vis.cs` is ready for a session on mains power.
+    - Per-version golden values (SC-02, SC-06, UI-04).
+    - SB-01 rebar on Revit 2024.
+    - Pane registration in `OnStartup` (Revit 2024 gap).
+    - Rule template layout (15–25 ms per rule).
+    - First-load stall.
+    - The T3 `code_mode` spike and the spike steps.
+    - Revit 2023, 2025 and 2027.
 
 ## Decisions
 
@@ -610,19 +774,31 @@ examples 1–4, scope picker). ADR 0062 §5 holds the decisions.
   means changed ids over 20% of the snapshot; changes while the pane is hidden
   mark the snapshot dirty; a model switch keeps the selected filter but drops
   its unsaved edits.
-- Open after Phase 3b, owned by Phase 4: the busy text comes from the adapter
-  (host name), not the core; an `IModelEvents` signal for parameter
-  definitions added or deleted refreshes the catalog; `GetHiddenIdsAsync`
-  returns ids hidden in the active view by permanent hide, temporary hide or
-  isolate, and the adapter documents which; the "stale result is dropped" test
-  is strengthened to fail without generation numbers.
+- Open after Phase 3b, closed in Phase 3d: the busy text comes from the
+  adapter (`IModelSource.HostName`); `IModelEvents.ParameterDefinitionsChanged`
+  refreshes the catalog; `IViewActions.GetIdsHiddenPermanentlyOrTemporarilyAsync`
+  names what it returns; `LifecycleTests.StaleResultIsDropped` covers stale
+  results.
+- 2026-11-18: Revit 2024 is the live test host on this machine. Revit and the
+  sample are opened through MCP `launch_host`; `scripts/test-models-context.ps1`
+  takes the pid (no FlaUI dialog clicks), and L2 `PreparesSample` shows the pane
+  through the Revit API (no ribbon click). FlaUI drives only the panel.
+- 2026-11-18: L3 must not take the user's input or screen: no Expand except
+  the one open a never-opened WPF combo box needs, PrintWindow images, and a
+  step logged when Revit comes to the front.
+- 2026-11-18: in the parameter picker, the Instance and Type sections are
+  collapsible. Categories show only in the tooltip, because they took width and
+  added noise; rows with the same name are told apart by hover.
+- 2026-11-18: host log routing stays as it is (no per-category filter). Model
+  Context Trace shows only at the Trace setting.
+- 2026-11-18: `launch_host` waits up to 10 min for the host bridge.
 
 ## Validation
 
 - Focused proof: `dotnet test` on `DevTools.ModelsContext.Tests` and
   `DevTools.ModelsContext.Views.Tests` (all TFMs).
-- Integration proof: sandbox performance numbers against 0062 §12; host tests
-  on Revit 2023 and 2026; spike log.
+- Integration proof: sandbox performance numbers against 0062 §12; L2/L3 on
+  Revit 2024 (this machine; 2026 recorded 2026-11-18), then 2023; spike log.
 - Repository-required checks: build skill per touched project,
   `pwsh -File scripts/format-lint.ps1` once per phase, CI `result` green.
 

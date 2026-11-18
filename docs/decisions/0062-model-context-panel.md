@@ -6,9 +6,12 @@ Date: 2026-11-13
 
 **Proposed.** The behavior below is agreed. The T3 spike (actions on single
 elements inside a link) ran on Revit 2026 on 2026-11-15: Hide and Show go,
-temporary hide, isolate and per-element overrides no-go (§5, §9). Revit 2023
-is still to run. T0–T2, the tree, the filter engine and selection sync use
-public API only.
+temporary hide, isolate and per-element overrides no-go (§5, §9). The live
+suites pass on Revit 2026 (2026-11-18). On Revit 2024 (2026-11-18) the panel
+matches the oracle. The only failures there are golden values from the 2026
+sample and SB-01 rebar. Revit 2023 (the minimum) is next; Accepted after that
+run. T0–T2, the tree, the
+filter engine and selection sync use public API only.
 
 ## Context
 
@@ -762,9 +765,11 @@ panel and never throws into Revit.
   - No object per element: snapshots are arrays of structs and name tables;
     objects exist only for visible rows (bounded by expansion and paging).
   - First paint does not wait for the snapshot: Category rows and counts come
-    first from one quick count per category
-    (`FilteredElementCollector.OfCategoryId(...).GetElementCount()`), then
-    Family and Type levels fill in as slices finish.
+    first from a quick count. One collector reads the ids in scope, and slices
+    read their categories. A collector per category was tried first and walks
+    the document once per category, about 100 times slower on the sample
+    ([snapshots.md](../architecture/ModelsContext/snapshots.md)). Family and
+    Type levels then fill in as slices finish.
   - Deltas update counts in place; a full rebuild happens only when the
     version rule or the delta size says so.
   - Active view id sets are cached per (view, model) and dropped by
@@ -843,7 +848,12 @@ panel and never throws into Revit.
   `tests/DevTools.ModelsContext.Views.Tests` (FlaUI, AutomationIds, against
   the views in `DevTools.Presentation`),
   `tests/DevTools.ModelsContext.Tests.Shared` (fake model),
-  `tests/DevTools.ModelsContext.Sandbox` (standalone app).
+  `tests/DevTools.ModelsContext.Sandbox` (standalone app),
+  `tests/RevitDevTool.ModelsContext.LiveTests` (L2, adapter inside Revit
+  against an API oracle) and `tests/RevitDevTool.ModelsContext.UiTests` (L3,
+  panel flows). Live runs open Revit and the sample through MCP `launch_host`;
+  UI Automation drives only the panel's controls
+  ([test matrix](../architecture/ModelsContext/test-matrix.md)).
 - Dockable pane registration: `RevitDevTool.Core` `DockablePaneProvider`
   (0007). Revit calls go through `RevitDevTool.Core` `RevitContextExecutor`.
 - Shared controls (flat tree list, `TagCheckComboBox` for the documents box,
@@ -965,19 +975,24 @@ Tradeoffs:
   minimum has no per-category filter. Model Context logs Trace (dropped by the
   default Debug) and Error only for failures it shows; see
   `docs/agents/verification.md` (Model Context diagnostics).
-- Spike on a live host with links, Revit 2023 and 2026.
+- Spike on a live host with links. Run each step through MCP: `launch_host`
+  with the sample, then `code_mode` `execute_csharp_code`; UI Automation only
+  where the step is a click on the panel. Revit 2024 is the test host on the
+  development machine.
   1. **Go/no-go:** done on 2026 (Snowdon Towers HVAC, six links), results in
      §5.5–§5.6 and §9. Still to run: the same Hide, Reveal + Unhide and
-     temporary checks on 2023, 2024, 2025 and 2027; Hide and Unhide on a view
-     whose template locks Visibility/Graphics; a view owned by another user
-     in a workshared model; and why hiding 500 references of the Architectural
-     link hid 548 elements (hosted or nested elements are the suspect).
+     temporary checks on 2024 (next), 2023, 2025 and 2027; Hide and Unhide on
+     a view whose template locks Visibility/Graphics; a view owned by another
+     user in a workshared model; and why hiding 500 references of the
+     Architectural link hid 548 elements (hosted or nested elements are the
+     suspect).
   2. `SetReferences` with references to elements without graphics in the view
      (MEP systems, unplaced rooms).
   3. `HideCategoriesTemporary` / `IsolateCategoriesTemporary` with links in By
      Host View, By Linked View and Custom.
-  4. Temporary View Properties: overrides dropped on exit, Current model and link
-     instance.
+  4. Temporary View Properties: overrides dropped on exit, Current model and
+     link instance. Answered for element overrides: they outlive the mode, so
+     Reset puts back the recorded overrides (§8, architecture Gotcha 15).
   5. Transactions and undo: whether temporary hide/isolate, Reset and Keep need
      a transaction and how many undo entries each eye click adds; Keep on a view
      whose template controls V/G; worksharing ownership of the view.
@@ -987,26 +1002,28 @@ Tradeoffs:
      50k elements. Also check whether `FilteredElementCollector(doc, viewId)`
      returns elements hidden temporarily or permanently, and whether
      `HideElementsTemporary` accepts ids that are not in the view (§7).
-  7. Timing of a T3 Hide and Show at about 1k, 10k and 50k references; `HideElementsTemporary` for a
-     Current model category of about 50k elements.
+  7. Timing of a T3 Hide and Show at about 1k, 10k and 50k references;
+     `HideElementsTemporary` for a Current model category of about 50k
+     elements.
   8. Isolate below a link's model row by hiding the rest (§5.11), still a
      candidate, not decided. Before deciding: Reset cost at 10k and 50k (the
      Reveal switches dominate); a view template that locks V/G; links whose
      display is By Linked View or Custom; nested links; elements added by a link
      reload while isolated; an isolate across two links; and how Keep, Reset
      and a later Show of one element combine with the journal.
-  8. Undo and Redo visible in `DocumentChanged` with usable ids.
-  9. Flicker of reset plus re-apply.
-  10. Document version: `GetDocumentVersion` before and after a link reload
+  9. Undo and Redo visible in `DocumentChanged` with usable ids.
+  10. Flicker of reset plus re-apply.
+  11. Document version: `GetDocumentVersion` before and after a link reload
       with and without a save of the link file; `GetChangedElements(oldGuid)`
       on a reloaded link (ids returned, cost at 100k and 1M, exception when the
       old version is unknown); same after Reload Latest on a workshared
       Current model; cloud models.
-  11. Quick per-category `GetElementCount()` time on a 1M-element model.
-- Benchmark the flat tree list against the §12 targets on a model of about
-  100k elements with two to three links, and on a generated 1M-element model
-  across five documents in the sandbox.
-- After the spike, set Accepted or amend. Product and architecture docs:
-  [product/models-context.md](../product/models-context.md),
+  12. Quick per-category `GetElementCount()` time on a 1M-element model.
+- Benchmark against the §12 targets: done in the sandbox on generated models
+  (100k with three links, 1M across five documents; numbers in the execution
+  plan, Phase 3c–3d). Still to do: a real model of about 100k elements in Revit
+  2024, and the first-load stall (33–59 ms in the sandbox, target < 50 ms).
+- After the 2024 and 2023 runs, set Accepted or amend. Product and architecture
+  docs: [product/models-context.md](../product/models-context.md),
   [architecture/ModelsContext](../architecture/ModelsContext/README.md).
 - Execution plan: [2026-11-13-models-context-panel](../plans/active/2026-11-13-models-context-panel.md).

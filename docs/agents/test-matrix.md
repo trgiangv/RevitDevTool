@@ -21,6 +21,20 @@ The `tests/DevTools.Mcp.*.Tests` names are from before the MCP merge. They test
 - Turn on `[assembly: Parallelize(Scope = ExecutionScope.ClassLevel, Workers = 0)]` in a project only after five clean runs in a row (`DevTools.Daemon.Tests`, `DevTools.TestRunner.Tests`). Projects with timing-based waits (file watchers) or shared stores stay serial.
 - Tests never write machine or user state: the Daemon takes the HKCU key of its `StartupRegistration` and the path of `UserSettingsStore`, and `TempUserState` gives each test its own key and file.
 - UI tests find elements by AutomationId and act through UI Automation patterns (see HandyControl UI tests below).
+- UI tests must leave the user's mouse, keyboard focus and front window alone. A
+  person keeps working in other apps while they run:
+  - Test windows open with `ForegroundGuard.NoActivateOnShow` (`ShowActivated =
+    false` and `WS_EX_NOACTIVATE`). Never call `Activate`, a UIA `Focus()`, or real
+    `Mouse` or `Keyboard` input.
+  - Use logical focus (`FocusManager.SetFocusedElement`) when a test needs a
+    focused element.
+  - `ForegroundGuard.Start()` runs on each WPF test thread (Views, HandyControl,
+    Daemon tests, sandbox). If a test window still reaches the foreground (a
+    drop-down or the product calling `Focus()`), the guard gives the foreground
+    straight back and writes a `ForegroundGuard:` trace line.
+  - Source: `tests/Shared/ForegroundGuard.cs`, linked into those projects. The
+    sandbox `--drag` run is the only exception: it uses the real pointer, on
+    purpose.
 - Fixed product timings and outside services are passed in, with the production value as the default: `HostConnections` discovery interval, `PackageVersionChecker` `HttpClient`, `StdioHostedService` input stream, `SentryTelemetry` `ITransport`. Tests pass a short interval, canned JSON, `Stream.Null`, or a capturing transport.
 - Wait for an event or state, not for a timeout to expire: stop the run once the awaited status arrives. For an unreachable endpoint use a local server that closes at once (`RejectingServer` in `DevTools.Daemon.Tests`); a refused connect to `127.0.0.1:9` costs about 2 s on Windows. A window a test creates lives on its own thread with a message loop, as a real host UI thread does.
 
@@ -43,6 +57,8 @@ these Skips with a reason (`Assert.Inconclusive`); it does not fail.
 | Test data folder | `tests/TestDataDirectory.cs` (compiled into every `*.Tests` project) sets `REVITDEVTOOL_DATA_DIR` to `%TEMP%\RevitDevTool-TestData`, so `AppUtils.GetApplicationDataPath()` points there instead of `%AppData%\RevitDevTool`. Tests install, update, and remove packages in its pixi-env, uv-env, NuGet cache, and pydevd; the folder persists, so only the first run downloads. | Never point tests at the real `%AppData%\RevitDevTool`; they remove packages. Delete the folder to start clean. |
 | MCP client dispose on net48 | A pending named-pipe read ignores cancellation on .NET Framework, so `McpClient.DisposeAsync` waits about 5 s for its read loop. | In net48 tests, dispose the client pipe before the client (`NamedPipeIntegrationTests`). |
 | `NUnit.Host.NetFramework.Tests` about 13 s | Each test builds one to four fixture generations; hashing the freshly copied DLLs in `%TEMP%` takes 100–170 ms each, likely on-access antivirus scanning. The net10 `NUnit.Host.Tests` pays the same per generation. | Not a hang. If it grows, build each deterministic generation once per class with a static `Lazy`. |
+| Dockable panes on Revit 2024 when a model opens at startup | The add-in registers its panes (DevTools, Commands, Model Context) in `ApplicationInitialized`. On Revit 2024 that event runs after a model given at startup (double-clicked .rvt, or `launch_host` with `filePath`) has opened, and the panes stay "not created" for the whole session: `DockablePane.PaneExists` is false, `GetDockablePane` throws, the ribbon buttons do nothing. A model opened later creates them. Seen 2026-11-18, Revit 2024.3; Revit 2026 is not affected. Fix pending (register in `OnStartup`). | Live tests start Revit without a file (`launch_host(hostApp, versionNumber)`), then `open_document`. `PreparesSample` stops as Inconclusive when the pane is not registered. |
+| Link hide and show can bring Revit to the front | Model Context hide and show for link elements run Revit's own UI commands (`ID_VIEW_HIDE_ELEMENTS`, `ID_VIEW_UNHIDE_ELEMENTS`) through `LinkedHideShow`. During an L3 run, Revit came to the front once at UI-05 `Temporary.Reset` (run `20261118-130820`, Revit 2026). The cause is not confirmed. | L3 does not fail on this. `RevitPanel.Act` records it as a step in the case evidence. All other L3 actions leave the front window alone. |
 | MSTest bodies off the Revit API thread | In Revit, the MSTest runtime (`MSTestRuntimeSession`) runs test bodies on a thread-pool thread while the Revit thread waits for the run: `IsRevitInApiMode` is false, `UIDocument.ActiveView` comes back null, and `ExternalEvent` dispatch never runs (seen on Revit 2026, 2026-11-17). Read-only API calls seem to work, which hides it. | Use NUnit (the default) for host tests that need the API context or the active view. `RevitDevTool.ModelsContext.LiveTests` stays on NUnit for this reason. |
 | Downloads and network | Pixi, uv, pydevd, and package installs download into the test data folder; `ParserScriptTests` caches a python.org embed in `%TEMP%\RevitDevTool-ParserPython`. `PackageVersionChecker` tests use canned PyPI and conda-forge JSON through an `HttpClient`; its NuGet lookup runs `nuget.exe search` and has no offline test. | Download once per class or per folder, not per test. Skip only if the download throws. |
 
@@ -205,7 +221,8 @@ Use cases, golden counts on the Snowdon sample and the three layers (core with
 fakes in CI, adapter inside Revit, panel flows through FlaUI) are in
 [architecture/ModelsContext/test-matrix.md](../architecture/ModelsContext/test-matrix.md).
 `tests/RevitDevTool.ModelsContext.LiveTests` and `tests/RevitDevTool.ModelsContext.UiTests`
-need a live Revit 2026 (the run script starts it with the sample); their names do not end in `.Tests`, so CI
+need a live Revit with the sample open (Revit 2024 on this machine; open it through MCP
+`launch_host`, then pass its pid to `scripts/test-models-context.ps1`); their names do not end in `.Tests`, so CI
 does not run them. Run L2, then L3 in the same Revit; each run writes
 `report.md` to `artifacts/models-context-tests/`; visibility images only for a failing case or with `-Images`.
 
