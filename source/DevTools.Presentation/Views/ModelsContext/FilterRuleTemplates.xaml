@@ -34,6 +34,8 @@
            BasedOn="{StaticResource SmallComboBoxItem}"
            TargetType="ComboBoxItem">
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <!--  Room for the overlay scroll bar (8 px).  -->
+        <Setter Property="Margin" Value="0,0,10,0" />
         <Setter Property="AutomationProperties.Name" Value="{Binding SpokenName}" />
     </Style>
 
@@ -167,13 +169,6 @@
         <Setter Property="ContentTemplate" Value="{StaticResource ParameterTipTemplate}" />
     </Style>
 
-    <Style x:Key="SectionText"
-           BasedOn="{StaticResource TextBlockDefaultSecLight}"
-           TargetType="TextBlock">
-        <Setter Property="FontSize" Value="11" />
-        <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-
     <GroupStyle x:Key="ParameterSections" HidesIfEmpty="True">
         <GroupStyle.Panel>
             <ItemsPanelTemplate>
@@ -190,12 +185,19 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                 </Grid.RowDefinitions>
-                                <ItemsPresenter Grid.Row="1" />
-                                <ui:StickyGroupHeader Panel.ZIndex="1"
+                                <ItemsPresenter x:Name="Items" Grid.Row="1" />
+                                <ui:StickyGroupHeader x:Name="Header"
+                                                      Panel.ZIndex="1"
                                                       AutomationProperties.AutomationId="Filter.Rule.Parameter.Section"
                                                       Content="{TemplateBinding Content}"
-                                                      ContentTemplate="{TemplateBinding ContentTemplate}" />
+                                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                      ToolTip="Click to collapse or expand" />
                             </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger SourceName="Header" Property="IsExpanded" Value="False">
+                                    <Setter TargetName="Items" Property="Visibility" Value="Collapsed" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
@@ -203,18 +205,47 @@
         </GroupStyle.ContainerStyle>
         <GroupStyle.HeaderTemplate>
             <DataTemplate DataType="{x:Type CollectionViewGroup}">
-                <Border Height="20"
-                        Padding="8,0"
-                        Background="{DynamicResource SecondaryRegionBrush}"
-                        BorderBrush="{DynamicResource BorderBrush}"
-                        BorderThickness="0,1,0,0">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock FontWeight="SemiBold"
-                                   Style="{StaticResource SectionText}"
-                                   Text="{Binding Name, Converter={StaticResource EnumDescription}}" />
-                        <TextBlock Style="{StaticResource SectionText}" Text="{Binding ItemCount, StringFormat=' · {0:N0}'}" />
-                    </StackPanel>
+                <Border Padding="4,4,12,2" Background="{DynamicResource RegionBrush}">
+                    <Border x:Name="Box"
+                            Height="24"
+                            Padding="8,0"
+                            Background="{DynamicResource RegionBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                        <StackPanel Orientation="Horizontal">
+                            <Path x:Name="Chevron"
+                                  Width="7"
+                                  Height="9"
+                                  VerticalAlignment="Center"
+                                  Data="{DynamicResource Chevron}"
+                                  Fill="{DynamicResource SecondaryTextBrush}"
+                                  RenderTransformOrigin="0.5,0.5"
+                                  Stretch="Uniform" />
+                            <TextBlock Margin="6,0,0,0"
+                                       VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Style="{StaticResource TextBlockDefault}"
+                                       Text="{Binding Name, Converter={StaticResource EnumDescription}}" />
+                            <TextBlock Margin="6,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Style="{StaticResource SmallSecondaryText}"
+                                       Text="{Binding ItemCount, StringFormat=N0}" />
+                        </StackPanel>
+                    </Border>
                 </Border>
+                <DataTemplate.Triggers>
+                    <Trigger SourceName="Box" Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Box" Property="Background" Value="{DynamicResource SecondaryRegionBrush}" />
+                    </Trigger>
+                    <DataTrigger Binding="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType=ui:StickyGroupHeader}}" Value="True">
+                        <Setter TargetName="Chevron" Property="RenderTransform">
+                            <Setter.Value>
+                                <RotateTransform Angle="90" />
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                </DataTemplate.Triggers>
             </DataTemplate>
         </GroupStyle.HeaderTemplate>
     </GroupStyle>
@@ -358,22 +389,15 @@
             </Grid.ToolTip>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock MaxWidth="170"
+            <TextBlock MaxWidth="250"
                        VerticalAlignment="Center"
                        Text="{Binding DisplayName}"
                        TextTrimming="CharacterEllipsis" />
-            <Path Grid.Column="1" Style="{StaticResource RowSourceIconStyle}" />
-            <TextBlock Grid.Column="3"
-                       MaxWidth="150"
-                       Margin="8,0,0,0"
-                       VerticalAlignment="Center"
-                       Opacity="0.6"
-                       Text="{Binding CategorySummary}"
-                       TextTrimming="CharacterEllipsis" />
+            <Path Grid.Column="1"
+                  HorizontalAlignment="Left"
+                  Style="{StaticResource RowSourceIconStyle}" />
         </Grid>
     </DataTemplate>
 
@@ -388,7 +412,7 @@
     </DataTemplate>
 
     <DataTemplate x:Key="ValueCountTemplate" DataType="{x:Type model:ValueCount}">
-        <Grid>
+        <Grid Margin="0,0,10,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -519,7 +543,8 @@
                                    Stroke="{DynamicResource BorderBrush}"
                                    StrokeDashArray="4 3"
                                    StrokeThickness="1" />
-                        <TextBlock HorizontalAlignment="Center"
+                        <TextBlock Margin="16,0"
+                                   HorizontalAlignment="Center"
                                    VerticalAlignment="Center"
                                    AutomationProperties.AutomationId="Filter.NoRules"
                                    Style="{StaticResource SmallSecondaryText}"

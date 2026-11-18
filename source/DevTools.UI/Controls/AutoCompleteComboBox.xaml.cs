@@ -124,6 +124,12 @@ public partial class AutoCompleteComboBox
 
     private void ApplyOwnItems(FilteredItems items)
     {
+        if (!IsDropDownOpen)
+        {
+            // Grouping a new source costs ~50 ms per 3k items; a closed picker groups when it opens.
+            Items.GroupDescriptions.Clear();
+        }
+
         _ownItems = items;
         _isApplyingOwnView = true;
         try
@@ -138,6 +144,7 @@ public partial class AutoCompleteComboBox
 
     private void ApplyFilter(Predicate<object>? filter, string? exact = null)
     {
+        StickyGroupHeader.SetShowAll(this, !ReferenceEquals(filter, _defaultItemsFilter));
         if (_ownItems is { } items)
         {
             items.Apply(filter, string.IsNullOrEmpty(exact)
@@ -167,7 +174,15 @@ public partial class AutoCompleteComboBox
     private void ApplyGroups()
     {
         Items.GroupDescriptions.Clear();
-        if (string.IsNullOrEmpty(GroupPath))
+        if (IsDropDownOpen)
+        {
+            EnsureGroups();
+        }
+    }
+
+    private void EnsureGroups()
+    {
+        if (string.IsNullOrEmpty(GroupPath) || Items.GroupDescriptions.Count > 0)
         {
             return;
         }
@@ -301,6 +316,7 @@ public partial class AutoCompleteComboBox
 
     protected override void OnDropDownOpened(EventArgs e)
     {
+        EnsureGroups();
         base.OnDropDownOpened(e);
 
         if (Validation.GetHasError(this) && _savedErrorTemplate is null)

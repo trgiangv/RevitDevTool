@@ -257,7 +257,7 @@ public sealed class FilterViewTests
     }
 
     [TestMethod]
-    public void RowShowsCategorySummary()
+    public void RowShowsNameOnly()
     {
         using var ui = OpenFilter();
 
@@ -267,7 +267,68 @@ public sealed class FilterViewTests
             CategoryNames = ["Doors", "Furniture", "Generic Models", "Windows"]
         })));
 
-        CollectionAssert.AreEqual(new[] { "Width", "Doors, Furniture +2" }, texts);
+        CollectionAssert.AreEqual(new[] { "Width" }, texts, "Categories show in the tooltip, not on the row.");
+    }
+
+    [TestMethod]
+    public void HeaderCollapsesItsSectionAndKeepsIt()
+    {
+        using var ui = OpenFilterWithRule();
+        var box = OpenPicker(ui);
+
+        var (shownBefore, shownCollapsed, collapsedAfterReopen, state) = WpfSta.Invoke(() =>
+        {
+            box.UpdateLayout();
+            var header = Descendants(Popup(box)).OfType<DevTools.UI.Controls.StickyGroupHeader>().First();
+            var group = (System.Windows.Data.CollectionViewGroup)header.Content;
+            var before = ShownRows(box, group);
+            var peer = (System.Windows.Automation.Provider.IExpandCollapseProvider)
+                System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(header);
+            peer.Collapse();
+            box.UpdateLayout();
+            var collapsed = ShownRows(box, group);
+            var expandState = peer.ExpandCollapseState;
+            box.IsDropDownOpen = false;
+            box.IsDropDownOpen = true;
+            box.UpdateLayout();
+            var again = Descendants(Popup(box)).OfType<DevTools.UI.Controls.StickyGroupHeader>()
+                .First(item => Equals(((System.Windows.Data.CollectionViewGroup)item.Content).Name, group.Name));
+            return (before, collapsed, again.IsCollapsed, expandState);
+        });
+
+        Assert.IsGreaterThan(0, shownBefore, "The first section shows no rows before collapse.");
+        Assert.AreEqual(0, shownCollapsed, "A collapsed section still shows rows.");
+        Assert.AreEqual(System.Windows.Automation.ExpandCollapseState.Collapsed, state);
+        Assert.IsTrue(collapsedAfterReopen, "The section opened again after the picker closed and opened.");
+    }
+
+    [TestMethod]
+    public void SearchShowsCollapsedSections()
+    {
+        using var ui = OpenFilterWithRule();
+        var box = OpenPicker(ui);
+
+        var (collapsed, searching, cleared) = WpfSta.Invoke(() =>
+        {
+            box.UpdateLayout();
+            var header = Descendants(Popup(box)).OfType<DevTools.UI.Controls.StickyGroupHeader>().First();
+            header.SetCollapsed(true);
+            var hidden = header.IsExpanded;
+            DevTools.UI.Controls.StickyGroupHeader.SetShowAll(box, true);
+            var shown = header.IsExpanded;
+            DevTools.UI.Controls.StickyGroupHeader.SetShowAll(box, false);
+            return (hidden, shown, header.IsExpanded);
+        });
+
+        Assert.IsFalse(collapsed);
+        Assert.IsTrue(searching, "A search must show every section.");
+        Assert.IsFalse(cleared, "The section did not collapse again after the search.");
+    }
+
+    private static int ShownRows(System.Windows.Controls.ComboBox box, System.Windows.Data.CollectionViewGroup group)
+    {
+        return Descendants(Popup(box)).OfType<System.Windows.Controls.ComboBoxItem>()
+            .Count(item => item.IsVisible && group.Items.Contains(item.DataContext));
     }
 
     [TestMethod]

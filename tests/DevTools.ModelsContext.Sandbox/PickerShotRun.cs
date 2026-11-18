@@ -6,6 +6,7 @@ using DevTools.UI.Theme;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -42,7 +43,7 @@ internal static class PickerShotRun
             filter.Root.AddConditionCommand.Execute(null);
             await Settle(500);
             var picker = Find<ComboBox>(filterView, "Filter.Rule.Parameter");
-            picker.Focus();
+            FocusManager.SetFocusedElement(window, picker);
             picker.Text = "Widt";
             await Settle(700);
             picker.IsDropDownOpen = true;
@@ -50,6 +51,18 @@ internal static class PickerShotRun
             var drop = (FrameworkElement)picker.Template.FindName("dropDownBorder", picker);
             SaveElement(drop, Path.Combine(directory, $"{prefix}-picker.png"));
             ShotRun.Save(window, Path.Combine(directory, $"{prefix}-picker-panel.png"), drop);
+            picker.IsDropDownOpen = false;
+
+            picker.Text = string.Empty;
+            await Settle(700);
+            picker.IsDropDownOpen = true;
+            await Settle(700);
+            var headers = Descendants(((System.Windows.Controls.Primitives.Popup)picker.Template.FindName("PART_Popup", picker)).Child)
+                .OfType<DevTools.UI.Controls.StickyGroupHeader>().ToList();
+            headers.First().SetCollapsed(true);
+            await Settle(400);
+            SaveElement(drop, Path.Combine(directory, $"{prefix}-picker-collapsed.png"));
+            headers.First().SetCollapsed(false);
             picker.IsDropDownOpen = false;
 
             foreach (var (name, info) in TipCases(filter.Root.Parameters))
@@ -236,5 +249,18 @@ internal static class PickerShotRun
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = File.Create(path);
         encoder.Save(stream);
+    }
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, index);
+            yield return child;
+            foreach (var nested in Descendants(child))
+            {
+                yield return nested;
+            }
+        }
     }
 }

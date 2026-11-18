@@ -3,6 +3,11 @@
 The views live in `source/DevTools.Presentation/Views/ModelsContext` and use
 shared controls from `source/DevTools.UI/Controls`. Policy: 0062 §12 and §15.
 
+`ModelContextView` builds `FilterTabView` the first time the Filter tab is
+selected. That view, with its own context menu, was about a third of the
+panel's first build. The view adds it to `Body` and registers the name
+`FilterView`, so `FindName("FilterView")` works once the tab has been shown.
+
 ## HandyControl stock look
 
 - Use HandyControl stock styles and attached properties (`ButtonDefault.Small`,
@@ -64,6 +69,20 @@ filtering as you type (ported from DotNetKit's control).
   by how far its group has scrolled above the viewport, clamped to the group's
   bottom, so the header of the group under the top edge stays visible. Headers
   are not items, so selection and Up/Down never land on them.
+  The header looks like the Categories box of the Filter tab: a 1 px
+  `BorderBrush` frame with corner radius 4, a 7×9 chevron in `SecondaryTextBrush`,
+  the name in SemiBold `TextBlockDefault` and the count in `SmallSecondaryText`. Its
+  outer border fills with `RegionBrush` so rows that scroll under it stay hidden,
+  and its UIA name joins the texts with " · " ("Instance · 5").
+  A click on a header collapses or expands its section (chevron right or down;
+  UIA ExpandCollapse on the header peer). The collapsed section names live on the
+  combo box, so a recycled group container and the next drop-down open keep the
+  user's choice. While a search filters the list, `AutoCompleteComboBox` sets the
+  inherited `StickyGroupHeader.ShowAll`, so a match never hides in a collapsed
+  section.
+  The control applies the group description only while the drop-down is open. A
+  new item source on a closed picker is not grouped. Grouping 3k parameters cost
+  about 50 ms per picker, and a scope change gives every rule a new list.
   `AutoCompleteComboBoxAutomationPeer` flattens each group into its header
   (control type Header, name "Instance · 5") followed by its list items, because
   the stock `GroupItemAutomationPeer` does not expose a header.
@@ -74,9 +93,8 @@ filtering as you type (ported from DotNetKit's control).
 - **Row.** Name (inherits the row foreground), a 13 px stroked source icon
   (`ProjectParameter`, `SharedParameter`, `FamilyParameter` in `Icons.xaml`,
   `SuccessBrush`, `PrimaryBrush`, `WarningBrush`; built-in has none; the icon
-  takes the row foreground on the selected row), and the category summary at
-  0.6 opacity, which reads as the secondary text color in both themes and stays
-  readable on the selected row. The core's `ParameterScopes` gives every item
+  takes the row foreground on the selected row). The categories show only in
+  the tooltip (Categories list), not on the row. The core's `ParameterScopes` gives every item
   `CategoryNames` and `Models` once per scope; the item's UIA name is
   `SpokenName` ("Width, Shared, Type").
 - **Tooltip.** An HC `ToolTipBaseStyle` tooltip (`ParameterTipStyle`) whose
@@ -213,8 +231,9 @@ on. The rule builder uses `Filter.Rules`, `Filter.NoRules`, `Filter.Rule.Add`
 `Filter.Item.Grip`, `Filter.Set.Connector`, `Filter.Set.Collapse`,
 `Filter.Set.Remove`, `Filter.Set.Scope.Documents`, `Filter.Set.Scope.Categories`
 and `Filter.Set.Warning`. View tests and live checks find controls only by these ids and act through
-UIA patterns (Toggle, Value, SelectionItem, Invoke, ExpandCollapse), never by
-screen position. Renaming an id breaks tests on purpose; update them together.
+UIA patterns (Toggle, Value, SelectionItem, Invoke, ItemContainer), never by
+screen position. Live L3 selects combo items through ItemContainer with the
+drop-down closed ([test-matrix.md](test-matrix.md#rules-for-adding-a-case), rule 5). Renaming an id breaks tests on purpose; update them together.
 
 The view root `ModelContext.Panel` reports the panel's activity as UIA
 `ItemStatus`: `Idle <n>` or `Busy <n>`. It is Busy while a panel job runs or a
