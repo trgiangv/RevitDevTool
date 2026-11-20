@@ -29,7 +29,8 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
         var ids = new List<ElementId>();
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType == CategoryType.Model && category.BuiltInCategory != BuiltInCategory.OST_RvtLinks)
+            if (category.CategoryType == CategoryType.Model
+                && category.BuiltInCategory is not (BuiltInCategory.OST_RvtLinks or BuiltInCategory.OST_Materials))
             {
                 ids.Add(category.Id);
             }

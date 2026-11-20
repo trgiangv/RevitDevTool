@@ -80,6 +80,10 @@ internal sealed class FilterCompiler(
         return rule.Operator switch
         {
             FilterOperator.Undefined => Compiled.And(parameters.Select(Missing)),
+            FilterOperator.Empty when parameters.Count > 1 => Compiled.And([
+                Compiled.Or(parameters.Select(parameter => Presence(parameter, FilterOperator.Empty))),
+                .. parameters.Select(parameter => Compiled.Or([Presence(parameter, FilterOperator.Empty), Missing(parameter)]))
+            ]),
             FilterOperator.Defined or FilterOperator.NotEmpty or FilterOperator.Empty =>
                 Compiled.Or(parameters.Select(parameter => Presence(parameter, rule.Operator))),
             _ => Compiled.Or(parameters.Select(parameter =>
@@ -96,16 +100,24 @@ internal sealed class FilterCompiler(
     {
         var id = parameter.ElementId;
         var hasValue = RevitRuleFactory.HasValue(id, parameter.Storage);
-        var hasNoValue = RevitRuleFactory.HasNoValue(id, parameter.Storage);
-        var holds = RevitRuleFactory.Holds(id, parameter.Storage);
+        var hasNoValue = Carried(parameter, RevitRuleFactory.HasNoValue(id, parameter.Storage));
+        var holds = HeldBy(parameter);
+        var exists = Compiled.Or([RevitRuleFactory.HasValue(id), Carried(parameter, RevitRuleFactory.HasNoValue(id))]);
+        var held = parameter.Held == HeldMeaning.Value
+            ? Compiled.And([holds, Compiled.Not(RevitRuleFactory.HasNoValue(id))])
+            : Compiled.None;
+        var heldEmpty = parameter.Held == HeldMeaning.Empty
+            ? Compiled.And([holds, Compiled.Not(RevitRuleFactory.HasValue(id)), Compiled.Not(RevitRuleFactory.HasNoValue(id))])
+            : Compiled.None;
+        var silentFilled = types.Only(parameter.Silent.Filled);
+        var silentEmpty = types.Only(parameter.Silent.Empty);
         if (parameter.Types.IsEmpty)
         {
             return op switch
             {
-                FilterOperator.NotEmpty => Compiled.Or([hasValue,
-                    Compiled.And([holds, Compiled.Not(RevitRuleFactory.HasNoValue(id))])]),
-                FilterOperator.Empty => hasNoValue,
-                _ => Compiled.Or([RevitRuleFactory.Exists(id), holds])
+                FilterOperator.NotEmpty => Compiled.Or([hasValue, held, silentFilled]),
+                FilterOperator.Empty => Compiled.Or([hasNoValue, heldEmpty, silentEmpty]),
+                _ => Compiled.Or([exists, holds, silentFilled, silentEmpty])
             };
         }
 
@@ -113,20 +125,37 @@ internal sealed class FilterCompiler(
         return op switch
         {
             FilterOperator.NotEmpty => Compiled.Or([hasValue, types.In(parameter.Types.WithValue),
-                Compiled.And([holds, Compiled.Not(RevitRuleFactory.HasNoValue(id)), types.NotIn(defined)])]),
+                Compiled.And([held, types.NotIn(defined)]), silentFilled]),
             FilterOperator.Empty => Compiled.Or([
                 Compiled.And([hasNoValue, types.NotIn(parameter.Types.WithValue)]),
-                Compiled.And([Compiled.Not(RevitRuleFactory.HasValue(id)), types.In(parameter.Types.WithoutValue)])
+                Compiled.And([Compiled.Not(RevitRuleFactory.HasValue(id)), types.In(parameter.Types.WithoutValue)]),
+                Compiled.And([heldEmpty, types.NotIn(defined)]),
+                silentEmpty
             ]),
-            _ => Compiled.Or([RevitRuleFactory.Exists(id), types.In(defined), holds])
+            _ => Compiled.Or([exists, types.In(defined), holds, silentFilled, silentEmpty])
         };
+    }
+
+    private static Compiled HeldBy(ResolvedParameter parameter)
+    {
+        return parameter.Held == HeldMeaning.Absent ? Compiled.None : RevitRuleFactory.Holds(parameter.ElementId, parameter.Storage);
+    }
+
+    private Compiled Carried(ResolvedParameter parameter, Compiled rule)
+    {
+        return parameter.Lacking.Count == 0 ? rule : Compiled.And([rule, types.Except(parameter.Lacking)]);
     }
 
     private Compiled Missing(ResolvedParameter parameter)
     {
         var id = parameter.ElementId;
-        var own = Compiled.And([Compiled.Not(RevitRuleFactory.Exists(id)),
-            Compiled.Not(RevitRuleFactory.Holds(id, parameter.Storage))]);
+        var own = Compiled.And([
+            Compiled.Or([
+                Compiled.And([Compiled.Not(RevitRuleFactory.Exists(id)), Compiled.Not(HeldBy(parameter))]),
+                types.Only(parameter.Lacking)
+            ]),
+            types.Except(parameter.Silent.All)
+        ]);
         return parameter.Types.IsEmpty
             ? own
             : Compiled.And([own, types.NotIn(parameter.Types.TypesFor(FilterOperator.Defined))]);

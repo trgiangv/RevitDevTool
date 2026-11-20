@@ -39,6 +39,27 @@ internal sealed class TypeFilters(Func<TypeMembership> members)
         return split.Outside.Count == 0 ? Compiled.None : Exclude(split.Inside);
     }
 
+    public Compiled Only(IReadOnlyCollection<long> ids)
+    {
+        if (ids.Count == 0)
+        {
+            return Compiled.None;
+        }
+
+        var split = Members.SplitIds(ids);
+        if (split.Inside.Count == 0)
+        {
+            return Compiled.None;
+        }
+
+        return split.Outside.Count == 0 ? Compiled.All : Exclude(split.Outside);
+    }
+
+    public Compiled Except(IReadOnlyCollection<long> ids)
+    {
+        return ids.Count == 0 ? Compiled.All : Exclude([.. ids]);
+    }
+
     private TypeMembership Members => _members ??= members();
 
     private static Compiled Exclude(IReadOnlyList<long> ids)

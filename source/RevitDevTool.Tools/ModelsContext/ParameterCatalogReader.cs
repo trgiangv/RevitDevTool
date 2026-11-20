@@ -74,6 +74,9 @@ internal static class ParameterCatalogReader
         private readonly Dictionary<long, Facts> _facts = [];
         private readonly Dictionary<string, string?> _groups = new(StringComparer.Ordinal);
         private readonly HashSet<long> _sampled = [];
+        private readonly HashSet<long> _sampledCategories = [];
+        private readonly Dictionary<long, ElementFilter?> _nativeFilters = [];
+        private readonly Dictionary<long, List<long>> _builtInsByCategory = [];
 
         public int AddFilterable(Document document, List<long> categories, FailureTally? failures)
         {
@@ -87,6 +90,16 @@ internal static class ParameterCatalogReader
                         var facts = FactsOf(id.ToLong());
                         facts.IsFilterable = true;
                         facts.Categories.Add(category);
+                        if (id.ToLong() < 0)
+                        {
+                            if (!_builtInsByCategory.TryGetValue(category, out var list))
+                            {
+                                list = [];
+                                _builtInsByCategory.Add(category, list);
+                            }
+
+                            list.Add(id.ToLong());
+                        }
                     }
                 }
                 catch (Exception exception)
@@ -123,6 +136,16 @@ internal static class ParameterCatalogReader
             var ids = new Dictionary<ParameterKey, HashSet<long>>();
             foreach (var pair in _facts)
             {
+                if (pair.Key < 0)
+                {
+                    var removed = pair.Value.Categories.RemoveWhere(category =>
+                        _sampledCategories.Contains(category) && !pair.Value.Verified.Contains(category));
+                    if (removed > 0 && pair.Value.Categories.Count == 0)
+                    {
+                        continue;
+                    }
+                }
+
                 if (IsListed(pair.Key, pair.Value)
                     && TryInfoOf(document, pair.Key, pair.Value, bindings, failures) is { } info)
                 {
@@ -152,10 +175,80 @@ internal static class ParameterCatalogReader
                 {
                     Observe(type, true, category, family);
                 }
+
+                if (category is { } sampledCategory)
+                {
+                    VerifyFilterable(element, type, sampledCategory);
+                }
             }
             catch (Exception exception)
             {
                 failures?.Add(exception);
+            }
+        }
+
+        private void VerifyFilterable(Element element, Element? type, long category)
+        {
+            _sampledCategories.Add(category);
+            if (!_builtInsByCategory.TryGetValue(category, out var ids))
+            {
+                return;
+            }
+
+            foreach (var id in ids)
+            {
+                var facts = _facts[id];
+                if (!facts.Verified.Contains(category)
+                    && (PassesNative(element, id, facts) || type is not null && PassesNative(type, id, facts)))
+                {
+                    facts.Verified.Add(category);
+                }
+            }
+        }
+
+        private bool PassesNative(Element element, long id, Facts facts)
+        {
+            try
+            {
+                if (!_nativeFilters.TryGetValue(id, out var filter))
+                {
+                    filter = NativeFilterOf(element.Document, id, facts);
+                    _nativeFilters.Add(id, filter);
+                }
+
+                return filter is null || filter.PassesFilter(element);
+            }
+            catch (Exception)
+            {
+                return true;
+            }
+        }
+
+        private static ElementFilter? NativeFilterOf(Document document, long id, Facts facts)
+        {
+            try
+            {
+                var parameterId = id.ToElementId();
+                var rules = new List<Autodesk.Revit.DB.FilterRule>
+                {
+                    ParameterFilterRuleFactory.CreateHasValueParameterRule(parameterId),
+                    ParameterFilterRuleFactory.CreateHasNoValueParameterRule(parameterId)
+                };
+                var storage = facts.Storage ?? document.get_TypeOfStorage((BuiltInParameter)(int)id);
+                if (storage == StorageType.Integer)
+                {
+                    rules.Add(ParameterFilterRuleFactory.CreateGreaterOrEqualRule(parameterId, int.MinValue));
+                }
+                else if (storage == StorageType.Double)
+                {
+                    rules.Add(ParameterFilterRuleFactory.CreateGreaterOrEqualRule(parameterId, double.MinValue, 0));
+                }
+
+                return new LogicalOrFilter(rules.Select(rule => (ElementFilter)new ElementParameterFilter(rule)).ToList());
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
 
@@ -331,6 +424,7 @@ internal static class ParameterCatalogReader
                 if (category is { } id)
                 {
                     facts.Categories.Add(id);
+                    facts.Verified.Add(id);
                 }
 
                 if (family is not null && parameterId >= 0)
@@ -387,6 +481,8 @@ internal static class ParameterCatalogReader
         public ForgeTypeId? Group { get; set; }
 
         public HashSet<long> Categories { get; } = [];
+
+        public HashSet<long> Verified { get; } = [];
 
         public HashSet<string> Families { get; } = new(StringComparer.Ordinal);
     }

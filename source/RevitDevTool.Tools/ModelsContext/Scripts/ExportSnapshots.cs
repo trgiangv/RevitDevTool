@@ -79,7 +79,9 @@ public class Command : IExternalCommand
         var categories = new List<ElementId>();
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType == CategoryType.Model && category.BuiltInCategory != BuiltInCategory.OST_RvtLinks)
+            if (category.CategoryType == CategoryType.Model
+                && category.BuiltInCategory != BuiltInCategory.OST_RvtLinks
+                && category.BuiltInCategory != BuiltInCategory.OST_Materials)
             {
                 categories.Add(category.Id);
             }

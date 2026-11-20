@@ -78,6 +78,17 @@ public sealed class TypeBoundTests
     }
 
     [TestMethod]
+    public void SplitIdsKeepsCandidateOrder()
+    {
+        var members = new TypeMembership([10, 11, 12, 13], [1, 2, 1, -1]);
+
+        var split = members.SplitIds([13, 11, 99]);
+
+        CollectionAssert.AreEqual(new long[] { 11, 13 }, split.Inside.ToList());
+        CollectionAssert.AreEqual(new long[] { 10, 12 }, split.Outside.ToList());
+    }
+
+    [TestMethod]
     public void SplitRejectsMismatchedArrays()
     {
         Assert.ThrowsExactly<ArgumentException>(() => new TypeMembership([1, 2], [1]));

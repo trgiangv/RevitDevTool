@@ -51,4 +51,17 @@ public sealed class TypeMembership
 
         return new MemberSplit(inside, outside);
     }
+
+    public MemberSplit SplitIds(IReadOnlyCollection<long> ids)
+    {
+        var set = ids as ISet<long> ?? new HashSet<long>(ids);
+        var inside = new List<long>();
+        var outside = new List<long>();
+        foreach (var candidate in _candidates)
+        {
+            (set.Contains(candidate) ? inside : outside).Add(candidate);
+        }
+
+        return new MemberSplit(inside, outside);
+    }
 }

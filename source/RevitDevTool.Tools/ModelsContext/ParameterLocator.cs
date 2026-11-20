@@ -10,8 +10,15 @@ internal sealed record ResolvedParameter(
     ParameterKey Key,
     StorageType Storage,
     string? SpecTypeId,
-    TypePresence Types)
+    TypePresence Types,
+    IReadOnlyCollection<long> Lacking)
 {
+    public HeldMeaning Held { get; init; } = HeldMeaning.Value;
+
+    public SilentElements Silent { get; init; } = SilentElements.None;
+
+    public bool SilentChecked { get; init; }
+
     public ElementId ElementId => Id.ToElementId();
 
     public ForgeTypeId? Spec => SpecTypeId is null ? null : new ForgeTypeId(SpecTypeId);
@@ -19,8 +26,26 @@ internal sealed record ResolvedParameter(
     public bool IsYesNo => SpecInfo.IsYesNo(Spec);
 }
 
+internal enum HeldMeaning
+{
+    Value,
+    Empty,
+    Absent
+}
+
+internal sealed record SilentElements(IReadOnlyCollection<long> Filled, IReadOnlyCollection<long> Empty)
+{
+    public static SilentElements None { get; } = new([], []);
+
+    public int Count => Filled.Count + Empty.Count;
+
+    public IReadOnlyCollection<long> All => [.. Filled, .. Empty];
+}
+
 internal static class ParameterLocator
 {
+    private const int HeldSamples = 25;
+
     public static ParameterKey KeyOf(Document document, ElementId parameterId)
     {
         try
@@ -75,41 +100,105 @@ internal static class ParameterLocator
         ICollection<ElementId> categories,
         IReadOnlyCollection<long>? known = null)
     {
-        var resolved = new List<ResolvedParameter>();
+        var located = Locate(document, key, categories, known);
+        return WithLacking(document, key, categories, WithTypes(document, key, categories, located));
+    }
+
+    public static IReadOnlyList<ResolvedParameter> Locate(
+        Document document,
+        ParameterKey key,
+        ICollection<ElementId> categories,
+        IReadOnlyCollection<long>? known = null)
+    {
+        var located = new List<ResolvedParameter>();
         try
         {
-            ICollection<ElementId>? types = null;
             foreach (var value in IdsOf(document, key, categories, known))
             {
-                var id = value.ToElementId();
-                types ??= TypeIdsOf(document, categories);
-                var presence = PresenceOn(document, types, id, StorageType.None);
-                var element = document.CollectElements()
-                    .WherePasses(ElementReader.AnyOptionFilter(document, categories))
-                    .WherePasses(Holds(id))
-                    .FirstElement();
-                var parameter = element is not null ? Find(element, key, id) : null;
-                if (parameter is null && !presence.IsEmpty)
-                {
-                    var type = document.GetElement(presence.TypesFor(FilterOperator.Defined).First().ToElementId());
-                    parameter = type is null ? null : FindOn(type, key, id);
-                }
-
-                if (parameter is not null)
-                {
-                    if (parameter.StorageType is StorageType.ElementId or StorageType.String)
-                    {
-                        presence = PresenceOn(document, types, id, parameter.StorageType);
-                    }
-
-                    resolved.Add(new ResolvedParameter(value, key, parameter.StorageType,
-                        SpecInfo.SpecOf(parameter.Definition)?.TypeId, presence));
-                }
+                var parameter = Probe(document, categories, key, value.ToElementId());
+                located.Add(new ResolvedParameter(value, key, parameter?.StorageType ?? StorageType.None,
+                    parameter is null ? null : SpecInfo.SpecOf(parameter.Definition)?.TypeId, TypePresence.None, []));
             }
         }
         catch (Exception exception)
         {
-            RevitProfiler.Logger.Swallowed(exception, "Resolve parameter", $"{document.Title} {key.Name}");
+            RevitProfiler.Logger.Swallowed(exception, "Locate parameter", $"{document.Title} {key.Name}");
+        }
+
+        return located;
+    }
+
+    public static IReadOnlyList<ResolvedParameter> WithTypes(
+        Document document,
+        ParameterKey key,
+        ICollection<ElementId> categories,
+        IReadOnlyList<ResolvedParameter> located)
+    {
+        var typed = new List<ResolvedParameter>();
+        try
+        {
+            ICollection<ElementId>? types = null;
+            foreach (var item in located)
+            {
+                var id = item.ElementId;
+                types ??= TypeIdsOf(document, categories);
+                var storage = item.Storage;
+                var spec = item.SpecTypeId;
+                var presence = storage is StorageType.ElementId or StorageType.String
+                    ? PresenceOn(document, types, key, id, storage)
+                    : PresenceOn(document, types, key, id, StorageType.None);
+                if (storage == StorageType.None)
+                {
+                    var type = presence.IsEmpty
+                        ? null
+                        : document.GetElement(presence.TypesFor(FilterOperator.Defined).First().ToElementId());
+                    if (type is null || FindOn(type, key, id) is not { } parameter)
+                    {
+                        continue;
+                    }
+
+                    storage = parameter.StorageType;
+                    spec = SpecInfo.SpecOf(parameter.Definition)?.TypeId;
+                    if (storage is StorageType.ElementId or StorageType.String)
+                    {
+                        presence = PresenceOn(document, types, key, id, storage);
+                    }
+                }
+
+                typed.Add(item with
+                {
+                    Storage = storage,
+                    SpecTypeId = spec,
+                    Types = presence,
+                    Held = HeldOf(document, categories, key, id, storage)
+                });
+            }
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Parameter types", $"{document.Title} {key.Name}");
+        }
+
+        return typed;
+    }
+
+    public static IReadOnlyList<ResolvedParameter> WithLacking(
+        Document document,
+        ParameterKey key,
+        ICollection<ElementId> categories,
+        IReadOnlyList<ResolvedParameter> typed)
+    {
+        var resolved = new List<ResolvedParameter>();
+        try
+        {
+            foreach (var item in typed)
+            {
+                resolved.Add(item with { Lacking = LackingOf(document, categories, key, item.ElementId) });
+            }
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Parameter lacking", $"{document.Title} {key.Name}");
         }
 
         return resolved;
@@ -126,19 +215,50 @@ internal static class ParameterLocator
     public static Parameter? Find(Element element, ParameterKey key, ElementId? id = null)
     {
         var own = FindOn(element, key, id);
-        if (own is { HasValue: true })
+        if (own is { HasValue: true } && key.BuiltInName is null)
         {
             return own;
         }
 
-        return (element.Document.GetElement(element.GetTypeId()) is { } type ? FindOn(type, key, id) : null) ?? own;
+        var type = element.Document.GetElement(element.GetTypeId()) is { } owner ? FindOn(owner, key, id) : null;
+        if (own is { HasValue: true })
+        {
+            return type is null || Seen(element, own) ? own : type;
+        }
+
+        return type ?? own;
     }
 
-    private static ElementFilter Holds(ElementId id)
+    private static bool Seen(Element element, Parameter parameter)
     {
-        return new LogicalOrFilter(
-            new ElementParameterFilter(ParameterFilterRuleFactory.CreateHasValueParameterRule(id)),
-            new ElementParameterFilter(ParameterFilterRuleFactory.CreateHasNoValueParameterRule(id)));
+        return Compiled.Or([RevitRuleFactory.HasValue(parameter.Id), RevitRuleFactory.Holds(parameter.Id, parameter.StorageType)])
+            .Passes(element);
+    }
+
+    private static Parameter? Probe(Document document, ICollection<ElementId> categories, ParameterKey key, ElementId id)
+    {
+        Compiled[] probes =
+        [
+            RevitRuleFactory.HasValue(id),
+            RevitRuleFactory.Holds(id, StorageType.Double),
+            RevitRuleFactory.Holds(id, StorageType.Integer),
+            RevitRuleFactory.HasNoValue(id)
+        ];
+        foreach (var probe in probes.OfType<Compiled.Filter>())
+        {
+            var parameter = document.CollectElements()
+                .WherePasses(ElementReader.AnyOptionFilter(document, categories))
+                .WherePasses(probe.Value)
+                .Take(HeldSamples)
+                .Select(element => Find(element, key, id))
+                .FirstOrDefault(found => found is not null);
+            if (parameter is not null)
+            {
+                return parameter;
+            }
+        }
+
+        return null;
     }
 
     private static ICollection<ElementId> TypeIdsOf(Document document, ICollection<ElementId> categories)
@@ -158,7 +278,12 @@ internal static class ParameterLocator
         return types;
     }
 
-    private static TypePresence PresenceOn(Document document, ICollection<ElementId> types, ElementId id, StorageType storage)
+    private static TypePresence PresenceOn(
+        Document document,
+        ICollection<ElementId> types,
+        ParameterKey key,
+        ElementId id,
+        StorageType storage)
     {
         if (types.Count == 0)
         {
@@ -167,7 +292,113 @@ internal static class ParameterLocator
 
         return new TypePresence(
             TypesPassing(document, types, RevitRuleFactory.HasValue(id, storage)),
-            TypesPassing(document, types, RevitRuleFactory.HasNoValue(id, storage)));
+            TypesPassing(document, types, RevitRuleFactory.HasNoValue(id, storage))
+                .Where(type => document.GetElement(type.ToElementId()) is { } element && FindOn(element, key, id) is not null)
+                .ToArray());
+    }
+
+    private static long[] LackingOf(Document document, ICollection<ElementId> categories, ParameterKey key, ElementId id)
+    {
+        return document.CollectElements()
+            .WherePasses(ElementReader.AnyOptionFilter(document, categories))
+            .WherePasses(new ElementParameterFilter(ParameterFilterRuleFactory.CreateHasNoValueParameterRule(id)))
+            .Where(element => Find(element, key, id) is null)
+            .Select(element => element.Id.ToLong())
+            .ToArray();
+    }
+
+    private static HeldMeaning HeldOf(
+        Document document,
+        ICollection<ElementId> categories,
+        ParameterKey key,
+        ElementId id,
+        StorageType storage)
+    {
+        var blind = Compiled.And([
+            RevitRuleFactory.Holds(id, storage),
+            Compiled.Not(RevitRuleFactory.HasValue(id)),
+            Compiled.Not(RevitRuleFactory.HasNoValue(id))
+        ]);
+        if (blind is not Compiled.Filter filter)
+        {
+            return HeldMeaning.Value;
+        }
+
+        var votes = document.CollectElements()
+            .WherePasses(ElementReader.AnyOptionFilter(document, categories))
+            .WherePasses(filter.Value)
+            .Take(HeldSamples)
+            .Select(element => Find(element, key, id) is { } parameter
+                ? parameter.HasValue ? HeldMeaning.Value : HeldMeaning.Empty
+                : HeldMeaning.Absent)
+            .GroupBy(meaning => meaning)
+            .Select(group => (Meaning: group.Key, Count: group.Count()))
+            .ToList();
+        return votes.Count == 0
+            ? HeldMeaning.Value
+            : votes.OrderByDescending(vote => vote.Count).ThenBy(vote => vote.Meaning).First().Meaning;
+    }
+
+    internal static long[] UnseenIds(Document document, ICollection<ElementId> categories, ResolvedParameter item)
+    {
+        var id = item.ElementId;
+        var holds = RevitRuleFactory.Holds(id, item.Storage);
+        var seen = Compiled.Or([RevitRuleFactory.HasValue(id), RevitRuleFactory.HasNoValue(id), holds]);
+        if (item.Storage == StorageType.None
+            || (!item.Types.IsEmpty && holds is Compiled.MatchNone)
+            || seen is not Compiled.Filter seenFilter
+            || Compiled.Not(seen) is not Compiled.Filter unseen)
+        {
+            return [];
+        }
+
+        var carrying = (categories.Count > 0 ? categories : ElementReader.ModelCategoryIds(document))
+            .Where(category => document.CollectElements()
+                .WherePasses(ElementReader.AnyOptionFilter(document, [category]))
+                .WherePasses(seenFilter.Value)
+                .FirstElementId() != ElementId.InvalidElementId)
+            .ToList();
+        return carrying.Count == 0
+            ? []
+            : document.CollectElements()
+                .WherePasses(ElementReader.AnyOptionFilter(document, carrying))
+                .WherePasses(unseen.Value)
+                .ToElementIds()
+                .Select(element => element.ToLong())
+                .ToArray();
+    }
+
+    internal static bool Lists(Element element, ParameterKey key, ElementId id)
+    {
+        if (key.BuiltInName is null || !Enum.TryParse<BuiltInParameter>(key.BuiltInName, out var builtIn))
+        {
+            return FindOn(element, key, id) is not null;
+        }
+
+        if (element.get_Parameter(builtIn) is null)
+        {
+            return false;
+        }
+
+        foreach (Parameter parameter in element.Parameters)
+        {
+            if (parameter.Definition is InternalDefinition definition && definition.BuiltInParameter == builtIn)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static bool IsFilled(Parameter parameter)
+    {
+        return parameter.HasValue && parameter.StorageType switch
+        {
+            StorageType.String => !string.IsNullOrEmpty(parameter.AsString()),
+            StorageType.ElementId => parameter.AsElementId() != ElementId.InvalidElementId,
+            _ => true
+        };
     }
 
     private static long[] TypesPassing(Document document, ICollection<ElementId> types, Compiled rule)
@@ -221,7 +452,7 @@ internal static class ParameterLocator
         }
     }
 
-    private static Parameter? FindOn(Element element, ParameterKey key, ElementId? id)
+    internal static Parameter? FindOn(Element element, ParameterKey key, ElementId? id)
     {
         if (key.BuiltInName is { } builtInName)
         {
@@ -233,15 +464,23 @@ internal static class ParameterLocator
             return element.get_Parameter(shared);
         }
 
+        Parameter? first = null;
         foreach (var parameter in element.GetParameters(key.Name))
         {
-            if (IsWanted(parameter, key, id))
+            if (!IsWanted(parameter, key, id))
+            {
+                continue;
+            }
+
+            if (id is not null || IsFilled(parameter))
             {
                 return parameter;
             }
+
+            first ??= parameter;
         }
 
-        return null;
+        return first;
     }
 
     private static bool IsWanted(Parameter parameter, ParameterKey key, ElementId? id)

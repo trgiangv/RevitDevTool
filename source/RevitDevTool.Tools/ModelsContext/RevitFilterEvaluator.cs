@@ -5,6 +5,7 @@ using DevTools.ModelsContext.Ports;
 using Nice3point.Revit.Extensions;
 using System.Diagnostics;
 using DocumentVersion = DevTools.ModelsContext.Model.DocumentVersion;
+using RuleNode = DevTools.ModelsContext.Model.FilterRule;
 
 namespace RevitDevTool.Tools.ModelsContext;
 
@@ -20,11 +21,12 @@ internal sealed class RevitFilterEvaluator(ParameterCache cache) : IFilterEvalua
         IReadOnlyCollection<long>? scope,
         CancellationToken cancellationToken)
     {
+        var warmed = await WarmAsync(document, filter, cancellationToken).ConfigureAwait(false);
         var raw = new Dictionary<ParameterKey, IReadOnlyDictionary<string, long[]>>();
         while (true)
         {
-            var prepared = await RevitProfiler.RunAsync("Filter candidates",
-                application => Prepare(DocumentRegistry.Require(application, document), filter, scope, raw),
+            var prepared = await RevitProfiler.RunAsync("Filter compile",
+                application => Prepare(DocumentRegistry.Require(application, document), filter, scope, raw, warmed),
                 cancellationToken).ConfigureAwait(false);
             if (prepared.Plan is not { } plan)
             {
@@ -44,11 +46,162 @@ internal sealed class RevitFilterEvaluator(ParameterCache cache) : IFilterEvalua
         }
     }
 
+    private async Task<Warmed> WarmAsync(DocumentKey document, FilterDefinition filter, CancellationToken cancellationToken)
+    {
+        var categories = Categories(filter.Groups);
+        var warmed = await RevitProfiler.RunAsync("Filter candidates", application =>
+        {
+            var resolved = DocumentRegistry.Require(application, document);
+            var timer = TraceTimer.Start(RevitProfiler.Logger);
+            CandidatesOf(resolved.Target, DocumentRegistry.SourceOf(resolved), ElementReader.VersionOf(resolved.Target),
+                filter.Groups, out var cached);
+            return new Warmed(cached ? 0 : timer.ElapsedMs, !cached);
+        }, cancellationToken).ConfigureAwait(false);
+        var typed = false;
+        var presence = PresenceKeysOf(filter.Root);
+        foreach (var key in KeysOf(filter.Root))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var located = await RevitProfiler.RunAsync("Filter parameter", application =>
+            {
+                var resolved = DocumentRegistry.Require(application, document);
+                var source = DocumentRegistry.SourceOf(resolved);
+                var version = ElementReader.VersionOf(resolved.Target);
+                return cache.FindResolved(source, key, filter.Groups, version) is { } cached
+                    ? new Located(source, version, cached, true)
+                    : new Located(source, version,
+                        ParameterLocator.Locate(resolved.Target, key, categories, cache.FindIds(source, version, key)), false);
+            }, cancellationToken).ConfigureAwait(false);
+            var parameters = located.Parameters;
+            if (!located.Done)
+            {
+                var typedParameters = await RevitProfiler.RunAsync("Filter parameter types", application =>
+                        ParameterLocator.WithTypes(DocumentRegistry.Require(application, document).Target, key, categories,
+                            located.Parameters),
+                    cancellationToken).ConfigureAwait(false);
+                parameters = await RevitProfiler.RunAsync("Filter parameter lacking", application =>
+                {
+                    var all = ParameterLocator.WithLacking(DocumentRegistry.Require(application, document).Target, key,
+                        categories, typedParameters);
+                    cache.StoreResolved(located.Source, key, filter.Groups, located.Version, all);
+                    return all;
+                }, cancellationToken).ConfigureAwait(false);
+            }
+
+            if (presence.Contains(key) && parameters.Any(parameter => !parameter.SilentChecked))
+            {
+                parameters = await SilentAsync(document, key, filter.Groups, categories, located, parameters, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            typed |= parameters.Any(parameter => !parameter.Types.IsEmpty || parameter.Silent.Count > 0);
+        }
+
+        if (typed)
+        {
+            await RevitProfiler.RunAsync("Filter types", application =>
+            {
+                var resolved = DocumentRegistry.Require(application, document);
+                CandidatesOf(resolved.Target, DocumentRegistry.SourceOf(resolved), ElementReader.VersionOf(resolved.Target),
+                    filter.Groups, out _).MembersIn(resolved.Target);
+            }, cancellationToken).ConfigureAwait(false);
+        }
+
+        return warmed;
+    }
+
+    private async Task<IReadOnlyList<ResolvedParameter>> SilentAsync(
+        DocumentKey document,
+        ParameterKey key,
+        IReadOnlyList<long> groups,
+        ICollection<ElementId> categories,
+        Located located,
+        IReadOnlyList<ResolvedParameter> parameters,
+        CancellationToken cancellationToken)
+    {
+        var updated = new List<ResolvedParameter>();
+        foreach (var parameter in parameters)
+        {
+            if (parameter.SilentChecked)
+            {
+                updated.Add(parameter);
+                continue;
+            }
+
+            var reader = await RevitProfiler.RunAsync("Filter parameter silent", application =>
+                    SilentReader.For(DocumentRegistry.Require(application, document).Target, categories, key, parameter),
+                cancellationToken).ConfigureAwait(false);
+            var index = 0;
+            while (index < reader.Count)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var start = index;
+                index = await RevitProfiler.RunAsync("Filter silent slice", application =>
+                        reader.AddSlice(DocumentRegistry.Require(application, document).Target, start),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            updated.Add(reader.ToResolved());
+        }
+
+        cache.StoreResolved(located.Source, key, groups, located.Version, updated);
+        return updated;
+    }
+
+    private static HashSet<ParameterKey> PresenceKeysOf(FilterNode root)
+    {
+        var keys = new HashSet<ParameterKey>();
+        var pending = new Stack<FilterNode>([root]);
+        while (pending.Count > 0)
+        {
+            switch (pending.Pop())
+            {
+                case FilterSet set:
+                    foreach (var child in set.Children)
+                    {
+                        pending.Push(child);
+                    }
+
+                    break;
+                case RuleNode { Operator: FilterOperator.NotEmpty or FilterOperator.Empty or FilterOperator.Defined or FilterOperator.Undefined } rule:
+                    keys.Add(rule.Parameter);
+                    break;
+            }
+        }
+
+        return keys;
+    }
+
+    private static List<ParameterKey> KeysOf(FilterNode root)
+    {
+        var keys = new List<ParameterKey>();
+        var pending = new Stack<FilterNode>([root]);
+        while (pending.Count > 0)
+        {
+            switch (pending.Pop())
+            {
+                case FilterSet set:
+                    for (var index = set.Children.Count - 1; index >= 0; index--)
+                    {
+                        pending.Push(set.Children[index]);
+                    }
+
+                    break;
+                case RuleNode rule when !keys.Contains(rule.Parameter):
+                    keys.Add(rule.Parameter);
+                    break;
+            }
+        }
+
+        return keys;
+    }
+
     private Prepared Prepare(
         ResolvedDocument resolved,
         FilterDefinition filter,
         IReadOnlyCollection<long>? scope,
-        Dictionary<ParameterKey, IReadOnlyDictionary<string, long[]>> raw)
+        Dictionary<ParameterKey, IReadOnlyDictionary<string, long[]>> raw,
+        Warmed warmed)
     {
         var timer = TraceTimer.Start(RevitProfiler.Logger);
         var categories = Categories(filter.Groups);
@@ -81,8 +234,10 @@ internal sealed class RevitFilterEvaluator(ParameterCache cache) : IFilterEvalua
         }
 
         var ids = plan.Native is Compiled.MatchNone ? Array.Empty<long>() : Candidates().InScope(scope);
+        var collected = candidates is not null && (!cached || warmed.Collected);
         RevitProfiler.Logger.FilterCompiled(source.Label, compiler.Rules, compiler.Unresolved, ids.Length,
-            plan.HasExactPass, Math.Round(timer.ElapsedMs - candidatesMs, 1), Math.Round(candidatesMs, 1), candidates is null ? "skipped" : cached ? "cached" : "collected");
+            plan.HasExactPass, Math.Round(timer.ElapsedMs - candidatesMs, 1), Math.Round(candidatesMs + warmed.CandidatesMs, 1),
+            candidates is null ? "skipped" : collected ? "collected" : "cached");
         return new Prepared(source, ids, plan, []);
     }
 
@@ -245,6 +400,14 @@ internal sealed class RevitFilterEvaluator(ParameterCache cache) : IFilterEvalua
     {
         return groups.Select(id => id.ToElementId()).ToList();
     }
+
+    private sealed record Warmed(double CandidatesMs, bool Collected);
+
+    private sealed record Located(
+        SourceId Source,
+        DocumentVersion? Version,
+        IReadOnlyList<ResolvedParameter> Parameters,
+        bool Done);
 
     private sealed record Prepared(
         SourceId Source,

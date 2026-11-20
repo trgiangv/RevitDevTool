@@ -198,7 +198,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
         {
             try
             {
-                if (ParameterLocator.Resolve(document, key, categories).FirstOrDefault()?.Spec is { } spec
+                if (ParameterLocator.Locate(document, key, categories).FirstOrDefault(found => found.Spec is not null)?.Spec is { } spec
                     && SpecInfo.IsMeasurable(spec))
                 {
                     return UnitFormatUtils.Format(document.GetUnits(), spec, value, false);
