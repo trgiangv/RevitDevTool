@@ -29,6 +29,12 @@ public static class RevitContextExecutor
     private static readonly RevitDispatcher Dispatcher = new();
 
     /// <summary>
+    ///     Number of external event turns started so far. Work that runs inline in one turn sees one value;
+    ///     Revit has left the API call between two different values.
+    /// </summary>
+    public static long Turn => Dispatcher.Turn;
+
+    /// <summary>
     ///     Queues <paramref name="action"/> for fire-and-forget execution on the Revit thread.
     /// </summary>
     /// <param name="action">

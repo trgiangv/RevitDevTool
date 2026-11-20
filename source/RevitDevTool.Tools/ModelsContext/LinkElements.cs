@@ -54,6 +54,7 @@ internal static class LinkElements
 
     public static FilteredElementCollector? InView(Document model, View view, ElementId linkInstanceId)
     {
+        ViewActivations.ThrowIfChangedInCall();
         return ShowsLinks(view) ? new FilteredElementCollector(model, view.Id, linkInstanceId) : null;
     }
 

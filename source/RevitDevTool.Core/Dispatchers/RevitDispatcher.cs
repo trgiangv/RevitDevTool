@@ -14,6 +14,7 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
     private readonly ExternalEvent? _event;
     private bool _insideExecute;
     private int _disposed;
+    private long _turn;
 
     public RevitDispatcher()
     {
@@ -21,8 +22,11 @@ internal sealed class RevitDispatcher : IExternalEventHandler, IRevitDispatcher,
             _event = ExternalEvent.Create(this);
     }
 
+    public long Turn => Interlocked.Read(ref _turn);
+
     public void Execute(UIApplication app)
     {
+        Interlocked.Increment(ref _turn);
         lock (_gate)
         {
             _insideExecute = true;

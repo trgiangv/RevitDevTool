@@ -205,6 +205,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
                 var difference = document.GetChangedElements(baseVersion);
                 if (!difference.AreDeletedElementIdsAvailable)
                 {
+                    RevitProfiler.Logger.ChangesUnavailable(source.ToString());
                     return null;
                 }
 
@@ -334,6 +335,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
             return cached;
         }
 
+        ViewActivations.ThrowIfChangedInCall();
         HashSet<long> ids;
         try
         {
@@ -363,6 +365,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
 
     private static FilteredElementCollector? ViewCollector(ResolvedDocument resolved, View view)
     {
+        ViewActivations.ThrowIfChangedInCall();
         return resolved.Link is { } link
             ? LinkElements.InView(resolved.Model, view, link.Id)
             : resolved.Model.CollectElements(view.Id);

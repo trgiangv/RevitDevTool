@@ -97,4 +97,8 @@ public static partial class ModelContextLog
     [LoggerMessage(EventId = 20, Level = LogLevel.Trace,
         Message = "Explorer expand {Row}: {Rows} rows in {ElapsedMs} ms")]
     public static partial void RowExpanded(this ILogger logger, string row, int rows, double elapsedMs);
+
+    [LoggerMessage(EventId = 26, Level = LogLevel.Trace,
+        Message = "Changes {Source}: no history since the last read, the snapshot rebuilds")]
+    public static partial void ChangesUnavailable(this ILogger logger, string source);
 }

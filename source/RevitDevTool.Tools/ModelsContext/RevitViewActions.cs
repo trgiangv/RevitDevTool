@@ -378,6 +378,7 @@ internal sealed class RevitViewActions : IViewActions
         var isolated = new List<ElementId>(ids);
         if (categories.Count > 0)
         {
+            ViewActivations.ThrowIfChangedInCall();
             isolated.AddRange(model.CollectElements(view.Id)
                 .WherePasses(new ElementMulticategoryFilter(categories))
                 .WhereElementIsNotElementType()

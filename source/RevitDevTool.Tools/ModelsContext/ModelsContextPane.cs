@@ -41,6 +41,7 @@ public sealed class ModelsContextPane(ModelContextServices services, IRevitModel
                 };
             });
         events.Subscribe(application);
+        ViewActivations.Watch(application);
     }
     public void ToggleVisibility()
     {
@@ -64,6 +65,7 @@ public sealed class ModelsContextPane(ModelContextServices services, IRevitModel
     {
         _host.IsVisibleChanged -= OnVisibleChanged;
         events.Unsubscribe();
+        ViewActivations.Unwatch();
         _panel?.Dispose();
         _panel = null;
         _initialized = false;
