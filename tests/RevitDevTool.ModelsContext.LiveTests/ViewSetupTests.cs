@@ -9,7 +9,7 @@ public sealed class ViewSetupTests
     [Explicit("Run by scripts/test-models-context.ps1 before the full run: Revit draws a newly opened view only after the run returns.")]
     public void PreparesSample()
     {
-        SampleViews.Switch(SampleViews.View);
+        var switched = SampleViews.Switch(SampleViews.View);
         if (!DockablePane.PaneIsRegistered(ModelsContextPane.PaneId))
         {
             Assert.Inconclusive("The Model Context pane is not registered. Deploy the current add-in (scripts/build-host.ps1 -HostApp Revit -Year <year>).");
@@ -21,5 +21,9 @@ public sealed class ViewSetupTests
         }
 
         SampleModel.Application.GetDockablePane(ModelsContextPane.PaneId).Show();
+        if (switched)
+        {
+            Assert.Inconclusive($"Made '{SampleViews.View.Name}' active; Revit applies it after this run, so run this test again.");
+        }
     }
 }

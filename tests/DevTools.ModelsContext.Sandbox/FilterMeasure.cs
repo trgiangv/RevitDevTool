@@ -32,7 +32,6 @@ internal static class FilterMeasure
         await Idle();
         report($"filter parameters {filter.Root.Parameters.Count:N0} merged from {run.Data.Sources.Count} files over {run.Data.Documents.Count} documents");
 
-        // The build itself starts an evaluation, so time the build and its result together.
         filter.Runner.IsLiveOn = true;
         await Idle();
         stall.TakeMax();

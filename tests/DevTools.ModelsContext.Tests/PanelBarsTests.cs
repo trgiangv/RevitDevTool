@@ -41,7 +41,7 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task ResetClearsJournal()
+    public async Task ResetEmptiesTemporaryBar()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var bar = fixture.Panel.TemporaryBar;

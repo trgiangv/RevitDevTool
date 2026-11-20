@@ -25,7 +25,12 @@ internal sealed class Adapter
 
     public List<ElementRef> Matches(FilterDefinition definition, IReadOnlyList<SampleDocument> documents, ScopeKind scope)
     {
-        var known = SampleModel.KnownSources;
+        return Matches(definition, documents, scope, SampleModel.KnownSources);
+    }
+
+    public List<ElementRef> Matches(FilterDefinition definition, IReadOnlyList<SampleDocument> documents, ScopeKind scope,
+        ICollection<SourceId> known)
+    {
         var matches = new List<ElementRef>();
         foreach (var document in documents)
         {

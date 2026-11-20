@@ -34,7 +34,6 @@ internal static class ViewImage
             }
             catch (IOException)
             {
-                // ignore
             }
         }
     }

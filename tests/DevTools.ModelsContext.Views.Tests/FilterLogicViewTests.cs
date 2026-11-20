@@ -169,7 +169,6 @@ public sealed class FilterLogicViewTests
         var group = WpfSta.Invoke(() => root.Children[1]);
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.FindAllInWindow("Filter.Item.Grip").Length == 2), "Two grips are not shown.");
 
-        // Logical focus only: a UIA Focus() would bring the test window to the front.
         WpfSta.Invoke(() => FocusManager.SetFocusedElement(ui.Host.Window, Grips(ui).First(grip => grip.IsVisible && grip.DataContext is RuleSetViewModel)));
         Assert.IsTrue(ThemeHost.WaitFor(() => FocusedGrip(ui) is { DataContext: RuleSetViewModel }), "The group grip has no focus.");
 

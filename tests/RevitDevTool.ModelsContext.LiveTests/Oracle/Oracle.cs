@@ -9,6 +9,16 @@ internal static class Oracle
 {
     public const double Tolerance = 1e-6;
 
+    private const int DeclaredLimit = 5_000;
+
+    private static readonly Dictionary<(string Title, long Element), HashSet<long>> DeclaredIds = [];
+
+    private static readonly HashSet<BuiltInCategory> NotElementCategories =
+    [
+        BuiltInCategory.OST_RvtLinks,
+        BuiltInCategory.OST_Materials
+    ];
+
     public static int Count(FilterDefinition definition, IReadOnlyList<SampleDocument> documents, ScopeKind scope)
     {
         return Matches(definition, documents, scope).Count;
@@ -16,12 +26,17 @@ internal static class Oracle
 
     public static List<ElementRef> Matches(FilterDefinition definition, IReadOnlyList<SampleDocument> documents, ScopeKind scope)
     {
-        var units = SampleModel.Host.GetUnits();
-        var known = SampleModel.KnownSources;
+        return Matches(definition, documents, scope, SampleModel.Host, SampleModel.KnownSources);
+    }
+
+    public static List<ElementRef> Matches(FilterDefinition definition, IReadOnlyList<SampleDocument> documents, ScopeKind scope,
+        Document host, ICollection<SourceId> known)
+    {
+        var units = host.GetUnits();
         var matches = new List<ElementRef>();
         foreach (var document in documents)
         {
-            var view = scope == ScopeKind.ActiveView ? ViewIds(document) : null;
+            var view = scope == ScopeKind.ActiveView ? ViewIds(document, host) : null;
             foreach (var element in Candidates(document.Document, definition.Groups, view is not null))
             {
                 if (view is not null && !view.Contains(element.Id.ToLong()))
@@ -51,7 +66,7 @@ internal static class Oracle
         var ids = new HashSet<long>();
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType == CategoryType.Model && category.BuiltInCategory != BuiltInCategory.OST_RvtLinks)
+            if (category.CategoryType == CategoryType.Model && !NotElementCategories.Contains(category.BuiltInCategory))
             {
                 ids.Add(category.Id.ToLong());
             }
@@ -67,7 +82,11 @@ internal static class Oracle
 
     public static HashSet<long> ViewIds(SampleDocument document)
     {
-        var host = SampleModel.Host;
+        return ViewIds(document, SampleModel.Host);
+    }
+
+    public static HashSet<long> ViewIds(SampleDocument document, Document host)
+    {
         var view = SampleModel.Application.ActiveUIDocument.ActiveView;
         var collector = document.Key.IsCurrentModel
             ? new FilteredElementCollector(host, view.Id)
@@ -75,7 +94,7 @@ internal static class Oracle
         return [.. collector.WhereElementIsNotElementType().ToElementIds().Select(id => id.ToLong())];
     }
 
-    private static bool Matches(FilterNode node, Element element, SourceId source, ICollection<SourceId> known, Units units)
+    internal static bool Matches(FilterNode node, Element element, SourceId source, ICollection<SourceId> known, Units units)
     {
         return node switch
         {
@@ -147,7 +166,7 @@ internal static class Oracle
             case StorageType.Double when rule.Picked is not null:
                 return filled && EqualityMatches(rule.Operator, string.Equals(value.AsValueString(), rule.Value.Trim(), StringComparison.Ordinal));
             case StorageType.Double:
-                return filled && Number(value, rule.Value, units) is { } target && Compare(rule.Operator, CompareDouble(value.AsDouble(), target));
+                return filled && Number(value, rule.Value, units) is { } target && Compare(rule.Operator, CompareShown(value, target, units));
             case StorageType.ElementId:
                 return filled && value.AsElementId() != ElementId.InvalidElementId
                               && EqualityMatches(rule.Operator, Refers(value, rule.Value.Trim()));
@@ -158,25 +177,90 @@ internal static class Oracle
 
     public static (Parameter? Instance, Parameter? Type) Read(Element element, ParameterKey key)
     {
-        var instance = Find(element, key);
-        var type = element.Document.GetElement(element.GetTypeId()) is ElementType elementType ? Find(elementType, key) : null;
-        return (instance, type);
+        var owner = element.Document.GetElement(element.GetTypeId()) as ElementType;
+        var type = owner is null ? null : Find(owner, key);
+        return (Find(element, key, owner), type);
+    }
+
+    private static bool NativelyHeld(Element element, Parameter parameter)
+    {
+        var parameterId = parameter.Id;
+        var rules = new List<Autodesk.Revit.DB.FilterRule>
+        {
+            ParameterFilterRuleFactory.CreateHasValueParameterRule(parameterId),
+            ParameterFilterRuleFactory.CreateHasNoValueParameterRule(parameterId)
+        };
+        if (parameter.StorageType == StorageType.Integer)
+        {
+            rules.Add(ParameterFilterRuleFactory.CreateGreaterOrEqualRule(parameterId, int.MinValue));
+        }
+        else if (parameter.StorageType == StorageType.Double)
+        {
+            rules.Add(ParameterFilterRuleFactory.CreateGreaterOrEqualRule(parameterId, double.MinValue, 0));
+        }
+
+        return rules.Any(rule => new ElementParameterFilter(rule).PassesFilter(element));
     }
 
     public static Parameter? Find(Element element, ParameterKey key)
     {
+        return Find(element, key, null);
+    }
+
+    private static Parameter? Find(Element element, ParameterKey key, ElementType? owner)
+    {
         if (key.BuiltInName is { } builtIn)
         {
-            return element.get_Parameter((BuiltInParameter)Enum.Parse(typeof(BuiltInParameter), builtIn));
+            return Carried(element, element.get_Parameter((BuiltInParameter)Enum.Parse(typeof(BuiltInParameter), builtIn)), owner);
         }
 
         if (key.SharedId is { } shared)
         {
-            return element.get_Parameter(shared);
+            return Carried(element, element.get_Parameter(shared), owner);
         }
 
-        return element.GetParameters(key.Name)
-            .FirstOrDefault(parameter => !parameter.IsShared && parameter.Id.ToLong() > 0 && DataType(parameter) == key.DataType);
+        var named = element.GetParameters(key.Name)
+            .Where(parameter => !parameter.IsShared && parameter.Id.ToLong() > 0 && DataType(parameter) == key.DataType)
+            .ToList();
+        return named.FirstOrDefault(HasValue) ?? named.FirstOrDefault();
+    }
+
+    private static Parameter? Carried(Element element, Parameter? parameter, ElementType? owner)
+    {
+        if (parameter is null)
+        {
+            return null;
+        }
+
+        var id = parameter.Id.ToLong();
+        if ((owner is null || !Declared(owner).Contains(id)) && NativelyHeld(element, parameter))
+        {
+            return parameter;
+        }
+
+        return Declared(element).Contains(id) ? parameter : null;
+    }
+
+    private static HashSet<long> Declared(Element element)
+    {
+        var key = (element.Document.Title, element.Id.ToLong());
+        if (!DeclaredIds.TryGetValue(key, out var ids))
+        {
+            if (DeclaredIds.Count >= DeclaredLimit)
+            {
+                DeclaredIds.Clear();
+            }
+
+            ids = [];
+            foreach (Parameter parameter in element.Parameters)
+            {
+                ids.Add(parameter.Id.ToLong());
+            }
+
+            DeclaredIds.Add(key, ids);
+        }
+
+        return ids;
     }
 
     public static string? DataType(Parameter parameter)
@@ -232,9 +316,50 @@ internal static class Oracle
         return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var plain) ? plain : null;
     }
 
-    private static int CompareDouble(double value, double target)
+    public static double HalfStep(Units units, ForgeTypeId spec)
     {
-        return Math.Abs(value - target) <= Tolerance ? 0 : value.CompareTo(target);
+        try
+        {
+            var options = units.GetFormatOptions(spec);
+            var unit = options.GetUnitTypeId();
+            return Math.Abs(UnitUtils.ConvertToInternalUnits(options.Accuracy, unit) - UnitUtils.ConvertToInternalUnits(0, unit)) / 2;
+        }
+        catch (Exception exception) when (exception is Autodesk.Revit.Exceptions.ApplicationException or ArgumentException)
+        {
+            return 0;
+        }
+    }
+
+    private static int CompareShown(Parameter parameter, double target, Units units)
+    {
+        var value = parameter.AsDouble();
+        var spec = parameter.Definition.GetDataType();
+        if (string.IsNullOrEmpty(spec.TypeId) || !UnitUtils.IsMeasurableSpec(spec))
+        {
+            return CompareDouble(value, target, Tolerance);
+        }
+
+        var half = HalfStep(units, spec);
+        if (!(half > Tolerance))
+        {
+            return CompareDouble(value, target, Tolerance);
+        }
+
+        return Shown(units, spec, target) is { } grid && Math.Abs(grid - target) <= Math.Min(Tolerance, half / 4)
+                                                      && Shown(units, spec, value) is { } shown
+            ? CompareDouble(shown, target, half / 2)
+            : CompareDouble(value, target, half);
+    }
+
+    private static double? Shown(Units units, ForgeTypeId spec, double value)
+    {
+        var text = UnitFormatUtils.Format(units, spec, value, false);
+        return UnitFormatUtils.TryParse(units, spec, text, out double parsed) ? parsed : null;
+    }
+
+    private static int CompareDouble(double value, double target, double tolerance)
+    {
+        return Math.Abs(value - target) <= tolerance ? 0 : value.CompareTo(target);
     }
 
     private static bool Refers(Parameter parameter, string text)

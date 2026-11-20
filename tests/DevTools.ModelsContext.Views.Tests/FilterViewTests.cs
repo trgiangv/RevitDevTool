@@ -271,7 +271,7 @@ public sealed class FilterViewTests
     }
 
     [TestMethod]
-    public void HeaderCollapsesItsSectionAndKeepsIt()
+    public void CollapsedSectionSurvivesReopen()
     {
         using var ui = OpenFilterWithRule();
         var box = OpenPicker(ui);

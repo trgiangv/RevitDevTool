@@ -13,6 +13,7 @@ namespace RevitDevTool.ModelsContext.UiTests;
 public sealed class PanelFlowTests : RecordedTest
 {
     private static RevitPanel _panel = null!;
+    private static PanelSteps _steps = null!;
 
     [ClassInitialize]
     public static void Open(TestContext context)
@@ -20,11 +21,12 @@ public sealed class PanelFlowTests : RecordedTest
         SetProcessDpiAwarenessContext(new IntPtr(-4));
         Evidence.Layer = "L3";
         _panel = RevitPanel.Attach(CaseFiles.Facts.HostTitle);
+        _steps = new PanelSteps(_panel);
         _panel.Settle();
         _panel.Select("ModelContext.Scope.WholeModel");
         _panel.Select("ModelContext.View.Filter");
-        _panel.Toggle(Document(CaseFiles.Facts.LinkLabel), true);
-        _panel.Toggle(Document(ContextBarViewModel.CurrentModelLabel), false);
+        _panel.Toggle(_steps.Document(CaseFiles.Facts.LinkLabel), true);
+        _panel.Toggle(_steps.Document(ContextBarViewModel.CurrentModelLabel), false);
     }
 
     [ClassCleanup]
@@ -42,7 +44,7 @@ public sealed class PanelFlowTests : RecordedTest
             var off = CaseFiles.Filter(flow.Cases[0]);
             var on = CaseFiles.Filter(flow.Cases[1]);
             _panel.Shot("before");
-            Build(off);
+            _steps.Build(off);
             var first = _panel.Count();
             _panel.Shot("after-off");
 
@@ -66,7 +68,7 @@ public sealed class PanelFlowTests : RecordedTest
             var item = CaseFiles.Filter(flow.Cases[0]);
             _panel.Shot("before");
 
-            Build(item);
+            _steps.Build(item);
             _panel.Shot("after");
 
             var count = _panel.Count();
@@ -84,7 +86,7 @@ public sealed class PanelFlowTests : RecordedTest
             var item = CaseFiles.Filter(flow.Cases[0]);
             var name = "uia-live " + Guid.NewGuid().ToString("N").Substring(0, 8);
             _panel.Shot("before");
-            Build(item);
+            _steps.Build(item);
             var parameter = _panel.Last("Filter.Rule.Parameter").Patterns.Value.Pattern.Value.Value;
             var built = _panel.Count();
             Assert.AreEqual(item.Filter.Rules![0].Parameter, parameter);
@@ -95,8 +97,8 @@ public sealed class PanelFlowTests : RecordedTest
             Assert.IsTrue(Retry.WhileTrue(() => _panel.Find("Filter.Save").IsEnabled, TimeSpan.FromSeconds(10)).Result, "Save stayed enabled.");
             Evidence.Step($"Renamed the filter to '{name}' and clicked Save.");
             _panel.Shot("saved");
-            NewFilter([]);
-            Switch(name);
+            _steps.NewFilter([]);
+            _steps.Switch(name);
             Evidence.Step($"Made a new filter, then picked '{name}' in the source list.");
 
             try
@@ -121,7 +123,7 @@ public sealed class PanelFlowTests : RecordedTest
         Record(flow, () =>
         {
             var item = CaseFiles.Filter(flow.Cases[0]);
-            NewFilter([]);
+            _steps.NewFilter([]);
             _panel.Shot("before");
 
             _panel.Toggle(_panel.Find("Filter.Categories"), true, false);
@@ -159,7 +161,7 @@ public sealed class PanelFlowTests : RecordedTest
                 Evidence.Step("Collapsed all rows so the link model row is on screen.");
                 _panel.Shot("before");
                 var row = _panel.Item(_panel.Find("Explorer.Rows"),
-                    cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(DocumentName(CaseFiles.Facts.LinkLabel))));
+                    cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(_steps.DocumentName(CaseFiles.Facts.LinkLabel))));
                 var eye = _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Eye"));
                 _panel.Act(() => eye.Patterns.Invoke.Pattern.Invoke());
                 Evidence.Step("Invoked the eye on the Architectural link's model row.");
@@ -225,26 +227,11 @@ public sealed class PanelFlowTests : RecordedTest
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetProcessDpiAwarenessContext(IntPtr value);
-    private static void Build(FilterCaseData item)
-    {
-        Evidence.Step($"Built {item.Id} through UI Automation: {item.Description}.");
-        NewFilter(item.Filter.Categories ?? []);
-        foreach (var rule in item.Filter.Rules ?? [])
-        {
-            Assert.IsFalse(rule.IsGroup, $"{item.Id}: the UI flow builds flat rules only.");
-            AddRule(rule);
-        }
-
-        if (item.Filter.Match == nameof(SetMatch.Any))
-        {
-            _panel.Act(() => _panel.Last("Filter.Set.Connector").Patterns.Invoke.Pattern.Invoke());
-        }
-    }
 
     private static AutomationElement ExpandLink(string category)
     {
         var rows = _panel.Find("Explorer.Rows");
-        var link = DocumentName(CaseFiles.Facts.LinkLabel);
+        var link = _steps.DocumentName(CaseFiles.Facts.LinkLabel);
         _panel.Find("Explorer.CollapseAll").Patterns.Invoke.Pattern.Invoke();
         Assert.IsTrue(Retry.WhileFalse(() => RowAfter(rows, link, category) is null, TimeSpan.FromSeconds(10), ignoreException: true).Result,
             "Collapse all left link rows open.");
@@ -255,10 +242,9 @@ public sealed class PanelFlowTests : RecordedTest
         return row!;
     }
 
-    // Explorer recycles rows when it rebuilds (after Reset): find row and eye in one try.
     private static AutomationElement LinkEye(string category)
     {
-        var link = DocumentName(CaseFiles.Facts.LinkLabel);
+        var link = _steps.DocumentName(CaseFiles.Facts.LinkLabel);
         var eye = Retry.WhileNull(() => RowAfter(_panel.Find("Explorer.Rows"), link, category)
                 ?.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Eye")),
             TimeSpan.FromSeconds(10), ignoreException: true).Result;
@@ -276,85 +262,5 @@ public sealed class PanelFlowTests : RecordedTest
     private static AutomationElement Eye(AutomationElement row)
     {
         return _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Eye"));
-    }
-
-    private static AutomationElement Document(string part)
-    {
-        return _panel.Item(_panel.Find("ModelContext.Documents"),
-            cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(DocumentName(part))));
-    }
-
-    private static string DocumentName(string part)
-    {
-        var items = _panel.Find("ModelContext.Documents").FindAllDescendants(cf => cf.ByControlType(ControlType.ListItem));
-        var match = items.FirstOrDefault(item => item.Name.Contains(part, StringComparison.OrdinalIgnoreCase));
-        Assert.IsNotNull(match, $"No document named like '{part}'.");
-        return match.Name;
-    }
-
-    private static void NewFilter(IReadOnlyList<string> categories)
-    {
-        var before = _panel.Settle();
-        _panel.Find("Filter.Add").Patterns.Invoke.Pattern.Invoke();
-        AcceptDiscard(before);
-        if (categories.Count == 0)
-        {
-            return;
-        }
-
-        _panel.Toggle(_panel.Find("Filter.Categories"), true, false);
-        foreach (var category in categories)
-        {
-            var name = CaseFiles.Facts.CategoryNames[category];
-            _panel.SetValue(_panel.Find("Filter.CategorySearch"), name, false);
-            var item = _panel.Item(_panel.Find("Filter.CategoryList"),
-                cf => cf.ByAutomationId("Filter.Category.Item").And(cf.ByName(name)));
-            _panel.Toggle(item, true);
-        }
-
-        _panel.SetValue(_panel.Find("Filter.CategorySearch"), string.Empty, false);
-    }
-
-    private static void Switch(string name)
-    {
-        var before = _panel.Settle();
-        _panel.Choose(_panel.Find("Filter.Source"), name, false);
-        AcceptDiscard(before);
-    }
-
-    private static void AcceptDiscard(int before)
-    {
-        AutomationElement? discard = null;
-        var settled = Retry.WhileFalse(() =>
-        {
-            discard = _panel.Shown("Filter.DiscardSwitch");
-            return discard is not null || _panel.Activity is { IsIdle: true } activity && activity.Generation > before;
-        }, TimeSpan.FromSeconds(60), ignoreException: true).Result;
-        Assert.IsTrue(settled, "The filter switch did not finish.");
-        if (discard is not null)
-        {
-            _panel.Act(() => discard.Patterns.Invoke.Pattern.Invoke());
-        }
-    }
-
-    private static void AddRule(NodeData rule)
-    {
-        var rules = _panel.Root.FindAllDescendants(cf => cf.ByAutomationId("Filter.Rule.Parameter")).Length;
-        _panel.Last("Filter.Rule.Add").Patterns.Invoke.Pattern.Invoke();
-        Assert.IsTrue(Retry.WhileFalse(() => _panel.Root.FindAllDescendants(cf => cf.ByAutomationId("Filter.Rule.Parameter")).Length > rules,
-            TimeSpan.FromSeconds(10)).Result, "+ Condition added no rule.");
-
-        _panel.SetValue(_panel.Last("Filter.Rule.Parameter"), rule.Parameter!);
-        var op = (FilterOperator)Enum.Parse(typeof(FilterOperator), rule.Operator!);
-        _panel.Choose(_panel.Last("Filter.Rule.Operator"), EnumText.Of(op));
-        if (FilterOperators.NeedsValue(op))
-        {
-            _panel.SetValue(_panel.Last("Filter.Rule.Value"), rule.Value);
-        }
-
-        if (rule.CaseSensitive)
-        {
-            _panel.Toggle(_panel.Last("Filter.Rule.CaseSensitive"), true);
-        }
     }
 }

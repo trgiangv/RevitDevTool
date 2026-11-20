@@ -1,0 +1,59 @@
+{
+  "setup": {
+    "evaluationLimit": 6000,
+    "scheduleLimit": 60,
+    "maxDepth": 5,
+    "maxRules": 50,
+    "seeds": [
+      185642, 345133, 622660, 174462, 506224, 13920, 974613, 828055, 766926, 144415,
+      189462, 746119, 342759, 390352, 250215, 228156, 5265, 140713, 996351, 514349,
+      603419, 872202, 618316, 465814, 123338, 40077, 177375, 292385, 928128, 586236,
+      342566, 421609, 833996, 874810, 287119, 475068, 896235, 29873, 649471, 701444,
+      414331, 550691, 465424, 558789, 790275, 339355, 279924, 16950, 15216, 576652,
+      383117, 253778, 390916, 695750, 224883, 313440, 726817, 156846, 51124, 466147,
+      836545, 682228, 899926, 180691, 801848, 767852, 912122, 467949, 103233, 775146,
+      331920, 975391, 491242, 294907, 100019, 52729, 406778, 59528, 675538, 783983,
+      760153, 160425, 277170, 351477, 203119, 88788, 30694, 138247, 649928, 973679,
+      748251, 739390, 978748, 183324, 864899, 732103, 650764, 284733, 756940, 22424
+    ]
+  },
+  "cases": [
+    {
+      "id": "SW-01",
+      "description": "Every category of the active model and each loaded link: the panel's quick count equals the oracle for Whole model, and for Active view when the active view is a plan or 3D view; for the active model a rolled-back itemized schedule per schedulable category is a second reference",
+      "expected": "panel = oracle in every category of every document; schedule differences listed with a reason",
+      "manualSteps": [
+        "Open any project with its links loaded; Model Context, Explorer, Whole model, tick every document.",
+        "For a category, compare the row count with a new schedule of that category (Itemize every instance on, no filters) in the active model.",
+        "Switch the scope to Active view in a plan or 3D view: the counts are the elements drawn in that view."
+      ]
+    },
+    {
+      "id": "SW-02",
+      "description": "Every category with elements in every document, every catalog parameter of it: Has value, Has no value, Equals the most common value, Contains a middle part of the most common text, at least the median number (the active model only for typed numbers); the panel's matched ids equal the oracle's, and the same rule run as a native Revit rule (and, in the active model, a rolled-back view filter) is a third reference",
+      "expected": "panel ids = oracle ids for every rule; native differences listed by reason in sweep-mismatches.json",
+      "manualSteps": [
+        "Filter tab: + New filter, pick a category, + Condition with a parameter of that category.",
+        "Try has a value, has no value, equals the most common value from the value list, contains part of it: the count equals the number of elements a schedule of the category shows with that condition.",
+        "In the active model, make a Revit view filter with the same category and rule on a plan: the elements it overrides are the ones the panel counts, except where sweep-mismatches.json gives a reason."
+      ]
+    },
+    {
+      "id": "SW-03",
+      "description": "Seeded random filter trees over all loaded documents and all their categories, large categories included",
+      "expected": "panel = oracle for every tree",
+      "manualSteps": [
+        "Run this tree again: the same seed on the same model and links gives the same tree.",
+        "On a mismatch the run folder holds sweep-tree-<id>.json with the stored filter: paste it into the custom filter file and compare the panel count with the oracle count written beside it."
+      ]
+    },
+    {
+      "id": "SW-04",
+      "description": "Per document: cold, warm and invalidated time of the snapshot, quick counts, parameter catalog, one value list and one filter; longest single Revit call and snapshot memory per million elements",
+      "expected": "no single Revit call over 1 s; ratings reported in sweep-perf.json",
+      "manualSteps": [
+        "Settings > Logging level Trace, use the panel on the model, and read the 'Revit ...' lines for queue, run and max slice time; set the level back."
+      ]
+    }
+  ]
+}

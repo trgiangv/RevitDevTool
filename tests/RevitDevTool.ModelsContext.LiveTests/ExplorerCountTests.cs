@@ -1,5 +1,6 @@
 using DevTools.ModelsContext.Model;
 using Nice3point.Revit.Extensions;
+using RevitDevTool.Tools.ModelsContext;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 
@@ -149,7 +150,10 @@ public sealed class ExplorerCountTests : RecordedTest
 
     private static void DocumentList()
     {
-        var expected = SampleModel.All.Select(document => document.Key).ToList();
+        var host = SampleModel.Host;
+        var expected = new List<DocumentKey> { SampleModel.Current.Key };
+        expected.AddRange(new FilteredElementCollector(host).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>()
+            .Select(instance => DocumentRegistry.KeyOf(host, instance)));
         var documents = Evidence.Time("panel", () => Adapter.Run(_adapter.Source.GetDocumentsAsync(CancellationToken.None)));
         Evidence.Step("Listed the documents the panel shows and the model's loaded link instances.");
         Evidence.Values(string.Join(", ", SampleModel.All.Select(document => document.Label)),

@@ -44,6 +44,8 @@ internal sealed class CaseRecord
     public List<string> RequiredImages { get; set; } = [];
 
     public List<string> ManualSteps { get; set; } = [];
+
+    public string? Safety { get; set; }
 }
 
 internal sealed class LayerRun
@@ -143,6 +145,31 @@ internal static class Evidence
     public static void Step(string text)
     {
         _current?.Steps.Add(text);
+    }
+
+    public static void Safety(string text)
+    {
+        if (_current is { } record)
+        {
+            record.Safety = text;
+        }
+    }
+
+    public static string? LatestFolder()
+    {
+        var latest = Path.Combine(Root(), LatestFile);
+        if (!File.Exists(latest))
+        {
+            return null;
+        }
+
+        var folder = Path.Combine(Root(), File.ReadAllText(latest).Trim());
+        return Directory.Exists(folder) ? folder : null;
+    }
+
+    public static string WorkFolder(string year)
+    {
+        return Path.Combine(RepositoryRoot(), "artifacts", "models-context-work", year);
     }
 
     public static T Time<T>(string name, Func<T> work)
@@ -391,6 +418,10 @@ internal static class EvidenceReport
         text.AppendLine($"- Oracle: {Show(item.Oracle)}");
         text.AppendLine($"- Panel: {Show(item.Panel)}");
         text.AppendLine($"- Timings: {string.Join(", ", item.TimingsMs.Select(pair => $"{pair.Key} {pair.Value} ms").Append($"total {item.TotalMs} ms"))}");
+        if (item.Safety is { Length: > 0 } safety)
+        {
+            text.AppendLine($"- Safety: {safety}");
+        }
         if (item.Images.Count > 0)
         {
             text.AppendLine();

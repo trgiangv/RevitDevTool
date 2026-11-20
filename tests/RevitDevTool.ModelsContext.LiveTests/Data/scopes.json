@@ -6,14 +6,14 @@
       "docs": "Host",
       "scope": "WholeModel",
       "filter": {},
-      "expected": 2985,
+      "expected": 2929,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
         "In the document list tick only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
         "Leave Categories empty (every model category counts).",
-        "Read the number before 'matches' in the result row: it must be 2985.",
+        "Read the number before 'matches' in the result row: it must be 2929.",
         "Check without the panel: Revit has no single count of every model element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
       ]
     },
@@ -23,14 +23,14 @@
       "docs": "Arch",
       "scope": "WholeModel",
       "filter": {},
-      "expected": 7746,
+      "expected": 7526,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
         "In the document list tick only the 'Architectural' link (untick 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
         "Leave Categories empty (every model category counts).",
-        "Read the number before 'matches' in the result row: it must be 7746.",
+        "Read the number before 'matches' in the result row: it must be 7526.",
         "Check without the panel: Revit has no single count of every model element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
       ]
     },

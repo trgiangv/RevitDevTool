@@ -14,6 +14,7 @@ namespace RevitDevTool.ModelsContext.UiTests;
 internal sealed class RevitPanel : IDisposable
 {
     public const string RevitPidVariable = "MODELS_CONTEXT_REVIT_PID";
+    public const string HostTitleVariable = "MODELS_CONTEXT_HOST_TITLE";
 
     private static readonly TimeSpan FindLimit = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan SettleLimit = TimeSpan.FromSeconds(90);
@@ -35,10 +36,11 @@ internal sealed class RevitPanel : IDisposable
 
     public IntPtr PanelWindow { get; }
 
-    public static RevitPanel Attach(string hostTitle)
+    public static RevitPanel Attach(string defaultTitle)
     {
-        var host = Evidence.HostOf("L2")
-            ?? (int.TryParse(Environment.GetEnvironmentVariable(RevitPidVariable), out var given) ? given : null);
+        var hostTitle = Environment.GetEnvironmentVariable(HostTitleVariable) is { Length: > 0 } given ? given : defaultTitle;
+        var host = (int.TryParse(Environment.GetEnvironmentVariable(RevitPidVariable), out var pid) ? pid : (int?)null)
+            ?? Evidence.HostOf("L2");
         var candidates = Process.GetProcessesByName("Revit")
             .Where(candidate => (host is null || candidate.Id == host)
                 && candidate.MainWindowTitle.Contains(hostTitle, StringComparison.OrdinalIgnoreCase))
@@ -103,7 +105,6 @@ internal sealed class RevitPanel : IDisposable
             ignoreException: true).Result;
     }
 
-    // A hidden element (Visibility.Hidden) stays in the UIA tree as offscreen; only on-screen ones count as shown.
     public AutomationElement? Shown(string automationId)
     {
         return Root.FindAllDescendants(cf => cf.ByAutomationId(automationId)).FirstOrDefault(element => !element.IsOffscreen);
@@ -166,8 +167,6 @@ internal sealed class RevitPanel : IDisposable
         element.Patterns.Value.Pattern.SetValue(value);
     }
 
-    // Selects without opening the drop-down (an open one captures the mouse). WPF makes item containers
-    // only on the first open, so a never-opened combo box is opened for one Select.
     public void Choose(AutomationElement combo, string name, bool runs = true)
     {
         var item = Choice(combo, name);

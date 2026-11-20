@@ -113,7 +113,7 @@ internal static class VisibilityRun
         return saved.Where(pair => !Same(view.GetElementOverrides(pair.Key), pair.Value)).Select(pair => pair.Key.ToLong()).ToList();
     }
 
-    private static bool Same(OverrideGraphicSettings left, OverrideGraphicSettings right)
+    internal static bool Same(OverrideGraphicSettings left, OverrideGraphicSettings right)
     {
         return left.Halftone == right.Halftone
                && SameColor(left.ProjectionLineColor, right.ProjectionLineColor)

@@ -1,0 +1,170 @@
+{
+  "setup": {
+    "category": "OST_DuctCurves",
+    "linkCategory": "OST_Doors",
+    "parameter": "Comments",
+    "familyParameter": "Family Name",
+    "value": "mc-user-edit",
+    "edited": 3,
+    "deleted": 2,
+    "copyOffsetFeet": 10,
+    "repeats": 8,
+    "reloadLink": "Reload-Link"
+  },
+  "cases": [
+    {
+      "id": "US-01",
+      "description": "Three ducts get a comment in a rolled-back edit; after the value cache drops, the count of the rule Comments equals the comment, in both documents, follows the oracle",
+      "expected": "0 before, 3 after, both equal to the oracle",
+      "manualSteps": [
+        "Tick Current model and the link; Filter tab: + New filter, Categories Ducts, + Condition Comments equals mc-user-edit: count 0.",
+        "Select three ducts and type mc-user-edit in Comments: the count becomes 3 without a click in the panel.",
+        "Undo the edit: the count returns to 0."
+      ]
+    },
+    {
+      "id": "US-02",
+      "description": "A duct is copied in a rolled-back edit; after the cache drops the Ducts count is one higher and equals the oracle",
+      "expected": "n before, n + 1 after, both equal to the oracle",
+      "manualSteps": [
+        "Filter tab: + New filter, Categories Ducts, no rules: note the count n.",
+        "Copy one duct (Modify > Copy): the count becomes n + 1.",
+        "Undo the copy: the count returns to n."
+      ]
+    },
+    {
+      "id": "US-03",
+      "description": "Two ducts are deleted in a rolled-back edit; after the cache drops the Ducts count is lower and equals the oracle",
+      "expected": "less than before, equal to the oracle",
+      "manualSteps": [
+        "Filter tab: + New filter, Categories Ducts, no rules: note the count n.",
+        "Select two ducts and press Delete: the count drops.",
+        "Undo the delete: the count returns to n."
+      ]
+    },
+    {
+      "id": "US-04",
+      "description": "One duct changes to a type of another family in a rolled-back edit; the rule Family Name equals the old family counts one less and equals the oracle",
+      "expected": "n before, n - 1 after, both equal to the oracle",
+      "manualSteps": [
+        "Filter tab: + New filter, Categories Ducts, + Condition Family Name equals the family of one duct: note the count n.",
+        "Select that duct and change its type to another family in the Type Selector: the count becomes n - 1.",
+        "Undo the change: the count returns to n."
+      ]
+    },
+    {
+      "id": "US-05",
+      "description": "An edit committed inside a transaction group and rolled back with the group (the API form of Undo): the count follows the edit and returns to the start value. Redo cannot run inside a run",
+      "expected": "0, then 3, then 0 again, each equal to the oracle",
+      "manualSteps": [
+        "Filter tab: + New filter, Categories Ducts, + Condition Comments equals mc-user-edit: count 0.",
+        "Type mc-user-edit in Comments of three ducts: count 3.",
+        "Press Ctrl+Z: count 0. Press Ctrl+Y: count 3."
+      ]
+    },
+    {
+      "id": "US-06",
+      "description": "The active plan view (activated by the MCP step, then checked in a run of its own): Active view counts of the Current model and the link equal the view collector",
+      "expected": "panel = oracle in both documents, link collector available",
+      "viewKind": "Plan",
+      "manualSteps": [
+        "Open a floor plan and tick Current model and the link; Scope Active view: the Explorer counts are the elements shown in that plan.",
+        "Switch to another plan: the counts follow the new view."
+      ]
+    },
+    {
+      "id": "US-07",
+      "description": "The active 3D view (activated by the MCP step, then checked in a run of its own): Active view counts of the Current model and the link equal the view collector",
+      "expected": "panel = oracle in both documents, link collector available",
+      "viewKind": "ThreeD",
+      "manualSteps": [
+        "Open the {3D} view, Scope Active view: the Explorer counts are the elements shown in the view.",
+        "Hide a category in the view (VV): the count drops after the panel refreshes."
+      ]
+    },
+    {
+      "id": "US-08",
+      "description": "The active sheet (activated by the MCP step, then checked in a run of its own): the Current model count equals the view collector, the link gives 0 and LinkElements.InView returns null without a collector",
+      "expected": "Current model = oracle, link 0, no link collector",
+      "viewKind": "Sheet",
+      "manualSteps": [
+        "Open a sheet, Scope Active view, tick the link: the link rows show 0 and Revit stays responsive.",
+        "Switch back to a plan: the link counts return."
+      ]
+    },
+    {
+      "id": "US-09",
+      "description": "The active schedule (activated by the MCP step, then checked in a run of its own): the Current model count equals the view collector, the link gives 0 and LinkElements.InView returns null",
+      "expected": "Current model = oracle, link 0, no link collector",
+      "viewKind": "Schedule",
+      "manualSteps": [
+        "Open a schedule, Scope Active view, tick the link: the link rows show 0 and Revit stays responsive."
+      ]
+    },
+    {
+      "id": "US-10",
+      "description": "The active drafting view (activated by the MCP step, then checked in a run of its own): the Current model count equals the view collector, the link gives 0 and LinkElements.InView returns null",
+      "expected": "Current model = oracle, link 0, no link collector",
+      "viewKind": "Drafting",
+      "manualSteps": [
+        "Open a drafting view, Scope Active view, tick the link: the link rows show 0 and Revit stays responsive."
+      ]
+    },
+    {
+      "id": "US-11",
+      "description": "The active legend (activated by the MCP step, then checked in a run of its own): the Current model count equals the view collector, the link gives 0 and LinkElements.InView returns null",
+      "expected": "Current model = oracle, link 0, no link collector",
+      "viewKind": "Legend",
+      "manualSteps": [
+        "Open a legend, Scope Active view, tick the link: the link rows show 0 and Revit stays responsive."
+      ]
+    },
+    {
+      "id": "US-12",
+      "description": "Eight evaluate requests for alternating documents, each new request canceling the previous one: no request fails except by cancel, the last one completes and equals the oracle, and a fresh count afterwards is still correct",
+      "expected": "last request = oracle, fresh count = oracle",
+      "manualSteps": [
+        "Filter tab with Ducts: untick and tick the link and switch Current model and link quickly several times.",
+        "The panel settles Idle and the count shows the last choice."
+      ]
+    },
+    {
+      "id": "US-15",
+      "description": "After the extra link Reload-Link was reloaded by an MCP step (scripts/models-context/user-action-reload.cs), the counts of every link equal the oracle and the Snapshot reload outcome follows the version rule: same version kept, small change patched, large change rebuilt",
+      "expected": "every document: panel = oracle; reload outcome = rule",
+      "manualSteps": [
+        "Open Reload-Link in Revit, note the element counts per category, then reload the link from Reload-Link-small.rvt (Manage Links > Reload From).",
+        "In the Explorer the counts of the Reload-Link rows equal the file's counts; the panel stays responsive.",
+        "Reload from Reload-Link-large.rvt and back: the counts follow each file."
+      ]
+    },
+    {
+      "id": "US-17",
+      "description": "In the active view, whose template controls V/G Overrides Model and Annotation (made by scripts/models-context/user-action-template-view.cs), Hide, Isolate, Halftone and Color on Current model elements, the link instance and a link category everywhere, each followed by Reset, then Hide and Keep inside a transaction group that is rolled back: no exception reaches Revit except the panel's own refusal, and Reset leaves the view as before",
+      "expected": "every action ok or refused with one message; after Reset no temporary mode, element and category overrides as before, the same template, the model not left modified",
+      "manualSteps": [
+        "Duplicate the L3 plan, create a view template from it (View > View Templates > Create Template from Current View), keep every parameter included and assign it to the duplicate; open the duplicate.",
+        "In the Explorer use the eye, Isolate, Halftone and Color on a Current model category, on the link model row and on a category under All models; after each, click Reset in the temporary bar.",
+        "Each action works or the panel shows one line saying why; after Reset the view looks as before and Visibility/Graphics still shows the template's settings.",
+        "Hide a category, click Keep, then Undo: the view is as before."
+      ]
+    }
+  ],
+  "followUps": [
+    {
+      "id": "US-13",
+      "layer": "MCP + L3",
+      "what": "Real Undo and Redo: MCP user-action-edit.cs and navigate_history between LiveStepTests runs (CountIs); step order in docs/architecture/ModelsContext/test-matrix.md."
+    },
+    {
+      "id": "US-14",
+      "layer": "MCP + L3",
+      "what": "Pane hidden during a change: MCP user-action-pane.cs hides and shows the pane around user-action-edit.cs, then LiveStepTests CountIs; step order in test-matrix.md."
+    },
+    {
+      "id": "US-16",
+      "layer": "MCP + L3",
+      "what": "Model switch: MCP open_document and user-action-switch.cs between LiveStepTests ShowsModel and CountIs runs; never inside a run. Step order in test-matrix.md."
+    }
+  ]
+}

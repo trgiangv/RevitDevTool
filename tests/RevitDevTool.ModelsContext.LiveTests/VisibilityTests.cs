@@ -15,6 +15,6 @@ public sealed class VisibilityTests : RecordedTest
     public void VisibilityMatchesApi(string id)
     {
         var item = Areas.Find(Areas.Visibility, id);
-        Record(item, () => VisibilityRun.Check(item));
+        Record(item, () => VisibilityRun.Check(item), writesView: true);
     }
 }

@@ -46,7 +46,7 @@
       "images": ["before", "paused", "after"],
       "manualSteps": [
         "Tick only the Architectural link. Filter tab: + New filter, open Categories, click All.",
-        "The count reads 7,746. The Live switch stays on with its label Live, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
+        "The count reads 7,526. The Live switch stays on with its label Live, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
         "Click None: the count reads 0 and the line is gone."
       ]
     },

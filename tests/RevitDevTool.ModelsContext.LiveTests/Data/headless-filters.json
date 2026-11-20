@@ -1,0 +1,133 @@
+{
+  "headless": [
+    {
+      "id": "MC-01",
+      "case": "TX-01",
+      "stored": {
+        "filters": [
+          {
+            "name": "Doors Mark s10",
+            "groups": ["$OST_Doors"],
+            "root": {
+              "any": false,
+              "children": [
+                { "parameter": { "name": "Mark", "builtInName": "ALL_MODEL_MARK" }, "operator": "Equal", "value": "s10", "caseSensitive": false }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "MC-02",
+      "case": "TX-02",
+      "stored": {
+        "filters": [
+          {
+            "name": "Doors Mark s10 Aa",
+            "groups": ["$OST_Doors"],
+            "root": {
+              "any": false,
+              "children": [
+                { "parameter": { "name": "Mark", "builtInName": "ALL_MODEL_MARK" }, "operator": "Equal", "value": "s10", "caseSensitive": true }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "MC-03",
+      "case": "GR-02",
+      "stored": {
+        "filters": [
+          {
+            "name": "Doors Mark S10 or no Swing Angle",
+            "groups": ["$OST_Doors"],
+            "root": {
+              "any": true,
+              "children": [
+                { "parameter": { "name": "Mark", "builtInName": "ALL_MODEL_MARK" }, "operator": "Equal", "value": "S10", "caseSensitive": false },
+                { "parameter": { "name": "Swing Angle", "dataType": "autodesk.spec.aec:angle" }, "operator": "Undefined", "value": "", "caseSensitive": false }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "MC-04",
+      "case": "GS-02",
+      "stored": {
+        "filters": [
+          {
+            "name": "Arch doors with Mark or HVAC ducts with level",
+            "groups": ["$OST_Doors", "$OST_DuctCurves"],
+            "root": {
+              "any": true,
+              "children": [
+                {
+                  "any": false,
+                  "scope": { "documents": ["$arch"], "categories": ["$OST_Doors"] },
+                  "children": [
+                    { "parameter": { "name": "Mark", "builtInName": "ALL_MODEL_MARK" }, "operator": "NotEmpty", "value": "", "caseSensitive": false }
+                  ]
+                },
+                {
+                  "any": false,
+                  "scope": { "documents": ["$host"], "categories": ["$OST_DuctCurves"] },
+                  "children": [
+                    { "parameter": { "name": "Reference Level", "builtInName": "RBS_START_LEVEL_PARAM" }, "operator": "NotEmpty", "value": "", "caseSensitive": false }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "MC-05",
+      "case": "NU-04",
+      "stored": {
+        "filters": [
+          {
+            "name": "Doors Swing Angle 90",
+            "groups": ["$OST_Doors"],
+            "root": {
+              "any": false,
+              "children": [
+                { "parameter": { "name": "Swing Angle", "dataType": "autodesk.spec.aec:angle" }, "operator": "Equal", "value": "90°", "caseSensitive": false }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "MC-06",
+      "case": "GR-03",
+      "stored": {
+        "filters": [
+          {
+            "name": "Exterior walls with 1 or 2 HR",
+            "groups": ["$OST_Walls"],
+            "root": {
+              "any": false,
+              "children": [
+                { "parameter": { "name": "Function", "builtInName": "FUNCTION_PARAM" }, "operator": "Equal", "value": "Exterior", "caseSensitive": false },
+                {
+                  "any": true,
+                  "children": [
+                    { "parameter": { "name": "Fire Rating", "builtInName": "FIRE_RATING" }, "operator": "Equal", "value": "2 HR", "caseSensitive": false },
+                    { "parameter": { "name": "Fire Rating", "builtInName": "FIRE_RATING" }, "operator": "Equal", "value": "1 HR", "caseSensitive": false }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

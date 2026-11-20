@@ -1,0 +1,22 @@
+{
+  "hitchMs": 50,
+  "maxCallMs": 1000,
+  "snapshotMbPerMillion": 64,
+  "repeatGrowthMb": 8,
+  "regressionPercent": 50,
+  "regressionMs": 20,
+  "operations": {
+    "snapshot": { "coldMs": 3000, "warmMs": 2000 },
+    "counts": { "coldMs": 1500, "warmMs": 1000 },
+    "scope": { "coldMs": 500, "warmMs": 300 },
+    "catalog": { "coldMs": 1500, "warmMs": 500 },
+    "values": { "coldMs": 1500, "warmMs": 300 },
+    "filter": { "coldMs": 2000, "warmMs": 1000 }
+  },
+  "filters": ["SC-02", "TX-06", "NU-04", "ST-02", "GR-03", "GS-02", "NU-11"],
+  "values": [
+    { "docs": "Host", "parameter": "Reference Level", "category": "OST_DuctCurves" },
+    { "docs": "Arch", "parameter": "Swing Angle", "category": "OST_Doors" }
+  ],
+  "repeat": { "filter": "TX-06", "runs": 20 }
+}
