@@ -93,8 +93,6 @@ public sealed partial class FilterLibraryViewModel : ObservableValidator
 
     internal FilterSourceItem? Current { get; private set; }
 
-    internal FilterSourceItem? Captured => _restore is { } pending ? pending.Selected : Current;
-
     private bool IsCustomSelected => Current is { IsCustom: true };
 
     private bool CanDuplicate => Current is { Kind: FilterSourceKind.RuleBased };
@@ -167,6 +165,17 @@ public sealed partial class FilterLibraryViewModel : ObservableValidator
         IsDirty = true;
     }
 
+    internal FilterState Capture(bool isLiveOn)
+    {
+        if (_restore is { } pending)
+        {
+            return pending with { IsLiveOn = isLiveOn };
+        }
+
+        var draft = IsDirty && Current is { IsCustom: true } ? new FilterDraft(_host.Definition(), Name) : null;
+        return new FilterState(Current, isLiveOn, draft);
+    }
+
     internal void Reset(FilterState state)
     {
         _restore = state;
@@ -194,10 +203,25 @@ public sealed partial class FilterLibraryViewModel : ObservableValidator
             _restore = null;
             Current = null;
             await SwitchToAsync(keep);
+            if (keep is { IsCustom: true } && restore.Draft is { } edits)
+            {
+                Restore(keep, edits);
+            }
+
             return;
         }
 
         await KeepAsync(keep);
+    }
+
+    private void Restore(FilterSourceItem item, FilterDraft draft)
+    {
+        _host.LoadDraft(draft.Definition);
+        item.Name = draft.Name;
+        Name = draft.Name;
+        EditName = draft.Name;
+        IsDirty = true;
+        _runner.Trigger();
     }
 
     private async Task<List<FilterSourceItem>> HostSourcesAsync(ContextData data, CancellationToken cancellationToken)

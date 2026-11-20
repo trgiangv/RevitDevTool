@@ -58,6 +58,8 @@ internal sealed record ExplorerState(HashSet<string> Expanded, HashSet<string> R
     }
 }
 
-internal sealed record FilterState(FilterSourceItem? Selected, bool IsLiveOn);
+internal sealed record FilterState(FilterSourceItem? Selected, bool IsLiveOn, FilterDraft? Draft = null);
+
+internal sealed record FilterDraft(FilterDefinition Definition, string Name);
 
 internal sealed record QuickDocument(DocumentKey Key, string Label, IReadOnlyList<GroupCount> Groups);

@@ -109,6 +109,8 @@ public sealed partial class FilterSourceItem : ObservableObject
 
     internal CustomFilter? Saved { get; set; }
 
+    private string StoredName => Saved?.Name ?? Name;
+
     internal static FilterSourceItem Custom(CustomFilter? saved, string name)
     {
         return new FilterSourceItem(name, CustomGroup, FilterSourceKind.Custom, null, saved);
@@ -123,7 +125,7 @@ public sealed partial class FilterSourceItem : ObservableObject
     internal bool SameAs(FilterSourceItem other)
     {
         return IsCustom
-            ? other.IsCustom && string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)
+            ? other.IsCustom && string.Equals(StoredName, other.StoredName, StringComparison.OrdinalIgnoreCase)
             : other.Host is { } host && Host!.Document == host.Document && Host.Id == host.Id;
     }
 

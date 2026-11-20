@@ -238,7 +238,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
 
     internal FilterState Capture()
     {
-        return new FilterState(Library.Captured, Runner.IsLiveOn);
+        return Library.Capture(Runner.IsLiveOn);
     }
 
     internal void Reset(FilterState state)

@@ -41,6 +41,8 @@
                    TargetType="controls:TagCheckComboBoxItem">
                 <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
                 <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+                <Setter Property="AutomationProperties.AutomationId" Value="ModelContext.Document" />
+                <Setter Property="AutomationProperties.HelpText" Value="{Binding Info.DisplayName}" />
             </Style>
 
             <Style x:Key="ExplorerBodyStyle"

@@ -119,6 +119,83 @@ public sealed class LifecycleTests
     }
 
     [TestMethod]
+    public async Task DraftSurvivesModelSwitch()
+    {
+        var model = new FakeModel(TestModel.SmallData);
+        model.AddModel(Other.Value);
+        using var fixture = PanelFixture.Create(model);
+        await fixture.Panel.InitializeAsync(CancellationToken.None);
+        var library = fixture.Filter.Library;
+        var draft = AddDraft(fixture, "Check");
+
+        model.ActivateModel(Other.Value.CurrentModel);
+        fixture.Settle();
+        var away = library.SelectedSource;
+        model.ActivateModel(Current);
+        fixture.Settle();
+
+        Assert.IsNull(away);
+        Assert.AreEqual("New filter 1", library.SelectedSource!.Name);
+        Assert.IsTrue(library.IsDirty);
+        Assert.IsTrue(library.SelectedSource.IsDirty);
+        Assert.AreEqual(draft, fixture.Filter.Definition().Root.Children.Single());
+        library.SaveCommand.Execute(null);
+        Assert.AreEqual(draft, fixture.CustomFilters.Object.Load().Single().Definition.Root.Children.Single());
+    }
+
+    [TestMethod]
+    public async Task DirtySavedFilterSurvivesSwitch()
+    {
+        var model = new FakeModel(TestModel.SmallData);
+        model.AddModel(Other.Value);
+        using var fixture = PanelFixture.Create(model);
+        await fixture.Panel.InitializeAsync(CancellationToken.None);
+        var library = fixture.Filter.Library;
+        AddDraft(fixture, "Check");
+        library.SaveCommand.Execute(null);
+        library.BeginRename();
+        library.EditName = "Renamed";
+        library.CommitRename();
+        var rule = (RuleViewModel)fixture.Filter.Root.Children[0];
+        rule.Value = "Other";
+        var edited = fixture.Filter.Definition().Root.Children.Single();
+
+        model.ActivateModel(Other.Value.CurrentModel);
+        fixture.Settle();
+        model.ActivateModel(Current);
+        fixture.Settle();
+
+        Assert.AreEqual("Renamed", library.SelectedSource!.Name);
+        Assert.IsTrue(library.IsDirty);
+        Assert.AreEqual(edited, fixture.Filter.Definition().Root.Children.Single());
+        Assert.AreEqual("New filter 1", fixture.CustomFilters.Object.Load().Single().Name);
+    }
+
+    [TestMethod]
+    public async Task ModelsKeepSeparateDrafts()
+    {
+        var model = new FakeModel(TestModel.SmallData);
+        model.AddModel(Other.Value);
+        using var fixture = PanelFixture.Create(model);
+        await fixture.Panel.InitializeAsync(CancellationToken.None);
+        var library = fixture.Filter.Library;
+        var first = AddDraft(fixture, "Check");
+        model.ActivateModel(Other.Value.CurrentModel);
+        fixture.Settle();
+        var second = AddDraft(fixture, "Review");
+
+        model.ActivateModel(Current);
+        fixture.Settle();
+        var back = fixture.Filter.Definition().Root.Children.Single();
+        model.ActivateModel(Other.Value.CurrentModel);
+        fixture.Settle();
+
+        Assert.AreEqual(first, back);
+        Assert.AreEqual(second, fixture.Filter.Definition().Root.Children.Single());
+        Assert.IsTrue(library.IsDirty);
+    }
+
+    [TestMethod]
     public async Task BusyHostDisablesActions()
     {
         using var fixture = await PanelFixture.OpenAsync();
@@ -316,5 +393,17 @@ public sealed class LifecycleTests
             .ToHashSet();
         Assert.AreEqual(0, collapsed);
         Assert.IsTrue(asked.SetEquals(inView));
+    }
+
+    private static FilterNode AddDraft(PanelFixture fixture, string value)
+    {
+        var filter = fixture.Filter;
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
+        var rule = (RuleViewModel)filter.Root.Children[0];
+        rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.DisplayName == "Comments");
+        rule.Value = value;
+        fixture.Settle();
+        return filter.Definition().Root.Children.Single();
     }
 }
