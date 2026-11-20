@@ -134,6 +134,28 @@ count.
     `getBoundingBox` line in the journal is the add-in's visualizer and unrelated.
     `RunAsync` now posts to `IScheduler.Context` (the dispatcher context of the panel) when
     `SynchronizationContext.Current` is null. Tests never open a document inside a run.
+21. **Never switch views inside a run, then collect.** Setting `UIDocument.ActiveView` to an
+    open 3D view and calling `RevitModelSource.ViewIds()` in the same API call crashed Revit
+    natively (`ExecutionEngineException` in `FilteredElementCollector.WhereElementIsNotElementType`,
+    dump of 2026-11-19 01:11, US-07). The panel's own jobs run through the external event after
+    Revit is idle, so the user path is not affected; tests activate views as an MCP step between
+    runs (`user-action-activate-view.cs`, then `ActiveViewFollows`). Code that calls the adapter
+    inline (an MCP execute) is refused instead: `ViewActivations` (watched from
+    `ModelsContextPane.Initialize`) stamps each `ViewActivated` with `RevitContextExecutor.Turn`,
+    the count of dispatcher turns, and every view collector (`RevitModelSource.ViewIds` and
+    `ViewCollector`, `LinkElements.InView`) throws "The active view changed in this call; query it
+    in a later call." while the turn is the same. The panel shows it as its one-line status. A cached
+    view id set is still returned. The panel's own jobs always start a new turn, so a user view switch
+    never refuses them. An inline caller outside a dispatcher turn (an external command) is refused
+    after a user view switch until the next turn starts: it fails closed by choice, because inline
+    work has no turn boundary to prove the switch is finished. The explicit L2 test `ViewGuardTests`
+    replays the old crash path.
+22. **"Has the parameter" has three answers.** `get_Parameter(bip)` returns built-ins that are
+    not in `element.Parameters` and that native rules do not see (`EXCAVATION_VOLUME_ON_TOPOSOLID`
+    on duct terminals), while curtain walls' Location Line is missing from `element.Parameters`
+    but passes native value rules. The panel follows native rules (what a Revit filter does); the
+    oracle counts a built-in as present when it is in `Parameters` or passes a native rule.
+    `OST_Materials` reports `CategoryType.Model`, so 56 materials count as model elements.
 
 ## Layers and ports
 
@@ -248,14 +270,94 @@ matching `SelectionChanged` echo, so the panel never reacts to its own change.
 
 How to read the lines: [verification.md#model-context-diagnostics](../../agents/verification.md#model-context-diagnostics).
 
-## Visibility tiers
+## Visibility
 
-Visibility is planned in the core and run by the adapter in four tiers (0062 §9):
-T0 Current model elements by id, T1 a whole link instance, T2 a category
-everywhere, T3 elements inside one link through Hide in View. T3 calls an
-internal Revit command handler; the adapter probes for it once and, when it is
-missing, link rows below the model row get no visibility actions. Details and
-the measured spike: 0062 §5, §7–§10.
+Visibility is planned in the core and run by the adapter in four tiers
+([0062](../../decisions/0062-model-context-panel.md) Decision 7): T0 Current
+model elements by id, T1 a whole link instance, T2 a category everywhere, T3
+elements inside one link through Hide in View. The Revit limits behind them are
+0062 Context 1–12.
+
+### Linked hide and show (`LinkedHideShow`)
+
+- One synchronous Revit call per request, on the Revit thread like every other
+  view action. No `PostCommand`, no `Idling`, no queue.
+- `UIFrameworkServices.CommandHandlerService.invokeCommandHandler(string)` is
+  found by reflection once (`IsAvailable`); the probe logs at Trace. When it is
+  missing a T3 plan fails with `ReferenceCommandsUnavailable`.
+- The user's selection is snapshotted, replaced by link references
+  (`SetReferences`), and restored afterwards. `SelectionChanged` is ignored
+  while the call runs (`IsRunning`).
+- **Hide:** `TransactionGroup` "Model Context Hide": `ID_VIEW_HIDE_ELEMENTS`,
+  then read back with the link view collector. Current model steps of the same
+  plan run first through the temporary API in the same Revit call
+  (`RevitViewActions.HideWithLinksAsync`).
+- **Show:** `TransactionGroup` "Model Context Show" for the journal entries
+  that are still hidden: Reveal Hidden on, `ID_VIEW_UNHIDE_ELEMENTS`, Reveal
+  Hidden off, read back. One undo entry, no visible flash.
+- A view already in Reveal Hidden mode is left in it; the command runs without
+  read-back.
+- A read-back that shows nothing changed throws ("Revit did not hide these
+  linked elements." / "... show ..."), and the group rolls back.
+
+### Temporary modes, Keep and Reset
+
+- Hide and isolate use the temporary API. Halftone and Color enable Temporary
+  View Properties first (after `CanEnableTemporaryViewPropertiesMode`, with the
+  view's own id when it has no template).
+- Element overrides outlive that mode (gotcha 15), so `RevitViewActions`
+  records each element's overrides per (model, view) before its first change.
+- **Keep:** `ConvertTemporaryHideIsolateToPermanent` in one transaction, then
+  the journal page is cleared without unhiding.
+- **Reset:** disables `TemporaryHideIsolate` and `TemporaryViewProperties`,
+  puts back the recorded overrides, then runs Show for the journal entries and
+  removes them.
+- **Eye back on:** Revit has no per-element temporary unhide, so
+  `VisibilityController` resets temporary mode and re-applies the rest of the
+  ledger; journaled linked elements are shown through `LinkedHideShow`.
+
+### State
+
+| State | Kept in |
+|-------|---------|
+| Temporary hide/isolate, category visibility, overrides, section box | Read back from the view |
+| Change count | `TemporaryJournal` page per (Current model, view), in memory |
+| Linked elements the panel hid | `TemporaryJournal` entries (`ElementRef` and its `UniqueId`), in memory |
+| Element overrides before the panel's first change | `RevitViewActions`, per (model, view), in memory |
+| Ticks, expansion, selected filter, Selection sync, Live, selection mode | `PanelSession`, in memory |
+| Unsaved custom filter (new, or edits and rename of a saved one) | `PanelSession` (`FilterState.Draft`: the editor's definition and name), in memory per model; restored dirty on switch back, no prompt |
+| Custom filters | Settings file through `DevTools.Settings` (`CustomFilterStore`) |
+
+Journal rules: Keep and Reset clear the view's page (Reset after showing the
+entries); `DocumentClosing` of the Current model drops its pages, and a closing
+link document drops that link's entries; Undo and Redo mark the pages stale.
+
+### Lifecycle
+
+| Event | Panel does |
+|-------|------------|
+| View activated, same model | Cancel scope jobs, drop view id sets, read the new view's temporary state; expansion kept. |
+| Active model switched | Park the old session in memory, with an unsaved custom filter as a draft; show the new model's session (built on first show). |
+| `DocumentClosing` | Drop that session, its journal pages and its snapshots (shared link snapshots by user count). |
+| Link unloaded | Rows disable with the reason; the snapshot is kept until a reload decides by version. |
+| Revit busy (modal command, edit mode, no open model) | Actions disable with "Revit is busy."; nothing is queued. |
+| Family document | Works as a Current model without links. |
+| Pane hidden | Pause; on show, resync once. |
+
+## Performance targets
+
+Release build, Revit 2024 and 2026:
+
+- 100k elements and three links: first Category rows < 300 ms, a 200-instance
+  page < 50 ms, Live change to Revit selection < 200 ms after the debounce,
+  about 40 realized row containers.
+- 1M elements across five models: first Category rows < 1 s, no UI stall over
+  50 ms, snapshot memory < 64 MB per million elements.
+- No `Document` retained after a model closes ten times.
+
+Sandbox, Release, generated models: 200-instance expand 13–43 ms at 100k and
+9–34 ms at 1M; snapshot 37.0 MB per million elements; first-load stall 33–59 ms
+(still over). A real model in Revit is not measured yet (0062 Follow-Up).
 
 ## Testing
 

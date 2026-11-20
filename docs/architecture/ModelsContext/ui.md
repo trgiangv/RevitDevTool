@@ -1,7 +1,7 @@
 # UI Conventions
 
 The views live in `source/DevTools.Presentation/Views/ModelsContext` and use
-shared controls from `source/DevTools.UI/Controls`. Policy: 0062 §12 and §15.
+shared controls from `source/DevTools.UI/Controls`. Policy: [0062](../../decisions/0062-model-context-panel.md) Decision 11 and 14.
 
 `ModelContextView` builds `FilterTabView` the first time the Filter tab is
 selected. That view, with its own context menu, was about a third of the
@@ -219,7 +219,8 @@ the border, because the Documents box and the Categories section are its scope.
 ## AutomationIds
 
 Every interactive control has an `AutomationProperties.AutomationId`, named
-`<Area>.<Part>`: `ModelContext.Scope.ActiveView`, `ModelContext.Documents`,
+`<Area>.<Part>`: `ModelContext.Scope.ActiveView`, `ModelContext.Documents` (each
+item `ModelContext.Document`, its model title in HelpText),
 `Explorer.Row.Eye`, `Explorer.SelectionSync`, `Filter.Source`, `Filter.Live`,
 `Filter.Paused`,
 `Filter.Rule.Parameter`, `Filter.Rule.CaseSensitive`, `Temporary.Reset`, and so

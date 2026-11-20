@@ -91,6 +91,7 @@ back. They go wherever host log entries go, including the file log. Lines to loo
   the native and exact match counts.
 - Every line names a document by its file name (`SourceId.Label`), for the
   Current model and links alike.
+- `Selection mismatch`: Revit's selection echo differed from what the panel sent.
 - `Parameters merged`, `Deltas applied`: parameter list refresh (catalogs,
   parameters, cached scopes) and one batch of model edits applied to snapshots.
 - `<Operation> <subject>: error ignored` and `<Operation> <subject>: N of M failed`:
@@ -104,5 +105,5 @@ level also reaches the user output panel through `NotifyLoggerProvider`
 (`IsEnabled` is true for every level but None) and can open the RevitDevTool pane
 (`PanelController.OnTraceReceived`). The minimum level is one key for every
 provider, with no per-category filter. So a Model Context Error, or every Trace
-line while the level is `Trace`, also shows in the output panel. Fixing this is a
-DevTools.Logging change tracked in 0062 Follow-Up.
+line while the level is `Trace`, also shows in the output panel. This stays as it
+is: Model Context Trace lines show only at the `Trace` setting.

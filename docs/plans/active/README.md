@@ -9,9 +9,14 @@ parallel duplicate plans for the same workstream, and move a plan to
 ## Models Context panel (active)
 
 Dockable Model Context panel: host-neutral core `DevTools.ModelsContext`,
-views, Revit adapter, T3 spike
+views, Revit adapter (T3 decided), live L2/L3 suites; open: performance and
+product fixes
 ([0062](../../decisions/0062-model-context-panel.md)):
 [2026-11-13-models-context-panel](2026-11-13-models-context-panel.md).
+Test matrix on Revit 2026 with Snowdon (native filter comparison, random filters,
+headless JSON filters, user actions with link reload, performance, safety guards,
+report artifact):
+[2026-11-19-models-context-host-matrix](2026-11-19-models-context-host-matrix.md).
 
 ## Product releases and CI (active)
 

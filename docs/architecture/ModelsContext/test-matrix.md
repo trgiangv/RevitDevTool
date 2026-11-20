@@ -216,30 +216,20 @@ Expected values come from `Data/*.json` (recorded from the oracle on the Revit 2
 sample, 2026-11-17). Change them there, not here alone.
 
 Revit 2024 is the test host on this machine (`-Year 2024` is the script default).
-The golden values were not yet checked against the Revit 2024 sample. On the first
-2024 run, a case where the oracle differs from the golden value means the 2024
-sample file differs, not that the panel is wrong: record it under Mismatches with
-both values and decide per-version golden values before changing `Data/*.json`.
+Current results (Snowdon HVAC + six links):
 
-Last full run, Revit 2026 (Snowdon HVAC + six links), 2026-11-18, run
-`20261118-103516`, after the MCP setup and the L3 helper fixes: L2 130 cases in
-110 s, all PASS (SB-01 50 s, the 15 visibility cases 19 s); L3 6 flows, all PASS,
-plus 7 data rule tests, in 70 s. The same suite on Revit 2024 took 286 s for L2
-(visibility 97 s, SB-01 85 s).
+- Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
+- Revit 2024, run `20261118-093432`: L2 127/131, L3 5/6; the differences are listed under Mismatches. A case where the oracle differs from the golden value there means the 2024 sample file differs, not that the panel is wrong: record it with both values and decide per-version golden values before changing `Data/*.json`.
+- L1 (net10.0-windows): core 341 tests in 4 s, views 103 tests in 64 s.
 
-Earlier run, Revit 2026 (Snowdon HVAC + six links), 2026-11-18, run
-`20261118-002331`, `scripts/test-models-context.ps1` on a fresh Revit: L2 128 cases in
-162 s, all PASS (`SB-01` alone took 77 s before batching, the 15 visibility cases 59 s); L3 7 flows,
-all PASS, in 69 s, plus 7 data rule tests. L1 core 340 tests (net10, net48) in 3 s,
-views 101 tests in 51 s. `L2 matrix` below means
-`FilterMatrixTests.CountMatchesOracle(<id>)`.
+`L2 matrix` below means `FilterMatrixTests.CountMatchesOracle(<id>)`.
 
 ### Context scope (L2 `FilterMatrixTests`, `ExplorerCountTests`)
 
 | ID | Use case | Docs | Expected | Test |
 |----|----------|------|----------|------|
-| SC-01 | Whole model, every model category | Current | 2,985 | L2 matrix |
-| SC-02 | Whole model, every model category | Arch | 7,746 | L2 matrix, L3 UI-04 |
+| SC-01 | Whole model, every model category (materials excluded) | Current | 2,929 | L2 matrix |
+| SC-02 | Whole model, every model category (materials excluded) | Arch | 7,526 | L2 matrix, L3 UI-04 |
 | SC-03 | Link unticked: Doors in the Current model only | Current | 0 | L2 matrix |
 | SC-04 | Link ticked: Doors in both | Both | 142 | L2 matrix |
 | SC-05 | Active view, every model category | Current | 917 | L2 matrix |
@@ -264,8 +254,8 @@ views 101 tests in 51 s. `L2 matrix` below means
 | EX-08 | Tree, paging 200, search, expand / collapse all | rows | L1 `ExplorerTabTests` |
 | EX-09 | Tiers T0–T3 planned per row | plan | L1 `PlannerTests` |
 | EX-10 | T1: link model row eye hides the link, Reset shows it | temporary bar "1", then gone | L3 UI-05 |
-| EX-12 | T3: eye on a category under a link hides those linked elements, Reset shows them | eye Hidden, bar "1", then eye Shown, no bar | L3 UI-06 |
 | EX-11 | Selection sync under 50 / above 50 / above 5,000 | state | L1 `SyncTests` |
+| EX-12 | T3: eye on a category under a link hides those linked elements, Reset shows them | eye Hidden, bar "1", then eye Shown, no bar | L3 UI-06 |
 
 ### Filter operators per value kind
 
@@ -422,13 +412,13 @@ TX-02 to TX-05, TX-18, TX-19 above; widening and exact pass also in L1
 | PK-08 | Models: Mark in HVAC and Arch | 2 models | L2 `CatalogMatchesFacts(PK-08)` |
 | PK-09 | Models: Swing Angle in Arch only, no warning | 1 model | L2 `CatalogMatchesFacts(PK-09)` |
 | CT-01 | Catalog build time from the panel's Trace lines, cold cache | lines for both documents | L2 `CatalogMatchesFacts(CT-01)` ([parameter-catalog.md](parameter-catalog.md#build-time-with-the-tooltip-facts)) |
-| PK-13 | Instance / Type sections with row counts, header not a list item and not selectable, sticky on scroll, exact name first; a header click collapses its section, the choice survives closing the picker, a search shows every section | UI state | Views `PickerGroupsBySection`, `HeadersAreNotListItems`, `HeaderIsNotAnItem`, `HeaderStaysOnScroll`, `HeaderCollapsesItsSectionAndKeepsIt`, `SearchShowsCollapsedSections`; HandyControl `ExactMatchComesFirst` |
-| PK-14 | Row: name and source icon per origin (none for built-in); categories only in the tooltip; no tags or warning colors | UI state | Views `RowIconFollowsSource`, `RowShowsNameOnly`, `RowHasNoTagsOrWarnings` |
-| PK-15 | Tooltip rows present only with a value: built-in measured, built-in text, shared, project, family, yes/no; five then "+ N more" | rows | L1 `ParameterTipTests`, Views `TipShowsRowsAndLists` |
-| PK-16 | Rule card: placeholder in the Current model's format, "Type" for a type parameter | UI state | L1 `PlaceholderUsesCurrentModel`, `TextHasNoPlaceholder`; Views `ValueBoxShowsExample`, `ChosenTypeParameterShowsType` |
 | PK-10 | Value counts of Swing Angle on Doors | total 142, values 131 | L2 `CatalogMatchesFacts(PK-10)` |
 | PK-11 | Typing filters, ≤ 100 opens, tags, SetValue picks | UI state | Views `FilterViewTests` (`PickerTypingFiltersIgnoringCase`, `PickerValueSetsParameterName` …) |
 | PK-12 | Value pattern picks a parameter in Revit | "Swing Angle" | L3 UI-03 |
+| PK-13 | Instance / Type sections with row counts, header not a list item and not selectable, sticky on scroll, exact name first; a header click collapses its section, the choice survives closing the picker, a search shows every section | UI state | Views `PickerGroupsBySection`, `HeadersAreNotListItems`, `HeaderIsNotAnItem`, `HeaderStaysOnScroll`, `CollapsedSectionSurvivesReopen`, `SearchShowsCollapsedSections`; HandyControl `ExactMatchComesFirst` |
+| PK-14 | Row: name and source icon per origin (none for built-in); categories only in the tooltip; no tags or warning colors | UI state | Views `RowIconFollowsSource`, `RowShowsNameOnly`, `RowHasNoTagsOrWarnings` |
+| PK-15 | Tooltip rows present only with a value: built-in measured, built-in text, shared, project, family, yes/no; five then "+ N more" | rows | L1 `ParameterTipTests`, Views `TipShowsRowsAndLists` |
+| PK-16 | Rule card: placeholder in the Current model's format, "Type" for a type parameter | UI state | L1 `PlaceholderUsesCurrentModel`, `TextHasNoPlaceholder`; Views `ValueBoxShowsExample`, `ChosenTypeParameterShowsType` |
 
 ### Visibility in the active 3D view (L2 `VisibilityMatchesApi`, `visibility.json`)
 
@@ -455,6 +445,94 @@ reset.
 | VI-14 | T3 filter result GR-02 | Color | refused: "Inside a link, single elements can only be hidden and shown…" | L2 |
 | VI-15 | T0 + T3 filter result GS-02 | Hide | planned as T0 + T3, not run | L2 |
 
+### User actions (L2 `UserActionTests`, `user-actions.json`)
+
+Adapter level, Snowdon HVAC with the Architectural link. Each step records its time and
+checks panel = oracle. Edits run in rolled-back transactions; no document is opened inside
+a run. Open views of every type come from `scripts/models-context/user-action-open-views.cs`
+(MCP); a missing type is Inconclusive.
+
+| ID | Use case | Expected | Test |
+|----|----------|----------|------|
+| US-01 | Value edit on three ducts, cache dropped, recount | 0, then 3 = oracle | L2 `EditedValueRecounts` |
+| US-02 | Copied duct recount | n, then n + 1 = oracle | L2 `CopiedDuctRecounts` |
+| US-03 | Deleted ducts recount | lower = oracle | L2 `DeletedDuctsRecount` |
+| US-04 | Duct changed to a type of another family, Family Name rule | n, then n - 1 = oracle | L2 `ChangedTypeRecounts` |
+| US-05 | Edit rolled back with its transaction group (API form of Undo) | 0, 3, 0 = oracle | L2 `UndoneEditRecounts` |
+| US-06 | Active plan (MCP `user-action-activate-view.cs`, then the explicit test alone): Active view counts, both documents | panel = view collector | L2 `ActiveViewFollows` (explicit) |
+| US-07 | Active 3D view (MCP `user-action-activate-view.cs`, then the explicit test alone) | panel = view collector | L2 `ActiveViewFollows` (explicit) |
+| US-08 | Active sheet (MCP `user-action-activate-view.cs`, then the explicit test alone): link gives 0, `InView` null | Current model = collector, link 0 | L2 `ActiveViewFollows` (explicit) |
+| US-09 | Active schedule (MCP `user-action-activate-view.cs`, then the explicit test alone) | same as US-08 | L2 `ActiveViewFollows` (explicit) |
+| US-10 | Active drafting view (MCP `user-action-activate-view.cs`, then the explicit test alone) | same as US-08 | L2 `ActiveViewFollows` (explicit) |
+| US-11 | Active legend (MCP `user-action-activate-view.cs`, then the explicit test alone) | same as US-08 | L2 `ActiveViewFollows` (explicit) |
+| US-12 | Eight evaluate requests, each canceling the last | last = oracle, fresh count = oracle | L2 `RepeatedRequestsLastWins` |
+| US-15 | After an MCP reload of Reload-Link: counts of every link, Snapshot reload outcome by version rule | panel = oracle; Kept, Patched or Rebuilt | L2 `ReloadedLinkMatchesOracle` (explicit, after `user-action-reload.cs` or `user-action-reload-same-path.cs`) |
+
+| US-13 | Real Undo and Redo of a committed edit (MCP steps, live panel) | 0, 3, 0, 3, 0 | MCP + L3 `LiveStepTests` |
+| US-14 | Pane hidden during a committed edit, then shown | 3 after one resync | MCP + L3 `LiveStepTests` |
+| US-16 | Model switch and back | the other title, then HVAC with its filter | MCP + L3 `LiveStepTests` |
+| US-17 | Hide, Isolate, Halftone, Color, Reset and Keep in a view whose template controls V/G (host elements, link instance, link category everywhere) | ok or one refusal; Reset restores overrides, no temporary mode, same template, model unmodified | L2 `LockedTemplateActionsStaySafe` (explicit) |
+
+Safety guards run in every L2 case (`SafetyGuard`) and after L2 and L3 in the script
+(`safety.json`).
+
+### Live steps (L3 `LiveStepTests`, `live-steps.json`)
+
+US-13, US-14 and US-16 need the live panel and a Revit step between reads, so each
+read is its own L3 run. `LiveStepTests` is skipped unless `MODELS_CONTEXT_LIVE_STEP=1`,
+so the script's full L3 run never runs it.
+
+| ID | Step | Expected | Test |
+|----|------|----------|------|
+| LS-01 | Build Ducts + Comments equals `mc-live-step` (Whole model, Current model ticked) | a count | `BuildsStepFilter` |
+| LS-02 | Settle, read `Filter.ResultCount` | `MODELS_CONTEXT_EXPECT` | `CountIs` |
+| LS-03 | Current model item of `ModelContext.Documents` (`ModelContext.Document`, title in HelpText) | starts with `MODELS_CONTEXT_EXPECT_MODEL` | `ShowsModel` |
+
+```powershell
+$env:MODELS_CONTEXT_LIVE_STEP = '1'; $env:MODELS_CONTEXT_REVIT_PID = '<pid>'
+$ui = 'tests/RevitDevTool.ModelsContext.UiTests/RevitDevTool.ModelsContext.UiTests.csproj'
+dotnet run --project $ui -- --filter BuildsStepFilter
+$env:MODELS_CONTEXT_EXPECT = '3'; dotnet run --project $ui -- --filter CountIs
+$env:MODELS_CONTEXT_EXPECT_MODEL = '<title>'; dotnet run --project $ui -- --filter ShowsModel
+```
+
+Step order (MCP steps are `execute_csharp_code` with the file in `scripts/models-context/`):
+
+- **US-13:** `BuildsStepFilter` (0) → `user-action-edit.cs` → `CountIs` 3 → `navigate_history` undo 1 →
+  `CountIs` 0 → redo 1 → `CountIs` 3 → undo 1 → `CountIs` 0.
+- **US-14:** after US-13 (count 0): `user-action-pane.cs` (`Show = false`) → `user-action-edit.cs` →
+  `user-action-pane.cs` (`Show = true`) → `CountIs` 3 → `user-action-edit.cs` (`Clear = true`) → `CountIs` 0.
+- **US-16:** `open_document` of a second model (it becomes active) → `ShowsModel` with
+  `MODELS_CONTEXT_EXPECT_MODEL` and `MODELS_CONTEXT_HOST_TITLE` set to its title →
+  `user-action-switch.cs` (`TitlePrefix` = HVAC) → clear `MODELS_CONTEXT_HOST_TITLE`, `ShowsModel` with the
+  HVAC title → `CountIs` 0 (the HVAC session kept its filter).
+- **US-17:** `user-action-template-view.cs` (duplicates `L3` as `MC Template Locked` with a template
+  that controls every parameter) → `user-action-activate-view.cs` with `ViewName = "MC Template Locked"` →
+  L2 `--filter LockedTemplateActionsStaySafe` alone. The view and template stay until the model is closed
+  without saving.
+
+### Sweep (L2 `SweepTests`, `sweep.json`, explicit)
+
+Panel = oracle on whatever model is active with all its loaded links (no titles, no golden
+values), for the federated Snowdon copy, Golden Nugget and サンプル設備. Run each by its method
+name; files land in the run folder.
+
+| ID | Use case | Expected | Test |
+|----|----------|----------|------|
+| SW-01 | Every category of every document, Whole model, and Active view when the active view is a plan or 3D view; a rolled-back itemized schedule per schedulable category of the active model as a second reference (links are not scheduled: they cannot be written). `MODELS_CONTEXT_SWEEP_SCHEDULES` caps the schedules (60) | panel = oracle; schedule differences with a reason in `sweep-counts.json` | `SweepCountsMatchOracle` |
+| SW-02 | Every category with elements, every catalog parameter: Has value, Has no value, Equals the most common value, Contains a middle part (text), at least the median (numbers; the active model only, as `TreeBuilder`). Native Revit rule per document and, in the active model, a `ParameterFilterElement` per rule in one rolled-back transaction. `MODELS_CONTEXT_SWEEP_LIMIT` caps evaluations (6,000, spread evenly) | panel ids = oracle ids; native agreement by reason, unexplained rows in `sweep-mismatches.json` | `SweepParametersMatchOracle` |
+| SW-03 | Seeded random trees over 1 to 3 of all loaded documents and all their categories; `MODELS_CONTEXT_SWEEP_TREES` limits the count (100) | panel = oracle; a failing tree in `sweep-tree-<id>.json` | `SweepTreesMatchOracle` |
+| SW-04 | Cold, warm and invalidated snapshot, quick counts, catalog, a value list and a filter per document; longest call, memory per million | no Revit call over 1 s; ratings in `sweep-perf.json` | `SweepTimingsPerDocument` |
+
+### Robustness, headless and performance
+
+| ID | Use case | Expected | Test |
+|----|----------|----------|------|
+| NF | Every case in `scopes.json` and `filters.json` also run as plain Revit rules (`ParameterFilterRuleFactory`, no panel fixes), and for the Current model as a `ParameterFilterElement` in a rolled-back transaction | panel = oracle; native differences listed with a reason in `native-comparison.json` | L2 `CompareWithNative` |
+| RT | 200 seeded random trees from the real catalog and values (`random-filters.json`), depth up to 5, up to 50 rules, Aa, group scopes, whole model | panel = oracle; a failing tree is written as a ready case | L2 `TreeMatchesOracle` (`MODELS_CONTEXT_RANDOM_TREES` limits the count) |
+| MC | A stored-format JSON filter run through the core ports with no panel view (`headless-filters.json`), and three evaluations started together | = panel and oracle; no exception | L2 `HeadlessFilterTests` |
+| PF | Cold, warm and invalidated time of snapshot, quick counts, scope ids, catalog, value index and filter match per document; longest Revit call; memory per million (a model under 100,000 elements is judged as 100,000, so fixed name and type costs do not scale up); 20 repeats without memory growth (`perf-budgets.json`) | within budget and the `perf/2026.json` baseline; `perf.json` in the run folder | L2 `PerformanceTests` (`MODELS_CONTEXT_RECORD_PERF=1` records the baseline) |
+
 ### L3 flows (`PanelFlowTests`, `ui-flows.json`)
 
 | ID | Flow | Expected | Test |
@@ -465,6 +543,7 @@ reset.
 | UI-04 | All categories in the link (SC-02), then None | Live switch on, line *Paused: over 5,000 matches*, then no line | `LivePausesAboveLimit` |
 | UI-05 | Eye on the link model row, Reset | bar "1 change", then no bar | `LinkHideShowsTemporaryBar` |
 | UI-06 | Eye on Doors under the link (T3, Hide in View), Reset | eye Hidden and bar "1 change", then eye Shown and no bar | `LinkDoorsHideThenReset` |
+
 ## Mismatches found
 
 Open, Revit 2024 (run `20261118-093432`, pid 45728, 2026-11-18). L2 127 of 131

@@ -4,872 +4,262 @@ Date: 2026-11-13
 
 ## Status
 
-**Proposed.** The behavior below is agreed. The T3 spike (actions on single
-elements inside a link) ran on Revit 2026 on 2026-11-15: Hide and Show go,
-temporary hide, isolate and per-element overrides no-go (§5, §9). The live
-suites pass on Revit 2026 (2026-11-18). On Revit 2024 (2026-11-18) the panel
-matches the oracle. The only failures there are golden values from the 2026
-sample and SB-01 rebar. Revit 2023 (the minimum) is next; Accepted after that
-run. T0–T2, the tree, the
-filter engine and selection sync use public API only.
+**Proposed.** The live suites pass on Revit 2026 and 2024. On 2024 the only
+differences are golden values taken from the 2026 sample and SB-01 rebar.
+Accepted after a Revit 2023 live run.
 
 ## Context
 
 `RevitDevTool.Tools` gets a dockable **Model Context** panel for daily model
 work: browse, filter and select elements, then show, hide, isolate, halftone,
 color, box or zoom the result in the active view. Elements in loaded RVT links
-must work the same way as elements in the Current model.
+must work the same way as elements of the open model.
 
-**Vocabulary.** *Current model* is the open document the user works in; the
-panel never says "host". *Link* is one loaded RVT link instance. *All models*
-is the tree group that acts on a category everywhere. "Host" appears below
-only inside Revit API terms (host view, host `ElementId`, By Host View).
+**Vocabulary.** *Current model* is the open document the user works in. *Link*
+is one loaded RVT link instance. *All models* is the Explorer group that acts
+on a category everywhere. The UI never says "host"; below, "host" appears only
+inside Revit API terms (host view, host `ElementId`, By Host View).
 
-Design canvas: *Model Context Panel — UX directions* (page "Panel + user
-flows", flows 1–7). Where the canvas and this ADR differ, this ADR wins: the
-notes under Flow 5 still mention an Explore mode (dropped, Alternatives 5). The "Explorations v1" page is kept as history
-and uses older words.
+Behavior: [product/models-context.md](../product/models-context.md). Structure:
+[architecture/ModelsContext](../architecture/ModelsContext/README.md). The
+design canvas (*Model Context Panel — UX directions*, flows 1–8) is history;
+this ADR wins where they differ.
 
-Revit limits what a host view can do to elements inside a link. Each item is
-marked *verified* (read from the Revit API assemblies 2023.0–2027) or
-*believed* (not yet run on a host).
+Revit limits what a host view can do to elements inside a link. *Verified*
+means read from the Revit API assemblies 2023.0–2027 or run on a host;
+*believed* means not yet run.
 
 1. `HideElements`, `HideElementsTemporary`, `IsolateElementsTemporary` and
-   `SetElementOverrides` take host `ElementId`s. A linked element has none, so
-   these calls reach a link only as a whole `RevitLinkInstance` (verified).
-2. Host category visibility, permanent or temporary, reaches link elements only
-   when the link displays By Host View, and then applies to the host and every
-   such link at once (believed).
+   `SetElementOverrides` take host ids. A linked element has none, so these
+   reach a link only as a whole `RevitLinkInstance` (verified).
+2. Host category visibility reaches link elements only when the link displays
+   By Host View, and then applies to every such link at once (believed).
 3. A host view filter is a new element in the project. Under By Host View it
-   also applies to link elements for built-in and shared parameters (verified
-   for `IFC_GUID`, §5.11); link-only project parameters cannot drive it.
-4. `RevitLinkGraphicsSettings` (`GetLinkOverrides` / `SetLinkOverrides`) exists
-   from Revit 2024: display mode and `LinkedViewId`; 2025 adds view filter type,
-   view range and object styles. No version exposes per-category settings of
-   Custom mode (verified). Revit 2023 cannot read a link's display mode; 2024
-   cannot tell whether a Custom link uses host or linked view filters.
-5. API code reaches a linked element only as a link reference
-   (`Reference.CreateLinkReference`) put in the selection with
-   `Selection.SetReferences`, then a Revit command. Spike on Revit 2026
-   (verified there):
-   - `PostCommand` accepts only `PostableCommand` members and external
-     commands. Any other id (`ID_TEMPHIDE_HIDE`, `ID_TEMPHIDE_ISOLATE`,
-     `ID_VIEW_UNHIDE_ELEMENTS`, `ID_VIEW_OVERRIDE_ELEMENTS_HALFTONE`) throws
-     `ArgumentException`, whatever the selection or view mode.
-   - `PostableCommand.HideElements` hides exactly the referenced linked
-     elements in the active view only (Hide in View, saved with the view).
-     References from several links and Current model elements go in one
-     command and one undo entry ("Hide/Isolate"). `SetReferences` of about
-     2,000 references takes about 100 ms. The command clears the selection.
-   - The internal, undocumented
-     `UIFrameworkServices.CommandHandlerService.invokeCommandHandler(string)`
-     runs a command synchronously inside the API call, from any focus
-     (verified from the panel's own button). `ID_VIEW_HIDE_ELEMENTS` hides the
-     referenced linked elements; `ID_VIEW_UNHIDE_ELEMENTS` unhides them, but
-     only while Reveal Hidden Elements is on, which the public
-     `View.EnableRevealHiddenMode` / `DisableTemporaryViewMode(RevealHiddenElements)`
-     switch in a transaction. A `TransactionGroup` around the steps makes one
-     undo entry.
-   - Posting `ToggleRevealHiddenElementsMode` from a dockable pane fails ("cannot
-     be invoked in this context": the view frame does not have focus), so the
-     first design (post, then wait for `Idling`) left Show waiting and is
-     dropped.
-   - Temporary Hide and Isolate (`ID_TEMPHIDE_HIDE`, `ID_TEMPHIDE_ISOLATE`)
-     ignore link references even through `invokeCommandHandler`, which runs
-     them for Current model elements. Revit has no temporary hide, isolate or
-     per-element override for a linked element.
-   - Temporary View Properties does not undo a Hide in View made while it is
-     on. `OverrideByElement` is postable but opens a modal dialog (not run).
+   reaches link elements for built-in and shared parameters (verified for
+   `IFC_GUID`); link-only project parameters cannot drive it.
+4. `RevitLinkGraphicsSettings` exists from 2024 (display mode, `LinkedViewId`);
+   2025 adds the view filter type. No version exposes Custom mode per category.
+   Revit 2023 cannot read a link's display mode (verified).
+5. API code reaches a linked element only as a link reference put in the
+   selection (`SetReferences`), then a Revit command. Spike on Revit 2026,
+   Snowdon Towers with six links (verified there):
+   - `PostCommand` takes only `PostableCommand` members, and posted view
+     commands fail while the panel has focus.
+   - The internal `CommandHandlerService.invokeCommandHandler(string)` runs a
+     command synchronously from any focus. `ID_VIEW_HIDE_ELEMENTS` hides the
+     referenced linked elements (Hide in View, saved with the view);
+     `ID_VIEW_UNHIDE_ELEMENTS` unhides them while Reveal Hidden is on. About
+     2,000 references take about 100 ms to select.
+   - Temporary hide and isolate ignore link references; isolate and element
+     overrides are refused, halftone changes nothing, and no internal entry
+     point exists. Revit has no temporary hide, isolate or per-element
+     override for a linked element.
+   - Temporary View Properties does not undo a Hide in View made under it.
 6. `FilteredElementCollector(hostDoc, viewId, linkInstanceId)` returns the
-   linked elements visible for that link in a host view. It is in Revit 2023.1
-   and later, not in 2023.0 (verified). It drops elements hidden with Hide in
-   View and took 0–8 ms per link on a 38k-element link once the view was
-   drawn (verified, 2026); the first call in a new view can rebuild view
-   geometry and be slow. On a sheet it crashes Revit natively at the first
-   filter call (`WhereElementIsNotElementType`, `OfCategoryId`; verified,
-   2026), so the panel builds it only for plan, section, elevation, detail and
-   3D views (`LinkElements.InView`) and treats other views as showing no linked
-   elements.
-7. Temporary state is readable only per host element
-   (`IsElementVisibleInTemporaryViewMode`). Nothing reports temporarily hidden
-   categories or hidden linked elements (verified).
-8. Revit can hide or override with a filter, but cannot select by one.
-9. `UIApplication.SelectionChanged` (2023+) forbids changing the selection or
-   the document inside the handler (verified).
-10. `UIDocument.ShowElements` accepts host ids only (verified).
-11. Isolate and graphic overrides for one linked element. Spike on Revit 2026,
-    Snowdon Towers with six links (verified there, 2026-11-15):
-    - Reflection over the Revit, UIFramework and AdWindows assemblies finds no
-      internal isolate or override entry point. The isolate members are the
-      public `View.IsolateElement(s)Temporary` / `IsolateCategor(ies)Temporary`,
-      host ids only. `ShowHideIsolateFilter` is an internal enum.
-      `SelectionFilterAction.Isolate` belongs to point clouds.
-    - `CommandHandlerService.canExecute(string)` asks Revit whether a command
-      can run on the current selection. With link references selected it
-      returns false for `ID_TEMPHIDE_ISOLATE`, `ID_TEMPHIDE_HIDE`,
-      `ID_TEMPHIDE_ISOLATECAT` and `ID_VIEW_OVERRIDE_ELEMENTS`; invoking them
-      anyway changes nothing.
-    - `ID_VIEW_OVERRIDE_ELEMENTS_HALFTONE` returns true but changes nothing
-      on linked elements (screenshots before and after are identical).
-    - A `SelectionFilterElement` accepts linked element ids, but as a view
-      filter it applies to Current model ids only: linked elements keep their
-      look.
-    - A host view filter on the built-in `IFC_GUID` parameter does reach linked
-      elements under By Host View (color verified on 314 beams). Every element
-      has a value, new ones too, and 105 of 125 model categories can filter on
-      it. It is not a usable key:
-      - Filter string rules ignore case, and an IfcGUID is base64 text where
-        `A` and `a` differ, so two GUIDs that differ only in case match the same
-        rule. Duplicates are therefore possible inside one document, and
-        collisions across documents are possible.
-      - One link had 1,466 elements and 1,458 distinct values (copies and
-        group members).
-      - It cannot tell two instances of the same link apart.
-      - A rule set grows with the target: an OR filter of 7,823 rules took
-        305 s to regenerate the view; 314 rules about 0.4 s to create.
-      - An inverted filter (AND of not-equals) as Isolate left the 20 model
-        categories without the parameter visible (topography, lines, MEP
-        items) and took 2.4 s for 20 targets.
-      - Each filter is a new project element (§1).
-    - Isolate by hiding the rest works: `IsolateElementTemporary(linkInstanceId)`
-      (public API) hides the other links and the Current model, then
-      `ID_VIEW_HIDE_ELEMENTS` (§10) hides the rest of that link. Measured in one
-      `TransactionGroup`: 1,461 hidden in a 1,466-element link in about 180 ms,
-      7,818 in a 7,823-element link in about 730 ms. Restoring 7.8k (end the
-      temporary isolate, Reveal Hidden on, Unhide, Reveal off) took about
-      5.5 s, mostly the two Reveal switches. The hides are Hide in View
-      (saved with the view) and are journal entries like any T3 hide.
-    - `RevitLinkGraphicsSettings` sets phase, discipline, detail level, linked
-      view and filter source for a whole link only.
+   linked elements visible in a host view. It exists from 2023.1, drops Hide in
+   View elements, and took 0–8 ms per link on a 38k-element link once the view
+   was drawn. On a sheet it crashes Revit natively (verified, 2026).
+7. Temporary state is readable only per host element. Nothing reports
+   temporarily hidden categories or hidden linked elements (verified).
+8. Revit can hide or override by a filter, but cannot select by one.
+9. `SelectionChanged` (2023+) forbids changing the selection or the document
+   inside the handler (verified).
+10. `UIDocument.ShowElements` takes host ids only (verified).
+11. A host view filter keyed on `IFC_GUID` reaches linked elements but is not a
+    usable key: string rules ignore case so GUIDs collide (one link had 1,466
+    elements and 1,458 values), it cannot tell two instances of a link apart,
+    and an OR filter of 7,823 rules took 305 s to regenerate the view. A
+    `SelectionFilterElement` as a view filter applies to Current model ids
+    only (verified, 2026).
+12. Isolate by hiding the rest works: temporary isolate of the link instance,
+    then Hide in View for the rest of that link. About 730 ms for 7,818 hides,
+    about 5.5 s to restore them (verified, 2026). The hides are saved with the
+    view.
 
 ## Decision
 
-### 1. Scope and versions
+1. **Revit 2023.1 and later.** The panel is built under
+   `REVIT2023_OR_GREATER`; the 2022 add-in does not register it. Two hints read
+   a link's display mode and need 2024+: the link names in the *All models*
+   tooltip and the "in view" marker on link filters (Custom links need 2025).
+   On older versions the tooltip is generic and the marker is missing. Why: 2023
+   lacks only these hints, not worth dropping its users (Context 4, 6).
+   Model elements exclude Materials (reported as a model category, not placed objects) and Revit links.
+2. **No model writes.** The panel never writes element data and never creates
+   an element: no parameters, Extensible Storage, view filters or views. It
+   changes only the active view's visibility and graphics, link instance
+   overrides, and the selection. Replace is not part of the panel; it can
+   become a separate tool that takes the panel's result. Why: the panel works
+   on shared models and in links, which are read only.
+3. **Documents are one list.** The Current model and each loaded link instance
+   are equal entries of one documents box; the UI never splits into host and
+   link areas. Links are opt-in, the last ticked entry cannot be unticked, and
+   ticks live in memory per session. With Scope = Selection the selection
+   decides the documents. Why: one way to reach elements in any document.
+4. **Explorer and Filter, actions in a context menu.** Two views share one
+   context bar (Scope, view switch, documents) and stay alive while hidden.
+   Explorer browses Model › Category › Family › Type › Instance; Filter selects
+   by categories and rules. Actions live in one context menu opened on the
+   target (selected rows, or the Filter result), not a fixed actions bar. An
+   item that cannot run on the target shows disabled with the reason. Why: a
+   bar took a row on every view and sat away from the rows it acted on.
+5. **Visibility lives on tree rows, and a row acts on exactly its group.**
+   - *All models* category rows act on the category itself (T2): the Current
+     model and every By Host View link.
+   - *Current model* rows act on that branch's elements by id (T0), so a user
+     can hide Ducts here and keep the linked Ducts. Elements drawn after the
+     click are not covered until the eye is clicked again.
+   - A link's model row acts on the whole link instance (T1). Rows below it
+     offer the eye only (T3); Isolate, Halftone and Color are disabled there
+     with the reason (Context 5).
+   - The eye reads back from the view (temporary state for the Current model,
+     the link view collector for links), so it reflects what Revit shows.
+   Why: an earlier row that also hid the category in links gave users no way
+   to hide a category in the Current model only.
+6. **Temporary first.** Hide and isolate use Revit's temporary modes; Halftone
+   and Color run inside Temporary View Properties. Why: nothing is saved with
+   the view, it works when a template locks Visibility/Graphics, and one call
+   resets it. The panel counts the changes (Revit cannot). **Keep** makes hide
+   and isolate permanent; **Reset** ends both modes and puts back the element
+   overrides recorded before the panel's first change, because element
+   overrides outlive Temporary View Properties. Revit has no per-element
+   temporary unhide, so turning one eye back on resets and re-applies the rest.
+7. **Tiers, resolved per request.**
 
-- Revit 2023 and later, latest update of each version (2023 means 2023.1 or
-  later, which has the link view collector). The panel is built under
-  `REVIT2023_OR_GREATER`; the Revit 2022 add-in does not register it.
-- Only two hints read a link's display mode and are built under
-  `REVIT2024_OR_GREATER`: the names of affected links in the
-  *All models* row tooltip (§7) and the "in view" marker on link filters (§5). On
-  2023 the tooltip says "and links that share this view's visibility" without
-  names, and link filters have no marker. A Custom link's view filter type needs 2025; on 2024
-  such a link shows no marker either.
-- The panel never writes element data and never creates an element: no
-  parameters, no Extensible Storage, no view filters, no views. It changes only
-  the active view's visibility and graphics and existing link instance
-  overrides.
-- Replace (writing parameter values) is not part of the panel. It can become a
-  separate tool that takes the panel's result as input, works on the current
-  document only, and writes in one undoable transaction.
+   | Tier | Target | Mechanism |
+   |------|--------|-----------|
+   | T0 | Current model elements | Public API by element id |
+   | T1 | A whole link | Public API on the `RevitLinkInstance` id |
+   | T2 | A category everywhere | Category hide, isolate and overrides |
+   | T3 | Elements inside one link: Hide and Show only | Hide in View through the internal command handler |
 
-### 2. Layout
-
-One dockable pane, 320 px design width, HandyControl Light and Dark (primary
-`#326CF3`, radius 4, 12 px text). Top to bottom:
-
-1. **Context bar.** One row with two icon `ButtonGroupSolid` groups: Scope
-   (Selection, Active view, Whole model), then the view switch, **Explorer**
-   (tree icon: browse, select, and show, hide, isolate, halftone, color in the
-   active view) and **Filter** (funnel icon). The documents box
-   (`TagCheckComboBox`, §3) sits on its own row below, because the three
-   parts do not fit one row at 300 px. Both views read this bar. The panel has
-   no title line: Revit's pane caption and the active view already name it.
-2. **Body:** the chosen view. Both views stay alive while hidden, so switching
-   keeps their state. The groups are `PanelButtonGroup`, a `ButtonGroup` whose
-   automation peer exposes each RadioButton (the stock item peer hides the
-   Toggle and SelectionItem patterns from UIA).
-3. **Temporary bar** (yellow), only while the view is in a temporary mode:
-   *Temporary · N changes* with **Keep** and **Reset**.
-There is no fixed actions bar. Actions live in one **context menu** with an
-icon per item, opened on the target itself:
-
-- **Explorer:** right-click on the selected rows (or Shift+F10 / the Menu key). A
-  right-click on an unselected row selects it first.
-- **Filter:** right-click on the result row, or its **⋯** button.
-
-Menu items, top to bottom, each with its icon:
-
-| Item | Does |
-|------|------|
-| Select in Revit | Sends the target to the Revit selection (one way). Hidden while the view syncs on its own (Explorer Selection sync on, Filter Live on), shown when sync pauses. |
-| Zoom | Zooms the active view to the target. |
-| Section box | Sets the 3D view's section box around the target (3D views only). |
-| — | |
-| Isolate | Same as the row's Isolate (§7). |
-| Hide / Show | Same as the row's eye. |
-| Halftone | Same as the row's Halftone. |
-| Color… | Same as the row's Color; opens the color picker. |
-| — | |
-| Reset view | Same as Reset on the temporary bar; shown only in temporary mode. |
-
-Items follow the tier rules (§9): an item that goes through T3 carries the
-orange dot, an item that cannot run on the target (Isolate, Halftone and Color
-on link rows below the model row, Section box in a 2D view) shows disabled
-with the reason as its tooltip. Every item also has a shortcut shown in the menu (Z, B, I, H).
-
-An action or row that goes through T3 carries a small orange dot. A control
-that cannot run shows disabled with a one-line tooltip giving the reason.
-
-### 3. Documents are one list
-
-- The current document and each loaded link instance are equal entries in the
-  documents box. The current document is labelled **Current
-  model** everywhere in the panel; links show their file name. One entry per
-  link instance; duplicate file names get an instance suffix. Entries are `DocumentKey`s (§11), not `Document`
-  objects.
-- The box is the `DevTools.UI` `TagCheckComboBox` (§12): each ticked document
-  shows as a tag with a remove button, tags that do not fit fold into a "+N"
-  tag, and the drop-down has search and "All". Its items expose Toggle and
-  SelectionItem to UIA even while the drop-down is closed. The view keeps the
-  rules below.
-- Default: the Current model ticked on first load. Links are opt-in; newly
-  loaded links start unticked. After that the Current model is an ordinary
-  entry: it can be unticked like a link. One rule for every entry: the last
-  ticked entry cannot be unticked, from the list, "All" or its tag, so the
-  panel never queries nothing (unticking "All" keeps the first ticked entry in
-  list order). A refresh (document list, view change, link reload) keeps the
-  user's ticks; only a list with nothing ticked falls back to the first
-  loaded entry. Unloaded links show disabled and keep their tick state: "All"
-  and tag close skip them.
-- The UI never splits the panel into host and link areas. Where data comes from shows only in
-  counts and tooltips.
-- With Scope = Selection the selection decides the documents: the documents
-  list is hidden and the tree shows selected elements from every document. The
-  ticked list returns with Active view or Whole model.
-- The ticked list is kept in memory per document session, not in settings.
-
-### 4. Explorer
-
-The tab is named for what the user does (browse the model), not for its
-control; its rows still form a tree.
-
-- Levels: **Model › Category › Family › Type › Instance**, one icon per level.
-  Only ticked documents appear, *Current model* first, then links.
-- An **All models** group sits at the top of the tree. It lists each category
-  found in any ticked document, merged, with the total count, and has no level
-  below Category. It exists for visibility (§7); selecting one of its rows
-  selects that category in every ticked document.
-
-```
-▾ All models                 category everywhere (T2)
-    Ducts          3,156  👁
-▾ Current model              this model only (T0)
-  ▸ Ducts            0    👁
-▾ MEP-Mech.rvt  👁 ◐ ■ ◎    whole link (T1); rows below: this link only (T3)
-  ▸ Ducts        3,156  • 👁
-```
-
-- Every row shows its branch count in grey, open or closed. Under Scope =
-  Selection the counts are of the selection. A blue badge shows how many
-  selected elements a closed row holds; open rows have no badge.
-- Whole model counts the main model and primary design options, like a Revit
-  schedule. Active view counts what the view collector returns, which follows
-  the view's design option settings; Selection counts what is selected. Explorer
-  and Filter use the same rule in every scope
-  ([filters.md](../architecture/ModelsContext/filters.md#design-options)).
-- Counts come from the document snapshot (§11). When a snapshot is older than
-  the last model change it is rebuilding, a flat progress bar shows in the gap
-  between the context bar and the body; it takes no space and covers nothing.
-- **Expand all** and **Collapse all** icon buttons sit beside the search box.
-  Expand all opens every level down to Type (and a Category whose children
-  are instances stays closed): opening instances would page one Revit call per
-  Type and put tens of thousands of rows in the list. It rebuilds the row list
-  once. Collapse all leaves only the root rows. Both are kept in the session's
-  expansion state.
-- Rows: 28 px, stock HandyControl selection look (solid primary, white text).
-- The Instance level loads on expand and pages ("200 of 1,402 · more").
-- **Status line** at the bottom-left: *N selected* and **Clear**. N counts the
-  elements under the rows selected in Explorer, not the host selection, so it
-  updates on click without waiting for the host. A host echo that differs from
-  what the panel sent is logged at Trace (`Selection mismatch`). When part of
-  the selection is in documents that are not ticked, it adds **Show in Explorer**,
-  which ticks those documents and reveals the rows.
-- Search matches only the text shown on rows: model, category, family, type
-  and instance names, and Element Id (`TokenParser`, so `linkInstanceId@id`
-  works). Parameter values are the Filter tab's job.
-- The control is a flat virtualized list (§12), not WPF `TreeView`.
-
-### 5. Filter tab
-
-One mode: categories plus rules.
-
-- **Source combo** lists custom filters, then each ticked document's Revit
-  filters grouped under the model name: rule-based (funnel icon) and selection
-  filters (cursor icon). Filters applied to the view show "in view": Current
-  model filters from the active view, link filters from the link's `LinkedViewId`
-  when the link displays By Linked View (2024+), or Custom with linked view
-  filters (2025+). Next to it:
-  - **+** adds a custom filter named with the next free `New filter N`, name in
-    edit mode.
-  - **Rename** puts the selected custom filter's name in edit mode; disabled
-    for Revit filters.
-  - **Delete** (trash icon) removes the selected custom filter; disabled for
-    Revit filters.
-  - **Save** is enabled only while the custom filter has unsaved changes (a dot
-    after its name).
-  - Names are trimmed, never empty, and unique among custom filters ignoring
-    case. An invalid name shows a red box and a one-line reason and blocks Save
-    and Enter; Esc or leaving the box restores the last valid name. The Rename
-    button or F2 renames a custom filter, saved or not; Enter updates the name in
-    the list at once and Save stores it.
-  - Switching away from a filter with unsaved changes asks inline
-    (Save · Discard), not in a dialog.
-- **Categories:** checkbox list with counts and search, folds to a summary
-  line. *All · None* tick or untick the categories the search shows. Checked
-  categories are always "any of".
-- **Rules:** a visual condition builder after Revizto Find Objects (decided
-  2026-11-16, design canvas Flow 8). A **group** holds conditions and nested
-  groups. One **AND** or **OR** button sits between its children; it shows the
-  group's single match mode and a click switches the whole group, so a group
-  never mixes them and there is no precedence to guess. There is **no NOT**:
-  negation lives in the operators (does not equal, does not contain, empty,
-  undefined). Each condition is parameter, operator, value, on two lines, with a
-  drag grip on its left edge.
-  - **Search scope per group:** documents (by file, so every instance of a
-    link) and categories, as two `TagCheckComboBox`es under the group header.
-    Empty reads *Same as parent*. A scope only narrows its parent; the top
-    group's scope is the Documents box plus the Categories section. A value that
-    later drops out of the parent stays as a tag and the group shows a warning;
-    a saved document the model does not have marks the group *unresolved* and
-    it matches nothing.
-  - **Order:** drag by the grip, or Alt+Up / Alt+Down, moves a condition or a
-    group within its group or into another group, never into itself.
-  - **+ Condition** (plus icon) and **+ Group** (stack icon) sit under each
-    group; groups collapse and have a remove button.
-  - **Parameter identity:** one match key per parameter: built-in by
-    `BuiltInParameter` name, shared by GUID, project and family parameters by
-    name plus data type (another data type is another parameter). Origin
-    (built-in, shared, project, family) and binding (instance, type) are tags,
-    not part of the key; the picker merges the ticked documents by key. It
-    groups rows under *Instance* and *Type* headers, shows the name, a source
-    icon only for project, shared and family parameters, and the categories;
-    the tooltip lists the details and the models that have the parameter. A
-    parameter in only some models is not a warning: it matches where it exists.
-  - **Catalog per document:** `GetFilterableParametersInCommon` per category
-    plus one sampled element per type (one per category without a type) for
-    family parameters and built-in data types. The adapter caches it per
-    document and version and drops it on `DocumentChanged` touching parameter
-    elements or families, and on link reload. Each item records the categories
-    it was found for (filterable for that category, or carried by a sampled
-    element of it or by that element's type).
-  - **Picker follows the group's scope:** the picker of a condition lists the
-    union of parameters found for any category in its group's effective scope
-    (documents and categories after narrowing); with no category in scope it
-    lists all. A rule whose parameter drops out of the list
-    keeps its key, name and kind; the picker shows its name as text.
-  - **Kind** comes from the parameter, never from the user: Yes/No spec gives
-    YesNo; a measurable spec or a double gives Number; an ElementId gives
-    Reference; an integer with named values gives Enumerated; other integers give
-    Integer; strings give Text. Stored rules carry no kind.
-  - **Operators:** Text all; Number and Integer compare; YesNo, Reference and
-    Enumerated equal and not equal; every kind has *not empty* / *empty* (has a
-    value / has no value) plus *defined* / *undefined* (the element has the
-    parameter / does not), the words Revizto uses.
-  - **Run per document:** the key resolves in the target document to the real
-    parameter (id, storage, spec); a key it lacks gives no match there.
-    A typed number parses once in the Current model's units, the format the
-    value box placeholder shows, and that one internal value is used in every
-    document (within half a display step). A number picked from the value list
-    keeps the stored values behind its text and is never parsed again. This
-    replaces parsing in each target document's units, which gave one typed
-    value a different meaning per document. Yes/No is 1/0;
-    Reference and Enumerated text map to their stored ids or integers through
-    the value index.
-  - **Case-sensitive text** (`Aa`, off by default): Revit string rules ignore
-    case, so a widened native pass returns a superset (positive leaves keep
-    their rule, negative leaves become *defined*), then an exact ordinal pass
-    runs on that superset only.
-  The value dropdown lists real values in the checked documents with counts and a
-  `[No parameter]` row (value index, §11), cached per document, key and
-  categories with the document version. **+ Condition** and **+ Group** are
-  small icon-and-text buttons under each group, hidden for read-only filters.
-  With no conditions the box says every element of the checked categories
-  matches.
-- **Revit filters** open read only. A rule-based filter runs in its own
-  document (`GetElementFilter()` AND `ElementMulticategoryFilter(GetCategories())`);
-  its rules display read only through a reader that turns
-  `ElementLogicalFilter` / `ElementParameterFilter` / `FilterRule` trees into
-  rule rows (an inverted parameter filter reads as its rules with negated
-  operators and the match mode swapped, or as an unsupported rule when a rule
-  has no negated operator), with an
-  *unsupported rule* row for rules it cannot show (global parameter
-  association). A selection filter gives `GetElementIds()`; missing
-  ids are skipped; in a link they become link references. A Current model
-  filter is never run against a link document. *Duplicate* copies a Revit filter into a
-  custom filter.
-- **Result row:** match count, selection mode **New / Add / Remove**,
-  **Live**, and the **⋯** button that opens the context menu (§2) for the
-  result.
-- **Live** is on by default. Each change of categories or rules updates the
-  Revit selection after a ~300 ms debounce. The selection when Live starts is
-  the baseline for Add and Remove, so edits never accumulate. Live pauses above
-  about 5,000 elements; *Select in Revit* then shows in the menu.
-- A model edit or a context refresh recounts the result whether or not Live
-  is on, but leaves the Revit selection alone, so an edit in Properties never
-  drops the element being edited.
-
-### 6. Selection sync
-
-- **Explorer: Selection sync** (two ways), **Filter: Live** (result to Revit
-  only). Selection sync is an icon toggle beside the search box with the
-  tooltip *Selection sync: tree and Revit select together*; the word is never
-  plain "Sync", which reads like syncing the tree with model changes. Switch
-  states live in memory per session.
-- **Selection sync on:** selecting tree rows selects in Revit (a Type or Category row
-  selects all its instances); selecting in Revit opens and highlights rows. Up
-  to about 50 selected elements the tree opens each path and scrolls to the
-  first; above that rows stay closed with badges and one hint line (*Too many
-  to reveal · Reveal all*). Above about 5,000, selection sync pauses for that
-  change and *Select in Revit* shows in the menu.
-- Selection sync is shown only with Scope = Active view or Whole model. With Scope =
-  Selection the toggle is hidden and *Select in Revit* shows in the menu.
-- Revit to tree: `SelectionChanged` gives ids and link references; rows are
-  found through the `(DocumentKey, ElementId)` index of the snapshot. The
-  handler only records the event; all work runs later on the panel's executor,
-  never inside the handler.
-- Both directions are debounced (about 150–300 ms). The panel records the set
-  of references it sent and drops the next `SelectionChanged` whose set
-  matches it. The same guard covers Live and the T3 queue.
-
-### 7. Visibility on tree rows
-
-There is no separate Layers tab: visibility lives on tree rows. Controls are
-icon buttons with tooltips and no column header: **Show** (the eye) is always
-visible; **Isolate**, **Halftone** and **Color** appear on the hovered or
-selected row. They always work on the active view, whatever the Scope, and on
-the branch's elements that are in that view. A row acts on exactly the group
-it sits in, and never on anything else:
-
-- **All models** category rows act on the category itself
-  (`HideCategoriesTemporary`, `IsolateCategoriesTemporary`,
-  `SetCategoryOverrides`): Revit applies it to the current model and every link
-  that shares the view's visibility (By Host View). The tooltip says so and, on
-  2024+, names those links.
-- **Current model** rows, at any level, act on that branch's elements by
-  element id (`HideElementsTemporary`, `IsolateElementsTemporary`,
-  `SetElementOverrides`). Links keep their state, so a user can hide Ducts in
-  the current model and keep the linked Ducts. Elements drawn after the click
-  are not covered until the eye is clicked again; Keep stores element hides,
-  not a category hide.
-- A **link's** model row carries all four controls for the whole link instance
-  (T1). Rows below it offer the eye only (T3, Hide in View, §8); Isolate,
-  Halftone and Color are disabled there with the reason, and Halftone and
-  Color for a link are on its model row.
-- The *All models* and *Current model* group rows are headers only, with no
-  controls.
-- **Isolate** shows only that row's target and hides everything else
-  temporarily in the active view, the same word and meaning as the Isolate
-  action; Reset brings everything back.
-- The eye has three states: shown, hidden, and partly hidden (some elements of
-  the branch are hidden). It is read back from the view: Current model rows
-  through the view's temporary state, link rows through the link view
-  collector (§5.6). The T3 journal only tells which link hides the panel made.
-- Rows the panel hid stay in the tree, dimmed with the eye off, even when the
-  Active view collector no longer returns them, so they can always be shown
-  again. Elements hidden outside the panel are found with Scope = Whole model.
-- When an *All models* row is hidden, rows of that category in the other groups
-  show the eye as hidden by *All models* and are disabled until it is shown
-  again.
-- Hovering an eye highlights every row the click will change.
-- A row the panel colored keeps its Color button visible as a swatch of that
-  color (tooltip *Color: #RRGGBB · click to change*); a halftoned row keeps
-  Halftone visible in the accent color. Child rows, and category rows under a
-  colored *All models* category, show the same marker. The marker reflects
-  only overrides the panel applied in this temporary session: Reset, Keep, an
-  undo, or closing the model clears it, and changes made directly in Revit are
-  not shown.
-
-### 8. Visibility: temporary first
-
-Temporary mode is chosen for a shared model: it is not saved with the view's
-permanent state, works when a view template locks Visibility/Graphics, and one
-call resets it.
-
-- Hide, isolate and show use `HideElementsTemporary`,
-  `IsolateElementsTemporary`, `HideCategoriesTemporary` and
-  `IsolateCategoriesTemporary`.
-- Linked elements below a link's model row are the one exception: Revit has no
-  temporary hide for them (§5.5), so their eye uses Hide in View (T3, §10).
-  That hide is saved with the view at once and adds undo entries. The panel
-  records each one in the T3 journal; turning the eye back on unhides exactly
-  those elements. Elements the user hid in Revit are never unhidden by the
-  panel.
-- Halftone and Color run inside Temporary View Properties
-  (`EnableTemporaryViewPropertiesMode` with the view's own id when it has no
-  template, after `CanEnableTemporaryViewPropertiesMode`). Category overrides
-  made there are dropped on exit, so Keep does not cover them. Element
-  overrides (T0, T1) are not: measured on Revit 2026, a color set with
-  `SetElementOverrides` stays in the view after the mode ends. The adapter
-  records each element's overrides before the panel first changes them in a
-  view, and Reset puts those back, so Reset leaves the view exactly as it was.
-- **N changes** is counted by the panel; Revit cannot report it.
-- **Keep** converts hide/isolate to permanent
-  (`ConvertTemporaryHideIsolateToPermanent`). When T3 hides are in the
-  journal, Keep asks inline: *N link elements stay hidden in this view. Show
-  them later with Reveal Hidden Elements.* (Keep · Cancel); Keep then clears
-  the journal.
-- **Reset** disables both `TemporaryHideIsolate` and `TemporaryViewProperties`,
-  restores the element overrides recorded before the panel's Halftone and
-  Color, and unhides every journal entry of this view through the T3 queue,
-  then clears the journal. Revit also drops temporary state when the model closes;
-  T3 hides stay in the view after a close, as Keep would leave them.
-- **The eye** is one toggle on the clicked row, or on every selected row when
-  the clicked row is selected. Revit has no per-element temporary unhide, so
-  turning an eye back on resets temporary mode and re-applies the rest in one
-  request.
-
-### 9. Tiers, resolved per request
-
-| Tier | Applies when | Mechanism |
-|------|--------------|-----------|
-| T0 Current model | Its elements, or a Current model category row | API, by element id |
-| T1 Link instance | Target is a whole link | API on the `RevitLinkInstance` id |
-| T2 Category everywhere | An *All models* row | `HideCategoriesTemporary` / `IsolateCategoriesTemporary` / `SetCategoryOverrides` |
-| T3 Inside one link | One link's category, a rule result, instances: Hide and Show only | Evaluate in the link document, `SetReferences`, Hide in View through the T3 queue (§10) |
-
-A result spanning documents splits: current-document matches go T0, link
-matches go T3. T2 never switches a link's display mode. Select, Box and Zoom
-on linked elements always use public API (Zoom through
-`UIView.ZoomAndCenterRectangle` on the link box transformed by
-`GetTotalTransform`). Nested links are out of scope for T3.
-
-**Spike result (2026).** Go for Hide and Show. No-go for Isolate, Halftone and
-Color below a link's model row: Revit has no command that applies them to a
-linked element (§5.5, §5.11), so they show disabled with the reason.
-Isolate by hiding the rest of the link is a measured candidate (Follow-Up 8). Hide and Show
-depend on an internal Revit call. The adapter probes for it once per session
-(`CommandHandlerService.invokeCommandHandler` found by reflection); when it is
-missing, link rows below the model row get no visibility actions
-(`ReferenceCommandsUnavailable`) and the panel logs the probe at Trace.
-
-### 10. Linked hide and show (`LinkedHideShow`)
-
-- One synchronous Revit call per request, on the Revit thread like every other
-  view action: no `PostCommand`, no `Idling`, no queue.
-- The user's selection is snapshotted, replaced by link references, and
-  restored afterwards. While the call runs, its selection changes are not
-  reported to the panel.
-- **Hide:** `TransactionGroup` "Model Context Hide": `SetReferences`,
-  `invokeCommandHandler("ID_VIEW_HIDE_ELEMENTS")`, read back with the link
-  view collector. One undo entry. Current model ids in the same request run
-  first through the temporary API in the same call.
-- **Show:** `TransactionGroup` "Model Context Show": `EnableRevealHiddenMode`,
-  `SetReferences` to the journal entries that are hidden,
-  `invokeCommandHandler("ID_VIEW_UNHIDE_ELEMENTS")`,
-  `DisableTemporaryViewMode(RevealHiddenElements)`, read back. One undo entry,
-  no visible flash. A view already in Reveal Hidden mode is left in it and not
-  read back.
-- A request whose read-back shows nothing changed fails with a one-line
-  message and the group rolls back.
-
-### 11. Architecture
-
-The panel is three layers. The core and the views never reference a host API,
-so they build, run and test out of process; a host plugs in through ports. The
-structure fits any host with a current model, attached models (Revit links,
-AutoCAD xrefs) and grouped elements.
-
-```
-DevTools.ModelsContext               core, no host API, no WPF
-   Model/       DocumentKey, ElementRef, ElementRow, TreeRow, DocumentSnapshot,
-                TreeSchema, FilterDefinition, VisibilityRequest, VisibilityPlan
-   Engine/      SnapshotAggregator, DeltaApplier, ScopeCounter, ValueIndexCache,
-                VisibilityPlanner, SelectionGuard, TemporaryJournal, Debouncer
-   Ports/       IModelSource, IModelEvents, ISelectionPort, IViewActions,
-                IFilterEvaluator, IHostFilterCatalog, ICustomFilterStore, IClock
-   ViewModels/  ModelContextViewModel, ContextBar, ExplorerTab, FilterTab,
-                TemporaryBar, ContextMenu
-DevTools.Presentation/Views/ModelsContext
-                                     XAML views on DevTools.UI; every control has an AutomationId
-DevTools.UI/Controls, Theme/Styles   FlatTreeList, Icons.xaml
-RevitDevTool.Tools/ModelsContext     Revit adapter, implements the ports
-   RevitModelSource, RevitModelEvents (event hub), RevitSelectionPort,
-   RevitViewActions (T0–T2), LinkedHideShow (T3), RevitFilterEvaluator,
-   RevitFilterCatalog, DocumentRegistry, ModelsContextPane
-```
-
-**Port rules.**
-
-- Only plain data crosses a port: `DocumentKey`, `ElementRef(DocumentKey,
-  long)`, structs, strings. No host object, no host thread affinity.
-- The core decides, the adapter executes. `VisibilityPlanner` turns a request
-  and each document's declared capabilities (hide by id, hide a group
-  everywhere, needs a reference command) into a `VisibilityPlan`; the Revit
-  adapter names its steps T0–T3 (§9) and runs them. Group rules (§7) and tier
-  splits are therefore tested without Revit.
-- `TreeSchema` comes from the adapter: Revit gives Category › Family › Type ›
-  Instance; another host gives its own levels.
-- `FilterDefinition` is host-neutral (categories, sets, rules, operators by
-  value kind). The adapter compiles it (Revit: `ElementFilter`, below); a fake
-  evaluates it over fake parameter data.
-- Time and threads enter through `IClock` and a scheduler port, so debounce,
-  Live and the self-caused-selection guard run under a fake clock.
-
-**Out of process.** A fake model (generated: about 100k elements and three
-links, or replayed from a snapshot JSON exported from a real model through MCP
-`execute_csharp_code`) implements every port. It drives the core tests, the
-FlaUI view tests and a standalone sandbox app that hosts the panel, so layout,
-flows and the §12 targets are checked before Revit is involved.
-
-The rest of this section describes the Revit adapter.
-
-**Identity.**
-
-- `DocumentKey` = Current model document identity + link instance id (`long`,
-  invalid for the Current model itself). UI objects hold keys, never `Document`, `Element`,
-  `RevitLinkInstance` or `Reference`. `DocumentRegistry` resolves a key on each
-  call and returns nothing for a closed or unloaded document.
-- Several instances of one link share one `Document`, so snapshots are keyed
-  by the link `Document` and shared; references, transforms and the journal
-  are keyed by `DocumentKey`.
-- Sync and selection use `(DocumentKey, ElementId)`. `UniqueId` is read only
-  when the T3 journal records an action.
-
-**Threading.**
-
-- Revit API calls run only on the Revit thread through
-  `RevitContextExecutor.RaiseAsync` with a `CancellationToken`. Collection
-  runs in slices of about 2–5k elements or 30 ms per call, awaited one after
-  another from the WPF side; a slice never queues the next one.
-- Grouping, counting and index building run on `Task.Run` over plain records.
-- Nothing from the Revit API crosses threads: only `long`, `int`, `string` and
-  plain structs.
-- One cancellation source per (scope, ticked documents); any change cancels it.
-- Debounce lives in the core (`Debouncer` on `IClock` and `IScheduler`); the
-  WPF side implements `IScheduler` with `DispatcherTimer` stop/start, the
-  pattern already in the repo.
-
-**Document snapshot** (plain data, no Revit objects):
-
-- `ElementRow` struct per element: id, type index, category index, level id,
-  workset id (about 32 bytes).
-- `TypeRow` table: type id, type name, family name, category; a name table so
-  each string is stored once.
-- `Dictionary<long, int>` id → row; aggregate nodes Category › Family › Type
-  with counts.
-- Built in one pass over `WhereElementIsNotElementType()` with a model
-  category filter. Instance names page in on expand. Parameter values are not
-  in the snapshot.
-- Estimated 8–10 MB per 100k elements, so about 30–40 MB for the Current model and three
-  links (to be measured).
-
-**Scopes.** Whole model reads the snapshot aggregates. Active view and
-Selection collect an id set (view collector, or the link view collector for
-links) and recount it against the snapshot rows in managed code. The id set is
-dropped on `ViewActivated` and on any `DocumentChanged`.
-
-**Invalidation.**
-
-- Current model `DocumentChanged`: deleted ids decrement their node chain, added ids
-  are read and counted, modified ids (model categories) are re-read and moved
-  if type, category or level changed, modified types or families patch
-  `TypeRow`. More than about 2,000 changed ids marks the snapshot dirty and it
-  rebuilds on next use. While the pane is hidden, changes only mark dirty.
-- Undo and Redo go through the same handler; if the spike shows their ids are
-  unreliable, they mark dirty instead. They always mark the T3 journal stale.
-- Link snapshots are stamped with the link document's
-  `Document.GetDocumentVersion` (`VersionGUID`, `NumberOfSaves`), present in
-  every supported version. A version changes when the file is saved or synced,
-  not per transaction. On reload (`RevitLinkType` modified, link instance added,
-  `IsValidObject` false, or `GetLinkDocument()` another object):
-  - same `VersionGUID` → keep the snapshot as is, no collection;
-  - different → `linkDoc.GetChangedElements(oldVersionGuid)` gives created,
-    modified and deleted ids, applied through the same delta path as the
-    Current model;
-  - the old version is unknown to the new file, or the delta is larger than
-    about 20% of the snapshot → rebuild in slices.
-- The Current model follows `DocumentChanged` live. After Reload Latest or a
-  sync, `GetChangedElements(lastSeenVersion)` is used as a check that the
-  delta path missed nothing; on mismatch the snapshot rebuilds.
-- A link source shared by several open Current models keeps one snapshot with
-  a reference count; it drops when the last user closes. An unloaded link keeps
-  its snapshot (rows disabled) until a reload decides by version.
-- The parameter catalog of a source refreshes when a parameter definition is
-  added or deleted in it (the adapter reports this from `DocumentChanged`).
-- `ValueIndexCache`: built lazily per (snapshot, parameter, category set),
-  quick filters first, in slices, cancelled when the rule changes. At most 500
-  distinct values ("more…"), at most 8 indexes (least recently used dropped).
-  Current model indexes drop on `DocumentChanged`.
-- Parameter catalog per snapshot: name → BuiltInParameter, shared GUID or
-  `ParameterElement` id, storage type and spec. Rebuilt when a
-  `ParameterElement` is added or deleted. Caches are never static and never
-  shared across documents.
-
-**Filter compiler.** `RevitFilterEvaluator` compiles a `FilterDefinition` per document to one
-`ElementFilter`: `ElementMulticategoryFilter` and `ElementIsElementTypeFilter`
-first, then `ElementParameterFilter` from `ParameterFilterRuleFactory` by
-storage type ("exists" = has value OR has no value). Parameter keys resolve in
-each document separately.
-
-**Events.** `RevitModelEvents` subscribes once to `SelectionChanged`,
-`DocumentChanged`, `ViewActivated` and `DocumentClosing`. Nothing subscribes
-to `Idling`. Panel-level parts listen while the pane is visible;
-tab-level handlers listen only while their tab is open, and a tab that comes
-back resyncs once. A hidden pane pauses everything.
-
-**Lifecycle.** Each open Current model has its own session (ticked documents,
-expansion, selected filter, Selection sync/Live, journal pages per view). Every
-asynchronous job carries the session and a generation number; a result whose
-session closed or whose generation moved on is dropped on the UI thread, never
-applied. Every port call resolves its `DocumentKey` through `DocumentRegistry`
-first and does nothing for a closed, unloaded or replaced document.
-
-| Event | Panel does |
-|-------|------------|
-| View activated, same model | Cancel scope jobs, drop view id sets, read the new view's temporary state; tree expansion kept; Active view counts recount from the snapshot. |
-| Active model switched | Cancel the old session's jobs, park its session in memory, show the new model's session (built on first show). No call touches the old model afterwards. |
-| `DocumentClosing` | Cancel that session's jobs, drop its session, journal and snapshots (shared link snapshots by reference count), release every key. If the close is cancelled, the session rebuilds on next show. |
-| Link unloaded | Its rows disable with the reason; its snapshot is kept until reload decides by version. |
-| Link reloaded | Version rule above. |
-| Undo / Redo | Delta path; journal stale. |
-| Revit busy (modal command, edit or sketch mode, no active document) | Actions disable with "Revit is busy"; nothing is queued for later. |
-| Family document | Works as a Current model without links. |
-| Pane hidden | Pause; on show, resync once. |
-
-Every adapter call is wrapped: a failure becomes a one-line status in the
-panel and never throws into Revit.
-
-### 12. UI controls and performance
-
-- **Flat tree list** (`DevTools.UI`): a `ListBox` with `SelectionMode=Extended`,
-  `VirtualizationMode=Recycling`, `ScrollUnit=Item`, fixed 28 px rows, in a `*`
-  grid row (never inside a `StackPanel`, an Auto row or an outer
-  `ScrollViewer`). The HandyControl `ListBoxItem` margin and minimum height are
-  overridden.
-- Rows are `TreeRow` objects (level, kind, text, count, selected-inside,
-  expanded, parent, lazy children, `DocumentKey`, id). Expand inserts a range,
-  collapse removes the run of deeper rows; both raise one `Reset` through a
-  small range-capable collection. Selection lives in a `HashSet<TreeRow>` on the
-  view model.
-- Row template: no converters; indent, count text and icon are precomputed or
-  picked by `DataTrigger` from frozen `StaticResource` geometries. Brushes stay
-  `DynamicResource` for theme switching. A count refresh swaps the visible list
-  once instead of raising per-row `PropertyChanged`.
-- **Documents box** (`DevTools.UI` `TagCheckComboBox`): a `ListBox` with
-  `SelectionMode=Multiple`, tags with a remove button, a "+N" overflow tag,
-  search and "All" in the drop-down. Part AutomationIds hang off the box id
-  (`ModelContext.Documents.Search`, `.SelectAll`, `.More`, `.Tag`,
-  `.TagRemove`). It looks like HandyControl `CheckComboBox`: stock item and
-  tag styles, a stock `CheckBox` per row. A click anywhere on the box toggles
-  the drop-down; only a click outside or focus loss closes it. Ticking rows,
-  "All", search and a tag's remove button keep it open.
-- Value dropdowns use a `VirtualizingStackPanel` with recycling as
-  `ItemsPanel` and a fixed `MaxDropDownHeight`; values load on open.
-- **Fork rule.** A HandyControl control that needs more than a Style is copied
-  into `DevTools.UI/Controls/<Name>/` under the `DevTools.UI.Controls`
-  namespace and changed there. `libs/HandyControl` (a submodule) is never
-  edited.
-- **Scale.** The panel must stay responsive at millions of elements across
-  several models. Rules that follow from it:
-  - No object per element: snapshots are arrays of structs and name tables;
-    objects exist only for visible rows (bounded by expansion and paging).
-  - First paint does not wait for the snapshot: Category rows and counts come
-    first from a quick count. One collector reads the ids in scope, and slices
-    read their categories. A collector per category was tried first and walks
-    the document once per category, about 100 times slower on the sample
-    ([snapshots.md](../architecture/ModelsContext/snapshots.md)). Family and
-    Type levels then fill in as slices finish.
-  - Deltas update counts in place; a full rebuild happens only when the
-    version rule or the delta size says so.
-  - Active view id sets are cached per (view, model) and dropped by
-    `DocumentChanged`, not recollected on every expand.
-  - All collection runs in cancellable slices; aggregation runs off the UI
-    thread on plain data.
-- Targets, Release, Revit 2024 and 2026:
-  - 100k elements and three links: first Category rows < 300 ms, expand a
-    200-instance page < 50 ms, Live change to Revit selection < 200 ms after
-    the debounce, about 40 realized row containers.
-  - 1M elements across five models: first Category rows < 1 s, full counts
-    without blocking the UI for more than 50 ms at a time, snapshot memory
-    < 64 MB per million elements.
-  - No `Document` retained after a model closes ten times.
-- **Diagnostics.** The panel logs through the host `ILogger`: failures shown to the
-  user at Error, timings (Revit-thread queue and run, slices) and ignored errors at
-  Trace, which the default Debug minimum drops. See
-  [verification.md](../agents/verification.md#model-context-diagnostics).
-
-### 13. State and storage
-
-| State | Source |
-|-------|--------|
-| Temporary hide/isolate, current document | Read back from the view |
-| Category visibility, overrides, link instance | Read back from the view |
-| Temporary changes count | Panel, per (DocumentKey, view) |
-| Section box | `View3D.GetSectionBox` |
-| T3 changes to linked elements | `TemporaryJournal`, in memory |
-| Document list, Explorer Selection sync, Filter Live, selection mode | In memory per session |
-| Custom filters | Settings (`DevTools.Settings`) |
-
-- The journal stores `(view id, linkInstance id, element UniqueId)` for each
-  linked element the panel hid. Reset unhides and clears it; Keep and
-  `DocumentClosing` clear it without unhiding; a link reload re-resolves
-  UniqueIds and drops entries that no longer resolve; Undo/Redo marks it
-  stale until the next read-back.
-- A custom filter stores categories, sets and rules. A parameter is stored by
-  `BuiltInParameter` name, shared parameter GUID, or name, in that order.
-  Element ids are never stored.
-
-### 14. Deferred
-
-- **Context strip** (expand selection by System, Connected, Type, Family,
-  Level, Workset, Host, Room, with keys and history). Not in the first release:
-  the meaning of each expansion across documents is not settled. It returns as
-  its own ADR amendment.
-- **Context popup** at the cursor (a hotkey that opens the panel's actions next
-  to the pointer). Not in the first release.
-
-### 15. Ownership
-
-- Core (model, engine, ports, view models): `source/DevTools.ModelsContext/`,
-  shared layer, no host API, same target frameworks as `DevTools.UI`.
-- Views: `source/DevTools.Presentation/Views/ModelsContext/`, XAML on
-  `DevTools.UI`. The add-in ILRepacks every assembly except
-  `RepackBinariesExcludes`, and only `DevTools.UI` stays loose for WPF (0037),
-  so XAML in a merged assembly uses no `;component/` URI to itself: only
-  `/DevTools.UI;component/...` URIs, and panel-only resources are an `x:Class`
-  `ResourceDictionary` merged by instance. Icons are `Geometry` entries in
-  `DevTools.UI/Theme/Styles/Icons.xaml` or HandyControl geometries, never
-  defined inside a view. Views reuse HandyControl styles and attached
-  properties (`ButtonDefault.Small`, `ButtonIcon.Small` and kin,
-  `hc:IconElement.Geometry`) and add a style or template only when no stock
-  one covers the need (the tree row template). Colors come only from
-  HandyControl brush resources through `DynamicResource` (`PrimaryBrush`,
-  `WarningBrush`, `RegionBrush`, `BorderBrush`, text brushes and kin): no color
-  literals, no new brush keys, no custom panel surfaces. The temporary bar and
-  the T3 marker use `WarningBrush`. Color uses the `DevTools.UI` `ColorPicker`
-  in place (its own drop-down on the row and from the menu), never a separate
-  window. A view test fails on any other `;component/` URI.
-- Revit adapter, pane and T3 queue: `RevitDevTool.Tools/ModelsContext/`
-  (0036). Link references reuse `Selection/ElementSelector`; token search
-  reuses `Selection/ElementSearcher`, which groups by link instance, not by
-  link document.
-- Tests: `tests/DevTools.ModelsContext.Tests` (core and view models on fakes),
-  `tests/DevTools.ModelsContext.Views.Tests` (FlaUI, AutomationIds, against
-  the views in `DevTools.Presentation`),
-  `tests/DevTools.ModelsContext.Tests.Shared` (fake model),
-  `tests/DevTools.ModelsContext.Sandbox` (standalone app),
-  `tests/RevitDevTool.ModelsContext.LiveTests` (L2, adapter inside Revit
-  against an API oracle) and `tests/RevitDevTool.ModelsContext.UiTests` (L3,
-  panel flows). Live runs open Revit and the sample through MCP `launch_host`;
-  UI Automation drives only the panel's controls
-  ([test matrix](../architecture/ModelsContext/test-matrix.md)).
-- Dockable pane registration: `RevitDevTool.Core` `DockablePaneProvider`
-  (0007). Revit calls go through `RevitDevTool.Core` `RevitContextExecutor`.
-- Shared controls (flat tree list, `TagCheckComboBox` for the documents box,
-  row template, icon geometries): `DevTools.UI/Controls`. `libs/HandyControl`
-  is not edited.
+   A result that spans documents splits: Current model matches go T0, link
+   matches T3. T2 never switches a link's display mode. Select, Box and Zoom on
+   linked elements use public API only. Nested links are out of scope for T3.
+   - **T3 is one synchronous call** (`LinkedHideShow`) on the Revit thread: no
+     `PostCommand`, no `Idling`, no queue. It swaps in link references, runs
+     the command in a `TransactionGroup` (one undo entry), reads back with the
+     link view collector, and restores the user's selection. A request that
+     changed nothing fails with one sentence and rolls back.
+   - The handler is found by reflection once per session. When it is missing,
+     rows below a link's model row get no visibility actions.
+   - T3 hides are saved with the view at once. The panel records each one in
+     an in-memory journal and unhides exactly those on Show or Reset; it never
+     unhides what the user hid in Revit. **Keep** asks first when the journal
+     has entries, then leaves them hidden.
+   - Isolate, Halftone and Color below a link's model row stay disabled:
+     Revit has no command that applies them to one linked element (Context 5,
+     11).
+   Why: links need per-element hide as Revit's own UI has it, and the public
+   API cannot do it (Context 1, 5).
+8. **Filter policy.**
+   - **Group builder without NOT.** A group holds conditions and nested groups
+     with one AND or OR for the whole group, so there is no precedence to
+     guess. Negation lives in the operators (does not equal, empty,
+     undefined). A nested group may narrow its documents (by file) and
+     categories, never widen them.
+   - **One identity key per parameter:** built-in by `BuiltInParameter`,
+     shared by GUID, project and family parameters by name plus data type.
+     Origin and binding are tags, not part of the key. The key resolves in each
+     document; a document without it gives no match. Why: the same rule must
+     mean the same parameter in every model.
+   - **Kind comes from the parameter**, never from the user; stored rules
+     carry no kind.
+   - **Typed numbers parse once in the Current model's units**, and that one
+     value is used in every document. A value picked from the list keeps its
+     stored value. Why: parsing per document gave one typed value a different
+     meaning per model.
+   - **The Properties palette is the truth.** Where Revit's own view filter
+     disagrees with what Properties shows, the panel follows Properties
+     (decided 2026-11-19): a typed number means every stored value that
+     displays as it (10 fittings show "3 mm", stored 2.54 mm, so "≥ 3 mm"
+     finds them); a reference set to *None* (id -1) is empty; a parameter
+     the element does not list and no native rule sees is undefined for that
+     element. Details in
+     [filters.md](../architecture/ModelsContext/filters.md#compiling-a-rule-filtercompiler).
+   - **Case-sensitive text is two passes.** Revit string rules ignore case, so
+     a widened native pass gives a superset and an exact pass runs on it.
+   - **Revit filters open read only and run natively** in their own document;
+     a Current model filter never runs against a link. *Duplicate* copies one
+     into a custom filter.
+9. **Live and Selection sync.**
+   - **Filter Live** (on by default) pushes the result to the Revit selection,
+     one way. Add and Remove work against the selection taken when Live
+     started, so edits never pile up. A model edit or context refresh only
+     recounts and never touches the selection, so an edit in Properties never
+     drops the element being edited.
+   - **Explorer Selection sync** is two way and shown only with Scope = Active
+     view or Whole model. It is never named plain "Sync".
+   - A model switch never asks: each model's session keeps its unsaved custom
+     filter and shows it again, still unsaved, on switch back.
+   - Each tab keeps its own switch in memory per session. Both pause above a
+     limit (5,000 elements) and offer *Select in Revit* instead.
+   - The `SelectionChanged` handler only records the ids; work runs later.
+     The panel drops the echo of a selection it sent itself.
+10. **Architecture.**
+    - **Host-free core plus ports.** `DevTools.ModelsContext` holds the model,
+      engine, ports and view models with no Revit API and no WPF; the Revit
+      adapter implements the ports. The core decides (for example
+      `VisibilityPlanner` picks the tier), the adapter executes. Why: group
+      rules, tier splits, Live and lifecycle are tested on fakes, and a sandbox
+      runs the panel without Revit.
+    - **Plain data only** crosses a port or a thread: keys, `long` ids,
+      strings, structs. Snapshots are arrays of structs and name tables, built
+      in one pass; parameter values are read on demand. Why: caches never pin a
+      closed model or a reloaded link.
+    - **Two keys.** `SourceId` (one document file) keys snapshots and caches,
+      shared by every instance of a link; `DocumentKey` (one documents box
+      entry) keys ticks, selection, view actions and the journal. Keys resolve
+      to Revit objects on each call; a closed or unloaded document resolves to
+      nothing.
+    - **Revit-thread slices.** Every Revit call runs through the executor in
+      short cancellable slices awaited one at a time; aggregation runs off the
+      UI thread. Nothing subscribes to `Idling`.
+    - **Links follow their document version** (same version keeps the
+      snapshot, another applies the changes, unknown or large rebuilds); the
+      Current model follows `DocumentChanged`.
+    - **Sessions and generations.** Each open Current model has a session; a
+      stale job result is dropped. A failed adapter call is one line in the
+      panel and never throws into Revit. Failures log at Error, timings at
+      Trace.
+11. **UI.**
+    - **A flat virtualized list, not WPF `TreeView`**, for the Explorer. Why:
+      `TreeView` costs a panel per open node, scrolls to an unrealized path
+      level by level, and has no multi-select.
+    - **HandyControl stock look**: stock styles and brushes, shared icon
+      geometries, no color literals, an AutomationId on every control.
+    - **Fork rule.** A HandyControl control that needs more than a style is
+      copied into `DevTools.UI/Controls`; `libs/HandyControl` is never edited.
+    - **No self `;component/` URIs.** The add-in merges `DevTools.Presentation`
+      and leaves only `DevTools.UI` loose (0037), so views use only
+      `/DevTools.UI;component/...` URIs. A guard test enforces it.
+12. **State and storage.** View state is read back from the view. The change
+    count, the T3 journal, recorded overrides, ticks and switches live in
+    memory. Settings hold only named custom filters; a parameter is stored by
+    its identity key and element ids are never stored. Why: no model writes,
+    and settings stay small.
+13. **Deferred.** The context strip (expand a selection by System, Connected,
+    Type, Family, Level, Workset, Host, Room) returns as its own amendment once
+    its meaning across documents is settled. The context popup at the cursor
+    is not in the first release. Isolate inside a link by hiding the rest
+    (Context 12) stays a candidate.
+14. **Ownership.** Core `source/DevTools.ModelsContext/`; views
+    `source/DevTools.Presentation/Views/ModelsContext/`; shared controls and
+    icons `source/DevTools.UI/`; Revit adapter and pane
+    `source/RevitDevTool.Tools/ModelsContext/` (0036), pane registration in
+    `RevitDevTool.Core` (0007); tests `tests/DevTools.ModelsContext.*` and
+    `tests/RevitDevTool.ModelsContext.*`
+    ([test matrix](../architecture/ModelsContext/test-matrix.md)).
 
 ## Alternatives Considered
 
-1. **Public API only (T0–T2).** Cannot hide one link's categories or act on
-   link-only data. Kept as the default wherever it is exact.
+1. **Public API only (T0–T2).** Cannot hide one link's elements. Kept wherever
+   it is exact.
 2. **PostCommand for everything.** No read-back, fragile timing, untestable.
 3. **View filters to apply rule results.** Each is a new project element.
-   Rejected by §1.
 4. **Extensible Storage for view state or the T3 journal.** Writes model data.
-5. **Separate Explore mode** (category → parameter → values browser). Folded
-   into the rule value dropdown.
+5. **Separate Explore mode** (category, parameter, values browser). Folded into
+   the rule value list.
 6. **Revit filters only, no custom rules.** Links are read only and new Revit
    filters would be new elements.
 7. **Find & Replace in the Filter tab.** Replace writes element data and cannot
@@ -877,68 +267,52 @@ panel and never throws into Revit.
 8. **Selection mode Intersect.** Overlaps Scope = Selection.
 9. **Host versus link UI.** Replaced by one documents list.
 10. **Inline "Save as custom filter" box.** Replaced by + / Delete / Save.
-11. **One global sync switch for Explorer and Filter.** Explorer syncs both ways and
-    Filter one way; each tab keeps its own.
-12. **Snapshot the selection for Scope = Selection.** Hiding Selection sync is simpler.
-13. **A fixed actions bar at the bottom** (Select, Isolate, Hide, Box, Zoom).
-    Took a row of space on every tab, sat away from the rows it acted on, and
-    repeated the row controls. Replaced by the context menu (§2).
-14. **Selection summary in the context strip, per-document counts.** Replaced
-    by the tree status line.
-15. **WPF `TreeView`.** Hierarchical virtualization costs a panel per open
-    node, scrolling to an unrealized path walks containers level by level, and
-    multi-select is not built in.
-16. **Cache `Element` objects or rebuild on demand** (RevitDBExplorer's
-    approach). Pins documents, breaks on link reload, and rebuilds the whole
-    tree on every refresh.
+11. **One sync switch for Explorer and Filter.** Explorer syncs both ways and
+    Filter one way; each keeps its own.
+12. **Snapshot the selection for Scope = Selection.** Hiding Selection sync is
+    simpler.
+13. **A fixed actions bar.** Took a row on every view and sat away from the
+    rows. Replaced by the context menu.
+14. **Selection summary in a context strip, per-document counts.** Replaced by
+    the Explorer status line.
+15. **WPF `TreeView`.** See Decision 11.
+16. **Cache `Element` objects or rebuild on demand.** Pins documents, breaks on
+    link reload, rebuilds the whole tree on every refresh.
 17. **`UniqueId` as the sync key.** Revit reports ids and references; storing
-    UniqueIds costs about 12–15 MB per 100k elements for no gain.
-18. **Revit 2024 as the minimum.** 2023 lacks only `RevitLinkGraphicsSettings`,
-    which feeds two hints. Not worth dropping 2023 users.
-19. **One category row per document with a hidden side effect** (a current
-    model row that also hides the category in By Host View links). Users could
-    not hide a category in the current model only. Replaced by *All models*
-    plus element-based Current model rows.
-20. **A separate Layers tab** (per-model category list with visibility
-    controls). It repeated the tree's Model › Category levels; its only own
-    parts, the *All models* group and always-listed hidden rows, moved into the
-    tree.
-21. **Cysharp ObservableCollections for tree rows.** Thread-safe collections,
-    filtered views and a WPF dispatcher bridge, MIT. Not adopted for the
-    first release: the visible row list is small (expansion and paging bound
-    it), its Slim WPF bridge rejects range changes, and the cost at scale sits
-    in the snapshot and in Revit collection, which a collection library does
-    not change. Revisit if search or sorting over large expanded lists needs
-    filtered views.
+    UniqueIds costs memory for no gain.
+18. **Revit 2024 as the minimum.** 2023 lacks only two hints.
+19. **One category row per document with a hidden link side effect.** Users
+    could not hide a category in the Current model only.
+20. **A separate Layers tab.** Repeated the tree's Model › Category levels; its
+    own parts moved into the Explorer.
+21. **Cysharp ObservableCollections for rows.** The visible list is small, its
+    WPF bridge rejects range changes, and the cost at scale is in snapshots and
+    Revit collection. Revisit if search or sort over large lists needs it.
 22. **Switch links to By Linked View to keep them visible.** Changes link
     overrides behind the user's back.
-23. **No T3 visibility at all** (link rows keep Select, Box and Zoom only).
-    Safe, but leaves links without per-element hide while Revit's own UI has
-    it. Kept as the fallback when the internal command call is missing (§9).
-24. **Temporary UI commands for T3** (`ID_TEMPHIDE_*` through `PostCommand`
-    or `invokeCommandHandler`). Not postable, and ignore link references
-    (§5.5).
-28. **`PostCommand` queue on `Idling`** (post Hide or the Reveal toggles, wait
-    for idles). Built and dropped: posted view-frame commands fail when the
-    panel has focus, the Show sequence waited until timeout, and a failed run
-    crashed Revit. The synchronous call (§10) replaces it.
-25. **Sandbox view** (duplicate the view, hide there, delete it to restore).
-    Moves the user to another view and creates and deletes view elements.
-26. **Undo or Temporary View Properties to restore T3 hides.** Undo works only
+23. **No T3 visibility at all.** Safe, but leaves links without per-element
+    hide. Kept as the fallback when the internal call is missing.
+24. **Temporary UI commands for T3** (`ID_TEMPHIDE_*`). Not postable, and they
+    ignore link references.
+25. **`PostCommand` queue on `Idling`.** Built and dropped: posted view-frame
+    commands fail when the panel has focus, Show waited until timeout, and a
+    failed run crashed Revit.
+26. **Sandbox view** (duplicate the view, hide there, delete it). Moves the
+    user to another view and creates and deletes views.
+27. **Undo or Temporary View Properties to restore T3 hides.** Undo works only
     while the hide is the last change; Temporary View Properties does not undo
-    a Hide in View (§5.5).
-27. **CustomExporter or a whole-document diff to find hidden linked
-    elements.** The link view collector already drops them (§5.6); the journal
-    says which ones the panel hid.
-29. **Halftone and Color for linked elements through a host view filter keyed
-    on `IFC_GUID`.** Reaches linked elements, but string rules ignore case so
-    GUIDs collide, it cannot tell link instances apart, it slows sharply with
-    the number of targets, and it adds a project element (§5.11).
+    a Hide in View.
+28. **CustomExporter or a document diff to find hidden linked elements.** The
+    link view collector already drops them; the journal says which ones the
+    panel hid.
+29. **Halftone and Color for linked elements through an `IFC_GUID` view
+    filter.** GUIDs collide, instances cannot be told apart, it slows sharply
+    with the number of targets, and it adds a project element (Context 11).
 30. **`ID_VIEW_OVERRIDE_ELEMENTS(_HALFTONE)` or a `SelectionFilterElement` for
-    linked elements.** Revit refuses the first, the second applies to Current
-    model ids only (§5.11).
-31. **Isolate a linked element with an inverted view filter.** Leaks the
-    categories without `IFC_GUID` and regenerates every link (§5.11).
+    linked elements.** Revit refuses the first; the second applies to Current
+    model ids only.
+31. **Isolate a linked element with an inverted view filter.** Leaves the
+    categories without `IFC_GUID` visible and regenerates every link.
 
 ## Consequences
 
@@ -947,17 +321,17 @@ Positive:
 - One way to reach elements in any document; links need no special UI.
 - Normal use leaves no trace in the saved model except what the user chose to
   Keep and T3 hides not yet shown again or reset.
-- Selecting by an existing Revit filter, including filters inside links.
+- Selecting by an existing Revit filter works, including filters inside links.
 - Settings stay small: named custom filters only.
-- Caches hold plain data, so closed models and reloaded links are never
-  pinned.
+- Caches hold plain data, so closed models and reloaded links are never pinned.
+- The core and views are tested and measured without Revit.
 
 Tradeoffs:
 
-- T3 hides are Hide in View: saved with the view at once and in the undo
-  history, not temporary. Each T3 Hide or Show is one undo entry.
+- T3 hides are Hide in View: saved with the view at once and one undo entry
+  per Hide or Show.
 - T3 relies on an internal, undocumented Revit call that may change in any
-  release; each supported year needs a spike run, and the fallback is no
+  release; each supported year needs a check, and the fallback is no
   visibility actions below a link's model row.
 - Isolate, Halftone and Color cannot target single elements or categories
   inside a link.
@@ -969,61 +343,31 @@ Tradeoffs:
 
 ## Follow-Up
 
-- Known gap, host log routing (separate session, DevTools.Logging): every
-  `ILogger` entry at or above the global minimum also goes to the user output
-  panel via `NotifyLoggerProvider` and can open the RevitDevTool pane, and the
-  minimum has no per-category filter. Model Context logs Trace (dropped by the
-  default Debug) and Error only for failures it shows; see
-  `docs/agents/verification.md` (Model Context diagnostics).
-- Spike on a live host with links. Run each step through MCP: `launch_host`
-  with the sample, then `code_mode` `execute_csharp_code`; UI Automation only
-  where the step is a click on the panel. Revit 2024 is the test host on the
-  development machine.
-  1. **Go/no-go:** done on 2026 (Snowdon Towers HVAC, six links), results in
-     §5.5–§5.6 and §9. Still to run: the same Hide, Reveal + Unhide and
-     temporary checks on 2024 (next), 2023, 2025 and 2027; Hide and Unhide on
-     a view whose template locks Visibility/Graphics; a view owned by another
-     user in a workshared model; and why hiding 500 references of the
-     Architectural link hid 548 elements (hosted or nested elements are the
-     suspect).
-  2. `SetReferences` with references to elements without graphics in the view
-     (MEP systems, unplaced rooms).
-  3. `HideCategoriesTemporary` / `IsolateCategoriesTemporary` with links in By
-     Host View, By Linked View and Custom.
-  4. Temporary View Properties: overrides dropped on exit, Current model and
-     link instance. Answered for element overrides: they outlive the mode, so
-     Reset puts back the recorded overrides (§8, architecture Gotcha 15).
-  5. Transactions and undo: whether temporary hide/isolate, Reset and Keep need
-     a transaction and how many undo entries each eye click adds; Keep on a view
-     whose template controls V/G; worksharing ownership of the view.
-  6. Link view collector as read-back: does it honour section box, phase, V/G
-     and temporary hide? If it does, compare it against the link document to
-     read hidden linked elements and replace the journal. Time it at 10k and
-     50k elements. Also check whether `FilteredElementCollector(doc, viewId)`
-     returns elements hidden temporarily or permanently, and whether
-     `HideElementsTemporary` accepts ids that are not in the view (§7).
-  7. Timing of a T3 Hide and Show at about 1k, 10k and 50k references;
-     `HideElementsTemporary` for a Current model category of about 50k
-     elements.
-  8. Isolate below a link's model row by hiding the rest (§5.11), still a
-     candidate, not decided. Before deciding: Reset cost at 10k and 50k (the
-     Reveal switches dominate); a view template that locks V/G; links whose
-     display is By Linked View or Custom; nested links; elements added by a link
-     reload while isolated; an isolate across two links; and how Keep, Reset
-     and a later Show of one element combine with the journal.
-  9. Undo and Redo visible in `DocumentChanged` with usable ids.
+- Revit 2023 live run, then set Accepted or amend.
+- T3 checks on other years: Hide, Reveal + Unhide and the temporary checks on
+  2023, 2025 and 2027.
+- Open spike steps (MCP `launch_host`, then `execute_csharp_code`):
+  1. Hide and Unhide on a template-locked view and on a view another user owns.
+  2. Why hiding 500 references of the Architectural link hid 548 elements.
+  3. `SetReferences` with elements that have no graphics (MEP systems,
+     unplaced rooms).
+  4. Category hide and isolate with By Host View, By Linked View and Custom
+     links; category overrides on exit from Temporary View Properties.
+  5. Undo entries of temporary hide, Reset and Keep; Keep on a
+     template-controlled view.
+  6. Link view collector as read-back (section box, phase, V/G, temporary
+     hide) and its time at 10k and 50k elements.
+  7. T3 Hide and Show time at about 1k, 10k and 50k references.
+  8. Isolate inside a link by hiding the rest (Context 12): Reset cost, locked
+     templates, link display modes, nested links, reload while isolated, and
+     how it combines with Keep, Reset and the journal.
+  9. Undo and Redo ids in `DocumentChanged`; if unusable, they mark the
+     snapshot dirty instead.
   10. Flicker of reset plus re-apply.
-  11. Document version: `GetDocumentVersion` before and after a link reload
-      with and without a save of the link file; `GetChangedElements(oldGuid)`
-      on a reloaded link (ids returned, cost at 100k and 1M, exception when the
-      old version is unknown); same after Reload Latest on a workshared
-      Current model; cloud models.
-  12. Quick per-category `GetElementCount()` time on a 1M-element model.
-- Benchmark against the §12 targets: done in the sandbox on generated models
-  (100k with three links, 1M across five documents; numbers in the execution
-  plan, Phase 3c–3d). Still to do: a real model of about 100k elements in Revit
-  2024, and the first-load stall (33–59 ms in the sandbox, target < 50 ms).
-- After the 2024 and 2023 runs, set Accepted or amend. Product and architecture
-  docs: [product/models-context.md](../product/models-context.md),
-  [architecture/ModelsContext](../architecture/ModelsContext/README.md).
+  11. Document versions around a link reload, `GetChangedElements` cost and
+      failure for an unknown version, Reload Latest, cloud models.
+  12. Quick per-category count time on a 1M-element model.
+- Benchmark on a real model of about 100k elements in Revit, and the
+  first-load stall (over the 50 ms target; latest numbers in the plan). Targets:
+  [architecture README](../architecture/ModelsContext/README.md#performance-targets).
 - Execution plan: [2026-11-13-models-context-panel](../plans/active/2026-11-13-models-context-panel.md).

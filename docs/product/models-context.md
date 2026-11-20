@@ -43,7 +43,7 @@ Three icon buttons decide which elements the panel counts and filters:
 |-------|----------|
 | Selection | What is selected in Revit, from any document, including elements of a secondary design option shown in the view they were picked in. The documents box hides: the selection decides the documents. |
 | Active view (default) | What the active view shows, per ticked document, with the view's design option settings: a view that shows a secondary option counts that option and not the primary. Links count only in plan, ceiling, engineering, area, section, elevation, detail, 3D and walkthrough views; other views (sheets, schedules, legends, drafting) show no linked elements. |
-| Whole model | Every model element of the ticked documents, main model and primary design options, the same set a Revit schedule lists. Secondary options never count, match or get selected here. |
+| Whole model | Every model element of the ticked documents, main model and primary design options, the same set a Revit schedule lists. Secondary options never count, match or get selected here. Materials are not model elements and never count. |
 
 Visibility actions always work on the active view, whatever the scope.
 
@@ -107,6 +107,8 @@ sits in:
 - The eye has three states: shown, hidden, partly hidden. Hovering it highlights
   every row the click will change.
 - Rows the panel hid stay in the tree, dimmed, so they can be shown again.
+- While an *All models* row is hidden, rows of that category in the other
+  groups show it as hidden by *All models* and are disabled until it is shown.
 - A colored row keeps a swatch; a halftoned row keeps the accent marker, until
   Reset, Keep, undo or closing the model.
 - Linked-element hides are Hide in View: saved with the view at once and one
@@ -152,6 +154,8 @@ the link's linked view) shows "in view".
   Enter. Esc, or leaving the box with an invalid name, restores the last valid
   name.
 - Switching away from unsaved changes asks inline: Save · Discard · Cancel.
+  Switching to another model does not ask: each model keeps its unsaved filter,
+  and switching back shows it again with its dot, ready to Save or Discard.
 - **Revit filters open read only.** A rule-based filter runs in its own
   document with its own categories; a selection filter uses its stored ids.
   Rules the panel cannot show appear as *Unsupported rule*. **Duplicate** copies
@@ -229,7 +233,10 @@ The value kind comes from the parameter, never from the user:
 | Enum (integer with named values) | equals, does not equal | Pick from the names found |
 
 Every kind also has *not empty*, *empty*, *defined* (the element has the
-parameter) and *undefined* (it does not), which need no value.
+parameter) and *undefined* (it does not), which need no value. Empty means
+what the Properties palette shows as blank: a reference set to *None* is
+empty. A parameter Properties does not show for an element is undefined there,
+even when another element of the same type has it.
 
 - The value drop-down lists real values in the ticked documents with counts, at
   most 500 ("more…"), and a `[No parameter] · N` line.
@@ -267,7 +274,8 @@ parameter) and *undefined* (it does not), which need no value.
 
 - Writing parameter values (Replace).
 - Isolate, Halftone or Color on single elements inside a link.
-- Expanding a selection by system, host, room and similar (deferred, 0062 §14).
+- Expanding a selection by system, host, room and similar (deferred, 0062
+  Decision 13).
 
 ## Related
 

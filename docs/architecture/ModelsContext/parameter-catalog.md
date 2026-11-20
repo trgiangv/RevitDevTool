@@ -37,6 +37,7 @@ One catalog per `SourceId`, built in slices on the Revit thread:
 filter on, for example `RBS_START_LEVEL_PARAM` (Reference Level) on ducts: an
 equals rule on L3 passes 319 ducts. The picker lists them, scoped to the
 categories they were seen on, except `ParameterCatalogReader.Unfilterable`.
+A built-in stays listed for a sampled category only when the sampled element or its type has it in `Parameters` or passes a native has-value, has-no-value or minimum-value rule on it, so `get_Parameter` phantoms (Workset in a non-workshared model, Excavation Volume on duct terminals) drop out.
 
 **Check.** L2 case SB-01 (`CatalogTests`, helper `Sample/SampledBuiltIns.cs` in
 `tests/RevitDevTool.ModelsContext.LiveTests`, read-only) samples one element
@@ -145,9 +146,11 @@ entries from `DocumentChanged`:
 
 | Change | Drops |
 |--------|-------|
-| A `ParameterElement` or `Family` added, modified or deleted | Catalog and values of that source; the panel reloads the picker (`ParameterDefinitionsChanged`) |
-| More than 2,000 changed ids | Same as above |
-| Any other change | Values, resolved parameters and candidates of that source |
+| A `ParameterElement` or `Family` added, modified or deleted, or a modified element that is gone or has no category and no known kind | Catalog and values of that source; the panel reloads the picker (`ParameterDefinitionsChanged`) |
+| More than 2,000 changed ids | Same as above, plus catalog and values of every link source |
+| An element added or deleted, or a `DesignOption` added or modified | Values, resolved parameters and candidates of that source |
+| An element type modified | Values and resolved parameters (type presence); candidates stay |
+| Only instances modified | Values; candidates stay unless a modified candidate changed type or design option; resolved parameters stay only when no modified id is among the kept candidates of the same categories |
 | `RevitLinkType` modified (link reload or unload) | Catalog and values of every instance's link source |
 
 The core keeps its own short-lived layers on top:

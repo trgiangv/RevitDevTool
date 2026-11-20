@@ -95,34 +95,113 @@ else collects `ParameterElement`s by name and samples one element per type.
 
 ## Compiling a rule (`FilterCompiler`)
 
-Per target document:
+Per target document, `RevitFilterEvaluator` first warms the cache in short
+Revit calls awaited one after another: the candidates, then three calls per
+parameter key (`ParameterLocator.Locate`, `WithTypes`, `WithLacking`: the
+parameter, its type presence, its lacking elements), for a key a presence rule
+uses also the silent-element calls (below), then the candidates' type ids when
+a key has type presence or silent elements. A compile call that has to resolve
+inline skips the silent elements. A model change between those calls only
+leaves an entry stamped with the old version, so the compile call resolves it
+again. The
+compile call then reads those entries and resolves inline only what a model
+change dropped in between.
 
 1. **Resolve** the key to `ResolvedParameter`s (id, storage type, spec, type
    presence) with `ParameterLocator.Resolve`, cached per source, key and
    categories. For each candidate id the resolver finds one element in the
    checked categories that has it, or else one element type, and reads storage
-   and spec from that `Parameter`. It also runs the has-value and has-no-value
+   and spec from that `Parameter`. It probes in order has value, holds a number,
+   holds an integer, has no value, and keeps the first element that really
+   carries the parameter: has-no-value also passes elements without it (Volume
+   on a Shaft Opening), and neither has-value rule passes a calculated parameter
+   (Calculated Flow on Mechanical Equipment). It also runs the has-value and has-no-value
    rules on the element types of those categories (`TypePresence`: types with a
-   value, types without one). An id neither carries is dropped. A key the
+   value, types without one that carry the parameter), and lists the elements
+   that pass has-no-value without carrying it (`Lacking`: Shaft Openings and
+   Model Text for Volume). An id neither carries is dropped. A key the
    document lacks resolves to nothing.
 2. **Build one leaf per id** and OR them. `HasValue` and `HasNoValue` are the
    native has-value rules, narrowed per storage: for text an empty string `""`
    is no value (`HasValue AND ≠ ""`, `HasNoValue OR (HasValue AND = "")`), for
    element ids -1 is no value (see *Reference* below). `Holds(id)` is
    `≥ int.MinValue` for integers and `≥ double.MinValue` for doubles (nothing
-   for other storage):
+   for other storage). In *defined* and *empty*, `HasNoValue(id)` also excludes
+   `Lacking`, and *undefined* adds `Lacking` back:
 
    ```text
    rule(key)      = OR over ids:  Guard(id) AND Rule(id)
    Guard(id)      = Defined(id) for text, NotEmpty(id) for every other storage
-   Defined(id)    = HasValue(id) OR HasNoValue(id) OR Holds(id) OR TypeIn(types with id)
-   NotEmpty(id)   = HasValue(id) OR TypeIn(types with a value)
-                    OR (Holds(id) AND NOT HasNoValue(id) AND NOT TypeIn(types with id))
+   Blind(id)      = Holds(id) AND NOT HasValue(id) AND NOT HasNoValue(id)
+   Held(id)       = Holds(id), or nothing when Held is Absent
+   Defined(id)    = HasValue(id) OR HasNoValue(id) OR Held(id) OR TypeIn(types with id)
+                    OR In(Silent)
+   NotEmpty(id)   = HasValue(id) OR TypeIn(types with a value) OR In(Silent with a value)
+                    OR (Held is Value AND Holds(id) AND NOT HasNoValue(id)
+                        AND NOT TypeIn(types with id))
    Empty(id)      = (HasNoValue(id) AND NOT TypeIn(types with a value))
                     OR (NOT HasValue(id) AND TypeIn(types without a value))
-   Undefined(key) = AND over ids: NOT(HasValue(id) OR HasNoValue(id)) AND NOT Holds(id)
-                    AND NOT TypeIn(types with id)
+                    OR (Held is Empty AND Blind(id) AND NOT TypeIn(types with id))
+                    OR In(Silent without a value)
+   Undefined(key) = AND over ids: ((NOT(HasValue(id) OR HasNoValue(id)) AND NOT Held(id))
+                    OR In(Lacking)) AND NOT In(Silent) AND NOT TypeIn(types with id)
    ```
+
+   *Empty* means what the Properties palette shows as blank
+   (`Parameter.HasValue` false, `""`, or id -1), also where Revit's own rules
+   read the element otherwise. An element has a built-in when a native rule
+   sees it or it lists it in its own `Parameters` (per element: within one
+   type, 186 Golden Nugget pipes without flow do not list Reynolds Number while
+   their siblings do; Properties shows the row only on the siblings). Two
+   per-id facts come from the resolver:
+
+   - `Held` (`WithTypes` call): some parameters are *blind*, both has-value
+     rules fail and only `Holds` passes. The resolver reads the first 25 blind
+     elements the way the value list does (the element's own parameter, else
+     its type's) and takes the majority, live on Golden Nugget, Revit 2026:
+     - *Value*: Workset (12 of 12), Voltage Loss on lighting fixtures (the
+       type holds 1, the type is blind too), CW Connection (the type holds No);
+     - *Empty*: the parameter is there without a value;
+     - *Absent*: family parameters "Festanschluss - angeschlossen aktuell"
+       (4 of 4) and "Allgemein - Gleichzeitigkeit" (3 of 3): `≥ double.MinValue`
+       passes Electrical Equipment that do not have the parameter at all, so
+       blind elements are not the parameter's elements.
+     No blind element gives *Value*.
+   - `Silent` (`SilentReader`, its own Revit calls after `WithLacking`: one
+     native call for the ids, then slices of at most 30 ms; only for a key
+     that a *not empty*, *empty*, *defined* or *undefined* rule uses, cached
+     with the resolved parameter): elements no rule sees at all, not even
+     `Holds` while the element lists the parameter. The resolver keeps the
+     checked categories where some element passes one of the three rules
+     (one native first-element check each), walks their elements that fail all
+     three, skips types with type presence (and skips the walk for a text or
+     reference parameter with type presence, where every instance fails the
+     has-value rules), checks per element that it lists the built-in in its
+     own `Parameters` (so `get_Parameter` phantoms stay undefined: Reynolds
+     Number on pipes without flow, End Attachment Level Reference on 36
+     unattached beams, IfcGUID on circuit 6728139), and splits the rest by
+     their own value into *with a value* and *without*. A category whose
+     elements are all silent is not walked: those stay *undefined*.
+
+   A key with several ids on one element is *empty* only when none of them has
+   a value: `Empty(key) = OR(Empty(id)) AND each id (Empty(id) OR
+   Undefined(id))`. The Japanese sample's link rooms carry two project
+   parameters named "仕上表 グループ名" (both element ids); the second is -1 on
+   all 113 rooms, so an OR over ids called 102 rooms with a group empty. A
+   value read without an id takes the one with a value.
+
+   The same per-element rule holds for shared parameters: `get_Parameter(Guid)`
+   returns the curtain panels' type parameter "建具 形式" on 104 panels whose
+   type is a wall type and that do not list it; they are undefined, as in
+   Properties.
+
+   Reading a value (`ParameterLocator.Find`, used by the value list and the
+   exact text pass) takes the type's parameter over an instance's built-in
+   that has a value no native rule sees: an instance's `IFC_TYPE_GUID` returns
+   a per-instance GUID that Properties never shows (Type IfcGUID is a type
+   property). The resolver's probe tries up to 25 elements per rule, so a key
+   whose first has-no-value element lacks it still resolves (Volume on Detail
+   Items).
 
    The guard is there because a native not-equals rule passes elements that do
    not have the parameter at all. Without it, `Swing Angle ≠ 90°` would also
@@ -270,7 +349,12 @@ Notes per kind:
   shows 0.585 in³ as "0.59 in³" and 0.775 in³ as "0.78 in³", so a positive tie
   belongs to the upper text (a negative one is taken to mirror it). The same
   tolerance applies to the comparisons, so "> 10'" means above what displays as
-  10'. The value box placeholder is an example in the Current model's format
+  10'. This is decided (2026-11-19): 10 Golden Nugget cable tray fittings show
+  "3 mm" (stored 2.54 mm), so "≥ 3 mm" finds them, while Revit's view filter
+  with its tiny tolerance does not. The live oracle compares the same way
+  (the stored value formatted and parsed back in the Current model's units,
+  or half a display step when the typed text is not on the display grid), and
+  the native reference uses half a display step as its epsilon. The value box placeholder is an example in the Current model's format
   (`FormatExampleAsync`: one internal unit rounded to one significant digit in
   the display unit, "300 mm", "1' - 0"").
 - **Number, picked.** The value list shows each document's own display text.
@@ -303,6 +387,10 @@ Notes per kind:
   (all 1,128 Architectural walls pass has-value on `DESIGN_OPTION_ID`). So for
   `ElementId` storage *not empty* is has-value AND ≠ -1 and *empty* is
   has-no-value OR (has-value AND = -1), on instances and in `TypePresence`.
+  This is decided (2026-11-19): Properties shows *None* or a blank for -1, so
+  the panel calls it empty while Revit's has-value rule calls it a value (Host
+  Id on 509 unhosted air terminals, Phase Demolished on 997 duct fittings). The
+  sweep marks those rows `none reference`.
   Measured on the Architectural walls, Whole model: Design Option *empty*
   1,096 and *not empty* 24, the same as the value list (1,096 without a value,
   8 Middle Stair, 16 Twisty Trellis); = "Continuous Bleachers no Stairs" is 0
