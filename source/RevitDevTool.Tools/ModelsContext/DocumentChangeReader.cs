@@ -42,11 +42,27 @@ internal sealed class DocumentChangeReader(
             undoRedo);
     }
 
+    public IReadOnlyCollection<long> Modified => modified.Select(id => id.ToLong()).ToList();
+
+    public bool Keeps(CandidateSet candidates)
+    {
+        return candidates.Holds(model, modified);
+    }
+
     public static TrackedIds TrackedOf(Document model)
     {
         return new TrackedIds(
             model.CollectElements().OfClass<RevitLinkInstance>().ToElementIds().Select(id => id.ToLong()),
-            model.CollectElements().OfClass<ParameterElement>().ToElementIds().Select(id => id.ToLong()));
+            model.CollectElements().OfClass<ParameterElement>().ToElementIds().Select(id => id.ToLong()),
+            model.CollectElements().OfClass<Family>().ToElementIds().Select(id => id.ToLong()));
+    }
+
+    public static void InvalidateLinks(Document model, ParameterCache cache)
+    {
+        foreach (var instance in model.CollectElements().OfClass<RevitLinkInstance>().Cast<RevitLinkInstance>())
+        {
+            cache.Invalidate(DocumentRegistry.LinkSourceOf(instance));
+        }
     }
 
     public static List<LinkStatusChange> LinkStatusesOf(Document model, long linkTypeId, ParameterCache cache)
@@ -73,10 +89,14 @@ internal sealed class DocumentChangeReader(
         {
             ChangedKind? kind = model.GetElement(id) switch
             {
+                null => ChangedKind.Unknown,
                 RevitLinkInstance => ChangedKind.LinkInstance,
                 RevitLinkType => ChangedKind.LinkType,
                 ParameterElement => ChangedKind.ParameterElement,
                 Family => ChangedKind.Family,
+                DesignOption => ChangedKind.DesignOption,
+                ElementType => ChangedKind.ElementType,
+                { Category: null } => ChangedKind.Unknown,
                 _ => null
             };
             if (kind is { } known)

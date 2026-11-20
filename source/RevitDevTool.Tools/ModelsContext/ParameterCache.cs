@@ -1,3 +1,4 @@
+using DevTools.ModelsContext.Engine;
 using DevTools.ModelsContext.Model;
 using DocumentVersion = DevTools.ModelsContext.Model.DocumentVersion;
 
@@ -138,21 +139,44 @@ internal sealed class ParameterCache
         }
     }
 
+    public void Invalidate(SourceId source, CacheDrop drop, IReadOnlyCollection<long> modified,
+        Func<CandidateSet, bool> keeps)
+    {
+        if (drop == CacheDrop.All)
+        {
+            Invalidate(source);
+            return;
+        }
+
+        lock (_gate)
+        {
+            Remove(_values, key => key.Source == source, (_, _) => true);
+            Remove(_candidates, key => key.Source == source,
+                (_, entry) => drop >= CacheDrop.Candidates || !keeps(entry.Value));
+            Remove(_resolved, key => key.Source == source,
+                (key, entry) => !ChangeClassifier.KeepsResolved(drop, entry.Value.Count, modified,
+                    _candidates.TryGetValue(new CandidateKey(source, key.Groups), out var candidates)
+                        ? candidates.Value.Contains
+                        : null));
+        }
+    }
+
     private void DropValues(SourceId source)
     {
-        foreach (var key in _values.Keys.Where(key => key.Source == source).ToList())
-        {
-            _values.Remove(key);
-        }
+        Remove(_values, key => key.Source == source, (_, _) => true);
+        Remove(_resolved, key => key.Source == source, (_, _) => true);
+        Remove(_candidates, key => key.Source == source, (_, _) => true);
+    }
 
-        foreach (var key in _resolved.Keys.Where(key => key.Source == source).ToList())
+    private static void Remove<TKey, TValue>(
+        Dictionary<TKey, TValue> entries,
+        Func<TKey, bool> owned,
+        Func<TKey, TValue, bool> drop)
+        where TKey : notnull
+    {
+        foreach (var key in entries.Where(pair => owned(pair.Key) && drop(pair.Key, pair.Value)).Select(pair => pair.Key).ToList())
         {
-            _resolved.Remove(key);
-        }
-
-        foreach (var key in _candidates.Keys.Where(key => key.Source == source).ToList())
-        {
-            _candidates.Remove(key);
+            entries.Remove(key);
         }
     }
 

@@ -128,7 +128,7 @@ internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache paramet
             var report = reader.Read();
             var source = DocumentRegistry.SourceOf(model);
             var outcome = ChangeClassifier.Classify(report, () => KeysOf(model));
-            Apply(model, source, outcome);
+            Apply(model, source, outcome, reader);
             var delta = reader.Delta(source, report,
                 e.Operation is UndoOperation.TransactionUndone or UndoOperation.TransactionRedone);
             Post(nameof(ElementsChanged), () => ElementsChanged?.Invoke(this, delta));
@@ -144,24 +144,21 @@ internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache paramet
         }
     }
 
-    private void Apply(Document model, SourceId source, ChangeOutcome outcome)
+    private void Apply(Document model, SourceId source, ChangeOutcome outcome, DocumentChangeReader reader)
     {
         if (outcome.IsBulk)
         {
             _keys.Remove(DocumentRegistry.ModelIdOf(model));
+            DocumentChangeReader.InvalidateLinks(model, parameterCache);
         }
 
         var statuses = outcome.LinkTypes
             .SelectMany(type => DocumentChangeReader.LinkStatusesOf(model, type, parameterCache))
             .ToList();
+        parameterCache.Invalidate(source, outcome.Drop, reader.Modified, reader.Keeps);
         if (outcome.DefinitionsChanged)
         {
-            parameterCache.Invalidate(source);
             Post(nameof(ParameterDefinitionsChanged), () => ParameterDefinitionsChanged?.Invoke(this, source));
-        }
-        else
-        {
-            parameterCache.InvalidateValues(source);
         }
 
         foreach (var status in statuses)

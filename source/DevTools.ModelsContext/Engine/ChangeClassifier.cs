@@ -5,7 +5,18 @@ public enum ChangedKind
     LinkInstance,
     LinkType,
     ParameterElement,
-    Family
+    Family,
+    ElementType,
+    DesignOption,
+    Unknown
+}
+
+public enum CacheDrop
+{
+    Values,
+    Resolved,
+    Candidates,
+    All
 }
 
 public readonly record struct ChangedId(long Id, ChangedKind Kind);
@@ -20,18 +31,21 @@ public sealed record ChangeReport(
     public bool IsBulk => ChangeClassifier.IsBulk(Added, Modified, Deleted.Count);
 }
 
-public sealed class TrackedIds(IEnumerable<long> links, IEnumerable<long> parameters)
+public sealed class TrackedIds(IEnumerable<long> links, IEnumerable<long> parameters, IEnumerable<long>? families = null)
 {
     public HashSet<long> Links { get; } = [.. links];
 
     public HashSet<long> Parameters { get; } = [.. parameters];
+
+    public HashSet<long> Families { get; } = [.. families ?? []];
 }
 
 public sealed record ChangeOutcome(
     bool IsBulk,
     bool DefinitionsChanged,
     bool DocumentsChanged,
-    IReadOnlyList<long> LinkTypes);
+    IReadOnlyList<long> LinkTypes,
+    CacheDrop Drop);
 
 public static class ChangeClassifier
 {
@@ -44,13 +58,15 @@ public static class ChangeClassifier
     {
         if (report.IsBulk)
         {
-            return new ChangeOutcome(true, true, true, []);
+            return new ChangeOutcome(true, true, true, [], CacheDrop.All);
         }
 
         var ids = tracked();
         var documents = false;
         var definitions = false;
         var linkTypes = new List<long>();
+        var options = false;
+        var types = false;
         foreach (var added in report.AddedKinds)
         {
             switch (added.Kind)
@@ -67,6 +83,7 @@ public static class ChangeClassifier
                     definitions = true;
                     break;
                 case ChangedKind.Family:
+                    ids.Families.Add(added.Id);
                     definitions = true;
                     break;
             }
@@ -79,8 +96,14 @@ public static class ChangeClassifier
                 case ChangedKind.LinkType:
                     linkTypes.Add(modified.Id);
                     break;
-                case ChangedKind.ParameterElement or ChangedKind.Family:
+                case ChangedKind.ParameterElement or ChangedKind.Family or ChangedKind.Unknown:
                     definitions = true;
+                    break;
+                case ChangedKind.DesignOption:
+                    options = true;
+                    break;
+                case ChangedKind.ElementType:
+                    types = true;
                     break;
             }
         }
@@ -89,8 +112,31 @@ public static class ChangeClassifier
         {
             documents |= ids.Links.Remove(deleted);
             definitions |= ids.Parameters.Remove(deleted);
+            definitions |= ids.Families.Remove(deleted);
         }
 
-        return new ChangeOutcome(false, definitions, documents, linkTypes);
+        return new ChangeOutcome(false, definitions, documents, linkTypes,
+            DropOf(report, definitions, options, types));
+    }
+
+    public static bool KeepsResolved(CacheDrop drop, int resolved, IEnumerable<long> modified,
+        Func<long, bool>? inCandidates)
+    {
+        return drop == CacheDrop.Values && resolved > 0 && inCandidates is not null && !modified.Any(inCandidates);
+    }
+
+    private static CacheDrop DropOf(ChangeReport report, bool definitions, bool options, bool types)
+    {
+        if (definitions)
+        {
+            return CacheDrop.All;
+        }
+
+        if (report.Added > 0 || report.Deleted.Count > 0 || options)
+        {
+            return CacheDrop.Candidates;
+        }
+
+        return types ? CacheDrop.Resolved : CacheDrop.Values;
     }
 }
