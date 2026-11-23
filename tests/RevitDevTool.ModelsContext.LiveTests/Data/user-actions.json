@@ -144,9 +144,19 @@
       "expected": "every action ok or refused with one message; after Reset no temporary mode, element and category overrides as before, the same template, the model not left modified",
       "manualSteps": [
         "Duplicate the L3 plan, create a view template from it (View > View Templates > Create Template from Current View), keep every parameter included and assign it to the duplicate; open the duplicate.",
-        "In the Explorer use the eye, Isolate, Halftone and Color on a Current model category, on the link model row and on a category under All models; after each, click Reset in the temporary bar.",
+        "In the Explorer use the eye, Isolate, Halftone and Color on a Current model category, on the link model row and on a category in the Categories box (its eye and menu); after each, click Reset in the temporary bar.",
         "Each action works or the panel shows one line saying why; after Reset the view looks as before and Visibility/Graphics still shows the template's settings.",
         "Hide a category, click Keep, then Undo: the view is as before."
+      ]
+    },
+    {
+      "id": "US-18",
+      "description": "In the active plan, whose template controls V/G Filters (Snowdon HVAC L3 with 'Mechanical Plan'), Color on an Architectural door type (T4) puts one 'Model Context <n>' rule filter inside Temporary View Properties, where Revit draws it; Reset deletes it, inside a transaction group that is rolled back",
+      "expected": "the panel filter is on the view with a red override while Temporary View Properties is on; after Reset no Model Context filter is left, no temporary mode, the same template",
+      "manualSteps": [
+        "Activate the L3 plan (template 'Mechanical Plan'). Explorer tab: tick the Architectural link, open Doors > a family > its type row, right-click > Color… and pick red.",
+        "The linked doors of that type draw red although the template controls Filters.",
+        "Click Reset: the color, the filter and the temporary mode are gone."
       ]
     }
   ],

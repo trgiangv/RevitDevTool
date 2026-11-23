@@ -124,6 +124,10 @@ internal sealed class TargetData
     public bool Link { get; set; }
 
     public bool Everywhere { get; set; }
+
+    public string? LinkType { get; set; }
+
+    public int? Repeat { get; set; }
 }
 
 internal sealed class VisibilityExpect
@@ -143,6 +147,12 @@ internal sealed class VisibilityExpect
     public bool? TargetColor { get; set; }
 
     public bool? OtherColor { get; set; }
+
+    public bool? LinkFilter { get; set; }
+
+    public bool OnlyTargetStays { get; set; }
+
+    public List<string>? Leftovers { get; set; }
 
     public string? Error { get; set; }
 

@@ -191,6 +191,53 @@ internal sealed class RevitPanel : IDisposable
         return item!;
     }
 
+    public AutomationElement Popup(Func<ConditionFactory, ConditionBase> condition)
+    {
+        var popup = TryPopup(condition, FindLimit);
+        Assert.IsNotNull(popup, "No popup window of the panel holds the item.");
+        return popup!;
+    }
+
+    public AutomationElement? TryPopup(Func<ConditionFactory, ConditionBase> condition, TimeSpan wait)
+    {
+        return Retry.WhileNull(() => PopupWindows().FirstOrDefault(window => window.FindFirstDescendant(condition) is not null),
+            wait, ignoreException: true).Result;
+    }
+
+    private IEnumerable<AutomationElement> PopupWindows()
+    {
+        foreach (var top in _automation.GetDesktop().FindAllChildren(cf => cf.ByProcessId(_processId)))
+        {
+            if (top.Properties.NativeWindowHandle.ValueOrDefault is var handle && handle != Window && handle != PanelWindow)
+            {
+                yield return top;
+            }
+
+            foreach (var owned in top.FindAllChildren(cf => cf.ByClassName("Popup")))
+            {
+                yield return owned;
+            }
+        }
+    }
+
+    public string Message()
+    {
+        return string.Join(" | ", new[] { "ModelContext.Message", "Explorer.Message" }
+            .Select(id => Shown(id)?.Name).Where(text => !string.IsNullOrWhiteSpace(text)));
+    }
+
+    public string NewMessage(string before)
+    {
+        var now = Message();
+        if (now.Length > 0 && now == before)
+        {
+            Evidence.Step($"The panel already showed '{before}' before this case; only a new message counts.");
+            return string.Empty;
+        }
+
+        return now;
+    }
+
     public int Count()
     {
         var digits = new string(Find("Filter.ResultCount").Name.Where(char.IsDigit).ToArray());

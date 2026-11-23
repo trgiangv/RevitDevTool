@@ -1,6 +1,6 @@
-using DevTools.ModelsContext.Engine;
-using DevTools.ModelsContext.Model;
-using DevTools.ModelsContext.Ports;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Scope;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;

@@ -1,6 +1,9 @@
-using DevTools.ModelsContext.Engine;
-using DevTools.ModelsContext.Model;
-using RevitDevTool.Tools.ModelsContext;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Scope;
+using RevitDevTool.Tools.ModelsContext.Documents;
+using RevitDevTool.Tools.ModelsContext.Filters;
+using RevitDevTool.Tools.ModelsContext.Parameters;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 

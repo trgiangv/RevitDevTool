@@ -1,6 +1,7 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Scope;
 using Nice3point.Revit.Extensions;
-using RevitDevTool.Tools.ModelsContext;
+using RevitDevTool.Tools.ModelsContext.Documents;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 

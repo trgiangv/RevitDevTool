@@ -1,4 +1,5 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Scope;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 
@@ -36,7 +37,7 @@ public sealed class ModelEditTests : RecordedTest
             var adapter = new Adapter();
             var key = Keys.Of(Data.Parameter);
             var definition = new FilterDefinition([Cases.Category(Data.Category)],
-                FilterSet.All(new DevTools.ModelsContext.Model.FilterRule(key, FilterOperator.Equal, Data.Value)));
+                FilterSet.All(new DevTools.ModelsContext.Filters.FilterRule(key, FilterOperator.Equal, Data.Value)));
             var before = Evidence.Time("panel", () => adapter.Count(definition, [SampleModel.Current], ScopeKind.WholeModel));
 
             foreach (var element in Elements().Take(Data.Edited))

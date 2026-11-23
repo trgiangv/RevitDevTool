@@ -34,6 +34,11 @@ internal static class SafetyGuard
         File.WriteAllText(Path.Combine(Evidence.Folder, BaselineFile), JsonSerializer.Serialize(_baseline, CaseFiles.Options));
     }
 
+    public static void Reset()
+    {
+        _baseline = null;
+    }
+
     public static void Observe()
     {
         Report(Check(includeSelection: true));

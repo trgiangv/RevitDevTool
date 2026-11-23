@@ -1,6 +1,10 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Parameters;
+using DevTools.ModelsContext.Scope;
 using Microsoft.Extensions.Logging;
-using RevitDevTool.Tools.ModelsContext;
+using RevitDevTool.Tools.ModelsContext.Filters;
+using RevitDevTool.Tools.ModelsContext.Pane;
 using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;

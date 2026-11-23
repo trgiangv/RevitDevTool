@@ -76,6 +76,34 @@
         "The linked doors disappear in the view, the eye on Doors is off and the temporary bar reads 1 change. In Revit, Reveal Hidden Elements shows the doors as hidden in the view.",
         "Click Reset: the doors are back, the eye is on and the bar is gone."
       ]
+    },
+    {
+      "id": "UI-07",
+      "description": "Plan part A from the panel: Isolate on the first door type under the Architectural link isolates the link and hides the rest of it in the active view (T3); the temporary bar shows the changes, other link categories read Hidden, Reset shows them again",
+      "test": "LinkTypeIsolateThenReset",
+      "cases": [],
+      "category": "OST_Doors",
+      "expected": "temporary bar with a change count, no error, type eye Shown, at least one other link category eye Hidden; then those eyes Shown and no bar after Reset",
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link ticked: click Collapse all, expand the link's row, expand Doors, expand its first family.",
+        "Right-click the first type row and pick Isolate (or select the row and click its Isolate tool). Only that door type of the link stays visible in the view; the temporary bar shows a change count and no error line shows.",
+        "The link's other category rows show the closed eye. Click Reset: the linked building is back, the eyes are open and the bar is gone."
+      ]
+    },
+    {
+      "id": "UI-08",
+      "description": "Plan part B from the panel: Color on the first door type under the Architectural link applies a temporary rule filter (T4); the temporary bar shows, the row shows the color, Reset removes both",
+      "test": "LinkTypeColorThenReset",
+      "cases": [],
+      "category": "OST_Doors",
+      "expected": "temporary bar with a change count, no error, row color #F44336; then no row color and no bar after Reset",
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link ticked: click Collapse all, expand the link's row, expand Doors, expand its first family.",
+        "Right-click the first type row and pick Color… (or select the row and click its Color tool). In the picker click the first swatch (red, #F44336) and Confirm.",
+        "Those linked doors turn red in the view, the row shows a red mark and the temporary bar shows a change count. Click Reset: the doors lose the color, the mark is gone and the bar is gone."
+      ]
     }
   ]
 }

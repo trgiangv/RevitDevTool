@@ -1,7 +1,9 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Parameters;
+using DevTools.ModelsContext.Scope;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using RuleNode = DevTools.ModelsContext.Model.FilterRule;
+using RuleNode = DevTools.ModelsContext.Filters.FilterRule;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 

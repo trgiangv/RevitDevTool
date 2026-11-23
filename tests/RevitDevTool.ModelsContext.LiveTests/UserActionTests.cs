@@ -1,9 +1,10 @@
-using DevTools.ModelsContext.Engine;
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Scope;
 using Nice3point.Revit.Extensions;
-using RevitDevTool.Tools.ModelsContext;
+using RevitDevTool.Tools.ModelsContext.Visibility;
 using System.Text.Json;
-using RuleNode = DevTools.ModelsContext.Model.FilterRule;
+using RuleNode = DevTools.ModelsContext.Filters.FilterRule;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 

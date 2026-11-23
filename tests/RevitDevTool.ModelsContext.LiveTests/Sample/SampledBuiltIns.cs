@@ -1,6 +1,9 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Parameters;
 using Nice3point.Revit.Extensions;
-using RevitDevTool.Tools.ModelsContext;
+using RevitDevTool.Tools.ModelsContext.Documents;
+using RevitDevTool.Tools.ModelsContext.Filters;
+using RevitDevTool.Tools.ModelsContext.Parameters;
 using System.Diagnostics;
 using System.Text;
 
@@ -73,7 +76,7 @@ internal static class SampledBuiltIns
                 foreach (var valueGroup in parameterGroup.GroupBy(item => item.Text!))
                 {
                     NumberRange? picked = isNumber && entry.Numbers.TryGetValue(valueGroup.Key, out var range) ? range : null;
-                    var plan = compiler.Plan(FilterSet.All(new DevTools.ModelsContext.Model.FilterRule(key, FilterOperator.Equal, valueGroup.Key, Picked: picked)));
+                    var plan = compiler.Plan(FilterSet.All(new DevTools.ModelsContext.Filters.FilterRule(key, FilterOperator.Equal, valueGroup.Key, Picked: picked)));
                     var matched = new HashSet<long>(plan.Match(document, valueGroup.Select(item => item.Element.Id).ToList()));
                     foreach (var item in valueGroup)
                     {

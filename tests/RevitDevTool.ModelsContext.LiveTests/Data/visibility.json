@@ -134,7 +134,7 @@
     },
     {
       "id": "VI-09",
-      "description": "T2 All models row: the eye on 'All models > Ducts' hides the Ducts category temporarily",
+      "description": "T2 category eye: the eye on 'Ducts' in the Categories box hides the Ducts category temporarily",
       "tier": "T2",
       "source": "ExplorerRow",
       "action": "Hide",
@@ -143,30 +143,29 @@
       "expected": { "temporaryHideIsolate": true, "targetVisible": false, "otherVisible": true, "linkVisible": true },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Explorer tab: click the eye on 'All models > Ducts'.",
+        "Activate '{3D}'. Explorer tab: open Categories and click the eye on 'Ducts'.",
         "The Ducts category is hidden (in the Current model and in links that follow the host view).",
         "Click Reset."
       ]
     },
     {
       "id": "VI-10",
-      "description": "T2 All models row: Isolate on 'All models > Ducts' isolates the Ducts category",
+      "description": "T2 category menu: Isolate on 'Ducts' in the Categories box hides every other category the view can hide (model, annotation, analytical, imports) inside Temporary View Properties; the Current model and every By Host View link then show only ducts, the link instances, the duct systems of the shown ducts and the listed categories Revit cannot hide; subcategories such as duct center lines count as their parent; Reset ends the mode and every count comes back",
       "tier": "T2",
       "source": "ExplorerRow",
       "action": "Isolate",
       "target": { "category": "OST_DuctCurves", "everywhere": true },
       "other": { "docs": "Host", "category": "OST_DuctTerminal" },
-      "expected": { "temporaryHideIsolate": true, "targetVisible": true, "otherVisible": false },
+      "expected": { "temporaryHideIsolate": false, "temporaryProperties": true, "targetVisible": true, "otherVisible": false, "linkVisible": true, "onlyTargetStays": true, "leftovers": ["Duct Systems", "Cameras", "Model Groups", "Divisions", "Multistory Stairs"] },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Explorer tab: hover 'All models > Ducts' and click Isolate.",
-        "Only ducts stay visible.",
-        "Click Reset."
+        "Activate '{3D}'. Explorer tab: open Categories, click 'Ducts' (only Ducts stays ticked), right-click it and click Isolate.",
+        "Only ducts stay visible, in the Current model and in links By Host View; the view title shows Temporary View Properties.",
+        "Click Reset: everything is back."
       ]
-    },
-    {
+    },    {
       "id": "VI-11",
-      "description": "T2 All models row: Color on 'All models > Ducts' overrides the Ducts category",
+      "description": "T2 category menu: Color on 'Ducts' in the Categories box overrides the Ducts category",
       "tier": "T2",
       "source": "ExplorerRow",
       "action": "Color",
@@ -176,29 +175,27 @@
       "expected": { "temporaryProperties": true, "targetColor": true, "otherColor": false },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Explorer tab: hover 'All models > Ducts', click Color and pick orange (230, 150, 20).",
+        "Activate '{3D}'. Explorer tab: open Categories, click 'Ducts' (only Ducts stays ticked), right-click it, click Color… and pick orange (230, 150, 20).",
         "Every duct draws orange (category override in Temporary View Properties).",
         "Click Reset."
       ]
     },
     {
       "id": "VI-12",
-      "description": "T2 All models row: the eye on 'All models > Doors' turns temporary hide on; Current model ducts stay. The linked doors disappear only in the image: the link view collector the API offers does not reflect a temporary category hide, so their state is recorded, not asserted",
+      "description": "T2 category menu in links: Isolate on 'Doors' leaves only doors in the Current model and every By Host View link (active view collectors), besides the link instances and the listed categories Revit cannot hide in a view; the door count is unchanged; Reset brings every count back",
       "tier": "T2",
       "source": "ExplorerRow",
-      "action": "Hide",
+      "action": "Isolate",
       "target": { "category": "OST_Doors", "everywhere": true },
       "other": { "docs": "Host", "category": "OST_DuctCurves" },
-      "linked": { "filterCase": "GR-02" },
-      "expected": { "temporaryHideIsolate": true, "otherVisible": true },
+      "expected": { "temporaryProperties": true, "otherVisible": false, "linkVisible": true, "onlyTargetStays": true, "leftovers": ["Cameras", "Model Groups", "Divisions", "Multistory Stairs"] },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Explorer tab: click the eye on 'All models > Doors'.",
-        "The linked doors disappear (the link follows the host view); HVAC ducts stay.",
-        "Click Reset."
+        "Activate '{3D}'. Explorer tab: tick the Architectural link, open Categories, click 'Doors', right-click it and click Isolate.",
+        "Only the doors stay; walls, floors, levels, lines and the HVAC ducts are gone.",
+        "Click Reset: everything is back."
       ]
-    },
-    {
+    },    {
       "id": "VI-13",
       "description": "T3 filter result inside the link: Hide on the GR-02 result (12 Architectural doors) is planned as Hide in View (T3). L2 checks the plan only; running T3 inside the test runner crashed Revit",
       "tier": "T3",
@@ -216,16 +213,16 @@
     },
     {
       "id": "VI-14",
-      "description": "T3 filter result inside the link: Color is refused with the reason that link elements only hide and show",
+      "description": "Linked elements sent by id: Color is refused (Revit colors linked elements only through a rule view filter, T4); nothing changes in the view",
       "tier": "T3",
       "source": "FilterResult",
       "action": "Color",
       "color": { "r": 200, "g": 0, "b": 200 },
       "target": { "filterCase": "GR-02" },
-      "expected": { "error": "Inside a link, single elements can only be hidden and shown. Isolate, Halftone and Color are on the link's model row." },
+      "expected": { "error": "Revit can color linked elements only by family, type or a rule filter." },
       "images": ["before", "after"],
       "manualSteps": [
-        "Activate '{3D}'. Filter tab: build GR-02 with only the Architectural link ticked.",
+        "Activate '{3D}'. Filter tab: build GR-02 with only the Architectural link ticked (its 'Swing Angle undefined' rule has no Revit filter rule).",
         "Result row menu: Color is disabled and its tooltip gives the reason; nothing changes in the view."
       ]
     },
@@ -243,6 +240,84 @@
         "Activate '{3D}'. Filter tab: build GS-02 with 'Current model' and the Architectural link ticked.",
         "Result row menu > Hide: ducts disappear in the temporary frame and the linked doors disappear too.",
         "Click Reset: both come back."
+      ]
+    },
+    {
+      "id": "VI-16",
+      "description": "T4 link type row: Color on the most used Architectural door type creates one 'Model Context <n>' rule view filter (Family Name + Type Name) inside Temporary View Properties with a red override; Reset deletes it and ends the mode",
+      "tier": "T4",
+      "source": "ExplorerRow",
+      "action": "Color",
+      "color": { "r": 230, "g": 40, "b": 40 },
+      "target": { "linkType": "OST_Doors" },
+      "other": { "docs": "Host", "category": "OST_DuctCurves" },
+      "expected": { "temporaryProperties": true, "linkFilter": true, "otherColor": false },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: tick the Architectural link, open Doors > a family > its type row, right-click > Color… and pick red (230, 40, 40).",
+        "The linked doors of that type draw red; the tooltip says it applies to every By Host View link with this type.",
+        "Visibility/Graphics > Filters lists 'Model Context 1' while the temporary view properties are on.",
+        "Click Reset: the doors lose the color, the filter is gone from Manage > Filters and the mode ends."
+      ]
+    },
+    {
+      "id": "VI-17",
+      "description": "T0 + T4 mixed: Halftone on Current model ducts (element overrides) and an Architectural door type (rule view filter) in one plan; Reset removes both",
+      "tier": "T0+T4",
+      "source": "ExplorerRow",
+      "action": "Halftone",
+      "target": { "docs": "Host", "category": "OST_DuctCurves", "linkType": "OST_Doors" },
+      "other": { "docs": "Host", "category": "OST_DuctTerminal" },
+      "expected": { "temporaryProperties": true, "linkFilter": true },
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: select 'Current model > Ducts' and a door type row under the Architectural link, right-click > Halftone.",
+        "Ducts and those linked doors draw halftone.",
+        "Click Reset."
+      ]
+    },
+    {
+      "id": "VI-18",
+      "description": "T4 cap: a link color request over 100 rules is refused before anything changes",
+      "tier": "T4",
+      "source": "ExplorerRow",
+      "action": "Color",
+      "color": { "r": 230, "g": 40, "b": 40 },
+      "target": { "linkType": "OST_Doors", "repeat": 51 },
+      "expected": { "error": "Over 100 rules to color in a link." },
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Activate '{3D}'. Explorer tab: select more than 50 type rows under the Architectural link, right-click: Color is disabled with the reason."
+      ]
+    },
+    {
+      "id": "VI-19",
+      "description": "T3 link isolate: Isolate on the GR-02 result (12 Architectural doors) is planned as a link isolate (temporary isolate of the link instance + Hide in View of the rest of that link in the active view). L2 checks the plan only",
+      "tier": "T3",
+      "source": "FilterResult",
+      "action": "Isolate",
+      "target": { "filterCase": "GR-02" },
+      "expected": { "plannedTiers": ["T3"] },
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Activate a plan. Filter tab: build GR-02 with only the Architectural link ticked.",
+        "Result row menu > Isolate: only the 12 linked doors stay; the rest of the link is hidden (Hide in View, saved with the view) and the Current model is hidden temporarily.",
+        "Click Reset: the panel shows the rest of the link again and ends the temporary isolate."
+      ]
+    },
+    {
+      "id": "VI-20",
+      "description": "T0 + T3 mixed isolate: Isolate on the GS-02 result keeps the Current model ducts and the Architectural doors. L2 checks the split only",
+      "tier": "T0+T3",
+      "source": "FilterResult",
+      "action": "Isolate",
+      "target": { "filterCase": "GS-02" },
+      "expected": { "plannedTiers": ["T0", "T3"] },
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Activate a plan. Filter tab: build GS-02 with 'Current model' and the Architectural link ticked.",
+        "Result row menu > Isolate: the ducts and the linked doors stay; everything else is hidden.",
+        "Click Reset: everything comes back."
       ]
     }
   ]

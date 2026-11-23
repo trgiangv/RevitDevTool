@@ -1,6 +1,8 @@
-using DevTools.ModelsContext.Model;
-using DevTools.ModelsContext.ViewModels;
+using DevTools.ModelsContext.Explorer;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Panel;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Conditions;
 using FlaUI.Core.Definitions;
 using FlaUI.Core.Tools;
 using RevitDevTool.ModelsContext.LiveTests;
@@ -12,6 +14,8 @@ namespace RevitDevTool.ModelsContext.UiTests;
 [DoNotParallelize]
 public sealed class PanelFlowTests : RecordedTest
 {
+    private const string SwatchHex = "#F44336";
+
     private static RevitPanel _panel = null!;
     private static PanelSteps _steps = null!;
 
@@ -224,9 +228,284 @@ public sealed class PanelFlowTests : RecordedTest
         });
     }
 
+    [TestMethod]
+    public void LinkTypeIsolateThenReset()
+    {
+        var flow = CaseFiles.Flow("UI-07");
+        Record(flow, () =>
+        {
+            _panel.Select("ModelContext.View.Explorer");
+            try
+            {
+                var category = CaseFiles.Facts.CategoryNames[flow.Category!];
+                ExpandLink(category);
+                var link = _steps.DocumentName(CaseFiles.Facts.LinkLabel);
+                var others = LinkCategories(link).Where(name => name != category).ToList();
+                var type = ExpandChild(ExpandChild([link, category]));
+                Evidence.Step($"Collapsed all rows, expanded the Architectural link, {category} and its first family: type row '{type[^1]}' under '{type[^2]}'.");
+                _panel.Shot("before");
+
+                var stale = _panel.Message();
+                var tool = RowTool(type, "Explorer.Row.Isolate");
+                Evidence.Time("isolate", () => _panel.Act(() => tool.Patterns.Invoke.Pattern.Invoke()));
+                Evidence.Step("Invoked Isolate on the selected type row (Explorer.Row.Isolate runs the row menu's Isolate item).");
+                var bar = _panel.TryFind("Temporary.Text")?.Name ?? string.Empty;
+                var message = _panel.NewMessage(stale);
+                var typeEye = EyeAt(type);
+                var eyes = LinkEyes(link, others);
+                var hidden = others.Where(name => eyes.GetValueOrDefault(name) == nameof(RowEye.Hidden)).ToList();
+                Evidence.Step("Eyes after Isolate: " + string.Join(", ", others.Select(name => $"{name} {eyes.GetValueOrDefault(name) ?? "off screen"}")) + ".");
+                _panel.Shot("after");
+
+                Evidence.Time("reset", () => _panel.Invoke("Temporary.Reset"));
+                Evidence.Step("Invoked Temporary.Reset.");
+                var gone = _panel.Gone("Temporary.Text");
+                var after = LinkEyes(link, hidden);
+                var back = hidden.Where(name => after.GetValueOrDefault(name) != nameof(RowEye.Shown)).ToList();
+                _panel.Shot("reset");
+                Evidence.Values($"bar with a count, no error, type eye {nameof(RowEye.Shown)}, another category {nameof(RowEye.Hidden)}; then all {nameof(RowEye.Shown)}, no bar",
+                    $"'{bar}', error '{message}', type eye {typeEye}, {hidden.Count} of {others.Count} categories {nameof(RowEye.Hidden)}; then {(back.Count == 0 ? "all shown" : "still hidden: " + string.Join(", ", back))}, {(gone ? "no bar" : "bar still shown")}");
+
+                Assert.IsTrue(bar.Any(char.IsDigit), $"The temporary bar shows no change count: '{bar}'.");
+                Assert.AreEqual(string.Empty, message);
+                Assert.AreEqual(nameof(RowEye.Shown), typeEye);
+                Assert.IsNotEmpty(hidden, "No other link category reads Hidden after Isolate.");
+                Assert.IsEmpty(back, "Reset left link categories hidden: " + string.Join(", ", back));
+                Assert.IsTrue(gone, "Reset left the temporary bar.");
+            }
+            finally
+            {
+                ResetLeftovers();
+                _panel.Select("ModelContext.View.Filter");
+            }
+        });
+    }
+
+    [TestMethod]
+    public void LinkTypeColorThenReset()
+    {
+        var flow = CaseFiles.Flow("UI-08");
+        Record(flow, () =>
+        {
+            _panel.Select("ModelContext.View.Explorer");
+            try
+            {
+                var category = CaseFiles.Facts.CategoryNames[flow.Category!];
+                ExpandLink(category);
+                var link = _steps.DocumentName(CaseFiles.Facts.LinkLabel);
+                var type = ExpandChild(ExpandChild([link, category]));
+                Evidence.Step($"Collapsed all rows, expanded the Architectural link, {category} and its first family: type row '{type[^1]}' under '{type[^2]}'.");
+                _panel.Shot("before");
+
+                var stale = _panel.Message();
+                var tool = RowTool(type, "Explorer.Row.Color");
+                _panel.Act(() => tool.Patterns.Invoke.Pattern.Invoke());
+                var picker = _panel.Popup(ConfirmButton);
+                FirstSwatch(picker).Patterns.Invoke.Pattern.Invoke();
+                var confirm = _panel.Item(picker, ConfirmButton);
+                Evidence.Time("color", () => _panel.Act(() => confirm.Patterns.Invoke.Pattern.Invoke()));
+                Evidence.Step("Invoked Color on the selected type row (Explorer.Row.Color runs the row menu's Color item), the first picker swatch, then Confirm.");
+                var bar = _panel.Shown("Temporary.Text")?.Name ?? string.Empty;
+                var message = _panel.NewMessage(stale);
+                Retry.WhileFalse(() => ColorAt(type) == SwatchHex, TimeSpan.FromSeconds(10), ignoreException: true);
+                var mark = ColorAt(type);
+                _panel.Shot("after");
+
+                Evidence.Time("reset", () => _panel.Invoke("Temporary.Reset"));
+                Evidence.Step("Invoked Temporary.Reset.");
+                var gone = _panel.Gone("Temporary.Text");
+                Retry.WhileFalse(() => string.IsNullOrEmpty(ColorAt(type)), TimeSpan.FromSeconds(10), ignoreException: true);
+                var cleared = ColorAt(type);
+                _panel.Shot("reset");
+                Evidence.Values($"bar with a count, no error, row color {SwatchHex}; then no color, no bar",
+                    $"'{bar}', error '{message}', row color '{mark}'; then color '{cleared}', {(gone ? "no bar" : "bar still shown")}");
+
+                Assert.IsTrue(bar.Any(char.IsDigit), $"The temporary bar shows no change count: '{bar}'.");
+                Assert.AreEqual(string.Empty, message);
+                Assert.AreEqual(SwatchHex, mark);
+                Assert.IsTrue(string.IsNullOrEmpty(cleared), $"Reset left the row color '{cleared}'.");
+                Assert.IsTrue(gone, "Reset left the temporary bar.");
+            }
+            finally
+            {
+                ClosePicker();
+                ResetLeftovers();
+                _panel.Select("ModelContext.View.Filter");
+            }
+        });
+    }
+
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+
+    private static void ResetLeftovers()
+    {
+        if (_panel.Shown("Temporary.Reset") is not null)
+        {
+            _panel.Invoke("Temporary.Reset");
+            Evidence.Step("Reset the temporary changes the case left.");
+        }
+    }
+
+    private static List<string> LinkCategories(string link)
+    {
+        var documents = _panel.Find("ModelContext.Documents").FindAllDescendants(cf => cf.ByControlType(ControlType.ListItem))
+            .Select(item => item.Name).ToHashSet();
+        var items = _panel.Find("Explorer.Rows").FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+        var start = Array.FindIndex(items, item => item.Name == link);
+        return items.Skip(start + 1).TakeWhile(item => !documents.Contains(item.Name)).Select(item => item.Name).ToList();
+    }
+
+    private static AutomationElement? AtPath(IReadOnlyList<string> path, int offset = 0)
+    {
+        var items = _panel.Find("Explorer.Rows").FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+        var index = -1;
+        foreach (var name in path)
+        {
+            index = Array.FindIndex(items, index + 1, item => item.Name == name);
+            if (index < 0)
+            {
+                return null;
+            }
+        }
+
+        index += offset;
+        return index < items.Length ? items[index] : null;
+    }
+
+    private static AutomationElement OnScreen(string[] path)
+    {
+        var row = AtPath(path);
+        Assert.IsNotNull(row, $"No row '{string.Join(" > ", path)}'.");
+        if (row!.IsOffscreen)
+        {
+            row.Patterns.ScrollItem.Pattern.ScrollIntoView();
+            Evidence.Step($"Scrolled '{path[^1]}' into view (ScrollItem pattern).");
+        }
+
+        return row;
+    }
+
+    private static string[] ExpandChild(string[] path)
+    {
+        var row = OnScreen(path);
+        var next = AtPath(path, 1)?.Name;
+        _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Expand")).Patterns.Invoke.Pattern.Invoke();
+        var child = Retry.WhileNull(() => AtPath(path, 1) is { } item && item.Name != next ? item : null,
+            TimeSpan.FromSeconds(10), ignoreException: true).Result;
+        Assert.IsNotNull(child, $"Expanding '{path[^1]}' showed no child row.");
+        return [.. path, child!.Name];
+    }
+
+    private static AutomationElement RowTool(string[] path, string automationId)
+    {
+        OnScreen(path).Patterns.SelectionItem.Pattern.Select();
+        var tool = Retry.WhileNull(() => AtPath(path)?.FindFirstDescendant(cf => cf.ByAutomationId(automationId)),
+            TimeSpan.FromSeconds(10), ignoreException: true).Result;
+        Assert.IsNotNull(tool, $"No {automationId} on the selected row '{path[^1]}'.");
+        Assert.IsTrue(Retry.WhileFalse(() => tool!.IsEnabled, TimeSpan.FromSeconds(5), ignoreException: true).Result,
+            $"{automationId} is disabled: {tool!.Properties.HelpText.ValueOrDefault}");
+        Evidence.Step($"Selected '{path[^1]}' (SelectionItem pattern).");
+        return tool!;
+    }
+
+    private static string? EyeAt(IReadOnlyList<string> path)
+    {
+        return AtPath(path)?.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Eye"))?.Properties.ItemStatus.ValueOrDefault;
+    }
+
+    private static Dictionary<string, string?> LinkEyes(string link, IReadOnlyCollection<string> names)
+    {
+        var items = _panel.Find("Explorer.Rows").FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+        var start = Array.FindIndex(items, item => item.Name == link);
+        var wanted = names.ToHashSet();
+        var eyes = new Dictionary<string, string?>();
+        foreach (var item in items.Skip(start + 1).Where(item => wanted.Contains(item.Name) && !eyes.ContainsKey(item.Name)))
+        {
+            eyes[item.Name] = EyeOf(item);
+        }
+
+        if (wanted.Any(name => eyes.GetValueOrDefault(name) is null))
+        {
+            ScrollFor(link, wanted, eyes);
+        }
+
+        return eyes;
+    }
+
+    private static void ScrollFor(string link, HashSet<string> wanted, Dictionary<string, string?> eyes)
+    {
+        var rows = _panel.Find("Explorer.Rows");
+        var scroll = rows.Patterns.Scroll.Pattern;
+        Evidence.Step("Scrolled the rows from the top down to read the eyes of rows the list had not realized (Scroll pattern).");
+        scroll.SetScrollPercent(-1, 0);
+        Retry.WhileFalse(() => scroll.VerticalScrollPercent.Value <= 0, TimeSpan.FromSeconds(5), ignoreException: true);
+        Collect(rows, link, wanted, eyes);
+        while (wanted.Any(name => eyes.GetValueOrDefault(name) is null) && scroll.VerticalScrollPercent.Value < 100)
+        {
+            var before = scroll.VerticalScrollPercent.Value;
+            scroll.Scroll(ScrollAmount.NoAmount, ScrollAmount.LargeIncrement);
+            Retry.WhileFalse(() => scroll.VerticalScrollPercent.Value > before, TimeSpan.FromSeconds(5), ignoreException: true);
+            Collect(rows, link, wanted, eyes);
+            if (scroll.VerticalScrollPercent.Value <= before)
+            {
+                return;
+            }
+        }
+    }
+
+    private static void Collect(AutomationElement rows, string link, HashSet<string> wanted, Dictionary<string, string?> eyes)
+    {
+        var items = rows.FindAllChildren(cf => cf.ByControlType(ControlType.ListItem));
+        var start = Array.FindIndex(items, item => item.Name == link);
+        foreach (var item in items.Skip(start + 1).Where(item => wanted.Contains(item.Name) && eyes.GetValueOrDefault(item.Name) is null))
+        {
+            eyes[item.Name] = EyeOf(item);
+        }
+    }
+
+    private static string? EyeOf(AutomationElement row)
+    {
+        return row.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Eye"))?.Properties.ItemStatus.ValueOrDefault;
+    }
+
+    private static string? ColorAt(IReadOnlyList<string> path)
+    {
+        return AtPath(path)?.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Color"))?.Properties.ItemStatus.ValueOrDefault;
+    }
+
+    private static ConditionBase ConfirmButton(ConditionFactory cf)
+    {
+        return cf.ByControlType(ControlType.Button).And(cf.ByName("Confirm"));
+    }
+
+    private static ConditionBase CancelButton(ConditionFactory cf)
+    {
+        return cf.ByControlType(ControlType.Button).And(cf.ByName("Cancel"));
+    }
+
+    private static void ClosePicker()
+    {
+        if (_panel.TryPopup(ConfirmButton, TimeSpan.FromSeconds(1)) is not { } picker)
+        {
+            return;
+        }
+
+        _panel.Item(picker, CancelButton).Patterns.Invoke.Pattern.Invoke();
+        var closed = Retry.WhileFalse(() => _panel.TryPopup(ConfirmButton, TimeSpan.Zero) is null, TimeSpan.FromSeconds(10), ignoreException: true).Result;
+        Evidence.Step(closed ? "Closed the color picker the case left open (Cancel)." : "The color picker stayed open after Cancel.");
+    }
+
+    private static AutomationElement FirstSwatch(AutomationElement picker)
+    {
+        var buttons = picker.FindAllDescendants(cf => cf.ByControlType(ControlType.Button))
+            .Where(button => button.ClassName == "Button" && string.IsNullOrEmpty(button.Name) && button.Patterns.Invoke.IsSupported)
+            .ToList();
+        Assert.IsNotEmpty(buttons, "The color picker shows no swatches.");
+        var smallest = buttons.Min(button => button.BoundingRectangle.Height);
+        return buttons.First(button => button.BoundingRectangle.Height <= smallest + 2);
+    }
 
     private static AutomationElement ExpandLink(string category)
     {

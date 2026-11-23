@@ -1,6 +1,7 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Visibility;
 using Nice3point.Revit.Extensions;
-using RevitDevTool.Tools.ModelsContext;
+using RevitDevTool.Tools.ModelsContext.Documents;
+using RevitDevTool.Tools.ModelsContext.Visibility;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 
@@ -48,6 +49,83 @@ public sealed class TemplateViewTests : RecordedTest
             Evidence.Values("each action ok or refused; Reset leaves the view as before", string.Join("; ", outcomes));
             Assert.That(problems, Is.Empty, string.Join("\n", problems));
         });
+    }
+
+    [Test]
+    [Explicit("Run alone with a plan active whose template controls V/G Filters (see US-18): it checks the view that is active now and never switches views.")]
+    public void LockedTemplateLinkColorDraws()
+    {
+        Record(Areas.Find(LazyData.Value.Cases, "US-18"), () =>
+        {
+            var host = ActiveModel.Host;
+            var view = SampleModel.Application.ActiveUIDocument.ActiveView;
+            if (!LocksFilters(host, view))
+            {
+                Assert.Inconclusive($"The active view '{view.Name}' has no template that controls V/G Overrides Filters. Activate a plan such as L3 with its template.");
+            }
+
+            var template = view.ViewTemplateId;
+            var step = VisibilityRun.LinkTypeStep("OST_Doors", 1);
+            var plan = new VisibilityPlan(VisibilityAction.Color, Red, [step], null);
+            var actions = new RevitViewActions();
+            var problems = new List<string>();
+            var group = new TransactionGroup(host, "Model Context template link color");
+            group.Start();
+            try
+            {
+                Evidence.Time("color", () => Adapter.Run(actions.ExecuteAsync(plan, None)));
+                var properties = view.TemporaryViewModes?.IsModeActive(TemporaryViewMode.TemporaryViewProperties) == true;
+                var drawn = VisibilityRun.LinkFilterDrawn(view, new RgbData { R = Red.R, G = Red.G, B = Red.B }, false);
+                Evidence.Step($"Color on a linked door type: temporary view properties {properties}, panel filter on the view with red {drawn}.");
+                Shot(host, view, "after");
+                if (!properties || !drawn)
+                {
+                    problems.Add($"expected the panel filter inside Temporary View Properties, got properties {properties}, drawn {drawn}");
+                }
+
+                Evidence.Time("reset", () => Adapter.Run(actions.ResetAsync(None)));
+                var left = VisibilityRun.PanelFilterCount(host);
+                Evidence.Step($"Reset: {left} panel filters left in the model.");
+                if (left > 0)
+                {
+                    problems.Add($"Reset left {left} Model Context filters");
+                }
+
+                Check(view, "link color", new Dictionary<ElementId, OverrideGraphicSettings>(), null, null, template, problems);
+            }
+            finally
+            {
+                if (group.HasStarted())
+                {
+                    group.RollBack();
+                }
+
+                group.Dispose();
+            }
+
+            Evidence.Values("filter drawn inside Temporary View Properties; Reset leaves no panel filter", string.Join("; ", problems));
+            Assert.That(problems, Is.Empty, string.Join("\n", problems));
+        }, writesView: true);
+    }
+
+    private static void Shot(Document host, View view, string label)
+    {
+        if (Evidence.Images)
+        {
+            Evidence.Image(label, path => ViewImage.Export(host, view, path));
+        }
+    }
+
+    private static bool LocksFilters(Document host, View view)
+    {
+        if (view.ViewTemplateId == ElementId.InvalidElementId || host.GetElement(view.ViewTemplateId) is not View template)
+        {
+            return false;
+        }
+
+        var controlled = new HashSet<long>(template.GetTemplateParameterIds().Select(id => id.ToLong()));
+        controlled.ExceptWith(template.GetNonControlledTemplateParameterIds().Select(id => id.ToLong()));
+        return controlled.Contains((long)BuiltInParameter.VIS_GRAPHICS_FILTERS);
     }
 
     private static void Act(Document host, View view, TemplateTarget target, VisibilityAction action, ElementId template,

@@ -1,6 +1,10 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Scope;
+using DevTools.ModelsContext.Visibility;
 using Nice3point.Revit.Extensions;
-using RevitDevTool.Tools.ModelsContext;
+using RevitDevTool.Tools.ModelsContext.Visibility;
+using RuleNode = DevTools.ModelsContext.Filters.FilterRule;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 
@@ -68,13 +72,16 @@ internal static class VisibilityRun
 
         Assert.That(plan.UsesReferenceCommands, Is.False, "L2 never runs a T3 plan (Hide in View through an internal command); declare plannedTiers in visibility.json.");
         var saved = Overrides(plan);
+        var linkCounts = expect.OnlyTargetStays ? LinkCategoryCounts.Read(SampleModel.Host, View) : null;
+        LinkCategoryCounts? linkAfter = null;
         VisibilityState after;
         VisibilityState reset;
         try
         {
             Evidence.Time("panel", () => Adapter.Run(_actions.ExecuteAsync(plan, CancellationToken.None)));
             Evidence.Step("Sent the plan to RevitViewActions.ExecuteAsync (the adapter the panel calls).");
-            after = Evidence.Time("oracle", () => Read(probe, item.Color));
+            after = Evidence.Time("oracle", () => Read(probe, item));
+            linkAfter = linkCounts is null ? null : LinkCategoryCounts.Read(SampleModel.Host, View);
             Shot("after");
         }
         finally
@@ -82,12 +89,17 @@ internal static class VisibilityRun
             Evidence.Time("reset", Reset);
             Evidence.Step("Reset: RevitViewActions.ResetAsync.");
             Shot("reset");
-            reset = Read(probe, item.Color);
+            reset = Read(probe, item);
         }
 
         Evidence.Values(item.ExpectedText, after.ToString());
         Evidence.Step($"After reset: {reset}.");
         Verify(expect, after);
+        if (linkCounts is not null)
+        {
+            VerifyLinks(probe.EverywhereCategory!.Value, expect.Leftovers ?? [], linkCounts, linkAfter!);
+        }
+        Assert.That(reset.PanelFilters, Is.Zero, "Reset left a Model Context view filter in the model.");
         Assert.That(reset.TemporaryHideIsolate || reset.TemporaryProperties, Is.False, "Reset left a temporary mode on.");
         Assert.That(reset.TargetColored || reset.OtherColored, Is.False, "Reset left a color override.");
         Assert.That(Changed(saved), Is.Empty, "Reset did not restore the element overrides the view had before.");
@@ -134,6 +146,8 @@ internal static class VisibilityRun
             AttachedModelStep => "T1",
             GroupEverywhereStep => "T2",
             ReferenceCommandStep => "T3",
+            LinkIsolateStep => "T3",
+            LinkFilterStep => "T4",
             _ => step.GetType().Name
         }).Distinct().ToList();
     }
@@ -149,9 +163,23 @@ internal static class VisibilityRun
         Compare(problems, "linked elements visible", expect.LinkedVisible, actual.LinkedVisible);
         Compare(problems, "target colored", expect.TargetColor, actual.TargetColored);
         Compare(problems, "other colored", expect.OtherColor, actual.OtherColored);
+        Compare(problems, "link filter drawn", expect.LinkFilter, actual.LinkFilterDrawn);
         Assert.That(problems, Is.Empty, string.Join("; ", problems));
     }
 
+    private static void VerifyLinks(long kept, IReadOnlyList<string> leftovers, LinkCategoryCounts before, LinkCategoryCounts after)
+    {
+        var reset = LinkCategoryCounts.Read(SampleModel.Host, View);
+        var target = Category.GetCategory(SampleModel.Host, kept.ToElementId())!.Name;
+        var links = Category.GetCategory(SampleModel.Host, new ElementId(BuiltInCategory.OST_RvtLinks))!.Name;
+        var stray = after.StrayOf([target, links, .. leftovers]);
+        Evidence.Step($"Active view collectors (Current model and every By Host View link): before {before} ({target} {before.Of(target):N0}); after {after} ({target} {after.Of(target):N0}); after reset {reset}.");
+        Evidence.Step($"Allowed besides {target}: the link instances ({links}) and categories Revit cannot hide in a view: {string.Join(", ", leftovers)}.");
+        Assert.That(before.Of(target), Is.GreaterThan(0), "The view shows no element of the target category.");
+        Assert.That(stray, Is.Empty, "Other categories stayed visible: " + string.Join(", ", stray));
+        Assert.That(after.Of(target), Is.EqualTo(before.Of(target)), "Isolate hid elements of the kept category.");
+        Assert.That(reset.SameAs(before), Is.True, $"Reset did not restore the counts: {reset} instead of {before}.");
+    }
     private static void Compare(List<string> problems, string name, bool? expected, bool? actual)
     {
         if (expected is { } wanted && actual != wanted)
@@ -183,7 +211,7 @@ internal static class VisibilityRun
 
     private static List<ElementRef> Elements(TargetData target)
     {
-        if (target.Link)
+        if (target.Link || (target.FilterCase is null && target.Category is null))
         {
             return [];
         }
@@ -226,19 +254,70 @@ internal static class VisibilityRun
             foreach (var group in probe.Target.GroupBy(element => element.Document).OrderBy(group => !group.Key.IsCurrentModel))
             {
                 var ids = group.Select(element => element.Id).OrderBy(value => value).ToList();
-                steps.Add(group.Key.IsCurrentModel ? new ElementsStep(group.Key, ids) : new ReferenceCommandStep(group.Key, ids));
+                steps.Add(StepOf(action, group.Key, ids));
             }
+        }
+
+        if (item.Target.LinkType is { } linkType)
+        {
+            steps.Add(LinkTypeStep(linkType, item.Target.Repeat ?? 1));
         }
 
         return new VisibilityPlan(action, color, steps, null);
     }
 
-    private static VisibilityState Read(Probe probe, RgbData? color)
+    internal static LinkFilterStep LinkTypeStep(string category, int repeat)
     {
+        var link = SampleModel.Architectural;
+        var categoryId = Cases.Category(category);
+        var top = Oracle.Candidates(link.Document, [categoryId])
+            .Where(element => element.GetTypeId() != ElementId.InvalidElementId)
+            .GroupBy(element => element.GetTypeId())
+            .OrderByDescending(group => group.Count())
+            .First();
+        var type = (ElementType)link.Document.GetElement(top.Key);
+        var rule = FilterSet.All(
+            new RuleNode(LinkRules.FamilyName, FilterOperator.Equal, type.FamilyName),
+            new RuleNode(LinkRules.TypeName, FilterOperator.Equal, type.Name));
+        Evidence.Step($"Link type row: '{type.FamilyName} : {type.Name}' ({top.Count()} elements) in the Architectural link{(repeat > 1 ? $", repeated {repeat} times" : "")}.");
+        return new LinkFilterStep(link.Key, [.. top.Select(element => element.Id.ToLong()).OrderBy(id => id)],
+            new FilterDefinition([categoryId], FilterSet.Any([.. Enumerable.Repeat<FilterNode>(rule, repeat)])));
+    }
+
+    internal static int PanelFilterCount(Document document)
+    {
+        return new FilteredElementCollector(document).OfClass(typeof(ParameterFilterElement))
+            .Count(element => LinkFilters.IsPanelName(element.Name));
+    }
+
+    internal static bool LinkFilterDrawn(View view, RgbData? color, bool halftone)
+    {
+        return view.GetFilters()
+            .Select(id => view.Document.GetElement(id))
+            .OfType<ParameterFilterElement>()
+            .Where(filter => LinkFilters.IsPanelName(filter.Name))
+            .Select(filter => view.GetFilterOverrides(filter.Id))
+            .Any(settings => color is not null ? Matches(settings, color) : settings.Halftone == halftone);
+    }
+
+    private static VisibilityStep StepOf(VisibilityAction action, DocumentKey document, List<long> ids)
+    {
+        if (document.IsCurrentModel)
+        {
+            return new ElementsStep(document, ids);
+        }
+
+        return action == VisibilityAction.Isolate ? new LinkIsolateStep(document, ids) : new ReferenceCommandStep(document, ids);
+    }
+
+    private static VisibilityState Read(Probe probe, VisibilityCase item)
+    {
+        var color = item.Color;
         var view = View;
         var hideIsolate = view.IsTemporaryHideIsolateActive();
         var properties = view.TemporaryViewModes?.IsModeActive(TemporaryViewMode.TemporaryViewProperties) == true;
-        bool? linkVisible = IsVisible(view, SampleModel.Architectural.Key.LinkInstanceId.ToElementId(), hideIsolate);
+        var inView = new HashSet<ElementId>(new FilteredElementCollector(SampleModel.Host, view.Id).WhereElementIsNotElementType().ToElementIds());
+        bool? linkVisible = IsVisible(view, SampleModel.Architectural.Key.LinkInstanceId.ToElementId(), hideIsolate, inView);
         bool? linkedVisible = null;
         if (probe.Linked.Count > 0)
         {
@@ -249,12 +328,14 @@ internal static class VisibilityRun
         return new VisibilityState(
             hideIsolate,
             properties,
-            All(probe.TargetIds.Select(id => IsVisible(view, id, hideIsolate))),
-            All(probe.OtherIds.Select(id => IsVisible(view, id, hideIsolate))),
+            All(probe.TargetIds.Select(id => IsVisible(view, id, hideIsolate, inView))),
+            All(probe.OtherIds.Select(id => IsVisible(view, id, hideIsolate, inView))),
             linkVisible,
             linkedVisible,
             color is not null && TargetColored(view, probe, color),
-            color is not null && probe.OtherIds.Any(id => Matches(view.GetElementOverrides(id), color)));
+            color is not null && probe.OtherIds.Any(id => Matches(view.GetElementOverrides(id), color)),
+            LinkFilterDrawn(view, color, item.Action == nameof(VisibilityAction.Halftone)),
+            PanelFilterCount(SampleModel.Host));
     }
 
     private static bool TargetColored(View view, Probe probe, RgbData color)
@@ -278,9 +359,10 @@ internal static class VisibilityRun
         return line.IsValid && line.Red == color.R && line.Green == color.G && line.Blue == color.B;
     }
 
-    private static bool IsVisible(View view, ElementId id, bool temporary)
+    private static bool IsVisible(View view, ElementId id, bool temporary, HashSet<ElementId> inView)
     {
-        return SampleModel.Host.GetElement(id) is { } element
+        return inView.Contains(id)
+               && SampleModel.Host.GetElement(id) is { } element
                && !element.IsHidden(view)
                && (!temporary || view.IsElementVisibleInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate, id));
     }
@@ -317,6 +399,8 @@ internal static class VisibilityRun
             AttachedModelStep => "the Architectural link instance",
             ElementsStep elements => $"{elements.Ids.Count} Current model elements",
             ReferenceCommandStep references => $"{references.Ids.Count} linked elements",
+            LinkIsolateStep isolate => $"isolate {isolate.KeepIds.Count} linked elements",
+            LinkFilterStep filter => $"a rule view filter for {filter.Ids.Count} linked elements",
             _ => step.GetType().Name
         }));
     }
@@ -339,11 +423,13 @@ internal sealed record VisibilityState(
     bool? LinkVisible,
     bool? LinkedVisible,
     bool TargetColored,
-    bool OtherColored)
+    bool OtherColored,
+    bool LinkFilterDrawn,
+    int PanelFilters)
 {
     public override string ToString()
     {
-        return $"hide/isolate {TemporaryHideIsolate}, view properties {TemporaryProperties}, target visible {Show(TargetVisible)}, other visible {Show(OtherVisible)}, link visible {Show(LinkVisible)}, linked visible {Show(LinkedVisible)}, target colored {TargetColored}, other colored {OtherColored}";
+        return $"hide/isolate {TemporaryHideIsolate}, view properties {TemporaryProperties}, target visible {Show(TargetVisible)}, other visible {Show(OtherVisible)}, link visible {Show(LinkVisible)}, linked visible {Show(LinkedVisible)}, target colored {TargetColored}, other colored {OtherColored}, link filter drawn {LinkFilterDrawn}, panel filters {PanelFilters}";
     }
 
     private static string Show(bool? value)

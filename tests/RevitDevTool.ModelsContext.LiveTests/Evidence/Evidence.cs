@@ -75,7 +75,7 @@ internal static class Evidence
     private const string ImagesFile = "images.on";
 
     private static readonly object Gate = new();
-    private static readonly Lazy<string> LazyFolder = new(OpenFolder);
+    private static string? _folder;
     private static LayerRun? _run;
     private static CaseRecord? _current;
     private static Stopwatch _caseWatch = new();
@@ -84,9 +84,28 @@ internal static class Evidence
 
     public static int HostProcessId { get; set; } = Process.GetCurrentProcess().Id;
 
-    public static string Folder => LazyFolder.Value;
+    public static string Folder
+    {
+        get
+        {
+            lock (Gate)
+            {
+                return _folder ??= OpenFolder();
+            }
+        }
+    }
 
     public static CaseRecord? Current => _current;
+
+    public static void StartSession()
+    {
+        lock (Gate)
+        {
+            _folder = null;
+            _run = null;
+            _current = null;
+        }
+    }
 
     public static bool Images => File.Exists(Path.Combine(Root(), ImagesFile));
 
