@@ -27,6 +27,18 @@ public sealed class TestNodePropertiesTests
     }
 
     [TestMethod]
+    public void Inconclusive_maps_to_skipped()
+    {
+        var properties = new List<IProperty>();
+        TestNodeProperties.AddCommonResultProperties(
+            properties,
+            CreateResult(TestOutcomes.Inconclusive, "The active view is not a plan.", "at line 1"));
+
+        var skipped = Assert.ContainsSingle(properties.OfType<SkippedTestNodeStateProperty>());
+        Assert.AreEqual("The active view is not a plan.", skipped.Explanation);
+    }
+
+    [TestMethod]
     public void Skipped_state_prefers_skip_reason_over_message()
     {
         var properties = new List<IProperty>();
