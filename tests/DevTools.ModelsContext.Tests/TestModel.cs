@@ -1,6 +1,8 @@
-using DevTools.ModelsContext.Engine;
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Explorer;
+using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Tests.Shared;
+using DevTools.ModelsContext.Visibility;
 
 namespace DevTools.ModelsContext.Tests;
 
@@ -37,7 +39,21 @@ internal static class TestModel
 
         return new VisibilityPlanner(
             key => data.Documents.FirstOrDefault(document => document.Key == key),
-            key => snapshots.TryGetValue(data.Document(key).Source, out var snapshot) ? snapshot : null);
+            key => snapshots.TryGetValue(data.Document(key).Source, out var snapshot)
+                ? new DocumentScope(data.Document(key), key.ToString(), snapshot, null)
+                : null);
+    }
+
+    public static FakeModelData WithoutLinkFilters()
+    {
+        return SmallData with
+        {
+            Documents = SmallData.Documents
+                .Select(document => document.Key.IsCurrentModel
+                    ? document
+                    : document with { Capabilities = document.Capabilities & ~DocumentCapabilities.LinkFilters })
+                .ToList()
+        };
     }
 
     public static TreeRow GroupRow(DocumentSnapshot snapshot, DocumentKey key, long groupId)

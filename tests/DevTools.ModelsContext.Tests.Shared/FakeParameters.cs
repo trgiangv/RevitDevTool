@@ -1,4 +1,6 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Parameters;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 

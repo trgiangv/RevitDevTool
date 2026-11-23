@@ -1,4 +1,4 @@
-using DevTools.ModelsContext.Ports;
+using DevTools.ModelsContext.Panel;
 
 namespace DevTools.ModelsContext.Tests.Shared;
 

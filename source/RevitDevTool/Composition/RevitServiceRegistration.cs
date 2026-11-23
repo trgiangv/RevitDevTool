@@ -31,7 +31,7 @@ using RevitDevTool.Tools.CommandBrowser.Services;
 using RevitDevTool.Tools.CommandBrowser.ViewModels;
 using RevitDevTool.Tools.ElementFinder;
 using RevitDevTool.Tools.Helpers;
-using RevitDevTool.Tools.ModelsContext;
+using RevitDevTool.Tools.ModelsContext.Pane;
 using RevitDevTool.View;
 using RevitDevTool.View.Settings.Visualization;
 using RevitDevTool.ViewModel.Settings.Visualization;

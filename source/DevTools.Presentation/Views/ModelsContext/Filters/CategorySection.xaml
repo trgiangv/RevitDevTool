@@ -1,0 +1,273 @@
+<UserControl x:Class="DevTools.Presentation.Views.ModelsContext.Filters.CategorySection"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
+             xmlns:filters="clr-namespace:DevTools.ModelsContext.Filters;assembly=DevTools.ModelsContext"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:panelViews="clr-namespace:DevTools.Presentation.Views.ModelsContext.Panel"
+             xmlns:scope="clr-namespace:DevTools.ModelsContext.Scope;assembly=DevTools.ModelsContext"
+             xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext.Filters"
+             x:Name="Root"
+             d:DesignWidth="320"
+             mc:Ignorable="d">
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
+                <panelViews:ModelContextResources />
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="CategoryNoteText"
+                   BasedOn="{StaticResource TextBlockDefaultSecLight}"
+                   TargetType="TextBlock">
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            </Style>
+
+            <Style x:Key="EyeButtonStyle"
+                   d:DataContext="{d:DesignInstance filters:CategoryItemViewModel}"
+                   BasedOn="{StaticResource ButtonIcon.Small}"
+                   TargetType="Button">
+                <Setter Property="Width" Value="22" />
+                <Setter Property="Height" Value="22" />
+                <Setter Property="Padding" Value="4" />
+                <Setter Property="hc:IconElement.Geometry" Value="{StaticResource EyeOpenGeometry}" />
+                <Setter Property="AutomationProperties.ItemStatus" Value="Shown" />
+                <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding ShowEye, RelativeSource={RelativeSource AncestorType=views:CategorySection}}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsHiddenInView}" Value="True">
+                        <Setter Property="hc:IconElement.Geometry" Value="{StaticResource EyeCloseGeometry}" />
+                        <Setter Property="AutomationProperties.ItemStatus" Value="Hidden" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="CategoryTickStyle"
+                   d:DataContext="{d:DesignInstance filters:CategoryItemViewModel}"
+                   BasedOn="{StaticResource {x:Type CheckBox}}"
+                   TargetType="CheckBox">
+                <Setter Property="Content" Value="{Binding Name}" />
+                <Setter Property="Grid.ColumnSpan" Value="2" />
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding SelectionMode, RelativeSource={RelativeSource AncestorType=views:CategorySection}}" Value="Extended">
+                        <Setter Property="Content" Value="{x:Null}" />
+                        <Setter Property="Grid.ColumnSpan" Value="1" />
+                        <Setter Property="HorizontalAlignment" Value="Left" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="CategoryNameText"
+                   BasedOn="{StaticResource TextBlockDefault}"
+                   TargetType="TextBlock">
+                <Setter Property="Margin" Value="6,0,0,0" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding SelectionMode, RelativeSource={RelativeSource AncestorType=views:CategorySection}}" Value="Extended">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="CategoryRowStyle"
+                   BasedOn="{StaticResource ListBoxItemBaseStyle}"
+                   TargetType="ListBoxItem">
+                <Setter Property="AutomationProperties.AutomationId" Value="{Binding AutomationPrefix, RelativeSource={RelativeSource AncestorType=views:CategorySection}, StringFormat={}{0}.Category.Row}" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="Margin" Value="0" />
+                <Setter Property="Padding" Value="4,0" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="hc:BorderElement.CornerRadius" Value="0" />
+                <Setter Property="hc:VisualElement.StaysHighlighted" Value="True" />
+            </Style>
+
+            <Style x:Key="CategoryListBoxStyle"
+                   BasedOn="{StaticResource ListBoxCustom}"
+                   TargetType="ListBox">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding SelectionMode, ElementName=Root}" Value="Extended">
+                        <Setter Property="ItemContainerStyle" Value="{StaticResource CategoryRowStyle}" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <DataTemplate x:Key="CategoryTemplate" DataType="{x:Type filters:CategoryItemViewModel}">
+                <Grid x:Name="ItemGrid" Height="22">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <CheckBox AutomationProperties.AutomationId="{Binding AutomationPrefix, RelativeSource={RelativeSource AncestorType=views:CategorySection}, StringFormat={}{0}.Category.Item}"
+                                  AutomationProperties.Name="{Binding Name}"
+                                  IsChecked="{Binding IsChecked}"
+                                  Style="{StaticResource CategoryTickStyle}" />
+                        <TextBlock Grid.Column="1"
+                                   Style="{StaticResource CategoryNameText}"
+                                   Text="{Binding Name}" />
+                    </Grid>
+                    <TextBlock x:Name="CountText"
+                               Grid.Column="1"
+                               Margin="8,0,12,0"
+                               Style="{StaticResource CategoryNoteText}"
+                               Text="{Binding Count, StringFormat=N0}"
+                               Typography.NumeralAlignment="Tabular" />
+                    <Button Grid.Column="2"
+                            AutomationProperties.AutomationId="{Binding AutomationPrefix, RelativeSource={RelativeSource AncestorType=views:CategorySection}, StringFormat={}{0}.CategoryEye}"
+                            AutomationProperties.Name="{Binding Name}"
+                            Command="{Binding ToggleEyeCommand}"
+                            Style="{StaticResource EyeButtonStyle}"
+                            ToolTip="{Binding EyeToolTip}" />
+                </Grid>
+                <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding ShowEye, RelativeSource={RelativeSource AncestorType=views:CategorySection}}" Value="True">
+                        <Setter TargetName="CountText" Property="Margin" Value="8,0,4,0" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsHiddenInView}" Value="True">
+                        <Setter TargetName="ItemGrid" Property="Opacity" Value="0.55" />
+                    </DataTrigger>
+                </DataTemplate.Triggers>
+            </DataTemplate>
+
+            <Style x:Key="CategoryChevronStyle" TargetType="Path">
+                <Setter Property="Width" Value="7" />
+                <Setter Property="Height" Value="9" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+                <Setter Property="Stretch" Value="Uniform" />
+                <Setter Property="Fill" Value="{DynamicResource SecondaryTextBrush}" />
+                <Setter Property="Data" Value="{StaticResource Chevron}" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsChecked, ElementName=CategoriesToggle}" Value="True">
+                        <Setter Property="RenderTransform">
+                            <Setter.Value>
+                                <RotateTransform Angle="90" />
+                            </Setter.Value>
+                        </Setter>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="CategoryListStyle" TargetType="Border">
+                <Setter Property="Padding" Value="8,6" />
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+                <Setter Property="BorderThickness" Value="0,1,0,0" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsChecked, ElementName=CategoriesToggle}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="WhenLocked" TargetType="StackPanel">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsLocked, ElementName=Root}" Value="True">
+                        <Setter Property="IsEnabled" Value="False" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Border d:DataContext="{d:DesignInstance scope:CategoryPickerViewModel}"
+            BorderBrush="{DynamicResource BorderBrush}"
+            BorderThickness="1"
+            CornerRadius="4"
+            DataContext="{Binding Picker, ElementName=Root}">
+        <StackPanel>
+            <ToggleButton x:Name="CategoriesToggle"
+                          Height="26"
+                          Padding="8,0"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Stretch"
+                          AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.Categories}"
+                          AutomationProperties.Name="Categories"
+                          IsChecked="{Binding IsOpen, ElementName=Root}"
+                          Style="{StaticResource ToggleButtonCustom}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Path Style="{StaticResource CategoryChevronStyle}" />
+                    <TextBlock Grid.Column="1"
+                               Margin="6,0,0,0"
+                               FontWeight="SemiBold"
+                               Style="{StaticResource TextBlockDefault}"
+                               Text="Categories" />
+                    <TextBlock Grid.Column="2"
+                               Margin="6,0,0,0"
+                               AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategorySummary}"
+                               Style="{StaticResource CategoryNoteText}"
+                               Text="{Binding Summary}" />
+                </Grid>
+            </ToggleButton>
+            <Border Style="{StaticResource CategoryListStyle}">
+                <StackPanel Style="{StaticResource WhenLocked}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <hc:SearchBar hc:InfoElement.Placeholder="Search categories"
+                                      hc:InfoElement.ShowClearButton="True"
+                                      AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategorySearch}"
+                                      Style="{StaticResource SearchBarPlus.Small}"
+                                      Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" />
+                        <StackPanel Grid.Column="1"
+                                    Margin="6,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Orientation="Horizontal">
+                            <Button AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategoryAll}"
+                                    Command="{Binding CheckAllCommand}"
+                                    Content="All"
+                                    Style="{StaticResource PanelLinkButton}"
+                                    ToolTip="Tick every listed category" />
+                            <TextBlock Style="{StaticResource CategoryNoteText}" Text="·" />
+                            <Button AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategoryNone}"
+                                    Command="{Binding CheckNoneCommand}"
+                                    Content="None"
+                                    Style="{StaticResource PanelLinkButton}"
+                                    ToolTip="Untick every listed category" />
+                        </StackPanel>
+                    </Grid>
+                    <ListBox x:Name="CategoryList"
+                             MaxHeight="176"
+                             Margin="0,3,0,0"
+                             Padding="0"
+                             AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategoryList}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ContextMenu="{Binding ItemMenu, ElementName=Root}"
+                             ItemTemplate="{StaticResource CategoryTemplate}"
+                             ItemsSource="{Binding VisibleItems}"
+                             SelectionChanged="OnSelectionChanged"
+                             SelectionMode="{Binding SelectionMode, ElementName=Root}"
+                             Style="{StaticResource CategoryListBoxStyle}"
+                             Tag="{Binding MenuContext, ElementName=Root}"
+                             VirtualizingPanel.IsVirtualizing="True"
+                             VirtualizingPanel.VirtualizationMode="Recycling" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -1,4 +1,4 @@
-using DevTools.Presentation.Views.ModelsContext;
+using DevTools.Presentation.Views.ModelsContext.Panel;
 using DevTools.UI.Theme;
 using System.Diagnostics;
 using System.Windows;

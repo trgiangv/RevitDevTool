@@ -1,7 +1,9 @@
-using DevTools.ModelsContext.Model;
-using DevTools.ModelsContext.Ports;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Explorer;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Panel;
+using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Tests.Shared;
-using DevTools.ModelsContext.ViewModels;
 using Microsoft.Extensions.Logging;
 using Moq;
 

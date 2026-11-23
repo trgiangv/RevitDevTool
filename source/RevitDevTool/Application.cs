@@ -10,7 +10,7 @@ using RevitDevTool.Commands;
 using RevitDevTool.Controllers;
 using RevitDevTool.Tools.CommandBrowser;
 #if REVIT2023_OR_GREATER
-using RevitDevTool.Tools.ModelsContext;
+using RevitDevTool.Tools.ModelsContext.Pane;
 #endif
 using System.IO;
 using ZLogger;

@@ -1,5 +1,6 @@
-using DevTools.ModelsContext.Engine;
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Scope;
+using DevTools.ModelsContext.Visibility;
 using Microsoft.Extensions.Logging;
 
 namespace DevTools.ModelsContext.Diagnostics;

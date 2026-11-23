@@ -1,5 +1,5 @@
 using DevTools.ModelsContext.Diagnostics;
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Filters;
 using Microsoft.Extensions.Logging;
 using Moq;
 

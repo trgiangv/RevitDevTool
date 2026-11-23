@@ -1,5 +1,5 @@
 using DevTools.ModelsContext.Tests.Shared;
-using DevTools.Presentation.Views.ModelsContext;
+using DevTools.Presentation.Views.ModelsContext.Panel;
 using System.Diagnostics;
 using System.Windows;
 
@@ -23,19 +23,22 @@ internal static class Program
         var drag = Array.IndexOf(args, "--drag");
         var dragShots = Array.IndexOf(args, "--drag-shots");
         var pickerShots = Array.IndexOf(args, "--picker-shots");
+        var explorerShots = Array.IndexOf(args, "--explorer-shots");
+        var whyHiddenShots = Array.IndexOf(args, "--why-hidden-shots");
         var theme = Array.IndexOf(args, "--theme");
         var light = theme >= 0 && string.Equals(args[theme + 1], "light", StringComparison.OrdinalIgnoreCase);
         DevTools.UI.Theme.ThemeManager.Current.ApplySettingsTheme(light ? DevTools.UI.Theme.AppTheme.Light : DevTools.UI.Theme.AppTheme.Dark);
 
         var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal) && shots < 0 && drag < 0 && dragShots < 0
-                                                 && pickerShots < 0);
+                                                 && pickerShots < 0 && whyHiddenShots < 0 && explorerShots < 0);
         var width = Array.IndexOf(args, "--width");
         if (width >= 0)
         {
             window.Width = double.Parse(args[width + 1], System.Globalization.CultureInfo.InvariantCulture);
         }
         var exitCode = 0;
-        if (args.Contains("--measure", StringComparer.Ordinal) || shots >= 0 || dragShots >= 0 || pickerShots >= 0)
+        if (args.Contains("--measure", StringComparer.Ordinal) || shots >= 0 || dragShots >= 0 || pickerShots >= 0 || whyHiddenShots >= 0
+            || explorerShots >= 0)
         {
             DevTools.Testing.Ui.ForegroundGuard.Start();
             DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
@@ -51,6 +54,14 @@ internal static class Program
         else if (pickerShots >= 0)
         {
             window.Loaded += async (_, _) => exitCode = await PickerShotRun.CaptureAsync(window, app, args[pickerShots + 1]);
+        }
+        else if (whyHiddenShots >= 0)
+        {
+            window.Loaded += async (_, _) => exitCode = await WhyHiddenShotRun.CaptureAsync(window, app, args[whyHiddenShots + 1]);
+        }
+        else if (explorerShots >= 0)
+        {
+            window.Loaded += async (_, _) => exitCode = await ExplorerShotRun.CaptureAsync(window, app, args[explorerShots + 1]);
         }
         else if (shots >= 0)
         {

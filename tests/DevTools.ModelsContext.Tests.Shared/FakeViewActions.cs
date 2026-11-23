@@ -1,5 +1,5 @@
-using DevTools.ModelsContext.Model;
-using DevTools.ModelsContext.Ports;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Visibility;
 
 namespace DevTools.ModelsContext.Tests.Shared;
 
@@ -19,7 +19,18 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
 
     public int ResetCount { get; private set; }
 
-    public Task ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken)
+    public string? ShowError { get; set; }
+
+    public string? Notice { get; set; }
+
+    public string? TakeNotice()
+    {
+        var notice = Notice;
+        Notice = null;
+        return notice;
+    }
+
+    public Task<IReadOnlyList<ElementRef>> ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken)
     {
         if (plan.IsDisabled)
         {
@@ -27,17 +38,35 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         }
 
         ExecutedPlans.Add(plan);
-        foreach (var step in plan.Steps.OfType<ReferenceCommandStep>())
+        var hidden = new List<ElementRef>();
+        foreach (var step in plan.Steps)
         {
-            HiddenLinked.UnionWith(step.Ids.Select(id => new ElementRef(step.Document, id)));
+            switch (step)
+            {
+                case ReferenceCommandStep references:
+                    hidden.AddRange(references.Ids.Select(id => new ElementRef(references.Document, id)));
+                    break;
+                case LinkIsolateStep isolate:
+                    var keep = isolate.KeepIds.ToHashSet();
+                    hidden.AddRange(model.SnapshotOf(isolate.Document).Rows
+                        .Where(row => !keep.Contains(row.Id))
+                        .Select(row => new ElementRef(isolate.Document, row.Id)));
+                    break;
+            }
         }
 
-        return Task.CompletedTask;
+        HiddenLinked.UnionWith(hidden);
+        return Task.FromResult<IReadOnlyList<ElementRef>>(hidden);
     }
 
     public Task ShowLinkedAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
     {
         ShownLinked.Add(elements.ToList());
+        if (ShowError is { } error)
+        {
+            throw new InvalidOperationException(error);
+        }
+
         HiddenLinked.ExceptWith(elements);
         return Task.CompletedTask;
     }

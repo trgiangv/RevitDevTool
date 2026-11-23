@@ -1,4 +1,5 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Explorer;
 using System.Text.Json;
 
 namespace DevTools.ModelsContext.Tests.Shared;

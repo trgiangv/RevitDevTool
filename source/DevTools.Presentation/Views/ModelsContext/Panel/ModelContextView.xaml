@@ -1,0 +1,360 @@
+<UserControl x:Class="DevTools.Presentation.Views.ModelsContext.Panel.ModelContextView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
+             xmlns:explorerViews="clr-namespace:DevTools.Presentation.Views.ModelsContext.Explorer"
+             xmlns:filterViews="clr-namespace:DevTools.Presentation.Views.ModelsContext.Filters"
+             xmlns:hc="https://handyorg.github.io/handycontrol"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:panel="clr-namespace:DevTools.ModelsContext.Panel;assembly=DevTools.ModelsContext"
+             xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext.Panel"
+             xmlns:visibility="clr-namespace:DevTools.ModelsContext.Visibility;assembly=DevTools.ModelsContext"
+             d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
+             d:DesignHeight="800"
+             d:DesignWidth="320"
+             AutomationProperties.AutomationId="ModelContext.Panel"
+             AutomationProperties.ItemStatus="{Binding Activity}"
+             mc:Ignorable="d">
+
+    <UserControl.InputBindings>
+        <KeyBinding Key="Escape" Command="{Binding WhyHidden.CloseCommand}" />
+    </UserControl.InputBindings>
+
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/DevTools.UI;component/Theme/Theme.xaml" />
+                <design:IntellisenseResources Source="/DevTools.UI;component/Theme/Design/DesignTimeResources.xaml" />
+                <views:ModelContextResources />
+            </ResourceDictionary.MergedDictionaries>
+
+            <Style x:Key="DocumentsBoxStyle"
+                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
+                   BasedOn="{StaticResource TagCheckComboBoxBaseStyle}"
+                   TargetType="controls:TagCheckComboBox">
+                <Setter Property="ShowSelectAllButton" Value="True" />
+            </Style>
+
+            <Style x:Key="DocumentItemStyle"
+                   d:DataContext="{d:DesignInstance panel:DocumentItemViewModel}"
+                   BasedOn="{StaticResource TagCheckComboBoxItemBaseStyle}"
+                   TargetType="controls:TagCheckComboBoxItem">
+                <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
+                <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+                <Setter Property="AutomationProperties.AutomationId" Value="ModelContext.Document" />
+                <Setter Property="AutomationProperties.HelpText" Value="{Binding Info.DisplayName}" />
+            </Style>
+
+            <Style x:Key="ExplorerBodyStyle"
+                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
+                   TargetType="explorerViews:ExplorerTabView">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsExplorerTab}" Value="False">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="FilterBodyStyle"
+                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
+                   TargetType="filterViews:FilterTabView">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsFilterTab}" Value="False">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="WhyHiddenStripStyle"
+                   d:DataContext="{d:DesignInstance visibility:WhyHiddenStripViewModel}"
+                   BasedOn="{StaticResource BorderTipInfo}"
+                   TargetType="Border">
+                <Setter Property="Margin" Value="0,8,0,0" />
+                <Setter Property="Padding" Value="8,6" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsOpen}" Value="False">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="TemporaryBarStyle"
+                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
+                   BasedOn="{StaticResource BorderTipWarning}"
+                   TargetType="Border">
+                <Setter Property="Margin" Value="0,8,0,0" />
+                <Setter Property="Padding" Value="8,6" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsTemporaryBarVisible}" Value="False">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="ConfirmPanelStyle"
+                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
+                   TargetType="StackPanel">
+                <Setter Property="Margin" Value="0,6,0,0" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding TemporaryBar.IsConfirmingKeep}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="UpdatingBarStyle"
+                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
+                   BasedOn="{StaticResource ProgressBarFlat}"
+                   TargetType="ProgressBar">
+                <Setter Property="IsIndeterminate" Value="False" />
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsUpdating}" Value="True">
+                        <Setter Property="Visibility" Value="Visible" />
+                        <Setter Property="IsIndeterminate" Value="True" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+
+    <Grid Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock AutomationProperties.AutomationId="ModelContext.Busy"
+                   Foreground="{DynamicResource WarningBrush}"
+                   Style="{StaticResource ErrorText}"
+                   Text="{Binding BusyText}" />
+
+        <ProgressBar x:Name="UpdatingBar"
+                     Grid.Row="2"
+                     VerticalAlignment="Center"
+                     AutomationProperties.AutomationId="ModelContext.Updating"
+                     Style="{StaticResource UpdatingBarStyle}" />
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <StackPanel x:Name="SwitchRow" Orientation="Horizontal">
+                <views:PanelButtonGroup VerticalAlignment="Center"
+                                        AutomationProperties.AutomationId="ModelContext.Scope"
+                                        Style="{StaticResource ButtonGroupSolid}">
+                    <RadioButton Height="28"
+                                 hc:IconElement.Geometry="{StaticResource PointerSelect}"
+                                 hc:IconElement.Height="14"
+                                 hc:IconElement.Width="14"
+                                 AutomationProperties.AutomationId="ModelContext.Scope.Selection"
+                                 AutomationProperties.Name="Selection"
+                                 IsChecked="{Binding ContextBar.IsSelectionScope}"
+                                 ToolTip="Selection" />
+                    <RadioButton Height="28"
+                                 hc:IconElement.Geometry="{StaticResource ActiveView}"
+                                 hc:IconElement.Height="14"
+                                 hc:IconElement.Width="14"
+                                 AutomationProperties.AutomationId="ModelContext.Scope.ActiveView"
+                                 AutomationProperties.Name="Active view"
+                                 IsChecked="{Binding ContextBar.IsActiveViewScope}"
+                                 ToolTip="Active view" />
+                    <RadioButton Height="28"
+                                 hc:IconElement.Geometry="{StaticResource AllModels}"
+                                 hc:IconElement.Height="14"
+                                 hc:IconElement.Width="14"
+                                 AutomationProperties.AutomationId="ModelContext.Scope.WholeModel"
+                                 AutomationProperties.Name="Whole model"
+                                 IsChecked="{Binding ContextBar.IsWholeModelScope}"
+                                 ToolTip="Whole model" />
+                </views:PanelButtonGroup>
+                <views:PanelButtonGroup Margin="8,0,0,0"
+                                        VerticalAlignment="Center"
+                                        AutomationProperties.AutomationId="ModelContext.View"
+                                        Style="{StaticResource ButtonGroupSolid}">
+                    <RadioButton Height="28"
+                                 hc:IconElement.Geometry="{StaticResource Tree}"
+                                 hc:IconElement.Height="14"
+                                 hc:IconElement.Width="14"
+                                 AutomationProperties.AutomationId="ModelContext.View.Explorer"
+                                 AutomationProperties.Name="Explorer"
+                                 IsChecked="{Binding IsExplorerTab}"
+                                 ToolTip="Explorer" />
+                    <RadioButton Height="28"
+                                 hc:IconElement.Geometry="{StaticResource Funnel}"
+                                 hc:IconElement.Height="14"
+                                 hc:IconElement.Width="14"
+                                 AutomationProperties.AutomationId="ModelContext.View.Filter"
+                                 AutomationProperties.Name="Filter"
+                                 IsChecked="{Binding IsFilterTab}"
+                                 ToolTip="Filter" />
+                </views:PanelButtonGroup>
+            </StackPanel>
+            <controls:TagCheckComboBox x:Name="DocumentsBox"
+                                       Grid.Row="1"
+                                       Margin="0,6,0,0"
+                                       AutomationProperties.AutomationId="ModelContext.Documents"
+                                       DisplayMemberPath="Label"
+                                       ItemContainerStyle="{StaticResource DocumentItemStyle}"
+                                       ItemsSource="{Binding ContextBar.Documents}"
+                                       Placeholder="Documents"
+                                       SelectionChanged="OnDocumentsSelectionChanged"
+                                       Style="{StaticResource DocumentsBoxStyle}" />
+        </Grid>
+
+        <views:PanelBorder Grid.Row="4"
+                           AutomationProperties.AutomationId="WhyHiddenStrip"
+                           AutomationProperties.ItemStatus="{Binding IsBusy}"
+                           DataContext="{Binding WhyHidden}"
+                           Style="{StaticResource WhyHiddenStripStyle}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock HorizontalAlignment="Left"
+                               VerticalAlignment="Center"
+                               AutomationProperties.AutomationId="WhyHiddenCause"
+                               Style="{StaticResource TextBlockDefault}"
+                               Text="{Binding Text}"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding Text}" />
+                    <StackPanel Grid.Column="1"
+                                Orientation="Horizontal"
+                                Visibility="{Binding HasFix, Converter={StaticResource Boolean2VisibilityConverter}}">
+                        <TextBlock Margin="6,0"
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource TextBlockDefault}"
+                                   Text="·" />
+                        <Button AutomationProperties.AutomationId="WhyHiddenFix"
+                                Command="{Binding FixCommand}"
+                                Content="{x:Static visibility:WhyHiddenStripViewModel.FixText}"
+                                Style="{StaticResource ButtonPrimary.Small}" />
+                    </StackPanel>
+                    <ToggleButton Grid.Column="2"
+                                  Width="20"
+                                  Margin="4,0,0,0"
+                                  Padding="4"
+                                  hc:IconElement.Height="10"
+                                  hc:IconSwitchElement.Geometry="{StaticResource DownGeometry}"
+                                  hc:IconSwitchElement.GeometrySelected="{StaticResource UpGeometry}"
+                                  AutomationProperties.AutomationId="WhyHiddenExpand"
+                                  AutomationProperties.Name="All causes"
+                                  IsChecked="{Binding IsExpanded}"
+                                  Style="{StaticResource ToggleButtonIconTransparent.Small}"
+                                  ToolTip="All causes"
+                                  Visibility="{Binding HasMore, Converter={StaticResource Boolean2VisibilityConverter}}" />
+                    <Button Grid.Column="3"
+                            Margin="2,0,0,0"
+                            hc:IconElement.Geometry="{StaticResource CloseGeometry}"
+                            hc:IconElement.Height="9"
+                            AutomationProperties.AutomationId="WhyHiddenClose"
+                            AutomationProperties.Name="Close"
+                            Command="{Binding CloseCommand}"
+                            Style="{StaticResource ButtonIcon.Small}"
+                            ToolTip="Close" />
+                </Grid>
+                <ItemsControl Margin="0,4,0,0"
+                              AutomationProperties.AutomationId="WhyHiddenList"
+                              Focusable="False"
+                              ItemsSource="{Binding Causes}"
+                              Visibility="{Binding IsExpanded, Converter={StaticResource Boolean2VisibilityConverter}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type visibility:HiddenCause}">
+                            <TextBlock Margin="0,2,0,0"
+                                       HorizontalAlignment="Left"
+                                       AutomationProperties.AutomationId="WhyHiddenItem"
+                                       Style="{StaticResource TextBlockDefault}"
+                                       Text="{Binding Text}"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip="{Binding Text}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Margin="0,4,0,0"
+                           AutomationProperties.AutomationId="WhyHiddenCue"
+                           Style="{StaticResource ErrorText}"
+                           Text="{Binding Cue}" />
+            </StackPanel>
+        </views:PanelBorder>
+
+        <Border Grid.Row="5" Style="{StaticResource TemporaryBarStyle}">
+            <StackPanel>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock HorizontalAlignment="Left"
+                               AutomationProperties.AutomationId="Temporary.Text"
+                               Style="{StaticResource TextBlockDefault}"
+                               Text="{Binding TemporaryBar.Text}" />
+                    <Button Grid.Column="1"
+                            AutomationProperties.AutomationId="Temporary.Keep"
+                            Command="{Binding TemporaryBar.KeepCommand}"
+                            Content="Keep"
+                            Style="{StaticResource ButtonPrimary.Small}" />
+                    <Button Grid.Column="2"
+                            Margin="4,0,0,0"
+                            AutomationProperties.AutomationId="Temporary.Reset"
+                            Command="{Binding TemporaryBar.ResetCommand}"
+                            Content="Reset"
+                            Style="{StaticResource ButtonDefault.Small}" />
+                </Grid>
+                <StackPanel Style="{StaticResource ConfirmPanelStyle}">
+                    <TextBlock HorizontalAlignment="Left"
+                               AutomationProperties.AutomationId="Temporary.ConfirmText"
+                               Style="{StaticResource TextBlockDefault}"
+                               Text="{Binding TemporaryBar.ConfirmText}"
+                               TextWrapping="Wrap" />
+                    <StackPanel Margin="0,6,0,0" Orientation="Horizontal">
+                        <Button AutomationProperties.AutomationId="Temporary.ConfirmKeep"
+                                Command="{Binding TemporaryBar.ConfirmKeepCommand}"
+                                Content="Keep"
+                                Style="{StaticResource ButtonPrimary.Small}" />
+                        <Button Margin="4,0,0,0"
+                                AutomationProperties.AutomationId="Temporary.CancelKeep"
+                                Command="{Binding TemporaryBar.CancelKeepCommand}"
+                                Content="Cancel"
+                                Style="{StaticResource ButtonDefault.Small}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <Grid x:Name="Body" Grid.Row="3">
+            <explorerViews:ExplorerTabView x:Name="ExplorerView"
+                                           AutomationProperties.AutomationId="ModelContext.Explorer"
+                                           Style="{StaticResource ExplorerBodyStyle}" />
+        </Grid>
+
+        <TextBlock Grid.Row="6"
+                   Margin="0,6,0,0"
+                   AutomationProperties.AutomationId="ModelContext.Message"
+                   Style="{StaticResource ErrorText}"
+                   Text="{Binding Message}" />
+
+        <Popup x:Name="ColorPopup"
+               Grid.Row="0"
+               d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
+               Placement="Bottom"
+               StaysOpen="False">
+            <hc:ColorPicker x:Name="ColorPicker"
+                            AutomationProperties.AutomationId="ModelContext.ColorPicker"
+                            Canceled="OnColorCanceled"
+                            Confirmed="OnColorConfirmed" />
+        </Popup>
+    </Grid>
+</UserControl>

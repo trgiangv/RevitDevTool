@@ -1,6 +1,6 @@
-using DevTools.ModelsContext.Model;
-using DevTools.ModelsContext.Ports;
-using DevTools.ModelsContext.ViewModels;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Panel;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -20,6 +20,8 @@ public sealed class FakeHost
 
     public FakeViewActions Actions { get; }
 
+    public FakeVisibilityExplainer Explainer { get; } = new();
+
     public Mock<IHostFilterCatalog> HostFilters { get; }
 
     public Mock<ICustomFilterStore> CustomFilters { get; }
@@ -30,7 +32,7 @@ public sealed class FakeHost
         ILogger? logger = null,
         IModelSource? source = null)
     {
-        return new ModelContextServices(source ?? Model, Model, Model, Actions, Model, HostFilters.Object,
+        return new ModelContextServices(source ?? Model, Model, Model, Actions, Explainer, Model, HostFilters.Object,
             CustomFilters.Object, clock, scheduler, logger);
     }
 

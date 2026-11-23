@@ -1,5 +1,6 @@
 using Bogus;
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Explorer;
 
 namespace DevTools.ModelsContext.Tests.Shared;
 
@@ -12,7 +13,8 @@ public sealed record FakeModelOptions
     public int LinkElements { get; init; } = 20_000;
 
     public DocumentCapabilities LinkCapabilities { get; init; } =
-        DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands | DocumentCapabilities.ReferenceUnhide;
+        DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands | DocumentCapabilities.ReferenceUnhide
+        | DocumentCapabilities.LinkFilters;
 
     public string ModelId { get; init; } = FakeModelGenerator.ModelId;
 

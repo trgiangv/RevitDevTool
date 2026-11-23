@@ -1,7 +1,8 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Parameters;
 using DevTools.ModelsContext.Tests.Shared;
-using DevTools.ModelsContext.ViewModels;
-using DevTools.Presentation.Views.ModelsContext;
+using DevTools.Presentation.Views.ModelsContext.Filters;
+using DevTools.Presentation.Views.ModelsContext.Panel;
 using DevTools.UI.Theme;
 using System.IO;
 using System.Windows;

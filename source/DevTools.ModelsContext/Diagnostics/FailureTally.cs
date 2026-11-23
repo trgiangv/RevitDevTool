@@ -1,4 +1,4 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Documents;
 using Microsoft.Extensions.Logging;
 
 namespace DevTools.ModelsContext.Diagnostics;

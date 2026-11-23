@@ -1,0 +1,267 @@
+using DevTools.ModelsContext.Diagnostics;
+using DevTools.ModelsContext.Documents;
+using Nice3point.Revit.Extensions;
+using RevitDevTool.Tools.ModelsContext.Filters;
+using RevitDevTool.Tools.ModelsContext.Pane;
+using System.Diagnostics;
+using DocumentVersion = DevTools.ModelsContext.Documents.DocumentVersion;
+using ElementRecord = DevTools.ModelsContext.Documents.ElementRecord;
+
+namespace RevitDevTool.Tools.ModelsContext.Documents;
+
+internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
+{
+    public const int SliceSize = 5000;
+    public static readonly TimeSpan SliceTime = TimeSpan.FromMilliseconds(30);
+
+    private const long NoTypeBase = -1_000_000_000_000L;
+    private const long OtherCategoryBase = -10_000_000_000_000L;
+    private const long CategorySpan = 10_000_000L;
+    private const string NoType = "No type";
+
+    private readonly HashSet<long> _modelCategories = [.. ModelCategoryIds(document).Select(id => id.ToLong())];
+    private readonly Dictionary<long, ElementType?> _types = [];
+
+    public List<TypeRecord> Types { get; } = [];
+
+    public List<ElementRecord> Elements { get; } = [];
+
+    public static List<ElementId> ModelCategoryIds(Document document)
+    {
+        var ids = new List<ElementId>();
+        foreach (Category category in document.Settings.Categories)
+        {
+            if (category.CategoryType == CategoryType.Model
+                && category.BuiltInCategory is not (BuiltInCategory.OST_RvtLinks or BuiltInCategory.OST_Materials))
+            {
+                ids.Add(category.Id);
+            }
+        }
+
+        return ids;
+    }
+
+    public static ElementFilter ModelFilter(
+        Document document,
+        ICollection<ElementId>? categories = null,
+        IReadOnlyList<ElementFilter>? options = null)
+    {
+        var filters = new List<ElementFilter> { AnyOptionFilter(document, categories) };
+        filters.AddRange(options ?? OptionFilters(document));
+        return new LogicalAndFilter(filters);
+    }
+
+    public static ElementFilter AnyOptionFilter(Document document, ICollection<ElementId>? categories = null)
+    {
+        return new LogicalAndFilter(
+            new ElementMulticategoryFilter(categories is { Count: > 0 } ? categories : ModelCategoryIds(document)),
+            new ElementIsElementTypeFilter(true));
+    }
+
+    public static List<ElementFilter> OptionFilters(Document document)
+    {
+        return SecondaryOptions(document)
+            .Select(option => (ElementFilter)new ElementDesignOptionFilter(option, true))
+            .ToList();
+    }
+
+    public static long[] CollectIds(Document document, ICollection<ElementId>? categories = null)
+    {
+        return document.CollectElements()
+            .WherePasses(ModelFilter(document, categories))
+            .ToElementIds()
+            .Select(id => id.ToLong())
+            .ToArray();
+    }
+
+    public static long[] CollectAnyOption(Document document, ICollection<ElementId>? categories = null)
+    {
+        return document.CollectElements()
+            .WherePasses(AnyOptionFilter(document, categories))
+            .ToElementIds()
+            .Select(id => id.ToLong())
+            .ToArray();
+    }
+
+    public static CandidateSet CandidatesOf(Document document, ICollection<ElementId>? categories = null)
+    {
+        return new CandidateSet(CollectAnyOption(document, categories), SecondaryIds(document, categories));
+    }
+
+    public static CandidateSet CandidatesAmong(Document document, ICollection<ElementId> ids)
+    {
+        if (ids.Count == 0)
+        {
+            return new CandidateSet([], []);
+        }
+
+        var inModel = document.CollectElements(ids)
+            .WherePasses(AnyOptionFilter(document))
+            .ToElementIds()
+            .Select(id => id.ToLong())
+            .ToArray();
+        var secondary = SecondaryIds(document);
+        secondary.IntersectWith(inModel);
+        return new CandidateSet(inModel, secondary);
+    }
+
+    public static HashSet<long> SecondaryIds(Document document, ICollection<ElementId>? categories = null)
+    {
+        var options = SecondaryOptions(document)
+            .Select(option => (ElementFilter)new ElementDesignOptionFilter(option))
+            .ToList();
+        if (options.Count == 0)
+        {
+            return [];
+        }
+
+        return
+        [
+            .. document.CollectElements()
+                .WherePasses(AnyOptionFilter(document, categories))
+                .WherePasses(options.Count == 1 ? options[0] : new LogicalOrFilter(options))
+                .ToElementIds()
+                .Select(id => id.ToLong())
+        ];
+    }
+
+    public static List<long> OptionMemberIds(Document document)
+    {
+        var options = document.CollectElements()
+            .OfClass<DesignOption>()
+            .Select(option => (ElementFilter)new ElementDesignOptionFilter(option.Id))
+            .ToList();
+        if (options.Count == 0)
+        {
+            return [];
+        }
+
+        return document.CollectElements()
+            .WherePasses(AnyOptionFilter(document))
+            .WherePasses(options.Count == 1 ? options[0] : new LogicalOrFilter(options))
+            .ToElementIds()
+            .Select(id => id.ToLong())
+            .ToList();
+    }
+
+    private static IEnumerable<ElementId> SecondaryOptions(Document document)
+    {
+        return document.CollectElements()
+            .OfClass<DesignOption>()
+            .Cast<DesignOption>()
+            .Where(option => !option.IsPrimary)
+            .Select(option => option.Id);
+    }
+
+    public static DocumentVersion? VersionOf(Document document)
+    {
+        try
+        {
+            return Document.GetDocumentVersion(document) is { } version
+                ? new DocumentVersion(version.VersionGUID.ToString(), version.NumberOfSaves)
+                : null;
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Document version", document.Title);
+            return null;
+        }
+    }
+
+    public int ReadSlice(IReadOnlyList<long> ids, int start)
+    {
+        var watch = Stopwatch.StartNew();
+        var index = start;
+        while (index < ids.Count && index - start < SliceSize && watch.Elapsed < SliceTime)
+        {
+            if (document.GetElement(ids[index].ToElementId()) is { } element)
+            {
+                Read(element);
+            }
+
+            index++;
+        }
+
+        return index;
+    }
+
+    public void Read(Element element)
+    {
+        if (element is ElementType type)
+        {
+            ReadType(type);
+            return;
+        }
+
+        if (element.Category is not { } category)
+        {
+            return;
+        }
+
+        var categoryId = category.Id.ToLong();
+        if (!_modelCategories.Contains(categoryId))
+        {
+            return;
+        }
+
+        var typeId = element.GetTypeId();
+        var elementType = TypeOf(typeId);
+        var typeValue = TypeValueOf(typeId, elementType, categoryId);
+        if (knownTypes.Add(typeValue))
+        {
+            Types.Add(new TypeRecord(typeValue, categoryId, category.Name,
+                elementType?.FamilyName ?? NoType, elementType?.Name ?? NoType));
+        }
+
+        Elements.Add(new ElementRecord(element.Id.ToLong(), typeValue, element.LevelId.ToLong(),
+            element.WorksetId.IntegerValue, element.DesignOption is { IsPrimary: false }, ElementDrawing.DrawOf(element),
+            ElementDrawing.OwnerOf(element)));
+    }
+
+    private static long TypeValueOf(ElementId typeId, ElementType? type, long categoryId)
+    {
+        if (typeId == ElementId.InvalidElementId)
+        {
+            return NoTypeBase + categoryId;
+        }
+
+        return type?.Category is { } typeCategory && typeCategory.Id.ToLong() != categoryId
+            ? OtherCategoryBase - typeId.ToLong() * CategorySpan - Math.Abs(categoryId) % CategorySpan
+            : typeId.ToLong();
+    }
+
+    private ElementType? TypeOf(ElementId typeId)
+    {
+        if (typeId == ElementId.InvalidElementId)
+        {
+            return null;
+        }
+
+        var key = typeId.ToLong();
+        if (!_types.TryGetValue(key, out var type))
+        {
+            type = document.GetElement(typeId) as ElementType;
+            _types.Add(key, type);
+        }
+
+        return type;
+    }
+
+    private void ReadType(ElementType type)
+    {
+        if (type.Category is not { } category)
+        {
+            return;
+        }
+
+        var categoryId = category.Id.ToLong();
+        if (!_modelCategories.Contains(categoryId))
+        {
+            return;
+        }
+
+        var typeValue = type.Id.ToLong();
+        knownTypes.Add(typeValue);
+        Types.Add(new TypeRecord(typeValue, categoryId, category.Name, type.FamilyName, type.Name));
+    }
+}

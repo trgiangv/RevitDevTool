@@ -1,6 +1,5 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Filters;
 using DevTools.ModelsContext.Tests.Shared;
-using DevTools.ModelsContext.ViewModels;
 
 namespace DevTools.ModelsContext.Sandbox;
 

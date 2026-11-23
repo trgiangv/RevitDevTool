@@ -1,6 +1,11 @@
-using DevTools.ModelsContext.Model;
-using DevTools.ModelsContext.ViewModels;
-using DevTools.Presentation.Views.ModelsContext;
+using DevTools.ModelsContext.Explorer;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Panel;
+using DevTools.ModelsContext.Parameters;
+using DevTools.ModelsContext.Visibility;
+using DevTools.Presentation.Views.ModelsContext.Explorer;
+using DevTools.Presentation.Views.ModelsContext.Filters;
+using DevTools.Presentation.Views.ModelsContext.Panel;
 using DevTools.UI.Theme;
 using System.IO;
 using System.Windows;
@@ -24,7 +29,6 @@ internal static class ShotRun
             var view = (ModelContextView)window.Host.Content;
             var list = (ListBox)((ExplorerTabView)view.FindName("ExplorerView")).FindName("RowList");
 
-            await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.AllModelsHeader));
             var theme = ThemeManager.Current.ActualApplicationTheme;
             {
                 var instance = explorer.Rows.First(row => row.Kind == TreeRowKind.Instance);
@@ -83,23 +87,28 @@ internal static class ShotRun
     {
         var explorer = panel.Explorer;
         var menu = panel.ContextMenu;
-        var header = explorer.Rows.First(row => row.Kind == TreeRowKind.AllModelsHeader);
-        await explorer.ExpandAsync(header);
-        var category = explorer.Rows.First(row => row.Kind == TreeRowKind.AllModelsGroup);
-        explorer.OpenMenu(category);
+        var picker = explorer.Categories.Picker;
+        var category = picker.Items[0];
+        picker.CheckNoneCommand.Execute(null);
+        category.IsChecked = true;
+        await explorer.Categories.ColorCommand.ExecuteAsync(null);
         await menu.ApplyColorCommand.ExecuteAsync(new RgbColor(0x2E, 0x9E, 0x5B));
+        picker.CheckAllCommand.Execute(null);
 
         foreach (var expanded in explorer.Rows.Where(row => row.IsExpanded && row.Level > 0).ToList())
         {
             explorer.Collapse(expanded);
         }
 
-        explorer.Collapse(header);
-        await explorer.ExpandAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
+        var current = explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
+        if (!current.IsExpanded)
+        {
+            await explorer.ExpandAsync(current);
+        }
         var groups = explorer.Rows.Where(row => row.Kind == TreeRowKind.Group && row.Document is { IsCurrentModel: true })
             .ToList();
-        var colored = groups.First(row => row.Id != category.Id);
-        var halftone = groups.First(row => row.Id != category.Id && row != colored);
+        var colored = groups.First(row => row.Id != category.GroupId);
+        var halftone = groups.First(row => row.Id != category.GroupId && row != colored);
         explorer.OpenMenu(colored);
         await menu.ApplyColorCommand.ExecuteAsync(new RgbColor(0xE0, 0x4F, 0x39));
         explorer.OpenMenu(halftone);
@@ -116,11 +125,6 @@ internal static class ShotRun
         await Settle(700);
         Save(window, Path.Combine(directory, $"{theme}-overrides-selected.png"));
 
-        list.SelectedItems.Clear();
-        await explorer.ExpandAsync(header);
-        list.ScrollIntoView(explorer.Rows[0]);
-        await Settle(500);
-        Save(window, Path.Combine(directory, $"{theme}-overrides-category.png"));
     }
 
     private static async Task CaptureFilterAsync(SandboxWindow window, ModelContextViewModel panel, ModelContextView view,
@@ -140,17 +144,17 @@ internal static class ShotRun
             category.IsChecked = true;
         }
 
-        var toggle = (ToggleButton)filterView.FindName("CategoriesToggle");
-        toggle.IsChecked = true;
+        var toggle = (CategorySection)filterView.FindName("CategorySection");
+        toggle.IsOpen = true;
         await Settle(700);
         Save(window, Path.Combine(directory, $"{theme}-filter-categories.png"));
         var mode = panel.Filter.Runner.Mode;
-        panel.Filter.Runner.Mode = ViewModels.ResultSelectionMode.Remove;
+        panel.Filter.Runner.Mode = Filters.ResultSelectionMode.Remove;
         await Settle();
         Save(window, Path.Combine(directory, $"{theme}-filter-remove.png"));
         panel.Filter.Runner.Mode = mode;
 
-        toggle.IsChecked = false;
+        toggle.IsOpen = false;
         filter.Root.AddConditionCommand.Execute(null);
         var rule = (RuleViewModel)filter.Root.Children[0];
         rule.SelectedParameter = rule.Parameters.FirstOrDefault();

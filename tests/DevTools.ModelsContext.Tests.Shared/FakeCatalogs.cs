@@ -1,5 +1,6 @@
 using Bogus;
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Parameters;
 
 namespace DevTools.ModelsContext.Tests.Shared;
 

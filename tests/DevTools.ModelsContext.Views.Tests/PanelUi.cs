@@ -1,7 +1,9 @@
-using DevTools.ModelsContext.Model;
+using DevTools.ModelsContext.Explorer;
+using DevTools.ModelsContext.Panel;
+using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Tests.Shared;
-using DevTools.ModelsContext.ViewModels;
-using DevTools.Presentation.Views.ModelsContext;
+using DevTools.Presentation.Views.ModelsContext.Explorer;
+using DevTools.Presentation.Views.ModelsContext.Panel;
 using DevTools.UI.Theme;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Tools;

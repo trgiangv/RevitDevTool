@@ -1,5 +1,9 @@
-using DevTools.ModelsContext.Model;
-using DevTools.ModelsContext.Ports;
+using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Explorer;
+using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Parameters;
+using DevTools.ModelsContext.Scope;
+using DevTools.ModelsContext.Selection;
 using System.Globalization;
 
 namespace DevTools.ModelsContext.Tests.Shared;
@@ -24,7 +28,7 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         _active = _primary;
         Data = data;
         AddModel(data);
-        View = new ViewInfo(data.CurrentModel, "view-1", "Level 1", false);
+        View = new ViewInfo(data.CurrentModel, "view-1", "Level 1", ViewKind.Plan);
     }
 
     public FakeModel(FakeModelOptions? options = null)
@@ -179,15 +183,24 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         return Task.FromResult(catalog);
     }
 
-    public Task<IReadOnlyDictionary<long, string>> GetUniqueIdsAsync(
+    public TaskCompletionSource<bool>? UniqueIdGate { get; set; }
+
+    public async Task<IReadOnlyDictionary<long, string>> GetUniqueIdsAsync(
         DocumentKey document,
         IReadOnlyCollection<long> ids,
         CancellationToken cancellationToken)
     {
+        if (UniqueIdGate is { } gate)
+        {
+            using (cancellationToken.Register(() => gate.TrySetCanceled()))
+            {
+                await gate.Task;
+            }
+        }
+
         var source = DocumentOf(document).Source;
-        IReadOnlyDictionary<long, string> uniqueIds = ids.Distinct().ToDictionary(id => id,
+        return ids.Distinct().ToDictionary(id => id,
             id => string.Format(CultureInfo.InvariantCulture, "{0}-{1:x8}", source.Value, id));
-        return Task.FromResult(uniqueIds);
     }
 
     public Task<IReadOnlyCollection<ElementRef>> GetSelectionAsync(CancellationToken cancellationToken)
@@ -205,6 +218,48 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         }
 
         return Task.CompletedTask;
+    }
+
+    public IReadOnlyCollection<ElementRef> PickCandidates { get; set; } = [];
+
+    public bool CancelPick { get; set; }
+
+    public int PickCalls { get; private set; }
+
+    public IReadOnlyCollection<DocumentKey> LastPickLinks { get; private set; } = [];
+
+    public IReadOnlyCollection<long> LastPickCategories { get; private set; } = [];
+
+    public TaskCompletionSource<bool>? PickGate { get; set; }
+
+    public async Task<PickResult> PickAsync(
+        IReadOnlyCollection<DocumentKey> links,
+        IReadOnlyCollection<long> categoryIds,
+        CancellationToken cancellationToken)
+    {
+        PickCalls++;
+        LastPickLinks = links;
+        LastPickCategories = categoryIds;
+        if (PickGate is { } gate)
+        {
+            using (cancellationToken.Register(() => gate.TrySetCanceled()))
+            {
+                await gate.Task;
+            }
+        }
+
+        if (CancelPick)
+        {
+            return PickResult.Cancel;
+        }
+
+        var picked = PickCandidates.Where(element => links.Contains(element.Document)).ToList();
+        if (picked.Count > 0)
+        {
+            await SelectAsync(picked, cancellationToken);
+        }
+
+        return PickResult.Of(picked);
     }
 
     public Task<IReadOnlyCollection<long>> EvaluateAsync(
@@ -301,7 +356,7 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
     public void ActivateModel(DocumentKey model)
     {
         _active = model.ModelId;
-        View = new ViewInfo(model, "view-1", "Level 1", false);
+        View = new ViewInfo(model, "view-1", "Level 1", ViewKind.Plan);
         _selection = [];
         ActiveModelChanged?.Invoke(this, model);
     }
