@@ -17,6 +17,12 @@ Test matrix on Revit 2026 with Snowdon (native filter comparison, random filters
 headless JSON filters, user actions with link reload, performance, safety guards,
 report artifact):
 [2026-11-19-models-context-host-matrix](2026-11-19-models-context-host-matrix.md).
+Direction: UX and Agent on one foundation, one result for many actions
+([0063](../../decisions/0063-model-context-ux-and-agent-foundation.md)). Link
+actions (isolate and overrides for specific linked elements, active select by
+category and source file, Why hidden for one row, nested shared families, one
+engine for Explorer and Filter):
+[2026-11-20-models-context-link-actions](2026-11-20-models-context-link-actions.md).
 
 ## Product releases and CI (active)
 

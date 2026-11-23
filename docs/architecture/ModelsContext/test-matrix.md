@@ -220,7 +220,8 @@ Current results (Snowdon HVAC + six links):
 
 - Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
 - Revit 2024, run `20261118-093432`: L2 127/131, L3 5/6; the differences are listed under Mismatches. A case where the oracle differs from the golden value there means the 2024 sample file differs, not that the panel is wrong: record it with both values and decide per-version golden values before changing `Data/*.json`.
-- L1 (net10.0-windows): core 341 tests in 4 s, views 103 tests in 64 s.
+- L1 (net10.0-windows, run 2026-11-21): core 431 tests in 4 s, views 120 tests in 70 s. Another agent may still be adding tests, so these are the counts at the time of writing.
+- Not run yet: L2 `WhyHiddenTests` (WH-01 to WH-06), `NestedChairsFollowHost` (NE-01) and `FilterKeepsTickedOnly` (PI-03); the manual Pick check (MP-01).
 
 `L2 matrix` below means `FilterMatrixTests.CountMatchesOracle(<id>)`.
 
@@ -252,10 +253,27 @@ Current results (Snowdon HVAC + six links):
 | EX-06 | Active view counts per category = view collector | equal per category | L2 `ExplorerMatchesOracle` |
 | EX-07 | Active view ids = view collector (link through the host view) | same set | L2 `ExplorerMatchesOracle` |
 | EX-08 | Tree, paging 200, search, expand / collapse all | rows | L1 `ExplorerTabTests` |
-| EX-09 | Tiers T0–T3 planned per row | plan | L1 `PlannerTests` |
+| EX-09 | Tiers T0–T4 planned per row | plan | L1 `PlannerTests` |
+| LA-01 | Link isolate: rows and results plan `LinkIsolateStep` (mixed results split T0 + T3), the plan carries the view id, the rest is journaled (not the targets) and reads hidden, Reset and an eye back on show it, a Show that reads back 0 drops the entries and reports once, Keep drops the journal | plan, journal, eyes, message | L1 `PlannerTests` (`LinkIsolateKeepsTargets`, `MixedIsolateSplits`), `PanelBarsTests` (`LinkIsolateJournalsRest`, `ResetShowsIsolateRest`, `EyeOnEndsLinkIsolate`, `EyeOnUnshownRestReports`, `ResetDropsUnshownOnce`, `KeepDropsIsolateJournal`) |
+| LA-02 | Link overrides: type row = Family Name + Type Name, category row = no rule, instance row and ids without a rule refused, a result filter keeps its rules, a non-native rule and over 100 rules refused, Revit 2023 refused, tooltip note, marks on the link rows, one re-apply after eye back on, a closed link drops the plan | plan, reason, marks | L1 `PlannerTests` (`LinkTypeRowColorsByName`, `LinkGroupRowColorsCategory`, `LinkInstanceRowRefusesColor`, `LinkResultWithoutFilterRefused`, `LinkResultUsesFilterRules`, `UndefinedRuleIsNotNative`, `LinkRulesOverCapRefused`, `TypeRowsOverCapRefused`, `LinkCheckFlagsFilter`), `PanelBarsTests` (`LinkGroupMenuOffersLinkActions`, `LinkOverridesNeedNewerRevit`, `LinkColorMarksRows`, `EyeOnReappliesLinkColorOnce`, `ClosedLinkDropsFilterPlan`) |
 | EX-10 | T1: link model row eye hides the link, Reset shows it | temporary bar "1", then gone | L3 UI-05 |
 | EX-11 | Selection sync under 50 / above 50 / above 5,000 | state | L1 `SyncTests` |
 | EX-12 | T3: eye on a category under a link hides those linked elements, Reset shows them | eye Hidden, bar "1", then eye Shown, no bar | L3 UI-06 |
+
+### Explorer boxes, hidden rows, Pick, shared engine
+
+| ID | Use case | Expected | Test |
+|----|----------|----------|------|
+| CB-01 | Categories box: all ticked at first, untick drops the group row, model count follows ticks, a new category shows ticked | state | L1 `CategoryBoxTests` (`CategoriesStartTicked`, `UntickDropsGroupRow`, `ModelCountFollowsTicks`, `NewCategoryShowsTicked`) |
+| CB-02 | Menu acts on the ticked (= selected) categories, no tick disables it with *Select categories*, search keeps hidden ticks, `SetTicks` is one change, the link notice shows after Isolate, the eye hides the category everywhere, tooltip names the links | plan, message, CanExecute | L1 `CategoryBoxTests` (`IsolateActsOnTicked`, `HalftoneActsOnTicked`, `NoTickDisablesMenu`, `TickEnablesMenu`, `SearchKeepsHiddenTicks`, `SetTicksBatchesOneChange`, `NoTickReportsReason`, `IsolateShowsLinkNotice`, `EyeHidesCategoryEverywhere`, `EyeTipNamesLinks`) |
+| CB-03 | Box lists the ticked categories, untick removes the group row, eye hides, menu lists Isolate, Halftone, Color; list reports CanSelectMultiple, AddToSelection ticks two rows and Isolate runs on both, menu off without ticks, selecting a row ticks only it, a tick selects its row | UI state | Views `ExplorerViewTests` (`CategoriesBoxListsTicked`, `UntickRemovesGroupRow`, `CategoryEyeHidesCategory`, `CategoryMenuListsActions`, `CategoryListSelectsMany`, `AddToSelectionKeepsBoth`, `MenuOffWithoutTicks`, `SelectRowTicksOnlyIt`, `TickSelectsRow`) |
+| HR-01 | Active view: group counts its hidden elements, Whole model has none, a click on *+N hidden* lists them dimmed and a second click closes | counts, rows | L1 `HiddenRowsTests` (`GroupCountsHiddenElements`, `WholeModelHasNoHidden`, `HiddenClickListsDimmedRows`, `HiddenClickAgainCloses`), Views `HiddenCountShowsInActiveView` |
+| HR-02 | Group Select and Hide skip hidden elements, a dimmed row acts alone and sets the Why hidden element, search finds hidden elements | ids | L1 `HiddenRowsTests` (`GroupSelectSkipsHidden`, `GroupHideSkipsHidden`, `DimmedRowActsAlone`, `DimmedRowSetsWhyElement`, `SearchFindsHiddenElement`) |
+| PI-01 | Pick is off with no ticked link or no ticked category and on with a link; it sends the ticked links only, skips the port with no link | enabled, args | L1 `PickTests` (`NoLinkDisablesPick`, `NoCategoryDisablesPick`, `LinkEnablesPick`, `PickSendsLinksOnly`, `NoLinkSkipsPort`), `ExplorerPickTests`; Views `PickOffWithoutLink`, `PickOnWithTickedLink` |
+| PI-02 | The picked set becomes the selection; Esc keeps the selection; empty pick says *Nothing picked*; a second pick is blocked; closing during a pick is quiet | state, status | L1 `PickTests` (`PickedBecomeSelection`, `EscapeKeepsSelection`, `EmptyPickSaysNothing`, `SecondPickIsBlocked`, `CloseDuringPickIsQuiet`, `PickingRaisesChanged`); `ExplorerPickTests` (`PickShowsCueUntilDone`, `SelectionScopeKeepsPick`) |
+| PI-03 | `LinkPickFilter` for the Architectural link and Doors on real link references: its door passes, its wall, a door of another link and a Current model duct do not, the link instance does | door only | L2 `PickFilterTests.FilterKeepsTickedOnly` |
+| MP-01 | Pick in a real view: click and box a linked element without Tab, only ticked links and categories, Esc ends it. Needs a person; recorded in the plan, not automated | manual | [link actions plan](../../plans/active/2026-11-20-models-context-link-actions.md) (open) |
+| SE-01 | One engine: a branch Hide matches Select, scoped hide and show keep the eye right, a filter result reads hidden state, a filter Color marks the Explorer row, one instance leaves its group plain, a link row Halftone marks the row | plans, marks | L1 `SharedEngineTests` |
 
 ### Filter operators per value kind
 
@@ -425,7 +443,14 @@ TX-02 to TX-05, TX-18, TX-19 above; widening and exact pass also in L1
 Each case activates `{3D}` through `UIDocument.ActiveView`, builds the plan the
 panel sends, runs it through `RevitViewActions`, reads the view state through
 the API, resets, and checks the reset. Images: the view before, after and after
-reset.
+reset. VI-09 to VI-12 keep their ids and data wording "All models"; the row is
+now the category in the Categories box (its eye and menu), same T2 plan.
+Category Isolate (VI-10, VI-12) hides every other hideable category inside
+Temporary View Properties; the leftovers each case allows are categories Revit
+never hides in a view. Annotation in a plan was checked by the spike only
+(L3 plan: tags and grids gone), not by an L2 case. L1 `CategoryBoxTests` and the view
+tests `SelectRowTicksOnlyIt`, `TickSelectsRow`, `AddToSelectionKeepsBoth` cover
+tick = selection.
 
 | ID | Tier, source | Action | Expected (API) | Test |
 |----|--------------|--------|----------------|------|
@@ -438,12 +463,37 @@ reset.
 | VI-07 | T1 link model row | Isolate | link visible, ducts hidden | L2 |
 | VI-08 | T1 link model row | Color | link instance colored; Reset restores its overrides | L2 |
 | VI-09 | T2 All models Ducts | Hide | ducts hidden, terminals visible | L2 |
-| VI-10 | T2 All models Ducts | Isolate | ducts visible, terminals hidden | L2 |
+| VI-10 | T2 Categories box Ducts | Isolate | Temporary View Properties on, no temporary hide/isolate; Current model and every By Host View link show only ducts (center lines count as Ducts) besides duct systems, link instances and the case's leftovers; Reset restores every count | L2 |
 | VI-11 | T2 All models Ducts | Color | category override colored, cleared by Reset | L2 |
-| VI-12 | T2 All models Doors (only in the link) | Hide | temporary mode on, ducts visible; linked doors in the image only | L2 |
+| VI-12 | T2 Categories box Doors (in links) | Isolate | Current model and every By Host View link show only Doors (141, unchanged), link instances and the leftovers Cameras, Model Groups, Divisions, Multistory Stairs; Reset restores every count (Architectural 7,823 -> 183 -> 7,823) | L2 |
 | VI-13 | T3 filter result GR-02 (link doors) | Hide | planned as T3, not run (Gotcha 13) | L2 |
-| VI-14 | T3 filter result GR-02 | Color | refused: "Inside a link, single elements can only be hidden and shown…" | L2 |
+| VI-14 | Linked ids of GR-02 without a rule | Color | refused: "Revit can color linked elements only by family, type or a rule filter." | L2 |
 | VI-15 | T0 + T3 filter result GS-02 | Hide | planned as T0 + T3, not run | L2 |
+| VI-16 | T4 link door type row | Color | `Model Context <n>` filter on the view with red, Temporary View Properties on; Reset deletes it and ends the mode | L2 |
+| VI-17 | T0 ducts + T4 link door type | Halftone | element overrides and the panel filter halftone; Reset clears both | L2 |
+| VI-18 | T4 link door type repeated 51 times | Color | refused: "Over 100 rules to color in a link.", view unchanged | L2 |
+| VI-19 | T3 isolate GR-02 (link doors) | Isolate | planned as T3, not run (Gotcha 13) | L2 |
+| VI-20 | T0 + T3 isolate GS-02 | Isolate | planned as T0 + T3, not run | L2 |
+
+### Why hidden and nested families
+
+Why hidden reads the active view only. The L2 cases build the cause in the
+Snowdon model, ask `RevitVisibilityExplainer`, and read the cue; each case uses
+the safety guard before and after. L2 `WhyHiddenTests` have not run live yet.
+
+| ID | Use case | Expected | Test |
+|----|----------|----------|------|
+| WH-01 | Category off in the active view | *Category off: <category>* | L2 `WhyHiddenTests.CategoryOffNamesCategory` |
+| WH-02 | Element hidden in the active view | *Hidden in view*, no Show | L2 `HiddenElementNoFix` |
+| WH-03 | View filter with visibility off | *Filter: <name>* | L2 `ViewFilterNamesFilter` |
+| WH-04 | Linked L4 door in the L3 plan | *Above cut plane* | L2 `LinkedDoorAboveCutPlane`, Explicit: run alone after `user-action-activate-view.cs` with `ViewName` = `L3` (the full run stays in `{3D}`) |
+| WH-05 | Element of a secondary design option | *Design option: <option>* | L2 `SecondaryOptionNamesOption` |
+| WH-06 | Element visible in the active view | *No view setting hides it* | L2 `VisibleElementHasNoCause` |
+| WH-07 | Cue text, check order, one cause per kind, *No view setting hides it* only alone, not-drawn, nested-family and ceiling cues, journaled linked hide first, only Show is a fix | list | L1 `WhyHiddenTests` (headless, fake explainer) |
+| WH-08 | Strip: open shows the first cause, follows the selected row, closes (✕, Esc, no row), newer open cancels older, an error becomes one cue, Show re-explains, category cue has no Show, menu needs one element | state | L1 `WhyHiddenStripTests`; Views `WhyHiddenViewTests` (strip hidden until opened, expand lists causes, Show and ✕ and Esc, sits above the Temporary bar) |
+| WH-09 | Hidden linked elements of each loaded link in the L3 plan (panel rule: drawable in this view type, not shown) | a cause for each sampled element | L2 `LinkedHiddenAllHaveCause`, Explicit: run alone after `user-action-activate-view.cs` with `ViewName` = `L3` |
+| WH-10 | Hidden counts skip sheets, no-geometry, view-owned (other view or any in a link), rooms and spaces in 3D, areas outside area plans | outside ids | L1 `HiddenRuleTests` |
+| NE-01 | Current model table 738550 with nested chairs (or the first instance in the view with nested instances): Isolate, Hide, Halftone and Color through `RevitViewActions` reach each `GetSubComponentIds` chair; Reset shows them and restores their overrides | chairs follow the host | L2 `NestedFamilyTests.NestedChairsFollowHost`, Explicit: run alone on a copy of Snowdon Architectural as the active model with `{3D}` active (MCP `open_document`, then `user-action-activate-view.cs` with `ViewName` = `{3D}`) |
 
 ### User actions (L2 `UserActionTests`, `user-actions.json`)
 
@@ -472,6 +522,7 @@ a run. Open views of every type come from `scripts/models-context/user-action-op
 | US-14 | Pane hidden during a committed edit, then shown | 3 after one resync | MCP + L3 `LiveStepTests` |
 | US-16 | Model switch and back | the other title, then HVAC with its filter | MCP + L3 `LiveStepTests` |
 | US-17 | Hide, Isolate, Halftone, Color, Reset and Keep in a view whose template controls V/G (host elements, link instance, link category everywhere) | ok or one refusal; Reset restores overrides, no temporary mode, same template, model unmodified | L2 `LockedTemplateActionsStaySafe` (explicit) |
+| US-18 | T4 Color on an Architectural door type in a plan whose template controls Filters (L3) | panel filter inside Temporary View Properties with red; Reset leaves no `Model Context <n>` filter, no mode, same template | L2 `LockedTemplateLinkColorDraws` (explicit) |
 
 Safety guards run in every L2 case (`SafetyGuard`) and after L2 and L3 in the script
 (`safety.json`).
@@ -543,6 +594,8 @@ name; files land in the run folder.
 | UI-04 | All categories in the link (SC-02), then None | Live switch on, line *Paused: over 5,000 matches*, then no line | `LivePausesAboveLimit` |
 | UI-05 | Eye on the link model row, Reset | bar "1 change", then no bar | `LinkHideShowsTemporaryBar` |
 | UI-06 | Eye on Doors under the link (T3, Hide in View), Reset | eye Hidden and bar "1 change", then eye Shown and no bar | `LinkDoorsHideThenReset` |
+| UI-07 | Isolate tool on the first door type under the link (part A), Reset | bar with a count, no error, type eye Shown, another link category Hidden; then Shown and no bar; Isolate and Reset times | `LinkTypeIsolateThenReset` |
+| UI-08 | Color tool on the first door type under the link, first picker swatch, Confirm (part B), Reset | bar with a count, no error, row color `#F44336`; then no color and no bar; Color and Reset times | `LinkTypeColorThenReset` |
 
 ## Mismatches found
 
@@ -563,6 +616,14 @@ UIA tree as offscreen elements. Three value editors share `Filter.Rule.Value`
 a hidden `Filter.DiscardSwitch` was invoked as if shown. `Shown`, `Gone` and
 `Last` in `RevitPanel` now take on-screen elements only (UI-01–UI-03, UI-05,
 UI-06).
+
+Closed on 2026-11-21, Revit 2026 (run `20261121-031343`, L2 439 of 439, L3 8 of
+8). UI-07: the edit that Isolate made fired a context reload, which canceled the
+running action before it journaled the hidden rest, so no bar showed and Reset
+could not show the link again. A started visibility action now finishes; menu
+and row tool refusals show in `ModelContext.Message`. UI-08 (test helper): the
+first unnamed button was a slider repeat button, not a swatch; `FirstSwatch` now
+takes `Button` class elements only.
 
 List a row here (ID, expected from the oracle or the Revit API,
 panel value, cause seen with `PrintCaseDifference`) when the panel differs;

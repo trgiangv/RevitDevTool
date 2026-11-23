@@ -17,8 +17,8 @@ How it is built: [architecture/ModelsContext](../architecture/ModelsContext/READ
 - **Current model**: the open model you work in. The panel never says "host".
 - **Link**: one loaded RVT link instance. Two instances of one file are two
   entries.
-- **All models**: the top tree group that acts on a category in every model at
-  once.
+- **Categories box**: the Explorer list of categories that decides what the
+  tree shows and where a category is hidden or shown.
 
 ## Layout
 
@@ -27,8 +27,9 @@ From top to bottom:
 1. **Context bar**: the Scope buttons, then the Explorer / Filter switch.
 2. **Documents box** on its own row (hidden when Scope is Selection).
 3. **Body**: Explorer or Filter. Both stay alive while hidden, so switching keeps
-   their state.
-4. **Temporary bar** (yellow), only while the view is in a temporary mode.
+   their state. Explorer shows the Categories box under the documents box.
+4. **Why hidden strip**, only while it is open.
+5. **Temporary bar** (yellow), only while the view is in a temporary mode.
 
 A thin progress bar shows under the context bar while counts rebuild. A
 one-line message shows when something fails; the panel never throws into Revit.
@@ -64,18 +65,64 @@ Visibility actions always work on the active view, whatever the scope.
 
 A flat, virtualized tree: **Model › Category › Family › Type › Instance**.
 
-- **All models** sits on top and lists every category found in any ticked
-  document with the merged count. Its rows act on the category everywhere.
-- Then **Current model**, then one group per ticked link.
+- The tree starts with **Current model**, then one group per ticked link.
 - Every row shows its count in grey. Instances load on expand in pages of 200
   ("200 of 1,402 · more").
 - **Search** matches row text only: model, category, family, type and instance
   names, and Element Id (`linkInstanceId@id` works). Parameter values belong to
-  the Filter view.
+  the Filter view. In Active view it also finds hidden elements, dimmed.
+- **Pick** (icon beside the search box): click or box elements of the ticked
+  links in the view, no Tab needed. Only elements of the ticked links and
+  categories can be picked. The picked set becomes the Revit selection. While
+  picking the status reads *Picking · Esc to finish*; Esc ends it. Disabled
+  with *Tick a link to pick in it* (no link ticked) or *Tick a category to pick*.
+  Current model elements are picked in Revit as usual.
 - **Expand all** opens down to Type rows; **Collapse all** leaves the roots.
 - **Status line**: *N selected* (elements under the selected rows) and
   **Clear**. When part of the Revit selection is in unticked documents, **Show in
   Explorer** ticks them and reveals the rows.
+
+### Categories box
+
+Under the documents box. Lists the categories of the ticked documents with
+counts, search, **All · None**. Every category starts ticked; a category that
+appears later shows ticked.
+
+- The tick is the selection: one state. Rows select like any Windows list
+  (click, Shift for a range, Ctrl to add or remove, Ctrl+A, the arrow keys) and
+  the selected rows are the ticked ones; ticking a box selects its row. Click
+  *Doors* and only Doors is ticked. Ticks hidden by the search stay.
+- The ticks decide what the tree lists.
+- The eye after the count hides or shows the category in the view, in the
+  Current model and in every link that follows the view (By Host View). A
+  hidden category dims. The tooltip names what the eye reaches, for example
+  *Hide in view: Current model + 2 links (By Host View)*, and notes the links it
+  does not reach. The eye acts on its own row only.
+- Right-click a category: **Isolate**, **Halftone**, **Color…** for the
+  ticked rows. Right-click on a row that is not selected selects only that
+  row first. With no row ticked the items are disabled with *Select
+  categories*.
+- **Isolate** leaves only the ticked categories: in Temporary View Properties
+  it hides every other category the view can hide (model, annotation,
+  analytical, imports, lines, levels, grids). It reaches the Current model and
+  every link By Host View, so isolating Doors leaves only doors, linked doors
+  included. The link instances stay, and the few categories Revit never hides
+  in a view (cameras, model groups, divisions, multistory stairs) stay drawn.
+  Reset ends the mode and every category is back. A link By Linked View or
+  Custom keeps its own settings; the panel says so: *Links By Linked View or
+  Custom keep their own settings.*
+- Under Scope = Selection the box stays, for Pick; the tree still shows the
+  selection.
+
+### Hidden elements (Active view)
+
+A group row shows *+N hidden* after its count when the view hides some of its
+elements. Click it to list them, dimmed; click again to stop. Group actions
+(Select, Hide, Isolate) act on the visible elements only; a dimmed row acts
+alone, when selected. Whole model has no hidden counts. Only elements a view of
+this type can draw count: sheets, elements with no geometry, view-owned elements
+of another view (all view-owned elements of a link), rooms and spaces in 3D, and
+areas outside area plans never count.
 
 ### Selection sync
 
@@ -88,8 +135,8 @@ select together*). Shown only with Scope = Active view or Whole model.
 - Up to 50 selected elements the tree opens each path and scrolls to the first.
   Above that rows stay closed with blue badges and the hint *Too many to reveal ·
   Reveal all*.
-- Above 5,000 elements sync pauses for that change and *Select in Revit* shows in
-  the menu.
+- Above 5,000 elements sync pauses for that change and *Select* shows in the
+  menu.
 
 ### Visibility on rows
 
@@ -99,16 +146,45 @@ sits in:
 
 | Row | Acts on |
 |-----|---------|
-| All models category | The category in the Current model and in every link that follows the view (By Host View). |
-| Current model, any level | That branch's elements by id. Links keep their state. |
+| Current model, any level | That branch's elements by id, the whole branch (not only what is listed). Links keep their state. |
 | A link's model row | The whole link instance (all four actions). |
-| Rows below a link's model row | Hide and Show only (Hide in View). Isolate, Halftone and Color are disabled with the reason: Revit has no way to apply them to one linked element. |
+| Rows below a link's model row | Hide and Show (Hide in View). Isolate keeps the row's elements and hides the rest of that link in the active view. Halftone and Color on a category, family or type row color that family or type (see below); on an instance row they are disabled with the reason. |
+
+**Isolate inside a link.** The link and any Current model targets are isolated
+temporarily; the rest of the link that the active view shows is hidden with Hide
+in View (saved with the view, orange dot). Reset or turning an eye back on shows
+it again. Refused, with one line, when the active view changed, Reveal Hidden
+Elements is on, the view shows no links, or more than 10,000 linked elements
+would be hidden. After a Revit crash the hidden rest stays hidden in that view;
+Reveal Hidden Elements brings it back.
+
+**Halftone and Color inside a link.** Revit cannot override one linked element,
+so the panel adds a temporary view filter named *Model Context 1* (2, …): Family
+Name, plus Type Name for a type row, or the Filter's own rules for a Filter
+result. The tooltip says *Applies to every By Host View link with this type*: the
+filter also reaches that family or type in the Current model and other links that
+follow the view. Refused, with the reason, when:
+
+- the row is an instance or the elements come without a rule (*Revit can color
+  linked elements only by family, type or a rule filter.*);
+- the Filter has a rule Revit cannot draw (case-sensitive, defined, undefined, a
+  rule scoped to one model, or a parameter Revit cannot filter);
+- the request has more than 100 rules;
+- the link is By Linked View or Custom, or Revit is 2023 or older.
+
+The filter is the panel's one model write. It runs inside Temporary View
+Properties (so a template that locks Filters still draws it) and is deleted on
+Reset, before save and synchronize, and when the pane is closed. Keep leaves it
+until the next Reset, like any override.
 
 - The eye has three states: shown, hidden, partly hidden. Hovering it highlights
   every row the click will change.
 - Rows the panel hid stay in the tree, dimmed, so they can be shown again.
-- While an *All models* row is hidden, rows of that category in the other
-  groups show it as hidden by *All models* and are disabled until it is shown.
+- While a category is hidden with the Categories box eye, its rows in every
+  group show it as hidden by the category and are disabled until it is shown.
+- Hide, Isolate, Halftone and Color on a Current model family instance also
+  reach its shared nested instances (a table takes its chairs along); Reset
+  undoes the same set. A linked instance already hides with its nested ones.
 - A colored row keeps a swatch; a halftoned row keeps the accent marker, until
   Reset, Keep, undo or closing the model.
 - Linked-element hides are Hide in View: saved with the view at once and one
@@ -116,10 +192,36 @@ sits in:
 
 ### Context menu
 
-Right-click the selected rows (or Shift+F10). Items: *Select in Revit* (hidden
+Right-click the selected rows (or Shift+F10). Items: *Select* (hidden
 while sync is on), Zoom (Z), Section box (B, 3D views only), Isolate (I),
-Hide / Show (H), Halftone, Color…, and *Reset view* in temporary mode. An item
-that cannot run on the target is disabled with the reason as its tooltip.
+Hide / Show (H), Halftone, Color… and *Why hidden?*. Reset lives only on the
+Temporary bar. An item that cannot run on the target is disabled with the reason
+as its tooltip. *Why hidden?* needs one element. When an item or a row tool
+runs and Revit refuses, the reason shows in the panel's message line. An action
+that started always finishes, even when the model changes while it runs.
+
+### Why hidden
+
+Select one dimmed row (or choose *Why hidden?* on one element, in Explorer or a
+Filter result) and a strip opens above the Temporary bar with the first cause
+in the active view, for example *Category off: Duct Fittings*. The chevron lists
+every cause; *No view setting hides it* when no check hits. The strip follows the selected
+row, and closes with ✕, Esc, or when the selection has no element.
+
+- Checks, first hit first: temporary hide or isolate, hidden in view, category,
+  view filter, workset, phase, design option, view range, crop or section box,
+  owner view, not drawn (*No geometry to draw*, *Not drawn in this view type*).
+  The category check includes the line style under Lines. A ceiling plan reads
+  *Below cut plane* or *Above view range*. A link adds its own first: link hidden, its category or workset,
+  its display mode (By Linked View and Custom use the link's own settings).
+- A nested family element that is not drawn and has no cause of its own takes
+  its parent's causes, else reads *Hidden by its family: name* (the parent
+  family's visibility settings or parameters turn it off).
+- A filter that cannot be tested reads *Filter: name (possible)*.
+- It only explains. **Show** appears only where the panel can undo the cause: a
+  temporary hide on a Current model element, or a linked element the panel hid.
+  A category off or a permanent hide is a cue, with no button.
+- Active view only; a view that is not a model view says so.
 
 ### Temporary bar
 
@@ -129,8 +231,10 @@ saved with the view and work under a locked view template.
 - *Temporary · N changes*: the panel counts the changes.
 - **Keep** makes hide and isolate permanent. When linked elements are hidden it
   first asks: *N link elements stay hidden in this view* (Keep · Cancel).
-- **Reset** ends the temporary modes and shows again every linked element the
-  panel hid in this view.
+- **Reset** ends the temporary modes, deletes the panel's view filters, and
+  shows again every linked element the panel hid in this view. When Revit does
+  not show some of them (their category is off), Reset says so once and forgets
+  them.
 
 ## Filter
 
@@ -261,7 +365,7 @@ even when another element of the same type has it.
   the result to the Revit selection after about 300 ms. Above 5,000 matches Live
   pauses: the switch and its label *Live* stay as they are (your choice is
   kept), one short warning line under the count reads *Paused: over 5,000
-  matches*, nothing is sent, and *Select in Revit* shows in the menu. The line
+  matches*, nothing is sent, and *Select* shows in the menu. The line
   follows the state: it is gone as soon as the result is 5,000 or fewer (a
   narrower filter, no categories, no filter selected) or Live is off, and Live
   sends again by itself.
@@ -273,7 +377,8 @@ even when another element of the same type has it.
 ## Not in this panel
 
 - Writing parameter values (Replace).
-- Isolate, Halftone or Color on single elements inside a link.
+- Halftone or Color on one linked instance (Revit has no per-element override
+  in a link; family, type and rule filters are the closest).
 - Expanding a selection by system, host, room and similar (deferred, 0062
   Decision 13).
 

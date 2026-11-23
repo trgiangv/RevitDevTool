@@ -16,8 +16,8 @@ color, box or zoom the result in the active view. Elements in loaded RVT links
 must work the same way as elements of the open model.
 
 **Vocabulary.** *Current model* is the open document the user works in. *Link*
-is one loaded RVT link instance. *All models* is the Explorer group that acts
-on a category everywhere. The UI never says "host"; below, "host" appears only
+is one loaded RVT link instance. *All models* was the Explorer group that acts
+on a category everywhere (removed 2026-11-21, Decision 5). The UI never says "host"; below, "host" appears only
 inside Revit API terms (host view, host `ElementId`, By Host View).
 
 Behavior: [product/models-context.md](../product/models-context.md). Structure:
@@ -80,10 +80,12 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
 
 1. **Revit 2023.1 and later.** The panel is built under
    `REVIT2023_OR_GREATER`; the 2022 add-in does not register it. Two hints read
-   a link's display mode and need 2024+: the link names in the *All models*
+   a link's display mode and need 2024+: the link names in the category eye
    tooltip and the "in view" marker on link filters (Custom links need 2025).
    On older versions the tooltip is generic and the marker is missing. Why: 2023
    lacks only these hints, not worth dropping its users (Context 4, 6).
+   *Amended 2026-11-21:* the tooltip moved from the *All models* row to the
+   Categories box eye (Decision 5).
    Model elements exclude Materials (reported as a model category, not placed objects) and Revit links.
 2. **No model writes.** The panel never writes element data and never creates
    an element: no parameters, Extensible Storage, view filters or views. It
@@ -91,6 +93,11 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
    overrides, and the selection. Replace is not part of the panel; it can
    become a separate tool that takes the panel's result. Why: the panel works
    on shared models and in links, which are read only.
+   *Amended 2026-11-21 (owner):* one exception. Halftone and Color on specific
+   linked elements (T4) create a temporary `ParameterFilterElement` named
+   `Model Context <n>`, applied inside Temporary View Properties. Reset, save,
+   synchronize and pane close delete it; a failed delete is one sentence. No
+   other element is ever created.
 3. **Documents are one list.** The Current model and each loaded link instance
    are equal entries of one documents box; the UI never splits into host and
    link areas. Links are opt-in, the last ticked entry cannot be unticked, and
@@ -103,17 +110,45 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
    target (selected rows, or the Filter result), not a fixed actions bar. An
    item that cannot run on the target shows disabled with the reason. Why: a
    bar took a row on every view and sat away from the rows it acted on.
+   *Amended 2026-11-21:* Explorer shows a Categories box under the documents
+   box (the Filter's Categories section, every category ticked at first). Its
+   ticks decide what the tree lists and are the selection for category actions.
+   *Amended 2026-11-23:* the ticks only decide what the tree lists; category
+   actions act on the selected rows (click, Shift, Ctrl), disabled with
+   *Select categories* when none is selected.
+   Explorer also gets a *Pick* button beside its search (links only, by ticked
+   links and categories) and a *Why hidden?* menu item with a strip above the
+   Temporary bar (read only; a Show button only where a tier undoes the cause).
+   Plan: [link actions](../plans/active/2026-11-20-models-context-link-actions.md),
+   under [0063](0063-model-context-ux-and-agent-foundation.md).
 5. **Visibility lives on tree rows, and a row acts on exactly its group.**
-   - *All models* category rows act on the category itself (T2): the Current
-     model and every By Host View link.
+   - *Amended 2026-11-21:* the *All models* level is gone. The category acts
+     through the Categories box: its eye hides or shows the category in the
+     Current model and every By Host View link (T2); Isolate, Halftone and Color
+     are in its menu and act on the ticked categories (*2026-11-23:* the
+     tick is the row selection; Isolate hides every other hideable category in
+     Temporary View Properties, so it reaches By Host View links). The rest of this
+     decision is unchanged. Former text: *All models* category rows act on the
+     category itself (T2): the Current model and every By Host View link.
    - *Current model* rows act on that branch's elements by id (T0), so a user
      can hide Ducts here and keep the linked Ducts. Elements drawn after the
      click are not covered until the eye is clicked again.
    - A link's model row acts on the whole link instance (T1). Rows below it
      offer the eye only (T3); Isolate, Halftone and Color are disabled there
-     with the reason (Context 5).
+     with the reason (Context 5). *Amended 2026-11-21:* rows below it also
+     isolate (T3 isolate, Decision 7) and, at Category, Family or Type level,
+     take Halftone and Color (T4); an instance row keeps them disabled with the
+     reason.
    - The eye reads back from the view (temporary state for the Current model,
      the link view collector for links), so it reflects what Revit shows.
+   - *Amended 2026-11-21:* a row resolves to element references once, so Hide,
+     Isolate, Overrides, Select and the counts act on the same set; a branch
+     action reaches the whole branch. Hidden state is read back by element
+     reference for Explorer and Filter alike. Active view keeps listing visible
+     elements, counts hidden ones per group (*+N hidden*) and lists them dimmed
+     on click or search. On the Current model, temporary isolate, hide and
+     element overrides also expand to shared nested instances (Revit does not
+     reach them); T3 on a linked host already hides its nested ones.
    Why: an earlier row that also hid the category in links gave users no way
    to hide a category in the Current model only.
 6. **Temporary first.** Hide and isolate use Revit's temporary modes; Halftone
@@ -131,10 +166,11 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
    | T0 | Current model elements | Public API by element id |
    | T1 | A whole link | Public API on the `RevitLinkInstance` id |
    | T2 | A category everywhere | Category hide, isolate and overrides |
-   | T3 | Elements inside one link: Hide and Show only | Hide in View through the internal command handler |
+   | T3 | Elements inside one link: Hide, Show, and Isolate by hiding the rest | Hide in View through the internal command handler |
+   | T4 | Halftone and Color inside a link by family, type or a native rule filter | A temporary `ParameterFilterElement` inside Temporary View Properties |
 
    A result that spans documents splits: Current model matches go T0, link
-   matches T3. T2 never switches a link's display mode. Select, Box and Zoom on
+   matches T3 (hide, show, isolate) or T4 (halftone, color). T2 never switches a link's display mode. Select, Box and Zoom on
    linked elements use public API only. Nested links are out of scope for T3.
    - **T3 is one synchronous call** (`LinkedHideShow`) on the Revit thread: no
      `PostCommand`, no `Idling`, no queue. It swaps in link references, runs
@@ -147,9 +183,26 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
      an in-memory journal and unhides exactly those on Show or Reset; it never
      unhides what the user hid in Revit. **Keep** asks first when the journal
      has entries, then leaves them hidden.
-   - Isolate, Halftone and Color below a link's model row stay disabled:
-     Revit has no command that applies them to one linked element (Context 5,
-     11).
+   - *Amended 2026-11-21 (owner), replaces "Isolate, Halftone and Color below a
+     link's model row stay disabled":*
+     - **T3 isolate:** temporary isolate of the link instance (with any Current
+       model ids), then Hide in View of the rest of that link in the active
+       view (Context 12): the link view collector's elements of model
+       categories, minus the targets, their nested instances and their hosts.
+       Both run in one outer `TransactionGroup`, so a failed hide rolls back the
+       isolate. Refused when the active view changed, Reveal Hidden is on, or
+       the rest is over 10,000. The journal records the rest; Reset and the eye
+       show it again. A Revit crash leaves those hides saved with the view.
+     - **T4 overrides:** Revit has no per-element override for a linked element
+       and no filterable element id (`ID_PARAM` is not filterable), so Halftone
+       and Color reach linked elements only through a rule view filter: Family
+       Name (+ Type Name) for Explorer rows, the filter's own rules for a
+       filter result when all are native, over 100 rules refused. It needs
+       Revit 2024+ (link display mode) and a By Host View link, and it also
+       colors the same family or type in the Current model and in every other
+       By Host View link (Context 2, 3). It runs inside Temporary View
+       Properties because a template that controls Filters hides a filter added
+       straight to the view (spike B1).
    Why: links need per-element hide as Revit's own UI has it, and the public
    API cannot do it (Context 1, 5).
 8. **Filter policy.**
@@ -193,7 +246,7 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
    - A model switch never asks: each model's session keeps its unsaved custom
      filter and shows it again, still unsaved, on switch back.
    - Each tab keeps its own switch in memory per session. Both pause above a
-     limit (5,000 elements) and offer *Select in Revit* instead.
+     limit (5,000 elements) and offer *Select* instead.
    - The `SelectionChanged` handler only records the ids; work runs later.
      The panel drops the echo of a selection it sent itself.
 10. **Architecture.**
@@ -226,6 +279,10 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
     - **A flat virtualized list, not WPF `TreeView`**, for the Explorer. Why:
       `TreeView` costs a panel per open node, scrolls to an unrealized path
       level by level, and has no multi-select.
+    - *Amended 2026-11-21:* the Categories section is one shared view
+      (`CategorySection`) used by Filter and Explorer. The Why hidden strip is a
+      plain row in the pane's grid, not an `hc:Drawer`, whose adorner may not
+      work in a dockable pane.
     - **HandyControl stock look**: stock styles and brushes, shared icon
       geometries, no color literals, an AutomationId on every control.
     - **Fork rule.** A HandyControl control that needs more than a style is
@@ -242,14 +299,27 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
     Type, Family, Level, Workset, Host, Room) returns as its own amendment once
     its meaning across documents is settled. The context popup at the cursor
     is not in the first release. Isolate inside a link by hiding the rest
-    (Context 12) stays a candidate.
+    (Context 12) and overrides for specific linked elements stay candidates.
+    *Amended 2026-11-21, built:* active select by category and source file
+    (Pick), Why hidden for one row, nested shared families in hide, isolate and
+    overrides (Current model), and the Explorer scope boxes (the *All models*
+    level left the tree; its T2 action is the eye and menu of each category
+    row; Decisions 1, 4, 5 and 11 amended above). Still open: the live L2 and
+    L3 runs and the manual Pick check. *Amended 2026-11-21, built:* isolate
+    inside a link by hiding the rest (T3 isolate) and Halftone and Color for
+    linked elements by family, type or a native rule filter (T4); Decisions 2,
+    5 and 7 amended above. Worked in the
+    [link actions plan](../plans/active/2026-11-20-models-context-link-actions.md)
+    under [0063](0063-model-context-ux-and-agent-foundation.md).
 14. **Ownership.** Core `source/DevTools.ModelsContext/`; views
     `source/DevTools.Presentation/Views/ModelsContext/`; shared controls and
     icons `source/DevTools.UI/`; Revit adapter and pane
     `source/RevitDevTool.Tools/ModelsContext/` (0036), pane registration in
     `RevitDevTool.Core` (0007); tests `tests/DevTools.ModelsContext.*` and
     `tests/RevitDevTool.ModelsContext.*`
-    ([test matrix](../architecture/ModelsContext/test-matrix.md)).
+    ([test matrix](../architecture/ModelsContext/test-matrix.md)). Each
+    splits by feature folder, namespace follows folder
+    ([Folders](../architecture/ModelsContext/README.md#folders)).
 
 ## Alternatives Considered
 
@@ -257,6 +327,8 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
    it is exact.
 2. **PostCommand for everything.** No read-back, fragile timing, untestable.
 3. **View filters to apply rule results.** Each is a new project element.
+   *Amended 2026-11-21:* still rejected for the Current model (T0 is exact);
+   accepted for Halftone and Color inside links (T4), the only path Revit has.
 4. **Extensible Storage for view state or the T3 journal.** Writes model data.
 5. **Separate Explore mode** (category, parameter, values browser). Folded into
    the rule value list.
@@ -308,11 +380,14 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
 29. **Halftone and Color for linked elements through an `IFC_GUID` view
     filter.** GUIDs collide, instances cannot be told apart, it slows sharply
     with the number of targets, and it adds a project element (Context 11).
+    Still rejected; T4 keys on family and type names or the filter's own rules
+    instead, and per-id filters are impossible (`ID_PARAM` is not filterable).
 30. **`ID_VIEW_OVERRIDE_ELEMENTS(_HALFTONE)` or a `SelectionFilterElement` for
     linked elements.** Revit refuses the first; the second applies to Current
     model ids only.
 31. **Isolate a linked element with an inverted view filter.** Leaves the
-    categories without `IFC_GUID` visible and regenerates every link.
+    categories without `IFC_GUID` visible and regenerates every link. Still
+    rejected; T3 isolate hides the rest instead.
 
 ## Consequences
 
@@ -333,8 +408,12 @@ Tradeoffs:
 - T3 relies on an internal, undocumented Revit call that may change in any
   release; each supported year needs a check, and the fallback is no
   visibility actions below a link's model row.
-- Isolate, Halftone and Color cannot target single elements or categories
-  inside a link.
+- Halftone and Color cannot target single linked instances, and a T4 filter
+  also reaches the same family or type in the Current model and other By Host
+  View links. A T4 filter is a project element while it is on (Decision 2).
+- Isolate inside a link hides the rest with Hide in View: saved with the view,
+  slow to show again at scale (about 5.5 s for 7.8k), and left hidden after a
+  Revit crash.
 - Turning one eye back on in temporary mode resets and re-applies, which may
   flicker.
 - Revit 2022 users do not get the panel. On 2023 two link hints are generic.

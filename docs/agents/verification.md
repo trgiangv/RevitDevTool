@@ -68,7 +68,7 @@ scripts/collect-logs.ps1
 ### Model Context diagnostics
 
 The Model Context panel logs through the host `ILogger` under the category
-`RevitDevTool.Tools.ModelsContext.ModelsContextPane`. A failure the panel shows the
+`RevitDevTool.Tools.ModelsContext.Pane.ModelsContextPane`. A failure the panel shows the
 user is logged at Error with its exception. Everything else is Trace, which the
 default minimum (Debug) drops before any formatting.
 
