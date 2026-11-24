@@ -84,15 +84,15 @@ public sealed partial class FilterLibraryViewModel : ObservableValidator
         IsDirty = true;
     }
 
-    internal FilterState Capture(bool isLiveOn)
+    internal FilterState Capture(bool isSelectionSyncOn)
     {
         if (_restore is { } pending)
         {
-            return pending with { IsLiveOn = isLiveOn };
+            return pending with { IsSelectionSyncOn = isSelectionSyncOn };
         }
 
         var draft = IsDirty && Current is { IsCustom: true } ? new FilterDraft(_host.Definition(), Name) : null;
-        return new FilterState(Current, isLiveOn, draft);
+        return new FilterState(Current, isSelectionSyncOn, draft);
     }
 
     internal void Reset(FilterState state)

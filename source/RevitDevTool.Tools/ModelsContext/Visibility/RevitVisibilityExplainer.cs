@@ -9,80 +9,78 @@ namespace RevitDevTool.Tools.ModelsContext.Visibility;
 
 internal sealed class RevitVisibilityExplainer : IVisibilityExplainer
 {
-    public const string ElementGone = "This element is no longer in the model.";
-
-    public Task<WhyHiddenResult> ExplainAsync(ElementRef element, CancellationToken cancellationToken)
+    public Task<WhyHidden> ExplainAsync(ElementRef element, CancellationToken cancellationToken)
     {
         return RevitProfiler.RunAsync("Why hidden", application => Explain(application, element), cancellationToken);
     }
 
-    internal static WhyHiddenResult Explain(UIApplication application, ElementRef element)
+    internal static WhyHidden Explain(UIApplication application, ElementRef element)
     {
         var watch = Stopwatch.StartNew();
-        var (active, view) = RevitViewActions.RequireView(application);
+        var (active, view) = CurrentView.Require(application);
         var model = active.Document;
         if (!string.Equals(element.Document.ModelId, DocumentRegistry.ModelIdOf(model), StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(RevitViewActions.ModelChanged);
+            throw new InvalidOperationException(VisibilityText.ModelChanged);
         }
 
-        var causes = !IsModelView(view) ? [HiddenCues.NotModelView]
+        var causes = !LinkElements.ShowsLinks(view) ? [HiddenReasons.NotModelView]
             : element.Document.IsCurrentModel ? CurrentCauses(model, view, element.Id)
             : LinkedCauses(model, view, element);
-        return WhyHiddenResult.Of(causes, watch.Elapsed.TotalMilliseconds);
+        return WhyHidden.Of(causes, watch.Elapsed.TotalMilliseconds);
     }
 
-    private static List<HiddenCause> CurrentCauses(Document model, View view, long id)
+    private static List<HiddenReason> CurrentCauses(Document model, View view, long id)
     {
-        var element = model.GetElement(id.ToElementId()) ?? throw new InvalidOperationException(ElementGone);
-        var causes = new List<HiddenCause>();
+        var element = model.GetElement(id.ToElementId()) ?? throw new InvalidOperationException(VisibilityText.ElementGone);
+        var causes = new List<HiddenReason>();
         if (HiddenTemporarily(view, element.Id))
         {
-            causes.Add(HiddenCues.TemporaryHideIsolate);
+            causes.Add(HiddenReasons.Temporary);
         }
 
         if (element.IsHidden(view))
         {
-            causes.Add(HiddenCues.HiddenInView);
+            causes.Add(HiddenReasons.InView);
         }
 
         causes.AddRange(new HiddenChecks(model, view, element, null).Run());
         return causes.Count > 0 ? causes : NestedCauses(model, view, element, null);
     }
 
-    private static List<HiddenCause> LinkedCauses(Document model, View view, ElementRef element)
+    private static List<HiddenReason> LinkedCauses(Document model, View view, ElementRef element)
     {
         if (model.GetElement(element.Document.LinkInstanceId.ToElementId()) is not RevitLinkInstance instance
             || instance.GetLinkDocument() is not { } linkDocument)
         {
-            throw new InvalidOperationException(VisibilityReasons.NotLoaded);
+            throw new InvalidOperationException(VisibilityText.NotLoaded);
         }
 
-        var linked = linkDocument.GetElement(element.Id.ToElementId()) ?? throw new InvalidOperationException(ElementGone);
-        var causes = new List<HiddenCause>();
+        var linked = linkDocument.GetElement(element.Id.ToElementId()) ?? throw new InvalidOperationException(VisibilityText.ElementGone);
+        var causes = new List<HiddenReason>();
         if (instance.IsHidden(view))
         {
-            causes.Add(HiddenCues.LinkHidden);
+            causes.Add(HiddenReasons.LinkInstance);
         }
 
         if (HiddenTemporarily(view, instance.Id))
         {
-            causes.Add(HiddenCues.LinkTemporary);
+            causes.Add(HiddenReasons.LinkTemporary);
         }
 
         if (instance.Category is { } linkCategory && HiddenChecks.IsCategoryHidden(view, linkCategory.Id))
         {
-            causes.Add(HiddenCues.LinkCategory(linkCategory.Name));
+            causes.Add(HiddenReasons.LinkCategory(linkCategory.Name));
         }
 
         if (HiddenChecks.HiddenWorksetName(model, view, instance.WorksetId) is { } workset)
         {
-            causes.Add(HiddenCues.LinkWorkset(workset));
+            causes.Add(HiddenReasons.LinkWorkset(workset));
         }
 
         if (DisplayModeOf(view, instance) is { } mode)
         {
-            causes.Add(HiddenCues.LinkDisplayMode(mode));
+            causes.Add(HiddenReasons.LinkDisplayMode(mode));
             return causes;
         }
 
@@ -90,7 +88,7 @@ internal sealed class RevitVisibilityExplainer : IVisibilityExplainer
         return causes.Count > 0 ? causes : NestedCauses(model, view, linked, instance);
     }
 
-    private static List<HiddenCause> NestedCauses(Document model, View view, Element element, RevitLinkInstance? link)
+    private static List<HiddenReason> NestedCauses(Document model, View view, Element element, RevitLinkInstance? link)
     {
         if (element is not FamilyInstance { SuperComponent: FamilyInstance parent } || IsDrawn(model, view, element.Id, link))
         {
@@ -98,15 +96,12 @@ internal sealed class RevitVisibilityExplainer : IVisibilityExplainer
         }
 
         var causes = new HiddenChecks(model, view, parent, link).Run().ToList();
-        return causes.Count > 0 ? causes : [HiddenCues.FamilySettings(parent.Symbol.FamilyName)];
+        return causes.Count > 0 ? causes : [HiddenReasons.FamilySettings(parent.Symbol.FamilyName)];
     }
 
     private static bool IsDrawn(Document model, View view, ElementId id, RevitLinkInstance? link)
     {
-        var collector = link is null
-            ? new FilteredElementCollector(model, view.Id)
-            : new FilteredElementCollector(model, view.Id, link.Id);
-        return collector.WherePasses(new ElementIdSetFilter([id])).Any();
+        return HiddenChecks.ViewCollector(model, view, link)?.WherePasses(new ElementIdSetFilter([id])).Any() == true;
     }
 
     private static bool HiddenTemporarily(View view, ElementId id)
@@ -127,12 +122,5 @@ internal sealed class RevitVisibilityExplainer : IVisibilityExplainer
 #else
         return null;
 #endif
-    }
-
-    private static bool IsModelView(View view)
-    {
-        return !view.IsTemplate && view.ViewType is ViewType.FloorPlan or ViewType.CeilingPlan or ViewType.EngineeringPlan
-            or ViewType.AreaPlan or ViewType.Section or ViewType.Elevation or ViewType.Detail or ViewType.ThreeD
-            or ViewType.Walkthrough;
     }
 }

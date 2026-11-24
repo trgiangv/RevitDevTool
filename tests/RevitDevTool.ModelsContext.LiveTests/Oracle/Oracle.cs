@@ -149,6 +149,7 @@ internal static class Oracle
             FilterOperator.Defined => true,
             FilterOperator.NotEmpty => filled,
             FilterOperator.Empty => !filled,
+            FilterOperator.NotEqual when !filled => true,
             _ => ValueMatches(rule, value, filled, units)
         };
     }

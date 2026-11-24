@@ -10,7 +10,7 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
     private readonly VisibilityController _visibility;
     private readonly PanelRuntime _runtime;
     private bool _isTemporaryActive;
-    private int _pendingLinkChanges;
+    private int _linkHideCount;
 
     internal TemporaryBarViewModel(PanelRuntime runtime, VisibilityController visibility)
     {
@@ -35,12 +35,12 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
 
     public string ConfirmText => string.Format(CultureInfo.CurrentCulture,
         "{0:N0} link elements stay hidden in this view. Show them later with Reveal Hidden Elements.",
-        _pendingLinkChanges);
+        _linkHideCount);
 
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        var state = await _runtime.Services.ViewActions.ReadTemporaryStateAsync(cancellationToken);
-        _isTemporaryActive = state?.IsActive == true;
+        var active = await _runtime.Services.ViewActions.ReadActiveViewAsync(cancellationToken);
+        _isTemporaryActive = active?.IsTemporary == true;
         ChangeCount = _visibility.Journal.ChangeCount;
         OnPropertyChanged(nameof(IsVisible));
     }
@@ -48,8 +48,8 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
     [RelayCommand]
     private Task KeepAsync()
     {
-        _pendingLinkChanges = _visibility.PendingLinkChanges;
-        if (_pendingLinkChanges > 0)
+        _linkHideCount = _visibility.LinkHideCount;
+        if (_linkHideCount > 0)
         {
             OnPropertyChanged(nameof(ConfirmText));
             IsConfirmingKeep = true;

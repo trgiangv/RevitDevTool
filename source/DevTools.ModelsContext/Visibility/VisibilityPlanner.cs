@@ -18,12 +18,13 @@ public sealed class VisibilityPlanner(
             : VisibilityPlan.Disabled(request.Action, reason);
     }
 
-    public VisibilityCheck Check(VisibilityRequest request)
+    public ActionState Check(VisibilityRequest request)
     {
         var builder = new Builder(request.Action, collect: false);
         var reason = Fill(builder, request);
-        return new VisibilityCheck(reason, reason is null && builder.TouchesLink,
-            reason is null && builder.LinkFilters.Count > 0);
+        return reason is null
+            ? new ActionState(null, ActionState.NoteOf(builder.LinkFilters.Count > 0, builder.TouchesLink))
+            : new ActionState(reason);
     }
 
     private string? Fill(Builder builder, VisibilityRequest request)
@@ -46,22 +47,22 @@ public sealed class VisibilityPlanner(
             }
         }
 
-        var filters = AddResultFilters(builder, request.Filter);
+        var filters = AddLinkResults(builder, request.Filter);
         if (filters is not null)
         {
             return filters;
         }
 
-        return builder.IsEmpty ? VisibilityReasons.Nothing : builder.LinkRuleRefusal();
+        return builder.IsEmpty ? VisibilityText.Nothing : builder.LinkRuleRefusal();
     }
 
     private string? AddRow(Builder builder, TreeRow row)
     {
         return row.Kind switch
         {
-            TreeRowKind.CurrentModelHeader => VisibilityReasons.HeaderHasNoActions,
-            TreeRowKind.MorePage => VisibilityReasons.PageRowHasNoActions,
-            TreeRowKind.Category => AddGroupEverywhere(builder, row),
+            TreeRowKind.CurrentModelHeader => VisibilityText.HeaderHasNoActions,
+            TreeRowKind.MorePage => VisibilityText.PageRowHasNoActions,
+            TreeRowKind.Category => AddCategory(builder, row),
             _ => AddDocumentRow(builder, row)
         };
     }
@@ -70,40 +71,40 @@ public sealed class VisibilityPlanner(
     {
         if (row.Document is not { } key)
         {
-            return VisibilityReasons.NotSupported;
+            return VisibilityText.NotSupported;
         }
 
         if (documents(key) is not { IsLoaded: true } info)
         {
-            return VisibilityReasons.NotLoaded;
+            return VisibilityText.NotLoaded;
         }
 
         return row.Kind == TreeRowKind.LinkModel
-            ? AddLinkModel(builder, info)
+            ? AddLinkInstance(builder, info)
             : AddBranch(builder, row, info);
     }
 
-    private static string? AddLinkModel(Builder builder, DocumentInfo info)
+    private static string? AddLinkInstance(Builder builder, DocumentInfo info)
     {
-        if (!info.Can(DocumentCapabilities.WholeModel))
+        if (!info.Can(DocumentCapabilities.LinkInstance))
         {
-            return VisibilityReasons.NotSupported;
+            return VisibilityText.NotSupported;
         }
 
-        builder.AttachedModels.Add(info.Key);
+        builder.LinkInstances.Add(info.Key);
         return null;
     }
 
     private string? AddBranch(Builder builder, TreeRow row, DocumentInfo info)
     {
-        if (CheckDocument(builder.Action, info) is { } reason)
+        if (RefusalOf(builder.Action, info) is { } reason)
         {
             return reason;
         }
 
         if (scopes(info.Key) is not { Snapshot.IsDirty: false } scope)
         {
-            return VisibilityReasons.Updating;
+            return VisibilityText.Updating;
         }
 
         if (builder.IsOverride && !info.Key.IsCurrentModel)
@@ -112,7 +113,7 @@ public sealed class VisibilityPlanner(
         }
 
         builder.Add(info.Key, builder.Action == VisibilityAction.Show && row.Kind != TreeRowKind.Instance
-            ? () => scope.Snapshot.IdsUnder(row.Path)
+            ? () => scope.Snapshot.WithSubgroups(row.Path).SelectMany(scope.Snapshot.IdsUnder)
             : () => scope.IdsOf(row));
         return null;
     }
@@ -121,24 +122,24 @@ public sealed class VisibilityPlanner(
     {
         if (!LinkRules.IsRuleRow(row))
         {
-            return VisibilityReasons.LinkOverrideNeedsRule;
+            return VisibilityText.LinkOverrideNeedsRule;
         }
 
         var snapshot = scope.Snapshot;
-        builder.AddLinkRule(key, LinkRules.CategoryOf(snapshot, row), LinkRules.RuleOf(snapshot, row),
+        builder.AddLinkRule(key, LinkRules.CategoriesOf(snapshot, row), LinkRules.RuleOf(snapshot, row),
             () => scope.IdsOf(row));
         return null;
     }
 
-    private string? AddGroupEverywhere(Builder builder, TreeRow row)
+    private string? AddCategory(Builder builder, TreeRow row)
     {
         var current = row.Document is { } key ? documents(key.CurrentModel) : null;
-        if (current is null || !current.Can(DocumentCapabilities.HideGroupEverywhere))
+        if (current is null || !current.Can(DocumentCapabilities.Categories))
         {
-            return VisibilityReasons.NotSupported;
+            return VisibilityText.NotSupported;
         }
 
-        builder.Groups[row.Id] = row.Text;
+        builder.Categories[row.Id] = row.Text;
         return null;
     }
 
@@ -147,10 +148,10 @@ public sealed class VisibilityPlanner(
         var info = documents(element.Document);
         if (info is null || !info.IsLoaded)
         {
-            return VisibilityReasons.NotLoaded;
+            return VisibilityText.NotLoaded;
         }
 
-        if (CheckDocument(builder.Action, info) is { } reason)
+        if (RefusalOf(builder.Action, info) is { } reason)
         {
             return reason;
         }
@@ -159,10 +160,10 @@ public sealed class VisibilityPlanner(
         {
             if (filter is null)
             {
-                return VisibilityReasons.LinkOverrideNeedsRule;
+                return VisibilityText.LinkOverrideNeedsRule;
             }
 
-            builder.AddResultElement(element);
+            builder.AddLinkResult(element);
             return null;
         }
 
@@ -170,9 +171,9 @@ public sealed class VisibilityPlanner(
         return null;
     }
 
-    private string? AddResultFilters(Builder builder, FilterDefinition? filter)
+    private string? AddLinkResults(Builder builder, FilterDefinition? filter)
     {
-        if (filter is null || builder.ResultElements.Count == 0)
+        if (filter is null || builder.LinkResults.Count == 0)
         {
             return null;
         }
@@ -182,11 +183,11 @@ public sealed class VisibilityPlanner(
             return refusal;
         }
 
-        foreach (var pair in builder.ResultElements)
+        foreach (var pair in builder.LinkResults)
         {
             if (scopes(pair.Key) is not { Snapshot.IsDirty: false } scope)
             {
-                return VisibilityReasons.Updating;
+                return VisibilityText.Updating;
             }
 
             var categories = filter.Groups.Count > 0 ? filter.Groups : CategoriesOf(scope.Snapshot, pair.Value);
@@ -210,25 +211,25 @@ public sealed class VisibilityPlanner(
         return [.. categories.OrderBy(id => id)];
     }
 
-    private static string? CheckDocument(VisibilityAction action, DocumentInfo info)
+    private static string? RefusalOf(VisibilityAction action, DocumentInfo info)
     {
         if (info.Key.IsCurrentModel)
         {
-            return info.Can(DocumentCapabilities.HideById) ? null : VisibilityReasons.NotSupported;
+            return info.Can(DocumentCapabilities.Elements) ? null : VisibilityText.NotSupported;
         }
 
         if (action is VisibilityAction.Halftone or VisibilityAction.Color)
         {
-            return info.Can(DocumentCapabilities.LinkFilters) ? null : VisibilityReasons.LinkFiltersUnavailable;
+            return info.Can(DocumentCapabilities.LinkFilters) ? null : VisibilityText.LinkFiltersUnavailable;
         }
 
-        if (!info.Can(DocumentCapabilities.ReferenceCommands))
+        if (!info.Can(DocumentCapabilities.LinkElements))
         {
-            return VisibilityReasons.ReferenceCommandsUnavailable;
+            return VisibilityText.LinkElementsUnavailable;
         }
 
-        return action == VisibilityAction.Show && !info.Can(DocumentCapabilities.ReferenceUnhide)
-            ? VisibilityReasons.ShowFromReveal
+        return action == VisibilityAction.Show && !info.Can(DocumentCapabilities.LinkShow)
+            ? VisibilityText.ShowFromReveal
             : null;
     }
 
@@ -236,24 +237,24 @@ public sealed class VisibilityPlanner(
     {
         private readonly Dictionary<DocumentKey, HashSet<long>> _ids = [];
         private readonly HashSet<DocumentKey> _touched = [];
-        private readonly Dictionary<(DocumentKey Document, long Category), LinkRuleGroup> _rules = [];
+        private readonly Dictionary<(DocumentKey Document, string Categories), LinkRuleSet> _rules = [];
         private readonly List<LinkFilterStep> _results = [];
 
         public VisibilityAction Action { get; } = action;
 
         public bool IsOverride => Action is VisibilityAction.Halftone or VisibilityAction.Color;
 
-        public Dictionary<long, string> Groups { get; } = [];
+        public Dictionary<long, string> Categories { get; } = [];
 
-        public List<DocumentKey> AttachedModels { get; } = [];
+        public List<DocumentKey> LinkInstances { get; } = [];
 
-        public Dictionary<DocumentKey, List<long>> ResultElements { get; } = [];
+        public Dictionary<DocumentKey, List<long>> LinkResults { get; } = [];
 
         public List<LinkFilterStep> LinkFilters => [.. _rules.Select(pair => new LinkFilterStep(pair.Key.Document,
             [.. pair.Value.Ids.OrderBy(id => id)],
-            new FilterDefinition([pair.Key.Category], LinkRules.Combine(pair.Value.Rules)))), .. _results];
+            new FilterDefinition(pair.Value.Categories, LinkRules.Combine(pair.Value.Rules)))), .. _results];
 
-        public bool IsEmpty => Groups.Count == 0 && AttachedModels.Count == 0 && _touched.Count == 0
+        public bool IsEmpty => Categories.Count == 0 && LinkInstances.Count == 0 && _touched.Count == 0
                                && _ids.Values.All(ids => ids.Count == 0) && _rules.Count == 0 && _results.Count == 0;
 
         public bool TouchesLink => _touched.Any(key => !key.IsCurrentModel);
@@ -275,23 +276,28 @@ public sealed class VisibilityPlanner(
             set.UnionWith(ids());
         }
 
-        public void AddResultElement(ElementRef element)
+        public void AddLinkResult(ElementRef element)
         {
-            if (!ResultElements.TryGetValue(element.Document, out var ids))
+            if (!LinkResults.TryGetValue(element.Document, out var ids))
             {
                 ids = [];
-                ResultElements.Add(element.Document, ids);
+                LinkResults.Add(element.Document, ids);
             }
 
             ids.Add(element.Id);
         }
 
-        public void AddLinkRule(DocumentKey key, long category, FilterNode? rule, Func<IEnumerable<long>> ids)
+        public void AddLinkRule(
+            DocumentKey key,
+            IReadOnlyList<long> categories,
+            FilterNode? rule,
+            Func<IEnumerable<long>> ids)
         {
-            if (!_rules.TryGetValue((key, category), out var group))
+            var name = string.Join(",", categories);
+            if (!_rules.TryGetValue((key, name), out var group))
             {
-                group = new LinkRuleGroup();
-                _rules.Add((key, category), group);
+                group = new LinkRuleSet(categories);
+                _rules.Add((key, name), group);
             }
 
             group.Rules.Add(rule);
@@ -309,14 +315,14 @@ public sealed class VisibilityPlanner(
         public string? LinkRuleRefusal()
         {
             var count = LinkFilters.Sum(step => LinkRules.CountOf(step.Filter.Root));
-            return count > VisibilityReasons.LinkFilterCap ? VisibilityReasons.LinkFilterTooMany : null;
+            return count > LinkRules.MaxRules ? VisibilityText.LinkFilterTooMany : null;
         }
 
         public VisibilityPlan Build(RgbColor? color)
         {
-            var steps = new List<VisibilityStep>();
-            steps.AddRange(Groups.Select(pair => new GroupEverywhereStep(pair.Key, pair.Value)));
-            steps.AddRange(AttachedModels.Distinct().Select(key => new AttachedModelStep(key)));
+            var steps = new List<PlanStep>();
+            steps.AddRange(Categories.Select(pair => new CategoryStep(pair.Key, pair.Value)));
+            steps.AddRange(LinkInstances.Distinct().Select(key => new LinkInstanceStep(key)));
             foreach (var pair in _ids.Where(pair => pair.Value.Count > 0).OrderBy(pair => !pair.Key.IsCurrentModel))
             {
                 var ids = pair.Value.OrderBy(id => id).ToList();
@@ -327,7 +333,7 @@ public sealed class VisibilityPlanner(
             return new VisibilityPlan(Action, color, steps, null);
         }
 
-        private VisibilityStep StepOf(DocumentKey key, List<long> ids)
+        private PlanStep StepOf(DocumentKey key, List<long> ids)
         {
             if (key.IsCurrentModel)
             {
@@ -336,12 +342,14 @@ public sealed class VisibilityPlanner(
 
             return Action == VisibilityAction.Isolate
                 ? new LinkIsolateStep(key, ids)
-                : new ReferenceCommandStep(key, ids);
+                : new LinkElementsStep(key, ids);
         }
     }
 
-    private sealed class LinkRuleGroup
+    private sealed class LinkRuleSet(IReadOnlyList<long> categories)
     {
+        public IReadOnlyList<long> Categories { get; } = categories;
+
         public List<FilterNode?> Rules { get; } = [];
 
         public HashSet<long> Ids { get; } = [];

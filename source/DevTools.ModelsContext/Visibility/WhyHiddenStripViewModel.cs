@@ -11,7 +11,6 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
 {
     public const string CheckingText = "Checking…";
     public const string FailedText = "Check failed";
-    public const string FixText = "Show";
 
     private readonly PanelRuntime _runtime;
     private readonly VisibilityController _visibility;
@@ -31,16 +30,16 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
     public partial ElementRef? Element { get; private set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasFix))]
-    [NotifyCanExecuteChangedFor(nameof(FixCommand))]
+    [NotifyPropertyChangedFor(nameof(CanShow))]
+    [NotifyCanExecuteChangedFor(nameof(ShowCommand))]
     public partial bool IsBusy { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(First))]
-    [NotifyPropertyChangedFor(nameof(HasFix))]
+    [NotifyPropertyChangedFor(nameof(CanShow))]
     [NotifyPropertyChangedFor(nameof(HasMore))]
-    [NotifyCanExecuteChangedFor(nameof(FixCommand))]
-    public partial IReadOnlyList<HiddenCause> Causes { get; private set; } = [];
+    [NotifyCanExecuteChangedFor(nameof(ShowCommand))]
+    public partial IReadOnlyList<HiddenReason> Reasons { get; private set; } = [];
 
     [ObservableProperty]
     public partial string Text { get; private set; } = string.Empty;
@@ -51,11 +50,11 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
     [ObservableProperty]
     public partial bool IsExpanded { get; set; }
 
-    public HiddenCause? First => Causes.Count > 0 ? Causes[0] : null;
+    public HiddenReason? First => Reasons.Count > 0 ? Reasons[0] : null;
 
-    public bool HasFix => !IsBusy && First is { Fix: not HiddenFix.None };
+    public bool CanShow => !IsBusy && First is { CanShow: true };
 
-    public bool HasMore => Causes.Count > 1;
+    public bool HasMore => Reasons.Count > 1;
 
     public Task OpenAsync(ElementRef element)
     {
@@ -86,21 +85,21 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
         IsBusy = false;
         IsExpanded = false;
         Element = null;
-        Causes = [];
+        Reasons = [];
         Text = string.Empty;
         Cue = null;
     }
 
-    [RelayCommand(CanExecute = nameof(HasFix))]
-    private Task FixAsync()
+    [RelayCommand(CanExecute = nameof(CanShow))]
+    private Task ShowAsync()
     {
-        if (Element is not { } element || First is not { Fix: not HiddenFix.None })
+        if (Element is not { } element || First is not { CanShow: true })
         {
             return Task.CompletedTask;
         }
 
         var token = Begin(element);
-        return _runtime.RunAsync(() => FixAndExplainAsync(element, token));
+        return _runtime.RunAsync(() => ShowAndExplainAsync(element, token));
     }
 
     private CancellationToken Begin(ElementRef element)
@@ -128,7 +127,7 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
         }
     }
 
-    private async Task FixAndExplainAsync(ElementRef element, CancellationToken token)
+    private async Task ShowAndExplainAsync(ElementRef element, CancellationToken token)
     {
         IsBusy = true;
         string? reason;
@@ -164,11 +163,11 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
         }
     }
 
-    private async Task<WhyHiddenResult?> ExplainAsync(ElementRef element, CancellationToken token)
+    private async Task<WhyHidden?> ExplainAsync(ElementRef element, CancellationToken token)
     {
         if (_runtime.IsBusy)
         {
-            Show([], _runtime.BusyText);
+            Display([], _runtime.BusyText);
             return null;
         }
 
@@ -182,8 +181,8 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
                 return null;
             }
 
-            result = result.WithJournal(_visibility.Journal, element);
-            Show(result.Causes, result.First.Text);
+            result = result.WithJournal(_visibility.Journal, element, _visibility.HidByPanel(element));
+            Display(result.Reasons, result.First.Text);
             return result;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -198,18 +197,18 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
             }
 
             _runtime.Logger.Failed(exception, exception.Message);
-            Show([], FailedText);
+            Display([], FailedText);
             Cue = exception.Message;
             return null;
         }
     }
 
-    private void Show(IReadOnlyList<HiddenCause> causes, string text)
+    private void Display(IReadOnlyList<HiddenReason> reasons, string text)
     {
-        Causes = causes;
+        Reasons = reasons;
         Text = text;
         IsBusy = false;
-        if (causes.Count < 2)
+        if (reasons.Count < 2)
         {
             IsExpanded = false;
         }

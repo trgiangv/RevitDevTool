@@ -1,4 +1,3 @@
-using DevTools.ModelsContext.Explorer;
 using DevTools.ModelsContext.Parameters;
 using DevTools.ModelsContext.Scope;
 
@@ -7,8 +6,6 @@ namespace DevTools.ModelsContext.Documents;
 public interface IModelSource
 {
     string HostName { get; }
-
-    TreeSchema Schema { get; }
 
     Task<IReadOnlyList<DocumentInfo>> GetDocumentsAsync(CancellationToken cancellationToken);
 

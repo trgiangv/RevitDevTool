@@ -31,7 +31,7 @@ internal static class FilterMeasure
         await Idle();
         report($"filter parameters {filter.Root.Parameters.Count:N0} merged from {run.Data.Sources.Count} files over {run.Data.Documents.Count} documents");
 
-        filter.Runner.IsLiveOn = true;
+        filter.Runner.IsSelectionSyncOn = true;
         await Idle();
         stall.TakeMax();
         var first = await ResultAsync(filter.Runner, () => FilterExamples.UpperLevelDoorsWithoutMark(filter, FakeParameters.Comments), Idle);
@@ -48,7 +48,7 @@ internal static class FilterMeasure
 
         var fourth = await ResultAsync(filter.Runner, () => FilterExamples.ArchWallsOrMepDucts(filter), Idle);
         report($"example 4 built in {fourth.ChangeMs:F0} ms + layout {fourth.LayoutMs:F0} ms, evaluated {fourth.Ms:F0} ms (300 ms debounce), {fourth.Count:N0} matches, longest stall {stall.TakeMax():F0} ms");
-        filter.Runner.IsLiveOn = false;
+        filter.Runner.IsSelectionSyncOn = false;
 
         await MeasurePickerAsync(filter, view, stall, Idle, report);
         stall.Stop();

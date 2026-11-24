@@ -1,5 +1,4 @@
 using DevTools.ModelsContext.Documents;
-using DevTools.ModelsContext.Explorer;
 
 namespace DevTools.ModelsContext.Scope;
 
@@ -8,7 +7,7 @@ public static class ScopeCounter
     public static CountNode Count(DocumentSnapshot snapshot, IEnumerable<long> ids)
     {
         var root = new CountNode(-1);
-        Span<int> path = stackalloc int[TreeSchema.MaxGroupingDepth];
+        Span<int> path = stackalloc int[DocumentSnapshot.MaxGroupingDepth];
         foreach (var id in ids)
         {
             if (!snapshot.TryGetRow(id, out var row))

@@ -488,7 +488,7 @@ public sealed class FilterTabTests
     }
 
     [TestMethod]
-    public async Task LiveDebounceFiresOnce()
+    public async Task SyncDebounceFiresOnce()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
@@ -506,7 +506,7 @@ public sealed class FilterTabTests
     }
 
     [TestMethod]
-    public async Task LivePausesAbove5000()
+    public async Task ResultSyncPausesAbove5000()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
@@ -522,10 +522,10 @@ public sealed class FilterTabTests
 
         fixture.Settle();
 
-        Assert.IsGreaterThan(FilterRunner.LivePauseLimit, filter.Runner.ResultCount);
-        Assert.IsTrue(filter.Runner.IsLivePaused);
-        Assert.IsTrue(filter.Runner.IsLiveOn);
-        StringAssert.Contains(FilterRunner.LivePausedText, FilterRunner.LivePauseLimit.ToString("N0", CultureInfo.CurrentCulture));
+        Assert.IsGreaterThan(FilterRunner.SelectionSyncPauseLimit, filter.Runner.ResultCount);
+        Assert.IsTrue(filter.Runner.IsSelectionSyncPaused);
+        Assert.IsTrue(filter.Runner.IsSelectionSyncOn);
+        StringAssert.Contains(FilterRunner.SelectionSyncPausedText, FilterRunner.SelectionSyncPauseLimit.ToString("N0", CultureInfo.CurrentCulture));
         Assert.AreEqual(0, sent);
     }
 
@@ -541,7 +541,7 @@ public sealed class FilterTabTests
         Category(filter, "Doors").IsChecked = true;
         fixture.Settle();
 
-        Assert.IsFalse(filter.Runner.IsLivePaused);
+        Assert.IsFalse(filter.Runner.IsSelectionSyncPaused);
         Assert.AreEqual(1, sent);
     }
 
@@ -554,17 +554,17 @@ public sealed class FilterTabTests
         fixture.Settle();
 
         Assert.AreEqual(0, fixture.Filter.Runner.ResultCount);
-        Assert.IsFalse(fixture.Filter.Runner.IsLivePaused);
+        Assert.IsFalse(fixture.Filter.Runner.IsSelectionSyncPaused);
     }
 
     [TestMethod]
-    public async Task PauseEndsWhenLiveOff()
+    public async Task PauseEndsWhenSyncOff()
     {
         using var fixture = await PausedAsync();
 
-        fixture.Filter.Runner.IsLiveOn = false;
+        fixture.Filter.Runner.IsSelectionSyncOn = false;
 
-        Assert.IsFalse(fixture.Filter.Runner.IsLivePaused);
+        Assert.IsFalse(fixture.Filter.Runner.IsSelectionSyncPaused);
     }
 
     [TestMethod]
@@ -576,7 +576,7 @@ public sealed class FilterTabTests
         fixture.Settle();
 
         Assert.IsNull(fixture.Filter.Library.SelectedSource);
-        Assert.IsFalse(fixture.Filter.Runner.IsLivePaused);
+        Assert.IsFalse(fixture.Filter.Runner.IsSelectionSyncPaused);
     }
 
     private static async Task<PanelFixture> PausedAsync()
@@ -590,7 +590,7 @@ public sealed class FilterTabTests
         }
 
         fixture.Settle();
-        Assert.IsTrue(fixture.Filter.Runner.IsLivePaused);
+        Assert.IsTrue(fixture.Filter.Runner.IsSelectionSyncPaused);
         return fixture;
     }
 
@@ -601,8 +601,8 @@ public sealed class FilterTabTests
         var filter = fixture.Filter;
         var baseline = fixture.Elements(FakeModelGenerator.Current, 1);
         fixture.Model.RaiseSelectionChanged(baseline);
-        filter.Runner.IsLiveOn = false;
-        filter.Runner.IsLiveOn = true;
+        filter.Runner.IsSelectionSyncOn = false;
+        filter.Runner.IsSelectionSyncOn = true;
         filter.Library.AddCommand.Execute(null);
         filter.Runner.Mode = ResultSelectionMode.Add;
 

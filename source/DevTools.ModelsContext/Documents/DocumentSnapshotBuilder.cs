@@ -1,8 +1,6 @@
-using DevTools.ModelsContext.Explorer;
-
 namespace DevTools.ModelsContext.Documents;
 
-public sealed class DocumentSnapshotBuilder(SourceId source, int groupingDepth = TreeSchema.MaxGroupingDepth)
+public sealed class DocumentSnapshotBuilder(SourceId source, int groupingDepth = DocumentSnapshot.MaxGroupingDepth)
 {
     private readonly DocumentSnapshot _snapshot = new(source, groupingDepth);
     private bool _built;

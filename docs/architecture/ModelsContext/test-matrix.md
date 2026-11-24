@@ -148,7 +148,7 @@ Panel preconditions a flow (and anyone checking the panel by hand) must meet:
    - `RevitPanel.Act` records a step when Revit comes to the front during an
      action. Run `20261118-130820` (Revit 2026) recorded it once, in UI-05 at
      `Temporary.Reset`. Link hide and show run Revit's own UI commands
-     (`LinkedHideShow`). This is product behaviour, not the test. See Current gaps
+     (`LinkHideShow`). This is product behaviour, not the test. See Current gaps
      in [docs/agents/test-matrix.md](../../agents/test-matrix.md).
 6. The model ends unmodified: edits run in rolled-back transactions and
    temporary modes are reset through the panel's own Reset; a test never
@@ -210,6 +210,42 @@ rolled back. Visibility cases commit temporary modes and reset them. L3 saves
 one custom filter named `uia-live …` and deletes it in the same test. Never
 save the model.
 
+### Window run loop (no Revit restart)
+
+`ModelsContextWindowCommand` opens the real panel in a plain window
+(AutomationId `ModelContext.Window`) from a fresh load of `RevitDevTool.Tools.dll`,
+so a panel or adapter change shows up without restarting Revit.
+
+```powershell
+dotnet build source/RevitDevTool.Tools/RevitDevTool.Tools.csproj -c Debug.Autodesk.2026 -p:CommandBuild=true
+```
+
+`CommandBuild=true` turns on the repo's ILRepack (`props/ILRepack.targets`, ADR 0019) for
+`RevitDevTool.Tools` only and writes to `bin\<Configuration>.Command\`: one merged
+`RevitDevTool.Tools.dll` plus the loose `DevTools.UI.dll` (the add-in's shared copy, gotcha 14)
+and the sidecars the add-in also keeps loose (FSharp.Core, IronPython, DLR). Command Execution
+needs exact identities in a command folder, so the plain build's NuGet siblings (System.Text.Json
+8.0.0.0 asked for, another version beside) were rejected. The add-in build does not change.
+
+Then run it through Command Execution or MCP:
+`run_command(path="<repo>\source\RevitDevTool.Tools\bin\Debug.Autodesk.2026.Command\RevitDevTool.Tools.dll", entry="RevitDevTool.Tools.ModelsContext.Pane.ModelsContextWindowCommand")`.
+
+- Each run hides the docked pane and closes the window of an earlier run, so one
+  panel answers Revit events and owns the `Model Context <n>` filters (gotcha 25).
+- Closing the window removes its view filters, unsubscribes its events and
+  disposes the panel. Temporary modes and recorded overrides live in that load's
+  memory only: press Reset before closing.
+- The window builds its own services (`AddSettingServices`, a ZLogger rolling file,
+  `AddModelsContext`) and subscribes through `RevitContext.UiControlledApplication`;
+  it shares the pane's wiring (`ModelsContextPanel`).
+- Its log is not the add-in log: `%APPDATA%\RevitDevTool\{Year}\Logs\models-context-window_{pid}_{yyyyMMdd}_{seq}.log`
+  (Debug and up, one file per Revit process and day, shared by every reload). Each run writes
+  "Model Context window opened from …" and each close "Model Context window closed.", so a
+  reload shows as a close then an open.
+- `DevTools.UI` binds to the add-in's loaded copy (gotcha 14): edits there still
+  need a Revit restart. On net48 years (2024 and below) each run loads a copy that
+  is never unloaded; restart Revit after many runs.
+
 ## Matrix
 
 Expected values come from `Data/*.json` (recorded from the oracle on the Revit 2026
@@ -265,7 +301,7 @@ Current results (Snowdon HVAC + six links):
 | ID | Use case | Expected | Test |
 |----|----------|----------|------|
 | CB-01 | Categories box: all ticked at first, untick drops the group row, model count follows ticks, a new category shows ticked | state | L1 `CategoryBoxTests` (`CategoriesStartTicked`, `UntickDropsGroupRow`, `ModelCountFollowsTicks`, `NewCategoryShowsTicked`) |
-| CB-02 | Menu acts on the ticked (= selected) categories, no tick disables it with *Select categories*, search keeps hidden ticks, `SetTicks` is one change, the link notice shows after Isolate, the eye hides the category everywhere, tooltip names the links | plan, message, CanExecute | L1 `CategoryBoxTests` (`IsolateActsOnTicked`, `HalftoneActsOnTicked`, `NoTickDisablesMenu`, `TickEnablesMenu`, `SearchKeepsHiddenTicks`, `SetTicksBatchesOneChange`, `NoTickReportsReason`, `IsolateShowsLinkNotice`, `EyeHidesCategoryEverywhere`, `EyeTipNamesLinks`) |
+| CB-02 | Menu acts on the ticked categories, no tick disables it with *Select categories*, search keeps hidden ticks, `SetTicks` is one change, the link notice shows after Isolate, the eye hides the category everywhere, tooltip names the links | plan, message, CanExecute | L1 `CategoryBoxTests` (`IsolateActsOnTicked`, `HalftoneActsOnTicked`, `NoTickDisablesMenu`, `TickEnablesMenu`, `SearchKeepsHiddenTicks`, `SetTicksBatchesOneChange`, `NoTickReportsReason`, `IsolateShowsLinkNotice`, `EyeHidesCategoryEverywhere`, `EyeTipNamesLinks`) |
 | CB-03 | Box lists the ticked categories, untick removes the group row, eye hides, menu lists Isolate, Halftone, Color; list reports CanSelectMultiple, AddToSelection ticks two rows and Isolate runs on both, menu off without ticks, selecting a row ticks only it, a tick selects its row | UI state | Views `ExplorerViewTests` (`CategoriesBoxListsTicked`, `UntickRemovesGroupRow`, `CategoryEyeHidesCategory`, `CategoryMenuListsActions`, `CategoryListSelectsMany`, `AddToSelectionKeepsBoth`, `MenuOffWithoutTicks`, `SelectRowTicksOnlyIt`, `TickSelectsRow`) |
 | HR-01 | Active view: group counts its hidden elements, Whole model has none, a click on *+N hidden* lists them dimmed and a second click closes | counts, rows | L1 `HiddenRowsTests` (`GroupCountsHiddenElements`, `WholeModelHasNoHidden`, `HiddenClickListsDimmedRows`, `HiddenClickAgainCloses`), Views `HiddenCountShowsInActiveView` |
 | HR-02 | Group Select and Hide skip hidden elements, a dimmed row acts alone and sets the Why hidden element, search finds hidden elements | ids | L1 `HiddenRowsTests` (`GroupSelectSkipsHidden`, `GroupHideSkipsHidden`, `DimmedRowActsAlone`, `DimmedRowSetsWhyElement`, `SearchFindsHiddenElement`) |

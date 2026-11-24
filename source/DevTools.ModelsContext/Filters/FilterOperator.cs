@@ -84,12 +84,6 @@ public static class FilterOperators
             or FilterOperator.Undefined);
     }
 
-    public static bool IsNegative(FilterOperator op)
-    {
-        return op is FilterOperator.NotEqual or FilterOperator.NotContains or FilterOperator.NotBeginsWith
-            or FilterOperator.NotEndsWith;
-    }
-
     public static bool IsPositiveMatch(FilterOperator op)
     {
         return op is FilterOperator.Equal or FilterOperator.Contains or FilterOperator.BeginsWith

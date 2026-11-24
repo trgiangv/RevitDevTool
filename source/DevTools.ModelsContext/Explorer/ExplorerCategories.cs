@@ -219,7 +219,7 @@ public sealed partial class ExplorerCategories : ObservableObject
                 return;
             }
 
-            _report(await _visibility.RunAsync(new VisibilityRequest(action, rows, [])));
+            _report(await _visibility.RunAsync(VisibilityRequest.ForRows(action, rows)));
         });
     }
 
@@ -228,7 +228,7 @@ public sealed partial class ExplorerCategories : ObservableObject
         var rows = SelectedRows();
         _report(rows.Count == 0
             ? SelectReason
-            : await _visibility.RunAsync(new VisibilityRequest(action, rows, [])));
+            : await _visibility.RunAsync(VisibilityRequest.ForRows(action, rows)));
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]

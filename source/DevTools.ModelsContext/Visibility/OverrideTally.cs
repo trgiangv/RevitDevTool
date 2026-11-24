@@ -3,17 +3,17 @@ using DevTools.ModelsContext.Explorer;
 
 namespace DevTools.ModelsContext.Visibility;
 
-public sealed class MarkTally
+public sealed class OverrideTally
 {
     private readonly Dictionary<(int Length, int Group, int Middle, int Last), Node> _nodes = [];
 
-    public static MarkTally Count(DocumentSnapshot snapshot, IEnumerable<KeyValuePair<long, RowOverride>> marks)
+    public static OverrideTally Count(DocumentSnapshot snapshot, IEnumerable<KeyValuePair<long, RowOverride>> overrides)
     {
-        var tally = new MarkTally();
-        Span<int> path = stackalloc int[TreeSchema.MaxGroupingDepth];
-        foreach (var mark in marks)
+        var tally = new OverrideTally();
+        Span<int> path = stackalloc int[DocumentSnapshot.MaxGroupingDepth];
+        foreach (var pair in overrides)
         {
-            if (!snapshot.TryGetRow(mark.Key, out var row))
+            if (!snapshot.TryGetRow(pair.Key, out var row))
             {
                 continue;
             }
@@ -21,7 +21,7 @@ public sealed class MarkTally
             var length = snapshot.PathOf(row, path);
             for (var depth = 1; depth <= length; depth++)
             {
-                tally.NodeAt(path[..depth]).Add(mark.Value);
+                tally.NodeAt(path[..depth]).Add(pair.Value);
             }
         }
 
@@ -67,14 +67,14 @@ public sealed class MarkTally
 
         public bool Mixed { get; private set; }
 
-        public void Add(RowOverride mark)
+        public void Add(RowOverride value)
         {
-            if (mark.Halftone)
+            if (value.Halftone)
             {
                 Halftone++;
             }
 
-            if (mark.Color is not { } color)
+            if (value.Color is not { } color)
             {
                 return;
             }

@@ -100,7 +100,7 @@ $uia = '.agents/skills/ui-automation/scripts/uia.ps1'
 pwsh -File $uia windows -ProcessId 1234
 pwsh -File $uia tree -ProcessId 1234 -Root Filter.Rules -Depth 4
 pwsh -File $uia select -ProcessId 1234 -Id Sandbox.Delay -Item '100 ms'
-pwsh -File $uia toggle -ProcessId 1234 -Id Filter.Live -Value Off
+pwsh -File $uia toggle -ProcessId 1234 -Id Filter.SelectionSync -Value Off
 pwsh -File $uia wait -ProcessId 1234 -Id Filter.NoRules -Gone -Timeout 10
 pwsh -File $uia shot -ProcessId 1234 -Root ModelContext.View -Path out/filter.png
 pwsh -File $uia dialog -ProcessName Revit -Title 'Security*'

@@ -39,7 +39,7 @@ Rules carry no value kind.
 - **Filter tab parts**: `FilterTabViewModel` only composes
   `FilterLibraryViewModel` (sources, switch, save, rename, duplicate; store edits
   through the pure `CustomFilterLibrary`), `CategoryPickerViewModel`,
-  `FilterRunner` (evaluate, Live, baseline, mode, pause) and the rule tree. Moves
+  `FilterRunner` (evaluate, selection sync, baseline, mode, pause) and the rule tree. Moves
   in the tree go through the pure `FilterTreeMoves`.
 - **Stored** filters write `scope` (`documents`, `categories`) on a group; the
   mapping lives in the core (`StoredFilters`) and `CustomFilterStore` only reads
@@ -325,7 +325,7 @@ has no design options).
 |------|------|-------------|
 | YesNo | spec is Yes/No (checked first) | integer rule on 1 / 0 (`TryParseYesNo` accepts Yes, No, true, false, 1, 0) |
 | Number | measurable spec, or double storage | double rule; a typed value is parsed once in the Current model's units and matches within half its display step there; a value picked from the value list uses the stored values behind its text; anything else uses tolerance 1e-6 |
-| Reference | `ElementId` storage | equals: OR over matching ids; not equals: has value AND each not-equals |
+| Reference | `ElementId` storage | equals: OR over matching ids; not equals: AND of each not-equals |
 | Enumerated ("Enum") | integer whose sampled display text is not a number | integer rule on the value mapped from its name |
 | Integer | other integers | integer rule |
 | Text | everything else | string rule |
@@ -335,6 +335,12 @@ Number have equals and the comparisons; YesNo, Reference and Enumerated have
 equals and not equals. Every kind adds *not empty* (`NotEmpty`), *empty*
 (`Empty`), *defined* (`Defined`) and *undefined* (`Undefined`), the words
 Revizto uses.
+
+*Not equals* is the same for every kind (decided 2026-11-24): *defined* AND
+(*empty* OR the native not-equals). An empty value (blank text, no number, a
+reference of -1) does not equal anything, so it matches. Every other value rule
+stays guarded by *defined* for text and *not empty* for other storage.
+`FilterKeys.Presence` warms the silent-value scan for *not equals* too.
 
 Notes per kind:
 
@@ -397,7 +403,7 @@ Notes per kind:
   in Whole model and 8 over all options.
 - **Enumerated.** The same index maps each display text to the integers stored
   under it, so "Single" maps back to its stored integer. An unknown name on
-  *does not equal* becomes "has a value".
+  *does not equal* matches every element that has the parameter.
 - **Labels.** Enum values show text from their `[Description]` attribute:
   `EnumDescriptionConverter` in XAML, `EnumText.Of` in code (for example the
   "Enum" spec label). Both cache per value.

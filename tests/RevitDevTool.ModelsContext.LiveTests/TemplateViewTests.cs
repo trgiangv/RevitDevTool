@@ -5,7 +5,7 @@ using RevitDevTool.Tools.ModelsContext.Visibility;
 
 namespace RevitDevTool.ModelsContext.LiveTests;
 
-internal sealed record TemplateTarget(string Name, VisibilityStep Step, IReadOnlyList<ElementId> Elements, ElementId? Category);
+internal sealed record TemplateTarget(string Name, PlanStep Step, IReadOnlyList<ElementId> Elements, ElementId? Category);
 
 [TestFixture]
 public sealed class TemplateViewTests : RecordedTest
@@ -83,7 +83,7 @@ public sealed class TemplateViewTests : RecordedTest
                     problems.Add($"expected the panel filter inside Temporary View Properties, got properties {properties}, drawn {drawn}");
                 }
 
-                Evidence.Time("reset", () => Adapter.Run(actions.ResetAsync(None)));
+                Evidence.Time("reset", () => Adapter.Run(actions.ResetAsync(null, None)));
                 var left = VisibilityRun.PanelFilterCount(host);
                 Evidence.Step($"Reset: {left} panel filters left in the model.");
                 if (left > 0)
@@ -145,7 +145,7 @@ public sealed class TemplateViewTests : RecordedTest
             outcomes.Add($"{name}: {outcome}");
             Evidence.Step($"{name}: {outcome}.");
             Note(problems, name, outcome);
-            var reset = Outcome(() => Adapter.Run(actions.ResetAsync(None)));
+            var reset = Outcome(() => Adapter.Run(actions.ResetAsync(null, None)));
             if (reset != Ok)
             {
                 problems.Add($"{name}: Reset gave {reset}");
@@ -185,7 +185,7 @@ public sealed class TemplateViewTests : RecordedTest
         try
         {
             var hidden = Outcome(() => Adapter.Run(actions.ExecuteAsync(plan, None)));
-            var kept = hidden == Ok ? Outcome(() => Adapter.Run(actions.KeepAsync(None))) : "not run";
+            var kept = hidden == Ok ? Outcome(() => Adapter.Run(actions.KeepAsync(null, None))) : "not run";
             outcomes.Add($"{target.Name} Hide then Keep: {hidden}, {kept}");
             Evidence.Step($"{target.Name} Hide then Keep inside a transaction group: {hidden}, {kept}.");
             Note(problems, target.Name + " Hide", hidden);
@@ -301,7 +301,7 @@ public sealed class TemplateViewTests : RecordedTest
         }
 
         var instance = link.Key.LinkInstanceId.ToElementId();
-        targets.Add(new TemplateTarget("the link instance", new AttachedModelStep(link.Key), [instance], null));
+        targets.Add(new TemplateTarget("the link instance", new LinkInstanceStep(link.Key), [instance], null));
         var linkCategory = Oracle.Candidates(link.Document, [])
             .GroupBy(element => element.Category.Id.ToLong())
             .OrderByDescending(group => group.Count())
@@ -310,7 +310,7 @@ public sealed class TemplateViewTests : RecordedTest
         if (linkCategory != 0)
         {
             var name = ActiveModel.CategoryName(link.Document, linkCategory);
-            targets.Add(new TemplateTarget($"{name} everywhere", new GroupEverywhereStep(linkCategory, name), [], linkCategory.ToElementId()));
+            targets.Add(new TemplateTarget($"{name} everywhere", new CategoryStep(linkCategory, name), [], linkCategory.ToElementId()));
         }
 
         return targets;

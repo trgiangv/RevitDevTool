@@ -16,17 +16,18 @@ public sealed class WhyHiddenStripTests
     public async Task OpenShowsFirstCause()
     {
         using var strip = await StripHost.OpenAsync();
-        strip.Explainer.Causes = [HiddenCues.OutsideCrop, HiddenCues.TemporaryHideIsolate];
+        await strip.HideDuctsAsync(Current);
+        strip.Explainer.Reasons = [HiddenReasons.OutsideCrop, HiddenReasons.Temporary];
 
         await strip.ViewModel.OpenAsync(strip.Duct(Current));
 
         var view = strip.ViewModel;
         Assert.IsTrue(view.IsOpen);
         Assert.IsFalse(view.IsBusy);
-        Assert.AreEqual(HiddenCues.TemporaryHideIsolate.Text, view.Text);
-        Assert.IsTrue(view.HasFix);
+        Assert.AreEqual(HiddenReasons.Temporary.Text, view.Text);
+        Assert.IsTrue(view.CanShow);
         Assert.IsTrue(view.HasMore);
-        Assert.HasCount(2, view.Causes);
+        Assert.HasCount(2, view.Reasons);
     }
 
     [TestMethod]
@@ -36,8 +37,8 @@ public sealed class WhyHiddenStripTests
 
         await strip.ViewModel.OpenAsync(strip.Duct(Current));
 
-        Assert.AreEqual(HiddenCues.NoneFound.Text, strip.ViewModel.Text);
-        Assert.IsFalse(strip.ViewModel.HasFix);
+        Assert.AreEqual(HiddenReasons.None.Text, strip.ViewModel.Text);
+        Assert.IsFalse(strip.ViewModel.CanShow);
         Assert.IsFalse(strip.ViewModel.HasMore);
     }
 
@@ -76,7 +77,7 @@ public sealed class WhyHiddenStripTests
 
         Assert.IsFalse(strip.ViewModel.IsOpen);
         Assert.IsNull(strip.ViewModel.Element);
-        Assert.IsEmpty(strip.ViewModel.Causes);
+        Assert.IsEmpty(strip.ViewModel.Reasons);
     }
 
     [TestMethod]
@@ -100,7 +101,7 @@ public sealed class WhyHiddenStripTests
         var first = strip.Duct(Current);
         var second = strip.Duct(Current, 1);
         strip.Explainer.Gate = new TaskCompletionSource<bool>();
-        strip.Explainer.CausesOf = element => element == first ? [HiddenCues.OutsideCrop] : [HiddenCues.HiddenInView];
+        strip.Explainer.ReasonsOf = element => element == first ? [HiddenReasons.OutsideCrop] : [HiddenReasons.InView];
         var older = strip.ViewModel.OpenAsync(first);
         strip.Explainer.Gate = null;
 
@@ -109,7 +110,7 @@ public sealed class WhyHiddenStripTests
 
         Assert.AreEqual(1, strip.Explainer.Canceled);
         Assert.AreEqual(second, strip.ViewModel.Element);
-        Assert.AreEqual(HiddenCues.HiddenInView.Text, strip.ViewModel.Text);
+        Assert.AreEqual(HiddenReasons.InView.Text, strip.ViewModel.Text);
     }
 
     [TestMethod]
@@ -123,7 +124,7 @@ public sealed class WhyHiddenStripTests
         Assert.IsTrue(strip.ViewModel.IsOpen);
         Assert.AreEqual(WhyHiddenStripViewModel.FailedText, strip.ViewModel.Text);
         Assert.AreEqual("Element gone.", strip.ViewModel.Cue);
-        Assert.IsFalse(strip.ViewModel.HasFix);
+        Assert.IsFalse(strip.ViewModel.CanShow);
         Assert.IsNull(strip.Panel.Message);
     }
 
@@ -135,22 +136,23 @@ public sealed class WhyHiddenStripTests
         var ducts = strip.Panel.Explorer.Rows.First(row =>
             row.Kind == TreeRowKind.Group && row.Document == Mep && row.Text == "Ducts");
         await strip.Panel.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
-        strip.Explainer.Causes = [HiddenCues.OutsideCrop];
+        strip.Explainer.Reasons = [HiddenReasons.OutsideCrop];
 
         await strip.ViewModel.OpenAsync(strip.Duct(Mep));
 
-        Assert.AreEqual(HiddenCues.HiddenInLink, strip.ViewModel.First);
-        Assert.HasCount(2, strip.ViewModel.Causes);
+        Assert.AreEqual(HiddenReasons.LinkElement, strip.ViewModel.First);
+        Assert.HasCount(2, strip.ViewModel.Reasons);
     }
 
     [TestMethod]
     public async Task FixShowsThenCloses()
     {
         using var strip = await StripHost.OpenAsync();
-        strip.Explainer.CausesOf = _ => strip.Explainer.Calls.Count == 1 ? [HiddenCues.TemporaryHideIsolate] : [];
+        await strip.HideDuctsAsync(Current);
+        strip.Explainer.ReasonsOf = _ => strip.Explainer.Calls.Count == 1 ? [HiddenReasons.Temporary] : [];
         await strip.ViewModel.OpenAsync(strip.Duct(Current));
 
-        await strip.ViewModel.FixCommand.ExecuteAsync(null);
+        await strip.ViewModel.ShowCommand.ExecuteAsync(null);
 
         Assert.HasCount(2, strip.Explainer.Calls);
         Assert.AreEqual(1, strip.Actions.ResetCount);
@@ -161,10 +163,11 @@ public sealed class WhyHiddenStripTests
     public async Task FixStillHiddenReExplains()
     {
         using var strip = await StripHost.OpenAsync();
-        strip.Explainer.Causes = [HiddenCues.TemporaryHideIsolate, HiddenCues.OutsideCrop];
+        await strip.HideDuctsAsync(Current);
+        strip.Explainer.Reasons = [HiddenReasons.Temporary, HiddenReasons.OutsideCrop];
         await strip.ViewModel.OpenAsync(strip.Duct(Current));
 
-        await strip.ViewModel.FixCommand.ExecuteAsync(null);
+        await strip.ViewModel.ShowCommand.ExecuteAsync(null);
 
         Assert.HasCount(2, strip.Explainer.Calls);
         Assert.AreEqual(1, strip.Actions.ResetCount);
@@ -176,26 +179,54 @@ public sealed class WhyHiddenStripTests
     public async Task CategoryCueHasNoFix()
     {
         using var strip = await StripHost.OpenAsync();
-        strip.Explainer.Causes = [HiddenCues.Category("Ducts")];
+        strip.Explainer.Reasons = [HiddenReasons.Category("Ducts")];
 
         await strip.ViewModel.OpenAsync(strip.Duct(Current));
 
-        Assert.IsFalse(strip.ViewModel.HasFix);
+        Assert.IsFalse(strip.ViewModel.CanShow);
     }
 
     [TestMethod]
     public async Task FixRefusedShowsCue()
     {
         using var strip = await StripHost.OpenAsync();
-        strip.Panel.ContextBar.Tick([Mep]);
-        strip.Explainer.Causes = [HiddenCues.HiddenInLink];
-        await strip.ViewModel.OpenAsync(strip.Duct(Mep));
+        await strip.HideDuctsAsync(Current);
+        strip.Explainer.Reasons = [HiddenReasons.Temporary];
+        await strip.ViewModel.OpenAsync(strip.Duct(Current));
+        strip.Actions.ResetError = "Revit is busy.";
 
-        await strip.ViewModel.FixCommand.ExecuteAsync(null);
+        await strip.ViewModel.ShowCommand.ExecuteAsync(null);
 
-        Assert.AreEqual(VisibilityReasons.Nothing, strip.ViewModel.Cue);
+        Assert.AreEqual("Revit is busy.", strip.ViewModel.Cue);
         Assert.HasCount(1, strip.Explainer.Calls);
         Assert.IsTrue(strip.ViewModel.IsOpen);
+    }
+
+    [TestMethod]
+    public async Task FailedResetKeepsPanelHide()
+    {
+        using var strip = await StripHost.OpenAsync();
+        await strip.HideDuctsAsync(Current);
+        strip.Explainer.Reasons = [HiddenReasons.Temporary];
+        await strip.ViewModel.OpenAsync(strip.Duct(Current));
+        strip.Actions.ResetError = "Revit is busy.";
+        await strip.ViewModel.ShowCommand.ExecuteAsync(null);
+
+        await strip.ViewModel.OpenAsync(strip.Duct(Current, 1));
+
+        Assert.IsTrue(strip.ViewModel.CanShow);
+    }
+
+    [TestMethod]
+    public async Task UserHideOffersNoShow()
+    {
+        using var strip = await StripHost.OpenAsync();
+        strip.Explainer.Reasons = [HiddenReasons.Temporary];
+
+        await strip.ViewModel.OpenAsync(strip.Duct(Current));
+
+        Assert.AreEqual(HiddenReasons.Temporary.Text, strip.ViewModel.Text);
+        Assert.IsFalse(strip.ViewModel.CanShow);
     }
 
     [TestMethod]
@@ -251,6 +282,13 @@ public sealed class WhyHiddenStripTests
             var panel = new ModelContextViewModel(host.Services(clock, clock));
             await panel.InitializeAsync(CancellationToken.None);
             return new StripHost(host, panel);
+        }
+
+        public Task HideDuctsAsync(DocumentKey document)
+        {
+            var ducts = Panel.Explorer.Rows.First(row =>
+                row.Kind == TreeRowKind.Group && row.Document == document && row.Text == "Ducts");
+            return Panel.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
         }
 
         public ElementRef Duct(DocumentKey document, int index = 0)

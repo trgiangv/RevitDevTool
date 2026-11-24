@@ -4,5 +4,5 @@ namespace DevTools.ModelsContext.Visibility;
 
 public interface IVisibilityExplainer
 {
-    Task<WhyHiddenResult> ExplainAsync(ElementRef element, CancellationToken cancellationToken);
+    Task<WhyHidden> ExplainAsync(ElementRef element, CancellationToken cancellationToken);
 }

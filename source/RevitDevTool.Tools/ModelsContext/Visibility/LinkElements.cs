@@ -73,7 +73,7 @@ internal static class LinkElements
         return ShowsLinks(view) ? new FilteredElementCollector(model, view.Id, linkInstanceId) : null;
     }
 
-    private static bool ShowsLinks(View view)
+    internal static bool ShowsLinks(View view)
     {
         return !view.IsTemplate && view.ViewType is ViewType.FloorPlan or ViewType.CeilingPlan or ViewType.EngineeringPlan
             or ViewType.AreaPlan or ViewType.Section or ViewType.Elevation or ViewType.Detail or ViewType.ThreeD
@@ -84,10 +84,10 @@ internal static class LinkElements
     {
         if (!string.Equals(link.ModelId, DocumentRegistry.ModelIdOf(model), StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(RevitViewActions.ModelChanged);
+            throw new InvalidOperationException(VisibilityText.ModelChanged);
         }
 
-        return FindLink(model, link) ?? throw new InvalidOperationException(VisibilityReasons.NotLoaded);
+        return FindLink(model, link) ?? throw new InvalidOperationException(VisibilityText.NotLoaded);
     }
 
     private static (RevitLinkInstance Instance, Document LinkDocument)? FindLink(Document model, DocumentKey link)

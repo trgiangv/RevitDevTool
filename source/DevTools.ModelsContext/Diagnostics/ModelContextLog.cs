@@ -70,8 +70,8 @@ public static partial class ModelContextLog
         double elapsedMs);
 
     [LoggerMessage(EventId = 23, Level = LogLevel.Trace,
-        Message = "Filter {Filter}: Live paused at {Matches} matches, limit {Limit}")]
-    public static partial void FilterLivePaused(this ILogger logger, string filter, int matches, int limit);
+        Message = "Filter {Filter}: Selection sync paused at {Matches} matches, limit {Limit}")]
+    public static partial void FilterSelectionSyncPaused(this ILogger logger, string filter, int matches, int limit);
 
     [LoggerMessage(EventId = 24, Level = LogLevel.Trace,
         Message = "Parameters merged: {Catalogs} catalogs, {Parameters} parameters, {Scopes} scopes in {ElapsedMs} ms")]

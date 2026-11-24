@@ -7,8 +7,6 @@ namespace RevitDevTool.Tools.ModelsContext.Visibility;
 
 internal static class LinkIsolation
 {
-    public const string NoLinkView = "This view cannot show linked elements.";
-
     public static List<ElementRef> RestOf(Document model, View view, IEnumerable<LinkIsolateStep> steps)
     {
         var rest = new List<ElementRef>();
@@ -16,8 +14,8 @@ internal static class LinkIsolation
         {
             var (instance, linkDocument) = LinkElements.RequireLink(model, step.Document);
             var collector = LinkElements.InView(model, view, instance.Id)
-                            ?? throw new InvalidOperationException(NoLinkView);
-            var keep = KeptOf(linkDocument, step.KeepIds);
+                            ?? throw new InvalidOperationException(VisibilityText.NoLinkView);
+            var keep = KeptOf(linkDocument, step.KeptIds);
             foreach (var id in collector.WherePasses(ElementReader.AnyOptionFilter(linkDocument)).ToElementIds())
             {
                 if (!keep.Contains(id))
@@ -26,9 +24,9 @@ internal static class LinkIsolation
                 }
             }
 
-            if (rest.Count > VisibilityReasons.LinkIsolateCap)
+            if (rest.Count > LinkRules.MaxIsolateRest)
             {
-                throw new InvalidOperationException(VisibilityReasons.LinkIsolateTooMany);
+                throw new InvalidOperationException(VisibilityText.LinkIsolateTooMany);
             }
         }
 

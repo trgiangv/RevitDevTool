@@ -70,7 +70,7 @@ internal static class VisibilityRun
             return;
         }
 
-        Assert.That(plan.UsesReferenceCommands, Is.False, "L2 never runs a T3 plan (Hide in View through an internal command); declare plannedTiers in visibility.json.");
+        Assert.That(plan.UsesLinkHide, Is.False, "L2 never runs a T3 plan (Hide in View through an internal command); declare plannedTiers in visibility.json.");
         var saved = Overrides(plan);
         var linkCounts = expect.OnlyTargetStays ? LinkCategoryCounts.Read(SampleModel.Host, View) : null;
         LinkCategoryCounts? linkAfter = null;
@@ -115,7 +115,7 @@ internal static class VisibilityRun
         }
 
         var ids = plan.Steps.OfType<ElementsStep>().SelectMany(step => step.Ids)
-            .Concat(plan.Steps.OfType<AttachedModelStep>().Select(step => step.Document.LinkInstanceId));
+            .Concat(plan.Steps.OfType<LinkInstanceStep>().Select(step => step.Document.LinkInstanceId));
         return ids.Distinct().Select(id => id.ToElementId()).ToDictionary(id => id, id => View.GetElementOverrides(id));
     }
 
@@ -143,9 +143,9 @@ internal static class VisibilityRun
         return plan.Steps.Select(step => step switch
         {
             ElementsStep => "T0",
-            AttachedModelStep => "T1",
-            GroupEverywhereStep => "T2",
-            ReferenceCommandStep => "T3",
+            LinkInstanceStep => "T1",
+            CategoryStep => "T2",
+            LinkElementsStep => "T3",
             LinkIsolateStep => "T3",
             LinkFilterStep => "T4",
             _ => step.GetType().Name
@@ -240,14 +240,14 @@ internal static class VisibilityRun
     {
         var action = (VisibilityAction)Enum.Parse(typeof(VisibilityAction), item.Action);
         RgbColor? color = item.Color is { } rgb ? new RgbColor(rgb.R, rgb.G, rgb.B) : null;
-        var steps = new List<VisibilityStep>();
+        var steps = new List<PlanStep>();
         if (probe.EverywhereCategory is { } category)
         {
-            steps.Add(new GroupEverywhereStep(category, CaseFiles.Facts.CategoryNames.TryGetValue(item.Target.Category!, out var name) ? name : item.Target.Category!));
+            steps.Add(new CategoryStep(category, CaseFiles.Facts.CategoryNames.TryGetValue(item.Target.Category!, out var name) ? name : item.Target.Category!));
         }
         else if (probe.WholeLink)
         {
-            steps.Add(new AttachedModelStep(probe.Link));
+            steps.Add(new LinkInstanceStep(probe.Link));
         }
         else
         {
@@ -287,7 +287,7 @@ internal static class VisibilityRun
     internal static int PanelFilterCount(Document document)
     {
         return new FilteredElementCollector(document).OfClass(typeof(ParameterFilterElement))
-            .Count(element => LinkFilters.IsPanelName(element.Name));
+            .Count(element => LinkViewFilters.IsPanelName(element.Name));
     }
 
     internal static bool LinkFilterDrawn(View view, RgbData? color, bool halftone)
@@ -295,19 +295,19 @@ internal static class VisibilityRun
         return view.GetFilters()
             .Select(id => view.Document.GetElement(id))
             .OfType<ParameterFilterElement>()
-            .Where(filter => LinkFilters.IsPanelName(filter.Name))
+            .Where(filter => LinkViewFilters.IsPanelName(filter.Name))
             .Select(filter => view.GetFilterOverrides(filter.Id))
             .Any(settings => color is not null ? Matches(settings, color) : settings.Halftone == halftone);
     }
 
-    private static VisibilityStep StepOf(VisibilityAction action, DocumentKey document, List<long> ids)
+    private static PlanStep StepOf(VisibilityAction action, DocumentKey document, List<long> ids)
     {
         if (document.IsCurrentModel)
         {
             return new ElementsStep(document, ids);
         }
 
-        return action == VisibilityAction.Isolate ? new LinkIsolateStep(document, ids) : new ReferenceCommandStep(document, ids);
+        return action == VisibilityAction.Isolate ? new LinkIsolateStep(document, ids) : new LinkElementsStep(document, ids);
     }
 
     private static VisibilityState Read(Probe probe, VisibilityCase item)
@@ -380,7 +380,7 @@ internal static class VisibilityRun
 
     private static void Reset()
     {
-        Adapter.Run(_actions.ResetAsync(CancellationToken.None));
+        Adapter.Run(_actions.ResetAsync(null, CancellationToken.None));
     }
 
     private static void Shot(string label)
@@ -395,11 +395,11 @@ internal static class VisibilityRun
     {
         return $"{plan.Action}{(plan.Color is { } color ? $" #{color.R:X2}{color.G:X2}{color.B:X2}" : "")} with " + string.Join(", ", plan.Steps.Select(step => step switch
         {
-            GroupEverywhereStep group => $"category everywhere '{group.GroupName}'",
-            AttachedModelStep => "the Architectural link instance",
+            CategoryStep group => $"category everywhere '{group.Name}'",
+            LinkInstanceStep => "the Architectural link instance",
             ElementsStep elements => $"{elements.Ids.Count} Current model elements",
-            ReferenceCommandStep references => $"{references.Ids.Count} linked elements",
-            LinkIsolateStep isolate => $"isolate {isolate.KeepIds.Count} linked elements",
+            LinkElementsStep references => $"{references.Ids.Count} linked elements",
+            LinkIsolateStep isolate => $"isolate {isolate.KeptIds.Count} linked elements",
             LinkFilterStep filter => $"a rule view filter for {filter.Ids.Count} linked elements",
             _ => step.GetType().Name
         }));

@@ -9,10 +9,8 @@ using RuleNode = DevTools.ModelsContext.Filters.FilterRule;
 
 namespace RevitDevTool.Tools.ModelsContext.Visibility;
 
-internal sealed class LinkFilterRules(Document model, Document link, ICollection<ElementId> categories)
+internal sealed class LinkFilterCompiler(Document model, Document link, ICollection<ElementId> categories)
 {
-    public const string NoNameRule = "Revit cannot filter this category by family or type.";
-
     private static readonly Dictionary<string, BuiltInParameter[]> Alternates = new(StringComparer.Ordinal)
     {
         [nameof(BuiltInParameter.ALL_MODEL_FAMILY_NAME)] =
@@ -42,7 +40,7 @@ internal sealed class LinkFilterRules(Document model, Document link, ICollection
             {
                 FilterSet nested => Set(nested),
                 RuleNode rule => Leaf(rule),
-                _ => throw new InvalidOperationException(VisibilityReasons.LinkRuleNotNative)
+                _ => throw new InvalidOperationException(VisibilityText.LinkRuleNotNative)
             };
             if (part is not null)
             {
@@ -76,7 +74,7 @@ internal sealed class LinkFilterRules(Document model, Document link, ICollection
                 StorageType.Double => Number(id, rule, spec),
                 _ => null
             }
-        } ?? throw new InvalidOperationException(VisibilityReasons.LinkRuleNotNative));
+        } ?? throw new InvalidOperationException(VisibilityText.LinkRuleNotNative));
     }
 
     private (ElementId Id, StorageType Storage, ForgeTypeId? Spec) Resolve(ParameterKey key)
@@ -103,7 +101,7 @@ internal sealed class LinkFilterRules(Document model, Document link, ICollection
         var hostId = ParameterLocator.IdsOf(model, key, categories, null).FirstOrDefault();
         if (located is null || hostId == 0 || !_filterable.Contains(hostId))
         {
-            throw new InvalidOperationException(VisibilityReasons.LinkRuleNotNative);
+            throw new InvalidOperationException(VisibilityText.LinkRuleNotNative);
         }
 
         return (hostId.ToElementId(), located.Storage, located.Spec);
@@ -119,7 +117,7 @@ internal sealed class LinkFilterRules(Document model, Document link, ICollection
             return (new ElementId(candidate), model.get_TypeOfStorage(candidate));
         }
 
-        throw new InvalidOperationException(alternates is null ? VisibilityReasons.LinkRuleNotNative : NoNameRule);
+        throw new InvalidOperationException(alternates is null ? VisibilityText.LinkRuleNotNative : VisibilityText.NoNameRule);
     }
 
     private static RevitFilterRule? Text(ElementId id, FilterOperator op, string value)

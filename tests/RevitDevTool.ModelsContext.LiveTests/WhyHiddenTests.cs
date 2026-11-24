@@ -35,7 +35,7 @@ public sealed class WhyHiddenTests : RecordedTest
             using var edit = new RolledBack(Model, "Why hidden category");
             Build(() => View.SetCategoryHidden(category.Id, true), View.CanCategoryBeHidden(category.Id));
             Evidence.Step($"Turned off '{category.Name}' in '{View.Name}' in a transaction that is rolled back.");
-            ExpectFirst(Explain(CurrentOf(element)), HiddenCues.Category(category.Name));
+            ExpectFirst(Explain(CurrentOf(element)), HiddenReasons.Category(category.Name));
         });
     }
 
@@ -49,7 +49,7 @@ public sealed class WhyHiddenTests : RecordedTest
             using var edit = new RolledBack(Model, "Why hidden element");
             Build(() => View.HideElements([element.Id]), element.CanBeHidden(View));
             Evidence.Step($"Hid element {element.Id} in '{View.Name}' in a transaction that is rolled back.");
-            ExpectFirst(Explain(CurrentOf(element)), HiddenCues.HiddenInView);
+            ExpectFirst(Explain(CurrentOf(element)), HiddenReasons.InView);
         });
     }
 
@@ -68,7 +68,7 @@ public sealed class WhyHiddenTests : RecordedTest
                 View.SetFilterVisibility(filter.Id, false);
             }, true);
             Evidence.Step($"Added filter '{FilterName}' with visibility off to '{View.Name}' in a transaction that is rolled back.");
-            ExpectFirst(Explain(CurrentOf(element)), HiddenCues.Filter(FilterName));
+            ExpectFirst(Explain(CurrentOf(element)), HiddenReasons.Filter(FilterName));
         });
     }
 
@@ -91,7 +91,7 @@ public sealed class WhyHiddenTests : RecordedTest
                 Assert.Inconclusive($"Door {LinkedDoor} is visible in '{View.Name}'.");
             }
 
-            ExpectAny(Explain(element), HiddenCauseKind.AboveCutPlane);
+            ExpectAny(Explain(element), HiddenCause.AboveRange);
         });
     }
 
@@ -100,7 +100,7 @@ public sealed class WhyHiddenTests : RecordedTest
     public void LinkedHiddenAllHaveCause()
     {
         Record(Case("WH-09", "Hidden linked elements in the active plan", "a cause for each",
-            $"Snowdon Federated, plan L3 active: Why hidden on {HiddenSample} hidden elements of each loaded link never reads '{HiddenCues.NoneFound.Text}'."), () =>
+            $"Snowdon Federated, plan L3 active: Why hidden on {HiddenSample} hidden elements of each loaded link never reads '{HiddenReasons.None.Text}'."), () =>
         {
             if (View is not ViewPlan)
             {
@@ -150,19 +150,19 @@ public sealed class WhyHiddenTests : RecordedTest
             }
 
             Evidence.Step($"Element {found.Element} of option '{found.Option}'.");
-            ExpectAny(Explain(found.Element), HiddenCauseKind.DesignOption);
+            ExpectAny(Explain(found.Element), HiddenCause.DesignOption);
         });
     }
 
     [Test]
     public void VisibleElementHasNoCause()
     {
-        Record(Case("WH-06", "Element visible in the active view", HiddenCues.NoneFound.Text,
-            $"Pick an element that the active view shows; Why hidden reads '{HiddenCues.NoneFound.Text}'."), () =>
+        Record(Case("WH-06", "Element visible in the active view", HiddenReasons.None.Text,
+            $"Pick an element that the active view shows; Why hidden reads '{HiddenReasons.None.Text}'."), () =>
         {
             var result = Explain(CurrentOf(VisibleElement()));
-            Evidence.Values(HiddenCues.NoneFound.Text, Describe(result));
-            Assert.That(result.Causes, Is.EqualTo(new[] { HiddenCues.NoneFound }));
+            Evidence.Values(HiddenReasons.None.Text, Describe(result));
+            Assert.That(result.Reasons, Is.EqualTo(new[] { HiddenReasons.None }));
         });
     }
 
@@ -177,28 +177,28 @@ public sealed class WhyHiddenTests : RecordedTest
         };
     }
 
-    private static WhyHiddenResult Explain(ElementRef element)
+    private static WhyHidden Explain(ElementRef element)
     {
         var result = Evidence.Time("why hidden", () => Adapter.Run(Explainer.ExplainAsync(element, CancellationToken.None)));
         Evidence.Step($"Why hidden on {element}: {Describe(result)} in {Math.Round(result.ElapsedMs, 1)} ms.");
         return result;
     }
 
-    private static void ExpectFirst(WhyHiddenResult result, HiddenCause expected)
+    private static void ExpectFirst(WhyHidden result, HiddenReason expected)
     {
         Evidence.Values(expected.Text, Describe(result));
         Assert.That(result.First, Is.EqualTo(expected));
     }
 
-    private static void ExpectAny(WhyHiddenResult result, HiddenCauseKind kind)
+    private static void ExpectAny(WhyHidden result, HiddenCause cause)
     {
-        Evidence.Values(kind.ToString(), Describe(result));
-        Assert.That(result.Causes.Select(cause => cause.Kind), Does.Contain(kind));
+        Evidence.Values(cause.ToString(), Describe(result));
+        Assert.That(result.Reasons.Select(reason => reason.Cause), Does.Contain(cause));
     }
 
-    private static string Describe(WhyHiddenResult result)
+    private static string Describe(WhyHidden result)
     {
-        return string.Join("; ", result.Causes.Select(cause => cause.Fix == HiddenFix.None ? cause.Text : $"{cause.Text} · {cause.Fix}"));
+        return string.Join("; ", result.Reasons.Select(reason => reason.CanShow ? $"{reason.Text} · Show" : reason.Text));
     }
 
     private static void Build(Action change, bool allowed)
@@ -264,7 +264,7 @@ public sealed class WhyHiddenTests : RecordedTest
         var visible = LinkElements.InView(Model, View, instance.Id) is { } collector
             ? new HashSet<long>(collector.WhereElementIsNotElementType().ToElementIds().Select(id => id.ToLong()))
             : [];
-        var view = RevitViewActions.ViewInfoOf(Model, View);
+        var view = CurrentView.InfoOf(Model, View);
         return reader.Elements
             .Select(record => new ElementRow(record.Id, 0, 0, 0, 0, record.SecondaryOption, record.Draw, record.OwnerViewId))
             .Where(row => !row.SecondaryOption && !visible.Contains(row.Id) && ViewDraws.CanDraw(view, row, false))

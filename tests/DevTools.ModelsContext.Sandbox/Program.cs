@@ -31,16 +31,17 @@ internal static class Program
         var light = theme >= 0 && string.Equals(args[theme + 1], "light", StringComparison.OrdinalIgnoreCase);
         DevTools.UI.Theme.ThemeManager.Current.ApplySettingsTheme(light ? DevTools.UI.Theme.AppTheme.Light : DevTools.UI.Theme.AppTheme.Dark);
 
-        var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal) && shots < 0 && drag < 0 && dragShots < 0
-                                                 && pickerShots < 0 && whyHiddenShots < 0 && explorerShots < 0 && categoryShots < 0 && resultShots < 0);
+        var measure = args.Contains("--measure", StringComparer.Ordinal);
+        var capture = measure || shots >= 0 || dragShots >= 0 || pickerShots >= 0 || whyHiddenShots >= 0
+                      || explorerShots >= 0 || categoryShots >= 0 || resultShots >= 0;
+        var window = new SandboxWindow(autoLoad: !capture && drag < 0);
         var width = Array.IndexOf(args, "--width");
         if (width >= 0)
         {
             window.Width = double.Parse(args[width + 1], System.Globalization.CultureInfo.InvariantCulture);
         }
         var exitCode = 0;
-        if (args.Contains("--measure", StringComparer.Ordinal) || shots >= 0 || dragShots >= 0 || pickerShots >= 0 || whyHiddenShots >= 0
-            || explorerShots >= 0 || categoryShots >= 0 || resultShots >= 0)
+        if (capture)
         {
             DevTools.Testing.Ui.ForegroundGuard.Start();
             DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
@@ -77,7 +78,7 @@ internal static class Program
         {
             window.Loaded += async (_, _) => exitCode = await ShotRun.CaptureAsync(window, app, args[shots + 1]);
         }
-        else if (args.Contains("--measure", StringComparer.Ordinal))
+        else if (measure)
         {
             window.Loaded += async (_, _) => exitCode = await MeasureAsync(window, app);
         }

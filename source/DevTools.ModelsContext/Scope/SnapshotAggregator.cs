@@ -1,5 +1,4 @@
 using DevTools.ModelsContext.Documents;
-using DevTools.ModelsContext.Explorer;
 
 namespace DevTools.ModelsContext.Scope;
 
@@ -8,7 +7,7 @@ public static class SnapshotAggregator
     public static CountNode Aggregate(DocumentSnapshot snapshot)
     {
         var root = new CountNode(-1);
-        Span<int> path = stackalloc int[TreeSchema.MaxGroupingDepth];
+        Span<int> path = stackalloc int[DocumentSnapshot.MaxGroupingDepth];
         foreach (var row in snapshot.Rows)
         {
             if (row.SecondaryOption)

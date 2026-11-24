@@ -8,8 +8,6 @@ namespace DevTools.ModelsContext.Visibility;
 
 public sealed class VisibilityController
 {
-    public const string NoActiveView = "There is no active view.";
-
     private readonly PlanExecutor _executor;
     private readonly Dictionary<(DocumentKey Model, string ViewId), ViewLedger> _ledgers = [];
     private readonly ReadBackCache _readBacks;
@@ -39,45 +37,40 @@ public sealed class VisibilityController
         }
     }
 
-    public JournalState Journal => View is null ? JournalState.Empty : _runtime.Journal.Get(View.Model, View.ViewId);
+    public JournalPage Journal => View is null ? JournalPage.Empty : _runtime.Journal.Get(View.Model, View.ViewId);
 
-    public int PendingLinkChanges => Journal.LinkEntries.Count;
+    public int LinkHideCount => Journal.LinkHides.Count;
 
     private ViewLedger? Current => View is { } view && _ledgers.TryGetValue((view.Model, view.ViewId), out var ledger)
         ? ledger
         : null;
 
-    public VisibilityPlan Plan(VisibilityRequest request)
-    {
-        return _runtime.Planner.Plan(request);
-    }
-
-    public VisibilityCheck Check(VisibilityRequest request)
+    public ActionState Check(VisibilityRequest request)
     {
         return _runtime.Planner.Check(request);
     }
 
-    public bool IsGroupHidden(long groupId)
+    public bool IsCategoryHidden(long categoryId)
     {
-        return Current?.Groups.ContainsKey(groupId) == true;
+        return Current?.HiddenCategories.ContainsKey(categoryId) == true;
     }
 
     public RowOverride? OverrideOf(ElementRef element)
     {
-        return Current is { } ledger && ledger.Marks.TryGetValue(element, out var mark) ? mark : null;
+        return Current is { } ledger && ledger.Overrides.TryGetValue(element, out var value) ? value : null;
     }
 
-    public IEnumerable<KeyValuePair<long, RowOverride>> MarksOf(DocumentKey document)
+    public IEnumerable<KeyValuePair<long, RowOverride>> OverridesOf(DocumentKey document)
     {
-        return Current is { Marks.Count: > 0 } ledger
-            ? ledger.Marks.Where(pair => pair.Key.Document == document)
+        return Current is { Overrides.Count: > 0 } ledger
+            ? ledger.Overrides.Where(pair => pair.Key.Document == document)
                 .Select(pair => new KeyValuePair<long, RowOverride>(pair.Key.Id, pair.Value))
             : [];
     }
 
-    public RowOverride? CategoryOverrideOf(long groupId)
+    public RowOverride? CategoryOverrideOf(long categoryId)
     {
-        return Current is { } ledger && ledger.Categories.TryGetValue(groupId, out var category) ? category : null;
+        return Current is { } ledger && ledger.CategoryOverrides.TryGetValue(categoryId, out var value) ? value : null;
     }
 
     public bool IsHidden(ElementRef element)
@@ -132,20 +125,23 @@ public sealed class VisibilityController
 
         if (View is not { } view)
         {
-            return NoActiveView;
+            return VisibilityText.NoActiveView;
         }
 
-        var plan = Plan(request);
+        var plan = _runtime.Planner.Plan(request);
         if (plan.IsDisabled)
         {
             return plan.DisabledReason;
         }
 
         var timer = TraceTimer.Start(_runtime.Logger);
-        if (await _executor.ApplyAsync(view, LedgerOf(view), plan, CancellationToken.None) is { } reason)
+        var ledger = LedgerOf(view);
+        if (await _executor.ApplyAsync(view, ledger, plan, CancellationToken.None) is { } reason)
         {
             return reason;
         }
+
+        RecordCategoryOff(ledger, plan);
 
         _readBacks.Touch(view, plan);
         _readBacks.Drop(view);
@@ -161,33 +157,117 @@ public sealed class VisibilityController
 
     public async Task KeepAsync(CancellationToken cancellationToken)
     {
-        if (_runtime.IsBusy)
+        if (_runtime.IsBusy || View is not { } view)
         {
             return;
         }
 
-        await _runtime.Services.ViewActions.KeepAsync(cancellationToken);
-        if (View is { } view)
+        await _runtime.Services.ViewActions.KeepAsync(view.ViewId, cancellationToken);
+        _runtime.Journal.Keep(view.Model, view.ViewId);
+        if (_ledgers.TryGetValue((view.Model, view.ViewId), out var ledger))
         {
-            _runtime.Journal.Reset(view.Model, view.ViewId);
+            ledger.Keep();
         }
 
-        await ClearAsync(cancellationToken);
+        _readBacks.Drop(view);
+        await ReadBackAsync(cancellationToken);
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    internal void Rename(ModelRename rename)
+    {
+        foreach (var pair in _ledgers.Where(pair => pair.Key.Model.ModelId == rename.OldId).ToList())
+        {
+            _ledgers.Remove(pair.Key);
+            pair.Value.Rename(rename);
+            _ledgers[(rename.Map(pair.Key.Model), pair.Key.ViewId)] = pair.Value;
+        }
+
+        _readBacks.ForgetModel(DocumentKey.Current(rename.OldId));
+        if (_view is { } view)
+        {
+            _view = rename.Map(view);
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
     }
 
     public async Task ResetAsync(CancellationToken cancellationToken)
     {
-        if (_runtime.IsBusy)
+        if (_runtime.IsBusy || View is not { } view)
         {
             return;
         }
 
-        await _runtime.Services.ViewActions.ResetAsync(cancellationToken);
-        var reason = View is { } view ? await _executor.RestoreLinksAsync(view, cancellationToken) : null;
-        await ClearAsync(cancellationToken);
+        await _runtime.Services.ViewActions.ResetAsync(view.ViewId, cancellationToken);
+        var reason = await _executor.RestoreLinksAsync(view, cancellationToken);
+        await ClearAsync(view, cancellationToken);
         if (reason is not null)
         {
             throw new InvalidOperationException(reason);
+        }
+    }
+
+    internal IReadOnlyCollection<long> CategoryOffIds(DocumentKey document)
+    {
+        if (Current is not { } ledger
+            || !ledger.CategoryOffIds.TryGetValue(document, out var ids)
+            || _runtime.Store.TryGet(document) is not { } snapshot)
+        {
+            return [];
+        }
+
+        return ids.Where(id => snapshot.TryGetRow(id, out var row)
+                               && ledger.IsCategoryOff(snapshot.Groups[row.GroupIndex].GroupId))
+            .ToList();
+    }
+
+    private void RecordCategoryOff(ViewLedger ledger, VisibilityPlan plan)
+    {
+        if (plan.Action is not (VisibilityAction.Hide or VisibilityAction.Isolate)
+            || !plan.Steps.Any(step => step is CategoryStep)
+            || _runtime.Data.Scope != ScopeKind.ActiveView)
+        {
+            return;
+        }
+
+        foreach (var document in _runtime.Data.Documents.Where(document => document.Ids is not null))
+        {
+            var snapshot = document.Snapshot;
+            ledger.AddCategoryOffIds(document.Key, document.Ids!.Where(id =>
+                snapshot.TryGetRow(id, out var row) && ledger.IsCategoryOff(snapshot.Groups[row.GroupIndex].GroupId)));
+        }
+    }
+
+    public bool HidByPanel(ElementRef element)
+    {
+        if (Current is not { } ledger)
+        {
+            return false;
+        }
+
+        if (ledger.HiddenElements.Contains(element))
+        {
+            return true;
+        }
+
+        return ledger.Isolation is { } isolation
+               && _runtime.Store.TryGet(element.Document) is { } snapshot
+               && snapshot.TryGetRow(element.Id, out var row)
+               && !isolation.Keeps(element, snapshot.Groups[row.GroupIndex].GroupId);
+    }
+
+    internal void DropLinkFilters(DocumentKey model)
+    {
+        var dropped = false;
+        foreach (var pair in _ledgers.Where(pair => pair.Key.Model.ModelId == model.ModelId))
+        {
+            dropped |= pair.Value.DropLinkFilters();
+        }
+
+        if (dropped)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -231,8 +311,8 @@ public sealed class VisibilityController
             count += step switch
             {
                 ElementsStep elements => elements.Ids.Count,
-                ReferenceCommandStep references => references.Ids.Count,
-                LinkIsolateStep isolate => isolate.KeepIds.Count,
+                LinkElementsStep linked => linked.Ids.Count,
+                LinkIsolateStep isolate => isolate.KeptIds.Count,
                 LinkFilterStep filter => filter.Ids.Count,
                 _ => 0
             };
@@ -261,21 +341,17 @@ public sealed class VisibilityController
         }
     }
 
-    private async Task ClearAsync(CancellationToken cancellationToken)
+    private async Task ClearAsync(ViewInfo view, CancellationToken cancellationToken)
     {
-        if (View is { } view)
+        var remaining = _runtime.Journal.Get(view.Model, view.ViewId).LinkHides;
+        _ledgers.Remove((view.Model, view.ViewId));
+        if (remaining.Count > 0)
         {
-            var remaining = _runtime.Journal.Get(view.Model, view.ViewId).LinkEntries;
-            _ledgers.Remove((view.Model, view.ViewId));
-            if (remaining.Count > 0)
-            {
-                LedgerOf(view).Elements.UnionWith(remaining.Select(entry => entry.Element));
-            }
-
-            _readBacks.Drop(view);
-            await ReadBackAsync(cancellationToken);
+            LedgerOf(view).HiddenElements.UnionWith(remaining.Select(hide => hide.Element));
         }
 
+        _readBacks.Drop(view);
+        await ReadBackAsync(cancellationToken);
         Changed?.Invoke(this, EventArgs.Empty);
     }
 

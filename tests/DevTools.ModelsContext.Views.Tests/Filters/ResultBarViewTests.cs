@@ -19,7 +19,7 @@ public sealed class ResultBarViewTests
     {
         using var ui = OpenWithResult(340);
 
-        var ids = new[] { "Filter.ResultCount", "Filter.ResultLabel", "Filter.Mode", "Filter.Live", "ButtonOverflow" }
+        var ids = new[] { "Filter.ResultCount", "Filter.ResultLabel", "Filter.Mode", "Filter.SelectionSync", "ButtonOverflow" }
             .Concat(Tools4.Where(id => !IsOverflow(ui, id)));
         var boxes = ids.Select(id => ui.Host.FindInWindow(id).BoundingRectangle).ToList();
 
@@ -45,8 +45,8 @@ public sealed class ResultBarViewTests
         Assert.IsGreaterThanOrEqualTo(1_000, WpfSta.Invoke(() => ui.Panel.Filter.Runner.ResultCount), "The count is not 4 digits.");
         Assert.IsTrue(ThemeHost.WaitFor(() => WpfSta.Invoke(() => Tools(ui).HasOverflowItems)), "No tool went to the overflow.");
         Assert.IsNotNull(ui.Host.TryFindInWindow("Filter.Mode"), "Mode left the bar.");
-        Assert.IsFalse(IsOverflow(ui, "Filter.Live"), "Selection sync left the bar.");
-        var sync = ui.Host.FindInWindow("Filter.Live");
+        Assert.IsFalse(IsOverflow(ui, "Filter.SelectionSync"), "Selection sync left the bar.");
+        var sync = ui.Host.FindInWindow("Filter.SelectionSync");
         Assert.AreEqual("Selection sync", sync.Name);
         var bar = ui.Host.FindInWindow("Filter.ResultTools");
         var arrow = ui.Host.FindInWindow("ButtonOverflow");
@@ -88,7 +88,7 @@ public sealed class ResultBarViewTests
                 ui.Panel.Filter.Categories.Items[0].IsChecked = true;
             }
 
-            ui.Clock.Advance(FilterRunner.LiveDelay);
+            ui.Clock.Advance(FilterRunner.SelectionSyncDelay);
         });
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Runner.ResultCount > 0), "The filter found nothing.");
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.FindInWindow("Filter.ResultCount").Name

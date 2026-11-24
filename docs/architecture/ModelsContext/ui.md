@@ -120,7 +120,9 @@ commits, Esc cancels, losing focus commits a valid name or restores the old one.
   one, each with a single collection reset.
 - **Small drop-downs:** `SmallComboBox`, `SmallComboBoxExtend` and `TagCheckComboBoxItem.Small` (`DevTools.UI/Theme/Styles/SmallItems.xaml`) give every item HC's small height (20) and font size 11, check boxes included. The editable value box uses `SmallComboBoxExtend` because only HC's Extend templates draw `InfoElement.Placeholder`. `SmallDropDownItemsAreSmall` and `ScopeDropDownItemsAreSmall` check height and every text size.
 - **Scope boxes:** `TagCheckComboBox.Small` has `Padding` 10,0. The template pulls the tag row 4 px left (as HC's `CheckComboBox` does), so the first tag sits 6 px from the left edge, the same as above and below, with 2 px between tags. `ScopeTagsHaveEvenInsets` checks it.
-- **Documents box:** `TagCheckComboBox` (tags, `+N` overflow, search, All). Its
+- **Documents box:** `TagCheckComboBox` (tags, `+N` overflow, search, All). When
+  not even one tag fits, `TagOverflowPanel` measures the first tag to the space
+  left, so it shrinks with an ellipsis instead of leaving a bare `+N`. Its
   items expose Toggle and SelectionItem even while the drop-down is closed.
 - **Scope and view switch:** `PanelButtonGroup`, a `ButtonGroup` whose automation
   peer exposes each radio button; the stock peer hides them from UIA.
@@ -139,7 +141,7 @@ the border, because the Documents box and the Categories section are its scope.
   first; a click runs `ToggleConnectorCommand`, which switches the whole group.
 - **Group:** `PrimaryBrush` border, header (grip, "Group", collapse toggle,
   remove), scope row ("Search", documents and categories `TagCheckComboBox.Small`
-  with "Same as parent" when empty), and a `BorderTipWarning` line when a scope
+  with the placeholder "Parent" when empty, `RuleSetViewModel.SameAsParent`), and a `BorderTipWarning` line when a scope
   value is outside the parent or unresolved. `CheckedItems.Path` keeps the
   boxes' selection and `ScopeOptionViewModel.IsChecked` in step.
 - **Reorder:** the grip is a focusable `Thumb`. `DragReorder` (`DevTools.UI`,
@@ -159,18 +161,40 @@ the border, because the Documents box and the Categories section are its scope.
   handler is swallowed by OLE and ends the whole drop silently; that is how a
   frozen `PrimaryBrush` pen once broke every drag, so the adorner pen is not
   frozen. Alt+Up / Alt+Down on a focused card run `MoveUp` / `MoveDown`.
-- **Result row:** count and *matches* sit in one group, mode, *Live* and **⋯**
-  in another, inside an HC `FlexPanel` that wraps. At about 304 px with a large
-  count the controls go to a second line instead of cutting *matches*.
+- **Result row:** a fixed row under the rules `ScrollViewer`, so the count stays
+  in view. One line: count and *matches* (Auto column), then a stock WPF
+  `ToolBar` (`ResultTools`, `Filter.ResultTools`, HC `ToolBarBaseStyle`, grip
+  hidden with `ToolBarTray.IsLocked`) holding mode (`OverflowMode="Never"`),
+  the selection sync toggle (`Filter.SelectionSync`, `Never`), a separator (`Never`) and
+  the result tools (`Filter.Result.Isolate`, `.Halftone`, `.Color`, `.Eye`,
+  `AsNeeded`; the ToolBar overflows from the end). The sync toggle shares
+  `SelectionSyncToggle` (`ModelContextResources.xaml`: stock
+  `ToggleButtonPrimary`, `SelectionSync` icon 14 px, Name *Selection sync*)
+  with Explorer, whose `SelectionSyncToggleStyle` only adds its visibility
+  trigger. `ResultToolStyle` (based
+  on `ToolBar.ButtonStyleKey`) shows the icon in the bar and icon plus
+  `AutomationProperties.Name` in the overflow popup. UIA reaches an overflowed
+  tool by toggling the template's `ButtonOverflow` and finding it in the popup.
+  The tools run the same `ContextMenuViewModel` items as the menu:
+  `FilterTabView` calls `OpenResultMenu` on hover of the result row, on focus
+  and on click, then reads the item's `DisabledReason` and runs its command; an
+  overflowed tool anchors the color picker on the ToolBar. Widths (100% DPI):
+  mode 78, sync toggle 40, separator 5, each tool 18, overflow arrow 18. When the
+  bar cannot hold the count, *matches* and those never-overflow items,
+  `FilterTabView.FitResultLabel` (after each layout pass) collapses *matches*;
+  the count's tooltip still reads "N matches". It uses the items' `DesiredSize`
+  and the label's `FormattedText` width (a collapsed label measures 0, so
+  measuring it would flip back each pass), then invalidates the ToolBar's
+  `PART_ToolBarPanel` so it takes the freed width.
 - **Children panel:** `FilterItemsControl` exposes its children straight to UI
   Automation; the stock `ItemsControl` peer wraps them in data items that
   can come back empty for items added later.
-- **Live pause:** the `Filter.Live` switch and its *Live* label never change.
-  `FilterRunner.IsLivePaused` is derived state (Live on and the current result
-  over `LivePauseLimit`), so `Filter.Paused` (HandyControl
+- **Selection sync pause:** the `Filter.SelectionSync` sync toggle never changes.
+  `FilterRunner.IsSelectionSyncPaused` is derived state (sync on and the current result
+  over `SelectionSyncPauseLimit`), so `Filter.Paused` (HandyControl
   `TextBlockDefaultWarning`, text *Paused: over 5,000 matches* from
-  `FilterRunner.LivePausedText`) shows only while that holds and goes away with
-  any result at or under the limit, an empty or missing filter, or Live off.
+  `FilterRunner.SelectionSyncPausedText`) shows only while that holds and goes away with
+  any result at or under the limit, an empty or missing filter, or sync off.
 
 ### Drag feel (design)
 
@@ -218,10 +242,51 @@ the border, because the Documents box and the Categories section are its scope.
 
 ## AutomationIds
 
+Icon-only buttons also set `AutomationProperties.Name` to their tooltip text (the
+row eye binds it to its own tooltip). The panel has one message line,
+`ModelContext.Message`: Explorer refusals (row tools, eyes, the Categories box)
+report into `ModelContextViewModel.Message`, so only one line ever shows.
+
+`CategorySection` (both tabs) is an Extended ListBox whose selection is the
+tick: `CategoryRowStyle` (based on stock `ListBoxItemBaseStyle`, rows
+`<Area>.Category.Row`) binds `IsSelected` to `IsChecked` two-way and keeps a
+selected row unpainted (stock hover and focus). The checkbox has no content, so
+a click on the name reaches the ListBox. Right-click is handled before the
+ListBox so it keeps the ticks; Space toggles the focused row. Virtualization is
+off (about 150 rows), so every row's selection stays bound.
+Subcategories stay in the same ListBox: `CategoryPickerViewModel` orders
+`Items` parent-then-children (`GroupCount.ParentId`) and keeps `VisibleItems`
+as one `ObservableCollection` it edits in place (roots, plus the children of
+expanded roots or the search hits). Replacing the list would regenerate every
+container while the Selector still holds the old selection, and the two-way
+`IsSelected` binding would push stale ticks back (`TickDuringExpandHolds`). The
+row's chevron (`<Area>.Category.Expand`, a stock `ToggleButtonCustom`) binds
+`IsExpanded`; the checkbox binds the three-state `BoxState` (own tick plus the
+children's). Parent drives children: setting `BoxState` ticks or clears the
+parent and its children at once (a click on the partial box arrives as `false`
+from the stock toggle and the setter turns it into `true`), and a child change
+makes the parent follow (all ticked, ticked; none, clear). Row selection stays
+bound to the row's own `IsChecked`, but a row change is batched per dispatcher
+frame (`CategoryPickerViewModel.SettleRows`) because one Selector gesture
+changes several rows: a single click on an already ticked child unselects its
+parent and siblings but not the child, so the parent cascade must not run on
+the kept child. The batch rule: a parent turned on ticks its children; a parent
+turned off clears them unless a sibling changed in the same gesture; a parent
+left on whose children were all cleared in a multi-row gesture keeps them
+(re-selecting the parent); otherwise the parent follows its children. Search
+opens parents only while it lasts (`_closedInSearch` keeps a parent the user
+closed during the search). Children indent 16 px. A parent missing from
+the scope comes from `CategoryTree.WithParents` (count 0, name from a loaded
+snapshot). In the Explorer tree, `ExplorerTree.GroupRows` puts a subgroup row in
+its parent group row's `Subgroups`; they lead the parent's children, the
+parent's count, hidden, selected and outside counts sum its own and its listed
+subgroups, and its color mark reads its own elements only.
+
 Every interactive control has an `AutomationProperties.AutomationId`, named
 `<Area>.<Part>`: `ModelContext.Scope.ActiveView`, `ModelContext.Documents` (each
 item `ModelContext.Document`, its model title in HelpText),
-`Explorer.Row.Eye`, `Explorer.SelectionSync`, `Filter.Source`, `Filter.Live`,
+`Explorer.Row.Eye`, `Explorer.Row.SavedHide` (orange dot: a linked row the panel
+hid with Hide in View), `Explorer.SelectionSync`, `Filter.Source`, `Filter.SelectionSync`,
 `Filter.Paused`,
 `Filter.Rule.Parameter`, `Filter.Rule.CaseSensitive`, `Temporary.Reset`, and so
 on. The rule builder uses `Filter.Rules`, `Filter.NoRules`, `Filter.Rule.Add`
@@ -229,6 +294,7 @@ on. The rule builder uses `Filter.Rules`, `Filter.NoRules`, `Filter.Rule.Add`
 `Filter.Rule.CaseSensitive`, `Filter.Rule.Operator`, `Filter.Rule.Value`,
 `Filter.Rule.Parameter.Section` (header), `Filter.Rule.Parameter.Type`,
 `Filter.Rule.Parameter.Source` (icon), `Filter.Rule.Remove`, `Filter.Rule.Unsupported`,
+`Filter.Rule.Skipped` (*Skipped · no value*), `Filter.Rule.MoreValues`,
 `Filter.Item.Grip`, `Filter.Set.Connector`, `Filter.Set.Collapse`,
 `Filter.Set.Remove`, `Filter.Set.Scope.Documents`, `Filter.Set.Scope.Categories`
 and `Filter.Set.Warning`. View tests and live checks find controls only by these ids and act through

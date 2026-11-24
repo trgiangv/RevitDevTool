@@ -1,6 +1,5 @@
 using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Documents;
-using DevTools.ModelsContext.Explorer;
 using DevTools.ModelsContext.Parameters;
 using DevTools.ModelsContext.Scope;
 using Nice3point.Revit.Extensions;
@@ -18,11 +17,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
 {
     public const string Revit = "Revit";
 
-    private static readonly TreeSchema RevitSchema = new(["Category", "Family", "Type", "Instance"]);
-
     public string HostName => Revit;
-
-    public TreeSchema Schema => RevitSchema;
 
     public Task<IReadOnlyList<DocumentInfo>> GetDocumentsAsync(CancellationToken cancellationToken)
     {
@@ -111,7 +106,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
 
     private static DocumentSnapshot Assemble(SourceId source, ReadRecords records, DocumentVersion? stamp)
     {
-        var builder = new DocumentSnapshotBuilder(source, RevitSchema.GroupingDepth);
+        var builder = new DocumentSnapshotBuilder(source, DocumentSnapshot.MaxGroupingDepth);
         foreach (var type in records.Types)
         {
             builder.AddType(type);

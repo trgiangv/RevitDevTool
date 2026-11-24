@@ -92,8 +92,7 @@ internal sealed class ReadBackCache(PanelRuntime runtime)
             return false;
         }
 
-        var hidden = await runtime.Services.ViewActions.GetIdsHiddenPermanentlyOrTemporarilyAsync(document,
-            candidates, cancellationToken);
+        var hidden = await runtime.Services.ViewActions.ReadHiddenAsync(document, candidates, cancellationToken);
         readBack.Checked.UnionWith(candidates);
         var before = readBack.Hidden.Count;
         readBack.Hidden.UnionWith(hidden);

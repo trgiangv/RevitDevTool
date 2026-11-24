@@ -153,7 +153,7 @@
                 <Setter Property="TextWrapping" Value="Wrap" />
                 <Setter Property="Visibility" Value="Collapsed" />
                 <Style.Triggers>
-                    <DataTrigger Binding="{Binding Filter.Runner.IsLivePaused}" Value="True">
+                    <DataTrigger Binding="{Binding Filter.Runner.IsSelectionSyncPaused}" Value="True">
                         <Setter Property="Visibility" Value="Visible" />
                     </DataTrigger>
                 </Style.Triggers>
@@ -335,8 +335,8 @@
                                   ToolTip="How the result changes the selection: New, Add, Remove" />
                         <ToggleButton x:Name="SyncToggle"
                                       Margin="4,0,0,0"
-                                      AutomationProperties.AutomationId="Filter.Live"
-                                      IsChecked="{Binding Filter.Runner.IsLiveOn}"
+                                      AutomationProperties.AutomationId="Filter.SelectionSync"
+                                      IsChecked="{Binding Filter.Runner.IsSelectionSyncOn}"
                                       Style="{StaticResource SelectionSyncToggle}"
                                       ToolBar.OverflowMode="Never"
                                       ToolTip="Selection sync: each result selects in Revit as you edit" />

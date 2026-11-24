@@ -365,7 +365,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         var action = row.Eye == RowEye.Hidden ? VisibilityAction.Show : VisibilityAction.Hide;
-        _report(await _visibility.RunAsync(new VisibilityRequest(action, _targets.TargetsFor(row), [])));
+        _report(await _visibility.RunAsync(VisibilityRequest.ForRows(action, _targets.TargetsFor(row))));
     }
 
     private async Task ApplySearchAsync()

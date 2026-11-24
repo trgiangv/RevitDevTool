@@ -34,8 +34,8 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData, Current)
             .Plan(VisibilityRequest.ForRows(VisibilityAction.Hide, row));
 
-        var step = (GroupEverywhereStep)plan.Steps.Single();
-        Assert.AreEqual(TestModel.Ducts, step.GroupId);
+        var step = (CategoryStep)plan.Steps.Single();
+        Assert.AreEqual(TestModel.Ducts, step.CategoryId);
     }
 
     [TestMethod]
@@ -46,7 +46,7 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData, Mep)
             .Plan(VisibilityRequest.ForRows(VisibilityAction.Halftone, row));
 
-        Assert.AreEqual(new AttachedModelStep(Mep), plan.Steps.Single());
+        Assert.AreEqual(new LinkInstanceStep(Mep), plan.Steps.Single());
     }
 
     [TestMethod]
@@ -58,9 +58,9 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData, Mep)
             .Plan(VisibilityRequest.ForRows(VisibilityAction.Hide, row));
 
-        var step = (ReferenceCommandStep)plan.Steps.Single();
+        var step = (LinkElementsStep)plan.Steps.Single();
         Assert.AreEqual(Mep, step.Document);
-        Assert.IsTrue(plan.UsesReferenceCommands);
+        Assert.IsTrue(plan.UsesLinkHide);
     }
 
     [TestMethod]
@@ -76,7 +76,7 @@ public sealed class PlannerTests
             var plan = planner.Plan(request);
             var check = planner.Check(request);
             Assert.AreEqual(plan.DisabledReason, check.DisabledReason);
-            Assert.AreEqual(plan.UsesReferenceCommands, check.UsesReferenceCommands);
+            Assert.AreEqual(ActionState.NoteOf(plan.UsesLinkFilter, plan.UsesLinkHide), check.Note);
         }
     }
 
@@ -91,8 +91,8 @@ public sealed class PlannerTests
 
         var step = (LinkIsolateStep)plan.Steps.Single();
         Assert.AreEqual(Mep, step.Document);
-        Assert.AreEqual(snapshot.IdsUnder(row.Path).Count(), step.KeepIds.Count);
-        Assert.IsTrue(plan.UsesReferenceCommands);
+        Assert.AreEqual(snapshot.IdsUnder(row.Path).Count(), step.KeptIds.Count);
+        Assert.IsTrue(plan.UsesLinkHide);
     }
 
     [TestMethod]
@@ -104,7 +104,7 @@ public sealed class PlannerTests
             .Plan(VisibilityRequest.ForElements(VisibilityAction.Isolate, elements));
 
         Assert.IsInstanceOfType<ElementsStep>(plan.Steps[0]);
-        CollectionAssert.AreEqual(new long[] { 21 }, ((LinkIsolateStep)plan.Steps[1]).KeepIds.ToArray());
+        CollectionAssert.AreEqual(new long[] { 21 }, ((LinkIsolateStep)plan.Steps[1]).KeptIds.ToArray());
     }
 
     [TestMethod]
@@ -124,7 +124,7 @@ public sealed class PlannerTests
         Assert.AreEqual(LinkRules.TypeName, rules[1].Parameter);
         Assert.AreEqual(snapshot.TypeName(row.Path.Type), rules[1].Value);
         Assert.AreEqual(snapshot.IdsUnder(row.Path).Count(), step.Ids.Count);
-        Assert.IsFalse(plan.UsesReferenceCommands);
+        Assert.IsFalse(plan.UsesLinkHide);
     }
 
     [TestMethod]
@@ -149,7 +149,7 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData, Mep)
             .Plan(VisibilityRequest.ForRows(VisibilityAction.Halftone, row));
 
-        Assert.AreEqual(VisibilityReasons.LinkOverrideNeedsRule, plan.DisabledReason);
+        Assert.AreEqual(VisibilityText.LinkOverrideNeedsRule, plan.DisabledReason);
     }
 
     [TestMethod]
@@ -158,7 +158,7 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData, Mep)
             .Plan(VisibilityRequest.ForElements(VisibilityAction.Color, [new ElementRef(Mep, 21)]));
 
-        Assert.AreEqual(VisibilityReasons.LinkOverrideNeedsRule, plan.DisabledReason);
+        Assert.AreEqual(VisibilityText.LinkOverrideNeedsRule, plan.DisabledReason);
     }
 
     [TestMethod]
@@ -188,13 +188,13 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData, Mep)
             .Plan(new VisibilityRequest(VisibilityAction.Color, [], [new ElementRef(Mep, 21)], null, filter));
 
-        Assert.AreEqual(VisibilityReasons.LinkRuleNotNative, plan.DisabledReason);
+        Assert.AreEqual(VisibilityText.LinkRuleNotNative, plan.DisabledReason);
     }
 
     [TestMethod]
     public void LinkRulesOverCapRefused()
     {
-        var rules = Enumerable.Range(0, VisibilityReasons.LinkFilterCap + 1)
+        var rules = Enumerable.Range(0, LinkRules.MaxRules + 1)
             .Select(index => (FilterNode)new FilterRule(ParameterKey.BuiltIn("Mark", "ALL_MODEL_MARK"),
                 FilterOperator.Equal, index.ToString(System.Globalization.CultureInfo.InvariantCulture)))
             .ToArray();
@@ -203,14 +203,14 @@ public sealed class PlannerTests
         var check = TestModel.Planner(TestModel.SmallData, Mep)
             .Check(new VisibilityRequest(VisibilityAction.Color, [], [new ElementRef(Mep, 21)], null, filter));
 
-        Assert.AreEqual(VisibilityReasons.LinkFilterTooMany, check.DisabledReason);
+        Assert.AreEqual(VisibilityText.LinkFilterTooMany, check.DisabledReason);
     }
 
     [TestMethod]
     public void TypeRowsOverCapRefused()
     {
         var snapshot = TestModel.Snapshot(Mep);
-        var rows = Enumerable.Range(0, VisibilityReasons.LinkFilterCap / 2 + 1)
+        var rows = Enumerable.Range(0, LinkRules.MaxRules / 2 + 1)
             .Select(index => new TreeRow(TreeRowKind.Type, "T", document: Mep,
                 path: RowPath.ForType(0, snapshot.Types[0].FamilyNameIndex, 0)))
             .ToArray();
@@ -218,7 +218,7 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData, Mep)
             .Plan(VisibilityRequest.ForRows(VisibilityAction.Color, rows));
 
-        Assert.AreEqual(VisibilityReasons.LinkFilterTooMany, plan.DisabledReason);
+        Assert.AreEqual(VisibilityText.LinkFilterTooMany, plan.DisabledReason);
     }
 
     [TestMethod]
@@ -231,8 +231,7 @@ public sealed class PlannerTests
             .Check(VisibilityRequest.ForRows(VisibilityAction.Color, row));
 
         Assert.IsNull(check.DisabledReason);
-        Assert.IsTrue(check.UsesLinkFilter);
-        Assert.IsFalse(check.UsesReferenceCommands);
+        Assert.AreEqual(VisibilityText.LinkFilterNote, check.Note);
     }
 
     private static TreeRow TypeRow(DocumentSnapshot snapshot, DocumentKey key, long groupId)
@@ -250,7 +249,7 @@ public sealed class PlannerTests
         {
             CurrentElements = 100,
             LinkElements = 100,
-            LinkCapabilities = DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands
+            LinkCapabilities = DocumentCapabilities.LinkInstance | DocumentCapabilities.LinkElements
         });
         var planner = TestModel.Planner(data);
         ElementRef[] elements = [new(Mep, 1)];
@@ -258,7 +257,7 @@ public sealed class PlannerTests
         var show = planner.Plan(VisibilityRequest.ForElements(VisibilityAction.Show, elements));
         var hide = planner.Plan(VisibilityRequest.ForElements(VisibilityAction.Hide, elements));
 
-        Assert.AreEqual(VisibilityReasons.ShowFromReveal, show.DisabledReason);
+        Assert.AreEqual(VisibilityText.ShowFromReveal, show.DisabledReason);
         Assert.IsFalse(hide.IsDisabled);
     }
 
@@ -272,7 +271,7 @@ public sealed class PlannerTests
 
         Assert.HasCount(2, plan.Steps);
         CollectionAssert.AreEqual(new long[] { 11, 12 }, ((ElementsStep)plan.Steps[0]).Ids.ToArray());
-        CollectionAssert.AreEqual(new long[] { 21 }, ((ReferenceCommandStep)plan.Steps[1]).Ids.ToArray());
+        CollectionAssert.AreEqual(new long[] { 21 }, ((LinkElementsStep)plan.Steps[1]).Ids.ToArray());
     }
 
     [TestMethod]
@@ -283,23 +282,23 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData, Current)
             .Plan(VisibilityRequest.ForRows(VisibilityAction.Hide, header));
 
-        Assert.AreEqual(VisibilityReasons.HeaderHasNoActions, plan.DisabledReason);
+        Assert.AreEqual(VisibilityText.HeaderHasNoActions, plan.DisabledReason);
     }
 
     [TestMethod]
-    public void NoReferenceCommandsDisablesLinkChild()
+    public void NoLinkElementsDisablesLinkChild()
     {
         var data = FakeModelGenerator.Generate(new FakeModelOptions
         {
             CurrentElements = 100,
             LinkElements = 100,
-            LinkCapabilities = DocumentCapabilities.WholeModel
+            LinkCapabilities = DocumentCapabilities.LinkInstance
         });
 
         var plan = TestModel.Planner(data)
             .Plan(VisibilityRequest.ForElements(VisibilityAction.Hide, [new ElementRef(Mep, 1)]));
 
-        Assert.AreEqual(VisibilityReasons.ReferenceCommandsUnavailable, plan.DisabledReason);
+        Assert.AreEqual(VisibilityText.LinkElementsUnavailable, plan.DisabledReason);
     }
 
     [TestMethod]
@@ -311,6 +310,6 @@ public sealed class PlannerTests
         var plan = TestModel.Planner(TestModel.SmallData)
             .Plan(VisibilityRequest.ForRows(VisibilityAction.Hide, row));
 
-        Assert.AreEqual(VisibilityReasons.Updating, plan.DisabledReason);
+        Assert.AreEqual(VisibilityText.Updating, plan.DisabledReason);
     }
 }

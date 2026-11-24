@@ -66,7 +66,7 @@ $uia = '.agents/skills/ui-automation/scripts/uia.ps1'
 $app = Start-Process <path-to-exe> -PassThru
 pwsh -File $uia wait -ProcessId $app.Id -Id Explorer.Search -Timeout 15
 pwsh -File $uia select -ProcessId $app.Id -Id ModelContext.View.Filter
-pwsh -File $uia toggle -ProcessId $app.Id -Id Filter.Live -Value Off
+pwsh -File $uia toggle -ProcessId $app.Id -Id Filter.SelectionSync -Value Off
 pwsh -File $uia find -ProcessId $app.Id -Id Filter.ResultCount
 pwsh -File $uia invoke -ProcessId $app.Id -Id Close
 ```

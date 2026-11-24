@@ -23,31 +23,25 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
 
     public string? Notice { get; set; }
 
-    public string? TakeNotice()
-    {
-        var notice = Notice;
-        Notice = null;
-        return notice;
-    }
-
-    public Task<IReadOnlyList<ElementRef>> ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken)
+    public Task<PlanOutcome> ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken)
     {
         if (plan.IsDisabled)
         {
             throw new InvalidOperationException(plan.DisabledReason);
         }
 
+        RequireView(plan.ViewId);
         ExecutedPlans.Add(plan);
         var hidden = new List<ElementRef>();
         foreach (var step in plan.Steps)
         {
             switch (step)
             {
-                case ReferenceCommandStep references:
+                case LinkElementsStep references:
                     hidden.AddRange(references.Ids.Select(id => new ElementRef(references.Document, id)));
                     break;
                 case LinkIsolateStep isolate:
-                    var keep = isolate.KeepIds.ToHashSet();
+                    var keep = isolate.KeptIds.ToHashSet();
                     hidden.AddRange(model.SnapshotOf(isolate.Document).Rows
                         .Where(row => !keep.Contains(row.Id))
                         .Select(row => new ElementRef(isolate.Document, row.Id)));
@@ -56,7 +50,19 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         }
 
         HiddenLinked.UnionWith(hidden);
-        return Task.FromResult<IReadOnlyList<ElementRef>>(hidden);
+        var categories = plan.Steps.OfType<CategoryStep>().Select(step => step.CategoryId).ToList();
+        if (plan.Action == VisibilityAction.Hide)
+        {
+            model.ViewHiddenCategories.UnionWith(categories);
+        }
+        else if (plan.Action == VisibilityAction.Isolate && categories.Count > 0)
+        {
+            model.ViewKeptCategories = [.. categories];
+        }
+
+        var notice = Notice;
+        Notice = null;
+        return Task.FromResult(new PlanOutcome(hidden, notice));
     }
 
     public Task ShowLinkedAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
@@ -71,24 +77,36 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         return Task.CompletedTask;
     }
 
-    public Task KeepAsync(CancellationToken cancellationToken)
+    public Task KeepAsync(string? viewId, CancellationToken cancellationToken)
     {
+        RequireView(viewId);
         KeepCount++;
         return Task.CompletedTask;
     }
 
     public string? ResetError { get; set; }
 
-    public Task ResetAsync(CancellationToken cancellationToken)
+    public Task ResetAsync(string? viewId, CancellationToken cancellationToken)
     {
         if (ResetError is { } error)
         {
             throw new InvalidOperationException(error);
         }
 
+        RequireView(viewId);
         ResetCount++;
         ExecutedPlans.Clear();
+        model.ViewHiddenCategories.Clear();
+        model.ViewKeptCategories = null;
         return Task.CompletedTask;
+    }
+
+    private void RequireView(string? viewId)
+    {
+        if (viewId is not null && viewId != model.View.ViewId)
+        {
+            throw new InvalidOperationException(VisibilityText.ViewChanged);
+        }
     }
 
     public Task ZoomAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
@@ -101,15 +119,15 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
     {
         return model.View.Is3D
             ? Task.CompletedTask
-            : throw new InvalidOperationException("Section box needs a 3D view.");
+            : throw new InvalidOperationException(VisibilityText.Needs3DView);
     }
 
-    public Task<TemporaryState?> ReadTemporaryStateAsync(CancellationToken cancellationToken)
+    public Task<ActiveView?> ReadActiveViewAsync(CancellationToken cancellationToken)
     {
-        return Task.FromResult<TemporaryState?>(new TemporaryState(model.View, ExecutedPlans.Count > 0, false));
+        return Task.FromResult<ActiveView?>(new ActiveView(model.View, ExecutedPlans.Count > 0));
     }
 
-    public Task<IReadOnlyCollection<long>> GetIdsHiddenPermanentlyOrTemporarilyAsync(
+    public Task<IReadOnlyCollection<long>> ReadHiddenAsync(
         DocumentKey document,
         IReadOnlyCollection<long> candidates,
         CancellationToken cancellationToken)
@@ -152,8 +170,8 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
                     case ElementsStep elements when elements.Document == document:
                         _ids.UnionWith(elements.Ids);
                         break;
-                    case GroupEverywhereStep group:
-                        _groups.Add(snapshot.GroupIndexOf(group.GroupId));
+                    case CategoryStep group:
+                        _groups.Add(snapshot.GroupIndexOf(group.CategoryId));
                         break;
                 }
             }

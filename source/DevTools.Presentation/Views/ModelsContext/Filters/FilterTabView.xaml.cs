@@ -21,7 +21,7 @@ public partial class FilterTabView : UserControl
     public FilterTabView()
     {
         InitializeComponent();
-        PausedLine.Text = FilterRunner.LivePausedText;
+        PausedLine.Text = FilterRunner.SelectionSyncPausedText;
         LayoutUpdated += (_, _) => FitResultLabel();
         DataContextChanged += OnDataContextChanged;
     }

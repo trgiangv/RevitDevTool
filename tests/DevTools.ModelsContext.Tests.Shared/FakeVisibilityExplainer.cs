@@ -7,9 +7,9 @@ public sealed class FakeVisibilityExplainer : IVisibilityExplainer
 {
     public List<ElementRef> Calls { get; } = [];
 
-    public IReadOnlyList<HiddenCause> Causes { get; set; } = [];
+    public IReadOnlyList<HiddenReason> Reasons { get; set; } = [];
 
-    public Func<ElementRef, IReadOnlyList<HiddenCause>>? CausesOf { get; set; }
+    public Func<ElementRef, IReadOnlyList<HiddenReason>>? ReasonsOf { get; set; }
 
     public TimeSpan Delay { get; set; }
 
@@ -19,7 +19,7 @@ public sealed class FakeVisibilityExplainer : IVisibilityExplainer
 
     public int Canceled { get; private set; }
 
-    public async Task<WhyHiddenResult> ExplainAsync(ElementRef element, CancellationToken cancellationToken)
+    public async Task<WhyHidden> ExplainAsync(ElementRef element, CancellationToken cancellationToken)
     {
         Calls.Add(element);
         try
@@ -45,6 +45,6 @@ public sealed class FakeVisibilityExplainer : IVisibilityExplainer
             throw error;
         }
 
-        return WhyHiddenResult.Of(CausesOf?.Invoke(element) ?? Causes, 1);
+        return WhyHidden.Of(ReasonsOf?.Invoke(element) ?? Reasons, 1);
     }
 }

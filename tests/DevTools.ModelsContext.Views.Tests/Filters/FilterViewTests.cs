@@ -118,7 +118,7 @@ public sealed class FilterViewTests
         WpfSta.Invoke(() =>
         {
             ui.Panel.Filter.Categories.Items[0].IsChecked = true;
-            ui.Clock.Advance(FilterRunner.LiveDelay);
+            ui.Clock.Advance(FilterRunner.SelectionSyncDelay);
         });
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Runner.ResultCount > 0), "The filter found nothing.");
 
@@ -133,8 +133,8 @@ public sealed class FilterViewTests
     {
         using var ui = OpenPaused();
 
-        Assert.AreEqual(FilterRunner.LivePausedText, ui.Host.FindInWindow("Filter.Paused").Name);
-        Assert.AreEqual(ToggleState.On, ui.Host.FindInWindow("Filter.Live").Patterns.Toggle.Pattern.ToggleState.Value);
+        Assert.AreEqual(FilterRunner.SelectionSyncPausedText, ui.Host.FindInWindow("Filter.Paused").Name);
+        Assert.AreEqual(ToggleState.On, ui.Host.FindInWindow("Filter.SelectionSync").Patterns.Toggle.Pattern.ToggleState.Value);
     }
 
     [TestMethod]
@@ -144,7 +144,7 @@ public sealed class FilterViewTests
 
         ui.Press("Filter.CategoryNone");
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Categories.Items.All(category => !category.IsChecked)), "None did not untick.");
-        WpfSta.Invoke(() => ui.Clock.Advance(FilterRunner.LiveDelay));
+        WpfSta.Invoke(() => ui.Clock.Advance(FilterRunner.SelectionSyncDelay));
 
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Paused") is null),
             "The paused line stayed at 0 matches.");
@@ -586,7 +586,7 @@ public sealed class FilterViewTests
         ui.Host.FindInWindow("Filter.Categories").Patterns.Toggle.Pattern.Toggle();
         ui.Press("Filter.CategoryAll");
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Categories.Items.All(category => category.IsChecked)), "All did not tick.");
-        WpfSta.Invoke(() => ui.Clock.Advance(FilterRunner.LiveDelay));
+        WpfSta.Invoke(() => ui.Clock.Advance(FilterRunner.SelectionSyncDelay));
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Paused") is not null),
             "The paused line did not show over the limit.");
         return ui;

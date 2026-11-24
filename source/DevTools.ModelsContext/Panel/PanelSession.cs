@@ -62,7 +62,7 @@ internal sealed record ExplorerState(HashSet<string> Expanded, HashSet<string> R
     }
 }
 
-internal sealed record FilterState(FilterSourceItem? Selected, bool IsLiveOn, FilterDraft? Draft = null);
+internal sealed record FilterState(FilterSourceItem? Selected, bool IsSelectionSyncOn, FilterDraft? Draft = null);
 
 internal sealed record FilterDraft(FilterDefinition Definition, string Name);
 

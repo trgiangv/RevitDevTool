@@ -14,18 +14,18 @@ internal sealed record FilterJob(string Name, HostFilterInfo? Host, FilterDefini
 
 public sealed partial class FilterRunner : ObservableObject, IDisposable
 {
-    public const int LivePauseLimit = 5000;
+    public const int SelectionSyncPauseLimit = 5000;
 
-    public static readonly TimeSpan LiveDelay = TimeSpan.FromMilliseconds(300);
+    public static readonly TimeSpan SelectionSyncDelay = TimeSpan.FromMilliseconds(300);
 
     private readonly Func<FilterJob?> _job;
-    private readonly Debouncer _live;
+    private readonly Debouncer _sync;
     private readonly Func<CancellationToken, Task> _readHidden;
     private readonly PanelRuntime _runtime;
     private HashSet<ElementRef> _baseline = [];
     private ContextData _data = ContextData.Empty;
     private CancellationTokenSource? _evaluation;
-    private bool _isLiveOn = true;
+    private bool _isSelectionSyncOn = true;
     private CancellationToken _token;
 
     internal FilterRunner(PanelRuntime runtime, Func<FilterJob?> job, Func<CancellationToken, Task> readHidden)
@@ -33,13 +33,13 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
         _runtime = runtime;
         _job = job;
         _readHidden = readHidden;
-        _live = new Debouncer(runtime.Scheduler, LiveDelay, () => _ = _runtime.RunAsync(() => EvaluateAsync(true)));
+        _sync = new Debouncer(runtime.Scheduler, SelectionSyncDelay, () => _ = _runtime.RunAsync(() => EvaluateAsync(true)));
     }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ResultCount))]
-    [NotifyPropertyChangedFor(nameof(IsLivePaused))]
-    [NotifyPropertyChangedFor(nameof(IsSyncing))]
+    [NotifyPropertyChangedFor(nameof(IsSelectionSyncPaused))]
+    [NotifyPropertyChangedFor(nameof(IsSelectionSyncing))]
     public partial IReadOnlyList<ElementRef> Result { get; private set; } = [];
 
     public int ResultCount => Result.Count;
@@ -47,18 +47,18 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
     [ObservableProperty]
     public partial ResultSelectionMode Mode { get; set; }
 
-    public bool IsLiveOn
+    public bool IsSelectionSyncOn
     {
-        get => _isLiveOn;
+        get => _isSelectionSyncOn;
         set
         {
-            if (!SetProperty(ref _isLiveOn, value))
+            if (!SetProperty(ref _isSelectionSyncOn, value))
             {
                 return;
             }
 
-            OnPropertyChanged(nameof(IsLivePaused));
-            OnPropertyChanged(nameof(IsSyncing));
+            OnPropertyChanged(nameof(IsSelectionSyncPaused));
+            OnPropertyChanged(nameof(IsSelectionSyncing));
             if (value)
             {
                 _ = _runtime.RunAsync(CaptureBaselineAsync);
@@ -66,16 +66,16 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
         }
     }
 
-    public bool IsLivePaused => IsLiveOn && ResultCount > LivePauseLimit;
+    public bool IsSelectionSyncPaused => IsSelectionSyncOn && ResultCount > SelectionSyncPauseLimit;
 
-    public bool IsSyncing => IsLiveOn && !IsLivePaused;
+    public bool IsSelectionSyncing => IsSelectionSyncOn && !IsSelectionSyncPaused;
 
-    public static string LivePausedText { get; } =
-        string.Format(CultureInfo.CurrentCulture, "Paused: over {0:N0} matches", LivePauseLimit);
+    public static string SelectionSyncPausedText { get; } =
+        string.Format(CultureInfo.CurrentCulture, "Paused: over {0:N0} matches", SelectionSyncPauseLimit);
 
     public void Dispose()
     {
-        _live.Dispose();
+        _sync.Dispose();
         _evaluation?.Cancel();
         _evaluation?.Dispose();
     }
@@ -88,28 +88,28 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
 
     internal void Trigger()
     {
-        _live.Trigger();
+        _sync.Trigger();
     }
 
     internal async Task ActivateAsync()
     {
-        if (IsLiveOn)
+        if (IsSelectionSyncOn)
         {
             await CaptureBaselineAsync();
         }
     }
 
-    internal void Reset(bool isLiveOn)
+    internal void Reset(bool isSelectionSyncOn)
     {
         _evaluation?.Cancel();
-        _live.Cancel();
+        _sync.Cancel();
         _data = ContextData.Empty;
-        if (_isLiveOn != isLiveOn)
+        if (_isSelectionSyncOn != isSelectionSyncOn)
         {
-            _isLiveOn = isLiveOn;
-            OnPropertyChanged(nameof(IsLiveOn));
-            OnPropertyChanged(nameof(IsLivePaused));
-            OnPropertyChanged(nameof(IsSyncing));
+            _isSelectionSyncOn = isSelectionSyncOn;
+            OnPropertyChanged(nameof(IsSelectionSyncOn));
+            OnPropertyChanged(nameof(IsSelectionSyncPaused));
+            OnPropertyChanged(nameof(IsSelectionSyncing));
         }
 
         Result = [];
@@ -132,7 +132,7 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
         }
 
         Result = result;
-        if (sync && IsLiveOn && job is { IsEmptyCustom: false })
+        if (sync && IsSelectionSyncOn && job is { IsEmptyCustom: false })
         {
             await SelectResultAsync(name, result, token);
         }
@@ -142,9 +142,9 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
 
     private async Task SelectResultAsync(string name, IReadOnlyList<ElementRef> result, CancellationToken token)
     {
-        if (IsLivePaused)
+        if (IsSelectionSyncPaused)
         {
-            _runtime.Logger.FilterLivePaused(name, result.Count, LivePauseLimit);
+            _runtime.Logger.FilterSelectionSyncPaused(name, result.Count, SelectionSyncPauseLimit);
             return;
         }
 
@@ -159,7 +159,7 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
 
     partial void OnModeChanged(ResultSelectionMode value)
     {
-        _live.Trigger();
+        _sync.Trigger();
     }
 
     private async Task CaptureBaselineAsync()

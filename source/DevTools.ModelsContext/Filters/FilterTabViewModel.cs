@@ -78,7 +78,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
     {
         var result = Runner.Result;
         var hidden = result.Count > 0 && result.All(_visibility.IsHidden);
-        _menu.Open(new MenuTarget([], result, () => result, Runner.IsSyncing, hidden, _token, Definition()));
+        _menu.Open(new MenuTarget([], result, () => result, Runner.IsSelectionSyncing, hidden, _token, Definition()));
     }
 
     public bool MoveTo(FilterNodeViewModel item, RuleSetViewModel target, int index)
@@ -244,13 +244,13 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
 
     internal FilterState Capture()
     {
-        return Library.Capture(Runner.IsLiveOn);
+        return Library.Capture(Runner.IsSelectionSyncOn);
     }
 
     internal void Reset(FilterState state)
     {
         Library.Reset(state);
-        Runner.Reset(state.IsLiveOn);
+        Runner.Reset(state.IsSelectionSyncOn);
         _data = ContextData.Empty;
     }
 

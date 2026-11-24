@@ -12,101 +12,101 @@ public sealed class WhyHiddenTests
     [TestMethod]
     public void CategoryCueNamesCategory()
     {
-        var cause = HiddenCues.Category("Duct Fittings");
+        var reason = HiddenReasons.Category("Duct Fittings");
 
-        Assert.AreEqual("Category off: Duct Fittings", cause.Text);
-        Assert.AreEqual(HiddenFix.None, cause.Fix);
+        Assert.AreEqual("Category off: Duct Fittings", reason.Text);
+        Assert.IsFalse(reason.CanShow);
     }
 
     [TestMethod]
     public void FilterCuesNameFilter()
     {
-        Assert.AreEqual("Filter: Walls-Demo", HiddenCues.Filter("Walls-Demo").Text);
-        Assert.AreEqual("Filter: Walls-Demo (possible)", HiddenCues.FilterPossible("Walls-Demo").Text);
-        Assert.AreEqual(HiddenCauseKind.FilterPossible, HiddenCues.FilterPossible("Walls-Demo").Kind);
+        Assert.AreEqual("Filter: Walls-Demo", HiddenReasons.Filter("Walls-Demo").Text);
+        Assert.AreEqual("Filter: Walls-Demo (possible)", HiddenReasons.FilterPossible("Walls-Demo").Text);
+        Assert.AreEqual(HiddenCause.FilterPossible, HiddenReasons.FilterPossible("Walls-Demo").Cause);
     }
 
     [TestMethod]
     public void DisplayModeCueNamesMode()
     {
-        Assert.AreEqual("By Linked View: link's own settings", HiddenCues.LinkDisplayMode("By Linked View").Text);
+        Assert.AreEqual("By Linked View: link's own settings", HiddenReasons.LinkDisplayMode("By Linked View").Text);
     }
 
     [TestMethod]
     public void FamilyCueNamesParent()
     {
-        var cause = HiddenCues.FamilySettings("Window-Double-Hung");
+        var reason = HiddenReasons.FamilySettings("Window-Double-Hung");
 
-        Assert.AreEqual("Hidden by its family: Window-Double-Hung", cause.Text);
-        Assert.AreEqual(HiddenCauseKind.NotDrawn, cause.Kind);
-        Assert.AreEqual(HiddenFix.None, cause.Fix);
+        Assert.AreEqual("Hidden by its family: Window-Double-Hung", reason.Text);
+        Assert.AreEqual(HiddenCause.NotDrawn, reason.Cause);
+        Assert.IsFalse(reason.CanShow);
     }
 
     [TestMethod]
     public void OnlyShowFixesExist()
     {
-        Assert.AreEqual(HiddenFix.ShowElement, HiddenCues.TemporaryHideIsolate.Fix);
-        Assert.AreEqual(HiddenFix.ShowElement, HiddenCues.HiddenInLink.Fix);
-        Assert.AreEqual(HiddenFix.None, HiddenCues.HiddenInView.Fix);
-        Assert.AreEqual(HiddenFix.None, HiddenCues.LinkTemporary.Fix);
-        Assert.AreEqual(HiddenFix.None, HiddenCues.WorksetClosed("Shell").Fix);
-        Assert.AreEqual(HiddenFix.None, HiddenCues.AboveCutPlane.Fix);
-        Assert.AreEqual(HiddenFix.None, HiddenCues.OutsideCrop.Fix);
+        Assert.IsTrue(HiddenReasons.Temporary.CanShow);
+        Assert.IsTrue(HiddenReasons.LinkElement.CanShow);
+        Assert.IsFalse(HiddenReasons.InView.CanShow);
+        Assert.IsFalse(HiddenReasons.LinkTemporary.CanShow);
+        Assert.IsFalse(HiddenReasons.WorksetClosed("Shell").CanShow);
+        Assert.IsFalse(HiddenReasons.AboveCutPlane.CanShow);
+        Assert.IsFalse(HiddenReasons.OutsideCrop.CanShow);
     }
 
     [TestMethod]
     public void EmptyGivesNoneFound()
     {
-        var result = WhyHiddenResult.Of([], 1);
+        var result = WhyHidden.Of([], 1);
 
-        Assert.AreEqual(HiddenCues.NoneFound, result.First);
+        Assert.AreEqual(HiddenReasons.None, result.First);
         Assert.IsFalse(result.Found);
     }
 
     [TestMethod]
     public void NoneFoundDropsBesideCauses()
     {
-        var result = WhyHiddenResult.Of([HiddenCues.NoneFound, HiddenCues.OutsideCrop], 1);
+        var result = WhyHidden.Of([HiddenReasons.None, HiddenReasons.OutsideCrop], 1);
 
-        CollectionAssert.AreEqual(new[] { HiddenCues.OutsideCrop }, result.Causes.ToArray());
+        CollectionAssert.AreEqual(new[] { HiddenReasons.OutsideCrop }, result.Reasons.ToArray());
     }
 
     [TestMethod]
     public void NoneFoundSaysNoSetting()
     {
-        Assert.AreEqual("No view setting hides it", HiddenCues.NoneFound.Text);
+        Assert.AreEqual("No view setting hides it", HiddenReasons.None.Text);
     }
 
     [TestMethod]
     public void NotDrawnCuesAreConcrete()
     {
-        Assert.AreEqual("No geometry to draw", HiddenCues.NoGeometry.Text);
-        Assert.AreEqual("Not drawn in this view type", HiddenCues.NotInViewType.Text);
-        Assert.AreEqual(HiddenCauseKind.NotDrawn, HiddenCues.NoGeometry.Kind);
-        Assert.AreEqual(HiddenFix.None, HiddenCues.NotInViewType.Fix);
+        Assert.AreEqual("No geometry to draw", HiddenReasons.NoGeometry.Text);
+        Assert.AreEqual("Not drawn in this view type", HiddenReasons.NotInViewType.Text);
+        Assert.AreEqual(HiddenCause.NotDrawn, HiddenReasons.NoGeometry.Cause);
+        Assert.IsFalse(HiddenReasons.NotInViewType.CanShow);
     }
 
     [TestMethod]
     public void CeilingCuesNameRange()
     {
-        Assert.AreEqual("Below cut plane", HiddenCues.BelowCutPlane.Text);
-        Assert.AreEqual(HiddenCauseKind.BelowViewDepth, HiddenCues.BelowCutPlane.Kind);
-        Assert.AreEqual("Above view range", HiddenCues.AboveViewRange.Text);
+        Assert.AreEqual("Below cut plane", HiddenReasons.BelowCutPlane.Text);
+        Assert.AreEqual(HiddenCause.BelowRange, HiddenReasons.BelowCutPlane.Cause);
+        Assert.AreEqual("Above view range", HiddenReasons.AboveViewRange.Text);
     }
 
     [TestMethod]
     public void NotDrawnFollowsPhase()
     {
-        var result = WhyHiddenResult.Of([HiddenCues.AboveCutPlane, HiddenCues.NoGeometry, HiddenCues.CreatedLater("Phase 2")], 1);
+        var result = WhyHidden.Of([HiddenReasons.AboveCutPlane, HiddenReasons.NoGeometry, HiddenReasons.CreatedLater("Phase 2")], 1);
 
-        Assert.AreEqual(HiddenCauseKind.Phase, result.First.Kind);
-        Assert.AreEqual(HiddenCauseKind.NotDrawn, result.Causes[1].Kind);
+        Assert.AreEqual(HiddenCause.Phase, result.First.Cause);
+        Assert.AreEqual(HiddenCause.NotDrawn, result.Reasons[1].Cause);
     }
 
     [TestMethod]
     public void NotModelViewStaysAlone()
     {
-        var result = WhyHiddenResult.Of([HiddenCues.NotModelView], 1);
+        var result = WhyHidden.Of([HiddenReasons.NotModelView], 1);
 
         Assert.AreEqual("Not a model view", result.First.Text);
     }
@@ -114,44 +114,44 @@ public sealed class WhyHiddenTests
     [TestMethod]
     public void CausesFollowCheckOrder()
     {
-        var result = WhyHiddenResult.Of(
+        var result = WhyHidden.Of(
         [
-            HiddenCues.OutsideCrop,
-            HiddenCues.AboveCutPlane,
-            HiddenCues.OwnerView("L1"),
-            HiddenCues.DesignOption("Option 2"),
-            HiddenCues.CreatedLater("Phase 2"),
-            HiddenCues.WorksetClosed("Shell"),
-            HiddenCues.Filter("Walls-Demo"),
-            HiddenCues.Category("Walls"),
-            HiddenCues.HiddenInView,
-            HiddenCues.TemporaryHideIsolate,
-            HiddenCues.LinkDisplayMode("Custom"),
-            HiddenCues.LinkHidden
+            HiddenReasons.OutsideCrop,
+            HiddenReasons.AboveCutPlane,
+            HiddenReasons.OwnerView("L1"),
+            HiddenReasons.DesignOption("Option 2"),
+            HiddenReasons.CreatedLater("Phase 2"),
+            HiddenReasons.WorksetClosed("Shell"),
+            HiddenReasons.Filter("Walls-Demo"),
+            HiddenReasons.Category("Walls"),
+            HiddenReasons.InView,
+            HiddenReasons.Temporary,
+            HiddenReasons.LinkDisplayMode("Custom"),
+            HiddenReasons.LinkInstance
         ], 1);
 
-        var kinds = result.Causes.Select(cause => cause.Kind).ToArray();
+        var causes = result.Reasons.Select(reason => reason.Cause).ToArray();
         CollectionAssert.AreEqual(new[]
         {
-            HiddenCauseKind.LinkHidden,
-            HiddenCauseKind.LinkDisplayMode,
-            HiddenCauseKind.TemporaryHideIsolate,
-            HiddenCauseKind.HiddenInView,
-            HiddenCauseKind.Category,
-            HiddenCauseKind.Filter,
-            HiddenCauseKind.Workset,
-            HiddenCauseKind.Phase,
-            HiddenCauseKind.DesignOption,
-            HiddenCauseKind.OwnerView,
-            HiddenCauseKind.AboveCutPlane,
-            HiddenCauseKind.OutsideCrop
-        }, kinds);
+            HiddenCause.LinkInstance,
+            HiddenCause.LinkDisplayMode,
+            HiddenCause.Temporary,
+            HiddenCause.InView,
+            HiddenCause.Category,
+            HiddenCause.Filter,
+            HiddenCause.Workset,
+            HiddenCause.Phase,
+            HiddenCause.DesignOption,
+            HiddenCause.OwnerView,
+            HiddenCause.AboveRange,
+            HiddenCause.OutsideCrop
+        }, causes);
     }
 
     [TestMethod]
     public void SameKindKeepsCheckOrder()
     {
-        var result = WhyHiddenResult.Of([HiddenCues.Filter("B"), HiddenCues.Filter("A")], 1);
+        var result = WhyHidden.Of([HiddenReasons.Filter("B"), HiddenReasons.Filter("A")], 1);
 
         Assert.AreEqual("Filter: B", result.First.Text);
     }
@@ -159,39 +159,57 @@ public sealed class WhyHiddenTests
     [TestMethod]
     public void DuplicateCausesCollapse()
     {
-        var result = WhyHiddenResult.Of([HiddenCues.Category("Walls"), HiddenCues.Category("Walls")], 1);
+        var result = WhyHidden.Of([HiddenReasons.Category("Walls"), HiddenReasons.Category("Walls")], 1);
 
-        Assert.AreEqual(1, result.Causes.Count);
+        Assert.AreEqual(1, result.Reasons.Count);
     }
 
     [TestMethod]
     public void JournalHideComesFirst()
     {
-        var journal = new JournalState(1, [new JournalEntry(Linked, "uid-7")], false);
+        var journal = new JournalPage(1, [new LinkHide(Linked, "uid-7")], false);
 
-        var result = WhyHiddenResult.Of([HiddenCues.Category("Doors")], 3).WithJournal(journal, Linked);
+        var result = WhyHidden.Of([HiddenReasons.Category("Doors")], 3).WithJournal(journal, Linked, false);
 
-        Assert.AreEqual(HiddenCues.HiddenInLink, result.First);
-        Assert.AreEqual(2, result.Causes.Count);
+        Assert.AreEqual(HiddenReasons.LinkElement, result.First);
+        Assert.AreEqual(2, result.Reasons.Count);
         Assert.AreEqual(3, result.ElapsedMs);
     }
 
     [TestMethod]
     public void JournalHideReplacesNoneFound()
     {
-        var journal = new JournalState(1, [new JournalEntry(Linked, "uid-7")], false);
+        var journal = new JournalPage(1, [new LinkHide(Linked, "uid-7")], false);
 
-        var result = WhyHiddenResult.Of([], 1).WithJournal(journal, Linked);
+        var result = WhyHidden.Of([], 1).WithJournal(journal, Linked, false);
 
-        CollectionAssert.AreEqual(new[] { HiddenCues.HiddenInLink }, result.Causes.ToArray());
+        CollectionAssert.AreEqual(new[] { HiddenReasons.LinkElement }, result.Reasons.ToArray());
     }
 
     [TestMethod]
     public void OtherElementIgnoresJournal()
     {
-        var journal = new JournalState(1, [new JournalEntry(new ElementRef(FakeModelGenerator.Mep, 8), "uid-8")], false);
-        var before = WhyHiddenResult.Of([], 1);
+        var journal = new JournalPage(1, [new LinkHide(new ElementRef(FakeModelGenerator.Mep, 8), "uid-8")], false);
+        var before = WhyHidden.Of([], 1);
 
-        Assert.AreSame(before, before.WithJournal(journal, Linked));
+        Assert.AreSame(before, before.WithJournal(journal, Linked, false));
+    }
+
+    [TestMethod]
+    public void UserHideLosesShowFix()
+    {
+        var result = WhyHidden.Of([HiddenReasons.Temporary], 1)
+            .WithJournal(JournalPage.Empty, Linked, false);
+
+        Assert.IsFalse(result.First.CanShow);
+    }
+
+    [TestMethod]
+    public void PanelHideKeepsShowFix()
+    {
+        var result = WhyHidden.Of([HiddenReasons.Temporary], 1)
+            .WithJournal(JournalPage.Empty, Linked, true);
+
+        Assert.IsTrue(result.First.CanShow);
     }
 }

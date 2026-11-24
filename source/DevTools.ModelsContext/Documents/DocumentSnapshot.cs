@@ -5,6 +5,8 @@ namespace DevTools.ModelsContext.Documents;
 
 public sealed class DocumentSnapshot
 {
+    public const int MaxGroupingDepth = 3;
+
     private readonly Dictionary<long, int> _groupIndex = [];
     private readonly List<GroupRow> _groups = [];
     private readonly RowIdIndex _rowIndex;
@@ -14,7 +16,7 @@ public sealed class DocumentSnapshot
 
     internal DocumentSnapshot(SourceId source, int groupingDepth)
     {
-        if (groupingDepth is < 1 or > TreeSchema.MaxGroupingDepth)
+        if (groupingDepth is < 1 or > MaxGroupingDepth)
         {
             throw new ArgumentOutOfRangeException(nameof(groupingDepth));
         }
@@ -358,7 +360,7 @@ public sealed class DocumentSnapshot
             return;
         }
 
-        Span<int> path = stackalloc int[TreeSchema.MaxGroupingDepth];
+        Span<int> path = stackalloc int[MaxGroupingDepth];
         var length = PathOf(row, path);
         Counts.Add(path[..length], amount);
     }

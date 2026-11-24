@@ -9,30 +9,32 @@ namespace RevitDevTool.Tools.ModelsContext.Visibility;
 
 internal sealed class RevitViewActions : IViewActions
 {
-    public const string Needs3DView = "Section box needs a 3D view.";
-    public const string NoTemporaryProperties = "This view cannot take temporary overrides.";
-    public const string ModelChanged = "The active model changed.";
-    public const string NothingToFrame = "Nothing to frame.";
-
     private const string TransactionName = "Model Context";
     private const string IsolateName = "Model Context Isolate";
+    private const string HideName = "Model Context Hide";
     private const double ZoomFactor = 1.25;
     private const double BoxFactor = 1.0;
 
     private readonly Dictionary<(string Model, ElementId View), Dictionary<ElementId, OverrideGraphicSettings>> _prior = [];
-    private readonly Dictionary<(string Model, ElementId View), HashSet<ElementId>> _isolated = [];
-    private string? _notice;
+    private readonly Dictionary<(string Model, ElementId View), CategoriesOff> _categoriesOff = [];
 
-    public string? TakeNotice()
+    public void Rename(string oldId, string newId)
     {
-        var notice = _notice;
-        _notice = null;
-        return notice;
+        Move(_prior, oldId, newId);
+        Move(_categoriesOff, oldId, newId);
     }
 
-    public Task<IReadOnlyList<ElementRef>> ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken)
+    private static void Move<T>(Dictionary<(string Model, ElementId View), T> records, string oldId, string newId)
     {
-        _notice = null;
+        foreach (var pair in records.Where(pair => pair.Key.Model == oldId).ToList())
+        {
+            records.Remove(pair.Key);
+            records[(newId, pair.Key.View)] = pair.Value;
+        }
+    }
+
+    public Task<PlanOutcome> ExecuteAsync(VisibilityPlan plan, CancellationToken cancellationToken)
+    {
         if (plan.DisabledReason is { } reason)
         {
             throw new InvalidOperationException(reason);
@@ -49,18 +51,15 @@ internal sealed class RevitViewActions : IViewActions
             return IsolateWithLinksAsync(plan, cancellationToken);
         }
 
-        if (!plan.UsesReferenceCommands)
+        if (!plan.UsesLinkHide)
         {
-            return RevitProfiler.RunAsync<IReadOnlyList<ElementRef>>("Visibility", application =>
-            {
-                Execute(application, plan);
-                return [];
-            }, cancellationToken);
+            return RevitProfiler.RunAsync("Visibility", application => new PlanOutcome([], Execute(application, plan)),
+                cancellationToken);
         }
 
         if (plan.Action != VisibilityAction.Hide)
         {
-            throw new InvalidOperationException(VisibilityReasons.LinkOverrideNeedsRule);
+            throw new InvalidOperationException(VisibilityText.LinkOverrideNeedsRule);
         }
 
         return HideWithLinksAsync(plan, cancellationToken);
@@ -71,15 +70,15 @@ internal sealed class RevitViewActions : IViewActions
         var linked = elements.Where(element => !element.Document.IsCurrentModel).ToList();
         return linked.Count == 0
             ? Task.CompletedTask
-            : RevitProfiler.RunAsync("Show links", application => LinkedHideShow.Show(application, linked),
+            : RevitProfiler.RunAsync("Show links", application => LinkHideShow.Show(application, linked),
                 cancellationToken);
     }
 
-    public Task KeepAsync(CancellationToken cancellationToken)
+    public Task KeepAsync(string? viewId, CancellationToken cancellationToken)
     {
         return RevitProfiler.RunAsync("Keep", application =>
         {
-            var (active, view) = RequireView(application);
+            var (active, view) = CurrentView.Require(application, viewId);
             if (!view.IsTemporaryHideIsolateActive())
             {
                 return;
@@ -93,16 +92,16 @@ internal sealed class RevitViewActions : IViewActions
         }, cancellationToken);
     }
 
-    public Task ResetAsync(CancellationToken cancellationToken)
+    public Task ResetAsync(string? viewId, CancellationToken cancellationToken)
     {
         return RevitProfiler.RunAsync("Reset", application =>
         {
-            var (active, view) = RequireView(application);
+            var (active, view) = CurrentView.Require(application, viewId);
             var hideIsolate = view.IsTemporaryHideIsolateActive();
             var properties = IsPropertiesModeActive(view);
             var key = KeyOf(active.Document, view);
             _prior.TryGetValue(key, out var prior);
-            var filters = LinkFilters.HasAny(active.Document, view);
+            var filters = LinkViewFilters.HasAny(active.Document, view);
             if (!hideIsolate && !properties && prior is null && !filters)
             {
                 return;
@@ -111,7 +110,7 @@ internal sealed class RevitViewActions : IViewActions
             RevitErrors.EnsureEditable(active.Document);
             using var transaction = new Transaction(active.Document, TransactionName);
             transaction.Start();
-            var failed = LinkFilters.Remove(active.Document, view);
+            var failed = LinkViewFilters.Remove(active.Document, view);
             if (hideIsolate)
             {
                 view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
@@ -132,7 +131,7 @@ internal sealed class RevitViewActions : IViewActions
 
             transaction.Commit();
             _prior.Remove(key);
-            _isolated.Remove(key);
+            _categoriesOff.Remove(key);
             if (failed is not null)
             {
                 throw new InvalidOperationException(failed);
@@ -144,10 +143,10 @@ internal sealed class RevitViewActions : IViewActions
     {
         return RevitProfiler.RunAsync("Zoom", application =>
         {
-            var (active, view) = RequireView(application);
-            if (!TryFrame(active.Document, view, elements, ZoomFactor, out var min, out var max))
+            var (active, view) = CurrentView.Require(application);
+            if (!ViewFraming.TryFrame(active.Document, view, elements, ZoomFactor, out var min, out var max))
             {
-                throw new InvalidOperationException(NothingToFrame);
+                throw new InvalidOperationException(VisibilityText.NothingToFrame);
             }
 
             active.GetOpenUIViews().FirstOrDefault(open => open.ViewId == view.Id)?.ZoomAndCenterRectangle(min, max);
@@ -158,15 +157,15 @@ internal sealed class RevitViewActions : IViewActions
     {
         return RevitProfiler.RunAsync("Section box", application =>
         {
-            var (active, view) = RequireView(application);
+            var (active, view) = CurrentView.Require(application);
             if (view is not View3D view3D)
             {
-                throw new InvalidOperationException(Needs3DView);
+                throw new InvalidOperationException(VisibilityText.Needs3DView);
             }
 
-            if (!TryFrame(active.Document, view, elements, BoxFactor, out var min, out var max))
+            if (!ViewFraming.TryFrame(active.Document, view, elements, BoxFactor, out var min, out var max))
             {
-                throw new InvalidOperationException(NothingToFrame);
+                throw new InvalidOperationException(VisibilityText.NothingToFrame);
             }
 
             ElementBox.Expand(min, max, ZoomFactor, out var boxMin, out var boxMax);
@@ -179,21 +178,21 @@ internal sealed class RevitViewActions : IViewActions
         }, cancellationToken);
     }
 
-    public Task<TemporaryState?> ReadTemporaryStateAsync(CancellationToken cancellationToken)
+    public Task<ActiveView?> ReadActiveViewAsync(CancellationToken cancellationToken)
     {
-        return RevitProfiler.RunAsync<TemporaryState?>("Temporary state", application =>
+        return RevitProfiler.RunAsync<ActiveView?>("Temporary state", application =>
         {
             if (application.ActiveUIDocument is not { ActiveView: { } view } active)
             {
                 return null;
             }
 
-            return new TemporaryState(ViewInfoOf(active.Document, view), view.IsTemporaryHideIsolateActive(),
-                IsPropertiesModeActive(view));
+            return new ActiveView(CurrentView.InfoOf(active.Document, view),
+                view.IsTemporaryHideIsolateActive() || IsPropertiesModeActive(view));
         }, cancellationToken);
     }
 
-    public async Task<IReadOnlyCollection<long>> GetIdsHiddenPermanentlyOrTemporarilyAsync(
+    public async Task<IReadOnlyCollection<long>> ReadHiddenAsync(
         DocumentKey document,
         IReadOnlyCollection<long> candidates,
         CancellationToken cancellationToken)
@@ -230,15 +229,9 @@ internal sealed class RevitViewActions : IViewActions
         return hidden;
     }
 
-    internal static ViewInfo ViewInfoOf(Document model, View view)
-    {
-        return new ViewInfo(DocumentRegistry.KeyOf(model),
-            view.Id.ToString(), view.Name, ElementDrawing.KindOf(view));
-    }
-
     private HashSet<ElementId> IsolatedOutOf(Document model, View view)
     {
-        return IsPropertiesModeActive(view) && _isolated.TryGetValue(KeyOf(model, view), out var hidden) ? hidden : [];
+        return IsPropertiesModeActive(view) && _categoriesOff.TryGetValue(KeyOf(model, view), out var off) ? off.All : [];
     }
 
     private static (int Next, List<long> Hidden) HiddenSlice(
@@ -269,82 +262,81 @@ internal sealed class RevitViewActions : IViewActions
     {
         return element.IsHidden(view)
                || (temporary && !view.IsElementVisibleInTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate, element.Id))
-               || (element.Category is { } category && isolatedOut.Contains(category.Id));
+               || (element.Category is { } category
+                   && (isolatedOut.Contains(category.Id) || category.Parent is { } parent && isolatedOut.Contains(parent.Id)));
     }
 
-    private Task<IReadOnlyList<ElementRef>> HideWithLinksAsync(VisibilityPlan plan, CancellationToken cancellationToken)
+    private Task<PlanOutcome> HideWithLinksAsync(VisibilityPlan plan, CancellationToken cancellationToken)
     {
-        var apiSteps = plan.Steps.Where(step => step is not ReferenceCommandStep).ToList();
-        var linked = plan.Steps.OfType<ReferenceCommandStep>()
+        var apiSteps = plan.Steps.Where(step => step is not LinkElementsStep).ToList();
+        var linked = plan.Steps.OfType<LinkElementsStep>()
             .SelectMany(step => step.Ids.Select(id => new ElementRef(step.Document, id)))
             .ToList();
-        return RevitProfiler.RunAsync<IReadOnlyList<ElementRef>>("Hide links", application =>
+        return RevitProfiler.RunAsync("Hide links", application =>
         {
-            if (apiSteps.Count > 0)
+            var (active, _) = CurrentView.Require(application, plan.ViewId);
+            return InGroup(active.Document, HideName, () =>
             {
-                Execute(application, plan with { Steps = apiSteps });
-            }
-
-            LinkedHideShow.Hide(application, linked);
-            return linked;
+                var notice = apiSteps.Count > 0 ? Execute(application, plan with { Steps = apiSteps }) : null;
+                return new PlanOutcome(LinkHideShow.Hide(application, linked), notice);
+            });
         }, cancellationToken);
     }
 
-    private Task<IReadOnlyList<ElementRef>> IsolateWithLinksAsync(VisibilityPlan plan, CancellationToken cancellationToken)
+    private Task<PlanOutcome> IsolateWithLinksAsync(VisibilityPlan plan, CancellationToken cancellationToken)
     {
-        return RevitProfiler.RunAsync<IReadOnlyList<ElementRef>>("Isolate links", application =>
+        return RevitProfiler.RunAsync("Isolate links", application =>
         {
-            var (active, view) = RequireView(application);
-            if (plan.ViewId is { } viewId && viewId != view.Id.ToString())
-            {
-                throw new InvalidOperationException(VisibilityReasons.ViewChanged);
-            }
-
+            var (active, view) = CurrentView.Require(application, plan.ViewId);
             if (view.IsInTemporaryViewMode(TemporaryViewMode.RevealHiddenElements))
             {
-                throw new InvalidOperationException(VisibilityReasons.RevealOn);
+                throw new InvalidOperationException(VisibilityText.RevealOn);
             }
 
             var model = active.Document;
             var rest = LinkIsolation.RestOf(model, view, plan.Steps.OfType<LinkIsolateStep>());
-            RevitErrors.EnsureEditable(model);
-            using var group = new TransactionGroup(model, IsolateName);
-            group.Start();
-            try
+            return InGroup(model, IsolateName, () =>
             {
-                Execute(application, plan);
-                if (rest.Count > 0)
-                {
-                    LinkedHideShow.Hide(application, rest);
-                }
-
-                group.Assimilate();
-            }
-            catch
-            {
-                if (group.HasStarted())
-                {
-                    group.RollBack();
-                }
-
-                throw;
-            }
-
-            return rest;
+                var notice = Execute(application, plan);
+                return new PlanOutcome(rest.Count > 0 ? LinkHideShow.Hide(application, rest) : [], notice);
+            });
         }, cancellationToken);
     }
 
-    private void Execute(UIApplication application, VisibilityPlan plan)
+    private static PlanOutcome InGroup(Document model, string name, Func<PlanOutcome> work)
     {
-        var (active, view) = RequireView(application);
+        RevitErrors.EnsureEditable(model);
+        using var group = new TransactionGroup(model, name);
+        group.Start();
+        try
+        {
+            var outcome = work();
+            group.Assimilate();
+            return outcome;
+        }
+        catch
+        {
+            if (group.HasStarted())
+            {
+                group.RollBack();
+            }
+
+            throw;
+        }
+    }
+
+    private string? Execute(UIApplication application, VisibilityPlan plan)
+    {
+        var (active, view) = CurrentView.Require(application, plan.ViewId);
         var model = active.Document;
         var (ids, categories) = CollectTargets(model, plan.Steps);
-        var filters = LinkFilters.Prepare(model, view, plan.Steps.OfType<LinkFilterStep>());
+        var filters = LinkViewFilters.Prepare(model, view, plan.Steps.OfType<LinkFilterStep>());
         RevitErrors.EnsureEditable(model);
         using var transaction = new Transaction(model, TransactionName);
         transaction.Start();
-        ApplyAction(model, view, plan, ids, categories, filters);
+        var notice = ApplyAction(model, view, plan, ids, categories, filters);
         transaction.Commit();
+        return notice;
     }
 
     private static (string Model, ElementId View) KeyOf(Document model, View view)
@@ -366,7 +358,7 @@ internal sealed class RevitViewActions : IViewActions
 
     private static (List<ElementId> Ids, List<ElementId> Categories) CollectTargets(
         Document model,
-        IEnumerable<VisibilityStep> steps)
+        IEnumerable<PlanStep> steps)
     {
         var modelId = DocumentRegistry.ModelIdOf(model);
         var ids = new List<ElementId>();
@@ -380,7 +372,7 @@ internal sealed class RevitViewActions : IViewActions
                     EnsureModel(elements.Document, modelId);
                     NestedComponents.AddWithNested(model, elements.Ids.Select(id => id.ToElementId()), ids, seen);
                     break;
-                case AttachedModelStep link:
+                case LinkInstanceStep link:
                     EnsureModel(link.Document, modelId);
                     AddLinkInstance(model, link.Document, ids);
                     break;
@@ -391,8 +383,8 @@ internal sealed class RevitViewActions : IViewActions
                 case LinkFilterStep filter:
                     EnsureModel(filter.Document, modelId);
                     break;
-                case GroupEverywhereStep group:
-                    categories.Add(group.GroupId.ToElementId());
+                case CategoryStep group:
+                    categories.Add(group.CategoryId.ToElementId());
                     break;
             }
         }
@@ -408,7 +400,7 @@ internal sealed class RevitViewActions : IViewActions
         }
     }
 
-    private void ApplyAction(
+    private string? ApplyAction(
         Document model,
         View view,
         VisibilityPlan plan,
@@ -419,34 +411,25 @@ internal sealed class RevitViewActions : IViewActions
         switch (plan.Action)
         {
             case VisibilityAction.Hide:
-                Hide(view, ids, categories);
+                Hide(model, view, ids, categories);
                 break;
             case VisibilityAction.Isolate:
                 Isolate(model, view, ids, categories);
-                _notice = categories.Count > 0 ? NoticeOf(model, view) : null;
                 break;
             case VisibilityAction.Halftone:
             case VisibilityAction.Color:
                 Override(model, view, plan, ids, categories, filters);
                 break;
         }
-    }
 
-    internal static (UIDocument Active, View View) RequireView(UIApplication application)
-    {
-        if (application.ActiveUIDocument is not { } active)
-        {
-            throw new InvalidOperationException(RevitErrors.Busy);
-        }
-
-        return (active, active.ActiveView ?? throw new InvalidOperationException(RevitErrors.NoActiveView));
+        return categories.Count > 0 ? NoticeOf(model, view) : null;
     }
 
     private static void EnsureModel(DocumentKey document, string modelId)
     {
         if (!string.Equals(document.ModelId, modelId, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException(ModelChanged);
+            throw new InvalidOperationException(VisibilityText.ModelChanged);
         }
     }
 
@@ -455,17 +438,25 @@ internal sealed class RevitViewActions : IViewActions
         return view.TemporaryViewModes?.IsModeActive(TemporaryViewMode.TemporaryViewProperties) == true;
     }
 
-    private static void Hide(View view, List<ElementId> ids, List<ElementId> categories)
+    private void Hide(Document model, View view, List<ElementId> ids, List<ElementId> categories)
     {
         if (ids.Count > 0)
         {
             view.HideElementsTemporary(ids);
         }
 
-        var hideable = categories.Where(view.CanCategoryBeHiddenTemporary).ToList();
-        if (hideable.Count > 0)
+        var hideable = categories.Where(view.CanCategoryBeHidden).ToList();
+        if (hideable.Count == 0)
         {
-            view.HideCategoriesTemporary(hideable);
+            return;
+        }
+
+        EnsurePropertiesMode(view);
+        var off = CategoriesOffOf(model, view);
+        foreach (var category in hideable)
+        {
+            view.SetCategoryHidden(category, true);
+            off.Hidden.Add(category);
         }
     }
 
@@ -479,8 +470,31 @@ internal sealed class RevitViewActions : IViewActions
         if (categories.Count > 0)
         {
             EnsurePropertiesMode(view);
-            _isolated[KeyOf(model, view)] = CategoryIsolation.Apply(model, view, categories);
+            var off = CategoriesOffOf(model, view);
+            off.Isolated.Clear();
+            off.Isolated.UnionWith(CategoryIsolation.Apply(model, view, categories, off.Hidden));
         }
+    }
+
+    private CategoriesOff CategoriesOffOf(Document model, View view)
+    {
+        var key = KeyOf(model, view);
+        if (!_categoriesOff.TryGetValue(key, out var off))
+        {
+            off = new CategoriesOff();
+            _categoriesOff.Add(key, off);
+        }
+
+        return off;
+    }
+
+    private sealed class CategoriesOff
+    {
+        public HashSet<ElementId> Hidden { get; } = [];
+
+        public HashSet<ElementId> Isolated { get; } = [];
+
+        public HashSet<ElementId> All => [.. Hidden, .. Isolated];
     }
 
     private static string? NoticeOf(Document model, View view)
@@ -491,7 +505,7 @@ internal sealed class RevitViewActions : IViewActions
             .Count(instance => instance.GetLinkDocument() is not null
                                && !instance.IsHidden(view)
                                && RevitVisibilityExplainer.DisplayModeOf(view, instance) is not null);
-        return own == 0 ? null : VisibilityReasons.LinksKeepOwnSettings;
+        return own == 0 ? null : VisibilityText.LinksKeepOwnSettings;
     }
 
     private void Override(
@@ -520,7 +534,7 @@ internal sealed class RevitViewActions : IViewActions
             view.SetCategoryOverrides(category, Apply(view.GetCategoryOverrides(category), plan, solid));
         }
 
-        LinkFilters.Apply(model, view, filters, settings => Apply(settings, plan, solid));
+        LinkViewFilters.Apply(model, view, filters, settings => Apply(settings, plan, solid));
     }
 
     private static void EnsurePropertiesMode(View view)
@@ -532,7 +546,7 @@ internal sealed class RevitViewActions : IViewActions
 
         if (!view.CanEnableTemporaryViewPropertiesMode())
         {
-            throw new InvalidOperationException(NoTemporaryProperties);
+            throw new InvalidOperationException(VisibilityText.NoTemporaryProperties);
         }
 
         view.EnableTemporaryViewPropertiesMode(view.ViewTemplateId == ElementId.InvalidElementId
@@ -573,55 +587,4 @@ internal sealed class RevitViewActions : IViewActions
             ?.Id;
     }
 
-    private static bool TryFrame(
-        Document model,
-        View view,
-        IReadOnlyCollection<ElementRef> elements,
-        double factor,
-        out XYZ min,
-        out XYZ max)
-    {
-        XYZ? unionMin = null;
-        XYZ? unionMax = null;
-        foreach (var group in DocumentRegistry.GroupByDocument(model, elements))
-        {
-            if (TryBoxGroup(model, view, group, out var boxMin, out var boxMax))
-            {
-                ElementBox.Union(ref unionMin, ref unionMax, boxMin, boxMax);
-            }
-        }
-
-        if (unionMin is null || unionMax is null)
-        {
-            min = XYZ.Zero;
-            max = XYZ.Zero;
-            return false;
-        }
-
-        ElementBox.Expand(unionMin, unionMax, factor, out min, out max);
-        return true;
-    }
-
-    private static bool TryBoxGroup(
-        Document model,
-        View view,
-        IGrouping<DocumentKey, ElementRef> group,
-        out XYZ min,
-        out XYZ max)
-    {
-        var ids = group.Select(element => element.Id.ToElementId()).ToList();
-        if (group.Key.IsCurrentModel)
-        {
-            return ElementBox.TryBox(model, ids, view, 1.0, out min, out max);
-        }
-
-        if (model.GetElement(group.Key.LinkInstanceId.ToElementId()) is RevitLinkInstance instance)
-        {
-            return ElementBox.TryBox(instance, ids, view, 1.0, out min, out max);
-        }
-
-        min = XYZ.Zero;
-        max = XYZ.Zero;
-        return false;
-    }
 }

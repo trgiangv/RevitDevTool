@@ -4,17 +4,6 @@ using DevTools.ModelsContext.Filters;
 
 namespace DevTools.ModelsContext.Visibility;
 
-public enum VisibilityAction
-{
-    Show,
-    Hide,
-    Isolate,
-    Halftone,
-    Color
-}
-
-public readonly record struct RgbColor(byte R, byte G, byte B);
-
 public sealed record VisibilityRequest(
     VisibilityAction Action,
     IReadOnlyList<TreeRow> Rows,
@@ -22,7 +11,7 @@ public sealed record VisibilityRequest(
     RgbColor? Color = null,
     FilterDefinition? Filter = null)
 {
-    public static VisibilityRequest ForRows(VisibilityAction action, params TreeRow[] rows)
+    public static VisibilityRequest ForRows(VisibilityAction action, params IReadOnlyList<TreeRow> rows)
     {
         return new VisibilityRequest(action, rows, []);
     }

@@ -5,30 +5,51 @@ namespace DevTools.ModelsContext.Visibility;
 
 internal sealed class ViewLedger
 {
-    public HashSet<ElementRef> Elements { get; } = [];
+    public HashSet<ElementRef> HiddenElements { get; } = [];
 
-    public Dictionary<long, string> Groups { get; } = [];
+    public Dictionary<long, string> HiddenCategories { get; } = [];
 
-    public HashSet<DocumentKey> Links { get; } = [];
+    public HashSet<DocumentKey> HiddenLinks { get; } = [];
 
-    public List<VisibilityPlan> Appearance { get; } = [];
+    public List<VisibilityPlan> OverridePlans { get; } = [];
 
-    public Dictionary<ElementRef, RowOverride> Marks { get; } = [];
+    public Dictionary<ElementRef, RowOverride> Overrides { get; } = [];
 
-    public Dictionary<long, RowOverride> Categories { get; } = [];
+    public Dictionary<long, RowOverride> CategoryOverrides { get; } = [];
 
-    public LedgerIsolation? Isolation { get; set; }
+    public Isolation? Isolation { get; set; }
 
-    public bool IsEmpty => Elements.Count == 0 && Groups.Count == 0 && Links.Count == 0 && Isolation is null;
+    public Dictionary<DocumentKey, HashSet<long>> CategoryOffIds { get; } = [];
 
-    public bool IsHidden(ElementRef element, long groupId)
+    public bool IsCategoryOff(long categoryId)
     {
-        if (Isolation is { } isolation && !isolation.Keeps(element, groupId))
+        return HiddenCategories.ContainsKey(categoryId)
+               || Isolation is { KeptCategories.Count: > 0 } isolation && !isolation.KeptCategories.Contains(categoryId);
+    }
+
+    public void AddCategoryOffIds(DocumentKey document, IEnumerable<long> ids)
+    {
+        if (!CategoryOffIds.TryGetValue(document, out var set))
+        {
+            set = [];
+            CategoryOffIds.Add(document, set);
+        }
+
+        set.UnionWith(ids);
+    }
+
+    public bool IsEmpty => HiddenElements.Count == 0 && HiddenCategories.Count == 0 && HiddenLinks.Count == 0
+                           && Isolation is null;
+
+    public bool IsHidden(ElementRef element, long categoryId)
+    {
+        if (Isolation is { } isolation && !isolation.Keeps(element, categoryId))
         {
             return true;
         }
 
-        return Elements.Contains(element) || Groups.ContainsKey(groupId) || Links.Contains(element.Document);
+        return HiddenElements.Contains(element) || HiddenCategories.ContainsKey(categoryId)
+                                                || HiddenLinks.Contains(element.Document);
     }
 
     public void Add(VisibilityPlan plan)
@@ -37,17 +58,17 @@ internal sealed class ViewLedger
         {
             switch (step)
             {
-                case GroupEverywhereStep group:
-                    Groups[group.GroupId] = group.GroupName;
+                case CategoryStep category:
+                    HiddenCategories[category.CategoryId] = category.Name;
                     break;
-                case AttachedModelStep model:
-                    Links.Add(model.Document);
+                case LinkInstanceStep link:
+                    HiddenLinks.Add(link.Document);
                     break;
                 case ElementsStep elements:
-                    Elements.UnionWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
+                    HiddenElements.UnionWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
                     break;
-                case ReferenceCommandStep references:
-                    Elements.UnionWith(references.Ids.Select(id => new ElementRef(references.Document, id)));
+                case LinkElementsStep linked:
+                    HiddenElements.UnionWith(linked.Ids.Select(id => new ElementRef(linked.Document, id)));
                     break;
             }
         }
@@ -59,37 +80,37 @@ internal sealed class ViewLedger
         {
             switch (step)
             {
-                case GroupEverywhereStep group:
-                    Groups.Remove(group.GroupId);
+                case CategoryStep category:
+                    HiddenCategories.Remove(category.CategoryId);
                     break;
-                case AttachedModelStep model:
-                    Links.Remove(model.Document);
+                case LinkInstanceStep link:
+                    HiddenLinks.Remove(link.Document);
                     break;
                 case ElementsStep elements:
-                    Elements.ExceptWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
+                    HiddenElements.ExceptWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
                     break;
             }
         }
     }
 
-    public void Mark(VisibilityPlan plan)
+    public void AddOverrides(VisibilityPlan plan)
     {
         foreach (var step in plan.Steps)
         {
             switch (step)
             {
-                case GroupEverywhereStep group:
-                    Categories.TryGetValue(group.GroupId, out var category);
-                    Categories[group.GroupId] = category.With(plan);
+                case CategoryStep category:
+                    CategoryOverrides.TryGetValue(category.CategoryId, out var current);
+                    CategoryOverrides[category.CategoryId] = current.With(plan);
                     break;
-                case AttachedModelStep model:
-                    MarkElement(InstanceOf(model.Document), plan);
+                case LinkInstanceStep link:
+                    AddOverride(InstanceOf(link.Document), plan);
                     break;
                 case ElementsStep elements:
-                    MarkElements(elements.Document, elements.Ids, plan);
+                    AddOverrides(elements.Document, elements.Ids, plan);
                     break;
                 case LinkFilterStep filter:
-                    MarkElements(filter.Document, filter.Ids, plan);
+                    AddOverrides(filter.Document, filter.Ids, plan);
                     break;
             }
         }
@@ -97,39 +118,100 @@ internal sealed class ViewLedger
 
     public void Forget(DocumentKey link)
     {
-        foreach (var element in Marks.Keys.Where(element => element.Document == link).ToList())
+        foreach (var element in Overrides.Keys.Where(element => element.Document == link).ToList())
         {
-            Marks.Remove(element);
+            Overrides.Remove(element);
         }
 
-        Marks.Remove(InstanceOf(link));
-        Links.Remove(link);
-        Elements.RemoveWhere(element => element.Document == link);
-        Appearance.RemoveAll(plan => plan.Steps.Any(step => DocumentOf(step) == link));
+        Overrides.Remove(InstanceOf(link));
+        HiddenLinks.Remove(link);
+        HiddenElements.RemoveWhere(element => element.Document == link);
+        CategoryOffIds.Remove(link);
+        OverridePlans.RemoveAll(plan => plan.Steps.Any(step => step is DocumentStep document && document.Document == link));
         if (Isolation is { } isolation)
         {
-            isolation.Links.Remove(link);
-            isolation.Rest.RemoveWhere(element => element.Document == link);
+            isolation.KeptLinks.Remove(link);
+            isolation.HiddenRest.RemoveWhere(element => element.Document == link);
         }
     }
 
-    private static DocumentKey? DocumentOf(VisibilityStep step)
+    public void Keep()
     {
-        return step switch
+        HiddenElements.Clear();
+        HiddenLinks.Clear();
+        Isolation = Isolation is { KeptCategories.Count: > 0 } isolation
+            ? new Isolation([], [.. isolation.KeptCategories], [], [])
+            : null;
+    }
+
+    public void Rename(ModelRename rename)
+    {
+        var elements = HiddenElements.Select(rename.Map).ToList();
+        HiddenElements.Clear();
+        HiddenElements.UnionWith(elements);
+        var links = HiddenLinks.Select(rename.Map).ToList();
+        HiddenLinks.Clear();
+        HiddenLinks.UnionWith(links);
+        var off = CategoryOffIds.ToList();
+        CategoryOffIds.Clear();
+        foreach (var pair in off)
         {
-            AttachedModelStep model => model.Document,
-            LinkFilterStep filter => filter.Document,
-            LinkIsolateStep isolate => isolate.Document,
-            _ => null
-        };
+            CategoryOffIds[rename.Map(pair.Key)] = pair.Value;
+        }
+
+        var overrides = Overrides.ToList();
+        Overrides.Clear();
+        foreach (var pair in overrides)
+        {
+            Overrides[rename.Map(pair.Key)] = pair.Value;
+        }
+
+        for (var index = 0; index < OverridePlans.Count; index++)
+        {
+            OverridePlans[index] = OverridePlans[index].Renamed(rename);
+        }
+
+        if (Isolation is { } isolation)
+        {
+            Isolation = new Isolation([.. isolation.KeptElements.Select(rename.Map)], isolation.KeptCategories,
+                [.. isolation.KeptLinks.Select(rename.Map)], [.. isolation.HiddenRest.Select(rename.Map)]);
+        }
+    }
+
+    public bool DropLinkFilters()
+    {
+        var plans = OverridePlans.Where(plan => plan.Steps.Any(step => step is LinkFilterStep)).ToList();
+        foreach (var step in plans.SelectMany(plan => plan.Steps).OfType<LinkFilterStep>())
+        {
+            foreach (var id in step.Ids)
+            {
+                Overrides.Remove(new ElementRef(step.Document, id));
+            }
+        }
+
+        foreach (var plan in plans)
+        {
+            var index = OverridePlans.IndexOf(plan);
+            var rest = plan.Steps.Where(step => step is not LinkFilterStep).ToList();
+            if (rest.Count == 0)
+            {
+                OverridePlans.RemoveAt(index);
+            }
+            else
+            {
+                OverridePlans[index] = plan with { Steps = rest };
+            }
+        }
+
+        return plans.Count > 0;
     }
 
     public VisibilityPlan? HidePlan()
     {
-        var steps = new List<VisibilityStep>();
-        steps.AddRange(Groups.Select(pair => new GroupEverywhereStep(pair.Key, pair.Value)));
-        steps.AddRange(Links.Select(link => new AttachedModelStep(link)));
-        foreach (var group in Elements.Where(element => element.Document.IsCurrentModel)
+        var steps = new List<PlanStep>();
+        steps.AddRange(HiddenCategories.Select(pair => new CategoryStep(pair.Key, pair.Value)));
+        steps.AddRange(HiddenLinks.Select(link => new LinkInstanceStep(link)));
+        foreach (var group in HiddenElements.Where(element => element.Document.IsCurrentModel)
                      .GroupBy(element => element.Document))
         {
             steps.Add(new ElementsStep(group.Key, group.Select(element => element.Id).OrderBy(id => id).ToList()));
@@ -143,45 +225,45 @@ internal sealed class ViewLedger
         return new ElementRef(link.CurrentModel, link.LinkInstanceId);
     }
 
-    private void MarkElements(DocumentKey document, IEnumerable<long> ids, VisibilityPlan plan)
+    private void AddOverrides(DocumentKey document, IEnumerable<long> ids, VisibilityPlan plan)
     {
         foreach (var id in ids)
         {
-            MarkElement(new ElementRef(document, id), plan);
+            AddOverride(new ElementRef(document, id), plan);
         }
     }
 
-    private void MarkElement(ElementRef element, VisibilityPlan plan)
+    private void AddOverride(ElementRef element, VisibilityPlan plan)
     {
-        Marks.TryGetValue(element, out var mark);
-        Marks[element] = mark.With(plan);
+        Overrides.TryGetValue(element, out var current);
+        Overrides[element] = current.With(plan);
     }
 }
 
-internal sealed record LedgerIsolation(
-    HashSet<ElementRef> Elements,
-    HashSet<long> Groups,
-    HashSet<DocumentKey> Links,
-    HashSet<ElementRef> Rest)
+internal sealed record Isolation(
+    HashSet<ElementRef> KeptElements,
+    HashSet<long> KeptCategories,
+    HashSet<DocumentKey> KeptLinks,
+    HashSet<ElementRef> HiddenRest)
 {
-    public static LedgerIsolation From(VisibilityPlan plan, IEnumerable<ElementRef> rest)
+    public static Isolation From(VisibilityPlan plan, IEnumerable<ElementRef> hiddenRest)
     {
-        var isolation = new LedgerIsolation([], [], [], [.. rest]);
+        var isolation = new Isolation([], [], [], [.. hiddenRest]);
         foreach (var step in plan.Steps)
         {
             switch (step)
             {
-                case GroupEverywhereStep group:
-                    isolation.Groups.Add(group.GroupId);
+                case CategoryStep category:
+                    isolation.KeptCategories.Add(category.CategoryId);
                     break;
-                case AttachedModelStep model:
-                    isolation.Links.Add(model.Document);
+                case LinkInstanceStep link:
+                    isolation.KeptLinks.Add(link.Document);
                     break;
-                case LinkIsolateStep link:
-                    isolation.Links.Add(link.Document);
+                case LinkIsolateStep isolate:
+                    isolation.KeptLinks.Add(isolate.Document);
                     break;
                 case ElementsStep elements:
-                    isolation.Elements.UnionWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
+                    isolation.KeptElements.UnionWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
                     break;
             }
         }
@@ -189,8 +271,8 @@ internal sealed record LedgerIsolation(
         return isolation;
     }
 
-    public bool Keeps(ElementRef element, long groupId)
+    public bool Keeps(ElementRef element, long categoryId)
     {
-        return Elements.Contains(element) || Groups.Contains(groupId) || Links.Contains(element.Document);
+        return KeptElements.Contains(element) || KeptCategories.Contains(categoryId) || KeptLinks.Contains(element.Document);
     }
 }

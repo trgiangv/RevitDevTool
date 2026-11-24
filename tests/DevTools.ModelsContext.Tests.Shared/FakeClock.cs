@@ -13,8 +13,6 @@ public sealed class FakeClock : IClock, IScheduler
 
     SynchronizationContext IScheduler.Context => Context;
 
-    public int PendingCount => _queue.Count;
-
     public IDisposable Schedule(TimeSpan delay, Action action)
     {
         var item = new Scheduled(this, Now + delay, _sequence++, action);

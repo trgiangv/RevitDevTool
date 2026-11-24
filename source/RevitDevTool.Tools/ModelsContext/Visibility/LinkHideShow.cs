@@ -8,10 +8,8 @@ using ZLogger;
 
 namespace RevitDevTool.Tools.ModelsContext.Visibility;
 
-internal static class LinkedHideShow
+internal static class LinkHideShow
 {
-    public const string NotHidden = "Revit did not hide these linked elements.";
-
     private const string HandlerAssembly = "UIFrameworkServices";
     private const string HandlerType = "UIFrameworkServices.CommandHandlerService";
     private const string HandlerMethod = "invokeCommandHandler";
@@ -27,13 +25,15 @@ internal static class LinkedHideShow
 
     public static bool IsRunning => Volatile.Read(ref _running) > 0;
 
-    public static void Hide(UIApplication application, IReadOnlyCollection<ElementRef> elements)
+    public static List<ElementRef> Hide(UIApplication application, IReadOnlyCollection<ElementRef> elements)
     {
+        var hidden = new List<ElementRef>();
         Run(application, elements, HideName, (active, view, targets) =>
         {
             if (IsRevealOn(view))
             {
                 Invoke(active, targets, HideCommand);
+                hidden.AddRange(targets);
                 return;
             }
 
@@ -43,9 +43,12 @@ internal static class LinkedHideShow
             RevitProfiler.Logger.ZLogTrace($"Hide links: {before.Count - after.Count} of {before.Count} visible elements hidden");
             if (before.Count > 0 && after.Count == before.Count)
             {
-                throw new InvalidOperationException(NotHidden);
+                throw new InvalidOperationException(VisibilityText.NotHidden);
             }
+
+            hidden.AddRange(before.Where(element => !after.Contains(element)));
         });
+        return hidden;
     }
 
     public static void Show(UIApplication application, IReadOnlyCollection<ElementRef> elements)
@@ -72,7 +75,7 @@ internal static class LinkedHideShow
             RevitProfiler.Logger.ZLogTrace($"Show links: {shown} of {hidden.Count} hidden elements shown");
             if (shown == 0)
             {
-                throw new InvalidOperationException(VisibilityReasons.NotShown);
+                throw new InvalidOperationException(VisibilityText.NotShown);
             }
         });
     }
@@ -85,15 +88,15 @@ internal static class LinkedHideShow
     {
         if (Handler.Value is null)
         {
-            throw new InvalidOperationException(VisibilityReasons.ReferenceCommandsUnavailable);
+            throw new InvalidOperationException(VisibilityText.LinkElementsUnavailable);
         }
 
-        var (active, view) = RevitViewActions.RequireView(application);
+        var (active, view) = CurrentView.Require(application);
         var model = active.Document;
         var targets = LinkElements.ResolvedOf(model, elements);
         if (targets.Count == 0)
         {
-            throw new InvalidOperationException(VisibilityReasons.Nothing);
+            throw new InvalidOperationException(VisibilityText.Nothing);
         }
 
         RevitErrors.EnsureEditable(model);
@@ -124,8 +127,8 @@ internal static class LinkedHideShow
         {
             RevitProfiler.Logger.Swallowed(exception, "Link command", command);
             throw new InvalidOperationException(command == UnhideCommand
-                ? VisibilityReasons.ShowFromReveal
-                : NotHidden);
+                ? VisibilityText.ShowFromReveal
+                : VisibilityText.NotHidden);
         }
     }
 

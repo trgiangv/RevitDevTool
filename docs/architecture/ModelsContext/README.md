@@ -68,14 +68,14 @@ count.
 12. **No self `;component/` URIs in `DevTools.Presentation`.** The add-in
     ILRepacks it; only `/DevTools.UI;component/...` URIs survive. A guard test
     fails on any other.
-13. **Never run T3 (`LinkedHideShow`) from a test body.** Hide in View and its
+13. **Never run T3 (`LinkHideShow`) from a test body.** Hide in View and its
     Show go through the internal `invokeCommandHandler`, which runs a Revit UI
     command re-entrantly inside the in-host test runner. After L2 runs that did
     it, the test host answered "Host testing session is busy" to every later run,
     and Revit's fatal-error journal shows the "Model Context Show" transaction
     still being undone. L2 checks the T3 split of a plan only
     (`expected.plannedTiers` in `visibility.json`); `VisibilityRun` fails any
-    plan with a `ReferenceCommandStep` before it runs, and the guard test
+    plan whose `UsesLinkHide` is true before it runs, and the guard test
     `LinkTiersArePlanOnly` fails a T3 case without `plannedTiers`. L3 UI-06
     runs T3 from outside Revit through the panel's eye, the path a user takes.
 14. **One copy of `DevTools.UI` per Revit.** WPF resolves
@@ -170,7 +170,7 @@ count.
     Revit draws only the template's filters (spike B1, 2026-11-21). T4 always enables the
     properties mode first. `ID_PARAM` is not filterable, so a view filter cannot pick element ids.
 25. **Panel view filters are model elements.** Every `ParameterFilterElement` the panel creates
-    is named `Model Context <n>` and recorded by `UniqueId` in `LinkFilters`; any other element
+    is named `Model Context <n>` and recorded by `UniqueId` in `LinkViewFilters`; any other element
     with that name is a leftover (crash, redo, an earlier session) and is deleted before the next
     create. Never rename a user filter into that pattern.
 26. **Link isolate hides are saved with the view.** The journal that lists them is in memory:
@@ -183,6 +183,53 @@ count.
     Visibility); category visibility reaches By Host View links. The active view link collector
     does not reflect temporary category hide or isolate, but it does reflect category visibility
     and view filters.
+28. **One Revit can hold several copies of the panel.** Each run of the window command through
+    Command Execution loads fresh copies of `DevTools.ModelsContext` and `DevTools.Presentation`,
+    and old collectible contexts stay loaded. XAML resolves `assembly=DevTools.ModelsContext` by
+    name, which can land on an older copy: typed paths then fail to cast, `DataType` templates
+    never match, and `x:Static` enum values never equal the live ones (live, 2026-11-24: the row
+    eye had no command after 3 runs). Model Context XAML therefore names no core type: paths are
+    untyped, triggers compare strings, and `FilterNodeTemplateSelector` (code, compiled against
+    its own copy) picks the filter node templates. `XamlGuardTests.NoCoreTypesInXaml` enforces it.
+    The same holds for Presentation's own types in `RelativeSource AncestorType`: bind to a WPF type
+    (`UserControl`) instead (live, 2026-11-24: Category row and checkbox AutomationIds were empty
+    with 9 copies of `DevTools.Presentation` loaded). `XamlGuardTests.NoLocalAncestorTypes` enforces it.
+29. **Some elements live on a subcategory.** `Settings.Categories` lists top-level categories only, but
+    Toposolid sub-divisions (`OST_Subdivision`, parent Toposolid), railing top rails and balusters report
+    the subcategory as `Element.Category` (live, Snowdon Site link: 2 Toposolid + 8 sub-divisions, the
+    panel showed 2). `ElementReader.ModelCategoryIds` adds the built-in model subcategories of every
+    model category except Site, Lines and Topography. A subcategory group keeps its own id and plain
+    name and carries `ParentId` (`TypeRecord`, `GroupRow`, `GroupCount`; 0 = top-level), so it is a
+    child of its category in the tree. Parent overrides children: a parent row, eye or ticked box row
+    acts on the parent plus its subgroups (`DocumentSnapshot.WithSubgroups`, `CategoryTree.WithChildren`,
+    `LinkRules.CategoriesOf` gives one link view filter with all ids); a child acts on itself, and the
+    latest action wins. Element overrides and ledger overrides merge per property, so the order of plans is
+    enough. Link view filters are not: Revit gives the filter higher in the view's list priority, and
+    `AddFilter` appends, so `LinkViewFilters.Apply` re-adds every other panel filter (keeping its overrides,
+    visibility and enabled state) to put the filters it just applied on top. The
+    Categories box refuses Show on a subcategory while its parent is hidden, because Revit keeps a
+    subcategory hidden under a hidden parent. The
+    subcategory id works unchanged in view filters, temporary hide and category isolate (live 2026:
+    `OST_Subdivision`, `OST_RailingTopRail` and `OST_StairsRailingBaluster` are filterable and can be
+    hidden in `{3D}`). `OwnedCategoryIds` narrows the candidates to subcategories that own elements with
+    one collector pass; per-category loops (`ParameterPresence.UnseenIds`) and category Isolate use it.
+30. **Temporary category hide does not reach inside links either.** Live on Revit 2026 (Snowdon HVAC,
+    `{3D}`, every link By Host View, 2026-11-24): `HideCategoriesTemporary({OST_Toposolid,
+    OST_Subdivision})` left the Site link's 10 Toposolid elements drawn, and `HideCategoriesTemporary
+    ({OST_Walls})` left the Architectural link's walls drawn, while `SetCategoryHidden(OST_Toposolid,
+    true)` hid them. The Categories box eye showed Hidden and "Temporary · 1 change" while the link
+    still drew them. Category Hide therefore uses the same path as category Isolate (gotcha 27):
+    `SetCategoryHidden` inside Temporary View Properties, which follows By Host View links. Halftone and
+    Color already used `SetCategoryOverrides` inside the same mode. `RevitViewActions` keeps the
+    categories it hid per view; a later Isolate leaves them hidden, and the hidden read-back counts their
+    elements (and their subcategories') as hidden. Keep does not convert this mode, so the ledger
+    keeps hidden categories after Keep and Reset still undoes them. By Linked View and Custom links keep
+    their own settings: every box action that touches categories reports *Links By Linked View or
+    Custom keep their own settings* when the view has such a link.
+    The view collector skips elements of a category hidden this way (by Hide or by Isolate), so the Active
+    view count dropped to 0 a moment later (live, 2026-11-24). When a category Hide or Isolate runs, the
+    controller records the Active view ids it takes away (`ViewLedger.CategoryOffIds`), and
+    `ContextLoader` adds back the ones whose category is still off. The row keeps its count and reads hidden.
 
 ## Layers and ports
 
@@ -202,10 +249,11 @@ DevTools.ModelsContext                  core: no Revit API, no WPF
                IHostFilterCatalog, ICustomFilterStore
   Parameters/  ParameterInfo, ParameterTip, ParameterScopes, ValueIndex,
                ValueIndexCache, ValueKind, ValueTally, CategoryIdSet
-  Visibility/  VisibilityPlanner, VisibilityPlan, VisibilityRequest, TemporaryJournal,
-               MarkTally, VisibilityController, TemporaryBar, IViewActions,
-               ViewLedger, ReadBackCache, PlanExecutor,
-               HiddenCause, WhyHiddenResult, IVisibilityExplainer, WhyHiddenStripViewModel
+  Visibility/  VisibilityRequest, VisibilityAction, RgbColor, VisibilityPlanner, VisibilityPlan,
+               PlanSteps, ActionState, VisibilityText, LinkRules, VisibilityController,
+               PlanExecutor, ViewLedger, ChangeJournal, ReadBackCache, OverrideTally,
+               IViewActions (PlanOutcome, ActiveView), TemporaryBar,
+               HiddenReason, WhyHidden, IVisibilityExplainer, WhyHiddenStripViewModel
   Selection/   SelectionGuard, ISelectionPort, PickResult, PickController
   Panel/       ModelContextViewModel, ModelContextServices, PanelSession, ContextBar,
                ContextMenu, IClock, IScheduler, Debouncer,
@@ -226,10 +274,12 @@ RevitDevTool.Tools/ModelsContext            Revit adapter
   Parameters/  ParameterLocator, ParameterValues, ValueReader, ParameterCatalogReader,
                ParameterCache, SpecInfo, CatalogFacts, CatalogInfoFactory, ParameterFacts,
                ResolvedParameter, ParameterPresence
-  Visibility/  RevitViewActions, CategoryIsolation, LinkedHideShow, LinkElements, NestedComponents,
+  Visibility/  RevitViewActions, CurrentView, ViewFraming, CategoryIsolation, LinkHideShow,
+               LinkElements, LinkIsolation, LinkViewFilters, LinkFilterCompiler, NestedComponents,
                RevitVisibilityExplainer, HiddenChecks
   Selection/   RevitSelectionPort, SelectionSnapshot, LinkPickFilter
-  Pane/        ModelsContextPane, ModelsContextExtensions, RevitProfiler, RevitContextLog
+  Pane/        ModelsContextPane, ModelsContextPanel, ModelsContextWindowCommand,
+               ModelsContextExtensions, RevitProfiler, RevitContextLog
 ```
 
 ### Folders
@@ -251,15 +301,17 @@ The core decides and the adapter executes. Examples:
 
 - `VisibilityPlanner` turns a row action plus each document's capabilities into
   a `VisibilityPlan` (which tier, which ids, or a disabled reason).
-  `RevitViewActions` and `LinkedHideShow` run it.
+  `RevitViewActions` and `LinkHideShow` run it.
 - `FilterDefinition` is host-neutral. `FilterCompiler` turns it into Revit
   `ElementFilter`s per document. The test fakes evaluate it over fake data.
 - `CaseSensitiveRules` (core) rewrites the rule tree; the adapter compiles the
   result.
 
-The pane (`ModelsContextPane`) wires it: it builds one `ModelContextServices`
-with the Revit port implementations, `SystemClock`, a `DispatcherScheduler` on
-the pane's dispatcher, and the host `ILogger`.
+`AddModelsContext` builds one `ModelContextServices` with the Revit port
+implementations, `SystemClock`, a `DispatcherScheduler` on the UI dispatcher, and
+the `ILogger`. `ModelsContextPanel` starts and stops the event subscriptions and
+builds the view; the dock pane (`ModelsContextPane`) and the window command
+(`ModelsContextWindowCommand`) both use it.
 
 ## Threading and dispatch
 
@@ -278,7 +330,7 @@ the pane's dispatcher, and the host `ILogger`.
   only cheap work in the handler: it reads ids, builds a plain `ElementDelta`,
   and posts the panel event to the WPF dispatcher at `Background` priority.
   `SelectionChanged` is ignored while the pane is hidden and while
-  `LinkedHideShow` runs (that call changes the selection on purpose).
+  `LinkHideShow` runs (that call changes the selection on purpose).
 - **Sessions and generations.** Each open Current model has a `PanelSession`.
   Every async job carries a ticket (session plus generation); a result whose
   session closed, whose generation moved on, or that arrives while the pane is
@@ -338,11 +390,28 @@ elements inside one link through Hide in View (hide, show, and the rest of a
 link isolate), T4 Halftone and Color inside a link through a temporary rule
 view filter. The Revit limits behind them are 0062 Context 1–12.
 
+Each tier is one plan step (`PlanSteps.cs`), named by what it acts on:
+
+| Tier | Step | Capability |
+|------|------|------------|
+| T0 | `ElementsStep` (Current model ids) | `Elements` |
+| T1 | `LinkInstanceStep` (the link instance) | `LinkInstance` |
+| T2 | `CategoryStep` (a category everywhere) | `Categories` |
+| T3 | `LinkElementsStep` (hide, show), `LinkIsolateStep` (kept ids; the rest is hidden) | `LinkElements`, `LinkShow` |
+| T4 | `LinkFilterStep` (rule view filter) | `LinkFilters` |
+
+Every step but `CategoryStep` is a `DocumentStep`. `VisibilityPlan.UsesLinkHide` is true for
+T3 steps, `UsesLinkFilter` for T4. `VisibilityPlanner.Plan` builds the steps;
+`VisibilityPlanner.Check` is the same pass without id expansion and returns an `ActionState`
+(disabled reason and tooltip note) for the menu. Every sentence the user reads after a
+visibility action lives in `VisibilityText`; the link limits (`MaxRules`, `MaxIsolateRest`)
+live in `LinkRules`.
+
 ### Isolate inside a link (`LinkIsolateStep`)
 
 - The planner turns Isolate on linked rows or results into one
   `LinkIsolateStep` per link (kept ids); Current model ids stay an
-  `ElementsStep`. `UsesReferenceCommands` is true, so L2 checks the plan only
+  `ElementsStep`. `UsesLinkHide` is true, so L2 checks the plan only
   (gotcha 13).
 - `RevitViewActions.IsolateWithLinksAsync` refuses when the active view is not
   the plan's view ("The active view changed."), when Reveal Hidden is on, or when
@@ -353,9 +422,10 @@ view filter. The Revit limits behind them are 0062 Context 1–12.
   chain (`LinkIsolation`). Over 10,000 is refused before any change.
 - One outer `TransactionGroup` "Model Context Isolate": temporary isolate of
   the link instance(s) plus the Current model ids (with nested instances), then
-  `LinkedHideShow.Hide` of the rest (its own group nests inside). Any failure
+  `LinkHideShow.Hide` of the rest (its own group nests inside). Any failure
   rolls back the outer group, so the isolate never stays without its hides.
-- `ExecuteAsync` returns the hidden linked refs; `PlanExecutor` journals them
+- `ExecuteAsync` returns a `PlanOutcome` with the hidden linked refs (`LinkHides`) and the
+  notice; `PlanExecutor` journals the refs
   (not the kept targets) and adds them to the ledger, so `IsHidden` reads right.
   Reset and an eye turned back on show them through the T3 Show path. A Show
   that reads back 0 (category off) drops those entries and reports once.
@@ -369,15 +439,15 @@ view filter. The Revit limits behind them are 0062 Context 1–12.
   definition when every rule is native (no case-sensitive, defined or undefined
   rule, no nested scope), with the filter's categories or, when it has none,
   the categories of its linked matches. Over 100 rules are refused.
-- `LinkFilters.Prepare` (before the transaction) refuses on Revit 2023 and
+- `LinkViewFilters.Prepare` (before the transaction) refuses on Revit 2023 and
   below, when the link is By Linked View or Custom (`GetLinkOverrides`), when a
   category is not filterable, or when Revit does not accept the rules
-  (`ElementFilterIsAcceptableForParameterFilterElement`). `LinkFilterRules`
+  (`ElementFilterIsAcceptableForParameterFilterElement`). `LinkFilterCompiler`
   compiles in the Current model: built-ins by id (Family Name and Type Name fall
   back to `SYMBOL_FAMILY_NAME_PARAM` / `SYMBOL_NAME_PARAM` when
   `GetFilterableParametersInCommon` lacks them), shared parameters by GUID,
   project parameters by name; storage and spec come from the link.
-- `LinkFilters.Apply` (inside the transaction, Temporary View Properties on):
+- `LinkViewFilters.Apply` (inside the transaction, Temporary View Properties on):
   deletes leftover `Model Context <n>` filters (gotcha 25), reuses the
   registry entry for the same rules or creates the next free name, `AddFilter`,
   then `SetFilterOverrides` merged with the filter's current overrides. The
@@ -391,15 +461,18 @@ view filter. The Revit limits behind them are 0062 Context 1–12.
   `DocumentSaving`, `DocumentSavingAs` and `DocumentSynchronizingWithCentral`
   delete the model's filters in their handler (the Revit API lets these
   pre-event handlers change the document); `DocumentClosing` drops the registry;
-  hiding the pane deletes them when the pane is no longer shown. Undo of the
-  color removes the filter and ends the mode; the stale registry entry resolves
-  to nothing.
+  hiding the pane deletes them when the pane is no longer shown. Each of these
+  cleanups raises `LinkViewFilters.Cleaned`; `RevitModelEvents` posts it as
+  `IModelEvents.ViewFiltersRemoved` and the core drops the `LinkFilterStep`
+  plans and their overrides from the model's ledgers, so a later eye-on does not
+  create the filter again. Undo of the color removes the filter and ends the
+  mode; the stale registry entry resolves to nothing.
 
-### Category isolate (`GroupEverywhereStep` with Isolate)
+### Category isolate (`CategoryStep` with Isolate)
 
-- The Categories box ticks are its selection (`CategorySection` syncs the
-  ListBox selection and `CategoryPickerViewModel.SetTicks` both ways in Extended
-  mode); Isolate, Halftone and Color act on the ticked rows.
+- In the Categories box, ListBox selection is the tick (`IsSelected` bound to
+  `IsChecked` in XAML, selected rows not painted). Isolate, Halftone and Color
+  act on the ticked rows.
 - `RevitViewActions` enables Temporary View Properties, then
   `CategoryIsolation.Apply` walks `Settings.Categories` (every type) and hides
   each one `CanCategoryBeHidden` allows, except the kept ones, their parents
@@ -410,26 +483,29 @@ view filter. The Revit limits behind them are 0062 Context 1–12.
 - Not hidden: cameras, model groups, divisions, multistory stairs (Revit does
   not allow it), the link instances, and system elements (duct systems) whose
   members stay shown. A subcategory follows its parent.
-- When a visible loaded link is By Linked View or Custom, `TakeNotice` returns
+- When a visible loaded link is By Linked View or Custom, the `PlanOutcome` notice is
   *Links By Linked View or Custom keep their own settings.*, shown as the panel
   message.
 - Current model read-back (`HiddenSlice`) counts an element hidden when its
   category is one the isolate hid in that view while the mode is on.
 
-### Linked hide and show (`LinkedHideShow`)
+### Linked hide and show (`LinkHideShow`)
 
 - One synchronous Revit call per request, on the Revit thread like every other
   view action. No `PostCommand`, no `Idling`, no queue.
 - `UIFrameworkServices.CommandHandlerService.invokeCommandHandler(string)` is
   found by reflection once (`IsAvailable`); the probe logs at Trace. When it is
-  missing a T3 plan fails with `ReferenceCommandsUnavailable`.
+  missing a T3 plan fails with `LinkElementsUnavailable`.
 - The user's selection is snapshotted, replaced by link references
   (`SetReferences`), and restored afterwards. `SelectionChanged` is ignored
   while the call runs (`IsRunning`).
 - **Hide:** `TransactionGroup` "Model Context Hide": `ID_VIEW_HIDE_ELEMENTS`,
-  then read back with the link view collector. Current model steps of the same
-  plan run first through the temporary API in the same Revit call
-  (`RevitViewActions.HideWithLinksAsync`).
+  then read back with the link view collector. It returns only the elements that
+  went from visible to hidden (all targets when Reveal Hidden is on), so an
+  element the user hid earlier is never journaled and Reset never unhides it.
+  Current model steps of the same plan run first through the temporary API, and
+  one outer group holds both parts, so a failed linked hide rolls the Current
+  model hide back too (`RevitViewActions.HideWithLinksAsync`).
 - **Show:** `TransactionGroup` "Model Context Show" for the journal entries
   that are still hidden: Reveal Hidden on, `ID_VIEW_UNHIDE_ELEMENTS`, Reveal
   Hidden off, read back. One undo entry, no visible flash.
@@ -440,48 +516,69 @@ view filter. The Revit limits behind them are 0062 Context 1–12.
 
 ### Temporary modes, Keep and Reset
 
+- Every plan carries the panel's view id, and Keep and Reset pass it too.
+  `RevitViewActions` refuses with "The active view changed." when Revit's active
+  view is another one, so the journal and ledger always describe the view that
+  changed.
 - Hide and isolate use the temporary API. Halftone and Color enable Temporary
   View Properties first (after `CanEnableTemporaryViewPropertiesMode`, with the
   view's own id when it has no template).
 - Element overrides outlive that mode (gotcha 15), so `RevitViewActions`
   records each element's overrides per (model, view) before its first change.
-- **Keep:** `ConvertTemporaryHideIsolateToPermanent` in one transaction, then
-  the journal page is cleared without unhiding.
+- **Keep:** `ConvertTemporaryHideIsolateToPermanent` in one transaction. The
+  journal and ledger then drop only what that call really made permanent, plus
+  the linked hides, which are already saved with the view. The journal counts
+  per plan whether Keep converts it (`VisibilityPlan.KeepConverts`: Hide, and
+  Isolate without a `CategoryStep`); `ChangeJournal.Keep` clears those
+  changes and the link hides, and `ViewLedger.Keep` clears hidden elements and
+  links and an element isolate. A category isolate (Temporary View
+  Properties), Halftone, Color and T4 filters stay on the page and in the
+  ledger: the bar keeps counting them, rows keep their overrides, and the next
+  Reset undoes them (owner decision 2026-11-24: the record always matches what
+  is really in the view).
 - **Reset:** deletes the view's panel filters (T4), disables
   `TemporaryHideIsolate` and `TemporaryViewProperties`, puts back the recorded
-  overrides, then runs Show for the journal entries and removes them. It also
-  runs when only panel filters are left (after Keep).
-- **Keep** leaves T4 filters and element overrides as they are, like any
-  override (0062 Decision 6); the next Reset removes them.
+  overrides, then runs Show for the journal entries and removes them.
 - **Eye back on:** Revit has no per-element temporary unhide, so
   `VisibilityController` resets temporary mode and re-applies the rest of the
-  ledger; journaled linked elements are shown through `LinkedHideShow`. When a
-  link isolate is active its rest is shown too. Re-applied T4 plans create
-  their filter again (Reset deleted it), never a second one.
+  ledger; journaled linked elements are shown through `LinkHideShow`. When a
+  link isolate is active its rest is shown too. The ledger changes only after
+  that Reset succeeds. Re-applied T4 plans create their filter again (Reset
+  deleted it), never a second one.
 
 ### One engine
 
 Rows and filter results both resolve to `ElementRef`s once (`DocumentScope.IdsOf`),
 and the planner plans only from those refs, so Select, Hide, Isolate, overrides
 and the counts act on the same set. Hidden state is read back by `ElementRef`
-for both tabs (`ReadBackCache`), and override marks are kept per element. The
-controller splits into `ViewLedger` (what the panel changed per view),
-`ReadBackCache` (what the view shows) and `PlanExecutor` (runs a plan through
-`IViewActions`). On the Current model `NestedComponents.AddWithNested` adds
+for both tabs (`ReadBackCache`), and overrides are kept per element. The
+controller splits into `ViewLedger` (what the panel changed per view: hidden
+elements, categories and links, the isolate, and overrides for the eyes and
+marks), `ChangeJournal` (what the bar counts and Reset undoes, with the linked
+hides), `ReadBackCache` (what the view shows) and `PlanExecutor` (runs a plan
+through `IViewActions`). `IViewActions` is the one port to the host view:
+`ExecuteAsync`, `ShowLinkedAsync`, `KeepAsync`, `ResetAsync`, `ZoomAsync`,
+`SectionBoxAsync`, `ReadActiveViewAsync` (`ActiveView`: the view and whether a
+temporary mode is on) and `ReadHiddenAsync`. On the Current model `NestedComponents.AddWithNested` adds
 shared nested instances before T0 isolate, hide and overrides (gotcha 23).
 
 ### Why hidden
 
 `WhyHiddenStripViewModel` asks `IVisibilityExplainer.ExplainAsync(ElementRef)`;
 `RevitVisibilityExplainer` runs `HiddenChecks` on the Revit thread in the active
-view only and returns `HiddenCause`s. `WhyHiddenResult.Of` orders them (link
+view only and returns `HiddenReason`s (a `HiddenCause`, the text, and `CanShow`).
+`WhyHidden.Of` orders them by cause (link
 causes first, then temporary hide or isolate, hidden in view, category, filter,
 workset, phase, design option, owner view, view range, crop) and keeps *No cause
 found* only when nothing else hits. A filter that cannot be tested is a
 *possible* cause. The panel's own journal adds *Hidden in view* for a linked
-element it hid (`WithJournal`). `HiddenFix.ShowElement` exists only for a
-temporary hide on a Current model element and a journaled linked hide; the strip's
-Show runs through `VisibilityController` and then explains again. A link is read
+element it hid (`WithJournal`). `CanShow` stays only for a
+Current model element the panel's ledger hid (`VisibilityController.HidByPanel`:
+hidden by id, or outside the panel's isolate) and a journaled linked hide;
+`WithJournal` clears it otherwise, because Show resets every temporary mode of the
+view. The strip's Show runs through `VisibilityController` and then explains again.
+The design option check counts a secondary option as a cause only when the view
+draws no element of that option. A link is read
 through `LinkElements.InView` (gotcha 1). The strip follows the selected row
 (`FollowAsync`), is a plain grid row above the Temporary bar, and opens from the
 menu item *Why hidden?* for one element.
@@ -495,32 +592,36 @@ with the filter checking the link instance id and the category id (set checks,
 no parameter reads), then `SetReferences` on the picked set. Esc raises
 `OperationCanceledException`, which becomes `PickResult.Cancel`. One pick runs at
 a time. The picked set is the Revit selection, so Selection sync and Scope =
-Selection show it with no extra step.
+Selection show it with no extra step. While a pick runs, `PanelRuntime.IsBusy` is
+true, so row tools, the menu, Selection sync and Live select stay off until it ends.
 
 ### State
 
 | State | Kept in |
 |-------|---------|
 | Temporary hide/isolate, category visibility, overrides, section box | Read back from the view |
-| Change count | `TemporaryJournal` page per (Current model, view), in memory |
-| Linked elements the panel hid | `TemporaryJournal` entries (`ElementRef` and its `UniqueId`), in memory |
+| Change count | `ChangeJournal` page per (Current model, view), in memory |
+| Linked elements the panel hid | `ChangeJournal` link hides (`ElementRef` and its `UniqueId`), in memory |
 | Element overrides before the panel's first change | `RevitViewActions`, per (model, view), in memory |
-| Panel view filters (T4) | `LinkFilters` registry, per (model, view), `UniqueId` by rules, in memory; the element itself is in the model until Reset, save, sync or pane close |
-| Ticks, expansion, selected filter, Selection sync, Live, selection mode | `PanelSession`, in memory |
+| Panel view filters (T4) | `LinkViewFilters` registry, per (model, view), `UniqueId` by rules, in memory; the element itself is in the model until Reset, save, sync or pane close |
+| Expansion, selected filter, Selection sync, Live, selection mode | `PanelSession`, in memory |
+| Document ticks | Set from `IModelSource.GetViewLinksAsync` (link instances in the Current model's active view collector) on show and on every view change; the user's ticks hold until then |
 | Unsaved custom filter (new, or edits and rename of a saved one) | `PanelSession` (`FilterState.Draft`: the editor's definition and name), in memory per model; restored dirty on switch back, no prompt |
 | Custom filters | Settings file through `DevTools.Settings` (`CustomFilterStore`) |
 
 Journal rules: Keep and Reset clear the view's page (Reset after showing the
-entries); `DocumentClosing` of the Current model drops its pages, and a closing
-link document drops that link's entries; Undo and Redo mark the pages stale.
+entries); `DocumentClosing` of the Current model drops its pages; Reset drops the
+entries of a link that is no longer in `SnapshotStore.Documents` (an unloaded
+link stays listed and keeps its entries); Undo and Redo mark the pages stale.
 
 ### Lifecycle
 
 | Event | Panel does |
 |-------|------------|
-| View activated, same model | Cancel scope jobs, drop view id sets, read the new view's temporary state; expansion kept. |
+| View activated, same model | Cancel scope jobs, drop view id sets, read the new view's temporary state, tick the Current model and the loaded links the view draws; expansion kept. |
 | Active model switched | Park the old session in memory, with an unsaved custom filter as a draft; show the new model's session (built on first show). |
 | `DocumentClosing` | Drop that session, its journal pages and its snapshots (shared link snapshots by user count). |
+| Save As, or the first save of a new model (the model id is its path) | `RevitModelEvents` keeps the id from `DocumentSaving` / `DocumentSavingAs`; when `DocumentSaved` / `DocumentSavedAs` gives another id it re-keys the adapter (`RevitViewActions` recorded overrides and category isolate, the `LinkViewFilters` registry, tracked ids, the active model), drops the scope and parameter caches of the old source, and posts `IModelEvents.ModelRenamed` (`ModelRename`: old and new id and source). The core moves the session, ticks, journal pages, view ledgers (with their plans), the view and the snapshot store to the new key, then refreshes. |
 | Link unloaded | Rows disable with the reason; the snapshot is kept until a reload decides by version. |
 | Revit busy (modal command, edit mode, no open model) | Actions disable with "Revit is busy."; nothing is queued. |
 | Family document | Works as a Current model without links. |
@@ -565,6 +666,10 @@ Sandbox, Release, generated models: 200-instance expand 13–43 ms at 100k and
   `ModelContext.Panel` status). Revit and the sample are opened through MCP
   `launch_host`; the test host on this machine is Revit 2024. Rows, golden values
   and commands: [test-matrix.md](test-matrix.md).
+- **Window run loop**: `ModelsContextWindowCommand` run through Command Execution on
+  the built `RevitDevTool.Tools.dll` opens the panel in a plain window from a fresh
+  load, so a change shows without restarting Revit
+  ([test-matrix.md](test-matrix.md#window-run-loop-no-revit-restart)).
 
 ## Change rules
 

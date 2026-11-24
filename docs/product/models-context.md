@@ -5,9 +5,10 @@ and selects elements of the open model and its loaded links, and shows, hides,
 isolates, halftones or colors them in the active view. Links work the same way
 as the open model wherever Revit allows it.
 
-The panel never writes element data and never creates elements (no view
-filters, parameters or views). It only changes the active view's visibility and
-graphics, and the selection.
+The panel never writes element data and never creates parameters or views. It
+changes the active view's visibility and graphics and the selection. Its one
+model write is a temporary view filter for Halftone and Color inside a link
+(see below), deleted on Reset, save, sync and pane close.
 
 Policy and the reasons behind each rule: [0062](../decisions/0062-model-context-panel.md).
 How it is built: [architecture/ModelsContext](../architecture/ModelsContext/README.md).
@@ -33,8 +34,11 @@ From top to bottom:
 
 A thin progress bar shows under the context bar while counts rebuild. A
 one-line message shows when something fails; the panel never throws into Revit.
-While Revit is busy (a modal command, edit mode, no open model) actions are
-disabled with "Revit is busy" and nothing is queued for later.
+With no open model, and while a Pick runs, actions are disabled with "Revit is
+busy". In edit mode an action that changes the view stops with "Revit is busy."
+when it runs. During a modal command a request waits until Revit is idle, then
+runs. An action refuses with "The active view changed." when the view switched
+after the panel last read it.
 
 ## Scope
 
@@ -52,18 +56,26 @@ Visibility actions always work on the active view, whatever the scope.
 
 - Lists the Current model and each loaded link instance as equal entries. Duplicate
   file names get an instance suffix.
-- Ticked entries show as tags; tags that do not fit fold into a `+N` tag. The
+- Ticked entries show as tags; tags that do not fit fold into a `+N` tag. When
+  even one tag does not fit, the first tag shrinks with an ellipsis. The
   drop-down has search and **All**.
-- The Current model is ticked on first load. New links start unticked.
+- When the panel opens and on every view change (a model switch too), the ticks become
+  the Current model plus each loaded link the active view draws (instance not hidden,
+  RVT Links shown, not filtered out). Your own ticks then hold until the next view change.
 - The last ticked entry cannot be unticked (from the list, **All** or its tag), so
   the panel always has something to query.
-- A refresh (link reload, view change) keeps your ticks. An unloaded link shows
+- A refresh (link reload, model edit) keeps your ticks. An unloaded link shows
   disabled and keeps its tick; **All** skips it.
 - Ticks live in memory per open model, not in settings.
 
 ## Explorer
 
 A flat, virtualized tree: **Model › Category › Family › Type › Instance**.
+
+A category is a model category, or a built-in model subcategory that owns elements. A subcategory is a child of
+its category in the tree (Toposolid › Sub-divisions, Railings › Top Rails), with its own count; the parent counts
+its own elements plus its children. Subcategories of Site, Lines and Topography (base and survey points, sketch
+lines, contours) are not listed.
 
 - The tree starts with **Current model**, then one group per ticked link.
 - Every row shows its count in grey. Instances load on expand in pages of 200
@@ -78,8 +90,8 @@ A flat, virtualized tree: **Model › Category › Family › Type › Instance*
   with *Tick a link to pick in it* (no link ticked) or *Tick a category to pick*.
   Current model elements are picked in Revit as usual.
 - **Expand all** opens down to Type rows; **Collapse all** leaves the roots.
-- **Status line**: *N selected* (elements under the selected rows) and
-  **Clear**. When part of the Revit selection is in unticked documents, **Show in
+- **Status line**: *N selected* (elements under the selected rows, hidden at
+  0) and **Clear**. When part of the Revit selection is in unticked documents, **Show in
   Explorer** ticks them and reveals the rows.
 
 ### Categories box
@@ -88,26 +100,43 @@ Under the documents box. Lists the categories of the ticked documents with
 counts, search, **All · None**. Every category starts ticked; a category that
 appears later shows ticked.
 
-- The tick is the selection: one state. Rows select like any Windows list
-  (click, Shift for a range, Ctrl to add or remove, Ctrl+A, the arrow keys) and
-  the selected rows are the ticked ones; ticking a box selects its row. Click
-  *Doors* and only Doors is ticked. Ticks hidden by the search stay.
+- Selection is the tick. A click on a name ticks only that row; Ctrl+click adds
+  or removes, Shift+click and Shift+arrows tick a range, Ctrl+A ticks every
+  listed row, Space toggles the focused row. The checkbox toggles its own row and
+  keeps the others. Right-click keeps the ticks. Rows are never painted as
+  selected. Ticks hidden by the search stay.
+- Subcategories list under their category, collapsed at first; the chevron (or
+  Right / Left on the row) opens and closes them. The parent counts its own
+  elements plus its children. The parent drives its children: ticking or
+  selecting the parent (box, name click, Ctrl, Shift, Space) ticks all of them,
+  unticking or deselecting it clears them. A child still ticks on its own; the
+  parent box then shows a partial mark, reads ticked once every child is ticked
+  and clear once none is. Clicking a partial box ticks everything. A search
+  that finds a subcategory opens its parent while the search lasts; clearing the
+  search restores what you had opened. **All · None** also reach the children
+  of a closed parent. A parent with no elements in scope still shows, with 0.
 - The ticks decide what the tree lists.
 - The eye after the count hides or shows the category in the view, in the
   Current model and in every link that follows the view (By Host View). A
   hidden category dims. The tooltip names what the eye reaches, for example
   *Hide in view: Current model + 2 links (By Host View)*, and notes the links it
-  does not reach. The eye acts on its own row only.
-- Right-click a category: **Isolate**, **Halftone**, **Color…** for the
-  ticked rows. Right-click on a row that is not selected selects only that
-  row first. With no row ticked the items are disabled with *Select
-  categories*.
+  does not reach; when the view has such a link, the panel also says *Links By
+  Linked View or Custom keep their own settings* after the click. The eye acts on
+  its own row only.
+- Right-click a category: **Isolate**, **Halftone**, **Color** for the
+  ticked rows. Right-click never changes the ticks. With no row ticked the
+  items are disabled with *Select categories*.
 - **Isolate** leaves only the ticked categories: in Temporary View Properties
   it hides every other category the view can hide (model, annotation,
   analytical, imports, lines, levels, grids). It reaches the Current model and
   every link By Host View, so isolating Doors leaves only doors, linked doors
   included. The link instances stay, and the few categories Revit never hides
   in a view (cameras, model groups, divisions, multistory stairs) stay drawn.
+  **Parent overrides children.** Every action on a parent (Hide, Show, Isolate, Halftone, Color, select, in the
+  tree or the Categories box, Current model or link) covers the parent and all its subcategories and replaces
+  what a subcategory had; an action on a subcategory covers that subcategory only, and the latest action wins.
+  Reset brings both back to how the model was. Revit cannot show a subcategory under a hidden parent, so its eye
+  then says *Show its parent category first.* A ticked subcategory alone keeps its parent drawn on Isolate.
   Reset ends the mode and every category is back. A link By Linked View or
   Custom keeps its own settings; the panel says so: *Links By Linked View or
   Custom keep their own settings.*
@@ -186,7 +215,8 @@ until the next Reset, like any override.
   reach its shared nested instances (a table takes its chairs along); Reset
   undoes the same set. A linked instance already hides with its nested ones.
 - A colored row keeps a swatch; a halftoned row keeps the accent marker, until
-  Reset, Keep, undo or closing the model.
+  Reset, undo or closing the model. Keep leaves them, because Keep does not
+  change a color or halftone.
 - Linked-element hides are Hide in View: saved with the view at once and one
   undo entry per click. They carry an orange dot.
 
@@ -194,7 +224,7 @@ until the next Reset, like any override.
 
 Right-click the selected rows (or Shift+F10). Items: *Select* (hidden
 while sync is on), Zoom (Z), Section box (B, 3D views only), Isolate (I),
-Hide / Show (H), Halftone, Color… and *Why hidden?*. Reset lives only on the
+Hide / Show (H), Halftone, Color and *Why hidden?*. Reset lives only on the
 Temporary bar. An item that cannot run on the target is disabled with the reason
 as its tooltip. *Why hidden?* needs one element. When an item or a row tool
 runs and Revit refuses, the reason shows in the panel's message line. An action
@@ -205,7 +235,7 @@ that started always finishes, even when the model changes while it runs.
 Select one dimmed row (or choose *Why hidden?* on one element, in Explorer or a
 Filter result) and a strip opens above the Temporary bar with the first cause
 in the active view, for example *Category off: Duct Fittings*. The chevron lists
-every cause; *No view setting hides it* when no check hits. The strip follows the selected
+the other causes; *No view setting hides it* when no check hits. The strip follows the selected
 row, and closes with ✕, Esc, or when the selection has no element.
 
 - Checks, first hit first: temporary hide or isolate, hidden in view, category,
@@ -219,7 +249,8 @@ row, and closes with ✕, Esc, or when the selection has no element.
   family's visibility settings or parameters turn it off).
 - A filter that cannot be tested reads *Filter: name (possible)*.
 - It only explains. **Show** appears only where the panel can undo the cause: a
-  temporary hide on a Current model element, or a linked element the panel hid.
+  Current model element the panel hid or left out of its isolate, or a linked
+  element the panel hid. A temporary hide made in Revit is a cue, with no button.
   A category off or a permanent hide is a cue, with no button.
 - Active view only; a view that is not a model view says so.
 
@@ -229,12 +260,19 @@ Hide, isolate, halftone and color use Revit's temporary modes, so they are not
 saved with the view and work under a locked view template.
 
 - *Temporary · N changes*: the panel counts the changes.
-- **Keep** makes hide and isolate permanent. When linked elements are hidden it
+- **Keep** (tooltip *Make hides permanent in this view*) turns Revit's temporary
+  hide and isolate of elements and link instances into
+  permanent hides; those changes, and the linked elements the panel hid (already
+  saved with the view), leave the bar. Everything Keep does not make permanent
+  stays on the bar and in its count, and the next Reset still undoes it:
+  a category Hide or Isolate from the Categories box (they live in Temporary View
+  Properties), Halftone and Color, and the panel's view filters. Keep and Reset
+  are plain buttons; neither is the default. When linked elements are hidden it
   first asks: *N link elements stay hidden in this view* (Keep · Cancel).
 - **Reset** ends the temporary modes, deletes the panel's view filters, and
   shows again every linked element the panel hid in this view. When Revit does
   not show some of them (their category is off), Reset says so once and forgets
-  them.
+  them. Entries of a link that is no longer in the model are dropped.
 
 ## Filter
 
@@ -274,7 +312,9 @@ A checkbox list with counts and search, folded to a summary line. An element
 counts under its own category (a wall used as a curtain panel counts as Curtain
 Panels). *All · None*
 tick or untick the categories the search shows. Checked categories always mean
-"any of". With no categories checked the filter looks at every model category.
+"any of". With no categories checked the filter looks at every model category,
+and the summary reads *All categories*; when the filter also has no condition it
+matches nothing, so the summary reads *None*.
 
 ### Conditions and groups
 
@@ -282,11 +322,13 @@ tick or untick the categories the search shows. Checked categories always mean
   One **AND** or **OR** button sits between its children. It shows the group's
   match, and a click switches the whole group. There is no NOT: use the negative
   operators (*does not equal*, *empty*, *undefined* ...).
-- Each condition is parameter, operator, value. With no conditions every element
+- Each condition is parameter, operator, value. A condition without a value
+  reads *Skipped · no value* and is left out. With no conditions every element
   of the checked categories matches. A custom filter with no categories and no
   conditions matches nothing.
 - **Group scope**: each nested group can limit its documents (by file, so every
-  instance of a link) and its categories. Empty means *Same as parent*. A scope
+  instance of a link) and its categories. An empty box shows *Parent*: the group
+  uses its parent's documents and categories. A scope
   only narrows its parent, and the lists offer only the parent's items.
   - A value that is no longer in the parent stays as a tag and the group shows a
     warning.
@@ -343,11 +385,14 @@ empty. A parameter Properties does not show for an element is undefined there,
 even when another element of the same type has it.
 
 - The value drop-down lists real values in the ticked documents with counts, at
-  most 500 ("more…"), and a `[No parameter] · N` line.
+  most 500 (**more…** opens the list; type to narrow), and a `[No parameter] · N`
+  line.
 - **Aa** (Text only, off by default) makes the rule match case. Revit's own text
   rules ignore case; with Aa on, `= "S10"` no longer matches `s10`.
-- *does not equal* and the other negative operators skip elements that do not
-  have the parameter. Use *undefined* to find those.
+- *does not equal* matches every element that has the parameter and does not
+  hold the value, including an empty value (blank text, no number, a reference
+  set to *None*), for every kind. It and the other negative operators skip
+  elements that do not have the parameter. Use *undefined* to find those.
 - A parameter that is missing in a document gives no match there (except for
   *undefined*, which then matches every element of that document).
 - Type parameters work like instance parameters: *empty*, *not empty*,
@@ -357,22 +402,33 @@ even when another element of the same type has it.
 
 ### Result row
 
+The row stays at the bottom of the Filter view while the rules scroll. It is
+one line: the count on the left, then a toolbar with the mode, the selection
+sync toggle and the tools. When the panel is narrow the tools move into the
+toolbar's overflow (the arrow at its end), each with its icon and name. The
+mode and the sync toggle always stay; at the narrowest widths the word
+*matches* hides first (the count's tooltip still says it).
+
 - The match count.
 - Selection mode **New / Add / Remove**: replace the Revit selection, add to it,
-  or remove from it. Add and Remove work against the selection captured when Live
-  was turned on, so repeated edits never pile up.
-- **Live** (on by default): each edit of categories, rules, mode or source pushes
-  the result to the Revit selection after about 300 ms. Above 5,000 matches Live
-  pauses: the switch and its label *Live* stay as they are (your choice is
+  or remove from it. Add and Remove work against the selection captured when selection
+  sync was turned on, so repeated edits never pile up.
+- **Selection sync** (on by default): the same icon toggle as Explorer's
+  selection sync. Each edit of categories, rules, mode or source pushes
+  the result to the Revit selection after about 300 ms. Above 5,000 matches selection
+  sync pauses: the toggle stays as it is (your choice is
   kept), one short warning line under the count reads *Paused: over 5,000
   matches*, nothing is sent, and *Select* shows in the menu. The line
   follows the state: it is gone as soon as the result is 5,000 or fewer (a
-  narrower filter, no categories, no filter selected) or Live is off, and Live
+  narrower filter, no categories, no filter selected) or selection sync is off, and it
   sends again by itself.
 - A model edit or a context refresh (scope, documents, view) only recounts. It
   never changes the Revit selection, so an edit in Properties never drops the
   element being edited.
-- **⋯** opens the same context menu as Explorer for the result.
+- **Isolate**, **Halftone**, **Color** and the eye (**Hide** / **Show**) act on
+  the result, like the row tools in Explorer; a tool that cannot run is disabled
+  with the reason as its tooltip. Right-click the result row for the full
+  context menu (Select, Zoom, Section box, Why hidden?).
 
 ## Not in this panel
 

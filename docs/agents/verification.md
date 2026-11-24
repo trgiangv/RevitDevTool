@@ -84,7 +84,7 @@ back. They go wherever host log entries go, including the file log. Lines to loo
   `Visibility`, `Context load`, `Selection sent/received`, `Explorer publish/expand`:
   panel steps with their size and time.
 - `Filter <name> in <document>`: one document's match count and time;
-  `Filter <name>: Live paused at N matches`: Live stopped sending above the limit.
+  `Filter <name>: Selection sync paused at N matches`: selection sync stopped sending above the limit.
 - `Filter compiled <document>: … compile N ms, candidates M ms (cached|collected|skipped)`
   and `Match <document>: C candidates, N native, M matched`: one document's
   compile, its candidate ids (cached per document, categories and version), and

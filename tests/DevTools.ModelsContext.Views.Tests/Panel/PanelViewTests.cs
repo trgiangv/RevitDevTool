@@ -292,7 +292,7 @@ public sealed class PanelViewTests
             Assert.IsNotNull(ui.Host.FindInMenu(menu, "Menu." + id), id + " is missing.");
         }
 
-        Assert.IsNull(ui.Host.TryFindInMenu(menu, "Menu.SelectInHost"), "Select shows while Live is on.");
+        Assert.IsNull(ui.Host.TryFindInMenu(menu, "Menu.SelectInHost"), "Select shows while selection sync is on.");
     }
 
     [TestMethod]
@@ -319,7 +319,7 @@ public sealed class PanelViewTests
         WpfSta.Invoke(() =>
         {
             ui.Panel.Filter.Categories.Items[0].IsChecked = true;
-            ui.Clock.Advance(DevTools.ModelsContext.Filters.FilterRunner.LiveDelay);
+            ui.Clock.Advance(DevTools.ModelsContext.Filters.FilterRunner.SelectionSyncDelay);
         });
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Runner.ResultCount > 0), "The filter found nothing.");
 

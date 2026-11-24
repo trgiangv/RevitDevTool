@@ -13,16 +13,15 @@ namespace RevitDevTool.Tools.ModelsContext.Visibility;
 
 internal sealed record PreparedFilter(string Signature, List<ElementId> Categories, ElementFilter? Filter);
 
-internal static class LinkFilters
+internal static class LinkViewFilters
 {
     public const string Prefix = "Model Context ";
-    public const string NotByHostView = "Revit colors linked elements only when the link is By Host View.";
-    public const string NotFilterable = "Revit cannot use this category in a view filter.";
-    public const string NotDeleted = "Could not delete the view filter {0}.";
 
     private const string TransactionName = "Model Context";
 
     private static readonly Dictionary<(string Model, long View), Dictionary<string, string>> Registry = [];
+
+    public static event Action<string>? Cleaned;
 
     public static bool IsSupported =>
 #if REVIT2024_OR_GREATER
@@ -64,7 +63,7 @@ internal static class LinkFilters
 
         if (!IsSupported)
         {
-            throw new InvalidOperationException(VisibilityReasons.LinkFiltersUnavailable);
+            throw new InvalidOperationException(VisibilityText.LinkFiltersUnavailable);
         }
 
         var filterable = new HashSet<long>(ParameterFilterUtilities.GetAllFilterableCategories().Select(id => id.ToLong()));
@@ -84,6 +83,7 @@ internal static class LinkFilters
 
         Sweep(model);
         var entries = EntriesOf(model, view);
+        var applied = new HashSet<ElementId>();
         foreach (var item in prepared)
         {
             var filter = Find(model, entries, item.Signature) ?? Create(model, item, entries);
@@ -93,6 +93,29 @@ internal static class LinkFilters
             }
 
             view.SetFilterOverrides(filter.Id, paint(view.GetFilterOverrides(filter.Id)));
+            applied.Add(filter.Id);
+        }
+
+        LowerOthers(model, view, applied);
+    }
+
+    private static void LowerOthers(Document model, View view, HashSet<ElementId> applied)
+    {
+        var others = view.GetOrderedFilters()
+            .Where(id => !applied.Contains(id)
+                         && model.GetElement(id) is ParameterFilterElement filter
+                         && IsPanelName(filter.Name))
+            .ToList();
+        foreach (var id in others)
+        {
+            var overrides = view.GetFilterOverrides(id);
+            var visible = view.GetFilterVisibility(id);
+            var enabled = view.GetIsFilterEnabled(id);
+            view.RemoveFilter(id);
+            view.AddFilter(id);
+            view.SetFilterOverrides(id, overrides);
+            view.SetFilterVisibility(id, visible);
+            view.SetIsFilterEnabled(id, enabled);
         }
     }
 
@@ -115,6 +138,15 @@ internal static class LinkFilters
 
     public static bool HasAnyAnywhere => Registry.Count > 0;
 
+    public static void Rename(string oldId, string newId)
+    {
+        foreach (var pair in Registry.Where(pair => pair.Key.Model == oldId).ToList())
+        {
+            Registry.Remove(pair.Key);
+            Registry[(newId, pair.Key.View)] = pair.Value;
+        }
+    }
+
     public static void RemoveEverywhere(UIApplication application)
     {
         foreach (Document document in application.Application.Documents)
@@ -128,20 +160,20 @@ internal static class LinkFilters
         var (instance, linkDocument) = LinkElements.RequireLink(model, step.Document);
         if (RevitVisibilityExplainer.DisplayModeOf(view, instance) is not null)
         {
-            throw new InvalidOperationException(NotByHostView);
+            throw new InvalidOperationException(VisibilityText.NotByHostView);
         }
 
         if (step.Filter.Groups.Count == 0 || step.Filter.Groups.Any(category => !filterable.Contains(category)))
         {
-            throw new InvalidOperationException(NotFilterable);
+            throw new InvalidOperationException(VisibilityText.NotFilterable);
         }
 
         var categories = step.Filter.Groups.Select(id => id.ToElementId()).ToList();
-        var filter = new LinkFilterRules(model, linkDocument, categories).Compile(step.Filter.Root);
+        var filter = new LinkFilterCompiler(model, linkDocument, categories).Compile(step.Filter.Root);
         if (filter is not null && !ParameterFilterElement.ElementFilterIsAcceptableForParameterFilterElement(model,
                 new HashSet<ElementId>(categories), filter))
         {
-            throw new InvalidOperationException(VisibilityReasons.LinkRuleNotNative);
+            throw new InvalidOperationException(VisibilityText.LinkRuleNotNative);
         }
 
         return new PreparedFilter(SignatureOf(step.Filter), categories, filter);
@@ -218,7 +250,7 @@ internal static class LinkFilters
 
         return failed.Count == 0
             ? null
-            : string.Format(CultureInfo.CurrentCulture, NotDeleted, string.Join(", ", failed));
+            : string.Format(CultureInfo.CurrentCulture, VisibilityText.NotDeleted, string.Join(", ", failed));
     }
 
     private static void Clean(Document model)
@@ -252,6 +284,10 @@ internal static class LinkFilters
         catch (Exception exception)
         {
             RevitProfiler.Logger.Swallowed(exception, "Clean view filters", model.Title);
+        }
+        finally
+        {
+            Cleaned?.Invoke(modelId);
         }
     }
 

@@ -116,7 +116,7 @@ public sealed class LoggingTests
     }
 
     [TestMethod]
-    public async Task LivePauseLogsLimit()
+    public async Task SyncPauseLogsLimit()
     {
         var logger = new CollectingLogger(LogLevel.Trace);
         using var fixture = await PanelFixture.OpenAsync(logger: logger);
@@ -127,7 +127,7 @@ public sealed class LoggingTests
         fixture.Settle();
 
         StringAssert.Contains(string.Join("\n", logger.Entries.Select(entry => entry.Message)),
-            "Live paused at");
+            "Selection sync paused at");
     }
 
     private sealed class CollectingLogger(LogLevel minimum) : ILogger

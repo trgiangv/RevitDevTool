@@ -113,11 +113,6 @@ public sealed class ExplorerViewTests
         Assert.AreEqual(ExplorerCategories.SelectReason, isolate.HelpText);
     }
 
-    private static bool HasGroup(PanelUi ui, string name)
-    {
-        return WpfSta.Invoke(() => ui.Panel.Explorer.Rows.Any(row => row.Kind == TreeRowKind.Group && row.Text == name));
-    }
-
     private static int SelectedCount(PanelUi ui)
     {
         return WpfSta.Invoke(() => ui.Panel.Explorer.Categories.Picker.Items.Count(item => item.IsChecked));

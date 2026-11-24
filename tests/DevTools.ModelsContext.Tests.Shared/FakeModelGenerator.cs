@@ -1,6 +1,5 @@
 using Bogus;
 using DevTools.ModelsContext.Documents;
-using DevTools.ModelsContext.Explorer;
 
 namespace DevTools.ModelsContext.Tests.Shared;
 
@@ -62,8 +61,6 @@ public static class FakeModelGenerator
     public static readonly DocumentKey ArchFirst = DocumentKey.Link(ModelId, ArchFirstInstance);
     public static readonly DocumentKey ArchSecond = DocumentKey.Link(ModelId, ArchSecondInstance);
     public static readonly DocumentKey Mep = DocumentKey.Link(ModelId, MepInstance);
-
-    public static readonly TreeSchema Schema = new(["Category", "Family", "Type", "Instance"]);
 
     internal static readonly IReadOnlyList<CategorySpec> Categories =
     [
@@ -162,7 +159,7 @@ public static class FakeModelGenerator
             .Select(element => new ElementRecord(8_100_000 + index * 1_000 + element, 8_000_000 + index, level, 1)));
         return source with { Types = [.. source.Types, .. types], Elements = [.. source.Elements, .. elements] };
     }
-    public static DocumentSnapshot BuildSnapshot(FakeSource source, int groupingDepth = TreeSchema.MaxGroupingDepth)
+    public static DocumentSnapshot BuildSnapshot(FakeSource source, int groupingDepth = DocumentSnapshot.MaxGroupingDepth)
     {
         return BuildSnapshot(source, null, false, groupingDepth);
     }
@@ -171,7 +168,7 @@ public static class FakeModelGenerator
         FakeSource source,
         DocumentVersion? stamp,
         bool reversed,
-        int groupingDepth = TreeSchema.MaxGroupingDepth)
+        int groupingDepth = DocumentSnapshot.MaxGroupingDepth)
     {
         var builder = new DocumentSnapshotBuilder(source.Id, groupingDepth);
         if (stamp is { } version)

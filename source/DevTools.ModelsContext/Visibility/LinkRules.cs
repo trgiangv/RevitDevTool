@@ -6,6 +6,9 @@ namespace DevTools.ModelsContext.Visibility;
 
 public static class LinkRules
 {
+    public const int MaxRules = 100;
+    public const int MaxIsolateRest = 10_000;
+
     public static ParameterKey FamilyName { get; } = ParameterKey.BuiltIn("Family Name", "ALL_MODEL_FAMILY_NAME");
 
     public static ParameterKey TypeName { get; } = ParameterKey.BuiltIn("Type Name", "ALL_MODEL_TYPE_NAME");
@@ -15,9 +18,10 @@ public static class LinkRules
         return row.Kind is TreeRowKind.Group or TreeRowKind.Family or TreeRowKind.Type;
     }
 
-    public static long CategoryOf(DocumentSnapshot snapshot, TreeRow row)
+    public static IReadOnlyList<long> CategoriesOf(DocumentSnapshot snapshot, TreeRow row)
     {
-        return snapshot.Groups[row.Path.Group].GroupId;
+        var paths = row.Kind == TreeRowKind.Group ? snapshot.WithSubgroups(row.Path) : [row.Path];
+        return [.. paths.Select(path => snapshot.Groups[path.Group].GroupId).Distinct().OrderBy(id => id)];
     }
 
     public static FilterNode? RuleOf(DocumentSnapshot snapshot, TreeRow row)
@@ -58,9 +62,9 @@ public static class LinkRules
     {
         if (!IsNative(root))
         {
-            return VisibilityReasons.LinkRuleNotNative;
+            return VisibilityText.LinkRuleNotNative;
         }
 
-        return CountOf(root) > VisibilityReasons.LinkFilterCap ? VisibilityReasons.LinkFilterTooMany : null;
+        return CountOf(root) > MaxRules ? VisibilityText.LinkFilterTooMany : null;
     }
 }

@@ -1,5 +1,4 @@
 using DevTools.ModelsContext.Documents;
-using DevTools.ModelsContext.Explorer;
 using System.Text.Json;
 
 namespace DevTools.ModelsContext.Tests.Shared;
@@ -67,7 +66,7 @@ public static class SnapshotJson
     {
         public string Source { get; set; } = string.Empty;
 
-        public int GroupingDepth { get; set; } = TreeSchema.MaxGroupingDepth;
+        public int GroupingDepth { get; set; } = DocumentSnapshot.MaxGroupingDepth;
 
         public List<TypeDocument> Types { get; set; } = [];
 

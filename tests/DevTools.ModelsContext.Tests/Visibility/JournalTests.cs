@@ -14,57 +14,85 @@ public sealed class JournalTests
     [TestMethod]
     public void JournalCountsChanges()
     {
-        var journal = new TemporaryJournal();
+        var journal = new ChangeJournal();
 
-        journal.Record(Current, View);
-        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
+        journal.AddChange(Current, View, true);
+        journal.AddLinkHides(Current, View, [new LinkHide(Linked, "uid-7")]);
 
-        var state = journal.Get(Current, View);
-        Assert.AreEqual(2, state.ChangeCount);
-        Assert.AreEqual(Linked, state.LinkEntries.Single().Element);
+        var page = journal.Get(Current, View);
+        Assert.AreEqual(2, page.ChangeCount);
+        Assert.AreEqual(Linked, page.LinkHides.Single().Element);
     }
 
     [TestMethod]
-    public void ResetClearsJournal()
+    public void KeepClearsConvertedChanges()
     {
-        var journal = new TemporaryJournal();
-        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
+        var journal = new ChangeJournal();
+        journal.AddChange(Current, View, true);
+        journal.AddLinkHides(Current, View, [new LinkHide(Linked, "uid-7")]);
 
-        journal.Reset(Current, View);
+        journal.Keep(Current, View);
 
-        Assert.AreEqual(JournalState.Empty, journal.Get(Current, View));
+        Assert.AreEqual(JournalPage.Empty, journal.Get(Current, View));
+    }
+
+    [TestMethod]
+    public void KeepLeavesPropertyChanges()
+    {
+        var journal = new ChangeJournal();
+        journal.AddChange(Current, View, true);
+        journal.AddChange(Current, View, false);
+
+        journal.Keep(Current, View);
+
+        Assert.AreEqual(1, journal.Get(Current, View).ChangeCount);
+    }
+
+    [TestMethod]
+    public void RenameMovesPages()
+    {
+        var journal = new ChangeJournal();
+        journal.AddLinkHides(Current, View, [new LinkHide(Linked, "uid-7")]);
+        var rename = new ModelRename(Current.ModelId, "renamed.rvt", FakeModelGenerator.CurrentSource,
+            FakeModelGenerator.CurrentSource);
+
+        journal.Rename(rename);
+
+        Assert.AreEqual(JournalPage.Empty, journal.Get(Current, View));
+        Assert.AreEqual(rename.Map(Linked),
+            journal.Get(DocumentKey.Current("renamed.rvt"), View).LinkHides.Single().Element);
     }
 
     [TestMethod]
     public void TemporaryResetKeepsLinkHides()
     {
-        var journal = new TemporaryJournal();
-        journal.Record(Current, View);
-        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
+        var journal = new ChangeJournal();
+        journal.AddChange(Current, View, true);
+        journal.AddLinkHides(Current, View, [new LinkHide(Linked, "uid-7")]);
 
-        journal.ResetTemporary(Current, View);
+        journal.ClearChanges(Current, View);
 
-        var state = journal.Get(Current, View);
-        Assert.AreEqual(1, state.ChangeCount);
-        Assert.HasCount(1, state.LinkEntries);
+        var page = journal.Get(Current, View);
+        Assert.AreEqual(1, page.ChangeCount);
+        Assert.HasCount(1, page.LinkHides);
     }
 
     [TestMethod]
     public void RemoveDropsShownEntries()
     {
-        var journal = new TemporaryJournal();
-        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
+        var journal = new ChangeJournal();
+        journal.AddLinkHides(Current, View, [new LinkHide(Linked, "uid-7")]);
 
         journal.Remove(Current, View, [Linked]);
 
-        Assert.AreEqual(JournalState.Empty, journal.Get(Current, View));
+        Assert.AreEqual(JournalPage.Empty, journal.Get(Current, View));
     }
 
     [TestMethod]
     public void UndoMarksJournalStale()
     {
-        var journal = new TemporaryJournal();
-        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
+        var journal = new ChangeJournal();
+        journal.AddLinkHides(Current, View, [new LinkHide(Linked, "uid-7")]);
 
         journal.MarkStale(Current);
 
@@ -74,11 +102,11 @@ public sealed class JournalTests
     [TestMethod]
     public void LinkReloadClearsItsEntries()
     {
-        var journal = new TemporaryJournal();
-        journal.RecordHidden(Current, View, [new JournalEntry(Linked, "uid-7")]);
+        var journal = new ChangeJournal();
+        journal.AddLinkHides(Current, View, [new LinkHide(Linked, "uid-7")]);
 
         journal.ClearLink(FakeModelGenerator.Mep);
 
-        Assert.IsEmpty(journal.Get(Current, View).LinkEntries);
+        Assert.IsEmpty(journal.Get(Current, View).LinkHides);
     }
 }

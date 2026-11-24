@@ -29,9 +29,9 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
 
     private bool Linked => link is not null;
 
-    public IEnumerable<HiddenCause> Run()
+    public IEnumerable<HiddenReason> Run()
     {
-        Func<HiddenCause?>[] checks = [Category, Filter, Workset, Phase, DesignOption, OwnerView, NotDrawn, ViewRange, Crop];
+        Func<HiddenReason?>[] checks = [Category, Filter, Workset, Phase, DesignOption, OwnerView, NotDrawn, ViewRange, Crop];
         foreach (var check in checks)
         {
             if (Try(check) is { } cause)
@@ -74,7 +74,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         }
     }
 
-    private static HiddenCause? Try(Func<HiddenCause?> check)
+    private static HiddenReason? Try(Func<HiddenReason?> check)
     {
         try
         {
@@ -86,13 +86,13 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         }
     }
 
-    private HiddenCause? Category()
+    private HiddenReason? Category()
     {
         for (var category = LineStyleOf(element) ?? element.Category; category is not null; category = category.Parent)
         {
             if (HostCategoryId(category) is { } id && IsCategoryHidden(view, id))
             {
-                return HiddenCues.Category(category.Parent is { } parent ? $"{parent.Name}: {category.Name}" : category.Name);
+                return HiddenReasons.Category(category.Parent is { } parent ? $"{parent.Name}: {category.Name}" : category.Name);
             }
         }
 
@@ -125,7 +125,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
             : null;
     }
 
-    private HiddenCause? Filter()
+    private HiddenReason? Filter()
     {
         foreach (var filterId in view.GetFilters())
         {
@@ -144,32 +144,32 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         return null;
     }
 
-    private HiddenCause? CurrentFilter(FilterElement filter)
+    private HiddenReason? CurrentFilter(FilterElement filter)
     {
         switch (filter)
         {
             case SelectionFilterElement selection:
-                return selection.GetElementIds().Contains(element.Id) ? HiddenCues.Filter(filter.Name) : null;
+                return selection.GetElementIds().Contains(element.Id) ? HiddenReasons.Filter(filter.Name) : null;
             case ParameterFilterElement parameters when InCategories(parameters):
                 try
                 {
                     return parameters.GetElementFilter() is not { } rules || rules.PassesFilter(element)
-                        ? HiddenCues.Filter(filter.Name)
+                        ? HiddenReasons.Filter(filter.Name)
                         : null;
                 }
                 catch (Autodesk.Revit.Exceptions.ApplicationException)
                 {
-                    return HiddenCues.FilterPossible(filter.Name);
+                    return HiddenReasons.FilterPossible(filter.Name);
                 }
             default:
                 return null;
         }
     }
 
-    private HiddenCause? LinkedFilter(FilterElement filter)
+    private HiddenReason? LinkedFilter(FilterElement filter)
     {
         return filter is ParameterFilterElement parameters && InCategories(parameters)
-            ? HiddenCues.FilterPossible(filter.Name)
+            ? HiddenReasons.FilterPossible(filter.Name)
             : null;
     }
 
@@ -178,7 +178,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         return element.Category is { } category && HostCategoryId(category) is { } id && filter.GetCategories().Contains(id);
     }
 
-    private HiddenCause? Workset()
+    private HiddenReason? Workset()
     {
         var source = Source;
         if (!source.IsWorkshared || element.WorksetId == WorksetId.InvalidWorksetId)
@@ -189,13 +189,13 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         var workset = source.GetWorksetTable().GetWorkset(element.WorksetId);
         if (!workset.IsOpen)
         {
-            return HiddenCues.WorksetClosed(workset.Name);
+            return HiddenReasons.WorksetClosed(workset.Name);
         }
 
-        return !Linked && HiddenWorksetName(source, view, element.WorksetId) is { } name ? HiddenCues.WorksetHidden(name) : null;
+        return !Linked && HiddenWorksetName(source, view, element.WorksetId) is { } name ? HiddenReasons.WorksetHidden(name) : null;
     }
 
-    private HiddenCause? Phase()
+    private HiddenReason? Phase()
     {
         if (!element.HasPhases()
             || view.get_Parameter(BuiltInParameter.VIEW_PHASE)?.AsElementId() is not { } viewPhaseId
@@ -216,26 +216,42 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         var created = phases.FindIndex(phase => phase.Id == element.CreatedPhaseId);
         if (created > viewIndex)
         {
-            return HiddenCues.CreatedLater(phases[created].Name);
+            return HiddenReasons.CreatedLater(phases[created].Name);
         }
 
         var demolished = phases.FindIndex(phase => phase.Id == element.DemolishedPhaseId);
-        return demolished >= 0 && demolished <= viewIndex ? HiddenCues.Demolished(phases[demolished].Name) : null;
+        return demolished >= 0 && demolished <= viewIndex ? HiddenReasons.Demolished(phases[demolished].Name) : null;
     }
 
-    private HiddenCause? DesignOption()
+    private HiddenReason? DesignOption()
     {
         if (element.DesignOption is not { IsPrimary: false } option)
         {
             return null;
         }
 
-        return !Linked && Autodesk.Revit.DB.DesignOption.GetActiveDesignOptionId(model) == option.Id
+        if (!Linked && Autodesk.Revit.DB.DesignOption.GetActiveDesignOptionId(model) == option.Id)
+        {
+            return null;
+        }
+
+        return ViewCollector(model, view, link)?.WherePasses(new ElementDesignOptionFilter(option.Id)).Any() == true
             ? null
-            : HiddenCues.DesignOption(option.Name);
+            : HiddenReasons.DesignOption(option.Name);
     }
 
-    private HiddenCause? OwnerView()
+    internal static FilteredElementCollector? ViewCollector(Document model, View view, RevitLinkInstance? link)
+    {
+        if (link is not null)
+        {
+            return LinkElements.InView(model, view, link.Id);
+        }
+
+        ViewActivations.ThrowIfChangedInCall();
+        return new FilteredElementCollector(model, view.Id);
+    }
+
+    private HiddenReason? OwnerView()
     {
         var owner = element.OwnerViewId;
         if (owner == ElementId.InvalidElementId || (!Linked && owner == view.Id))
@@ -243,10 +259,10 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
             return null;
         }
 
-        return HiddenCues.OwnerView(Source.GetElement(owner)?.Name ?? owner.ToString());
+        return HiddenReasons.OwnerView(Source.GetElement(owner)?.Name ?? owner.ToString());
     }
 
-    private HiddenCause? NotDrawn()
+    private HiddenReason? NotDrawn()
     {
         if (element.OwnerViewId != ElementId.InvalidElementId)
         {
@@ -256,13 +272,13 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         var draw = ElementDrawing.DrawOf(element);
         if (draw == ViewDraw.None)
         {
-            return HiddenCues.NoGeometry;
+            return HiddenReasons.NoGeometry;
         }
 
-        return (draw & ViewDraws.Of(ElementDrawing.KindOf(view))) == 0 ? HiddenCues.NotInViewType : null;
+        return (draw & ViewDraws.Of(ElementDrawing.KindOf(view))) == 0 ? HiddenReasons.NotInViewType : null;
     }
 
-    private HiddenCause? ViewRange()
+    private HiddenReason? ViewRange()
     {
         if (view is not ViewPlan plan || Corners() is not { Count: > 0 } corners)
         {
@@ -277,33 +293,33 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
             : PlanRange(plan, range, minZ, maxZ);
     }
 
-    private HiddenCause? CeilingRange(ViewPlan plan, PlanViewRange range, double minZ, double maxZ)
+    private HiddenReason? CeilingRange(ViewPlan plan, PlanViewRange range, double minZ, double maxZ)
     {
         if (Elevation(plan, range, PlanViewPlane.CutPlane) is { } cut && maxZ < cut - Tolerance)
         {
-            return HiddenCues.BelowCutPlane;
+            return HiddenReasons.BelowCutPlane;
         }
 
         var top = Elevation(plan, range, PlanViewPlane.TopClipPlane);
         var depth = Elevation(plan, range, PlanViewPlane.ViewDepthPlane);
         var limit = top is { } t && depth is { } d ? Math.Max(t, d) : top ?? depth;
-        return limit is { } above && minZ > above + Tolerance ? HiddenCues.AboveViewRange : null;
+        return limit is { } above && minZ > above + Tolerance ? HiddenReasons.AboveViewRange : null;
     }
 
-    private HiddenCause? PlanRange(ViewPlan plan, PlanViewRange range, double minZ, double maxZ)
+    private HiddenReason? PlanRange(ViewPlan plan, PlanViewRange range, double minZ, double maxZ)
     {
         if (Elevation(plan, range, PlanViewPlane.TopClipPlane) is { } top && minZ > top + Tolerance)
         {
-            return HiddenCues.AboveViewRange;
+            return HiddenReasons.AboveViewRange;
         }
 
         if (Elevation(plan, range, PlanViewPlane.CutPlane) is { } cut && minZ > cut + Tolerance && !IsShownAboveCut())
         {
-            return HiddenCues.AboveCutPlane;
+            return HiddenReasons.AboveCutPlane;
         }
 
         return Elevation(plan, range, PlanViewPlane.ViewDepthPlane) is { } depth && maxZ < depth - Tolerance
-            ? HiddenCues.BelowViewDepth
+            ? HiddenReasons.BelowViewDepth
             : null;
     }
 
@@ -319,7 +335,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         return level is null ? null : level.ProjectElevation + range.GetOffset(plane);
     }
 
-    private HiddenCause? Crop()
+    private HiddenReason? Crop()
     {
         if (Corners() is not { Count: > 0 } corners)
         {
@@ -328,7 +344,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
 
         if (view is View3D { IsSectionBoxActive: true } sectioned)
         {
-            return Outside(sectioned.GetSectionBox(), corners, withDepth: true) ? HiddenCues.OutsideSectionBox : null;
+            return Outside(sectioned.GetSectionBox(), corners, withDepth: true) ? HiddenReasons.OutsideSectionBox : null;
         }
 
         if (!view.CropBoxActive || view is View3D { IsPerspective: true })
@@ -336,7 +352,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
             return null;
         }
 
-        return Outside(view.CropBox, corners, withDepth: false) ? HiddenCues.OutsideCrop : null;
+        return Outside(view.CropBox, corners, withDepth: false) ? HiddenReasons.OutsideCrop : null;
     }
 
     private static bool Outside(BoundingBoxXYZ box, List<XYZ> corners, bool withDepth)
