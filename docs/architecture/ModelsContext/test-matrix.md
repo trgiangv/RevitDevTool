@@ -130,7 +130,8 @@ Panel preconditions a flow (and anyone checking the panel by hand) must meet:
    case whose slots were not captured. Visibility cases list their slots too, but L2
    requires them only in a run with `-Images`.
 5. L3 waits only on the readiness signal (`ItemStatus` Idle/Busy); no sleeps,
-   no keys, no mouse, UIA patterns by AutomationId only. Never poll Revit's
+   no keys (the one exception: Shift+F10 opens a context menu, UI-18 to UI-20), no mouse, UIA patterns by
+   AutomationId only. Never poll Revit's
    UIA tree while it is busy. A collapsed or hidden control is still in the UIA
    tree (offscreen): test presence with `Shown` / `Gone`, never with a bare
    `FindFirstDescendant`.
@@ -254,6 +255,10 @@ sample, 2026-11-17). Change them there, not here alone.
 Revit 2026 is the primary test host, Revit 2024 the secondary (`-Year 2024` is the script default).
 Current results (Snowdon HVAC + six links):
 
+- Revit 2026, run `20261125-013631` (fresh Revit after a restart): L2 441 PASS, 0 FAIL, 8 Inconclusive (CA by design)
+  in 268 s, SC-05 917; L3 18 of 20 in 298 s, the new menu flows UI-18 and UI-20 then passed after test fixes
+  (runs `20261125-014836`, `-014723`); UI-19 passed in the full run; safety ok after L2, after L3 and at host end.
+  CA-01 to CA-10 passed alone in `{3D}` (run `20261125-014919`).
 - Revit 2026, run `20261125-005153` (fresh Revit, Snowdon HVAC + six links, Center line left out, eye counts what the
   view draws): L2 440 PASS, 1 FAIL (SC-01, golden moved, below), 8 Inconclusive (CA-01 to CA-09 need `{3D}` from a
   run of their own) in 275 s; L3 17 of 17 flows in 473 s; safety ok after L2; the count cases and the host end state
@@ -263,10 +268,9 @@ Current results (Snowdon HVAC + six links):
   elements: Railings › Supports 2,608, Wall Sweeps 258, Curtain Wall Grids 235 …), SC-06 780 → 1,028, EN-02 816 → 817,
   EN-05 1,119 → 1,120 (2026-11-24). SC-01 went 2,929 → 4,961 with Center line collected and back to 2,929 once Center
   line was left out (run `20261125-005153`). TX-04, TX-05, NU-05, YN-03 and RF-02 kept their values.
-- SC-05 (Active view `L3`) depends on how far Revit has drawn `L3`, not on the model: 917 (runs `20261124-230742`,
-  `20261125-001901`), 1,198 (`20261124-231506`, a session where `L3` had been active a long time) and 1,669 (a fresh
-  session where `L3` was activated by MCP and never shown in front, `20261124-232231`); panel = oracle in all.
-  The golden stays 917 (Gotcha 20).
+- SC-05 (Active view `L3`) stays 917 (oracle = panel). On 2026-11-25 the L3 view collector gave 917 in 21 probes:
+  fresh session never in front, Revit minimized with L3 reopened, in front after `ZoomToFit`, after a full L2 run.
+  Earlier sessions gave 1,198 and 1,669 (only Ducts and Flex Ducts moved) and could not be repeated (Gotcha 19).
 - Earlier: Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
 - Revit 2024, run `20261118-093432`: L2 127/131, L3 5/6; the differences are listed under Mismatches. A case where the oracle differs from the golden value there means the 2024 sample file differs, not that the panel is wrong: record it with both values and decide per-version golden values before changing `Data/*.json`.
 - L1 last run (net10.0-windows, 2026-11-25): core and views all pass.
@@ -705,12 +709,17 @@ name; files land in the run folder.
 | UI-15 | Explorer sync off, Filter sync off then on above 5,000 (EX-11, LV-06) | Filter stays On; paused line gone with it off, back on; Explorer stays Off | `SyncTogglesAreSeparate` |
 | UI-16 | Eye on Ducts (Current model), select a duct instance row, close the strip (WH) | *Temporary hide/isolate* with Show; closed | `WhyHiddenNamesTempHide` |
 | UI-17 | Eye on Doors under the link, Keep, Cancel, Reset (B61) | *… link elements stay hidden in this view*; Cancel keeps the bar; Reset clears it | `KeepAsksForLinkHides` |
+| UI-18 | Row context menu on Doors under the link (Shift+F10), Hide, Reset (B56) | menu lists Zoom, Isolate, Hide, Halftone, Color, Why hidden (Select only while sync is off); eye Hidden, bar with a count; then no bar | `RowMenuHidesLinkDoors` |
+| UI-19 | Categories box menu on ticked Walls (Shift+F10): Isolate, Reset, Halftone, Reset (B31) | bar with a count, then no bar, both times | `BoxMenuIsolateHalftone` |
+| UI-20 | Result row menu (Shift+F10) on TX-01: Hide, Reset (B91) | TX-01; bar with a count; then no bar | `ResultMenuHidesMatches` |
 
 UI-09 to UI-17 change only temporary state and reset it; UI-09, UI-10 and UI-12 need the Site link loaded
-(Inconclusive otherwise). The context menus (B56, the box Isolate and Halftone, the result right-click) have no
-L3 test: WPF does not implement UI Automation `ShowContextMenu`, so only a right-click or Shift+F10 opens them,
-which is not a pattern. They stay covered by Views `CategoryMenuListsActions`, `IsolateRunsOnTicked` and
-`PanelViewTests`; the row tools (UI-07, UI-08) run the same menu items.
+(Inconclusive otherwise). WPF does not implement UI Automation `ShowContextMenu`, so the context menus (UI-18 to
+UI-20) open with one Shift+F10 on the focused row (`RevitPanel.MenuItem`, the one key the owner allows in L3; it
+takes the keyboard focus for that moment). The menu is a popup window of Revit's process; the item is found by
+AutomationId (`Menu.<Action>`, `Explorer.CategoryMenu.<Action>`) and run by its Invoke pattern, which closes the menu.
+`RevitPanel.MenuItems` lists the items through the raw view walker: the control view of this menu leaves out its
+first visible item (Zoom), which the popup capture (`menu` image, the popup window itself) shows on screen.
 
 ## Mismatches found
 

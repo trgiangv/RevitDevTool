@@ -216,6 +216,47 @@
         "Make {3D} active. Explorer tab, Architectural link ticked: Collapse all, expand the link, click the eye on Doors.",
         "Click Keep: the bar asks 'N link elements stay hidden in this view' (Keep · Cancel). Click Cancel: the bar stays. Click Reset."
       ]
+    },
+    {
+      "id": "UI-18",
+      "description": "Row context menu (B56): Shift+F10 on Doors under the Architectural link lists Zoom, Isolate, Hide, Halftone, Color and Why hidden (Select only while selection sync is off); Hide hides the linked doors; Reset shows them",
+      "test": "RowMenuHidesLinkDoors",
+      "cases": [],
+      "category": "OST_Doors",
+      "expected": "menu lists Zoom, Isolate, Hide, Halftone, Color, Why hidden (Select only while selection sync is off); eye Hidden, bar with a count; then no bar",
+      "images": ["before", "menu", "after", "reset"],
+      "manualSteps": [
+        "Explorer tab, Whole model, only the Architectural link ticked: Collapse all, expand the link, select the Doors row.",
+        "Press Shift+F10 (or right-click): the menu lists Zoom, Isolate, Hide, Halftone, Color and Why hidden? (Select shows only while selection sync is off). Click Hide: the Doors eye reads Hidden and the bar shows a count.",
+        "Click Reset: the bar goes away."
+      ]
+    },
+    {
+      "id": "UI-19",
+      "description": "Categories box menu (B31): Shift+F10 on the ticked Walls row, Isolate, Reset, then Halftone, Reset",
+      "test": "BoxMenuIsolateHalftone",
+      "cases": [],
+      "category": "OST_Walls",
+      "expected": "Isolate: bar with a count, then no bar; Halftone: bar with a count, then no bar",
+      "images": ["before", "isolate", "halftone", "after"],
+      "manualSteps": [
+        "Explorer tab, Whole model, only the Architectural link ticked: open Categories, click None, tick Walls.",
+        "Press Shift+F10 on the Walls row (or right-click it), click Isolate: only walls stay drawn and the bar shows a count. Click Reset.",
+        "Open the menu again, click Halftone: walls draw halftone and the bar shows a count. Click Reset."
+      ]
+    },
+    {
+      "id": "UI-20",
+      "description": "Result row menu (B91): build TX-01, Shift+F10 on the result row, Hide hides the matching door, Reset shows it",
+      "test": "ResultMenuHidesMatches",
+      "cases": ["TX-01"],
+      "expected": "TX-01 count; bar with a count; then no bar",
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Filter tab, Whole model, only the Architectural link ticked: + (new filter), Categories Doors, rule Mark equals 's10' (1 match).",
+        "Click the mode box in the result row and press Shift+F10 (or right-click the row), click Hide: the bar shows a count.",
+        "Click Reset: the bar goes away."
+      ]
     }
   ]
 }

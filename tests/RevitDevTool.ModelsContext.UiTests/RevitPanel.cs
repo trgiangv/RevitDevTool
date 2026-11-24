@@ -2,7 +2,9 @@ using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Conditions;
 using FlaUI.Core.Definitions;
 using FlaUI.Core.Exceptions;
+using FlaUI.Core.Input;
 using FlaUI.Core.Tools;
+using FlaUI.Core.WindowsAPI;
 using FlaUI.UIA3;
 using RevitDevTool.ModelsContext.LiveTests;
 using System.Diagnostics;
@@ -218,6 +220,54 @@ internal sealed class RevitPanel : IDisposable
                 yield return owned;
             }
         }
+    }
+
+    public AutomationElement MenuItem(AutomationElement target, string itemAutomationId)
+    {
+        Settle();
+        target.Focus();
+        Keyboard.TypeSimultaneously(VirtualKeyShort.SHIFT, VirtualKeyShort.F10);
+        Evidence.Step($"Focused '{target.Name}' and sent Shift+F10 to open its context menu.");
+        var item = Retry.WhileNull(() => PopupWindows()
+                .Select(window => window.FindFirstDescendant(cf => cf.ByAutomationId(itemAutomationId)))
+                .FirstOrDefault(found => found is not null),
+            FindLimit, ignoreException: true).Result;
+        Assert.IsNotNull(item, $"Shift+F10 on '{target.Name}' opened no menu with {itemAutomationId}.");
+        return item!;
+    }
+
+    public IReadOnlyList<string> MenuItems(AutomationElement item)
+    {
+        var walker = _automation.TreeWalkerFactory.GetRawViewWalker();
+        var items = new List<string>();
+        for (var child = walker.GetFirstChild(item.Parent); child is not null; child = walker.GetNextSibling(child))
+        {
+            if (child.Properties.ControlType.ValueOrDefault == ControlType.MenuItem && !child.Properties.IsOffscreen.ValueOrDefault)
+            {
+                items.Add(child.Properties.AutomationId.ValueOrDefault ?? string.Empty);
+            }
+        }
+
+        return items;
+    }
+
+    public void MenuShot(AutomationElement item, string label)
+    {
+        var window = item;
+        while (window is not null && window.Properties.NativeWindowHandle.ValueOrDefault == IntPtr.Zero)
+        {
+            window = window.Parent;
+        }
+
+        if (window is not null)
+        {
+            Evidence.Image(label, path => WindowShot.Save(window.Properties.NativeWindowHandle.Value, path));
+        }
+    }
+
+    public void CloseMenu()
+    {
+        Keyboard.Type(VirtualKeyShort.ESCAPE);
     }
 
     public string Message()

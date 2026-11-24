@@ -123,6 +123,19 @@ count.
     `L3` open from an earlier run: `scripts/test-models-context.ps1` runs
     `--filter PreparesSample` first, then the full run. `SampleViews.Activate` stops as Inconclusive
     otherwise; no retry.
+    Probe of 2026-11-25 (Revit 2026, Snowdon HVAC, `FilteredElementCollector(doc, viewId)` and the link
+    overload per link): once `L3` was activated in an MCP call of its own, every later call counted the same
+    set, 917 Current model elements (Ducts 307, Flex Ducts 6) and the same link counts. That held 21 times:
+    fresh session with Revit never in front, Revit minimized with `L3` closed and reopened, Revit in front
+    after `ZoomToFit`, after a full L2 run, after a rolled-back duct edit and in a build that still collected
+    Center line. Revit gives no "drawn" signal and needs none here: the view collector is the definition
+    (panel and oracle use it). Earlier sessions counted 1,198 and 1,669; only Ducts and Flex Ducts moved
+    (587 and 1,052 ducts, as if the view range were not applied to them), and no setup above repeated it.
+    If SC-05 moves again, dump the ids by category with MCP `execute_csharp_code` of
+    `scripts/models-context/view-ids-probe.cs` (one call per `Tag`) and diff the files before touching the golden.
+    Never build the link overload `FilteredElementCollector(doc, viewId, linkId)` for a sheet: on 2026-11-25 it
+    crashed Revit natively with the Cover Sheet active (dump `Revit.exe.39880.dmp`). `LinkElements.ShowsLinks`
+    guards the panel, and the probe refuses any view type outside that list.
 20. **Panel jobs always resume on the UI context.** `PanelRuntime.RunAsync` ran a
     job on whatever thread called it. A document opened inside a test run
     (`OpenAndActivateDocument` in an earlier setup test) raised pane visibility and view

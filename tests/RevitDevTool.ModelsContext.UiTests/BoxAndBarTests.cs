@@ -374,6 +374,135 @@ public sealed class BoxAndBarTests : RecordedTest
         });
     }
 
+    [TestMethod]
+    public void RowMenuHidesLinkDoors()
+    {
+        Record(CaseFiles.Flow("UI-18"), () =>
+        {
+            var doors = CaseFiles.Facts.CategoryNames["OST_Doors"];
+            WithBox(() =>
+            {
+                var link = _steps.DocumentName(CaseFiles.Facts.LinkLabel);
+                _panel.Find("Explorer.CollapseAll").Patterns.Invoke.Pattern.Invoke();
+                var linkRow = _panel.Item(_panel.Find("Explorer.Rows"), cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(link)));
+                _panel.Item(linkRow, cf => cf.ByAutomationId("Explorer.Row.Expand")).Patterns.Invoke.Pattern.Invoke();
+                var row = RowUnder(link, doors);
+                _panel.Shot("before");
+
+                var syncing = _panel.Find("Explorer.SelectionSync").Patterns.Toggle.Pattern.ToggleState.Value == ToggleState.On;
+                var item = _panel.MenuItem(row, "Menu.HideShow");
+                var items = _panel.MenuItems(item);
+                Evidence.Step("Menu items: " + string.Join(", ", items) + ".");
+                _panel.MenuShot(item, "menu");
+                _panel.Act(() => item.Patterns.Invoke.Pattern.Invoke());
+                Evidence.Step("Invoked Menu.HideShow (Invoke pattern).");
+                var eye = _panel.Item(RowUnder(link, doors), cf => cf.ByAutomationId("Explorer.Row.Eye")).Properties.ItemStatus.ValueOrDefault;
+                var bar = _panel.Shown("Temporary.Text")?.Name ?? string.Empty;
+                _panel.Shot("after");
+
+                _panel.Invoke("Temporary.Reset");
+                var gone = _panel.Gone("Temporary.Text");
+                _panel.Shot("reset");
+                Evidence.Values("menu lists Zoom, Isolate, Hide, Halftone, Color, Why hidden (Select only while selection sync is off); eye Hidden, bar with a count; then no bar",
+                    $"menu {string.Join(", ", items)}; eye {eye}, '{bar}'; {(gone ? "no bar" : "bar still shown")}");
+
+                foreach (var expected in new[] { "Menu.Zoom", "Menu.Isolate", "Menu.HideShow", "Menu.Halftone", "Menu.Color", "Menu.WhyHidden" })
+                {
+                    CollectionAssert.Contains(items.ToList(), expected);
+                }
+
+                Assert.AreEqual(!syncing, items.Contains("Menu.SelectInHost"), $"Select must show only while Explorer selection sync is off (sync {(syncing ? "on" : "off")}).");
+
+                Assert.AreEqual("Hidden", eye);
+                Assert.IsTrue(bar.Any(char.IsDigit), $"The temporary bar shows no change count: '{bar}'.");
+                Assert.IsTrue(gone, "Reset left the temporary bar.");
+            }, ResetLeftovers);
+        });
+    }
+
+    [TestMethod]
+    public void BoxMenuIsolateHalftone()
+    {
+        Record(CaseFiles.Flow("UI-19"), () =>
+        {
+            var walls = CaseFiles.Facts.CategoryNames["OST_Walls"];
+            WithBox(() =>
+            {
+                OpenBoxWithNone();
+                _panel.Toggle(Named("Explorer.Category.Item", walls), true, false);
+                _panel.Shot("before");
+
+                var isolate = _panel.MenuItem(BoxRow(walls), "Explorer.CategoryMenu.Isolate");
+                _panel.Act(() => isolate.Patterns.Invoke.Pattern.Invoke());
+                var isolated = _panel.Shown("Temporary.Text")?.Name ?? string.Empty;
+                _panel.Shot("isolate");
+                _panel.Invoke("Temporary.Reset");
+                var isolateGone = _panel.Gone("Temporary.Text");
+
+                var halftone = _panel.MenuItem(BoxRow(walls), "Explorer.CategoryMenu.Halftone");
+                _panel.Act(() => halftone.Patterns.Invoke.Pattern.Invoke());
+                var halftoned = _panel.Shown("Temporary.Text")?.Name ?? string.Empty;
+                _panel.Shot("halftone");
+                _panel.Invoke("Temporary.Reset");
+                var halftoneGone = _panel.Gone("Temporary.Text");
+                _panel.Shot("after");
+                Evidence.Values("Isolate: bar with a count, then no bar; Halftone: bar with a count, then no bar",
+                    $"Isolate '{isolated}', {(isolateGone ? "no bar" : "bar still shown")}; Halftone '{halftoned}', {(halftoneGone ? "no bar" : "bar still shown")}");
+
+                Assert.IsTrue(isolated.Any(char.IsDigit), $"Isolate showed no change count: '{isolated}'.");
+                Assert.IsTrue(isolateGone, "Reset left the Isolate bar.");
+                Assert.IsTrue(halftoned.Any(char.IsDigit), $"Halftone showed no change count: '{halftoned}'.");
+                Assert.IsTrue(halftoneGone, "Reset left the Halftone bar.");
+            }, ResetLeftovers);
+        });
+    }
+
+    [TestMethod]
+    public void ResultMenuHidesMatches()
+    {
+        Record(CaseFiles.Flow("UI-20"), () =>
+        {
+            var flow = CaseFiles.Flow("UI-20");
+            var item = CaseFiles.Filter(flow.Cases[0]);
+            _panel.Select("ModelContext.View.Filter");
+            try
+            {
+                _steps.Build(item);
+                var count = _panel.Count();
+                _panel.Shot("before");
+
+                var hide = _panel.MenuItem(_panel.Find("Filter.Mode"), "Menu.HideShow");
+                _panel.Act(() => hide.Patterns.Invoke.Pattern.Invoke());
+                Evidence.Step("Invoked Menu.HideShow from the result row's context menu.");
+                var bar = _panel.Shown("Temporary.Text")?.Name ?? string.Empty;
+                _panel.Shot("after");
+                _panel.Invoke("Temporary.Reset");
+                var gone = _panel.Gone("Temporary.Text");
+                _panel.Shot("reset");
+                Evidence.Values($"{item.ExpectedText}; bar with a count; then no bar",
+                    $"{count}; '{bar}'; {(gone ? "no bar" : "bar still shown")}");
+
+                Assert.AreEqual(item.ExpectedCount, count);
+                Assert.IsTrue(bar.Any(char.IsDigit), $"The temporary bar shows no change count: '{bar}'.");
+                Assert.IsTrue(gone, "Reset left the temporary bar.");
+            }
+            finally
+            {
+                ResetLeftovers();
+                _panel.Select("ModelContext.View.Explorer");
+            }
+        });
+    }
+
+    private static AutomationElement BoxRow(string name)
+    {
+        var row = Retry.WhileNull(() => _panel.Root.FindAllDescendants(cf => cf.ByAutomationId("Explorer.Category.Row"))
+                .FirstOrDefault(candidate => candidate.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Category.Item"))?.Name == name),
+            Wait, ignoreException: true).Result;
+        Assert.IsNotNull(row, $"No box row '{name}'.");
+        return row!;
+    }
+
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetProcessDpiAwarenessContext(IntPtr value);
