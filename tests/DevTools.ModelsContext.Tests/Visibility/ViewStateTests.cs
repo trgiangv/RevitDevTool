@@ -12,20 +12,20 @@ public sealed class ViewStateTests
     private static readonly DocumentKey Mep = FakeModelGenerator.Mep;
 
     [TestMethod]
-    public async Task StaleViewRefusesHide()
+    public async Task StaleViewHideRunsOnActive()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.View = new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan);
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
-        Assert.AreEqual(VisibilityText.ViewChanged, fixture.Panel.Message);
-        Assert.IsEmpty(fixture.Actions.ExecutedPlans);
-        Assert.AreEqual(0, fixture.Panel.Journal.ChangeCount);
+        Assert.IsNull(fixture.Panel.Message);
+        Assert.AreEqual("view-2", fixture.Actions.ExecutedPlans.Single().ViewId);
+        Assert.AreEqual(1, fixture.Panel.Journal.ChangeCount);
     }
 
     [TestMethod]
-    public async Task StaleViewRefusesReset()
+    public async Task StaleViewResetRunsOnActive()
     {
         using var fixture = await PanelFixture.OpenAsync();
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
@@ -33,9 +33,34 @@ public sealed class ViewStateTests
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
+        Assert.IsNull(fixture.Panel.Message);
+        Assert.AreEqual(1, fixture.Actions.ResetCount);
+    }
+
+    [TestMethod]
+    public async Task StaleViewKeepRunsOnActive()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        fixture.Model.View = new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan);
+
+        await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
+
+        Assert.IsNull(fixture.Panel.Message);
+        Assert.AreEqual(1, fixture.Actions.KeepCount);
+    }
+
+    [TestMethod]
+    public async Task OtherModelViewRefusesHide()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.View = new ViewInfo(DocumentKey.Current("other-model"), "view-2", "Level 2", ViewKind.Plan);
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+
         Assert.AreEqual(VisibilityText.ViewChanged, fixture.Panel.Message);
-        Assert.AreEqual(0, fixture.Actions.ResetCount);
-        Assert.AreEqual(1, fixture.Panel.Journal.ChangeCount);
+        Assert.IsEmpty(fixture.Actions.ExecutedPlans);
+        Assert.AreEqual(0, fixture.Panel.Journal.ChangeCount);
     }
 
     [TestMethod]

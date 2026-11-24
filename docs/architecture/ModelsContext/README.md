@@ -419,7 +419,7 @@ live in `LinkRules`.
   `ElementsStep`. `UsesLinkHide` is true, so L2 checks the plan only
   (gotcha 13).
 - `RevitViewActions.IsolateWithLinksAsync` refuses when the active view is not
-  the plan's view ("The active view changed."), when Reveal Hidden is on, or when
+  the plan's view (`ViewChangedException`, see Temporary modes), when Reveal Hidden is on, or when
   the view cannot show links (`LinkElements.InView` is null). The rest =
   elements of that link the link view collector returns for the active view,
   limited to model categories and instances (`ElementReader.AnyOptionFilter`),
@@ -522,9 +522,14 @@ live in `LinkRules`.
 ### Temporary modes, Keep and Reset
 
 - Every plan carries the panel's view id, and Keep and Reset pass it too.
-  `RevitViewActions` refuses with "The active view changed." when Revit's active
+  `CurrentView.Require` throws the typed `ViewChangedException` when Revit's active
   view is another one, so the journal and ledger always describe the view that
-  changed.
+  changed. `VisibilityController.OnActiveViewAsync` catches that type once, reads
+  `ReadActiveViewAsync`, and when it is another view of the same model sets that view
+  (ledger and journal keyed by it) and runs the action, Keep or Reset again; a second
+  mismatch, or another model, reaches the panel message. `ModelContextViewModel.ShowView`
+  clears the message when the view changes; scope, ticks and tab changes clear it too
+  (product: [Layout](../../product/models-context.md)).
 - Hide and isolate use the temporary API. Halftone and Color enable Temporary
   View Properties first (after `CanEnableTemporaryViewPropertiesMode`, with the
   view's own id when it has no template).

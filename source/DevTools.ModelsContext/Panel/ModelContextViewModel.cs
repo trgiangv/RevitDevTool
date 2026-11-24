@@ -189,6 +189,11 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     internal void ShowView(ViewInfo? view)
     {
+        if (_visibility.View?.Model != view?.Model || _visibility.View?.ViewId != view?.ViewId)
+        {
+            Message = null;
+        }
+
         _visibility.View = view;
     }
 
@@ -213,6 +218,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     partial void OnSelectedTabChanged(PanelTab value)
     {
+        Message = null;
         _ = _runtime.RunAsync(value == PanelTab.Explorer ? ResyncExplorerAsync : Filter.ActivateAsync);
     }
 
@@ -320,7 +326,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     private void OnContextChanged(object? sender, EventArgs e)
     {
-        if (Message == ContextBarViewModel.LastDocumentHint)
+        if (!_suppressContextChanged || Message == ContextBarViewModel.LastDocumentHint)
         {
             Message = null;
         }

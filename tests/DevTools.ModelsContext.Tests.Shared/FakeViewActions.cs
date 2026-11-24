@@ -110,7 +110,7 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
     {
         if (viewId is not null && viewId != model.View.ViewId)
         {
-            throw new InvalidOperationException(VisibilityText.ViewChanged);
+            throw new ViewChangedException();
         }
     }
 

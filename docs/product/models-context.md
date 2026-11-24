@@ -34,11 +34,15 @@ From top to bottom:
 
 A thin progress bar shows under the context bar while counts rebuild. A
 one-line message shows when something fails; the panel never throws into Revit.
+The message stays while the context stays and goes away when the scope, the
+ticked documents, the tab, the active model or the active view changes.
 With no open model, and while a Pick runs, actions are disabled with "Revit is
 busy". In edit mode an action that changes the view stops with "Revit is busy."
 when it runs. During a modal command a request waits until Revit is idle, then
-runs. An action refuses with "The active view changed." when the view switched
-after the panel last read it.
+runs. When the view switched after the panel last read it, an action, Keep or
+Reset reads the active view again and runs on it; it refuses with "The active
+view changed." only when the active view still differs (another model became
+active).
 
 ## Scope
 
@@ -182,8 +186,7 @@ sits in:
 **Isolate inside a link.** The link and any Current model targets are isolated
 temporarily; the rest of the link that the active view shows is hidden with Hide
 in View (saved with the view, orange dot). Reset or turning an eye back on shows
-it again. Refused, with one line, when the active view changed, Reveal Hidden
-Elements is on, the view shows no links, or more than 10,000 linked elements
+it again. Refused, with one line, when Reveal Hidden Elements is on, the view shows no links, or more than 10,000 linked elements
 would be hidden. After a Revit crash the hidden rest stays hidden in that view;
 Reveal Hidden Elements brings it back.
 

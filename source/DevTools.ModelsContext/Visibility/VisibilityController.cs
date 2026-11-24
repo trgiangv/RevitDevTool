@@ -140,14 +140,16 @@ public sealed class VisibilityController
         }
 
         var timer = TraceTimer.Start(_runtime.Logger);
-        var ledger = LedgerOf(view);
         var before = await InViewBeforeAsync(plan);
-        if (await _executor.ApplyAsync(view, ledger, plan, CancellationToken.None) is { } reason)
+        var (current, reason) = await OnActiveViewAsync(view, async target =>
+            (target, await _executor.ApplyAsync(target, LedgerOf(target), plan, CancellationToken.None)));
+        if (reason is not null)
         {
             return reason;
         }
 
-        RecordCategoryOff(ledger, before);
+        view = current;
+        RecordCategoryOff(LedgerOf(view), before);
 
         _readBacks.Touch(view, plan);
         _readBacks.Drop(view);
@@ -168,7 +170,11 @@ public sealed class VisibilityController
             return;
         }
 
-        await _runtime.Services.ViewActions.KeepAsync(view.ViewId, cancellationToken);
+        view = await OnActiveViewAsync(view, async target =>
+        {
+            await _runtime.Services.ViewActions.KeepAsync(target.ViewId, cancellationToken);
+            return target;
+        });
         _runtime.Journal.Keep(view.Model, view.ViewId);
         if (_ledgers.TryGetValue((view.Model, view.ViewId), out var ledger))
         {
@@ -205,7 +211,11 @@ public sealed class VisibilityController
             return;
         }
 
-        await _runtime.Services.ViewActions.ResetAsync(view.ViewId, cancellationToken);
+        view = await OnActiveViewAsync(view, async target =>
+        {
+            await _runtime.Services.ViewActions.ResetAsync(target.ViewId, cancellationToken);
+            return target;
+        });
         var reason = await _executor.RestoreLinksAsync(view, cancellationToken);
         await ClearAsync(view, cancellationToken);
         if (reason is not null)
@@ -343,6 +353,25 @@ public sealed class VisibilityController
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    private async Task<T> OnActiveViewAsync<T>(ViewInfo view, Func<ViewInfo, Task<T>> work)
+    {
+        try
+        {
+            return await work(view);
+        }
+        catch (ViewChangedException)
+        {
+            var active = await _runtime.Services.ViewActions.ReadActiveViewAsync(CancellationToken.None);
+            if (active?.View is not { } fresh || fresh.Model != view.Model || fresh.ViewId == view.ViewId)
+            {
+                throw;
+            }
+
+            View = fresh;
+            return await work(fresh);
+        }
     }
 
     private static int ElementCountOf(VisibilityPlan plan)

@@ -22,7 +22,7 @@ internal static class CurrentView
         var (active, view) = Require(application);
         if (viewId is not null && viewId != view.Id.ToString())
         {
-            throw new InvalidOperationException(VisibilityText.ViewChanged);
+            throw new ViewChangedException();
         }
 
         return (active, view);
