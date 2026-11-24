@@ -50,7 +50,7 @@ public sealed record WhyHidden(IReadOnlyList<HiddenReason> Reasons, double Elaps
 
     public WhyHidden WithJournal(JournalPage journal, ElementRef element, bool hidByPanel)
     {
-        if (journal.LinkHides.Any(hide => hide.Element == element))
+        if (journal.AllLinkHides.Any(hide => hide.Element == element))
         {
             return Of([HiddenReasons.LinkElement, .. Reasons], ElapsedMs);
         }

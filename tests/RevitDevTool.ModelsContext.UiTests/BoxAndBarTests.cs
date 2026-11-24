@@ -494,6 +494,79 @@ public sealed class BoxAndBarTests : RecordedTest
         });
     }
 
+    [TestMethod]
+    public void SavedDotFollowsKeep()
+    {
+        Record(CaseFiles.Flow("UI-21"), () =>
+        {
+            var doors = CaseFiles.Facts.CategoryNames["OST_Doors"];
+            var warning = ThemeColors.Warning;
+            _panel.Select("ModelContext.Scope.ActiveView");
+            try
+            {
+                WithBox(() =>
+                {
+                    var link = _steps.DocumentName(CaseFiles.Facts.LinkLabel);
+                    _panel.Find("Explorer.CollapseAll").Patterns.Invoke.Pattern.Invoke();
+                    var linkRow = _panel.Item(_panel.Find("Explorer.Rows"), cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(link)));
+                    _panel.Item(linkRow, cf => cf.ByAutomationId("Explorer.Row.Expand")).Patterns.Invoke.Pattern.Invoke();
+                    var before = DotPixels(link, doors, warning);
+                    _panel.Shot("before");
+
+                    _panel.Act(() => _panel.Item(RowUnder(link, doors), cf => cf.ByAutomationId("Explorer.Row.Eye")).Patterns.Invoke.Pattern.Invoke());
+                    Evidence.Step($"Hid {doors} under the Architectural link (Hide in View) in Active view.");
+                    _panel.Find("Temporary.Keep").Patterns.Invoke.Pattern.Invoke();
+                    _panel.Invoke("Temporary.ConfirmKeep");
+                    Evidence.Step("Invoked Temporary.Keep and Temporary.ConfirmKeep: the linked doors stay hidden, saved with the view.");
+                    var kept = DotPixels(link, doors, warning);
+                    var keptEye = EyeOf(link, doors);
+                    _panel.Shot("kept");
+
+                    _panel.Act(() => _panel.Item(RowUnder(link, doors), cf => cf.ByAutomationId("Explorer.Row.Eye")).Patterns.Invoke.Pattern.Invoke());
+                    Evidence.Step($"Turned the {doors} eye back on (Show).");
+                    var after = DotPixels(link, doors, warning);
+                    var shownEye = EyeOf(link, doors);
+                    _panel.Shot("after");
+                    Evidence.Values($"dot pixels (near {ColorTranslator.ToHtml(warning)}): 0 before; > 0 after Keep, eye Hidden; 0 after Show, eye Shown",
+                        $"{before} before; {kept} after Keep, eye {keptEye}; {after} after Show, eye {shownEye}");
+
+                    Assert.AreEqual(0, before, "The saved-hide dot shows before any hide.");
+                    Assert.IsGreaterThan(0, kept, "No saved-hide dot after Keep.");
+                    Assert.AreEqual("Hidden", keptEye);
+                    Assert.AreEqual(0, after, "The saved-hide dot stayed after Show.");
+                    Assert.AreEqual("Shown", shownEye);
+                }, ResetLeftovers);
+            }
+            finally
+            {
+                _panel.Select("ModelContext.Scope.WholeModel");
+            }
+        });
+    }
+
+    private static string? EyeOf(string link, string name)
+    {
+        return _panel.Item(RowUnder(link, name), cf => cf.ByAutomationId("Explorer.Row.Eye")).Properties.ItemStatus.ValueOrDefault;
+    }
+
+    private static int DotPixels(string link, string name, Color dot)
+    {
+        _panel.Settle();
+        var row = RowUnder(link, name);
+        var count = _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Count")).BoundingRectangle;
+        var left = count.Right;
+        if (row.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.HiddenCount")) is { IsOffscreen: false } hidden)
+        {
+            left = Math.Max(left, hidden.BoundingRectangle.Right);
+        }
+
+        var eye = _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Eye")).BoundingRectangle;
+        var rowBounds = row.BoundingRectangle;
+        var area = new Rectangle(left, rowBounds.Top, Math.Max(1, eye.Left - left), rowBounds.Height);
+        using var image = WindowShot.Capture(_panel.PanelWindow, area);
+        return WindowShot.CountNear(image, dot, 40);
+    }
+
     private static AutomationElement BoxRow(string name)
     {
         var row = Retry.WhileNull(() => _panel.Root.FindAllDescendants(cf => cf.ByAutomationId("Explorer.Category.Row"))

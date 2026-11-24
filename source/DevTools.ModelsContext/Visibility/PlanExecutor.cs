@@ -100,7 +100,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
 
     private HashSet<ElementRef> JournaledOf(ViewInfo view)
     {
-        return runtime.Journal.Get(view.Model, view.ViewId).LinkHides
+        return runtime.Journal.Get(view.Model, view.ViewId).AllLinkHides
             .Select(hide => hide.Element)
             .ToHashSet();
     }
@@ -184,7 +184,8 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
         IReadOnlyList<ElementRef> hidden,
         CancellationToken cancellationToken)
     {
-        if (plan.Steps.Any(step => step is not LinkElementsStep))
+        var changed = plan.Steps.Any(step => step is not LinkElementsStep);
+        if (changed)
         {
             runtime.Journal.AddChange(view.Model, view.ViewId, plan.KeepConverts);
         }
@@ -206,7 +207,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
 
         if (hides.Count > 0)
         {
-            runtime.Journal.AddLinkHides(view.Model, view.ViewId, hides);
+            runtime.Journal.AddLinkHides(view.Model, view.ViewId, hides, changed);
         }
     }
 }

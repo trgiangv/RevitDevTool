@@ -274,8 +274,16 @@ Current results (Snowdon HVAC + six links):
 - Earlier: Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
 - Revit 2024, run `20261118-093432`: L2 127/131, L3 5/6; the differences are listed under Mismatches. A case where the oracle differs from the golden value there means the 2024 sample file differs, not that the panel is wrong: record it with both values and decide per-version golden values before changing `Data/*.json`.
 - L1 last run (net10.0-windows, 2026-11-25): core and views all pass.
-- Not run yet: the explicit L2 cases WH-04, WH-09 (`L3` alone) and `NestedChairsFollowHost` (NE-01, an
-  Architectural copy).
+- Explicit L2 cases, Revit 2026, 2026-11-25: WH-04 PASS (*Above cut plane*, run `20261125-024110`, `L3` active by
+  MCP); NE-01 PASS (4 of 4 nested chairs follow Isolate, Hide, Halftone and Color; Reset restores them; run
+  `20261125-030129`, the Architectural work copy opened by MCP with `{3D}` active, not saved). WH-09 open: 2 sampled
+  Architectural railing supports (701522, 2659946) read *No view setting hides it*. 2659946 belongs to handrail
+  701146, which `L3` draws while none of its 89 supports is in the view collector; no view setting hides them, so
+  whether handrail supports get a cue of their own (or WH-09 accepts them) is a product decision.
+- Run `20261125-024241` (L2 441 PASS / 0 FAIL, safety ok): UI-18 to UI-20 failed with "Access is denied." and
+  UI-21 captured a blank panel. The Windows session was locked (no input desktop, LogonUI running), so Shift+F10
+  and PrintWindow could not work; rerun those four on an unlocked desktop. UI-21 already showed the eye Hidden after
+  Keep and Shown after Show.
 - L3 flows tick only the Architectural link at start (`PanelSteps.TickOnly`), since a view's links now tick at open.
 
 `L2 matrix` below means `FilterMatrixTests.CountMatchesOracle(<id>)`.
@@ -309,7 +317,7 @@ Current results (Snowdon HVAC + six links):
 | EX-07 | Active view ids = view collector (link through the host view) | same set | L2 `ExplorerMatchesOracle` |
 | EX-08 | Tree, paging 200, search, expand / collapse all | rows | L1 `ExplorerTabTests` |
 | EX-09 | Tiers T0–T4 planned per row | plan | L1 `PlannerTests` |
-| LA-01 | Link isolate: rows and results plan `LinkIsolateStep` (mixed results split T0 + T3), the plan carries the view id, the rest is journaled (not the targets) and reads hidden, Reset and an eye back on show it, a Show that reads back 0 drops the entries and reports once, Keep drops the journal | plan, journal, eyes, message | L1 `PlannerTests` (`LinkIsolateKeepsTargets`, `MixedIsolateSplits`), `PanelBarsTests` (`LinkIsolateJournalsRest`, `ResetShowsIsolateRest`, `EyeOnEndsLinkIsolate`, `EyeOnUnshownRestReports`, `ResetDropsUnshownOnce`, `KeepDropsIsolateJournal`) |
+| LA-01 | Link isolate: rows and results plan `LinkIsolateStep` (mixed results split T0 + T3), the plan carries the view id, the rest is journaled (not the targets) and reads hidden, Reset and an eye back on show it, a Show that reads back 0 drops the entries and reports once, Keep takes them off the bar and Reset leaves them (the eye and the dot stay; the eye shows them again) | plan, journal, eyes, message | L1 `PlannerTests` (`LinkIsolateKeepsTargets`, `MixedIsolateSplits`), `PanelBarsTests` (`LinkIsolateJournalsRest`, `ResetShowsIsolateRest`, `EyeOnEndsLinkIsolate`, `EyeOnUnshownRestReports`, `ResetDropsUnshownOnce`, `KeepTakesIsolateOffBar`) |
 | LA-02 | Link overrides: type row = Family Name + Type Name, category row = no rule, instance row and ids without a rule refused, a result filter keeps its rules, a non-native rule and over 100 rules refused, Revit 2023 refused, tooltip note, marks on the link rows, one re-apply after eye back on, a closed link drops the plan | plan, reason, marks | L1 `PlannerTests` (`LinkTypeRowColorsByName`, `LinkGroupRowColorsCategory`, `LinkInstanceRowRefusesColor`, `LinkResultWithoutFilterRefused`, `LinkResultUsesFilterRules`, `UndefinedRuleIsNotNative`, `LinkRulesOverCapRefused`, `TypeRowsOverCapRefused`, `LinkCheckFlagsFilter`), `PanelBarsTests` (`LinkGroupMenuOffersLinkActions`, `LinkOverridesNeedNewerRevit`, `LinkColorMarksRows`, `EyeOnReappliesLinkColorOnce`, `ClosedLinkDropsFilterPlan`) |
 | EX-10 | T1: link model row eye hides the link, Reset shows it | temporary bar "1", then gone | L3 UI-05 |
 | EX-11 | Selection sync under 50 / above 50 / above 5,000 | state | L1 `SyncTests` |
@@ -572,7 +580,7 @@ LH-02; model sync relay MS-01.
 | HC-04 | Box action with a link By Linked View or Custom reports the notice | message | L1 `CategoryHideTests.EyeHideShowsLinkNotice`; L2 CA-07 | L1 pass |
 | LH-01 | One record of linked hides (the journal): eye, bar count, Show, Reset, rename, view switch, isolate rest shown by Show, an explicit hide outlives it | agree | L1 `LinkHideRecordTests` | pass |
 | LH-02 | Typed failure when Revit shows no linked element (`LinkedNotShownException`) | *linked stay hidden* message | L1 `LinkHideRecordTests.UnshownTypedFailureReports`, `PanelBarsTests` (`MenuRefusalShowsInPanel`, `ResetDropsUnshownOnce`, `EyeOnUnshownRestReports`) | pass |
-| LH-03 | Active view, linked hide (T3): the row keeps its count, eye Hidden, so the saved-hide dot shows | count, eye, `IsHiddenInView` | L1 `LinkHideRecordTests.ActiveViewLinkHideKeepsRow`; L3 UI-06 to also check `Explorer.Row.SavedHide` (mc-ux) | L1 pass |
+| LH-03 | Active view, linked hide (T3): the row keeps its count, eye Hidden, so the saved-hide dot shows; after Keep the hides leave the bar and Reset, the eye and the dot stay, and the eye shows them again | count, eye, `IsHiddenInView`, dot pixels | L1 `LinkHideRecordTests.ActiveViewLinkHideKeepsRow`, `PanelBarsTests` (`KeepTakesLinkHidesOffBar`, `KeptLinkHideKeepsEyeAndDot`, `ResetLeavesKeptLinkHides`, `EyeShowsKeptLinkHide`), `JournalTests.KeepClearsConvertedChanges`; L3 UI-21 | L1 pass |
 | TV-01 | View framing when Temporary View Properties turns on and off | same zoom corners and camera | MCP probe on `{3D}` (Revit 2026, 2026-11-24): zoom corners, eye and direction read before, after the mode on, after it off, after the panel's box eye Hide and after its Show; all five equal | not reproduced |
 | BZ-01 | Edit mode: a view action stops with *Revit is busy.*; during a modal command a request waits, then runs (product: Layout) | message, then the run | none | open |
 
@@ -580,8 +588,8 @@ LH-02; model sync relay MS-01.
 
 Why hidden reads the active view only. The L2 cases build the cause in the
 Snowdon model, ask `RevitVisibilityExplainer`, and read the cue; each case uses
-the safety guard before and after. WH-01 to WH-03, WH-05 and WH-06 passed live (run `20261125-001901`);
-the explicit WH-04 and WH-09 have not run yet.
+the safety guard before and after. WH-01 to WH-03, WH-05 and WH-06 passed live (run `20261125-001901`),
+WH-04 too (run `20261125-024110`); WH-09 is open (Current results).
 
 | ID | Use case | Expected | Test |
 |----|----------|----------|------|
@@ -712,6 +720,7 @@ name; files land in the run folder.
 | UI-18 | Row context menu on Doors under the link (Shift+F10), Hide, Reset (B56) | menu lists Zoom, Isolate, Hide, Halftone, Color, Why hidden (Select only while sync is off); eye Hidden, bar with a count; then no bar | `RowMenuHidesLinkDoors` |
 | UI-19 | Categories box menu on ticked Walls (Shift+F10): Isolate, Reset, Halftone, Reset (B31) | bar with a count, then no bar, both times | `BoxMenuIsolateHalftone` |
 | UI-20 | Result row menu (Shift+F10) on TX-01: Hide, Reset (B91) | TX-01; bar with a count; then no bar | `ResultMenuHidesMatches` |
+| UI-21 | Active view: eye on Doors under the link, Keep and confirm, then the eye again (LH-03, B54) | no dot; dot and eye Hidden after Keep; no dot and eye Shown after Show. The dot (an `Ellipse`, no UIA peer) is counted in a PrintWindow capture of the row between `Explorer.Row.Count` and `Explorer.Row.Eye`, pixels near HandyControl `WarningColor` read from `ColorsDark.xaml` | `SavedDotFollowsKeep` |
 
 UI-09 to UI-17 change only temporary state and reset it; UI-09, UI-10 and UI-12 need the Site link loaded
 (Inconclusive otherwise). WPF does not implement UI Automation `ShowContextMenu`, so the context menus (UI-18 to

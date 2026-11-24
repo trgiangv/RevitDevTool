@@ -235,7 +235,7 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task KeepDropsIsolateJournal()
+    public async Task KeepTakesIsolateOffBar()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Tick([Mep]);
@@ -247,7 +247,8 @@ public sealed class PanelBarsTests
 
         Assert.AreEqual(1, fixture.Actions.KeepCount);
         Assert.IsEmpty(fixture.Actions.ShownLinked);
-        Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
+        Assert.AreEqual(0, fixture.Panel.Journal.ChangeCount);
+        Assert.IsEmpty(fixture.Panel.Journal.LinkHides);
     }
 
     [TestMethod]
@@ -407,7 +408,7 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task KeepClearsJournalWithoutShow()
+    public async Task KeepTakesLinkHidesOffBar()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Tick([Mep]);
@@ -417,6 +418,54 @@ public sealed class PanelBarsTests
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
 
         Assert.IsEmpty(fixture.Actions.ShownLinked);
+        Assert.AreEqual(0, fixture.Panel.Journal.ChangeCount);
+        Assert.IsEmpty(fixture.Panel.Journal.LinkHides);
+        Assert.IsNotEmpty(fixture.Panel.Journal.Kept);
+    }
+
+    [TestMethod]
+    public async Task KeptLinkHideKeepsEyeAndDot()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Mep]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+
+        await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
+        await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
+        Assert.IsTrue(fixture.Group(Mep, "Ducts").IsHiddenInView);
+    }
+
+    [TestMethod]
+    public async Task ResetLeavesKeptLinkHides()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
+        await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+
+        await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
+
+        Assert.IsEmpty(fixture.Actions.ShownLinked);
+        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
+    }
+
+    [TestMethod]
+    public async Task EyeShowsKeptLinkHide()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([Mep]);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
+        await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+
+        Assert.IsNotEmpty(fixture.Actions.ShownLinked);
+        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
         Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
     }
 

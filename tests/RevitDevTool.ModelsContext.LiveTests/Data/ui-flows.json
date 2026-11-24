@@ -257,6 +257,20 @@
         "Click the mode box in the result row and press Shift+F10 (or right-click the row), click Hide: the bar shows a count.",
         "Click Reset: the bar goes away."
       ]
+    },
+    {
+      "id": "UI-21",
+      "description": "Saved-hide dot (LH-03): in Active view, Doors under the Architectural link hidden with the eye and kept stay hidden, saved with the view, and the row shows the orange dot; the eye shows them again and the dot goes away",
+      "test": "SavedDotFollowsKeep",
+      "cases": [],
+      "category": "OST_Doors",
+      "expected": "no dot before; dot and eye Hidden after Keep; no dot and eye Shown after Show",
+      "images": ["before", "kept", "after"],
+      "manualSteps": [
+        "Make L3 active. Explorer tab, Active view, only the Architectural link ticked: Collapse all, expand the link.",
+        "Click the eye on Doors, then Keep and confirm Keep: the bar goes away, the Doors eye reads hidden and a small orange dot shows left of the row tools.",
+        "Click the Doors eye again: the doors show and the dot goes away."
+      ]
     }
   ]
 }

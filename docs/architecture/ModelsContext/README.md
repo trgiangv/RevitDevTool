@@ -581,7 +581,9 @@ controller splits into `ViewLedger` (what the panel changed per view: hidden
 Current model elements, categories and link instances, the isolate, the Active view ids
 a category action took away, and overrides for the eyes and marks), `ChangeJournal` (what
 the bar counts and Reset undoes, and the one record of linked elements the panel hid,
-each flagged when it is the rest of a link isolate), `ReadBackCache` (what the view
+each flagged when it is the rest of a link isolate; Keep flags them kept: `JournalPage.Kept`
+leaves the bar count and Reset, while `HasLinkHide`, `LinkHideIds`, Show and Why hidden still
+read them through `AllLinkHides`), `ReadBackCache` (what the view
 shows) and `PlanExecutor` (runs a plan through `IViewActions`). Eyes, Why hidden and the
 Active view scope read linked hides from the journal only. After a Hide the controller keeps,
 per (model, view), the requested elements that did not end up hidden (`NotDrawnIds`: the

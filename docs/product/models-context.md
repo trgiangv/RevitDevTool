@@ -269,14 +269,16 @@ saved with the view and work under a locked view template.
 - **Keep** (tooltip *Make hides permanent in this view*) turns Revit's temporary
   hide and isolate of elements and link instances into
   permanent hides; those changes, and the linked elements the panel hid (already
-  saved with the view), leave the bar. Everything Keep does not make permanent
+  saved with the view), leave the bar. Kept linked elements keep their eye
+  (hidden) and orange dot, Reset leaves them hidden, and their eye shows them
+  again. Everything Keep does not make permanent
   stays on the bar and in its count, and the next Reset still undoes it:
   a category Hide or Isolate from the Categories box (they live in Temporary View
   Properties), Halftone and Color, and the panel's view filters. Keep and Reset
   are plain buttons; neither is the default. When linked elements are hidden it
   first asks: *N link elements stay hidden in this view* (Keep · Cancel).
 - **Reset** ends the temporary modes, deletes the panel's view filters, and
-  shows again every linked element the panel hid in this view. When Revit does
+  shows again every linked element the panel hid in this view since the last Keep. When Revit does
   not show some of them (their category is off), Reset says so once and forgets
   them. Entries of a link that is no longer in the model are dropped.
 

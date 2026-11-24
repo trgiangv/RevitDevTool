@@ -7,10 +7,15 @@ public sealed record LinkHide(ElementRef Element, string UniqueId, bool IsIsolat
 public sealed record JournalPage(int ChangeCount, IReadOnlyList<LinkHide> LinkHides, bool IsStale)
 {
     public static JournalPage Empty { get; } = new(0, [], false);
+
+    public IReadOnlyList<LinkHide> Kept { get; init; } = [];
+
+    public IEnumerable<LinkHide> AllLinkHides => LinkHides.Concat(Kept);
 }
 
 public sealed class ChangeJournal
 {
+    private const int JoinedBatch = 0;
     private readonly object _gate = new();
     private readonly Dictionary<(DocumentKey Model, string ViewId), Page> _pages = [];
 
@@ -37,7 +42,11 @@ public sealed class ChangeJournal
             if (_pages.TryGetValue((model.CurrentModel, viewId), out var page))
             {
                 page.HideChanges = 0;
-                page.Hides.Clear();
+                foreach (var pair in page.Hides.ToList())
+                {
+                    page.Hides[pair.Key] = pair.Value with { Kept = true };
+                }
+
                 DropIfEmpty(model.CurrentModel, viewId, page);
             }
         }
@@ -64,12 +73,12 @@ public sealed class ChangeJournal
         }
     }
 
-    public void AddLinkHides(DocumentKey model, string viewId, IEnumerable<LinkHide> hides)
+    public void AddLinkHides(DocumentKey model, string viewId, IEnumerable<LinkHide> hides, bool joinsChange)
     {
         lock (_gate)
         {
             var page = PageOf(model.CurrentModel, viewId);
-            var batch = ++page.Batches;
+            var batch = joinsChange ? JoinedBatch : ++page.Batches;
             foreach (var hide in hides)
             {
                 if (!hide.IsIsolateRest || !page.Hides.ContainsKey(hide.Element))
@@ -123,8 +132,15 @@ public sealed class ChangeJournal
                 return JournalPage.Empty;
             }
 
-            var changes = page.HideChanges + page.PropertyChanges + page.Hides.Values.Select(batched => batched.Batch).Distinct().Count();
-            return new JournalPage(changes, page.Hides.Values.Select(batched => batched.Hide).ToList(), page.IsStale);
+            var onBar = page.Hides.Values.Where(batched => !batched.Kept).ToList();
+            var kept = page.Hides.Values.Where(batched => batched.Kept).Select(batched => batched.Hide).ToList();
+            var changes = page.HideChanges + page.PropertyChanges + onBar.Select(batched => batched.Batch).Where(batch => batch != JoinedBatch).Distinct().Count();
+            if (changes == 0 && onBar.Count == 0 && kept.Count == 0 && !page.IsStale)
+            {
+                return JournalPage.Empty;
+            }
+
+            return new JournalPage(changes, onBar.Select(batched => batched.Hide).ToList(), page.IsStale) { Kept = kept };
         }
     }
 
@@ -214,7 +230,7 @@ public sealed class ChangeJournal
         return page;
     }
 
-    private readonly record struct Batched(LinkHide Hide, int Batch);
+    private readonly record struct Batched(LinkHide Hide, int Batch, bool Kept = false);
 
     private sealed class Page
     {
