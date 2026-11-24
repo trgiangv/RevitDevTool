@@ -38,8 +38,8 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
             }
 
             ids.Add(category.Id);
-            if (category.BuiltInCategory is BuiltInCategory.OST_Site or BuiltInCategory.OST_Lines
-                or BuiltInCategory.OST_Topography)
+            var parent = category.BuiltInCategory.ToString();
+            if (!SubcategoryRule.ListsChildrenOf(parent))
             {
                 continue;
             }
@@ -47,7 +47,8 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
             foreach (Category subcategory in category.SubCategories)
             {
                 if (subcategory.CategoryType == CategoryType.Model
-                    && subcategory.BuiltInCategory != BuiltInCategory.INVALID)
+                    && subcategory.BuiltInCategory != BuiltInCategory.INVALID
+                    && SubcategoryRule.Lists(parent, subcategory.BuiltInCategory.ToString()))
                 {
                     ids.Add(subcategory.Id);
                 }

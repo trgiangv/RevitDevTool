@@ -79,7 +79,8 @@ A flat, virtualized tree: **Model › Category › Family › Type › Instance*
 A category is a model category, or a built-in model subcategory that owns elements. A subcategory is a child of
 its category in the tree (Toposolid › Sub-divisions, Railings › Top Rails), with its own count; the parent counts
 its own elements plus its children. Subcategories of Site, Lines and Topography (base and survey points, sketch
-lines, contours) are not listed.
+lines, contours) and every Center line subcategory (ducts, duct fittings, flex ducts, pipes, conduits, cable trays)
+are not listed, so Whole model is the set a Revit schedule lists.
 
 - The tree starts with **Current model**, then one group per ticked link.
 - Every row shows its count in grey. Instances load on expand in pages of 200
@@ -209,8 +210,10 @@ Properties (so a template that locks Filters still draws it) and is deleted on
 Reset, before save and synchronize, and when the pane is closed. Keep leaves it
 until the next Reset, like any override.
 
-- The eye has three states: shown, hidden, partly hidden. Hovering it highlights
-  every row the click will change.
+- The eye has three states: shown, hidden, partly hidden. Hidden means every
+  element of the row that the active view can draw is hidden; elements the view
+  does not draw (another level, outside the crop) never make it partly hidden.
+  Hovering it highlights every row the click will change.
 - Rows the panel hid stay in the tree, dimmed, so they can be shown again.
 - While a category is hidden with the Categories box eye, its rows in every
   group show it as hidden by the category and are disabled until it is shown.

@@ -60,11 +60,12 @@ public sealed class CategoryActionTests : RecordedTest
             foreach (var document in new[] { SampleModel.Current, SampleModel.Site })
             {
                 var snapshot = Evidence.Time("panel", () => Adapter.Run(new Adapter().Source.BuildSnapshotAsync(document.Source, null, CancellationToken.None)));
-                found.AddRange(snapshot.Groups.Where(group => noisy.Contains(group.ParentId))
+                found.AddRange(snapshot.Groups.Where(group => noisy.Contains(group.ParentId)
+                                                              || ((BuiltInCategory)group.GroupId).ToString().Contains("CenterLine"))
                     .Select(group => $"{document.Label}: {snapshot.Names[group.NameIndex]}"));
             }
 
-            Evidence.Step("Built the snapshots of the Current model and the Site link and listed groups under Site, Lines or Topography.");
+            Evidence.Step("Built the snapshots of the Current model and the Site link and listed groups under Site, Lines or Topography, and Center line groups.");
             Evidence.Values("none", found.Count == 0 ? "none" : string.Join(", ", found));
 
             Assert.That(found, Is.Empty);

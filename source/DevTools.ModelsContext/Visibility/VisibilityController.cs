@@ -10,6 +10,7 @@ public sealed class VisibilityController
 {
     private readonly PlanExecutor _executor;
     private readonly Dictionary<(DocumentKey Model, string ViewId), ViewLedger> _ledgers = [];
+    private readonly Dictionary<(DocumentKey Model, string ViewId), HashSet<ElementRef>> _notDrawn = [];
     private readonly ReadBackCache _readBacks;
     private readonly PanelRuntime _runtime;
     private ViewInfo? _view;
@@ -154,6 +155,7 @@ public sealed class VisibilityController
         _readBacks.Touch(view, plan);
         _readBacks.Drop(view);
         await ReadBackAsync(CancellationToken.None);
+        RecordNotDrawn(view, plan);
         Changed?.Invoke(this, EventArgs.Empty);
         if (timer.IsEnabled)
         {
@@ -195,6 +197,12 @@ public sealed class VisibilityController
             _ledgers[(rename.Map(pair.Key.Model), pair.Key.ViewId)] = pair.Value;
         }
 
+        foreach (var pair in _notDrawn.Where(pair => pair.Key.Model.ModelId == rename.OldId).ToList())
+        {
+            _notDrawn.Remove(pair.Key);
+            _notDrawn[(rename.Map(pair.Key.Model), pair.Key.ViewId)] = [.. pair.Value.Select(element => rename.Map(element))];
+        }
+
         _readBacks.ForgetModel(DocumentKey.Current(rename.OldId));
         if (_view is { } view)
         {
@@ -221,6 +229,50 @@ public sealed class VisibilityController
         if (reason is not null)
         {
             throw new InvalidOperationException(reason);
+        }
+    }
+
+    public HashSet<long> NotDrawnIds(DocumentKey document)
+    {
+        return View is { } view && _notDrawn.TryGetValue((view.Model, view.ViewId), out var elements)
+            ? [.. elements.Where(element => element.Document == document).Select(element => element.Id)]
+            : [];
+    }
+
+    private void RecordNotDrawn(ViewInfo view, VisibilityPlan plan)
+    {
+        if (plan.Action != VisibilityAction.Hide)
+        {
+            return;
+        }
+
+        var requested = plan.Steps.SelectMany(step => step switch
+        {
+            ElementsStep elements => elements.Ids.Select(id => new ElementRef(elements.Document, id)),
+            LinkElementsStep linked => linked.Ids.Select(id => new ElementRef(linked.Document, id)),
+            _ => []
+        }).ToList();
+        if (requested.Count == 0)
+        {
+            return;
+        }
+
+        if (!_notDrawn.TryGetValue((view.Model, view.ViewId), out var notDrawn))
+        {
+            notDrawn = [];
+            _notDrawn.Add((view.Model, view.ViewId), notDrawn);
+        }
+
+        foreach (var element in requested)
+        {
+            if (IsHidden(element))
+            {
+                notDrawn.Remove(element);
+            }
+            else
+            {
+                notDrawn.Add(element);
+            }
         }
     }
 
@@ -400,6 +452,11 @@ public sealed class VisibilityController
             _ledgers.Remove(key);
         }
 
+        foreach (var key in _notDrawn.Keys.Where(key => key.Model.ModelId == document.ModelId).ToList())
+        {
+            _notDrawn.Remove(key);
+        }
+
         _readBacks.ForgetModel(document);
     }
 
@@ -415,6 +472,7 @@ public sealed class VisibilityController
     private async Task ClearAsync(ViewInfo view, CancellationToken cancellationToken)
     {
         _ledgers.Remove((view.Model, view.ViewId));
+        _notDrawn.Remove((view.Model, view.ViewId));
         _readBacks.Drop(view);
         await ReadBackAsync(cancellationToken);
         Changed?.Invoke(this, EventArgs.Empty);

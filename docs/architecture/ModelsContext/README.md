@@ -198,7 +198,9 @@ count.
     Toposolid sub-divisions (`OST_Subdivision`, parent Toposolid), railing top rails and balusters report
     the subcategory as `Element.Category` (live, Snowdon Site link: 2 Toposolid + 8 sub-divisions, the
     panel showed 2). `ElementReader.ModelCategoryIds` adds the built-in model subcategories of every
-    model category except Site, Lines and Topography. A subcategory group keeps its own id and plain
+    model category except Site, Lines and Topography, and never a `*CenterLine` subcategory
+    (`SubcategoryRule`: Revit's internal duct, pipe, conduit and cable tray center lines, 2,032 of them in
+    Snowdon HVAC, are not in a schedule and would double the Ducts count). A subcategory group keeps its own id and plain
     name and carries `ParentId` (`TypeRecord`, `GroupRow`, `GroupCount`; 0 = top-level), so it is a
     child of its category in the tree. Parent overrides children: a parent row, eye or ticked box row
     acts on the parent plus its subgroups (`DocumentSnapshot.WithSubgroups`, `CategoryTree.WithChildren`,
@@ -568,7 +570,12 @@ a category action took away, and overrides for the eyes and marks), `ChangeJourn
 the bar counts and Reset undoes, and the one record of linked elements the panel hid,
 each flagged when it is the rest of a link isolate), `ReadBackCache` (what the view
 shows) and `PlanExecutor` (runs a plan through `IViewActions`). Eyes, Why hidden and the
-Active view scope read linked hides from the journal only. When Revit shows none of the
+Active view scope read linked hides from the journal only. After a Hide the controller keeps,
+per (model, view), the requested elements that did not end up hidden (`NotDrawnIds`: the
+read-back for the Current model, the journal for links, so a door on another level that Hide
+in View could not reach). `DocumentStates.NotDrawn` takes them out of the eye's total in
+`RowPainter`, so a row reads Hidden when everything the view draws is hidden (product: the
+eye). Reset of that view, a model forget and a rename keep the record in step. When Revit shows none of the
 linked elements asked for, the adapter throws `LinkedNotShownException` and the executor
 catches that type (no message matching). `IViewActions` is the one port to the host view:
 `ExecuteAsync`, `ShowLinkedAsync`, `KeepAsync`, `ResetAsync`, `ZoomAsync`,

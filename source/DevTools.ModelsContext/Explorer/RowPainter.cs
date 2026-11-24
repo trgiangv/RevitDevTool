@@ -95,7 +95,9 @@ internal sealed class RowPainter(
             return RowEye.None;
         }
 
-        return stale ? RowEye.Unknown : EyeOf(state.Hidden.Count, scope.Counts.Count + state.Outside.Count);
+        return stale
+            ? RowEye.Unknown
+            : EyeOf(state.Hidden.Count, scope.Counts.Count + state.Outside.Count - state.NotDrawn.Count);
     }
 
     private void ApplyBranchState(TreeRow row, DocumentScope scope, bool stale)
@@ -113,7 +115,8 @@ internal sealed class RowPainter(
         row.IsDimmed = row.Count == 0 && hidden == 0 && row.HiddenCount > 0;
         row.Eye = row.IsDimmed
             ? RowEye.None
-            : InheritedEye(row, stale) ?? EyeOf(hidden, row.Count + paths.Sum(branch.Outside.CountAt));
+            : InheritedEye(row, stale)
+              ?? EyeOf(hidden, row.Count + paths.Sum(branch.Outside.CountAt) - paths.Sum(branch.NotDrawn.CountAt));
     }
 
     private void ApplyInstanceState(TreeRow row, DocumentScope scope, bool stale)

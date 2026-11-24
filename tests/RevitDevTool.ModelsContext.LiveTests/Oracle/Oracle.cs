@@ -88,7 +88,8 @@ internal static class Oracle
 
             foreach (Category subcategory in category.SubCategories)
             {
-                if (subcategory.CategoryType == CategoryType.Model && subcategory.BuiltInCategory != BuiltInCategory.INVALID)
+                if (subcategory.CategoryType == CategoryType.Model && subcategory.BuiltInCategory != BuiltInCategory.INVALID
+                    && subcategory.BuiltInCategory.ToString().IndexOf("CenterLine", StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     ids.Add(subcategory.Id.ToLong());
                 }

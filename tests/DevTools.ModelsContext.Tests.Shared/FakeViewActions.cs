@@ -43,7 +43,8 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
             switch (step)
             {
                 case LinkElementsStep references:
-                    hidden.AddRange(references.Ids.Select(id => new ElementRef(references.Document, id)));
+                    hidden.AddRange(references.Ids.Select(id => new ElementRef(references.Document, id))
+                        .Where(element => !model.ViewNotDrawn.Contains(element)));
                     break;
                 case LinkIsolateStep isolate:
                     var keep = isolate.KeptIds.ToHashSet();
@@ -155,7 +156,8 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         }
 
         IReadOnlyCollection<long> ids = candidates
-            .Where(id => snapshot.TryGetRow(id, out var row)
+            .Where(id => !model.ViewNotDrawn.Contains(new ElementRef(document, id))
+                         && snapshot.TryGetRow(id, out var row)
                          && (hidden.Contains(row) || (kept is not null && !kept.Contains(row))))
             .ToList();
         return Task.FromResult(ids);

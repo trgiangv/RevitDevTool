@@ -33,8 +33,13 @@ internal sealed class DocumentStates(VisibilityController visibility)
                 visibility.OverridesOf(document.Key).Where(pair => document.InScope(pair.Key)));
             var outside = ScopeCounter.Count(document.Snapshot, hidden.Where(id => !document.InScope(id)));
             var unseen = UnseenOf(data, document, hidden, visibility.View);
+            var notDrawn = ScopeCounter.Count(document.Snapshot, visibility.NotDrawnIds(document.Key)
+                .Where(id => document.InScope(id) && !hidden.Contains(id)));
             _states[document.Key] = new DocumentState(hidden, ScopeCounter.Count(document.Snapshot, hidden), outside,
-                overrides, unseen, ScopeCounter.Count(document.Snapshot, unseen));
+                overrides, unseen, ScopeCounter.Count(document.Snapshot, unseen))
+            {
+                NotDrawn = notDrawn
+            };
         }
 
         ComputeSelected(data, selected);
@@ -85,6 +90,8 @@ internal sealed class DocumentState(
     public HashSet<long> UnseenIds { get; } = unseenIds;
 
     public CountNode Unseen { get; } = unseen;
+
+    public CountNode NotDrawn { get; init; } = new(-1);
 
     public CountNode Selected { get; set; } = new(-1);
 }

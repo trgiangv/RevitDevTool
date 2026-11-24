@@ -50,6 +50,8 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
 
     public HashSet<ElementRef> ViewHiddenElements { get; } = [];
 
+    public HashSet<ElementRef> ViewNotDrawn { get; } = [];
+
     public int BuildCount { get; private set; }
 
     public int DocumentReads { get; private set; }

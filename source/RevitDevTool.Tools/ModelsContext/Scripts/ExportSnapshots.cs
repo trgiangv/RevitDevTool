@@ -97,7 +97,8 @@ public class Command : IExternalCommand
             foreach (Category subcategory in category.SubCategories)
             {
                 if (subcategory.CategoryType == CategoryType.Model
-                    && subcategory.BuiltInCategory != BuiltInCategory.INVALID)
+                    && subcategory.BuiltInCategory != BuiltInCategory.INVALID
+                    && subcategory.BuiltInCategory.ToString().IndexOf("CenterLine", StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     categories.Add(subcategory.Id);
                 }
