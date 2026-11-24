@@ -43,7 +43,7 @@ internal static class RowFactory
             new TreeRow(TreeRowKind.Group, group.Name, parent, id: group.GroupId)
             {
                 Count = group.Count,
-                DisabledReason = VisibilityReasons.Updating,
+                DisabledReason = VisibilityText.Updating,
                 Key = RowKey(TreeRowKind.Group, document, group.GroupId)
             }));
     }

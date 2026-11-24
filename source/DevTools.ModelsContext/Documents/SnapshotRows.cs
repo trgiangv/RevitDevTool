@@ -12,7 +12,12 @@ public readonly record struct ElementRow(
 
 public readonly record struct TypeRow(long TypeId, int GroupIndex, int FamilyNameIndex, int TypeNameIndex);
 
-public readonly record struct GroupRow(long GroupId, int NameIndex);
+public readonly record struct GroupRow(long GroupId, int NameIndex, long ParentId = GroupRow.TopLevel)
+{
+    public const long TopLevel = 0;
+
+    public bool IsSubgroup => ParentId != TopLevel;
+}
 
 public readonly record struct ElementRecord(
     long Id,
@@ -23,4 +28,10 @@ public readonly record struct ElementRecord(
     ViewDraw Draw = ViewDraw.Model,
     long OwnerViewId = ViewDraws.NoOwner);
 
-public sealed record TypeRecord(long TypeId, long GroupId, string GroupName, string FamilyName, string TypeName);
+public sealed record TypeRecord(
+    long TypeId,
+    long GroupId,
+    string GroupName,
+    string FamilyName,
+    string TypeName,
+    long ParentId = GroupRow.TopLevel);

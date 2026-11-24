@@ -139,31 +139,94 @@ public sealed partial class FilterSourceItem : ObservableObject
 public sealed partial class CategoryItemViewModel : ObservableObject
 {
     private readonly Action _changed;
+    private readonly Action<CategoryItemViewModel> _expandedChanged;
+    private readonly Action<CategoryItemViewModel>? _rowTicked;
+    private readonly List<CategoryItemViewModel> _children = [];
     private bool _isChecked;
+    private bool _isExpanded;
+    private int _ownCount;
 
-    internal CategoryItemViewModel(long groupId, string name, int count, Action changed)
+    internal CategoryItemViewModel(long groupId, string name, int count, Action changed,
+        CategoryItemViewModel? parent = null, Action<CategoryItemViewModel>? expandedChanged = null,
+        Action<CategoryItemViewModel>? rowTicked = null)
     {
+        _rowTicked = rowTicked;
         GroupId = groupId;
         Name = name;
+        _ownCount = count;
         Count = count;
         _changed = changed;
+        Parent = parent;
+        _expandedChanged = expandedChanged ?? (static _ => { });
+        parent?.AddChild(this);
     }
 
     public long GroupId { get; }
 
     public string Name { get; }
 
+    public CategoryItemViewModel? Parent { get; }
+
+    public IReadOnlyList<CategoryItemViewModel> Children => _children;
+
+    public bool IsChild => Parent is not null;
+
+    public bool HasChildren => _children.Count > 0;
+
     [ObservableProperty]
-    public partial int Count { get; internal set; }
+    public partial int Count { get; private set; }
 
     public bool IsChecked
     {
         get => _isChecked;
         set
         {
-            if (SetProperty(ref _isChecked, value))
+            if (_rowTicked is null)
+            {
+                if (Tick(value))
+                {
+                    _changed();
+                }
+
+                return;
+            }
+
+            if (SetChecked(value))
+            {
+                _rowTicked(this);
+            }
+        }
+    }
+
+    public bool? BoxState
+    {
+        get
+        {
+            if (_children.Count == 0)
+            {
+                return _isChecked;
+            }
+
+            var ticked = _children.Count(child => child.IsChecked) + (_isChecked ? 1 : 0);
+            return ticked == 0 ? false : ticked == _children.Count + 1 ? true : null;
+        }
+        set
+        {
+            if (Tick(value == true || (value == false && BoxState is null)))
             {
                 _changed();
+            }
+        }
+    }
+
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (SetExpanded(value))
+            {
+                _expandedChanged(this);
             }
         }
     }
@@ -176,9 +239,65 @@ public sealed partial class CategoryItemViewModel : ObservableObject
 
     internal Func<CategoryItemViewModel, Task>? Eye { get; set; }
 
-    internal void SetChecked(bool value)
+    internal long ParentId => Parent?.GroupId ?? GroupRow.TopLevel;
+
+    private bool Tick(bool value)
     {
-        SetProperty(ref _isChecked, value, nameof(IsChecked));
+        var changed = TickChildren(value) | SetChecked(value);
+        return Parent?.FollowChildren() is true || changed;
+    }
+
+    internal bool TickChildren(bool value)
+    {
+        var changed = false;
+        foreach (var child in _children)
+        {
+            changed |= child.SetChecked(value);
+        }
+
+        return changed;
+    }
+
+    internal bool FollowChildren()
+    {
+        if (_children.All(child => child.IsChecked))
+        {
+            return SetChecked(true);
+        }
+
+        return _children.All(child => !child.IsChecked) && SetChecked(false);
+    }
+
+    internal bool SetChecked(bool value)
+    {
+        if (!SetProperty(ref _isChecked, value, nameof(IsChecked)))
+        {
+            return false;
+        }
+
+        OnPropertyChanged(nameof(BoxState));
+        Parent?.OnPropertyChanged(nameof(BoxState));
+        return true;
+    }
+
+    internal bool SetExpanded(bool value)
+    {
+        return SetProperty(ref _isExpanded, value, nameof(IsExpanded));
+    }
+
+    internal void SetOwnCount(int count)
+    {
+        _ownCount = count;
+    }
+
+    internal void RefreshCount()
+    {
+        Count = _ownCount + _children.Sum(child => child._ownCount);
+    }
+
+    private void AddChild(CategoryItemViewModel child)
+    {
+        _children.Add(child);
     }
 
     [RelayCommand]

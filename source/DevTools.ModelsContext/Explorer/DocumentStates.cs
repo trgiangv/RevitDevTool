@@ -29,12 +29,12 @@ internal sealed class DocumentStates(VisibilityController visibility)
         foreach (var document in data.Documents)
         {
             var hidden = visibility.HiddenIds(document);
-            var marks = MarkTally.Count(document.Snapshot,
-                visibility.MarksOf(document.Key).Where(mark => document.InScope(mark.Key)));
+            var overrides = OverrideTally.Count(document.Snapshot,
+                visibility.OverridesOf(document.Key).Where(pair => document.InScope(pair.Key)));
             var outside = ScopeCounter.Count(document.Snapshot, hidden.Where(id => !document.InScope(id)));
             var unseen = UnseenOf(data, document, hidden, visibility.View);
             _states[document.Key] = new DocumentState(hidden, ScopeCounter.Count(document.Snapshot, hidden), outside,
-                marks, unseen, ScopeCounter.Count(document.Snapshot, unseen));
+                overrides, unseen, ScopeCounter.Count(document.Snapshot, unseen));
         }
 
         ComputeSelected(data, selected);
@@ -70,7 +70,7 @@ internal sealed class DocumentState(
     HashSet<long> hiddenIds,
     CountNode hidden,
     CountNode outside,
-    MarkTally marks,
+    OverrideTally overrides,
     HashSet<long> unseenIds,
     CountNode unseen)
 {
@@ -80,7 +80,7 @@ internal sealed class DocumentState(
 
     public CountNode Outside { get; } = outside;
 
-    public MarkTally Marks { get; } = marks;
+    public OverrideTally Overrides { get; } = overrides;
 
     public HashSet<long> UnseenIds { get; } = unseenIds;
 

@@ -8,4 +8,4 @@ public enum LinkStatus
 
 public sealed record LinkStatusChange(DocumentKey Link, LinkStatus Status);
 
-public readonly record struct GroupCount(long GroupId, string Name, int Count);
+public readonly record struct GroupCount(long GroupId, string Name, int Count, long ParentId = GroupRow.TopLevel);

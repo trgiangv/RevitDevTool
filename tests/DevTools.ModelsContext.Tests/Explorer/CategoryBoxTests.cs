@@ -73,7 +73,7 @@ public sealed class CategoryBoxTests
         var plan = fixture.Actions.ExecutedPlans.Single();
         Assert.AreEqual(VisibilityAction.Isolate, plan.Action);
         CollectionAssert.AreEquivalent(new[] { TestModel.Ducts, TestModel.Walls },
-            plan.Steps.Cast<GroupEverywhereStep>().Select(step => step.GroupId).ToList());
+            plan.Steps.Cast<CategoryStep>().Select(step => step.CategoryId).ToList());
     }
 
     [TestMethod]
@@ -84,8 +84,8 @@ public sealed class CategoryBoxTests
 
         await fixture.Explorer.Categories.HalftoneCommand.ExecuteAsync(null);
 
-        var step = (GroupEverywhereStep)fixture.Actions.ExecutedPlans.Single().Steps.Single();
-        Assert.AreEqual(TestModel.Ducts, step.GroupId);
+        var step = (CategoryStep)fixture.Actions.ExecutedPlans.Single().Steps.Single();
+        Assert.AreEqual(TestModel.Ducts, step.CategoryId);
     }
 
     [TestMethod]
@@ -151,7 +151,7 @@ public sealed class CategoryBoxTests
 
         await fixture.Explorer.Categories.HalftoneCommand.ExecuteAsync(null);
 
-        Assert.AreEqual(ExplorerCategories.SelectReason, fixture.Explorer.Message);
+        Assert.AreEqual(ExplorerCategories.SelectReason, fixture.Panel.Message);
         Assert.IsEmpty(fixture.Actions.ExecutedPlans);
     }
 
@@ -160,11 +160,11 @@ public sealed class CategoryBoxTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         TickOnly(fixture, "Ducts");
-        fixture.Actions.Notice = VisibilityReasons.LinksKeepOwnSettings;
+        fixture.Actions.Notice = VisibilityText.LinksKeepOwnSettings;
 
         await fixture.Explorer.Categories.IsolateCommand.ExecuteAsync(null);
 
-        Assert.AreEqual(VisibilityReasons.LinksKeepOwnSettings, fixture.Explorer.Message);
+        Assert.AreEqual(VisibilityText.LinksKeepOwnSettings, fixture.Panel.Message);
     }
     [TestMethod]
     public async Task EyeHidesCategoryEverywhere()
@@ -173,8 +173,8 @@ public sealed class CategoryBoxTests
 
         await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
 
-        var step = (GroupEverywhereStep)fixture.Actions.ExecutedPlans.Single().Steps.Single();
-        Assert.AreEqual(TestModel.Ducts, step.GroupId);
+        var step = (CategoryStep)fixture.Actions.ExecutedPlans.Single().Steps.Single();
+        Assert.AreEqual(TestModel.Ducts, step.CategoryId);
         Assert.IsTrue(Item(fixture, "Ducts").IsHiddenInView);
         Assert.IsFalse(Item(fixture, "Walls").IsHiddenInView);
     }

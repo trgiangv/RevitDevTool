@@ -14,14 +14,20 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
 
     private readonly Action _changed;
     private readonly HashSet<long> _excluded = [];
+    private readonly HashSet<long> _expanded = [];
+    private readonly HashSet<long> _closedInSearch = [];
+    private readonly List<CategoryItemViewModel> _rowBatch = [];
     private readonly Func<bool> _isReadOnly;
     private readonly bool _ticksNew;
+    private readonly Func<bool> _emptyMatchesAll;
 
-    internal CategoryPickerViewModel(Func<bool> isReadOnly, Action changed, bool ticksNew = false)
+    internal CategoryPickerViewModel(Func<bool> isReadOnly, Action changed, bool ticksNew = false,
+        Func<bool>? emptyMatchesAll = null)
     {
         _isReadOnly = isReadOnly;
         _changed = changed;
         _ticksNew = ticksNew;
+        _emptyMatchesAll = emptyMatchesAll ?? (static () => true);
     }
 
     public ObservableCollection<CategoryItemViewModel> Items { get; } = [];
@@ -35,13 +41,13 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         {
             if (SetProperty(ref field, value ?? string.Empty))
             {
+                _closedInSearch.Clear();
                 UpdateVisible();
             }
         }
     } = string.Empty;
 
-    [ObservableProperty]
-    public partial IReadOnlyList<CategoryItemViewModel> VisibleItems { get; private set; } = [];
+    public ObservableCollection<CategoryItemViewModel> VisibleItems { get; } = [];
 
     public string Summary => _ticksNew ? TickSummary() : PickSummary();
 
@@ -65,27 +71,132 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
 
     internal void Rebuild(IReadOnlyList<GroupCount> groups)
     {
-        if (groups.Select(group => group.GroupId).SequenceEqual(Items.Select(item => item.GroupId)))
+        var ordered = TreeOrder(groups);
+        if (ordered.Select(group => (group.GroupId, group.ParentId))
+            .SequenceEqual(Items.Select(item => (item.GroupId, item.ParentId))))
         {
-            for (var index = 0; index < groups.Count; index++)
+            for (var index = 0; index < ordered.Count; index++)
             {
-                Items[index].Count = groups[index].Count;
+                Items[index].SetOwnCount(ordered[index].Count);
             }
 
+            RefreshCounts();
             return;
         }
 
         var checkedIds = Checked().ToHashSet();
+        var byId = new Dictionary<long, CategoryItemViewModel>();
         Items.Clear();
-        foreach (var group in groups)
+        foreach (var group in ordered)
         {
-            var item = new CategoryItemViewModel(group.GroupId, group.Name, group.Count, OnItemChanged);
+            var parent = group.ParentId != GroupRow.TopLevel && byId.TryGetValue(group.ParentId, out var found) ? found : null;
+            var item = new CategoryItemViewModel(group.GroupId, group.Name, group.Count, OnItemChanged, parent,
+                OnExpandedChanged, OnRowTicked);
             item.SetChecked(_ticksNew ? Lists(group.GroupId) : checkedIds.Contains(group.GroupId));
+            item.SetExpanded(_expanded.Contains(group.GroupId));
+            byId[group.GroupId] = item;
             Items.Add(item);
         }
 
+        RefreshCounts();
         UpdateVisible();
         RaiseTicks();
+    }
+
+    private static List<GroupCount> TreeOrder(IReadOnlyList<GroupCount> groups)
+    {
+        var ids = groups.Select(group => group.GroupId).ToHashSet();
+        bool IsRoot(GroupCount group) => group.ParentId == GroupRow.TopLevel || group.ParentId == group.GroupId
+                                         || !ids.Contains(group.ParentId);
+        var roots = groups.Where(IsRoot).ToList();
+        var rootIds = roots.Select(group => group.GroupId).ToHashSet();
+        var children = groups.Where(group => !IsRoot(group) && rootIds.Contains(group.ParentId))
+            .ToLookup(group => group.ParentId);
+        var orphans = groups.Where(group => !IsRoot(group) && !rootIds.Contains(group.ParentId))
+            .Select(group => group with { ParentId = GroupRow.TopLevel });
+        var ordered = new List<GroupCount>();
+        foreach (var root in roots.Concat(orphans))
+        {
+            ordered.Add(root);
+            ordered.AddRange(children[root.GroupId]);
+        }
+
+        return ordered;
+    }
+
+    private void RefreshCounts()
+    {
+        foreach (var item in Items)
+        {
+            item.RefreshCount();
+        }
+    }
+
+    private void OnRowTicked(CategoryItemViewModel item)
+    {
+        var first = _rowBatch.Count == 0;
+        if (!_rowBatch.Contains(item))
+        {
+            _rowBatch.Add(item);
+        }
+
+        if (!first)
+        {
+            return;
+        }
+
+        if (SynchronizationContext.Current is { } context)
+        {
+            context.Post(_ => SettleRows(), null);
+        }
+        else
+        {
+            SettleRows();
+        }
+    }
+
+    private void SettleRows()
+    {
+        var batch = _rowBatch.ToHashSet();
+        _rowBatch.Clear();
+        foreach (var parent in batch.Where(item => item.HasChildren))
+        {
+            if (parent.IsChecked || !parent.Children.Any(batch.Contains))
+            {
+                parent.TickChildren(parent.IsChecked);
+            }
+        }
+
+        foreach (var parent in batch.Where(item => item.Parent is not null && !batch.Contains(item.Parent))
+                     .Select(item => item.Parent!).Distinct())
+        {
+            if (batch.Count > 1 && parent.IsChecked && parent.Children.All(child => batch.Contains(child) && !child.IsChecked))
+            {
+                parent.TickChildren(true);
+            }
+            else
+            {
+                parent.FollowChildren();
+            }
+        }
+
+        OnItemChanged();
+    }
+
+    private void OnExpandedChanged(CategoryItemViewModel item)
+    {
+        if (item.IsExpanded)
+        {
+            _expanded.Add(item.GroupId);
+            _closedInSearch.Remove(item.GroupId);
+        }
+        else
+        {
+            _expanded.Remove(item.GroupId);
+            _closedInSearch.Add(item.GroupId);
+        }
+
+        UpdateVisible();
     }
 
     internal void Check(IEnumerable<long> groups)
@@ -144,8 +255,10 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
             return;
         }
 
+        var listed = VisibleItems.Concat(VisibleItems.Where(item => item.HasChildren && !item.IsExpanded)
+            .SelectMany(item => item.Children)).ToList();
         var changed = false;
-        foreach (var item in VisibleItems.Where(item => item.IsChecked != value))
+        foreach (var item in listed.Where(item => item.IsChecked != value).ToList())
         {
             item.SetChecked(value);
             changed = true;
@@ -187,7 +300,17 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
     private string PickSummary()
     {
         var names = Items.Where(item => item.IsChecked).Select(item => item.Name).ToList();
-        return names.Count == 0 ? AllCategories : string.Join(", ", names);
+        if (names.Count > 0)
+        {
+            return string.Join(", ", names);
+        }
+
+        return _emptyMatchesAll() ? AllCategories : NoCategories;
+    }
+
+    internal void RefreshSummary()
+    {
+        OnPropertyChanged(nameof(Summary));
     }
 
     private string TickSummary()
@@ -206,8 +329,50 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
     private void UpdateVisible()
     {
         var text = Search.Trim();
-        VisibleItems = text.Length == 0
-            ? Items.ToList()
-            : Items.Where(item => item.Name.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        var visible = new List<CategoryItemViewModel>();
+        foreach (var root in Items.Where(item => !item.IsChild))
+        {
+            var self = text.Length == 0 || Matches(root, text);
+            var children = self ? root.Children : root.Children.Where(child => Matches(child, text)).ToList();
+            if (!self && children.Count == 0)
+            {
+                continue;
+            }
+
+            root.SetExpanded(_expanded.Contains(root.GroupId)
+                             || (!self && !_closedInSearch.Contains(root.GroupId)));
+            visible.Add(root);
+            if (root.IsExpanded)
+            {
+                visible.AddRange(children);
+            }
+        }
+
+        Show(visible);
+    }
+
+    private void Show(List<CategoryItemViewModel> visible)
+    {
+        var keep = visible.ToHashSet();
+        for (var index = VisibleItems.Count - 1; index >= 0; index--)
+        {
+            if (!keep.Contains(VisibleItems[index]))
+            {
+                VisibleItems.RemoveAt(index);
+            }
+        }
+
+        for (var index = 0; index < visible.Count; index++)
+        {
+            if (index >= VisibleItems.Count || VisibleItems[index] != visible[index])
+            {
+                VisibleItems.Insert(index, visible[index]);
+            }
+        }
+    }
+
+    private static bool Matches(CategoryItemViewModel item, string text)
+    {
+        return item.Name.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0;
     }
 }

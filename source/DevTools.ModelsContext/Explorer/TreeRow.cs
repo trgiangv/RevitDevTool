@@ -26,6 +26,7 @@ public sealed class TreeRow : INotifyPropertyChanged
     private static readonly PropertyChangedEventArgs HasHiddenChanged = new(nameof(HasHidden));
     private static readonly PropertyChangedEventArgs HiddenOpenChanged = new(nameof(IsHiddenOpen));
     private static readonly PropertyChangedEventArgs DimmedChanged = new(nameof(IsDimmed));
+    private static readonly PropertyChangedEventArgs HiddenInViewChanged = new(nameof(IsHiddenInView));
 
     public TreeRow(
         TreeRowKind kind,
@@ -123,6 +124,8 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public IReadOnlyList<TreeRow>? Children { get; set; }
 
+    public IReadOnlyList<TreeRow>? Subgroups { get; internal set; }
+
     public RowEye Eye
     {
         get;
@@ -130,8 +133,13 @@ public sealed class TreeRow : INotifyPropertyChanged
         {
             if (field != value)
             {
+                var saved = IsHiddenInView;
                 field = value;
                 Raise(EyeChanged);
+                if (saved != IsHiddenInView)
+                {
+                    Raise(HiddenInViewChanged);
+                }
             }
         }
     }
@@ -219,6 +227,8 @@ public sealed class TreeRow : INotifyPropertyChanged
     }
 
     public bool IsInsideLink => Document is { IsCurrentModel: false } && Kind != TreeRowKind.LinkModel;
+
+    public bool IsHiddenInView => IsInsideLink && Eye is RowEye.Hidden or RowEye.Partly;
 
     public bool IsHighlighted
     {

@@ -31,14 +31,56 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
         var ids = new List<ElementId>();
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType == CategoryType.Model
-                && category.BuiltInCategory is not (BuiltInCategory.OST_RvtLinks or BuiltInCategory.OST_Materials))
+            if (category.CategoryType != CategoryType.Model
+                || category.BuiltInCategory is BuiltInCategory.OST_RvtLinks or BuiltInCategory.OST_Materials)
             {
-                ids.Add(category.Id);
+                continue;
+            }
+
+            ids.Add(category.Id);
+            if (category.BuiltInCategory is BuiltInCategory.OST_Site or BuiltInCategory.OST_Lines
+                or BuiltInCategory.OST_Topography)
+            {
+                continue;
+            }
+
+            foreach (Category subcategory in category.SubCategories)
+            {
+                if (subcategory.CategoryType == CategoryType.Model
+                    && subcategory.BuiltInCategory != BuiltInCategory.INVALID)
+                {
+                    ids.Add(subcategory.Id);
+                }
             }
         }
 
         return ids;
+    }
+
+    public static List<ElementId> OwnedCategoryIds(Document document)
+    {
+        var all = ModelCategoryIds(document);
+        var subcategories = all.Where(id => Category.GetCategory(document, id)?.Parent is not null).ToList();
+        var owned = new HashSet<ElementId>(all.Except(subcategories));
+        if (subcategories.Count > 0)
+        {
+            foreach (var element in document.CollectElements()
+                         .WherePasses(new ElementMulticategoryFilter(subcategories))
+                         .WhereElementIsNotElementType())
+            {
+                if (element.Category is { } category)
+                {
+                    owned.Add(category.Id);
+                }
+            }
+        }
+
+        return [.. owned];
+    }
+
+    public static long ParentOf(Category category)
+    {
+        return category.Parent?.Id.ToLong() ?? GroupRow.TopLevel;
     }
 
     public static ElementFilter ModelFilter(
@@ -210,7 +252,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
         if (knownTypes.Add(typeValue))
         {
             Types.Add(new TypeRecord(typeValue, categoryId, category.Name,
-                elementType?.FamilyName ?? NoType, elementType?.Name ?? NoType));
+                elementType?.FamilyName ?? NoType, elementType?.Name ?? NoType, ParentOf(category)));
         }
 
         Elements.Add(new ElementRecord(element.Id.ToLong(), typeValue, element.LevelId.ToLong(),
@@ -262,6 +304,6 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
 
         var typeValue = type.Id.ToLong();
         knownTypes.Add(typeValue);
-        Types.Add(new TypeRecord(typeValue, categoryId, category.Name, type.FamilyName, type.Name));
+        Types.Add(new TypeRecord(typeValue, categoryId, category.Name, type.FamilyName, type.Name, ParentOf(category)));
     }
 }

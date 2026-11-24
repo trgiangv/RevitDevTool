@@ -1,31 +1,49 @@
+using RevitDevTool.Tools.ModelsContext.Documents;
+
 namespace RevitDevTool.Tools.ModelsContext.Visibility;
 
 internal static class CategoryIsolation
 {
-    public static HashSet<ElementId> Apply(Document model, View view, IReadOnlyCollection<ElementId> kept)
+    public static HashSet<ElementId> Apply(
+        Document model,
+        View view,
+        IReadOnlyCollection<ElementId> kept,
+        HashSet<ElementId> stayHidden)
     {
         var keep = KeepOf(model, kept);
         var hidden = new HashSet<ElementId>();
         foreach (Category category in model.Settings.Categories)
         {
-            if (!view.CanCategoryBeHidden(category.Id))
-            {
-                continue;
-            }
+            SetShown(view, category.Id, keep.Contains(category.Id) && !stayHidden.Contains(category.Id), hidden);
+        }
 
-            var shown = keep.Contains(category.Id);
-            if (view.GetCategoryHidden(category.Id) != !shown)
+        foreach (var id in ElementReader.OwnedCategoryIds(model))
+        {
+            if (Category.GetCategory(model, id)?.Parent is { } parent && keep.Contains(parent.Id))
             {
-                view.SetCategoryHidden(category.Id, !shown);
-            }
-
-            if (!shown)
-            {
-                hidden.Add(category.Id);
+                SetShown(view, id, keep.Contains(id) && !stayHidden.Contains(id), hidden);
             }
         }
 
         return hidden;
+    }
+
+    private static void SetShown(View view, ElementId category, bool shown, HashSet<ElementId> hidden)
+    {
+        if (!view.CanCategoryBeHidden(category))
+        {
+            return;
+        }
+
+        if (view.GetCategoryHidden(category) != !shown)
+        {
+            view.SetCategoryHidden(category, !shown);
+        }
+
+        if (!shown)
+        {
+            hidden.Add(category);
+        }
     }
 
     private static HashSet<ElementId> KeepOf(Document model, IEnumerable<ElementId> kept)

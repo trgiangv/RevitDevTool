@@ -79,15 +79,37 @@ public class Command : IExternalCommand
         var categories = new List<ElementId>();
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType == CategoryType.Model
-                && category.BuiltInCategory != BuiltInCategory.OST_RvtLinks
-                && category.BuiltInCategory != BuiltInCategory.OST_Materials)
+            if (category.CategoryType != CategoryType.Model
+                || category.BuiltInCategory == BuiltInCategory.OST_RvtLinks
+                || category.BuiltInCategory == BuiltInCategory.OST_Materials)
             {
-                categories.Add(category.Id);
+                continue;
+            }
+
+            categories.Add(category.Id);
+            if (category.BuiltInCategory == BuiltInCategory.OST_Site
+                || category.BuiltInCategory == BuiltInCategory.OST_Lines
+                || category.BuiltInCategory == BuiltInCategory.OST_Topography)
+            {
+                continue;
+            }
+
+            foreach (Category subcategory in category.SubCategories)
+            {
+                if (subcategory.CategoryType == CategoryType.Model
+                    && subcategory.BuiltInCategory != BuiltInCategory.INVALID)
+                {
+                    categories.Add(subcategory.Id);
+                }
             }
         }
 
         return categories;
+    }
+
+    private static long ParentOf(Category category)
+    {
+        return category.Parent != null ? Value(category.Parent.Id) : 0;
     }
 
     private static ElementFilter ModelFilter(Document document, List<ElementId> categories)
@@ -113,6 +135,7 @@ public class Command : IExternalCommand
         types.Append("{\"typeId\":").Append(typeValue.ToString(CultureInfo.InvariantCulture))
             .Append(",\"groupId\":").Append(Value(category.Id).ToString(CultureInfo.InvariantCulture))
             .Append(",\"group\":").Append(Quote(category.Name))
+            .Append(",\"parentId\":").Append(ParentOf(category).ToString(CultureInfo.InvariantCulture))
             .Append(",\"family\":").Append(Quote(elementType != null ? elementType.FamilyName : NoType))
             .Append(",\"type\":").Append(Quote(elementType != null ? elementType.Name : NoType))
             .Append('}');

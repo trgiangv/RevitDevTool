@@ -35,6 +35,11 @@ internal static class VisibleIds
         {
             case TreeRowKind.Group or TreeRowKind.Family or TreeRowKind.Type when row.Document == scope.Key:
                 groups.Add(row.Path.Group);
+                foreach (var subgroup in row.Subgroups ?? [])
+                {
+                    groups.Add(subgroup.Path.Group);
+                }
+
                 break;
             case TreeRowKind.Instance when row.Document == scope.Key:
                 ids.Add(row.Id);

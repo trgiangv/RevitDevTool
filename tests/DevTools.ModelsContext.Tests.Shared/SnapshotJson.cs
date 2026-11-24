@@ -23,6 +23,7 @@ public static class SnapshotJson
                     TypeId = type.TypeId,
                     GroupId = snapshot.Groups[type.GroupIndex].GroupId,
                     Group = snapshot.Names[snapshot.Groups[type.GroupIndex].NameIndex],
+                    ParentId = snapshot.Groups[type.GroupIndex].ParentId,
                     Family = snapshot.Names[type.FamilyNameIndex],
                     Type = snapshot.Names[type.TypeNameIndex]
                 })
@@ -41,7 +42,7 @@ public static class SnapshotJson
         var builder = new DocumentSnapshotBuilder(new SourceId(document.Source), document.GroupingDepth);
         foreach (var type in document.Types)
         {
-            builder.AddType(new TypeRecord(type.TypeId, type.GroupId, type.Group, type.Family, type.Type));
+            builder.AddType(new TypeRecord(type.TypeId, type.GroupId, type.Group, type.Family, type.Type, type.ParentId));
         }
 
         foreach (var element in document.Elements)
@@ -80,6 +81,8 @@ public static class SnapshotJson
         public long GroupId { get; set; }
 
         public string Group { get; set; } = string.Empty;
+
+        public long ParentId { get; set; }
 
         public string Family { get; set; } = string.Empty;
 

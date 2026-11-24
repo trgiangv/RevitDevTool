@@ -13,6 +13,7 @@ public sealed partial class ExplorerCategories : ObservableObject
 {
     public const string NotReachedNote = "Links By Linked View or Custom keep their own settings";
     public const string SelectReason = "Select categories";
+    public const string ParentHiddenReason = "Show its parent category first.";
 
     private readonly ContextBarViewModel _bar;
     private readonly ContextMenuViewModel _menu;
@@ -20,6 +21,7 @@ public sealed partial class ExplorerCategories : ObservableObject
     private readonly PanelRuntime _runtime;
     private readonly Func<CancellationToken> _token;
     private readonly VisibilityController _visibility;
+    private IReadOnlyList<GroupCount> _groups = [];
 
     internal ExplorerCategories(
         PanelRuntime runtime,
@@ -74,11 +76,11 @@ public sealed partial class ExplorerCategories : ObservableObject
         foreach (var document in data.Documents)
         {
             var snapshot = document.Snapshot;
-            foreach (var group in snapshot.Groups.Where(group => _visibility.IsGroupHidden(group.GroupId)))
+            foreach (var group in snapshot.Groups.Where(group => _visibility.IsCategoryHidden(group.GroupId)))
             {
                 if (!groups.ContainsKey(group.GroupId))
                 {
-                    groups[group.GroupId] = new GroupCount(group.GroupId, snapshot.Names[group.NameIndex], 0);
+                    groups[group.GroupId] = new GroupCount(group.GroupId, snapshot.Names[group.NameIndex], 0, group.ParentId);
                 }
             }
         }
@@ -134,20 +136,42 @@ public sealed partial class ExplorerCategories : ObservableObject
     private void Apply(IEnumerable<GroupCount> groups)
     {
         var links = LinkCount();
-        Picker.Rebuild(groups.OrderBy(group => group.Name, StringComparer.CurrentCultureIgnoreCase).ToList());
+        _groups = CategoryTree.WithParents(groups.ToList(), Snapshots())
+            .OrderBy(group => group.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        Picker.Rebuild(_groups);
         foreach (var item in Picker.Items)
         {
-            var hidden = _visibility.IsGroupHidden(item.GroupId);
+            var hidden = _visibility.IsCategoryHidden(item.GroupId);
             item.IsHiddenInView = hidden;
             item.EyeToolTip = EyeTipOf(hidden, links);
             item.Eye = ToggleEyeAsync;
         }
     }
 
-    private TreeRow? RowOf(CategoryItemViewModel item)
+    private IEnumerable<DocumentSnapshot> Snapshots()
+    {
+        return _runtime.Data.Documents.Select(document => document.Snapshot)
+            .Concat(_bar.TickedDocuments.Select(key => _runtime.Store.TryGet(key)).OfType<DocumentSnapshot>());
+    }
+
+    private bool IsParentHidden(long groupId)
+    {
+        return _groups.FirstOrDefault(group => group.GroupId == groupId) is { ParentId: not GroupRow.TopLevel } child
+               && _visibility.IsCategoryHidden(child.ParentId);
+    }
+
+    private List<TreeRow> EyeRowsOf(CategoryItemViewModel item)
     {
         var current = _runtime.Data.CurrentModel ?? _bar.CurrentModel;
-        return current is { } key ? RowFactory.Category(key, item.GroupId, item.Name) : null;
+        if (current is not { } key)
+        {
+            return [];
+        }
+
+        var rows = new List<TreeRow> { RowFactory.Category(key, item.GroupId, item.Name) };
+        rows.AddRange(CategoryTree.ChildrenOf(_groups, item.GroupId)
+            .Select(child => RowFactory.Category(key, child.GroupId, child.Name)));
+        return rows;
     }
 
     private bool HasSelection()
@@ -165,20 +189,37 @@ public sealed partial class ExplorerCategories : ObservableObject
 
     private List<TreeRow> SelectedRows()
     {
-        return Picker.Items.Where(item => item.IsChecked).Select(RowOf).OfType<TreeRow>().ToList();
+        var current = _runtime.Data.CurrentModel ?? _bar.CurrentModel;
+        if (current is not { } key)
+        {
+            return [];
+        }
+
+        var names = _groups.ToDictionary(group => group.GroupId, group => group.Name);
+        var ticked = Picker.Items.Where(item => item.IsChecked).Select(item => item.GroupId);
+        return CategoryTree.WithChildren(_groups, ticked)
+            .Select(id => RowFactory.Category(key, id, names.TryGetValue(id, out var name) ? name : string.Empty))
+            .ToList();
     }
 
     private Task ToggleEyeAsync(CategoryItemViewModel item)
     {
         return _runtime.RunAsync(async () =>
         {
-            if (RowOf(item) is not { } row)
+            var rows = EyeRowsOf(item);
+            if (rows.Count == 0)
             {
                 return;
             }
 
             var action = item.IsHiddenInView ? VisibilityAction.Show : VisibilityAction.Hide;
-            _report(await _visibility.RunAsync(VisibilityRequest.ForRows(action, row)));
+            if (action == VisibilityAction.Show && IsParentHidden(item.GroupId))
+            {
+                _report(ParentHiddenReason);
+                return;
+            }
+
+            _report(await _visibility.RunAsync(new VisibilityRequest(action, rows, [])));
         });
     }
 

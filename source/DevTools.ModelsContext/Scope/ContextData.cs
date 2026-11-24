@@ -76,7 +76,8 @@ public sealed class DocumentScope(
         return row.Kind switch
         {
             TreeRowKind.Instance => [row.Id],
-            TreeRowKind.Group or TreeRowKind.Family or TreeRowKind.Type => IdsUnder(row.Path),
+            TreeRowKind.Group => Snapshot.WithSubgroups(row.Path).SelectMany(IdsUnder),
+            TreeRowKind.Family or TreeRowKind.Type => IdsUnder(row.Path),
             _ => []
         };
     }

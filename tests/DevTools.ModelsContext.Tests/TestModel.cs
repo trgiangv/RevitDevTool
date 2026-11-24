@@ -18,7 +18,37 @@ internal static class TestModel
         LinkElements = 2_000
     }));
 
+    public const long Toposolid = -2001352;
+    public const int ToposolidCount = 2;
+    public const long SubDivisions = -2001122;
+    public const string SubDivisionName = "Sub-divisions";
+    public const int SubDivisionCount = 8;
+
+    private const long ToposolidType = 4_000_000;
+    private const long SubDivisionType = 4_100_000;
+
     public static FakeModelData SmallData => Small.Value;
+
+    public static FakeModelData WithToposolid()
+    {
+        var sources = SmallData.Sources.ToDictionary(pair => pair.Key,
+            pair => pair.Key == FakeModelGenerator.CurrentSource || pair.Key == FakeModelGenerator.MepSource
+                ? AddToposolid(pair.Value)
+                : pair.Value);
+        return SmallData with { Sources = sources };
+    }
+
+    private static FakeSource AddToposolid(FakeSource source)
+    {
+        var level = source.Elements[0].LevelId;
+        var parent = new TypeRecord(ToposolidType, Toposolid, "Toposolid", "Toposolid", "Site");
+        var child = new TypeRecord(SubDivisionType, SubDivisions, SubDivisionName, "Toposolid", "Sub-division", Toposolid);
+        var elements = Enumerable.Range(1, ToposolidCount)
+            .Select(index => new ElementRecord(ToposolidType + index, ToposolidType, level, 1))
+            .Concat(Enumerable.Range(1, SubDivisionCount)
+                .Select(index => new ElementRecord(SubDivisionType + index, SubDivisionType, level, 1)));
+        return source with { Types = [.. source.Types, parent, child], Elements = [.. source.Elements, .. elements] };
+    }
 
     public static DocumentSnapshot Snapshot(DocumentKey key)
     {

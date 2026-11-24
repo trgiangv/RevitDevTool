@@ -23,7 +23,7 @@ internal static class ScopeGroupCounter
         // One collector per category walks the whole document each time (~100x slower on the sample).
         var ids = await RevitProfiler.RunAsync("Count ids", application => CountIds(application, document, scope),
             cancellationToken).ConfigureAwait(false);
-        var counts = new Dictionary<long, (string Name, int Count)>();
+        var counts = new Dictionary<long, (string Name, int Count, long Parent)>();
         var stats = ProfileStats.Start("Count");
         var failures = FailureTally.Start(RevitProfiler.Logger);
         var index = 0;
@@ -38,7 +38,7 @@ internal static class ScopeGroupCounter
 
         failures?.Flush("Count", document, ids.Length);
         stats?.Flush(document, ids.Length);
-        return counts.Select(pair => new GroupCount(pair.Key, pair.Value.Name, pair.Value.Count)).ToList();
+        return counts.Select(pair => new GroupCount(pair.Key, pair.Value.Name, pair.Value.Count, pair.Value.Parent)).ToList();
     }
 
     private static IReadOnlyList<GroupCount> SelectionCounts(UIApplication application, DocumentKey document)
@@ -48,7 +48,8 @@ internal static class ScopeGroupCounter
             .Select(id => target.GetElement(id.ToElementId())?.Category)
             .Where(category => category is not null)
             .GroupBy(category => category!.Id.ToLong())
-            .Select(group => new GroupCount(group.Key, group.First()!.Name, group.Count()))
+            .Select(group => new GroupCount(group.Key, group.First()!.Name, group.Count(),
+                ElementReader.ParentOf(group.First()!)))
             .ToList();
     }
 
@@ -75,7 +76,7 @@ internal static class ScopeGroupCounter
         DocumentKey document,
         long[] ids,
         int start,
-        Dictionary<long, (string Name, int Count)> counts,
+        Dictionary<long, (string Name, int Count, long Parent)> counts,
         FailureTally? failures)
     {
         var target = DocumentRegistry.Require(application, document).Target;
@@ -93,7 +94,7 @@ internal static class ScopeGroupCounter
     private static void CountOne(
         Document target,
         long id,
-        Dictionary<long, (string Name, int Count)> counts,
+        Dictionary<long, (string Name, int Count, long Parent)> counts,
         FailureTally? failures)
     {
         try
@@ -104,7 +105,9 @@ internal static class ScopeGroupCounter
             }
 
             var key = category.Id.ToLong();
-            counts[key] = counts.TryGetValue(key, out var known) ? (known.Name, known.Count + 1) : (category.Name, 1);
+            counts[key] = counts.TryGetValue(key, out var known)
+                ? known with { Count = known.Count + 1 }
+                : (category.Name, 1, ElementReader.ParentOf(category));
         }
         catch (Exception exception)
         {

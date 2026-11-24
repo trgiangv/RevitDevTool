@@ -142,7 +142,8 @@ internal sealed class ExplorerSearch(PanelRuntime runtime, ExplorerTree tree, Tr
     private bool SearchesInside(TreeRow row)
     {
         return row.Kind is TreeRowKind.CurrentModelHeader or TreeRowKind.LinkModel or TreeRowKind.Family
-               || (row.Kind == TreeRowKind.Group && (tree.DocumentOf(row)?.Snapshot.GroupingDepth ?? 0) > 1);
+               || (row.Kind == TreeRowKind.Group && (row.Subgroups is not null
+                                                     || (tree.DocumentOf(row)?.Snapshot.GroupingDepth ?? 0) > 1));
     }
 
     private IEnumerable<ElementRef> ParseToken(string text)

@@ -18,13 +18,13 @@ internal sealed class RowPainter(
         var document = tree.DocumentOf(row);
         if (document is not null)
         {
-            row.DisabledReason = document.Info.IsLoaded ? null : VisibilityReasons.NotLoaded;
+            row.DisabledReason = document.Info.IsLoaded ? null : VisibilityText.NotLoaded;
         }
 
         var stale = visibility.Journal.IsStale;
         ApplyKindState(row, document, stale);
         _overrides.Apply(row, document, stale);
-        if (row.Children is not { } children)
+        if ((row.Children ?? row.Subgroups) is not { } children)
         {
             return;
         }
@@ -100,17 +100,20 @@ internal sealed class RowPainter(
 
     private void ApplyBranchState(TreeRow row, DocumentScope scope, bool stale)
     {
-        var keys = RowFactory.KeyPath(row.Path, scope.Snapshot.GroupingDepth);
+        var depth = scope.Snapshot.GroupingDepth;
+        var paths = row.Subgroups is { } subgroups
+            ? subgroups.Select(subgroup => RowFactory.KeyPath(subgroup.Path, depth)).Prepend(RowFactory.KeyPath(row.Path, depth)).ToList()
+            : [RowFactory.KeyPath(row.Path, depth)];
         var branch = states[scope.Key];
-        var hidden = branch.Hidden.CountAt(keys);
-        row.Count = scope.Counts.CountAt(keys);
-        row.SelectedInside = branch.Selected.CountAt(keys);
-        row.HiddenCount = branch.Unseen.CountAt(keys);
+        var hidden = paths.Sum(branch.Hidden.CountAt);
+        row.Count = paths.Sum(scope.Counts.CountAt);
+        row.SelectedInside = paths.Sum(branch.Selected.CountAt);
+        row.HiddenCount = paths.Sum(branch.Unseen.CountAt);
         row.IsHiddenOpen = tree.IsHiddenOpen(row);
         row.IsDimmed = row.Count == 0 && hidden == 0 && row.HiddenCount > 0;
         row.Eye = row.IsDimmed
             ? RowEye.None
-            : InheritedEye(row, stale) ?? EyeOf(hidden, row.Count + branch.Outside.CountAt(keys));
+            : InheritedEye(row, stale) ?? EyeOf(hidden, row.Count + paths.Sum(branch.Outside.CountAt));
     }
 
     private void ApplyInstanceState(TreeRow row, DocumentScope scope, bool stale)
@@ -125,7 +128,7 @@ internal sealed class RowPainter(
 
     private RowEye? InheritedEye(TreeRow row, bool stale)
     {
-        if (GroupIdOf(row) is { } group && visibility.IsGroupHidden(group))
+        if (GroupIdOf(row) is { } group && visibility.IsCategoryHidden(group))
         {
             return RowEye.HiddenByCategory;
         }

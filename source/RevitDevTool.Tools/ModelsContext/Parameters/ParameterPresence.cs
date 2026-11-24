@@ -96,7 +96,7 @@ internal static class ParameterPresence
             return [];
         }
 
-        var carrying = (categories.Count > 0 ? categories : ElementReader.ModelCategoryIds(document))
+        var carrying = (categories.Count > 0 ? categories : ElementReader.OwnedCategoryIds(document))
             .Where(category => document.CollectElements()
                 .WherePasses(ElementReader.AnyOptionFilter(document, [category]))
                 .WherePasses(seenFilter.Value)

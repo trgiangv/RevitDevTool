@@ -29,7 +29,7 @@ public static class SnapshotAggregator
             .Select(node =>
             {
                 var group = snapshot.Groups[node.Key];
-                return new GroupCount(group.GroupId, snapshot.Names[group.NameIndex], node.Count);
+                return new GroupCount(group.GroupId, snapshot.Names[group.NameIndex], node.Count, group.ParentId);
             })
             .ToList();
     }

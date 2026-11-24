@@ -24,7 +24,12 @@ public sealed class DocumentSnapshot
         _rowIndex = new RowIdIndex(_rows);
     }
 
-    public SourceId Source { get; }
+    public SourceId Source { get; private set; }
+
+    internal void Rename(SourceId source)
+    {
+        Source = source;
+    }
 
     public int GroupingDepth { get; }
 
@@ -157,6 +162,27 @@ public sealed class DocumentSnapshot
         return branch.Family == RowPath.Any || _types[row.TypeIndex].FamilyNameIndex == branch.Family;
     }
 
+    public IReadOnlyList<RowPath> WithSubgroups(RowPath branch)
+    {
+        if (branch.ElementId != RowPath.Unset || branch.Family != RowPath.Any || branch.Type != RowPath.Any
+            || branch.Group < 0 || branch.Group >= _groups.Count)
+        {
+            return [branch];
+        }
+
+        var parentId = _groups[branch.Group].GroupId;
+        var paths = new List<RowPath> { branch };
+        for (var index = 0; index < _groups.Count; index++)
+        {
+            if (_groups[index].ParentId == parentId && index != branch.Group)
+            {
+                paths.Add(RowPath.ForGroup(index));
+            }
+        }
+
+        return paths;
+    }
+
     public IEnumerable<long> IdsUnder(RowPath branch)
     {
         return IdsUnder(branch, false);
@@ -221,7 +247,7 @@ public sealed class DocumentSnapshot
     internal int UpsertType(TypeRecord type, out bool moved)
     {
         moved = false;
-        var groupIndex = UpsertGroup(type.GroupId, type.GroupName);
+        var groupIndex = UpsertGroup(type.GroupId, type.GroupName, type.ParentId);
         var familyIndex = Names.Intern(type.FamilyName);
         var typeNameIndex = Names.Intern(type.TypeName);
         var row = new TypeRow(type.TypeId, groupIndex, familyIndex, typeNameIndex);
@@ -310,17 +336,17 @@ public sealed class DocumentSnapshot
         return true;
     }
 
-    private int UpsertGroup(long groupId, string name)
+    private int UpsertGroup(long groupId, string name, long parentId)
     {
-        var nameIndex = Names.Intern(name);
+        var group = new GroupRow(groupId, Names.Intern(name), parentId);
         if (_groupIndex.TryGetValue(groupId, out var index))
         {
-            _groups[index] = new GroupRow(groupId, nameIndex);
+            _groups[index] = group;
             return index;
         }
 
         index = _groups.Count;
-        _groups.Add(new GroupRow(groupId, nameIndex));
+        _groups.Add(group);
         _groupIndex.Add(groupId, index);
         return index;
     }

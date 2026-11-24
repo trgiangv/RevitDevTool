@@ -121,6 +121,10 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
             TreeRowKind.Group or TreeRowKind.Type when scope is not null => await InstanceRowsAsync(row, scope),
             _ => []
         };
+        if (row.Subgroups is { Count: > 0 } subgroups && (row.Children.Count == 0 || row.Children[0] != subgroups[0]))
+        {
+            row.Children = [.. subgroups, .. row.Children];
+        }
     }
 
     public async Task<IReadOnlyList<TreeRow>> AppendPageAsync(TreeRow parent)
@@ -130,7 +134,7 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
             return [];
         }
 
-        var existing = (parent.Children ?? []).Where(child => child.Kind != TreeRowKind.MorePage).ToList();
+        var existing = (parent.Children ?? []).Where(child => child.Kind == TreeRowKind.Instance).ToList();
         var take = ids.Skip(existing.Count).Take(ExplorerTabViewModel.InstancePageSize).ToList();
         var names = await runtime.Services.Source.GetInstanceNamesAsync(key, take, Token);
         var page = names.Select(name => RowFactory.Instance(parent, key, name)).ToList();
@@ -140,7 +144,7 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
             page.Add(RowFactory.MorePage(parent, key, shown, ids.Length));
         }
 
-        parent.Children = existing.Concat(page).ToList();
+        parent.Children = (parent.Subgroups ?? []).Concat(existing).Concat(page).ToList();
         return page;
     }
 
@@ -239,18 +243,31 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
     {
         var snapshot = scope.Snapshot;
         var state = states[scope.Key];
-        return RowFactory.Sorted(RowFactory.KeysOf(scope.Counts, state.Hidden, state.Unseen)
+        var listed = RowFactory.KeysOf(scope.Counts, state.Hidden, state.Unseen)
             .Where(index => categories.Lists(snapshot.Groups[index].GroupId))
-            .Select(index =>
-            {
-                var groupId = snapshot.Groups[index].GroupId;
-                return new TreeRow(TreeRowKind.Group, snapshot.GroupName(index), parent, path: RowPath.ForGroup(index),
-                    id: groupId)
-                {
-                    HasChildren = true,
-                    Key = RowFactory.RowKey(TreeRowKind.Group, scope.Key, groupId)
-                };
-            }));
+            .ToList();
+        var tops = listed.Where(index => !snapshot.Groups[index].IsSubgroup)
+            .Select(index => snapshot.Groups[index].GroupId).ToHashSet();
+        bool Nested(int index) => snapshot.Groups[index] is { IsSubgroup: true } group && tops.Contains(group.ParentId);
+        var rows = RowFactory.Sorted(listed.Where(index => !Nested(index)).Select(index => GroupRow(parent, scope, index)));
+        var nested = listed.Where(Nested).ToLookup(index => snapshot.Groups[index].ParentId);
+        foreach (var row in rows.Where(row => nested.Contains(row.Id)))
+        {
+            row.Subgroups = RowFactory.Sorted(nested[row.Id].Select(index => GroupRow(row, scope, index)));
+        }
+
+        return rows;
+    }
+
+    private static TreeRow GroupRow(TreeRow parent, DocumentScope scope, int index)
+    {
+        var groupId = scope.Snapshot.Groups[index].GroupId;
+        return new TreeRow(TreeRowKind.Group, scope.Snapshot.GroupName(index), parent, path: RowPath.ForGroup(index),
+            id: groupId)
+        {
+            HasChildren = true,
+            Key = RowFactory.RowKey(TreeRowKind.Group, scope.Key, groupId)
+        };
     }
 
     private List<TreeRow> FamilyRows(TreeRow parent, DocumentScope scope)

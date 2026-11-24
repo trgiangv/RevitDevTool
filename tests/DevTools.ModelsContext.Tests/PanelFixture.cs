@@ -57,8 +57,8 @@ internal sealed class PanelFixture : IDisposable
 
     public TreeRow? FindGroup(DocumentKey document, string name)
     {
-        return Explorer.Rows.FirstOrDefault(row =>
-            row.Kind == TreeRowKind.Group && row.Document == document && row.Text == name);
+        return Explorer.Rows.SelectMany(row => row.Subgroups is { } subgroups ? subgroups.Prepend(row) : [row])
+            .FirstOrDefault(row => row.Kind == TreeRowKind.Group && row.Document == document && row.Text == name);
     }
 
     public void Settle()
@@ -68,7 +68,8 @@ internal sealed class PanelFixture : IDisposable
 
     public TreeRow Group(DocumentKey document, string name)
     {
-        return Explorer.Rows.First(row => row.Kind == TreeRowKind.Group && row.Document == document && row.Text == name);
+        return Explorer.Rows.SelectMany(row => row.Subgroups is { } subgroups ? subgroups.Prepend(row) : [row])
+            .First(row => row.Kind == TreeRowKind.Group && row.Document == document && row.Text == name);
     }
 
     public IReadOnlyList<ElementRef> Elements(DocumentKey document, int count)

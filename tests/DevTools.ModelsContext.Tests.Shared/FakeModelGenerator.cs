@@ -13,7 +13,7 @@ public sealed record FakeModelOptions
     public int LinkElements { get; init; } = 20_000;
 
     public DocumentCapabilities LinkCapabilities { get; init; } =
-        DocumentCapabilities.WholeModel | DocumentCapabilities.ReferenceCommands | DocumentCapabilities.ReferenceUnhide
+        DocumentCapabilities.LinkInstance | DocumentCapabilities.LinkElements | DocumentCapabilities.LinkShow
         | DocumentCapabilities.LinkFilters;
 
     public string ModelId { get; init; } = FakeModelGenerator.ModelId;
@@ -109,7 +109,7 @@ public static class FakeModelGenerator
             levels);
 
         const DocumentCapabilities currentCapabilities =
-            DocumentCapabilities.HideById | DocumentCapabilities.HideGroupEverywhere;
+            DocumentCapabilities.Elements | DocumentCapabilities.Categories;
         var documents = new List<DocumentInfo>
         {
             new(currentKey, currentSource, "Current model", true, currentCapabilities),
@@ -139,6 +139,29 @@ public static class FakeModelGenerator
         return new FakeModelData(currentKey, documents, sources, levels);
     }
 
+    public static FakeModelData WithSubcategories(FakeModelData data)
+    {
+        return data with { Sources = data.Sources.ToDictionary(pair => pair.Key, pair => AddSubcategories(pair.Value)) };
+    }
+
+    private static FakeSource AddSubcategories(FakeSource source)
+    {
+        var level = source.Elements[0].LevelId;
+        (long Category, string Name, long Parent, int Count)[] groups =
+        [
+            (-2001352, "Toposolid", 0, 3),
+            (-2001122, "Sub-divisions", -2001352, 12),
+            (-2000126, "Railings", 0, 4),
+            (-2000177, "Top Rails", -2000126, 6),
+            (-2000175, "Balusters", -2000126, 20)
+        ];
+        var types = groups.Select((group, index) => new TypeRecord(8_000_000 + index, group.Category, group.Name,
+            group.Parent == 0 ? group.Name : groups.First(other => other.Category == group.Parent).Name,
+            group.Name + " Type", group.Parent)).ToList();
+        var elements = groups.SelectMany((group, index) => Enumerable.Range(1, group.Count)
+            .Select(element => new ElementRecord(8_100_000 + index * 1_000 + element, 8_000_000 + index, level, 1)));
+        return source with { Types = [.. source.Types, .. types], Elements = [.. source.Elements, .. elements] };
+    }
     public static DocumentSnapshot BuildSnapshot(FakeSource source, int groupingDepth = TreeSchema.MaxGroupingDepth)
     {
         return BuildSnapshot(source, null, false, groupingDepth);

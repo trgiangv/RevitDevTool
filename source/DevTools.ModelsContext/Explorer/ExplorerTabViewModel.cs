@@ -29,20 +29,23 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private readonly RowTargets _targets;
     private readonly ExplorerTree _tree;
     private readonly VisibilityController _visibility;
+    private readonly Action<string?> _report;
     private ExplorerState? _pending;
 
     internal ExplorerTabViewModel(
         PanelRuntime runtime,
         VisibilityController visibility,
         ContextBarViewModel bar,
-        ContextMenuViewModel menu)
+        ContextMenuViewModel menu,
+        Action<string?> report)
     {
         _runtime = runtime;
+        _report = report;
         _visibility = visibility;
         _menu = menu;
         _states = new DocumentStates(visibility);
         Categories = new ExplorerCategories(runtime, visibility, bar, menu, () => _tree!.Token, OnTicksChanged,
-            message => Message = message);
+            report);
         Pick = new ExplorerPick(runtime, () => bar.TickedDocuments, () => Categories.Ticked);
         _tree = new ExplorerTree(runtime, _states, Categories);
         var reveal = new TreeReveal(runtime, _tree);
@@ -122,8 +125,6 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     public bool CanShowInExplorer => _sync.CanShowInExplorer;
 
-    [ObservableProperty]
-    public partial string? Message { get; private set; }
 
     public void Dispose()
     {
@@ -194,11 +195,11 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         var item = _menu[action];
         if (!item.IsEnabled)
         {
-            Message = item.DisabledReason;
+            _report(item.DisabledReason);
             return;
         }
 
-        Message = null;
+        _report(null);
         await item.Command.ExecuteAsync(null);
     }
 
@@ -281,7 +282,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     private Task Run(Func<Task> work)
     {
-        Message = null;
+        _report(null);
         return _runtime.RunAsync(work);
     }
 
@@ -324,7 +325,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void CollapseAll()
     {
-        Message = null;
+        _report(null);
         CollapseTree();
     }
 
@@ -364,7 +365,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         }
 
         var action = row.Eye == RowEye.Hidden ? VisibilityAction.Show : VisibilityAction.Hide;
-        Message = await _visibility.RunAsync(new VisibilityRequest(action, _targets.TargetsFor(row), []));
+        _report(await _visibility.RunAsync(new VisibilityRequest(action, _targets.TargetsFor(row), [])));
     }
 
     private async Task ApplySearchAsync()

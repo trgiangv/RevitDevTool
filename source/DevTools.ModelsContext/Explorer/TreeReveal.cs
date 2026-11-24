@@ -55,6 +55,7 @@ internal sealed class TreeReveal(PanelRuntime runtime, ExplorerTree tree)
             TreeRowKind.Instance => child.Id == id,
             TreeRowKind.MorePage => false,
             _ => scope.Snapshot.IsUnder(target, child.Path)
+                 || child.Subgroups?.Any(subgroup => scope.Snapshot.IsUnder(target, subgroup.Path)) == true
         };
     }
 

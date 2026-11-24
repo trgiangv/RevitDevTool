@@ -311,7 +311,7 @@ public sealed class ExplorerTabTests
 
         await fixture.Explorer.RunToolAsync(fixture.Group(FakeModelGenerator.Mep, "Ducts"), MenuAction.Halftone);
 
-        Assert.AreEqual(VisibilityReasons.LinkFiltersUnavailable, fixture.Explorer.Message);
+        Assert.AreEqual(VisibilityText.LinkFiltersUnavailable, fixture.Panel.Message);
         Assert.IsEmpty(fixture.Actions.ExecutedPlans);
     }
 
@@ -386,7 +386,7 @@ public sealed class ExplorerTabTests
         await fixture.Explorer.Categories.ColorCommand.ExecuteAsync(null);
         await fixture.Panel.ContextMenu.ApplyColorCommand.ExecuteAsync(new RgbColor(1, 2, 3));
 
-        Assert.IsInstanceOfType<GroupEverywhereStep>(fixture.Actions.ExecutedPlans.Single().Steps.Single());
+        Assert.IsInstanceOfType<CategoryStep>(fixture.Actions.ExecutedPlans.Single().Steps.Single());
         Assert.AreEqual(new RgbColor(1, 2, 3), fixture.Group(Current, "Ducts").OverrideColor);
     }
 
@@ -404,7 +404,7 @@ public sealed class ExplorerTabTests
     }
 
     [TestMethod]
-    public async Task KeepClearsColor()
+    public async Task KeepLeavesColorRecorded()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var ducts = fixture.Group(Current, "Ducts");
@@ -412,7 +412,8 @@ public sealed class ExplorerTabTests
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
 
-        Assert.IsFalse(fixture.Group(Current, "Ducts").IsHalftone);
+        Assert.IsTrue(fixture.Group(Current, "Ducts").IsHalftone);
+        Assert.AreEqual(1, fixture.Panel.TemporaryBar.ChangeCount);
     }
 
     [TestMethod]
