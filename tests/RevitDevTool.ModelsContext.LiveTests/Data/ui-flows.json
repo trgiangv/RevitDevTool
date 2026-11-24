@@ -46,7 +46,7 @@
       "images": ["before", "paused", "after"],
       "manualSteps": [
         "Tick only the Architectural link. Filter tab: + New filter, open Categories, click All.",
-        "The count reads 7,526. The Selection sync toggle stays on, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
+        "The count reads 11,195. The Selection sync toggle stays on, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
         "Click None: the count reads 0 and the line is gone."
       ]
     },
@@ -107,15 +107,15 @@
     },
     {
       "id": "UI-09",
-      "description": "Categories box tree: ticking Toposolid ticks Sub-divisions, unticking the child leaves the parent partly ticked, ticking it again checks the parent",
+      "description": "Categories box tree: ticking Toposolid ticks Sub-divisions, unticking its only child clears the parent, ticking it again checks the parent",
       "test": "BoxTreeTicksChildren",
       "cases": [],
-      "expected": "Sub-divisions On; Toposolid Indeterminate; then Toposolid On",
-      "images": ["before", "parent", "partly", "after"],
+      "expected": "Sub-divisions On; Toposolid Off; then Toposolid On",
+      "images": ["before", "parent", "cleared", "after"],
       "manualSteps": [
         "Explorer tab, Whole model, Architectural and Site links ticked. Open Categories, click None.",
         "Tick Toposolid and open its chevron: Sub-divisions is ticked.",
-        "Untick Sub-divisions: the Toposolid box shows the partial mark. Tick it again: Toposolid reads ticked."
+        "Untick Sub-divisions (Toposolid's only child): the Toposolid box clears. Tick it again: Toposolid reads ticked."
       ]
     },
     {

@@ -8,7 +8,7 @@ modeless WPF `Window`, not the Dockable Pane. Run it through Command Execution (
 `run_command`) on the built `RevitDevTool.Tools.dll`: each run loads that build fresh in an isolation
 session ([assembly-isolation.md](../../product/assembly-isolation.md)), so build, close the window, run
 again. This comes before the remaining Model Context work
-([link actions](2026-11-20-models-context-link-actions.md), [host matrix](2026-11-19-models-context-host-matrix.md)).
+([link actions](../active/2026-11-20-models-context-link-actions.md), [host matrix](../active/2026-11-19-models-context-host-matrix.md)).
 
 ## Decisions
 
@@ -59,9 +59,12 @@ again. This comes before the remaining Model Context work
       guard `NoCoreTypesInXaml`); a user close ran `Stop` outside the API context (now through
       `RevitProfiler.RunAsync`); the window logs to `models-context-window_*.log`.
 
-## Open
+## Result
 
-- The orange dot (`Explorer.Row.SavedHide`) did not show on a linked Doors row hidden through Hide in View.
+Done 2026-11-24. The window command, the shared wiring and the run loop doc landed, and the live reload
+loop passed on Revit 2026. The one note found on the way, the orange dot (`Explorer.Row.SavedHide`)
+missing on a linked Doors row hidden through Hide in View, moved to the linked-hide record work: test
+matrix LH-03 (L1 `ActiveViewLinkHideKeepsRow` passes; the L3 check stays with the UI round).
 
 ## Validation
 

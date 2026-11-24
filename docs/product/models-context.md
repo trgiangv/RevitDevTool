@@ -239,8 +239,8 @@ the other causes; *No view setting hides it* when no check hits. The strip follo
 row, and closes with ✕, Esc, or when the selection has no element.
 
 - Checks, first hit first: temporary hide or isolate, hidden in view, category,
-  view filter, workset, phase, design option, view range, crop or section box,
-  owner view, not drawn (*No geometry to draw*, *Not drawn in this view type*).
+  view filter, workset, phase, design option, not drawn (*No geometry to draw*,
+  *Not drawn in this view type*), owner view, view range, crop or section box.
   The category check includes the line style under Lines. A ceiling plan reads
   *Below cut plane* or *Above view range*. A link adds its own first: link hidden, its category or workset,
   its display mode (By Linked View and Custom use the link's own settings).

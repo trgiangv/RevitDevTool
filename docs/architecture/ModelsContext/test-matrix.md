@@ -251,19 +251,32 @@ Then run it through Command Execution or MCP:
 Expected values come from `Data/*.json` (recorded from the oracle on the Revit 2026
 sample, 2026-11-17). Change them there, not here alone.
 
-Revit 2024 is the test host on this machine (`-Year 2024` is the script default).
+Revit 2026 is the primary test host, Revit 2024 the secondary (`-Year 2024` is the script default).
 Current results (Snowdon HVAC + six links):
 
-- Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
+- Revit 2026, run `20261125-001901` (fresh Revit, Snowdon HVAC + six links): L2 441 PASS, 0 FAIL, 8 Inconclusive
+  (CA-01 to CA-09 need `{3D}` from a run of their own) in 280 s; L3 16 of 17 flows in 169 s, UI-06 open (below);
+  safety ok after L2, after L3 and at host end. CA-01 to CA-10 passed alone with `{3D}` active (runs
+  `20261124-235159`, CA-07 `-235310`). WH-01 to WH-03, WH-05, WH-06 and PI-03 ran and passed.
+- Goldens re-read from the oracle on Revit 2026 (2026-11-24, panel = oracle each time): SC-01 2,929 → 4,961 and
+  SC-02 7,526 → 11,195 (UI-04 too), SC-06 780 → 1,028, EN-02 816 → 817, EN-05 1,119 → 1,120. TX-04, TX-05, NU-05,
+  YN-03 and RF-02 kept their values. SC-01 grew by exactly the Current model's Center line elements (Ducts 1,045,
+  Duct Fittings 956, Flex Ducts 31), SC-02 by Arch subcategory elements (Railings › Supports 2,608, Wall Sweeps 258,
+  Curtain Wall Grids 235 …).
+- SC-05 (Active view `L3`) depends on how far Revit has drawn `L3`, not on the model: 917 (runs `20261124-230742`,
+  `20261125-001901`), 1,198 (`20261124-231506`, a session where `L3` had been active a long time) and 1,669 (a fresh
+  session where `L3` was activated by MCP and never shown in front, `20261124-232231`); panel = oracle in all.
+  The golden stays 917 (Gotcha 20).
+- Open, UI-06: after Hide in View on Doors under the link in Whole model scope the eye reads Partly, not Hidden.
+  Since the one linked-hide record (round 10) the journal keeps only the doors Revit drew and then hid (24 in
+  `L3`), while the Whole model row holds all 142. Either Whole model reads Partly (update UI-06 and EX-12) or the
+  eye counts only the doors the view can draw; a product decision.
+- Earlier: Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
 - Revit 2024, run `20261118-093432`: L2 127/131, L3 5/6; the differences are listed under Mismatches. A case where the oracle differs from the golden value there means the 2024 sample file differs, not that the panel is wrong: record it with both values and decide per-version golden values before changing `Data/*.json`.
-- L1 (net10.0-windows, run 2026-11-21): core 431 tests in 4 s, views 120 tests in 70 s. Another agent may still be adding tests, so these are the counts at the time of writing.
-- Not run yet: L2 `WhyHiddenTests` (WH-01 to WH-06), `NestedChairsFollowHost` (NE-01) and `FilterKeepsTickedOnly` (PI-03); the manual Pick check (MP-01); L2 `CategoryActionTests` (CA-01 to CA-09).
-- Goldens to re-read from the oracle on the next 2026 run (rule 2), because the product changed after they were recorded:
-  SC-01, SC-02, SC-05, SC-06 and UI-04 (model subcategories are collected, so whole-document totals grow
-  where a document has Slab Edges, railing parts, Sub-divisions and the like); TX-04, TX-05, NU-05, YN-03,
-  EN-02, EN-05, RF-02 (*not equals* now also matches an element whose value is empty); L3 flows that
-  assumed only the Current model ticked at open (the view's links tick now). VI-09 expects Temporary View
-  Properties instead of temporary hide (Gotcha 30).
+- L1 last run (net10.0-windows, 2026-11-25): core and views all pass.
+- Not run yet: the explicit L2 cases WH-04, WH-09 (`L3` alone) and `NestedChairsFollowHost` (NE-01, an
+  Architectural copy).
+- L3 flows tick only the Architectural link at start (`PanelSteps.TickOnly`), since a view's links now tick at open.
 
 `L2 matrix` below means `FilterMatrixTests.CountMatchesOracle(<id>)`.
 
@@ -271,17 +284,17 @@ Current results (Snowdon HVAC + six links):
 
 | ID | Use case | Docs | Expected | Test |
 |----|----------|------|----------|------|
-| SC-01 | Whole model, every model category (materials excluded) | Current | 2,929 | L2 matrix |
-| SC-02 | Whole model, every model category (materials excluded) | Arch | 7,526 | L2 matrix, L3 UI-04 |
+| SC-01 | Whole model, every model category (materials excluded) | Current | 4,961 | L2 matrix |
+| SC-02 | Whole model, every model category (materials excluded) | Arch | 11,195 | L2 matrix, L3 UI-04 |
 | SC-03 | Link unticked: Doors in the Current model only | Current | 0 | L2 matrix |
 | SC-04 | Link ticked: Doors in both | Both | 142 | L2 matrix |
 | SC-05 | Active view, every model category | Current | 917 | L2 matrix |
-| SC-06 | Active view through the link | Arch | 780 | L2 matrix |
+| SC-06 | Active view through the link | Arch | 1,028 | L2 matrix |
 | SC-07 | Active view, Doors | Both | 24 | L2 matrix |
 | SC-08 | Active view, Swing Angle > 45° | Both | 22 | L2 matrix |
 | SC-09 | Secondary design options: Whole model only counts main + primary; view and selection follow the collector | Arch | snapshot counts = oracle (main + primary) | L2 `ExplorerMatchesOracle` |
 | SC-10 | Documents list: Current model first, then each loaded link | all | keys equal | L2 `ExplorerMatchesOracle` |
-| SC-11 | Ticks, last tick, unloaded link | fake | state | L1 `PanelBarsTests`, `PanelViewTests` (`AtLeastOneDocumentStaysTicked`, `AllSkipsUnloadedLink` …) |
+| SC-11 | Ticks, last tick, unloaded link | fake | state | L1 `PanelBarsTests.AtLeastOneDocumentStaysTicked`, Views `PanelViewTests.AllSkipsUnloadedLink` … |
 
 ### Explorer counts and visibility tiers
 
@@ -317,7 +330,7 @@ Current results (Snowdon HVAC + six links):
 | PI-01 | Pick is off with no ticked link or no ticked category and on with a link; it sends the ticked links only, skips the port with no link | enabled, args | L1 `PickTests` (`NoLinkDisablesPick`, `NoCategoryDisablesPick`, `LinkEnablesPick`, `PickSendsLinksOnly`, `NoLinkSkipsPort`), `ExplorerPickTests`; Views `PickOffWithoutLink`, `PickOnWithTickedLink` |
 | PI-02 | The picked set becomes the selection; Esc keeps the selection; empty pick says *Nothing picked*; a second pick is blocked; closing during a pick is quiet | state, status | L1 `PickTests` (`PickedBecomeSelection`, `EscapeKeepsSelection`, `EmptyPickSaysNothing`, `SecondPickIsBlocked`, `CloseDuringPickIsQuiet`, `PickingRaisesChanged`); `ExplorerPickTests` (`PickShowsCueUntilDone`, `SelectionScopeKeepsPick`) |
 | PI-03 | `LinkPickFilter` for the Architectural link and Doors on real link references: its door passes, its wall, a door of another link and a Current model duct do not, the link instance does | door only | L2 `PickFilterTests.FilterKeepsTickedOnly` |
-| MP-01 | Pick in a real view: click and box a linked element without Tab, only ticked links and categories, Esc ends it. Needs a person; recorded in the plan, not automated | manual | [link actions plan](../../plans/active/2026-11-20-models-context-link-actions.md) (open) |
+| MP-01 | Pick in a real view: click and box a linked element without Tab, only ticked links and categories, Esc ends it. Needs a person; recorded in the plan, not automated | manual | [link actions plan](../../plans/active/2026-11-20-models-context-link-actions.md) (passed 2026-11-23) |
 | SE-01 | One engine: a branch Hide matches Select, scoped hide and show keep the eye right, a filter result reads hidden state, a filter Color marks the Explorer row, one instance leaves its group plain, a link row Halftone marks the row | plans, marks | L1 `SharedEngineTests` |
 
 ### Filter operators per value kind
@@ -366,10 +379,10 @@ Equipment in the Current model.
 | YN-02 | Yes/No | Room Bounding = No | 248 | L2 matrix |
 | YN-03 | Yes/No | Walls Structural ≠ Yes | 1,103 | L2 matrix |
 | EN-01 | Enum on the type | Walls Function = Exterior | 303 | L2 matrix |
-| EN-02 | Enum on the type | Function ≠ Exterior | 816 | L2 matrix |
+| EN-02 | Enum on the type | Function ≠ Exterior | 817 | L2 matrix |
 | EN-03 | Enum on the instance | Walls Location Line = Wall Centerline | 333 | L2 matrix |
 | EN-04 | Enum, unknown name | Function = "No Such Function" | 0 | L2 matrix |
-| EN-05 | Enum, unknown name | Function ≠ "No Such Function" | 1,119 | L2 matrix |
+| EN-05 | Enum, unknown name | Function ≠ "No Such Function" | 1,120 | L2 matrix |
 | RF-01 | Element id, level | Ducts Reference Level = L3 | 319 | L2 matrix |
 | RF-02 | Element id, level | Reference Level ≠ L3 | 734 | L2 matrix |
 | RF-03 | Element id, level in a link | Walls Base Constraint = L4 | 210 | L2 matrix |
@@ -494,8 +507,8 @@ Category Isolate (VI-10, VI-12) hides every other hideable category inside
 Temporary View Properties; the leftovers each case allows are categories Revit
 never hides in a view. Annotation in a plan was checked by the spike only
 (L3 plan: tags and grids gone), not by an L2 case. L1 `CategoryBoxTests` and the view
-tests `SelectRowTicksOnlyIt`, `TickSelectsRow`, `AddToSelectionKeepsBoth` cover
-tick = selection.
+tests `CategorySectionTests` (`SelectTicksOnlyRow`, `AddKeepsBothTicked`, `BoxTickKeepsOthers`)
+cover tick = selection.
 
 | ID | Tier, source | Action | Expected (API) | Test |
 |----|--------------|--------|----------------|------|
@@ -523,7 +536,8 @@ tick = selection.
 ### Subcategories, parent rule, category actions, linked-hide record (L1; L2 `CategoryActionTests`, `category-actions.json`)
 
 The L2 cases need `{3D}` active from a run of its own (Gotcha 21; `user-action-activate-view.cs` with
-`ViewName` = `{3D}`), every link By Host View, and the Site link loaded. CA-07 sets the Architectural
+`ViewName` = `{3D}`), every link By Host View, and the Site link loaded. The full run activates `L3`, so they end
+Inconclusive there; run `--filter CategoryActionTests` alone after the MCP view switch. CA-07 sets the Architectural
 link to Custom inside a transaction group that it rolls back.
 
 Product behaviors (cleanup audit numbering) and their rows: B20 subcategory rows SU-01, CA-01; B21 Site, Lines,
@@ -536,18 +550,18 @@ LH-02; model sync relay MS-01.
 
 | ID | Use case | Expected | Test | Status |
 |----|----------|----------|------|--------|
-| CA-10 | No group under Site, Lines or Topography (points, sketch lines, contours) in the Current model and the Site link | none | L2 `NoisySubcategoriesLeftOut` | written, not run |
+| CA-10 | No group under Site, Lines or Topography (points, sketch lines, contours) in the Current model and the Site link | none | L2 `NoisySubcategoriesLeftOut` | pass (run `20261124-235159`, CA-07 `-235310`) |
 | LA-03 | Link isolate refusals: Reveal Hidden Elements on, a view that cannot show links, over 10,000 linked elements to hide; the sentence shows, nothing is journaled, no eye changes | refusal text, state unchanged | L1 `LinkIsolateRefusalTests` (`RefusedIsolateChangesNothing` ×3, `TooManyNamesTheCap`); the adapter checks run before any Hide in View, so L2 does not run them (Gotcha 13) | pass |
 | MS-01 | Model sync relay: a sync of the active model whose snapshot already reflects the version keeps it; a missed change rebuilds it and the counts follow; a sync of another model is ignored | builds, counts | L1 `ModelSyncTests` (`SyncKeepsReflectedSnapshot`, `SyncRebuildsMissedChange`, `SyncOfOtherModelIgnored`) | pass |
-| CA-01 | Site link snapshot: Toposolid and its subcategory Sub-divisions, plain name, parent id | 2 + 8, parent Toposolid | L2 `SubcategoryCollected` | written, not run |
-| CA-02 | Box Hide of Walls reaches By Host View links (category visibility in Temporary View Properties) | Walls 0 in every view collector; Reset restores every count | L2 `BoxHideReachesLinks` | written, not run |
-| CA-03 | Hide Toposolid with Sub-divisions in the Site link | 10, then 0, then 10 | L2 `ParentHideCoversChild` | written, not run |
-| CA-04 | Revit fact behind the child Show refusal: Toposolid hidden alone takes Sub-divisions out too | Sub-divisions 0 | L2 `HiddenParentHidesChild` | written, not run |
-| CA-05 | Box Color is a category override in Temporary View Properties; linked walls checked on the images | override set, cleared by Reset | L2 `BoxColorIsCategoryOverride` | written, not run |
-| CA-06 | Keep with a category hide: the mode stays, Walls stay hidden, Reset ends it | Walls 0 after Keep; counts back after Reset | L2 `KeepLeavesCategoryHide` | written, not run |
-| CA-07 | A Custom link is not reached; the notice says so | *Links By Linked View or Custom keep their own settings.* | L2 `OwnSettingsLinkNotice` | written, not run |
-| CA-08 | Color on the Site link's Toposolid row: one panel filter with both category ids | {Toposolid, Sub-divisions}; none after Reset | L2 `ParentLinkFilterHasBoth` | written, not run |
-| CA-09 | Latest wins between panel view filters | parent on top, then child on top; none after Reset | L2 `LatestFilterOnTop` | written, not run |
+| CA-01 | Site link snapshot: Toposolid and its subcategory Sub-divisions, plain name, parent id | 2 + 8, parent Toposolid | L2 `SubcategoryCollected` | pass (run `20261124-235159`, CA-07 `-235310`) |
+| CA-02 | Box Hide of Walls reaches By Host View links (category visibility in Temporary View Properties) | Walls 0 in every view collector; Reset restores every count | L2 `BoxHideReachesLinks` | pass (run `20261124-235159`, CA-07 `-235310`) |
+| CA-03 | Hide Toposolid with Sub-divisions in the Site link | 10, then 0, then 10 | L2 `ParentHideCoversChild` | pass (run `20261124-235159`, CA-07 `-235310`) |
+| CA-04 | Revit fact behind the child Show refusal: Toposolid hidden alone takes Sub-divisions out too | Sub-divisions 0 | L2 `HiddenParentHidesChild` | pass (run `20261124-235159`, CA-07 `-235310`) |
+| CA-05 | Box Color is a category override in Temporary View Properties; linked walls checked on the images | override set, cleared by Reset | L2 `BoxColorIsCategoryOverride` | pass (run `20261124-235159`, CA-07 `-235310`) |
+| CA-06 | Keep with a category hide: the mode stays, Walls stay hidden, Reset ends it | Walls 0 after Keep; counts back after Reset | L2 `KeepLeavesCategoryHide` | pass (run `20261124-235159`, CA-07 `-235310`) |
+| CA-07 | A Custom link is not reached; the notice says so | *Links By Linked View or Custom keep their own settings.* | L2 `OwnSettingsLinkNotice` | pass (run `20261124-235159`, CA-07 `-235310`) |
+| CA-08 | Color on the Site link's Toposolid row: one panel filter with both category ids | {Toposolid, Sub-divisions}; none after Reset | L2 `ParentLinkFilterHasBoth` | pass (run `20261124-235159`, CA-07 `-235310`) |
+| CA-09 | Latest wins between panel view filters | parent on top, then child on top; none after Reset | L2 `LatestFilterOnTop` | pass (run `20261124-235159`, CA-07 `-235310`) |
 | SU-01 | Subgroup data: plain name, `ParentId`, parent and child rows, untick, child-only Isolate, link Hide counts | data, plans | L1 `SubcategoryRowTests` (7) | pass |
 | PO-01 | Parent overrides children for Color, Halftone, Hide, select; Current model and link; latest wins; Reset clears both; box parent covers children | plans, marks | L1 `ParentOverrideTests` (14) | pass |
 | PO-02 | Child Show refused while its parent is hidden | *Show its parent category first.* | L1 `ParentOverrideTests.ChildShowWaitsForParent`; L2 CA-04 | L1 pass |
@@ -558,13 +572,15 @@ LH-02; model sync relay MS-01.
 | LH-01 | One record of linked hides (the journal): eye, bar count, Show, Reset, rename, view switch, isolate rest shown by Show, an explicit hide outlives it | agree | L1 `LinkHideRecordTests` | pass |
 | LH-02 | Typed failure when Revit shows no linked element (`LinkedNotShownException`) | *linked stay hidden* message | L1 `LinkHideRecordTests.UnshownTypedFailureReports`, `PanelBarsTests` (`MenuRefusalShowsInPanel`, `ResetDropsUnshownOnce`, `EyeOnUnshownRestReports`) | pass |
 | LH-03 | Active view, linked hide (T3): the row keeps its count, eye Hidden, so the saved-hide dot shows | count, eye, `IsHiddenInView` | L1 `LinkHideRecordTests.ActiveViewLinkHideKeepsRow`; L3 UI-06 to also check `Explorer.Row.SavedHide` (mc-ux) | L1 pass |
-| TV-01 | View framing when Temporary View Properties turns on and off | same zoom corners and camera | manual probe (round-10 report) | open |
+| TV-01 | View framing when Temporary View Properties turns on and off | same zoom corners and camera | MCP probe on `{3D}` (Revit 2026, 2026-11-24): zoom corners, eye and direction read before, after the mode on, after it off, after the panel's box eye Hide and after its Show; all five equal | not reproduced |
+| BZ-01 | Edit mode: a view action stops with *Revit is busy.*; during a modal command a request waits, then runs (product: Layout) | message, then the run | none | open |
 
 ### Why hidden and nested families
 
 Why hidden reads the active view only. The L2 cases build the cause in the
 Snowdon model, ask `RevitVisibilityExplainer`, and read the cue; each case uses
-the safety guard before and after. L2 `WhyHiddenTests` have not run live yet.
+the safety guard before and after. WH-01 to WH-03, WH-05 and WH-06 passed live (run `20261125-001901`);
+the explicit WH-04 and WH-09 have not run yet.
 
 | ID | Use case | Expected | Test |
 |----|----------|----------|------|
@@ -642,7 +658,7 @@ Step order (MCP steps are `execute_csharp_code` with the file in `scripts/models
   `user-action-pane.cs` (`Show = true`) → `CountIs` 3 → `user-action-edit.cs` (`Clear = true`) → `CountIs` 0.
 - **US-16:** `open_document` of a second model (it becomes active) → `ShowsModel` with
   `MODELS_CONTEXT_EXPECT_MODEL` and `MODELS_CONTEXT_HOST_TITLE` set to its title →
-  `user-action-switch.cs` (`TitlePrefix` = HVAC) → clear `MODELS_CONTEXT_HOST_TITLE`, `ShowsModel` with the
+  `user-action-switch.cs` (switches back to the HVAC model) → clear `MODELS_CONTEXT_HOST_TITLE`, `ShowsModel` with the
   HVAC title → `CountIs` 0 (the HVAC session kept its filter).
 - **US-17:** `user-action-template-view.cs` (duplicates `L3` as `MC Template Locked` with a template
   that controls every parameter) → `user-action-activate-view.cs` with `ViewName = "MC Template Locked"` →
@@ -683,7 +699,7 @@ name; files land in the run folder.
 | UI-06 | Eye on Doors under the link (T3, Hide in View), Reset | eye Hidden and bar "1 change", then eye Shown and no bar | `LinkDoorsHideThenReset` |
 | UI-07 | Isolate tool on the first door type under the link (part A), Reset | bar with a count, no error, type eye Shown, another link category Hidden; then Shown and no bar; Isolate and Reset times | `LinkTypeIsolateThenReset` |
 | UI-08 | Color tool on the first door type under the link, first picker swatch, Confirm (part B), Reset | bar with a count, no error, row color `#F44336`; then no color and no bar; Color and Reset times | `LinkTypeColorThenReset` |
-| UI-09 | Box tree on the Site link: tick Toposolid, open it, untick then tick Sub-divisions (CB-04) | Sub-divisions On; Toposolid partial; then On | `BoxTreeTicksChildren` |
+| UI-09 | Box tree on the Site link: tick Toposolid, open it, untick then tick Sub-divisions, its only child (CB-04) | Sub-divisions On; Toposolid Off; then On | `BoxTreeTicksChildren` |
 | UI-10 | Box search "Sub-div" with Toposolid closed (CB-04) | rows Toposolid, Sub-divisions; chevron open | `BoxSearchOpensParent` |
 | UI-11 | Box None, select Walls, add Doors (CB-03) | exactly Walls and Doors ticked | `BoxRowsSelectMany` |
 | UI-12 | Only Toposolid ticked, expand the Site link and Toposolid (CB-05) | Toposolid 10, Sub-divisions 8 | `SiteNestsSubdivisions` |
@@ -728,7 +744,7 @@ first unnamed button was a slider repeat button, not a swatch; `FirstSwatch` now
 takes `Button` class elements only.
 
 List a row here (ID, expected from the oracle or the Revit API,
-panel value, cause seen with `PrintCaseDifference`) when the panel differs;
+panel value, cause seen in `mismatched-elements.md` from `WriteMismatchedElements`) when the panel differs;
 the expected value stays.
 
 Fixed on 2026-11-17, with the cause:

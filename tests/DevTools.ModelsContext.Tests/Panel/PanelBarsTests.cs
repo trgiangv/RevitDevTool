@@ -578,6 +578,23 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
+    public async Task CanceledSettleKeepsNewView()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var gate = new TaskCompletionSource<bool>();
+        gate.SetCanceled();
+        fixture.Model.ViewLinksGate = gate;
+
+        fixture.Model.View = new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan);
+        fixture.Model.RaiseViewActivated(fixture.Model.View);
+        fixture.Settle();
+        fixture.Model.ViewLinksGate = null;
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+
+        Assert.AreEqual("view-2", fixture.Actions.ExecutedPlans.Single().ViewId);
+    }
+
+    [TestMethod]
     public async Task OpenTicksViewLinks()
     {
         var model = new FakeModel(TestModel.SmallData);

@@ -24,8 +24,8 @@ category and source file, Why hidden for one row, nested shared families, one
 engine for Explorer and Filter):
 [2026-11-20-models-context-link-actions](2026-11-20-models-context-link-actions.md).
 Window command: a `RevitDevTool.Tools` command opens the panel in a plain Window, run through
-Command Execution so a rebuild needs no Revit restart (first, before the other open work):
-[2026-11-24-models-context-dev-window](2026-11-24-models-context-dev-window.md).
+Command Execution so a rebuild needs no Revit restart:
+[completed](../completed/2026-11-24-models-context-dev-window.md).
 
 ## Product releases and CI (active)
 

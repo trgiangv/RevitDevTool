@@ -21,7 +21,8 @@ internal static class CategoryIsolation
         {
             if (Category.GetCategory(model, id)?.Parent is { } parent && keep.Contains(parent.Id))
             {
-                SetShown(view, id, keep.Contains(id) && !stayHidden.Contains(id), hidden);
+                var shown = keep.Contains(id) || kept.Contains(parent.Id);
+                SetShown(view, id, shown && !stayHidden.Contains(id), hidden);
             }
         }
 

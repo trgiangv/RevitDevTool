@@ -120,12 +120,9 @@ in-scope ids on first expand, in slices, cached per view: no UI stall, kept.
   writes prior element overrides to the permanent view. Run `measure_vis.cs`
   (not in the repo; recreate it or measure with `scripts/test-models-context.ps1`)
   on a session with mains power.
-- [ ] Per-version golden values for SC-02, SC-06, UI-04 (2024 sample differs:
-  7,700 / 765 / 7,700): moved to
-  [2026-11-19-models-context-host-matrix](2026-11-19-models-context-host-matrix.md) Phase 1.
 - [ ] SB-01 rebar on Revit 2024: `REBAR_MIN_LENGTH` and `REBAR_MAX_LENGTH` on two
   rebar sets in the Structural link fail to find their own value (4 of 11,612
-  samples); not seen on 2026. Investigate with `PrintCaseDifference`.
+  samples); not seen on 2026. Investigate with `WriteMismatchedElements`.
 - [ ] Revit 2024 pane gap: panes registered in `ApplicationInitialized` (Model
   Context and the main DevTools pane) exist only when a document opens after that
   event, so Revit started with a model leaves them "not created" and the ribbon
@@ -137,8 +134,8 @@ in-scope ids on first expand, in slices, cached per view: no UI stall, kept.
 - [ ] Open spike steps from 0062 that 2024 can answer: view template locking V/G,
   500 refs hid 548, link display modes, T3 timing at 1k/10k/50k. Record results
   here and in 0062.
-- [ ] Revit 2023 (minimum), 2025 and 2027 live runs, then 0062 Accepted: moved to
-  [2026-11-19-models-context-host-matrix](2026-11-19-models-context-host-matrix.md).
+- Per-version golden values and the Revit 2023, 2025 and 2027 live runs (0062 Accepted) live in
+  [2026-11-19-models-context-host-matrix](2026-11-19-models-context-host-matrix.md) Progress.
 - [ ] Later splits, off the critical path: `ModelContextViewModel` (event inbox,
   context loader) and `ExplorerTabViewModel` (five parts).
 

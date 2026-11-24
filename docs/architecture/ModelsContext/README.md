@@ -576,10 +576,9 @@ shared nested instances before T0 isolate, hide and overrides (gotcha 23).
 `WhyHiddenStripViewModel` asks `IVisibilityExplainer.ExplainAsync(ElementRef)`;
 `RevitVisibilityExplainer` runs `HiddenChecks` on the Revit thread in the active
 view only and returns `HiddenReason`s (a `HiddenCause`, the text, and `CanShow`).
-`WhyHidden.Of` orders them by cause (link
-causes first, then temporary hide or isolate, hidden in view, category, filter,
-workset, phase, design option, owner view, view range, crop) and keeps *No cause
-found* only when nothing else hits. A filter that cannot be tested is a
+`WhyHidden.Of` orders them by cause (`WhyHidden.Order`; the order is in
+[product/models-context.md](../../product/models-context.md#why-hidden)) and keeps
+*No view setting hides it* only when nothing else hits. A filter that cannot be tested is a
 *possible* cause. The panel's own journal adds *Hidden in view* for a linked
 element it hid (`WithJournal`). `CanShow` stays only for a
 Current model element the panel's ledger hid (`VisibilityController.HidByPanel`:
@@ -666,14 +665,16 @@ Sandbox, Release, generated models: 200-instance expand 13–43 ms at 100k and
   URIs.
 - **Sandbox** (`tests/DevTools.ModelsContext.Sandbox`) opens the panel on a
   generated or replayed model without Revit. `--measure` prints timings,
-  `--shots <folder>` saves screenshots, every run opens in the dark theme (`--theme light` for the light one), and
-  `--trace` prints the panel Trace lines.
+  `--shots <folder>` saves screenshots, every run opens in the dark theme (`--theme light` for the light one),
+  `--trace` prints the panel Trace lines, `--picker-shots`, `--explorer-shots`, `--why-hidden-shots`,
+  `--category-shots` and `--result-shots` save the screenshots of one area, and `--width <px>` sets the
+  panel width.
 - **Live tests** run on the Snowdon sample in Revit: adapter tests in
   `tests/RevitDevTool.ModelsContext.LiveTests` (inside Revit, golden counts from an
   API oracle) and a few panel flows in `tests/RevitDevTool.ModelsContext.UiTests`
   (FlaUI from outside Revit on the panel's controls only, waiting on the
   `ModelContext.Panel` status). Revit and the sample are opened through MCP
-  `launch_host`; the test host on this machine is Revit 2024. Rows, golden values
+  `launch_host`; Revit 2026 is the primary test host, Revit 2024 the secondary. Rows, golden values
   and commands: [test-matrix.md](test-matrix.md).
 - **Window run loop**: `ModelsContextWindowCommand` run through Command Execution on
   the built `RevitDevTool.Tools.dll` opens the panel in a plain window from a fresh

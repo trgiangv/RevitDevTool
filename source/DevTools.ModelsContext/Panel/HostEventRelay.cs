@@ -253,6 +253,7 @@ internal sealed class HostEventRelay : IDisposable
             return;
         }
 
+        _owner.ShowView(view);
         var documents = _owner.ContextBar.Documents.Select(item => item.Info).ToList();
         var ticks = await _sessions.ViewTicksAsync(documents, session.Token);
         if (!ReferenceEquals(session, _sessions.Active))
@@ -261,7 +262,6 @@ internal sealed class HostEventRelay : IDisposable
         }
 
         _owner.SetDocumentsQuietly(documents, ticks);
-        _owner.ShowView(view);
         await _owner.TemporaryBar.RefreshAsync(session.Token);
         await _owner.RefreshAsync();
     }

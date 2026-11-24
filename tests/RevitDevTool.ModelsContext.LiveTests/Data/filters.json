@@ -708,7 +708,7 @@
       "docs": "Arch",
       "scope": "WholeModel",
       "filter": {"categories":["OST_Walls"],"rules":[{"parameter":"Function","operator":"NotEqual","value":"Exterior"}]},
-      "expected": 816,
+      "expected": 817,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
@@ -716,7 +716,7 @@
         "Open the Filter tab and click + (New custom filter).",
         "Open Categories and tick Walls.",
         "Click + Condition, pick parameter 'Function', operator 'does not equal', value 'Exterior'.",
-        "Read the number before 'matches' in the result row: it must be 816.",
+        "Read the number before 'matches' in the result row: it must be 817.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Function, on the Filter tab add 'Function does not equal Exterior', turn on Grand totals > Count and read the total. Close the file without saving."
       ]
     },
@@ -762,7 +762,7 @@
       "docs": "Arch",
       "scope": "WholeModel",
       "filter": {"categories":["OST_Walls"],"rules":[{"parameter":"Function","operator":"NotEqual","value":"No Such Function"}]},
-      "expected": 1119,
+      "expected": 1120,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
@@ -770,7 +770,7 @@
         "Open the Filter tab and click + (New custom filter).",
         "Open Categories and tick Walls.",
         "Click + Condition, pick parameter 'Function', operator 'does not equal', value 'No Such Function'.",
-        "Read the number before 'matches' in the result row: it must be 1119.",
+        "Read the number before 'matches' in the result row: it must be 1120.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Function, on the Filter tab add 'Function does not equal No Such Function', turn on Grand totals > Count and read the total. Close the file without saving."
       ]
     },

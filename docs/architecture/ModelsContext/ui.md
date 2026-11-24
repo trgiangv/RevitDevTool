@@ -141,7 +141,7 @@ the border, because the Documents box and the Categories section are its scope.
   first; a click runs `ToggleConnectorCommand`, which switches the whole group.
 - **Group:** `PrimaryBrush` border, header (grip, "Group", collapse toggle,
   remove), scope row ("Search", documents and categories `TagCheckComboBox.Small`
-  with the placeholder "Parent" when empty, `RuleSetViewModel.SameAsParent`), and a `BorderTipWarning` line when a scope
+  with the placeholder "Parent" when empty, set in `FilterRuleTemplates.xaml`), and a `BorderTipWarning` line when a scope
   value is outside the parent or unresolved. `CheckedItems.Path` keeps the
   boxes' selection and `ScopeOptionViewModel.IsChecked` in step.
 - **Reorder:** the grip is a focusable `Thumb`. `DragReorder` (`DevTools.UI`,
@@ -222,7 +222,7 @@ the border, because the Documents box and the Categories section are its scope.
   calls `FilterDropHandler.DragOver` and `Drop` on the view models: up, down,
   onto itself (no move), into a nested group, out of a group, across nested
   groups, a group into its own descendant (refused), and the before or after
-  half of a card (`DropInfo.IndexAt`).
+  half of a card (`DropInfo.InsertPosition`).
 - Keyboard reorder stays a UIA test (`AltUpDownReorders`).
 - Zones, hysteresis, nested groups, the empty-group drop and the preview
   lifetime are Views tests too (`ZoneFollowsPointerHalf`, `SideFlipsOnlyPastBand`,

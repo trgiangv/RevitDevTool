@@ -189,6 +189,7 @@ public sealed class CategoryActionTests : RecordedTest
             RequireThreeD();
 #if REVIT2024_OR_GREATER
             var link = SampleModel.Architectural.Key.LinkInstanceId.ToElementId();
+            var selection = SampleViews.Active.Selection.GetElementIds();
             using var group = new TransactionGroup(Host, "Model Context live: link Custom");
             group.Start();
             try
@@ -210,6 +211,8 @@ public sealed class CategoryActionTests : RecordedTest
             finally
             {
                 group.RollBack();
+                SampleViews.Active.Selection.SetElementIds(selection);
+                Evidence.Step("Rolled back the group and put back the selection the rollback cleared.");
             }
 #else
             Assert.Inconclusive("Link display overrides need Revit 2024 or later.");

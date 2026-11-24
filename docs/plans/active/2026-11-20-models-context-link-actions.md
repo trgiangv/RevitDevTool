@@ -5,7 +5,9 @@ Date: 2026-11-20
 ## Status
 
 Active. D, G, C, E, F, the cleanup H, A and B are built (2026-11-21); the live
-runs of A and B and the manual Pick check are open.
+runs of A and B (run `20261121-031343`) and the manual Pick check (2026-11-23) passed.
+Open: the 614 vs 4,203 pick count question and 0063, still Proposed. The plan moves
+to completed once 0063 is decided.
 
 ## Outcome
 
@@ -617,4 +619,5 @@ active view, through `LinkElements.InView`.
 
 ## Result
 
-Complete after implementation.
+Built and proven: A to H in L1, L2 and L3 (Revit 2026, run `20261121-031343`) and the manual
+Pick check. Left before the move to completed: the 0063 decision and the pick count question.

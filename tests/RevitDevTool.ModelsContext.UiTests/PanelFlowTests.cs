@@ -29,8 +29,7 @@ public sealed class PanelFlowTests : RecordedTest
         _panel.Settle();
         _panel.Select("ModelContext.Scope.WholeModel");
         _panel.Select("ModelContext.View.Filter");
-        _panel.Toggle(_steps.Document(CaseFiles.Facts.LinkLabel), true);
-        _panel.Toggle(_steps.Document(ContextBarViewModel.CurrentModelLabel), false);
+        _steps.TickOnly(CaseFiles.Facts.LinkLabel);
     }
 
     [ClassCleanup]

@@ -38,6 +38,21 @@ internal sealed class PanelSteps(RevitPanel panel)
             cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(DocumentName(part))));
     }
 
+    public void TickOnly(string part)
+    {
+        var keep = DocumentName(part);
+        panel.Toggle(Document(part), true);
+        var others = panel.Find("ModelContext.Documents").FindAllDescendants(cf => cf.ByControlType(ControlType.ListItem))
+            .Select(item => item.Name).Where(name => name != keep).ToList();
+        foreach (var name in others)
+        {
+            panel.Toggle(panel.Item(panel.Find("ModelContext.Documents"),
+                cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(name))), false);
+        }
+
+        Evidence.Step($"Ticked only '{keep}' in the documents box.");
+    }
+
     public string DocumentName(string part)
     {
         var items = panel.Find("ModelContext.Documents").FindAllDescendants(cf => cf.ByControlType(ControlType.ListItem));

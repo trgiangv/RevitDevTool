@@ -101,10 +101,19 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         return Task.FromResult(documents);
     }
 
-    public Task<IReadOnlyCollection<DocumentKey>> GetViewLinksAsync(CancellationToken cancellationToken)
+    public TaskCompletionSource<bool>? ViewLinksGate { get; set; }
+
+    public async Task<IReadOnlyCollection<DocumentKey>> GetViewLinksAsync(CancellationToken cancellationToken)
     {
-        IReadOnlyCollection<DocumentKey> links = ViewLinks.Where(key => key.ModelId == _active).ToList();
-        return Task.FromResult(links);
+        if (ViewLinksGate is { } gate)
+        {
+            using (cancellationToken.Register(() => gate.TrySetCanceled()))
+            {
+                await gate.Task;
+            }
+        }
+
+        return ViewLinks.Where(key => key.ModelId == _active).ToList();
     }
 
     public Task<DocumentSnapshot> BuildSnapshotAsync(
