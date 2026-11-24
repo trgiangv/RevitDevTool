@@ -31,4 +31,27 @@ public sealed class NUnitResultMapperTests
     {
         Assert.AreEqual(TestOutcomes.Failed, NUnitResultMapper.MapOutcome(ResultState.Failure));
     }
+
+    [TestMethod]
+    public void Inconclusive_explicit_test_has_no_skip_reason()
+    {
+        Assert.IsNull(NUnitResultMapper.MapSkipReason(ExplicitTest(), ResultState.Inconclusive));
+    }
+
+    [TestMethod]
+    public void Skipped_explicit_test_keeps_its_reason()
+    {
+        Assert.AreEqual(ExplicitReason, NUnitResultMapper.MapSkipReason(ExplicitTest(), ResultState.Explicit));
+    }
+
+    private const string ExplicitReason = "Run by the script first.";
+
+    private static ITest ExplicitTest()
+    {
+        var test = new global::NUnit.Framework.Internal.TestMethod(
+            new global::NUnit.Framework.Internal.MethodWrapper(typeof(NUnitResultMapperTests), nameof(MapOutcome_keeps_an_assertion_failure_as_failed)));
+        test.RunState = RunState.Explicit;
+        test.Properties.Set(global::NUnit.Framework.Internal.PropertyNames.SkipReason, ExplicitReason);
+        return test;
+    }
 }

@@ -120,8 +120,11 @@ internal static class NUnitResultMapper
         return parts.Count == 0 ? null : string.Join(Environment.NewLine, parts);
     }
 
-    private static string? MapSkipReason(ITest test, ResultState? resultState)
+    internal static string? MapSkipReason(ITest test, ResultState? resultState)
     {
+        if (resultState is not null && resultState.Status != TestStatus.Skipped)
+            return null;
+
         var reason = test.Properties.Get(PropertyNames.SkipReason) as string;
         if (!string.IsNullOrWhiteSpace(reason))
             return reason;

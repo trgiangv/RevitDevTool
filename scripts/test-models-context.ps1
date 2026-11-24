@@ -13,7 +13,8 @@
     Revit draws a view opened inside a test run only after that run returns, so
     L2 first runs ViewSetupTests.PreparesSample in a run of its own (it activates
     the sample view and shows the Model Context pane through the Revit API; when it
-    had to switch the view it ends Inconclusive and runs again, up to three times), then
+    had to switch the view it ends Inconclusive and runs again, up to three times; the
+    script goes on only once it passed, else it exits with code 4), then
     the full suite in a second run on the same Revit. L3 follows and attaches to
     the Revit that L2 recorded; it uses UI Automation only for the panel's own
     controls. The visibility cases export view images only for a failing case;
@@ -166,11 +167,18 @@ function Complete([int]$testExit) {
 Write-Host "Revit pid $RevitPid, configuration $configuration"
 $pidArgs = @('--pid', $RevitPid)
 
+$prepared = $false
 foreach ($attempt in 1..3) {
-    dotnet test --project $live -c $configuration -- @pidArgs --filter PreparesSample
-    if ($LASTEXITCODE -eq 0) { break }
+    $lines = @(dotnet test --project $live -c $configuration -- @pidArgs --filter PreparesSample 2>&1)
+    $code = $LASTEXITCODE
+    $lines | ForEach-Object { Write-Host $_ }
+    if ($code -eq 0 -and ($lines -match '^\s*succeeded:\s*1\b')) { $prepared = $true; break }
+    Write-Host "PreparesSample did not pass on attempt $attempt (it ends Inconclusive after it switches the view); running it again."
 }
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if (-not $prepared) {
+    Write-Host 'PreparesSample never passed: the sample view or the Model Context pane is not ready. See its message above.' -ForegroundColor Red
+    exit 4
+}
 
 $filterArgs = if ($Filter) { @('--filter', $Filter) } else { @() }
 dotnet test --project $live -c $configuration --no-build -- @pidArgs @filterArgs

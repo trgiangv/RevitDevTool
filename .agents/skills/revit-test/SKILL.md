@@ -109,6 +109,7 @@ shadow.
 | `--filter FullyQualifiedName~…` or `Name=` matches nothing | Use `--filter MethodName` |
 | No passed stdout under `dotnet test` | Add `--output Detailed` |
 | `[Explicit]` never runs | Select it with `--filter MethodName` |
+| A filtered `[Explicit]` test shows `skipped` and "Zero tests ran", exit 0 | It ran and ended `Assert.Inconclusive` (MTP counts that as skipped); read its message. A script must check for `succeeded: 1`, not the exit code |
 | Run lands in the wrong of several open hosts | Pass `--pid <host process id>` |
 | Exit 8, zero tests | Wrong filter syntax, or the cwd `global.json` still selects VSTest |
 | `"did not find the TestRunner at '…'"` | Restore the RevitDevTool.TestAdapter package again |
