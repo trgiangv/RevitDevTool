@@ -279,10 +279,12 @@ public sealed class PanelViewTests
         var menu = WpfSta.Invoke(() =>
         {
             var filter = (FilterTabView)ui.View.FindName("FilterView");
-            return ((Border)filter.FindName("ResultRow")).ContextMenu!;
+            var row = (Border)filter.FindName("ResultRow");
+            ui.Panel.Filter.OpenResultMenu();
+            row.ContextMenu!.PlacementTarget = row;
+            row.ContextMenu.IsOpen = true;
+            return row.ContextMenu;
         });
-
-        ui.Press("Filter.Menu");
 
         Assert.IsTrue(ThemeHost.WaitFor(() => menu.IsOpen), "The menu did not open.");
         foreach (var id in new[] { "Zoom", "SectionBox", "Isolate", "HideShow", "Halftone", "Color" })
@@ -291,6 +293,39 @@ public sealed class PanelViewTests
         }
 
         Assert.IsNull(ui.Host.TryFindInMenu(menu, "Menu.SelectInHost"), "Select shows while Live is on.");
+    }
+
+    [TestMethod]
+    public void ResultToolsHaveNames()
+    {
+        using var ui = PanelUi.Open(340);
+        ui.ShowView("ModelContext.View.Filter");
+
+        foreach (var (id, name) in new[] { ("Isolate", "Isolate"), ("Halftone", "Halftone"), ("Color", "Color"), ("Eye", "Hide") })
+        {
+            Assert.AreEqual(name, ui.Host.FindInWindow("Filter.Result." + id).Name, id + " has the wrong name.");
+        }
+
+        Assert.IsNull(ui.Host.TryFindInWindow("Filter.Menu"), "The ⋯ button is still there.");
+    }
+
+    [TestMethod]
+    public void ResultIsolateRunsPlan()
+    {
+        using var ui = PanelUi.Open();
+        ui.ShowView("ModelContext.View.Filter");
+        ui.Press("Filter.Add");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Library.SelectedSource is { IsCustom: true }), "No custom filter was added.");
+        WpfSta.Invoke(() =>
+        {
+            ui.Panel.Filter.Categories.Items[0].IsChecked = true;
+            ui.Clock.Advance(DevTools.ModelsContext.Filters.FilterRunner.LiveDelay);
+        });
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Runner.ResultCount > 0), "The filter found nothing.");
+
+        ui.Press("Filter.Result.Isolate");
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.ExecutedPlans.Count == 1), "Isolate on the result ran no plan.");
     }
 
     [TestMethod]

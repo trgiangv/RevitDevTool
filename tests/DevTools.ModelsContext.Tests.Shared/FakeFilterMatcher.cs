@@ -74,9 +74,14 @@ public static class FakeFilterMatcher
             return TextRules.Matches(rule.Operator, exists, value, rule.Value, rule.IsCaseSensitive);
         }
 
-        if (!exists || !double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var actual))
+        if (!exists)
         {
             return false;
+        }
+
+        if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var actual))
+        {
+            return rule.Operator == FilterOperator.NotEqual && value.Length == 0;
         }
 
         if (rule.Picked is { } picked)

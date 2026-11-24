@@ -186,7 +186,7 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
     private async Task<IReadOnlyList<ElementRef>> HostResultAsync(string name, HostFilterInfo host,
         CancellationToken cancellationToken)
     {
-        if (_data.Find(host.Document) is not { } scope)
+        if (_data.Find(host.Document) is not { Info.IsLoaded: true } scope)
         {
             return [];
         }
@@ -207,7 +207,7 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
     {
         var definition = job.Definition;
         var result = new List<ElementRef>();
-        foreach (var document in _data.Documents)
+        foreach (var document in _data.Documents.Where(document => document.Info.IsLoaded))
         {
             if (FilterScopes.ForDocument(definition.Root, document.Info.Source, _data.KnownSources) is not { } root)
             {

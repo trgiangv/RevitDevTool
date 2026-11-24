@@ -4,9 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:panel="clr-namespace:DevTools.ModelsContext.Panel;assembly=DevTools.ModelsContext"
              xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext.Panel"
-             d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
              AutomationProperties.AutomationId="Menu"
              DataContext="{Binding Path=PlacementTarget.(FrameworkElement.DataContext), RelativeSource={RelativeSource Self}}"
              Style="{DynamicResource {x:Type ContextMenu}}"
@@ -28,7 +26,6 @@
             </Style>
 
             <Style x:Key="HideShowIconStyle"
-                   d:DataContext="{d:DesignInstance panel:MenuItemViewModel}"
                    BasedOn="{StaticResource MenuIconStyle}"
                    TargetType="Path">
                 <Setter Property="Data" Value="{StaticResource EyeCloseGeometry}" />
@@ -40,7 +37,6 @@
             </Style>
 
             <Style x:Key="MenuEntryStyle"
-                   d:DataContext="{d:DesignInstance panel:MenuItemViewModel}"
                    BasedOn="{StaticResource {x:Type MenuItem}}"
                    TargetType="MenuItem">
                 <Setter Property="AutomationProperties.AutomationId" Value="{Binding Action, StringFormat='Menu.{0}'}" />

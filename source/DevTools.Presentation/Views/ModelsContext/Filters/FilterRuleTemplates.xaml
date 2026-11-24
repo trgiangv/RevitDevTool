@@ -4,11 +4,9 @@
                     xmlns:behaviors="clr-namespace:DevTools.UI.Behaviors;assembly=DevTools.UI"
                     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                     xmlns:dd="clr-namespace:DevTools.UI.Behaviors.DragDrop;assembly=DevTools.UI"
-                    xmlns:filters="clr-namespace:DevTools.ModelsContext.Filters;assembly=DevTools.ModelsContext"
                     xmlns:hc="https://handyorg.github.io/handycontrol"
                     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-                    xmlns:parameters="clr-namespace:DevTools.ModelsContext.Parameters;assembly=DevTools.ModelsContext"
-                    xmlns:scope="clr-namespace:DevTools.ModelsContext.Scope;assembly=DevTools.ModelsContext"
+                    xmlns:panelViews="clr-namespace:DevTools.Presentation.Views.ModelsContext.Panel"
                     xmlns:ui="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
                     xmlns:uiConverters="clr-namespace:DevTools.UI.Converters;assembly=DevTools.UI"
                     xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext.Filters"
@@ -16,11 +14,13 @@
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/DevTools.UI;component/Controls/TagCheckComboBox/TagCheckComboBox.xaml" />
+        <panelViews:ModelContextResources />
     </ResourceDictionary.MergedDictionaries>
 
     <uiConverters:EnumDescriptionConverter x:Key="EnumDescription" />
     <views:ParameterTipConverter x:Key="ParameterTip" />
     <views:FilterDropHandler x:Key="FilterDrop" />
+    <views:FilterNodeTemplateSelector x:Key="FilterNode" />
 
     <Style x:Key="SmallSecondaryText"
            BasedOn="{StaticResource TextBlockDefaultSecLight}"
@@ -31,7 +31,6 @@
     </Style>
 
     <Style x:Key="ParameterItemStyle"
-           d:DataContext="{d:DesignInstance parameters:ParameterInfo}"
            BasedOn="{StaticResource SmallComboBoxItem}"
            TargetType="ComboBoxItem">
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -40,9 +39,7 @@
         <Setter Property="AutomationProperties.Name" Value="{Binding SpokenName}" />
     </Style>
 
-    <Style x:Key="SourceIconStyle"
-           d:DataContext="{d:DesignInstance parameters:ParameterInfo}"
-           TargetType="Path">
+    <Style x:Key="SourceIconStyle" TargetType="Path">
         <Setter Property="Width" Value="13" />
         <Setter Property="Height" Value="13" />
         <Setter Property="Margin" Value="4,0,0,0" />
@@ -95,7 +92,7 @@
         <Setter Property="HorizontalAlignment" Value="Left" />
     </Style>
 
-    <DataTemplate x:Key="TipListTemplate" DataType="{x:Type parameters:TipList}">
+    <DataTemplate x:Key="TipListTemplate">
         <StackPanel x:Name="List" Margin="0,5,0,0">
             <TextBlock Style="{StaticResource TipLabel}" Text="{Binding Title}" />
             <ItemsControl Focusable="False" ItemsSource="{Binding Items}">
@@ -122,7 +119,7 @@
         </DataTemplate.Triggers>
     </DataTemplate>
 
-    <DataTemplate x:Key="ParameterTipTemplate" DataType="{x:Type parameters:ParameterTip}">
+    <DataTemplate x:Key="ParameterTipTemplate">
         <StackPanel MaxWidth="320" Grid.IsSharedSizeScope="True">
             <TextBlock Margin="0,0,0,4"
                        FontSize="12"
@@ -131,7 +128,7 @@
                        Text="{Binding Title}" />
             <ItemsControl Focusable="False" ItemsSource="{Binding Rows}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type parameters:TipRow}">
+                    <DataTemplate>
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" SharedSizeGroup="TipLabel" />
@@ -146,12 +143,12 @@
                                        Text="{Binding Value}" />
                         </Grid>
                         <DataTemplate.Triggers>
-                            <DataTrigger Binding="{Binding Label}" Value="{x:Static parameters:ParameterTip.BuiltInLabel}">
+                            <DataTrigger Binding="{Binding Label}" Value="BuiltInParameter">
                                 <Setter TargetName="Value" Property="FontFamily" Value="Consolas" />
                                 <Setter TargetName="Value" Property="FontSize" Value="10.5" />
                                 <Setter TargetName="Value" Property="TextWrapping" Value="NoWrap" />
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding Label}" Value="{x:Static parameters:ParameterTip.GuidLabel}">
+                            <DataTrigger Binding="{Binding Label}" Value="GUID">
                                 <Setter TargetName="Value" Property="FontFamily" Value="Consolas" />
                                 <Setter TargetName="Value" Property="FontSize" Value="10.5" />
                             </DataTrigger>
@@ -252,7 +249,6 @@
     </GroupStyle>
 
     <Style x:Key="EditableValueStyle"
-           d:DataContext="{d:DesignInstance filters:RuleViewModel}"
            BasedOn="{StaticResource SmallComboBoxExtend}"
            TargetType="ComboBox">
         <Style.Triggers>
@@ -272,7 +268,6 @@
     </Style>
 
     <Style x:Key="PickValueStyle"
-           d:DataContext="{d:DesignInstance filters:RuleViewModel}"
            BasedOn="{StaticResource SmallComboBox}"
            TargetType="ComboBox">
         <Setter Property="Visibility" Value="Collapsed" />
@@ -290,7 +285,6 @@
     </Style>
 
     <Style x:Key="YesNoValueStyle"
-           d:DataContext="{d:DesignInstance filters:RuleViewModel}"
            BasedOn="{StaticResource SmallComboBox}"
            TargetType="ComboBox">
         <Setter Property="Visibility" Value="Collapsed" />
@@ -304,9 +298,7 @@
         </Style.Triggers>
     </Style>
 
-    <Style x:Key="RuleGridStyle"
-           d:DataContext="{d:DesignInstance filters:FilterNodeViewModel}"
-           TargetType="Grid">
+    <Style x:Key="RuleGridStyle" TargetType="Grid">
         <Style.Triggers>
             <DataTrigger Binding="{Binding IsReadOnly}" Value="True">
                 <Setter Property="IsEnabled" Value="False" />
@@ -320,9 +312,7 @@
         <Setter Property="Margin" Value="0,0,5,0" />
     </Style>
 
-    <Style x:Key="GripStyle"
-           d:DataContext="{d:DesignInstance filters:FilterNodeViewModel}"
-           TargetType="Thumb">
+    <Style x:Key="GripStyle" TargetType="Thumb">
         <Setter Property="Width" Value="8" />
         <Setter Property="Height" Value="14" />
         <Setter Property="VerticalAlignment" Value="Center" />
@@ -358,7 +348,6 @@
     </Style>
 
     <Style x:Key="ScopeItemStyle"
-           d:DataContext="{d:DesignInstance scope:ScopeOptionViewModel}"
            BasedOn="{StaticResource TagCheckComboBoxItem.Small}"
            TargetType="ui:TagCheckComboBoxItem">
         <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
@@ -379,11 +368,11 @@
         <Setter Property="DisplayMemberPath" Value="Name" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource ScopeItemStyle}" />
         <Setter Property="MaxDropDownHeight" Value="240" />
-        <Setter Property="Placeholder" Value="{x:Static filters:RuleSetViewModel.SameAsParent}" />
+        <Setter Property="Placeholder" Value="Parent" />
         <Setter Property="behaviors:CheckedItems.Path" Value="IsChecked" />
     </Style>
 
-    <DataTemplate x:Key="ParameterTemplate" DataType="{x:Type parameters:ParameterInfo}">
+    <DataTemplate x:Key="ParameterTemplate">
         <Grid Background="Transparent">
             <Grid.ToolTip>
                 <ToolTip Content="{Binding Converter={StaticResource ParameterTip}}" Style="{StaticResource ParameterTipStyle}" />
@@ -408,11 +397,11 @@
         <Setter Property="AutomationProperties.Name" Value="{Binding Converter={StaticResource EnumDescription}}" />
     </Style>
 
-    <DataTemplate x:Key="OperatorTemplate" DataType="{x:Type filters:FilterOperator}">
+    <DataTemplate x:Key="OperatorTemplate">
         <TextBlock Text="{Binding Converter={StaticResource EnumDescription}}" TextTrimming="CharacterEllipsis" />
     </DataTemplate>
 
-    <DataTemplate x:Key="ValueCountTemplate" DataType="{x:Type parameters:ValueCount}">
+    <DataTemplate x:Key="ValueCountTemplate">
         <Grid Margin="0,0,10,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -431,7 +420,7 @@
         <VirtualizingStackPanel IsVirtualizing="True" VirtualizationMode="Recycling" />
     </ItemsPanelTemplate>
 
-    <DataTemplate x:Key="ChildTemplate" DataType="{x:Type filters:FilterNodeViewModel}">
+    <DataTemplate x:Key="ChildTemplate">
         <StackPanel>
             <Button x:Name="Connector"
                     MinWidth="38"
@@ -443,7 +432,9 @@
                     Style="{StaticResource ButtonDefault.Small}"
                     ToolTip="Switch AND / OR for this group"
                     Visibility="Collapsed" />
-            <ContentPresenter x:Name="Node" Content="{Binding}" />
+            <ContentPresenter x:Name="Node"
+                              Content="{Binding}"
+                              ContentTemplateSelector="{StaticResource FilterNode}" />
         </StackPanel>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding ShowsConnector}" Value="True">
@@ -453,7 +444,7 @@
         </DataTemplate.Triggers>
     </DataTemplate>
 
-    <DataTemplate DataType="{x:Type filters:RuleSetViewModel}">
+    <DataTemplate x:Key="RuleSetTemplate">
         <Border x:Name="Frame"
                 Padding="5"
                 Background="{DynamicResource RegionBrush}"
@@ -493,6 +484,7 @@
                             hc:IconElement.Geometry="{StaticResource CloseGeometry}"
                             hc:IconElement.Height="9"
                             AutomationProperties.AutomationId="Filter.Set.Remove"
+                            AutomationProperties.Name="Remove group"
                             Command="{Binding RemoveCommand}"
                             Style="{StaticResource ButtonIcon.Small}"
                             ToolTip="Remove group" />
@@ -507,7 +499,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock HorizontalAlignment="Left"
                                Style="{StaticResource TextBlockDefaultSecLight}"
-                               Text="Search" />
+                               Text="In" />
                     <ui:TagCheckComboBox Grid.Column="1"
                                          AutomationProperties.AutomationId="Filter.Set.Scope.Documents"
                                          ItemsSource="{Binding DocumentOptions}"
@@ -549,7 +541,7 @@
                                    VerticalAlignment="Center"
                                    AutomationProperties.AutomationId="Filter.NoRules"
                                    Style="{StaticResource SmallSecondaryText}"
-                                   Text="No conditions · every element of the checked categories" />
+                                   Text="No conditions" />
                     </Grid>
                     <views:FilterItemsControl x:Name="Rules"
                                               dd:DragReorder.DropTarget="{StaticResource FilterDrop}"
@@ -611,7 +603,7 @@
         </DataTemplate.Triggers>
     </DataTemplate>
 
-    <DataTemplate DataType="{x:Type filters:RuleViewModel}">
+    <DataTemplate x:Key="RuleTemplate">
         <Border Padding="5"
                 Background="{DynamicResource SecondaryRegionBrush}"
                 CornerRadius="4">
@@ -640,6 +632,7 @@
                         </Grid.ColumnDefinitions>
                         <ui:AutoCompleteComboBox x:Name="Picker"
                                                  HorizontalContentAlignment="Left"
+                                                 hc:InfoElement.Placeholder="Parameter"
                                                  AutomationProperties.AutomationId="Filter.Rule.Parameter"
                                                  GroupPath="Section"
                                                  IsSynchronizedWithCurrentItem="False"
@@ -670,7 +663,7 @@
                             <TextBlock x:Name="ChosenType"
                                        AutomationProperties.AutomationId="Filter.Rule.Parameter.Type"
                                        DockPanel.Dock="Right"
-                                       Text="{x:Static filters:RuleViewModel.TypeText}">
+                                       Text="Type">
                                 <TextBlock.Style>
                                     <Style BasedOn="{StaticResource SmallSecondaryText}" TargetType="TextBlock">
                                         <Setter Property="Visibility" Value="Collapsed" />
@@ -714,7 +707,7 @@
                                   Style="{StaticResource SmallComboBox}" />
                         <ComboBox Grid.Column="1"
                                   Margin="5,0,0,0"
-                                  hc:InfoElement.Placeholder="{Binding ValueHint}"
+                                  hc:InfoElement.Placeholder="{Binding ValueHint, TargetNullValue=Value}"
                                   AutomationProperties.AutomationId="Filter.Rule.Value"
                                   DropDownOpened="OnValuesOpened"
                                   IsEditable="True"
@@ -744,30 +737,41 @@
                                   SelectedValue="{Binding Value}"
                                   SelectedValuePath="Content"
                                   Style="{StaticResource YesNoValueStyle}">
-                            <ComboBoxItem Content="{x:Static parameters:ValueKinds.Yes}" />
-                            <ComboBoxItem Content="{x:Static parameters:ValueKinds.No}" />
+                            <ComboBoxItem Content="Yes" />
+                            <ComboBoxItem Content="No" />
                         </ComboBox>
                         <Button Grid.Column="2"
                                 Margin="3,0,0,0"
                                 hc:IconElement.Geometry="{StaticResource CloseGeometry}"
                                 hc:IconElement.Height="9"
                                 AutomationProperties.AutomationId="Filter.Rule.Remove"
+                                AutomationProperties.Name="Remove condition"
                                 Command="{Binding RemoveCommand}"
                                 Style="{StaticResource ButtonIcon.Small}"
                                 ToolTip="Remove condition" />
                     </Grid>
                     <StackPanel Grid.Row="2" Orientation="Horizontal">
+                        <TextBlock x:Name="Skipped"
+                                   Margin="0,2,8,0"
+                                   AutomationProperties.AutomationId="Filter.Rule.Skipped"
+                                   FontSize="10"
+                                   Style="{StaticResource TextBlockDefaultWarning}"
+                                   Text="Skipped · no value"
+                                   Visibility="Collapsed" />
                         <TextBlock x:Name="NoParameter"
                                    Margin="0,2,0,0"
                                    FontSize="10"
                                    Style="{StaticResource TextBlockDefaultSecLight}"
                                    Text="{Binding NoParameterCount, StringFormat='[No parameter] · {0:N0}'}" />
-                        <TextBlock x:Name="MoreValues"
-                                   Margin="8,2,0,0"
-                                   FontSize="10"
-                                   Style="{StaticResource TextBlockDefaultSecLight}"
-                                   Text="more…"
-                                   Visibility="Collapsed" />
+                        <Button x:Name="MoreValues"
+                                Margin="8,2,0,0"
+                                AutomationProperties.AutomationId="Filter.Rule.MoreValues"
+                                Click="OnMoreValuesClick"
+                                Content="more…"
+                                FontSize="10"
+                                Style="{StaticResource PanelLinkButton}"
+                                ToolTip="More values · type to narrow"
+                                Visibility="Collapsed" />
                     </StackPanel>
                 </Grid>
             </Grid>
@@ -779,10 +783,20 @@
             <DataTrigger Binding="{Binding HasMoreValues}" Value="True">
                 <Setter TargetName="MoreValues" Property="Visibility" Value="Visible" />
             </DataTrigger>
+            <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding NeedsValue}" Value="True" />
+                    <Condition Binding="{Binding Value}" Value="" />
+                </MultiDataTrigger.Conditions>
+                <Setter TargetName="Skipped" Property="Visibility" Value="Visible" />
+            </MultiDataTrigger>
+            <DataTrigger Binding="{Binding ParameterName}" Value="">
+                <Setter TargetName="Skipped" Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
         </DataTemplate.Triggers>
     </DataTemplate>
 
-    <DataTemplate DataType="{x:Type filters:UnsupportedRuleViewModel}">
+    <DataTemplate x:Key="UnsupportedRuleTemplate">
         <TextBlock HorizontalAlignment="Left"
                    AutomationProperties.AutomationId="Filter.Rule.Unsupported"
                    Style="{StaticResource TextBlockDefaultWarning}"

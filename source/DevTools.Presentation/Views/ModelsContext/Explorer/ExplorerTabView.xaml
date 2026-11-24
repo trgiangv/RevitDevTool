@@ -4,14 +4,11 @@
              xmlns:c="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:explorer="clr-namespace:DevTools.ModelsContext.Explorer;assembly=DevTools.ModelsContext"
              xmlns:filterViews="clr-namespace:DevTools.Presentation.Views.ModelsContext.Filters"
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:panel="clr-namespace:DevTools.ModelsContext.Panel;assembly=DevTools.ModelsContext"
              xmlns:panelViews="clr-namespace:DevTools.Presentation.Views.ModelsContext.Panel"
              xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext.Explorer"
-             d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="320"
              mc:Ignorable="d">
@@ -25,21 +22,18 @@
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="TreeRowContainerStyle"
-                   d:DataContext="{d:DesignInstance explorer:TreeRow}"
                    BasedOn="{StaticResource FlatTreeListItemStyle}"
                    TargetType="ListBoxItem">
                 <Setter Property="AutomationProperties.Name" Value="{Binding Text, Mode=OneTime}" />
             </Style>
 
             <Style x:Key="RowBadgeStyle"
-                   d:DataContext="{d:DesignInstance explorer:TreeRow}"
                    BasedOn="{StaticResource TagBaseStyle}"
                    TargetType="hc:Tag">
                 <Setter Property="ShowCloseButton" Value="False" />
             </Style>
 
             <Style x:Key="RowButtonStyle"
-                   d:DataContext="{d:DesignInstance explorer:TreeRow}"
                    BasedOn="{StaticResource ButtonIcon.Small}"
                    TargetType="Button">
                 <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" />
@@ -47,7 +41,7 @@
 
             <views:RgbBrushConverter x:Key="RgbBrush" />
 
-            <DataTemplate x:Key="TreeRowTemplate" DataType="{x:Type explorer:TreeRow}">
+            <DataTemplate x:Key="TreeRowTemplate">
                 <Grid x:Name="RowGrid" Height="28">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -68,7 +62,8 @@
                             Width="20"
                             hc:IconElement.Geometry="{StaticResource Chevron}"
                             AutomationProperties.AutomationId="Explorer.Row.Expand"
-                            Command="{Binding Path=(FrameworkElement.DataContext).(panel:ModelContextViewModel.Explorer).ToggleExpandCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
+                            AutomationProperties.Name="Expand"
+                            Command="{Binding Path=DataContext.Explorer.ToggleExpandCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             RenderTransformOrigin="0.5,0.5"
                             Style="{StaticResource RowButtonStyle}" />
@@ -91,7 +86,7 @@
                             Grid.Column="3"
                             Grid.ColumnSpan="6"
                             AutomationProperties.AutomationId="Explorer.Row.More"
-                            Command="{Binding Path=(FrameworkElement.DataContext).(panel:ModelContextViewModel.Explorer).LoadMoreCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
+                            Command="{Binding Path=DataContext.Explorer.LoadMoreCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             Content="{Binding Text, Mode=OneTime}"
                             Style="{StaticResource PanelLinkButton}"
@@ -104,7 +99,8 @@
                             Padding="5,0"
                             AutomationProperties.AutomationId="Explorer.Row.Badge"
                             Background="{DynamicResource PrimaryBrush}"
-                            Content="{Binding Badge, StringFormat=N0}"
+                            Content="{Binding Badge}"
+                            ContentStringFormat="N0"
                             FontSize="10"
                             Foreground="{DynamicResource TextIconBrush}"
                             IsHitTestVisible="False"
@@ -123,7 +119,7 @@
                                 Margin="4,0,0,0"
                                 AutomationProperties.AutomationId="Explorer.Row.HiddenCount"
                                 AutomationProperties.ItemStatus="{Binding IsHiddenOpen}"
-                                Command="{Binding Path=(FrameworkElement.DataContext).(panel:ModelContextViewModel.Explorer).ShowHiddenCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
+                                Command="{Binding Path=DataContext.Explorer.ShowHiddenCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                                 CommandParameter="{Binding}"
                                 Content="{Binding HiddenText}"
                                 FontSize="11"
@@ -138,8 +134,9 @@
                              Height="6"
                              Margin="4,0,0,0"
                              VerticalAlignment="Center"
+                             AutomationProperties.AutomationId="Explorer.Row.SavedHide"
                              Fill="{DynamicResource WarningBrush}"
-                             ToolTip="Goes through link commands"
+                             ToolTip="Hidden in view · saved"
                              Visibility="Collapsed" />
 
                     <StackPanel x:Name="Actions"
@@ -148,11 +145,12 @@
                         <Button x:Name="Isolate"
                                 hc:IconElement.Geometry="{StaticResource Isolate}"
                                 AutomationProperties.AutomationId="Explorer.Row.Isolate"
+                                AutomationProperties.Name="Isolate"
                                 Click="OnToolClick"
                                 IsVisibleChanged="OnToolShown"
                                 MouseEnter="OnToolHover"
                                 Style="{StaticResource RowButtonStyle}"
-                                Tag="{x:Static panel:MenuAction.Isolate}"
+                                Tag="Isolate"
                                 ToolTip="Isolate"
                                 ToolTipService.ShowOnDisabled="True"
                                 Visibility="Collapsed" />
@@ -160,11 +158,12 @@
                                 hc:IconElement.Geometry="{StaticResource Halftone}"
                                 AutomationProperties.AutomationId="Explorer.Row.Halftone"
                                 AutomationProperties.ItemStatus="{Binding IsHalftone}"
+                                AutomationProperties.Name="Halftone"
                                 Click="OnToolClick"
                                 IsVisibleChanged="OnToolShown"
                                 MouseEnter="OnToolHover"
                                 Style="{StaticResource RowButtonStyle}"
-                                Tag="{x:Static panel:MenuAction.Halftone}"
+                                Tag="Halftone"
                                 ToolTip="Halftone"
                                 ToolTipService.ShowOnDisabled="True"
                                 Visibility="Collapsed" />
@@ -173,12 +172,13 @@
                                     hc:IconElement.Geometry="{StaticResource ColorDrop}"
                                     AutomationProperties.AutomationId="Explorer.Row.Color"
                                     AutomationProperties.ItemStatus="{Binding ColorHex}"
+                                    AutomationProperties.Name="Color"
                                     Click="OnToolClick"
                                     IsVisibleChanged="OnToolShown"
                                     MouseEnter="OnToolHover"
                                     Style="{StaticResource RowButtonStyle}"
-                                    Tag="{x:Static panel:MenuAction.Color}"
-                                    ToolTip="Color…"
+                                    Tag="Color"
+                                    ToolTip="Color"
                                     ToolTipService.ShowOnDisabled="True" />
                             <Border x:Name="Swatch"
                                     Width="12"
@@ -197,7 +197,8 @@
                             hc:IconElement.Geometry="{StaticResource EyeOpenGeometry}"
                             AutomationProperties.AutomationId="Explorer.Row.Eye"
                             AutomationProperties.ItemStatus="{Binding Eye}"
-                            Command="{Binding Path=(FrameworkElement.DataContext).(panel:ModelContextViewModel.Explorer).ToggleEyeCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
+                            AutomationProperties.Name="{Binding ToolTip, RelativeSource={RelativeSource Self}}"
+                            Command="{Binding Path=DataContext.Explorer.ToggleEyeCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             MouseEnter="OnEyeMouseEnter"
                             MouseLeave="OnEyeMouseLeave"
@@ -218,24 +219,24 @@
                     </DataTrigger>
 
 
-                    <DataTrigger Binding="{Binding Kind}" Value="{x:Static explorer:TreeRowKind.CurrentModelHeader}">
+                    <DataTrigger Binding="{Binding Kind}" Value="CurrentModelHeader">
                         <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource Document}" />
                         <Setter TargetName="RowText" Property="FontWeight" Value="SemiBold" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Kind}" Value="{x:Static explorer:TreeRowKind.LinkModel}">
+                    <DataTrigger Binding="{Binding Kind}" Value="LinkModel">
                         <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource Link}" />
                         <Setter TargetName="RowText" Property="FontWeight" Value="SemiBold" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Kind}" Value="{x:Static explorer:TreeRowKind.Group}">
+                    <DataTrigger Binding="{Binding Kind}" Value="Group">
                         <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource Category}" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Kind}" Value="{x:Static explorer:TreeRowKind.Family}">
+                    <DataTrigger Binding="{Binding Kind}" Value="Family">
                         <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource Family}" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Kind}" Value="{x:Static explorer:TreeRowKind.Type}">
+                    <DataTrigger Binding="{Binding Kind}" Value="Type">
                         <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource ElementType}" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Kind}" Value="{x:Static explorer:TreeRowKind.Instance}">
+                    <DataTrigger Binding="{Binding Kind}" Value="Instance">
                         <Setter TargetName="LevelIcon" Property="Data" Value="{StaticResource Cube}" />
                     </DataTrigger>
 
@@ -245,27 +246,27 @@
                     <DataTrigger Binding="{Binding HasCount}" Value="False">
                         <Setter TargetName="CountText" Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding IsInsideLink}" Value="True">
+                    <DataTrigger Binding="{Binding IsHiddenInView}" Value="True">
                         <Setter TargetName="LinkDot" Property="Visibility" Value="Visible" />
                     </DataTrigger>
 
-                    <DataTrigger Binding="{Binding Eye}" Value="{x:Static explorer:RowEye.None}">
+                    <DataTrigger Binding="{Binding Eye}" Value="None">
                         <Setter TargetName="Eye" Property="Visibility" Value="Hidden" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Eye}" Value="{x:Static explorer:RowEye.Hidden}">
+                    <DataTrigger Binding="{Binding Eye}" Value="Hidden">
                         <Setter TargetName="Eye" Property="hc:IconElement.Geometry" Value="{StaticResource EyeCloseGeometry}" />
                         <Setter TargetName="Eye" Property="ToolTip" Value="Show" />
                         <Setter TargetName="RowGrid" Property="Opacity" Value="0.55" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Eye}" Value="{x:Static explorer:RowEye.Partly}">
+                    <DataTrigger Binding="{Binding Eye}" Value="Partly">
                         <Setter TargetName="Eye" Property="Opacity" Value="0.55" />
                         <Setter TargetName="Eye" Property="ToolTip" Value="Partly hidden · click to hide" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Eye}" Value="{x:Static explorer:RowEye.Unknown}">
+                    <DataTrigger Binding="{Binding Eye}" Value="Unknown">
                         <Setter TargetName="Eye" Property="Opacity" Value="0.35" />
                         <Setter TargetName="Eye" Property="ToolTip" Value="State unknown" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Eye}" Value="{x:Static explorer:RowEye.HiddenByCategory}">
+                    <DataTrigger Binding="{Binding Eye}" Value="HiddenByCategory">
                         <Setter TargetName="Eye" Property="hc:IconElement.Geometry" Value="{StaticResource EyeCloseGeometry}" />
                         <Setter TargetName="Eye" Property="IsEnabled" Value="False" />
                         <Setter TargetName="Eye" Property="ToolTip" Value="Hidden by its category" />
@@ -315,7 +316,7 @@
                     <DataTrigger Binding="{Binding IsHeader}" Value="True">
                         <Setter TargetName="Actions" Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Kind}" Value="{x:Static explorer:TreeRowKind.MorePage}">
+                    <DataTrigger Binding="{Binding Kind}" Value="MorePage">
                         <Setter TargetName="Actions" Property="Visibility" Value="Collapsed" />
                         <Setter TargetName="Eye" Property="Visibility" Value="Collapsed" />
                         <Setter TargetName="CountText" Property="Visibility" Value="Collapsed" />
@@ -327,7 +328,6 @@
             </DataTemplate>
 
             <Style x:Key="HintButtonStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
@@ -338,8 +338,7 @@
             </Style>
 
             <Style x:Key="SelectionSyncToggleStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
-                   BasedOn="{StaticResource ToggleButtonPrimary}"
+                   BasedOn="{StaticResource SelectionSyncToggle}"
                    TargetType="ToggleButton">
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding Explorer.IsSelectionSyncVisible}" Value="False">
@@ -349,7 +348,6 @@
             </Style>
 
             <Style x:Key="ShowInExplorerStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
@@ -360,11 +358,20 @@
             </Style>
 
             <Style x:Key="ClearStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
                    BasedOn="{StaticResource PanelLinkButton}"
                    TargetType="Button">
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding Explorer.HasSelection}" Value="False">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+
+            <Style x:Key="StatusStyle"
+                   BasedOn="{StaticResource TextBlockDefaultSecLight}"
+                   TargetType="TextBlock">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Explorer.SelectedCount}" Value="0">
                         <Setter Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                 </Style.Triggers>
@@ -407,11 +414,9 @@
                                      AutomationProperties.AutomationId="Explorer.CategoryBox"
                                      MenuContext="{Binding Explorer.Categories}"
                                      Picker="{Binding Explorer.Categories.Picker}"
-                                     SelectionMode="Extended"
                                      ShowEye="True">
             <filterViews:CategorySection.ItemMenu>
-                <ContextMenu d:DataContext="{d:DesignInstance explorer:ExplorerCategories}"
-                             AutomationProperties.AutomationId="Explorer.CategoryMenu"
+                <ContextMenu AutomationProperties.AutomationId="Explorer.CategoryMenu"
                              DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}"
                              Style="{StaticResource {x:Type ContextMenu}}">
                     <MenuItem AutomationProperties.AutomationId="Explorer.CategoryMenu.Isolate"
@@ -439,7 +444,7 @@
                     <MenuItem AutomationProperties.AutomationId="Explorer.CategoryMenu.Color"
                               AutomationProperties.HelpText="{Binding MenuReason}"
                               Command="{Binding ColorCommand}"
-                              Header="Color…"
+                              Header="Color"
                               Style="{StaticResource {x:Type MenuItem}}"
                               ToolTip="{Binding MenuReason}"
                               ToolTipService.ShowOnDisabled="True">
@@ -467,7 +472,7 @@
                           Text="{Binding Explorer.SearchText, UpdateSourceTrigger=PropertyChanged}" />
             <Button Grid.Column="1"
                     Margin="4,0,0,0"
-                    hc:IconElement.Geometry="{StaticResource PointerSelect}"
+                    hc:IconElement.Geometry="{StaticResource Point}"
                     AutomationProperties.AutomationId="Explorer.Pick"
                     AutomationProperties.HelpText="{Binding Explorer.Pick.ToolTip}"
                     AutomationProperties.Name="Pick"
@@ -492,11 +497,7 @@
                     ToolTip="Collapse all" />
             <ToggleButton Grid.Column="4"
                           Margin="4,0,0,0"
-                          hc:IconElement.Geometry="{StaticResource SelectionSync}"
-                          hc:IconElement.Height="14"
-                          hc:IconElement.Width="14"
                           AutomationProperties.AutomationId="Explorer.SelectionSync"
-                          AutomationProperties.Name="Selection sync"
                           IsChecked="{Binding Explorer.IsSelectionSyncOn}"
                           Style="{StaticResource SelectionSyncToggleStyle}"
                           ToolTip="Selection sync: tree and Revit select together" />
@@ -518,7 +519,7 @@
                         PreviewKeyDown="OnRowsKeyDown"
                         SelectionChanged="OnSelectionChanged">
             <c:FlatTreeList.ContextMenu>
-                <panelViews:ModelContextMenu d:DataContext="{d:DesignInstance panel:ModelContextViewModel}" />
+                <panelViews:ModelContextMenu />
             </c:FlatTreeList.ContextMenu>
         </c:FlatTreeList>
 
@@ -531,7 +532,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <TextBlock AutomationProperties.AutomationId="Explorer.Status"
-                       Style="{StaticResource TextBlockDefaultSecLight}"
+                       Style="{StaticResource StatusStyle}"
                        Text="{Binding Explorer.StatusText}" />
             <Button Grid.Column="1"
                     Margin="8,0,0,0"
@@ -550,11 +551,6 @@
                        AutomationProperties.AutomationId="Explorer.PickStatus"
                        Style="{StaticResource PickStatusStyle}"
                        Text="{Binding Explorer.Pick.Status}" />
-            <TextBlock Grid.Column="4"
-                       Margin="8,0,0,0"
-                       AutomationProperties.AutomationId="Explorer.Message"
-                       Style="{StaticResource ErrorText}"
-                       Text="{Binding Explorer.Message}" />
         </Grid>
     </Grid>
 </UserControl>

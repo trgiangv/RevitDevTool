@@ -37,12 +37,12 @@ internal static class WhyHiddenShotRun
             var linkedDucts = panel.Explorer.Rows.First(row => row.Document == FakeModelGenerator.Mep && row.Text == "Ducts");
             var linked = panel.Explorer.ElementsOf([linkedDucts]).OrderBy(element => element.Id).First();
 
-            host.Explainer.Causes =
+            host.Explainer.Reasons =
             [
-                HiddenCues.HiddenInLink,
-                HiddenCues.Filter("Walls-Demo"),
-                HiddenCues.WorksetClosed("Shell"),
-                HiddenCues.BelowViewDepth
+                HiddenReasons.LinkElement,
+                HiddenReasons.Filter("Walls-Demo"),
+                HiddenReasons.WorksetClosed("Shell"),
+                HiddenReasons.BelowViewDepth
             ];
             await OpenAsync(panel, linked);
             ShotRun.Save(window, Path.Combine(directory, $"{prefix}-why-hidden.png"));
@@ -51,11 +51,11 @@ internal static class WhyHiddenShotRun
             await Settle(400);
             ShotRun.Save(window, Path.Combine(directory, $"{prefix}-why-hidden-expanded.png"));
 
-            host.Explainer.Causes = [HiddenCues.Category("Duct Fittings"), HiddenCues.OutsideCrop];
+            host.Explainer.Reasons = [HiddenReasons.Category("Duct Fittings"), HiddenReasons.OutsideCrop];
             await OpenAsync(panel, elements[0]);
             ShotRun.Save(window, Path.Combine(directory, $"{prefix}-why-hidden-category.png"));
 
-            host.Explainer.Causes = [];
+            host.Explainer.Reasons = [];
             await OpenAsync(panel, elements[1]);
             ShotRun.Save(window, Path.Combine(directory, $"{prefix}-why-hidden-none.png"));
             return 0;

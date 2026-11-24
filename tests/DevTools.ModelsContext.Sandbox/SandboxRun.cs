@@ -43,7 +43,7 @@ internal sealed class SandboxRun : IDisposable
     {
         if (size == SandboxSize.Hundred)
         {
-            return FakeModelGenerator.Generate(new FakeModelOptions { CurrentElements = 100_000, LinkElements = 20_000 });
+            return FakeModelGenerator.WithSubcategories(FakeModelGenerator.Generate(new FakeModelOptions { CurrentElements = 100_000, LinkElements = 20_000 }));
         }
 
         var data = FakeModelGenerator.Generate(new FakeModelOptions { CurrentElements = 300_000, LinkElements = 175_000 });

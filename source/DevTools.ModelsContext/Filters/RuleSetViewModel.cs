@@ -11,7 +11,6 @@ namespace DevTools.ModelsContext.Filters;
 
 public sealed partial class RuleSetViewModel : FilterNodeViewModel
 {
-    public const string SameAsParent = "Same as parent";
     public const string UnresolvedText = "Not in this model: {0}. This group matches nothing.";
     public const string OutsideText = "Outside the parent scope: {0}.";
 

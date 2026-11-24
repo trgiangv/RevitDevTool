@@ -1,9 +1,10 @@
 using DevTools.ModelsContext.Documents;
 using DevTools.ModelsContext.Scope;
+using DevTools.ModelsContext.Visibility;
 
 namespace DevTools.ModelsContext.Panel;
 
-internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel owner)
+internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel owner, VisibilityController visibility)
 {
     public async Task<int> LoadAsync(JobTicket ticket, ScopeKind scope)
     {
@@ -83,7 +84,7 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
 
             if (!info.IsLoaded)
             {
-                AddKept(documents, info, key);
+                AddKept(documents, info, key, scope);
                 continue;
             }
 
@@ -98,11 +99,12 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
         return documents;
     }
 
-    private void AddKept(List<DocumentScope> documents, DocumentInfo info, DocumentKey key)
+    private void AddKept(List<DocumentScope> documents, DocumentInfo info, DocumentKey key, ScopeKind scope)
     {
         if (runtime.Store.TryGet(key) is { } kept)
         {
-            documents.Add(new DocumentScope(info, owner.ContextBar.LabelOf(key), kept, null));
+            documents.Add(new DocumentScope(info, owner.ContextBar.LabelOf(key), kept,
+                scope == ScopeKind.WholeModel ? null : []));
         }
     }
 
@@ -118,6 +120,11 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
         var ids = scope == ScopeKind.WholeModel
             ? null
             : await runtime.Services.Source.CollectScopeAsync(key, scope, ticket.Token);
+        if (scope == ScopeKind.ActiveView && ids is not null && visibility.CategoryOffIds(key) is { Count: > 0 } off)
+        {
+            ids = [.. ids.Union(off)];
+        }
+
         return owner.IsCurrent(ticket) ? new DocumentScope(info, owner.ContextBar.LabelOf(key), snapshot, ids) : null;
     }
 }

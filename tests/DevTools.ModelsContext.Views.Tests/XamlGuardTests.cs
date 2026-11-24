@@ -23,6 +23,39 @@ public sealed class XamlGuardTests
         Assert.IsEmpty(hits, string.Join(Environment.NewLine, hits));
     }
 
+    [TestMethod]
+    public void NoCoreTypesInXaml()
+    {
+        var root = Path.Combine(RepositoryRoot(), "source", "DevTools.Presentation", "Views", "ModelsContext");
+        var hits = Directory.EnumerateFiles(root, "*.xaml", SearchOption.AllDirectories)
+            .Where(file => File.ReadAllText(file).Contains("assembly=DevTools.ModelsContext", StringComparison.Ordinal))
+            .Select(Path.GetFileName)
+            .ToList();
+
+        Assert.IsEmpty(hits, string.Join(Environment.NewLine, hits));
+    }
+
+    [TestMethod]
+    public void NoLocalAncestorTypes()
+    {
+        var root = Path.Combine(RepositoryRoot(), "source", "DevTools.Presentation", "Views", "ModelsContext");
+        var hits = Directory.EnumerateFiles(root, "*.xaml", SearchOption.AllDirectories)
+            .SelectMany(file =>
+            {
+                var text = File.ReadAllText(file);
+                return LocalPrefix.Matches(text).Cast<Match>()
+                    .Select(match => match.Groups[1].Value)
+                    .Where(prefix => text.Contains("AncestorType=" + prefix + ":", StringComparison.Ordinal)
+                                     || text.Contains("AncestorType={x:Type " + prefix + ":", StringComparison.Ordinal))
+                    .Select(prefix => Path.GetFileName(file) + ": " + prefix);
+            })
+            .ToList();
+
+        Assert.IsEmpty(hits, string.Join(Environment.NewLine, hits));
+    }
+
+    private static readonly Regex LocalPrefix = new("xmlns:(\\w+)=\"clr-namespace:[^\";]+\"", RegexOptions.Compiled);
+
     private static string RepositoryRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)

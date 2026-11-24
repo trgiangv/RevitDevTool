@@ -6,8 +6,6 @@ namespace DevTools.ModelsContext.Filters;
 
 public sealed partial class RuleViewModel : FilterNodeViewModel
 {
-    public const string TypeText = "Type";
-
     private bool _isCaseSensitive;
     private FilterOperator _operator;
     private ParameterKey? _parameter;

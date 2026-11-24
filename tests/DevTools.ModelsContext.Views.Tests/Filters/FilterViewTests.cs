@@ -22,24 +22,20 @@ public sealed class FilterViewTests
     }
 
     [TestMethod]
-    public void CategoryRowsHaveNoSelection()
+    public void FilterListsCategories()
     {
-        using var ui = OpenFilter();
-        ui.Host.FindInWindow("Filter.Categories").Patterns.Toggle.Pattern.Toggle();
-        var list = ui.Host.FindInWindow("Filter.CategoryList");
-        var row = list.FindFirstDescendant(cf => cf.ByControlType(ControlType.ListItem));
-
-        Assert.IsNotNull(row, "The category list has no rows.");
-
-        row.Patterns.SelectionItem.Pattern.Select();
-
-        var clear = WpfSta.Invoke(() =>
+        using var ui = PanelUi.Open();
+        var load = WpfSta.Invoke(() =>
         {
-            var box = (System.Windows.Controls.ListBox)FindByAutomationId(ui, "Filter.CategoryList");
-            var item = (System.Windows.Controls.ListBoxItem)box.ItemContainerGenerator.ContainerFromIndex(0);
-            return item.IsSelected && item.Background is System.Windows.Media.SolidColorBrush { Color.A: 0 };
+            ui.Panel.ContextBar.Scope = DevTools.ModelsContext.Scope.ScopeKind.Selection;
+            return ui.Panel.RefreshAsync();
         });
-        Assert.IsTrue(clear, "A selected category row is painted.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => load.IsCompleted), "The Selection load did not finish.");
+        ui.ShowView("ModelContext.View.Filter");
+        ui.Host.FindInWindow("Filter.Categories").Patterns.Toggle.Pattern.Toggle();
+
+        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.FindAllInWindow("Filter.Category.Item").Count() > 0),
+            "The Categories box lists no categories.");
     }
 
     [TestMethod]
@@ -52,6 +48,53 @@ public sealed class FilterViewTests
 
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.NoRules") is null),
             "The empty hint stayed after adding a rule.");
+    }
+
+    [TestMethod]
+    public void BlankValueShowsSkipped()
+    {
+        using var ui = OpenFilterWithRule();
+        var rule = WpfSta.Invoke(() =>
+        {
+            var rule = (RuleViewModel)ui.Panel.Filter.Root.Children[0];
+            rule.SelectedParameter = rule.Parameters.First(parameter => parameter.DisplayName == "Width");
+            return rule;
+        });
+
+        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Rule.Skipped") is not null),
+            "A rule with no value shows no skipped cue.");
+
+        WpfSta.Invoke(() => rule.Value = "300");
+
+        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Rule.Skipped") is null),
+            "The skipped cue stayed after a value.");
+    }
+
+    [TestMethod]
+    public void ResultStaysOutsideScroll()
+    {
+        using var ui = OpenFilter();
+
+        var inside = WpfSta.Invoke(() =>
+        {
+            var result = FindByAutomationId(ui, "Filter.Result");
+            for (System.Windows.DependencyObject? node = result; node is not null; node = System.Windows.Media.VisualTreeHelper.GetParent(node))
+            {
+                if (node is System.Windows.Controls.ScrollViewer)
+                {
+                    return true;
+                }
+
+                if (node is FilterTabView)
+                {
+                    return false;
+                }
+            }
+
+            return false;
+        });
+
+        Assert.IsFalse(inside, "The result row scrolls with the rules.");
     }
 
     [TestMethod]

@@ -111,15 +111,14 @@ internal static class RevitRuleFactory
         return created is null ? Compiled.None : Pass(created);
     }
 
-    public static Compiled Reference(ElementId parameter, FilterOperator op, IReadOnlyList<long> targets, Compiled hasValue)
+    public static Compiled Reference(ElementId parameter, FilterOperator op, IReadOnlyList<long> targets)
     {
         return op switch
         {
             FilterOperator.Equal => Compiled.Or(targets.Select(item =>
                 Pass(ParameterFilterRuleFactory.CreateEqualsRule(parameter, item.ToElementId())))),
             FilterOperator.NotEqual => Compiled.And(targets.Select(item =>
-                    Pass(ParameterFilterRuleFactory.CreateNotEqualsRule(parameter, item.ToElementId())))
-                .Prepend(hasValue)),
+                Pass(ParameterFilterRuleFactory.CreateNotEqualsRule(parameter, item.ToElementId())))),
             _ => Compiled.None
         };
     }

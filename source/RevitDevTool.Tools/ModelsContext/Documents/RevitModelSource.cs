@@ -36,7 +36,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
             var documents = new List<DocumentInfo>
             {
                 new(DocumentRegistry.KeyOf(model), DocumentRegistry.SourceOf(model), model.Title, true,
-                    DocumentCapabilities.HideById | DocumentCapabilities.HideGroupEverywhere)
+                    DocumentCapabilities.Elements | DocumentCapabilities.Categories)
             };
             if (model.IsFamilyDocument)
             {
@@ -57,18 +57,38 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
         }, cancellationToken);
     }
 
+    public Task<IReadOnlyCollection<DocumentKey>> GetViewLinksAsync(CancellationToken cancellationToken)
+    {
+        return RevitProfiler.RunAsync<IReadOnlyCollection<DocumentKey>>("View links", application =>
+        {
+            if (application.ActiveUIDocument is not { Document: { IsFamilyDocument: false } model, ActiveView: { } view }
+                || view.IsTemplate)
+            {
+                return [];
+            }
+
+            ViewActivations.ThrowIfChangedInCall();
+            return model.CollectElements(view.Id)
+                .OfClass<RevitLinkInstance>()
+                .Cast<RevitLinkInstance>()
+                .Where(instance => instance.GetLinkDocument() is not null)
+                .Select(instance => DocumentRegistry.KeyOf(model, instance))
+                .ToList();
+        }, cancellationToken);
+    }
+
     private static DocumentCapabilities LinkCapabilities(bool loaded)
     {
         if (!loaded)
         {
-            return DocumentCapabilities.WholeModel;
+            return DocumentCapabilities.LinkInstance;
         }
 
-        var capabilities = LinkFilters.IsSupported
-            ? DocumentCapabilities.WholeModel | DocumentCapabilities.LinkFilters
-            : DocumentCapabilities.WholeModel;
-        return LinkedHideShow.IsAvailable
-            ? capabilities | DocumentCapabilities.ReferenceCommands | DocumentCapabilities.ReferenceUnhide
+        var capabilities = LinkViewFilters.IsSupported
+            ? DocumentCapabilities.LinkInstance | DocumentCapabilities.LinkFilters
+            : DocumentCapabilities.LinkInstance;
+        return LinkHideShow.IsAvailable
+            ? capabilities | DocumentCapabilities.LinkElements | DocumentCapabilities.LinkShow
             : capabilities;
     }
 
@@ -332,7 +352,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
         catch (Exception exception)
         {
             RevitProfiler.Logger.Swallowed(exception, "View ids", document);
-            ids = [];
+            return [];
         }
 
         scopes.Store(document, viewId, ids);

@@ -25,12 +25,14 @@ internal static class Program
         var pickerShots = Array.IndexOf(args, "--picker-shots");
         var explorerShots = Array.IndexOf(args, "--explorer-shots");
         var whyHiddenShots = Array.IndexOf(args, "--why-hidden-shots");
+        var categoryShots = Array.IndexOf(args, "--category-shots");
+        var resultShots = Array.IndexOf(args, "--result-shots");
         var theme = Array.IndexOf(args, "--theme");
         var light = theme >= 0 && string.Equals(args[theme + 1], "light", StringComparison.OrdinalIgnoreCase);
         DevTools.UI.Theme.ThemeManager.Current.ApplySettingsTheme(light ? DevTools.UI.Theme.AppTheme.Light : DevTools.UI.Theme.AppTheme.Dark);
 
         var window = new SandboxWindow(autoLoad: !args.Contains("--measure", StringComparer.Ordinal) && shots < 0 && drag < 0 && dragShots < 0
-                                                 && pickerShots < 0 && whyHiddenShots < 0 && explorerShots < 0);
+                                                 && pickerShots < 0 && whyHiddenShots < 0 && explorerShots < 0 && categoryShots < 0 && resultShots < 0);
         var width = Array.IndexOf(args, "--width");
         if (width >= 0)
         {
@@ -38,7 +40,7 @@ internal static class Program
         }
         var exitCode = 0;
         if (args.Contains("--measure", StringComparer.Ordinal) || shots >= 0 || dragShots >= 0 || pickerShots >= 0 || whyHiddenShots >= 0
-            || explorerShots >= 0)
+            || explorerShots >= 0 || categoryShots >= 0 || resultShots >= 0)
         {
             DevTools.Testing.Ui.ForegroundGuard.Start();
             DevTools.Testing.Ui.ForegroundGuard.NoActivateOnShow(window);
@@ -58,6 +60,14 @@ internal static class Program
         else if (whyHiddenShots >= 0)
         {
             window.Loaded += async (_, _) => exitCode = await WhyHiddenShotRun.CaptureAsync(window, app, args[whyHiddenShots + 1]);
+        }
+        else if (categoryShots >= 0)
+        {
+            window.Loaded += async (_, _) => exitCode = await CategoryShotRun.CaptureAsync(window, app, args[categoryShots + 1]);
+        }
+        else if (resultShots >= 0)
+        {
+            window.Loaded += async (_, _) => exitCode = await ResultShotRun.CaptureAsync(window, app, args[resultShots + 1]);
         }
         else if (explorerShots >= 0)
         {

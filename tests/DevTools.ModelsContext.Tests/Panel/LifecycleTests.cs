@@ -115,7 +115,7 @@ public sealed class LifecycleTests
         fixture.Settle();
 
         Assert.IsTrue(otherRows);
-        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
         Assert.IsTrue(fixture.Group(Current, "Ducts").IsExpanded);
         Assert.AreEqual(2, fixture.Panel.SessionCount);
         Assert.AreEqual(builds + 1, model.BuildCount);
@@ -209,13 +209,13 @@ public sealed class LifecycleTests
         var isolate = menu[MenuAction.Isolate].DisabledReason;
         var zoom = menu[MenuAction.Zoom].IsEnabled;
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
-        var message = fixture.Explorer.Message;
+        var message = fixture.Panel.Message;
         fixture.Model.SetBusy(false);
         fixture.Settle();
 
-        Assert.AreEqual(VisibilityReasons.HostBusy(FakeModel.FakeHostName), isolate);
+        Assert.AreEqual(VisibilityText.HostBusy(FakeModel.FakeHostName), isolate);
         Assert.IsFalse(zoom);
-        Assert.AreEqual(VisibilityReasons.HostBusy(FakeModel.FakeHostName), message);
+        Assert.AreEqual(VisibilityText.HostBusy(FakeModel.FakeHostName), message);
         Assert.IsEmpty(fixture.Actions.ExecutedPlans);
         Assert.IsEmpty(await fixture.Model.GetSelectionAsync(CancellationToken.None));
     }
@@ -332,6 +332,19 @@ public sealed class LifecycleTests
     }
 
     [TestMethod]
+    public async Task UnloadedLinkCountsNothingInView()
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Settle();
+
+        fixture.Model.SetLoaded(Mep, false);
+        fixture.Settle();
+
+        Assert.AreEqual(0, fixture.FindGroup(Mep, "Ducts")?.Count ?? 0);
+    }
+
+    [TestMethod]
     public async Task UnloadedLinkRowsDisable()
     {
         using var fixture = await PanelFixture.OpenAsync();
@@ -344,7 +357,7 @@ public sealed class LifecycleTests
         fixture.Model.SetLoaded(Mep, true);
         fixture.Settle();
 
-        Assert.AreEqual(VisibilityReasons.NotLoaded, unloaded);
+        Assert.AreEqual(VisibilityText.NotLoaded, unloaded);
         Assert.IsTrue(fixture.Group(Mep, "Ducts").IsEnabled);
         Assert.AreEqual(builds, fixture.Model.BuildCount);
     }
@@ -357,9 +370,9 @@ public sealed class LifecycleTests
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        var entries = fixture.Panel.Journal.LinkEntries;
-        Assert.IsNotEmpty(entries);
-        Assert.IsTrue(entries.All(entry => entry.UniqueId.StartsWith("mep-", StringComparison.Ordinal)));
+        var hides = fixture.Panel.Journal.LinkHides;
+        Assert.IsNotEmpty(hides);
+        Assert.IsTrue(hides.All(hide => hide.UniqueId.StartsWith("mep-", StringComparison.Ordinal)));
     }
 
     [TestMethod]

@@ -4,10 +4,10 @@ namespace DevTools.ModelsContext.Documents;
 public enum DocumentCapabilities
 {
     None = 0,
-    HideById = 1,
-    HideGroupEverywhere = 2,
-    WholeModel = 4,
-    ReferenceCommands = 8,
-    ReferenceUnhide = 16,
+    Elements = 1,
+    Categories = 2,
+    LinkInstance = 4,
+    LinkElements = 8,
+    LinkShow = 16,
     LinkFilters = 32
 }

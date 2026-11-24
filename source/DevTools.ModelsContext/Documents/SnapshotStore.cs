@@ -55,6 +55,31 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
         }
     }
 
+    public void Rename(ModelRename rename)
+    {
+        lock (_gate)
+        {
+            foreach (var pair in _documents.Where(pair => pair.Key.ModelId == rename.OldId).ToList())
+            {
+                _documents.Remove(pair.Key);
+                _documents[rename.Map(pair.Key)] = rename.Map(pair.Value);
+            }
+
+            if (!_snapshots.TryGetValue(rename.OldSource, out var task))
+            {
+                return;
+            }
+
+            _snapshots.Remove(rename.OldSource);
+            _snapshots[rename.NewSource] = task.ContinueWith(built =>
+            {
+                var snapshot = built.Result;
+                snapshot.Rename(rename.NewSource);
+                return snapshot;
+            }, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
+        }
+    }
+
     public int UsersOf(SourceId id)
     {
         lock (_gate)

@@ -4,15 +4,12 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:data="clr-namespace:System.Windows.Data;assembly=PresentationFramework"
              xmlns:design="clr-namespace:DevTools.UI.Theme.Design;assembly=DevTools.UI"
-             xmlns:filters="clr-namespace:DevTools.ModelsContext.Filters;assembly=DevTools.ModelsContext"
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:panel="clr-namespace:DevTools.ModelsContext.Panel;assembly=DevTools.ModelsContext"
              xmlns:panelViews="clr-namespace:DevTools.Presentation.Views.ModelsContext.Panel"
              xmlns:ui="clr-namespace:DevTools.UI.Controls;assembly=DevTools.UI"
              xmlns:uiConverters="clr-namespace:DevTools.UI.Converters;assembly=DevTools.UI"
              xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext.Filters"
-             d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
              d:DesignHeight="600"
              d:DesignWidth="320"
              mc:Ignorable="d">
@@ -27,9 +24,7 @@
             </ResourceDictionary.MergedDictionaries>
 
 
-            <Style x:Key="BoxStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
-                   TargetType="Border">
+            <Style x:Key="BoxStyle" TargetType="Border">
                 <Setter Property="Margin" Value="0,7,0,0" />
                 <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
@@ -37,9 +32,7 @@
             </Style>
 
 
-            <Style x:Key="SourceIconStyle"
-                   d:DataContext="{d:DesignInstance filters:FilterSourceItem}"
-                   TargetType="Path">
+            <Style x:Key="SourceIconStyle" TargetType="Path">
                 <Setter Property="Width" Value="12" />
                 <Setter Property="Height" Value="12" />
                 <Setter Property="Margin" Value="0,0,6,0" />
@@ -57,7 +50,7 @@
                 </Style.Triggers>
             </Style>
 
-            <DataTemplate x:Key="SourceTemplate" DataType="{x:Type filters:FilterSourceItem}">
+            <DataTemplate x:Key="SourceTemplate">
                 <StackPanel Orientation="Horizontal">
                     <Path Style="{StaticResource SourceIconStyle}" />
                     <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
@@ -83,19 +76,6 @@
                 </DataTemplate.Triggers>
             </DataTemplate>
 
-            <DataTemplate x:Key="ModeTemplate" DataType="{x:Type filters:ResultSelectionMode}">
-                <StackPanel Orientation="Horizontal">
-                    <Path Width="11"
-                          Height="11"
-                          Margin="0,0,4,0"
-                          VerticalAlignment="Center"
-                          Data="{StaticResource Cursor}"
-                          Fill="{DynamicResource SecondaryTextBrush}"
-                          Stretch="Uniform" />
-                    <TextBlock VerticalAlignment="Center" Text="{Binding}" />
-                </StackPanel>
-            </DataTemplate>
-
 
             <Style x:Key="NameBoxStyle"
                    BasedOn="{StaticResource TextBoxPlusBaseStyle}"
@@ -107,9 +87,7 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="WhenEditingName"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
-                   TargetType="StackPanel">
+            <Style x:Key="WhenEditingName" TargetType="StackPanel">
                 <Setter Property="Margin" Value="0,7,0,0" />
                 <Setter Property="Visibility" Value="Collapsed" />
                 <Style.Triggers>
@@ -119,9 +97,7 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="WhenSwitchPending"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
-                   TargetType="Border">
+            <Style x:Key="WhenSwitchPending" TargetType="Border">
                 <Setter Property="Margin" Value="0,7,0,0" />
                 <Setter Property="Padding" Value="8,5" />
                 <Setter Property="Background" Value="{DynamicResource SecondaryRegionBrush}" />
@@ -134,9 +110,7 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="WhenReadOnlyRow"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
-                   TargetType="StackPanel">
+            <Style x:Key="WhenReadOnlyRow" TargetType="StackPanel">
                 <Setter Property="Margin" Value="0,7,0,0" />
                 <Setter Property="Orientation" Value="Horizontal" />
                 <Setter Property="Visibility" Value="Collapsed" />
@@ -151,15 +125,32 @@
             </Style>
 
 
+            <Style x:Key="ResultToolStyle"
+                   BasedOn="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"
+                   TargetType="Button">
+                <Setter Property="Height" Value="24" />
+                <Setter Property="Padding" Value="3,0" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="hc:IconElement.Width" Value="12" />
+                <Setter Property="hc:IconElement.Height" Value="12" />
+                <Style.Triggers>
+                    <Trigger Property="ToolBar.IsOverflowItem" Value="True">
+                        <Setter Property="Content" Value="{Binding (AutomationProperties.Name), RelativeSource={RelativeSource Self}}" />
+                        <Setter Property="MinWidth" Value="120" />
+                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                        <Setter Property="HorizontalContentAlignment" Value="Left" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
             <Style x:Key="PausedText"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
                    BasedOn="{StaticResource TextBlockDefaultWarning}"
                    TargetType="TextBlock">
                 <Setter Property="Margin" Value="0,4,0,0" />
                 <Setter Property="FontSize" Value="11" />
                 <Setter Property="HorizontalAlignment" Value="Left" />
                 <Setter Property="TextWrapping" Value="Wrap" />
-                <Setter Property="Text" Value="{x:Static filters:FilterRunner.LivePausedText}" />
                 <Setter Property="Visibility" Value="Collapsed" />
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding Filter.Runner.IsLivePaused}" Value="True">
@@ -170,174 +161,230 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="0,0,0,8">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <ComboBox x:Name="SourceBox"
-                          AutomationProperties.AutomationId="Filter.Source"
-                          ItemTemplate="{StaticResource SourceTemplate}"
-                          ItemsSource="{Binding Filter.Library.Sources}"
-                          SelectedItem="{Binding Filter.Library.SelectedSource}">
-                    <ComboBox.GroupStyle>
-                        <GroupStyle>
-                            <GroupStyle.HeaderTemplate>
-                                <DataTemplate DataType="{x:Type data:CollectionViewGroup}">
-                                    <TextBlock Margin="4,4,0,2"
-                                               HorizontalAlignment="Left"
-                                               FontWeight="SemiBold"
-                                               Style="{StaticResource TextBlockDefaultSecLight}"
-                                               Text="{Binding Name}" />
-                                </DataTemplate>
-                            </GroupStyle.HeaderTemplate>
-                        </GroupStyle>
-                    </ComboBox.GroupStyle>
-                </ComboBox>
-                <Button Grid.Column="1"
-                        Margin="4,0,0,0"
-                        hc:IconElement.Geometry="{StaticResource AddGeometry}"
-                        AutomationProperties.AutomationId="Filter.Add"
-                        Command="{Binding Filter.Library.AddCommand}"
-                        Style="{StaticResource ButtonIcon.Small}"
-                        ToolTip="New custom filter" />
-                <Button Grid.Column="2"
-                        hc:IconElement.Geometry="{StaticResource Rename}"
-                        AutomationProperties.AutomationId="Filter.Rename"
-                        Command="{Binding Filter.Library.RenameCommand}"
-                        Style="{StaticResource ButtonIcon.Small}"
-                        ToolTip="Rename custom filter (F2)" />
-                <Button Grid.Column="3"
-                        hc:IconElement.Geometry="{StaticResource TrashCan}"
-                        AutomationProperties.AutomationId="Filter.Delete"
-                        Command="{Binding Filter.Library.DeleteCommand}"
-                        Style="{StaticResource ButtonIcon.Small}"
-                        ToolTip="Delete custom filter" />
-                <Button Grid.Column="4"
-                        hc:IconElement.Geometry="{StaticResource SaveGeometry}"
-                        AutomationProperties.AutomationId="Filter.Save"
-                        Command="{Binding Filter.Library.SaveCommand}"
-                        Style="{StaticResource ButtonIcon.Small}"
-                        ToolTip="Save" />
-            </Grid>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox x:Name="SourceBox"
+                              AutomationProperties.AutomationId="Filter.Source"
+                              ItemTemplate="{StaticResource SourceTemplate}"
+                              ItemsSource="{Binding Filter.Library.Sources}"
+                              SelectedItem="{Binding Filter.Library.SelectedSource}">
+                        <ComboBox.GroupStyle>
+                            <GroupStyle>
+                                <GroupStyle.HeaderTemplate>
+                                    <DataTemplate DataType="{x:Type data:CollectionViewGroup}">
+                                        <TextBlock Margin="4,4,0,2"
+                                                   HorizontalAlignment="Left"
+                                                   FontWeight="SemiBold"
+                                                   Style="{StaticResource TextBlockDefaultSecLight}"
+                                                   Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </GroupStyle.HeaderTemplate>
+                            </GroupStyle>
+                        </ComboBox.GroupStyle>
+                    </ComboBox>
+                    <Button Grid.Column="1"
+                            Margin="4,0,0,0"
+                            hc:IconElement.Geometry="{StaticResource AddGeometry}"
+                            AutomationProperties.AutomationId="Filter.Add"
+                            AutomationProperties.Name="New custom filter"
+                            Command="{Binding Filter.Library.AddCommand}"
+                            Style="{StaticResource ButtonIcon.Small}"
+                            ToolTip="New custom filter" />
+                    <Button Grid.Column="2"
+                            hc:IconElement.Geometry="{StaticResource Rename}"
+                            AutomationProperties.AutomationId="Filter.Rename"
+                            AutomationProperties.Name="Rename custom filter"
+                            Command="{Binding Filter.Library.RenameCommand}"
+                            Style="{StaticResource ButtonIcon.Small}"
+                            ToolTip="Rename custom filter (F2)" />
+                    <Button Grid.Column="3"
+                            hc:IconElement.Geometry="{StaticResource TrashCan}"
+                            AutomationProperties.AutomationId="Filter.Delete"
+                            AutomationProperties.Name="Delete custom filter"
+                            Command="{Binding Filter.Library.DeleteCommand}"
+                            Style="{StaticResource ButtonIcon.Small}"
+                            ToolTip="Delete custom filter" />
+                    <Button Grid.Column="4"
+                            hc:IconElement.Geometry="{StaticResource SaveGeometry}"
+                            AutomationProperties.AutomationId="Filter.Save"
+                            AutomationProperties.Name="Save"
+                            Command="{Binding Filter.Library.SaveCommand}"
+                            Style="{StaticResource ButtonIcon.Small}"
+                            ToolTip="Save" />
+                </Grid>
 
-            <StackPanel Style="{StaticResource WhenEditingName}">
-                <hc:TextBox x:Name="NameBox"
-                            hc:InfoElement.Placeholder="Filter name"
-                            AutomationProperties.AutomationId="Filter.Name"
-                            AutomationProperties.HelpText="{Binding Filter.Library.NameError, TargetNullValue=''}"
-                            IsVisibleChanged="OnNameVisibleChanged"
-                            LostKeyboardFocus="OnNameLostFocus"
-                            PreviewKeyDown="OnNameKeyDown"
-                            Style="{StaticResource NameBoxStyle}"
-                            Text="{Binding Filter.Library.EditName, UpdateSourceTrigger=PropertyChanged}" />
-            </StackPanel>
+                <StackPanel Style="{StaticResource WhenEditingName}">
+                    <hc:TextBox x:Name="NameBox"
+                                hc:InfoElement.Placeholder="Filter name"
+                                AutomationProperties.AutomationId="Filter.Name"
+                                AutomationProperties.HelpText="{Binding Filter.Library.NameError, TargetNullValue=''}"
+                                IsVisibleChanged="OnNameVisibleChanged"
+                                LostKeyboardFocus="OnNameLostFocus"
+                                PreviewKeyDown="OnNameKeyDown"
+                                Style="{StaticResource NameBoxStyle}"
+                                Text="{Binding Filter.Library.EditName, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
 
-            <Border Style="{StaticResource WhenSwitchPending}">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Style="{StaticResource TextBlockDefault}" Text="Unsaved changes" />
+                <Border Style="{StaticResource WhenSwitchPending}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource TextBlockDefault}" Text="Unsaved changes" />
+                        <Button Margin="8,0,0,0"
+                                AutomationProperties.AutomationId="Filter.SaveSwitch"
+                                Command="{Binding Filter.Library.SaveAndSwitchCommand}"
+                                Content="Save"
+                                Style="{StaticResource PanelLinkButton}" />
+                        <Button Margin="4,0,0,0"
+                                AutomationProperties.AutomationId="Filter.DiscardSwitch"
+                                Command="{Binding Filter.Library.DiscardAndSwitchCommand}"
+                                Content="Discard"
+                                Style="{StaticResource PanelLinkButton}" />
+                        <Button Margin="4,0,0,0"
+                                AutomationProperties.AutomationId="Filter.CancelSwitch"
+                                Command="{Binding Filter.Library.CancelSwitchCommand}"
+                                Content="Cancel"
+                                Style="{StaticResource PanelLinkButton}" />
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Style="{StaticResource WhenReadOnlyRow}">
+                    <TextBlock Style="{StaticResource TextBlockDefaultSecLight}" Text="Read only" />
                     <Button Margin="8,0,0,0"
-                            AutomationProperties.AutomationId="Filter.SaveSwitch"
-                            Command="{Binding Filter.Library.SaveAndSwitchCommand}"
-                            Content="Save"
-                            Style="{StaticResource PanelLinkButton}" />
-                    <Button Margin="4,0,0,0"
-                            AutomationProperties.AutomationId="Filter.DiscardSwitch"
-                            Command="{Binding Filter.Library.DiscardAndSwitchCommand}"
-                            Content="Discard"
-                            Style="{StaticResource PanelLinkButton}" />
-                    <Button Margin="4,0,0,0"
-                            AutomationProperties.AutomationId="Filter.CancelSwitch"
-                            Command="{Binding Filter.Library.CancelSwitchCommand}"
-                            Content="Cancel"
+                            AutomationProperties.AutomationId="Filter.Duplicate"
+                            Command="{Binding Filter.Library.DuplicateCommand}"
+                            Content="Duplicate"
                             Style="{StaticResource PanelLinkButton}" />
                 </StackPanel>
-            </Border>
 
-            <StackPanel Style="{StaticResource WhenReadOnlyRow}">
-                <TextBlock Style="{StaticResource TextBlockDefaultSecLight}" Text="Read only" />
-                <Button Margin="8,0,0,0"
-                        AutomationProperties.AutomationId="Filter.Duplicate"
-                        Command="{Binding Filter.Library.DuplicateCommand}"
-                        Content="Duplicate"
-                        Style="{StaticResource PanelLinkButton}" />
+                <views:CategorySection x:Name="CategorySection"
+                                       Margin="0,7,0,0"
+                                       AutomationPrefix="Filter"
+                                       IsLocked="{Binding Filter.IsReadOnly}"
+                                       Picker="{Binding Filter.Categories}" />
+
+                <Border Padding="6" Style="{StaticResource BoxStyle}">
+                    <ContentPresenter Content="{Binding Filter.Root}" ContentTemplateSelector="{StaticResource FilterNode}" />
+                </Border>
             </StackPanel>
+        </ScrollViewer>
 
-            <views:CategorySection x:Name="CategorySection"
-                                   Margin="0,7,0,0"
-                                   AutomationPrefix="Filter"
-                                   IsLocked="{Binding Filter.IsReadOnly}"
-                                   Picker="{Binding Filter.Categories}" />
-
-            <Border Padding="6" Style="{StaticResource BoxStyle}">
-                <ContentPresenter Content="{Binding Filter.Root}" />
-            </Border>
-
-            <Border x:Name="ResultRow"
-                    Margin="0,7,0,0"
-                    Padding="8,6"
-                    AutomationProperties.AutomationId="Filter.Result"
-                    Background="{DynamicResource SecondaryRegionBrush}"
-                    ContextMenuOpening="OnResultMenuOpening"
-                    CornerRadius="4">
-                <Border.ContextMenu>
-                    <panelViews:ModelContextMenu d:DataContext="{d:DesignInstance panel:ModelContextViewModel}" />
-                </Border.ContextMenu>
-                <StackPanel>
-                    <hc:FlexPanel AlignItems="Center"
-                                  FlexWrap="Wrap"
-                                  JustifyContent="SpaceBetween">
-                        <StackPanel Margin="0,0,8,0" Orientation="Horizontal">
-                            <TextBlock VerticalAlignment="Center"
-                                       AutomationProperties.AutomationId="Filter.ResultCount"
-                                       FontSize="18"
-                                       FontWeight="SemiBold"
-                                       Style="{StaticResource TextBlockDefault}"
-                                       Text="{Binding Filter.Runner.ResultCount, StringFormat=N0}"
-                                       Typography.NumeralAlignment="Tabular" />
-                            <TextBlock Margin="5,0,0,0"
-                                       VerticalAlignment="Center"
-                                       AutomationProperties.AutomationId="Filter.ResultLabel"
-                                       Style="{StaticResource SmallSecondaryText}"
-                                       Text="matches"
-                                       TextTrimming="None" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <ComboBox MinWidth="96"
-                                      AutomationProperties.AutomationId="Filter.Mode"
-                                      ItemTemplate="{StaticResource ModeTemplate}"
-                                      ItemsSource="{x:Static views:FilterTabView.Modes}"
-                                      SelectedItem="{Binding Filter.Runner.Mode}"
-                                      Style="{StaticResource SmallComboBox}"
-                                      ToolTip="How the result changes the selection: New, Add, Remove" />
-                            <TextBlock Margin="6,0,4,0"
-                                       VerticalAlignment="Center"
-                                       Style="{StaticResource SmallSecondaryText}"
-                                       Text="Live" />
-                            <ToggleButton AutomationProperties.AutomationId="Filter.Live"
-                                          AutomationProperties.Name="Live"
-                                          IsChecked="{Binding Filter.Runner.IsLiveOn}"
-                                          Style="{StaticResource ToggleButtonSwitch.Small}"
-                                          ToolTip="Send each result to the selection as you edit" />
-                            <Button Width="22"
-                                    Margin="6,0,0,0"
-                                    Padding="0"
-                                    hc:IconElement.Geometry="{StaticResource More}"
-                                    hc:IconElement.Width="12"
-                                    AutomationProperties.AutomationId="Filter.Menu"
-                                    Click="OnResultMenuClick"
-                                    Style="{StaticResource ButtonDefault.Small}"
-                                    ToolTip="Actions" />
-                        </StackPanel>
-                    </hc:FlexPanel>
-                    <TextBlock AutomationProperties.AutomationId="Filter.Paused" Style="{StaticResource PausedText}" />
-                </StackPanel>
-            </Border>
-        </StackPanel>
-    </ScrollViewer>
+        <Border x:Name="ResultRow"
+                Grid.Row="1"
+                Margin="0,7,0,0"
+                Padding="6"
+                AutomationProperties.AutomationId="Filter.Result"
+                Background="{DynamicResource SecondaryRegionBrush}"
+                ContextMenuOpening="OnResultMenuOpening"
+                CornerRadius="4"
+                MouseEnter="OnResultRowHover">
+            <Border.ContextMenu>
+                <panelViews:ModelContextMenu />
+            </Border.ContextMenu>
+            <StackPanel>
+                <Grid x:Name="ResultBar">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel x:Name="CountGroup"
+                                Margin="0,0,6,0"
+                                Orientation="Horizontal">
+                        <TextBlock x:Name="ResultCount"
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="Filter.ResultCount"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Style="{StaticResource TextBlockDefault}"
+                                   Text="{Binding Filter.Runner.ResultCount, StringFormat=N0}"
+                                   ToolTip="{Binding Filter.Runner.ResultCount, StringFormat={}{0:N0} matches}"
+                                   Typography.NumeralAlignment="Tabular" />
+                        <TextBlock x:Name="ResultLabel"
+                                   Margin="5,0,0,0"
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="Filter.ResultLabel"
+                                   Style="{StaticResource SmallSecondaryText}"
+                                   Text="matches"
+                                   TextTrimming="None" />
+                    </StackPanel>
+                    <ToolBar x:Name="ResultTools"
+                             Grid.Column="1"
+                             Padding="0"
+                             HorizontalAlignment="Right"
+                             AutomationProperties.AutomationId="Filter.ResultTools"
+                             ToolBarTray.IsLocked="True">
+                        <ComboBox x:Name="ModeBox"
+                                  MinWidth="76"
+                                  AutomationProperties.AutomationId="Filter.Mode"
+                                  AutomationProperties.Name="Selection mode"
+                                  ItemsSource="{x:Static views:FilterTabView.Modes}"
+                                  SelectedItem="{Binding Filter.Runner.Mode}"
+                                  Style="{StaticResource SmallComboBox}"
+                                  ToolBar.OverflowMode="Never"
+                                  ToolTip="How the result changes the selection: New, Add, Remove" />
+                        <ToggleButton x:Name="SyncToggle"
+                                      Margin="4,0,0,0"
+                                      AutomationProperties.AutomationId="Filter.Live"
+                                      IsChecked="{Binding Filter.Runner.IsLiveOn}"
+                                      Style="{StaticResource SelectionSyncToggle}"
+                                      ToolBar.OverflowMode="Never"
+                                      ToolTip="Selection sync: each result selects in Revit as you edit" />
+                        <Separator x:Name="ResultSeparator"
+                                   Margin="2,2"
+                                   ToolBar.OverflowMode="Never" />
+                        <Button hc:IconElement.Geometry="{StaticResource Isolate}"
+                                AutomationProperties.AutomationId="Filter.Result.Isolate"
+                                AutomationProperties.Name="Isolate"
+                                Click="OnResultToolClick"
+                                GotKeyboardFocus="OnResultToolFocus"
+                                Style="{StaticResource ResultToolStyle}"
+                                Tag="Isolate"
+                                ToolTip="Isolate"
+                                ToolTipService.ShowOnDisabled="True" />
+                        <Button hc:IconElement.Geometry="{StaticResource Halftone}"
+                                AutomationProperties.AutomationId="Filter.Result.Halftone"
+                                AutomationProperties.Name="Halftone"
+                                Click="OnResultToolClick"
+                                GotKeyboardFocus="OnResultToolFocus"
+                                Style="{StaticResource ResultToolStyle}"
+                                Tag="Halftone"
+                                ToolTip="Halftone"
+                                ToolTipService.ShowOnDisabled="True" />
+                        <Button hc:IconElement.Geometry="{StaticResource ColorDrop}"
+                                AutomationProperties.AutomationId="Filter.Result.Color"
+                                AutomationProperties.Name="Color"
+                                Click="OnResultToolClick"
+                                GotKeyboardFocus="OnResultToolFocus"
+                                Style="{StaticResource ResultToolStyle}"
+                                Tag="Color"
+                                ToolTip="Color"
+                                ToolTipService.ShowOnDisabled="True" />
+                        <Button hc:IconElement.Geometry="{StaticResource EyeOpenGeometry}"
+                                AutomationProperties.AutomationId="Filter.Result.Eye"
+                                AutomationProperties.Name="Hide"
+                                Click="OnResultToolClick"
+                                GotKeyboardFocus="OnResultToolFocus"
+                                Style="{StaticResource ResultToolStyle}"
+                                Tag="HideShow"
+                                ToolTip="Hide"
+                                ToolTipService.ShowOnDisabled="True" />
+                    </ToolBar>
+                </Grid>
+                <TextBlock x:Name="PausedLine"
+                           AutomationProperties.AutomationId="Filter.Paused"
+                           Style="{StaticResource PausedText}" />
+            </StackPanel>
+        </Border>
+    </Grid>
 </UserControl>

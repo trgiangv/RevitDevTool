@@ -47,7 +47,7 @@ public sealed class FamilyParameterTests
         {
             var text = angle.ToString(CultureInfo.InvariantCulture);
             var equal = Doors(snapshot).Count(row => Value(snapshot, row) == text);
-            var notEqual = Doors(snapshot).Count(row => Value(snapshot, row) is { Length: > 0 } value && value != text);
+            var notEqual = Doors(snapshot).Count(row => Value(snapshot, row) is { } value && value != text);
 
             Assert.AreEqual(equal, await CountAsync(FilterOperator.Equal, text), text);
             Assert.AreEqual(notEqual, await CountAsync(FilterOperator.NotEqual, text), text);

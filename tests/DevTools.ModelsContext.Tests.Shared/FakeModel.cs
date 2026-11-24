@@ -11,10 +11,11 @@ namespace DevTools.ModelsContext.Tests.Shared;
 public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFilterEvaluator
 {
     public const string FakeHostName = "Fake host";
+    public const string NotOpen = "This model is not open.";
 
     private readonly Dictionary<string, List<DocumentInfo>> _documents = new(StringComparer.Ordinal);
     private readonly Dictionary<SourceId, List<FakeVersion>> _history = [];
-    private readonly string _primary;
+    private string _primary;
     private readonly Dictionary<SourceId, DocumentSnapshot> _snapshots = [];
     private readonly Dictionary<SourceId, FakeSource> _sources = [];
     private string _active;
@@ -41,6 +42,12 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
     public DocumentKey ActiveModel => DocumentKey.Current(_active);
 
     public ViewInfo View { get; set; }
+
+    public HashSet<DocumentKey> ViewLinks { get; } = [];
+
+    public HashSet<long> ViewHiddenCategories { get; } = [];
+
+    public HashSet<long>? ViewKeptCategories { get; set; }
 
     public int BuildCount { get; private set; }
 
@@ -80,6 +87,10 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
 
     public event EventHandler<SourceId>? ParameterDefinitionsChanged;
 
+    public event EventHandler<DocumentKey>? ViewFiltersRemoved;
+
+    public event EventHandler<ModelRename>? ModelRenamed;
+
     public string HostName => FakeHostName;
 
     public TreeSchema Schema => FakeModelGenerator.Schema;
@@ -89,6 +100,12 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         DocumentReads++;
         IReadOnlyList<DocumentInfo> documents = _documents.TryGetValue(_active, out var list) ? list.ToList() : [];
         return Task.FromResult(documents);
+    }
+
+    public Task<IReadOnlyCollection<DocumentKey>> GetViewLinksAsync(CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<DocumentKey> links = ViewLinks.Where(key => key.ModelId == _active).ToList();
+        return Task.FromResult(links);
     }
 
     public Task<DocumentSnapshot> BuildSnapshotAsync(
@@ -143,7 +160,8 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         IReadOnlyList<GroupCount> counts = source.Elements
             .Where(element => inScope.Contains(element.Id))
             .GroupBy(element => types[element.TypeId].GroupId)
-            .Select(group => new GroupCount(group.Key, types[group.First().TypeId].GroupName, group.Count()))
+            .Select(group => new GroupCount(group.Key, types[group.First().TypeId].GroupName, group.Count(),
+                types[group.First().TypeId].ParentId))
             .ToList();
         return Task.FromResult(counts);
     }
@@ -268,6 +286,11 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         IReadOnlyCollection<long>? scope,
         CancellationToken cancellationToken)
     {
+        if (!DocumentOf(document).IsLoaded)
+        {
+            throw new InvalidOperationException(NotOpen);
+        }
+
         var snapshot = SnapshotOf(document);
         var host = Data.Documents.FirstOrDefault(info => info.Key == DocumentKey.Current(document.ModelId));
         var factor = host is not null && UnitFactors.TryGetValue(host.Source, out var hostFactor) ? hostFactor : 1;
@@ -376,6 +399,13 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         LinkStatusChanged?.Invoke(this, new LinkStatusChange(link, loaded ? LinkStatus.Reloaded : LinkStatus.Unloaded));
     }
 
+    public void RemoveDocument(DocumentKey link)
+    {
+        _documents[link.ModelId].RemoveAll(document => document.Key == link);
+        RefreshData();
+        DocumentsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
     public DocumentVersion SaveVersion(
         SourceId source,
         IReadOnlyList<ElementRecord>? added = null,
@@ -476,6 +506,32 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         ModelSynced?.Invoke(this, model);
     }
 
+    public ModelRename RenameModel(string newId)
+    {
+        var oldId = _active;
+        var source = DocumentOf(DocumentKey.Current(oldId)).Source;
+        var rename = new ModelRename(oldId, newId, source, source);
+        _documents[newId] = _documents[oldId].Select(rename.Map).ToList();
+        _documents.Remove(oldId);
+        if (_primary == oldId)
+        {
+            _primary = newId;
+        }
+
+        _active = newId;
+        View = rename.Map(View);
+        _selection = _selection.Select(rename.Map).ToList();
+        RefreshData();
+        Data = Data with { CurrentModel = rename.Map(Data.CurrentModel) };
+        ModelRenamed?.Invoke(this, rename);
+        return rename;
+    }
+
+    public void RaiseViewFiltersRemoved(DocumentKey model)
+    {
+        ViewFiltersRemoved?.Invoke(this, model);
+    }
+
     public FakeSource SourceOf(DocumentKey document)
     {
         return _sources[DocumentOf(document).Source];
@@ -530,11 +586,23 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
             ScopeKind.Selection => _selection.Where(element => element.Document == document)
                 .Select(element => element.Id)
                 .ToList(),
-            ScopeKind.ActiveView => elements.Where(element => element.Id % 3 == 0)
+            ScopeKind.ActiveView => elements.Where(element => element.Id % 3 == 0 && IsDrawn(document, element))
                 .Select(element => element.Id)
                 .ToList(),
             _ => elements.Select(element => element.Id).ToList()
         };
+    }
+
+    private bool IsDrawn(DocumentKey document, ElementRecord element)
+    {
+        if (ViewHiddenCategories.Count == 0 && ViewKeptCategories is null)
+        {
+            return true;
+        }
+
+        var snapshot = SnapshotOf(document);
+        var category = snapshot.Groups[snapshot.Types[snapshot.TypeIndexOf(element.TypeId)].GroupIndex].GroupId;
+        return !ViewHiddenCategories.Contains(category) && ViewKeptCategories?.Contains(category) != false;
     }
 
     private DocumentInfo DocumentOf(DocumentKey key)

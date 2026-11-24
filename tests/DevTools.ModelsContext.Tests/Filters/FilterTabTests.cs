@@ -1,6 +1,7 @@
 using DevTools.ModelsContext.Documents;
 using DevTools.ModelsContext.Filters;
 using DevTools.ModelsContext.Parameters;
+using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Tests.Shared;
 using Moq;
 using System.Collections.Specialized;
@@ -103,6 +104,55 @@ public sealed class FilterTabTests
 
         Assert.AreEqual(before - 1, filter.Runner.Result.Count);
         Assert.IsEmpty(await fixture.Model.GetSelectionAsync(CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task NewFilterSummaryReadsNone()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+
+        fixture.Filter.Library.AddCommand.Execute(null);
+
+        Assert.AreEqual(CategoryPickerViewModel.NoCategories, fixture.Filter.Categories.Summary);
+    }
+
+    [TestMethod]
+    public async Task ConditionSummaryReadsAll()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var filter = fixture.Filter;
+        filter.Library.AddCommand.Execute(null);
+        var raised = new List<string?>();
+        filter.Categories.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        filter.Root.AddConditionCommand.Execute(null);
+
+        Assert.AreEqual(CategoryPickerViewModel.AllCategories, filter.Categories.Summary);
+        CollectionAssert.Contains(raised, nameof(CategoryPickerViewModel.Summary));
+    }
+
+    [TestMethod]
+    public async Task UnloadedLinkSkipsFilter()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        var filter = fixture.Filter;
+        filter.Library.AddCommand.Execute(null);
+        filter.Root.AddConditionCommand.Execute(null);
+        var rule = (RuleViewModel)filter.Root.Children[0];
+        rule.SelectedParameter = rule.Parameters.Single(parameter => parameter.DisplayName == "Comments");
+        rule.Value = "Check";
+        fixture.Settle();
+
+        fixture.Model.SetLoaded(FakeModelGenerator.Mep, false);
+        fixture.Settle();
+        rule.Value = "Check ";
+        rule.Value = "Check";
+        fixture.Settle();
+
+        Assert.IsNull(fixture.Panel.Message);
+        Assert.IsTrue(filter.Runner.Result.Any(element => element.Document == FakeModelGenerator.Current));
+        Assert.IsFalse(filter.Runner.Result.Any(element => element.Document == FakeModelGenerator.Mep));
     }
 
     [TestMethod]

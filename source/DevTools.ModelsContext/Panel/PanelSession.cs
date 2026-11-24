@@ -7,7 +7,12 @@ internal sealed class PanelSession(DocumentKey model)
 {
     private CancellationTokenSource _jobs = new();
 
-    public DocumentKey Model { get; } = model;
+    public DocumentKey Model { get; private set; } = model;
+
+    public void Rename(ModelRename rename)
+    {
+        Model = rename.Map(Model);
+    }
 
     public int Generation { get; private set; }
 
@@ -18,8 +23,6 @@ internal sealed class PanelSession(DocumentKey model)
     public ExplorerState? Explorer { get; set; }
 
     public FilterState? Filter { get; set; }
-
-    public IReadOnlyList<DocumentKey>? Ticked { get; set; }
 
     public JobTicket Begin()
     {

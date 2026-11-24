@@ -23,4 +23,8 @@ public interface IModelEvents
     event EventHandler<bool>? BusyChanged;
 
     event EventHandler<SourceId>? ParameterDefinitionsChanged;
+
+    event EventHandler<DocumentKey>? ViewFiltersRemoved;
+
+    event EventHandler<ModelRename>? ModelRenamed;
 }

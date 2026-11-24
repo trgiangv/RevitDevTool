@@ -41,6 +41,8 @@ internal sealed class HostEventRelay : IDisposable
         events.ModelSynced += OnModelSynced;
         events.LinkStatusChanged += OnLinkStatusChanged;
         events.ParameterDefinitionsChanged += OnParameterDefinitionsChanged;
+        events.ViewFiltersRemoved += OnViewFiltersRemoved;
+        events.ModelRenamed += OnModelRenamed;
     }
 
     public void Dispose()
@@ -54,6 +56,8 @@ internal sealed class HostEventRelay : IDisposable
         events.ModelSynced -= OnModelSynced;
         events.LinkStatusChanged -= OnLinkStatusChanged;
         events.ParameterDefinitionsChanged -= OnParameterDefinitionsChanged;
+        events.ViewFiltersRemoved -= OnViewFiltersRemoved;
+        events.ModelRenamed -= OnModelRenamed;
         _deltaDebouncer.Dispose();
         _documentsDebouncer.Dispose();
         _viewDebouncer.Dispose();
@@ -182,6 +186,29 @@ internal sealed class HostEventRelay : IDisposable
         }
     }
 
+    private void OnModelRenamed(object? sender, ModelRename rename)
+    {
+        lock (_gate)
+        {
+            if (_incomingView is { } view)
+            {
+                _incomingView = rename.Map(view);
+            }
+
+            for (var index = 0; index < _deltas.Count; index++)
+            {
+                _deltas[index] = _deltas[index] with { Source = rename.Map(_deltas[index].Source) };
+            }
+        }
+
+        _owner.Rename(rename);
+    }
+
+    private void OnViewFiltersRemoved(object? sender, DocumentKey model)
+    {
+        _visibility.DropLinkFilters(model);
+    }
+
     private async Task OnElementsSettledAsync()
     {
         List<ElementDelta> deltas;
@@ -226,6 +253,14 @@ internal sealed class HostEventRelay : IDisposable
             return;
         }
 
+        var documents = _owner.ContextBar.Documents.Select(item => item.Info).ToList();
+        var ticks = await _sessions.ViewTicksAsync(documents, session.Token);
+        if (!ReferenceEquals(session, _sessions.Active))
+        {
+            return;
+        }
+
+        _owner.SetDocumentsQuietly(documents, ticks);
         _owner.ShowView(view);
         await _owner.TemporaryBar.RefreshAsync(session.Token);
         await _owner.RefreshAsync();

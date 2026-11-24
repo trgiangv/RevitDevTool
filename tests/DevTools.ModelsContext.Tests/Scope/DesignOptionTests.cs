@@ -40,7 +40,7 @@ public sealed class DesignOptionTests
     public void ScopesFollowOptionRule()
     {
         var snapshot = Snapshot();
-        var info = new DocumentInfo(DocumentKey.Current("options"), Source, "options", true, DocumentCapabilities.WholeModel);
+        var info = new DocumentInfo(DocumentKey.Current("options"), Source, "options", true, DocumentCapabilities.LinkInstance);
         var whole = new DocumentScope(info, "options", snapshot, null);
         var view = new DocumentScope(info, "options", snapshot, new HashSet<long> { Main, Secondary });
 

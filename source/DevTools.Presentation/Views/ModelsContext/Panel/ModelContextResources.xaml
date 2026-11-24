@@ -1,6 +1,7 @@
 <ResourceDictionary x:Class="DevTools.Presentation.Views.ModelsContext.Panel.ModelContextResources"
                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:hc="https://handyorg.github.io/handycontrol"
                     xmlns:theme="clr-namespace:DevTools.UI.Theme;assembly=DevTools.UI">
 
     <ResourceDictionary.MergedDictionaries>
@@ -31,6 +32,15 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <Style x:Key="SelectionSyncToggle"
+           BasedOn="{StaticResource ToggleButtonPrimary}"
+           TargetType="ToggleButton">
+        <Setter Property="hc:IconElement.Geometry" Value="{DynamicResource SelectionSync}" />
+        <Setter Property="hc:IconElement.Width" Value="14" />
+        <Setter Property="hc:IconElement.Height" Value="14" />
+        <Setter Property="AutomationProperties.Name" Value="Selection sync" />
     </Style>
 
     <Style x:Key="ErrorText"

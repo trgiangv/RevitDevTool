@@ -88,6 +88,10 @@ internal sealed class FilterCompiler(
             ]),
             FilterOperator.Defined or FilterOperator.NotEmpty or FilterOperator.Empty =>
                 Compiled.Or(parameters.Select(parameter => Presence(parameter, rule.Operator))),
+            FilterOperator.NotEqual => Compiled.Or(parameters.Select(parameter => Compiled.And([
+                Presence(parameter, FilterOperator.Defined),
+                Compiled.Or([Presence(parameter, FilterOperator.Empty), Build(parameter, rule)])
+            ]))),
             _ => Compiled.Or(parameters.Select(parameter =>
                 Compiled.And([Presence(parameter, Guard(parameter)), Build(parameter, rule)])))
         };
@@ -197,8 +201,7 @@ internal sealed class FilterCompiler(
         long[] targets = values.TryGetValue(text, out var named) ? named
             : long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) ? [id]
             : [];
-        return RevitRuleFactory.Reference(parameter.ElementId, rule.Operator, targets,
-            Presence(parameter, FilterOperator.NotEmpty));
+        return RevitRuleFactory.Reference(parameter.ElementId, rule.Operator, targets);
     }
 
     private Compiled OrdersText()
@@ -243,8 +246,6 @@ internal sealed class FilterCompiler(
             return rule.Operator == FilterOperator.NotEqual ? Compiled.And(rules) : Compiled.Or(rules);
         }
 
-        return rule.Operator == FilterOperator.NotEqual
-            ? Presence(parameter, FilterOperator.NotEmpty)
-            : Compiled.None;
+        return rule.Operator == FilterOperator.NotEqual ? Compiled.All : Compiled.None;
     }
 }

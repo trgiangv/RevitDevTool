@@ -101,7 +101,7 @@ public sealed class HiddenRuleTests
             .AddElement(new ElementRecord(Room, 10, 0, 0, false, ViewDraw.Spatial))
             .AddElement(new ElementRecord(Area, 10, 0, 0, false, ViewDraw.AreaPlan))
             .Build();
-        var info = new DocumentInfo(key, Source, "rule", true, DocumentCapabilities.WholeModel);
+        var info = new DocumentInfo(key, Source, "rule", true, DocumentCapabilities.LinkInstance);
         return new DocumentScope(info, "rule", snapshot, new HashSet<long> { Shown });
     }
 }

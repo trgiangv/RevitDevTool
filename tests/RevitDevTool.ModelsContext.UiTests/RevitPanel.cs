@@ -222,8 +222,7 @@ internal sealed class RevitPanel : IDisposable
 
     public string Message()
     {
-        return string.Join(" | ", new[] { "ModelContext.Message", "Explorer.Message" }
-            .Select(id => Shown(id)?.Name).Where(text => !string.IsNullOrWhiteSpace(text)));
+        return Shown("ModelContext.Message")?.Name is { } text && !string.IsNullOrWhiteSpace(text) ? text : string.Empty;
     }
 
     public string NewMessage(string before)

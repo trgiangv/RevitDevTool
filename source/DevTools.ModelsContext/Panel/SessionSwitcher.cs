@@ -1,3 +1,4 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Documents;
 using DevTools.ModelsContext.Visibility;
 
@@ -45,7 +46,7 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
             return;
         }
 
-        await ShowAsync(ticket, documents, session.Ticked);
+        await ShowAsync(ticket, documents);
     }
 
     public async Task ResumeAsync(IReadOnlyList<DocumentInfo> documents)
@@ -62,7 +63,7 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
             return;
         }
 
-        await ShowAsync(session.Begin(), documents, null);
+        await ShowAsync(session.Begin(), documents);
     }
 
     public async Task ReloadDocumentsAsync()
@@ -108,6 +109,25 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
         {
             runtime.Forget([info.Source]);
             await owner.RefreshAsync();
+        }
+    }
+
+    public void Rename(ModelRename rename)
+    {
+        if (!_sessions.TryGetValue(rename.OldId, out var session))
+        {
+            return;
+        }
+
+        _sessions.Remove(rename.OldId);
+        session.Rename(rename);
+        _sessions[rename.NewId] = session;
+        lock (_gate)
+        {
+            if (_reloadedSources.Remove(rename.OldSource))
+            {
+                _reloadedSources.Add(rename.NewSource);
+            }
         }
     }
 
@@ -173,7 +193,6 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
 
         session.Explorer = owner.Explorer.Capture();
         session.Filter = owner.Filter.Capture();
-        session.Ticked = owner.ContextBar.TickedDocuments;
         session.Cancel();
     }
 
@@ -184,10 +203,28 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
         owner.ShowNoModel();
     }
 
-    private async Task ShowAsync(
-        JobTicket ticket,
+    public async Task<IReadOnlyList<DocumentKey>> ViewTicksAsync(
         IReadOnlyList<DocumentInfo> documents,
-        IReadOnlyCollection<DocumentKey>? ticks)
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyCollection<DocumentKey> links;
+        try
+        {
+            links = await runtime.Services.Source.GetViewLinksAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            runtime.Logger.Swallowed(exception, "View links", Active?.Model.ModelId ?? string.Empty);
+            links = [];
+        }
+
+        return documents
+            .Where(info => info.IsLoaded && (info.Key.IsCurrentModel || links.Contains(info.Key)))
+            .Select(info => info.Key)
+            .ToList();
+    }
+
+    private async Task ShowAsync(JobTicket ticket, IReadOnlyList<DocumentInfo> documents)
     {
         await ApplyReloadedLinksAsync(ticket.Token);
         if (!owner.IsCurrent(ticket))
@@ -195,15 +232,21 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
             return;
         }
 
-        runtime.Forget(runtime.Store.SetDocuments(documents));
-        owner.SetDocumentsQuietly(documents, ticks);
-        var state = await runtime.Services.ViewActions.ReadTemporaryStateAsync(ticket.Token);
+        var ticks = await ViewTicksAsync(documents, ticket.Token);
         if (!owner.IsCurrent(ticket))
         {
             return;
         }
 
-        owner.ShowView(state?.View);
+        runtime.Forget(runtime.Store.SetDocuments(documents));
+        owner.SetDocumentsQuietly(documents, ticks);
+        var active = await runtime.Services.ViewActions.ReadActiveViewAsync(ticket.Token);
+        if (!owner.IsCurrent(ticket))
+        {
+            return;
+        }
+
+        owner.ShowView(active?.View);
         await owner.TemporaryBar.RefreshAsync(ticket.Token);
         await owner.RefreshAsync();
         await owner.ResyncExplorerAsync();

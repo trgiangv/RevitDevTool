@@ -92,11 +92,11 @@ public sealed class PanelBarsTests
 
         var menu = fixture.Panel.ContextMenu;
         Assert.IsTrue(menu[MenuAction.Halftone].IsEnabled);
-        Assert.AreEqual(VisibilityReasons.LinkFilterNote, menu[MenuAction.Halftone].ToolTipText);
-        Assert.AreEqual(VisibilityReasons.LinkFilterNote, menu[MenuAction.Color].ToolTipText);
+        Assert.AreEqual(VisibilityText.LinkFilterNote, menu[MenuAction.Halftone].ToolTipText);
+        Assert.AreEqual(VisibilityText.LinkFilterNote, menu[MenuAction.Color].ToolTipText);
         Assert.IsTrue(menu[MenuAction.Isolate].IsEnabled);
-        Assert.IsTrue(menu[MenuAction.Isolate].UsesReferenceCommands);
-        Assert.IsTrue(menu[MenuAction.HideShow].UsesReferenceCommands);
+        Assert.AreEqual(VisibilityText.SavedWithView, menu[MenuAction.Isolate].Note);
+        Assert.AreEqual(VisibilityText.SavedWithView, menu[MenuAction.HideShow].Note);
     }
 
     [TestMethod]
@@ -108,7 +108,7 @@ public sealed class PanelBarsTests
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
 
         var menu = fixture.Panel.ContextMenu;
-        Assert.AreEqual(VisibilityReasons.LinkFiltersUnavailable, menu[MenuAction.Halftone].DisabledReason);
+        Assert.AreEqual(VisibilityText.LinkFiltersUnavailable, menu[MenuAction.Halftone].DisabledReason);
         Assert.IsTrue(menu[MenuAction.Isolate].IsEnabled);
     }
 
@@ -125,9 +125,9 @@ public sealed class PanelBarsTests
 
         var plan = fixture.Actions.ExecutedPlans.Single();
         var step = (LinkIsolateStep)plan.Steps.Single();
-        var journaled = fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList();
+        var journaled = fixture.Panel.Journal.LinkHides.Select(hide => hide.Element).ToList();
         Assert.IsNotNull(plan.ViewId);
-        Assert.AreEqual(kept.Count, step.KeepIds.Count);
+        Assert.AreEqual(kept.Count, step.KeptIds.Count);
         Assert.IsNotEmpty(journaled);
         Assert.IsFalse(journaled.Any(kept.Contains));
         Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Pipes").Eye);
@@ -147,7 +147,7 @@ public sealed class PanelBarsTests
         fixture.Model.UniqueIdGate.SetResult(true);
         await isolate;
 
-        Assert.IsNotEmpty(fixture.Panel.Journal.LinkEntries);
+        Assert.IsNotEmpty(fixture.Panel.Journal.LinkHides);
         Assert.IsTrue(fixture.Panel.IsTemporaryBarVisible);
     }
 
@@ -158,12 +158,12 @@ public sealed class PanelBarsTests
         fixture.Panel.ContextBar.Tick([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
-        fixture.Actions.ShowError = VisibilityReasons.NotShown;
+        fixture.Actions.ShowError = VisibilityText.NotShown;
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Walls"));
 
         await fixture.Panel.ContextMenu[MenuAction.HideShow].Command.ExecuteAsync(null);
 
-        Assert.AreEqual(VisibilityReasons.LinkedStayHidden, fixture.Panel.Message);
+        Assert.AreEqual(VisibilityText.LinkedStayHidden, fixture.Panel.Message);
     }
 
     [TestMethod]
@@ -174,12 +174,12 @@ public sealed class PanelBarsTests
         var ducts = fixture.Group(Mep, "Ducts");
         fixture.Explorer.OpenMenu(ducts);
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
-        var rest = fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList();
+        var rest = fixture.Panel.Journal.LinkHides.Select(hide => hide.Element).ToList();
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
         CollectionAssert.AreEquivalent(rest, fixture.Actions.ShownLinked.Single().ToList());
-        Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
+        Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
         Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Pipes").Eye);
     }
 
@@ -189,14 +189,14 @@ public sealed class PanelBarsTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Tick([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
-        fixture.Actions.ShowError = VisibilityReasons.NotShown;
+        fixture.Actions.ShowError = VisibilityText.NotShown;
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
         var first = fixture.Panel.Message;
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
-        Assert.AreEqual(VisibilityReasons.LinkedStayHidden, first);
-        Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
+        Assert.AreEqual(VisibilityText.LinkedStayHidden, first);
+        Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
         Assert.HasCount(1, fixture.Actions.ShownLinked);
     }
 
@@ -208,14 +208,14 @@ public sealed class PanelBarsTests
         var ducts = fixture.Group(Mep, "Ducts");
         fixture.Explorer.OpenMenu(ducts);
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
-        var rest = fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList();
+        var rest = fixture.Panel.Journal.LinkHides.Select(hide => hide.Element).ToList();
         var walls = fixture.Group(Current, "Walls");
         Assert.AreEqual(RowEye.Hidden, walls.Eye);
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(walls);
 
         CollectionAssert.AreEquivalent(rest, fixture.Actions.ShownLinked.Single().ToList());
-        Assert.IsEmpty(fixture.Panel.Journal.LinkEntries);
+        Assert.IsEmpty(fixture.Panel.Journal.LinkHides);
         Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Pipes").Eye);
     }
 
@@ -226,12 +226,12 @@ public sealed class PanelBarsTests
         fixture.Panel.ContextBar.Tick([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
-        fixture.Actions.ShowError = VisibilityReasons.NotShown;
+        fixture.Actions.ShowError = VisibilityText.NotShown;
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
-        Assert.AreEqual(VisibilityReasons.LinkedStayHidden, fixture.Explorer.Message);
-        Assert.IsEmpty(fixture.Panel.Journal.LinkEntries);
+        Assert.AreEqual(VisibilityText.LinkedStayHidden, fixture.Panel.Message);
+        Assert.IsEmpty(fixture.Panel.Journal.LinkHides);
     }
 
     [TestMethod]
@@ -247,7 +247,7 @@ public sealed class PanelBarsTests
 
         Assert.AreEqual(1, fixture.Actions.KeepCount);
         Assert.IsEmpty(fixture.Actions.ShownLinked);
-        Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
+        Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
     }
 
     [TestMethod]
@@ -308,9 +308,9 @@ public sealed class PanelBarsTests
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        Assert.IsTrue(fixture.Actions.ExecutedPlans.Single().UsesReferenceCommands);
+        Assert.IsTrue(fixture.Actions.ExecutedPlans.Single().UsesLinkHide);
         CollectionAssert.AreEquivalent(ducts.ToList(),
-            fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList());
+            fixture.Panel.Journal.LinkHides.Select(hide => hide.Element).ToList());
         Assert.AreEqual(1, fixture.Panel.TemporaryBar.ChangeCount);
     }
 
@@ -326,10 +326,10 @@ public sealed class PanelBarsTests
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        Assert.IsNull(fixture.Explorer.Message);
+        Assert.IsNull(fixture.Panel.Message);
         CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Actions.ShownLinked.Single().ToList());
         CollectionAssert.AreEquivalent(pipes.ToList(),
-            fixture.Panel.Journal.LinkEntries.Select(entry => entry.Element).ToList());
+            fixture.Panel.Journal.LinkHides.Select(hide => hide.Element).ToList());
         Assert.AreEqual(0, fixture.Actions.ResetCount);
         Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
         Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Pipes").Eye);
@@ -346,7 +346,7 @@ public sealed class PanelBarsTests
 
         var item = fixture.Panel.ContextMenu[MenuAction.HideShow];
         Assert.AreEqual("Show", item.Text);
-        Assert.AreEqual(VisibilityReasons.ShowFromReveal, item.DisabledReason);
+        Assert.AreEqual(VisibilityText.ShowFromReveal, item.DisabledReason);
     }
 
     [TestMethod]
@@ -361,7 +361,7 @@ public sealed class PanelBarsTests
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
         CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Actions.ShownLinked.Single().ToList());
-        Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
+        Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
         Assert.IsFalse(fixture.Panel.IsTemporaryBarVisible);
     }
 
@@ -402,7 +402,7 @@ public sealed class PanelBarsTests
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
         Assert.IsEmpty(fixture.Actions.ShownLinked);
-        Assert.IsNotEmpty(fixture.Panel.Journal.LinkEntries);
+        Assert.IsNotEmpty(fixture.Panel.Journal.LinkHides);
         Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
     }
 
@@ -417,7 +417,7 @@ public sealed class PanelBarsTests
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
 
         Assert.IsEmpty(fixture.Actions.ShownLinked);
-        Assert.AreEqual(JournalState.Empty, fixture.Panel.Journal);
+        Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
     }
 
     [TestMethod]
@@ -432,9 +432,9 @@ public sealed class PanelBarsTests
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         Assert.AreEqual(1, fixture.Actions.ResetCount);
-        Assert.IsFalse(fixture.Actions.ExecutedPlans.Any(plan => plan.UsesReferenceCommands));
+        Assert.IsFalse(fixture.Actions.ExecutedPlans.Any(plan => plan.UsesLinkHide));
         Assert.IsEmpty(fixture.Actions.ShownLinked);
-        Assert.IsNotEmpty(fixture.Panel.Journal.LinkEntries);
+        Assert.IsNotEmpty(fixture.Panel.Journal.LinkHides);
         Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
         Assert.AreEqual(2, fixture.Panel.TemporaryBar.ChangeCount);
     }
@@ -447,7 +447,7 @@ public sealed class PanelBarsTests
             Documents = data.Documents
                 .Select(document => document.Key.IsCurrentModel
                     ? document
-                    : document with { Capabilities = document.Capabilities & ~DocumentCapabilities.ReferenceUnhide })
+                    : document with { Capabilities = document.Capabilities & ~DocumentCapabilities.LinkShow })
                 .ToList()
         };
     }
@@ -459,7 +459,7 @@ public sealed class PanelBarsTests
 
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
-        Assert.AreEqual(ContextMenuViewModel.NeedsThreeDView,
+        Assert.AreEqual(VisibilityText.Needs3DView,
             fixture.Panel.ContextMenu[MenuAction.SectionBox].DisabledReason);
     }
 
@@ -566,7 +566,7 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task ViewChangeKeepsCurrentUnticked()
+    public async Task ViewChangeResetsManualTicks()
     {
         using var fixture = await PanelFixture.OpenAsync();
         UntickCurrentForMep(fixture);
@@ -574,7 +574,79 @@ public sealed class PanelBarsTests
         fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
         fixture.Settle();
 
-        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+    }
+
+    [TestMethod]
+    public async Task OpenTicksViewLinks()
+    {
+        var model = new FakeModel(TestModel.SmallData);
+        model.ViewLinks.Add(Mep);
+        using var fixture = PanelFixture.Create(model);
+
+        await fixture.Panel.InitializeAsync(CancellationToken.None);
+
+        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+    }
+
+    [TestMethod]
+    public async Task ViewChangeTicksViewLinks()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.ViewLinks.Add(Mep);
+
+        fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
+        fixture.Settle();
+
+        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+    }
+
+    [TestMethod]
+    public async Task ManualTickHoldsUntilViewChange()
+    {
+        var model = new FakeModel(TestModel.SmallData);
+        model.ViewLinks.Add(Mep);
+        using var fixture = PanelFixture.Create(model);
+        await fixture.Panel.InitializeAsync(CancellationToken.None);
+        fixture.Panel.ContextBar.Documents.Single(item => item.Key == Mep).IsChecked = false;
+        fixture.Settle();
+
+        fixture.Model.RaiseDocumentsChanged();
+        fixture.Settle();
+        var held = fixture.Panel.ContextBar.TickedDocuments.ToArray();
+        fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
+        fixture.Settle();
+
+        CollectionAssert.AreEqual(new[] { Current }, held);
+        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+    }
+
+    [TestMethod]
+    public async Task HiddenLinkNotTicked()
+    {
+        var model = new FakeModel(TestModel.SmallData);
+        model.ViewLinks.Add(Mep);
+        using var fixture = PanelFixture.Create(model);
+
+        await fixture.Panel.InitializeAsync(CancellationToken.None);
+
+        var ticked = fixture.Panel.ContextBar.TickedDocuments;
+        CollectionAssert.DoesNotContain(ticked.ToList(), FakeModelGenerator.ArchFirst);
+        CollectionAssert.DoesNotContain(ticked.ToList(), FakeModelGenerator.ArchSecond);
+    }
+
+    [TestMethod]
+    public async Task UnloadedViewLinkStaysUnticked()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.SetLoaded(Mep, false);
+        fixture.Settle();
+        fixture.Model.ViewLinks.Add(Mep);
+
+        fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
+        fixture.Settle();
+
+        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
     }
 
     [TestMethod]

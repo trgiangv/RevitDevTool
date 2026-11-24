@@ -36,12 +36,13 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         TemporaryBar = new TemporaryBarViewModel(_runtime, _visibility);
         WhyHidden = new WhyHiddenStripViewModel(_runtime, _visibility);
         ContextMenu = new ContextMenuViewModel(_runtime, _visibility, WhyHidden);
-        Explorer = new ExplorerTabViewModel(_runtime, _visibility, ContextBar, ContextMenu);
+        Explorer = new ExplorerTabViewModel(_runtime, _visibility, ContextBar, ContextMenu, message => Message = message);
         Filter = new FilterTabViewModel(_runtime, _visibility, ContextMenu);
-        _loader = new ContextLoader(_runtime, this);
+        _loader = new ContextLoader(_runtime, this, _visibility);
         _sessions = new SessionSwitcher(_runtime, _visibility, this);
         Explorer.PropertyChanged += OnExplorerChanged;
         Explorer.RowSelectionChanged += OnExplorerRowsChanged;
+        Explorer.Pick.PropertyChanged += OnPickChanged;
         _runtime.Failed += OnFailed;
         _runtime.ActivityChanged += OnActivityChanged;
         ContextBar.Changed += OnContextChanged;
@@ -106,7 +107,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     public int SessionCount => _sessions.Count;
 
-    public JournalState Journal => _visibility.Journal;
+    public JournalPage Journal => _visibility.Journal;
 
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
@@ -134,6 +135,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         _runtime.ActivityChanged -= OnActivityChanged;
         Explorer.PropertyChanged -= OnExplorerChanged;
         Explorer.RowSelectionChanged -= OnExplorerRowsChanged;
+        Explorer.Pick.PropertyChanged -= OnPickChanged;
         ContextMenu.PropertyChanged -= OnMenuChanged;
         ContextMenu.Opened -= OnMenuOpened;
         WhyHidden.Close();
@@ -169,6 +171,20 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         {
             _suppressContextChanged = false;
         }
+    }
+
+    internal void Rename(ModelRename rename)
+    {
+        var ticks = ContextBar.TickedDocuments.Select(rename.Map).ToList();
+        var documents = ContextBar.Documents.Select(item => rename.Map(item.Info)).ToList();
+        _runtime.Store.Rename(rename);
+        _runtime.Forget([rename.OldSource]);
+        _runtime.Journal.Rename(rename);
+        _visibility.Rename(rename);
+        _sessions.Rename(rename);
+        SetDocumentsQuietly(documents, ticks);
+        NotifyActiveModel();
+        _ = RefreshAsync();
     }
 
     internal void ShowView(ViewInfo? view)
@@ -210,7 +226,20 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     partial void OnIsBusyChanged(bool value)
     {
-        _runtime.IsBusy = value;
+        ApplyBusy();
+    }
+
+    private void OnPickChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ExplorerPick.IsPicking))
+        {
+            ApplyBusy();
+        }
+    }
+
+    private void ApplyBusy()
+    {
+        _runtime.IsBusy = IsBusy || Explorer.Pick.IsPicking;
         ContextMenu.Refresh();
     }
 

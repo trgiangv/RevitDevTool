@@ -18,6 +18,8 @@ internal sealed class PanelUi : IDisposable
         LinkElements = 2_000,
     }));
 
+    private static readonly Lazy<FakeModelData> WithSubcategories = new(() => FakeModelGenerator.WithSubcategories(Small.Value));
+
     private PanelUi(FakeHost fake, FakeClock clock, ModelContextViewModel panel, ModelContextView view, ThemeHost host)
     {
         Model = fake.Model;
@@ -40,9 +42,9 @@ internal sealed class PanelUi : IDisposable
 
     public ThemeHost Host { get; }
 
-    public static PanelUi Open(double width = 320, AppTheme theme = AppTheme.Dark)
+    public static PanelUi Open(double width = 320, AppTheme theme = AppTheme.Dark, bool subcategories = false)
     {
-        var fake = new FakeHost(new FakeModel(Small.Value));
+        var fake = new FakeHost(new FakeModel(subcategories ? WithSubcategories.Value : Small.Value));
         var clock = new FakeClock();
         var (panel, view) = WpfSta.Invoke(() =>
         {

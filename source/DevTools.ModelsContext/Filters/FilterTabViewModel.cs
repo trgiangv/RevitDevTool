@@ -26,7 +26,8 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         _runtime = runtime;
         _visibility = visibility;
         _menu = menu;
-        Categories = new CategoryPickerViewModel(() => IsReadOnly, OnCategoriesChanged);
+        Categories = new CategoryPickerViewModel(() => IsReadOnly, OnCategoriesChanged,
+            emptyMatchesAll: () => Library is { Current.IsCustom: false } || Root is { Children.Count: > 0 });
         Runner = new FilterRunner(runtime, Job, visibility.RefreshHiddenAsync);
         visibility.Watch(() => Runner.Result);
         Library = new FilterLibraryViewModel(runtime, Runner, this);
@@ -50,7 +51,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         get
         {
             var groups = Categories.Checked();
-            return new EffectiveScope(_data.Documents.Select(document => document.Info.Source).Distinct().ToList(),
+            return new EffectiveScope(LoadedDocuments().Select(document => document.Info.Source).Distinct().ToList(),
                 groups.Count == 0 ? null : groups);
         }
     }
@@ -98,6 +99,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
 
     void IFilterEditor.OnEdited()
     {
+        Categories.RefreshSummary();
         if (_loading || IsReadOnly)
         {
             return;
@@ -222,7 +224,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         _token = cancellationToken;
         _examples.Clear();
         Runner.Load(data, cancellationToken);
-        Categories.Rebuild(data.MergedGroups());
+        Categories.Rebuild(CategoryGroups(data));
         await LoadParametersAsync(cancellationToken);
         await Library.LoadAsync(data, cancellationToken);
     }
@@ -254,6 +256,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
 
     partial void OnRootChanged(RuleSetViewModel value)
     {
+        Categories.RefreshSummary();
         RefreshScope(value);
     }
 
@@ -273,9 +276,9 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
     private async Task LoadParametersAsync(CancellationToken cancellationToken)
     {
         var catalogs = new List<SourceCatalog>();
-        foreach (var source in _data.Documents.Select(document => document.Snapshot.Source).Distinct())
+        foreach (var source in LoadedDocuments().Select(document => document.Snapshot.Source).Distinct())
         {
-            var groups = _data.Documents
+            var groups = LoadedDocuments()
                 .Where(document => document.Snapshot.Source == source)
                 .SelectMany(document => document.Snapshot.Groups.Select(group => group.GroupId))
                 .ToHashSet();
@@ -284,6 +287,29 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
 
         _scopes.Set(catalogs, DocumentLabel, Categories.Label);
         RefreshScope(Root);
+    }
+
+    private IReadOnlyList<GroupCount> CategoryGroups(ContextData data)
+    {
+        var snapshots = data.Known
+            .Where(info => info.IsLoaded)
+            .Select(info => _runtime.Store.TryGet(info.Key))
+            .OfType<DocumentSnapshot>()
+            .ToList();
+        if (data.Scope != ScopeKind.Selection)
+        {
+            return CategoryTree.WithParents(data.MergedGroups(), snapshots);
+        }
+
+        var known = snapshots.Select(snapshot => SnapshotAggregator.GroupsOf(snapshot, snapshot.Counts)
+            .Select(group => group with { Count = 0 }));
+        return CategoryTree.WithParents(
+            SnapshotAggregator.MergeGroups(data.Documents.Select(document => document.Groups()).Concat(known)), snapshots);
+    }
+
+    private IEnumerable<DocumentScope> LoadedDocuments()
+    {
+        return _data.Documents.Where(document => document.Info.IsLoaded);
     }
 
     private void OnCategoriesChanged()

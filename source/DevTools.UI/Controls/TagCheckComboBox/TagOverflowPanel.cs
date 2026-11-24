@@ -131,8 +131,18 @@ public class TagOverflowPanel : Panel
             }
         }
 
-        width = WidthWithOverflow(tags, 0, unbounded);
-        return 0;
+        if (tags.Count == 0)
+        {
+            width = WidthWithOverflow(tags, 0, unbounded);
+            return 0;
+        }
+
+        var overflowWidth = MeasureOverflow(tags, 1, unbounded);
+        var rest = tags.Count > 1 ? overflowWidth + Spacing : 0;
+        var first = Math.Max(0, available - rest);
+        tags[0].Measure(new Size(first, unbounded.Height));
+        width = tags[0].DesiredSize.Width + rest;
+        return 1;
     }
 
     private double WidthWithOverflow(List<UIElement> tags, int visible, Size unbounded)

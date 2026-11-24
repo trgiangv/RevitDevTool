@@ -12,12 +12,17 @@ using System.Windows.Threading;
 
 namespace RevitDevTool.Tools.ModelsContext.Documents;
 
-internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache parameterCache, Dispatcher dispatcher)
+internal sealed class RevitModelEvents(
+    ScopeCache scopes,
+    ParameterCache parameterCache,
+    RevitViewActions viewActions,
+    Dispatcher dispatcher)
     : IRevitModelEvents
 {
     private UIControlledApplication? _application;
     private readonly Dictionary<string, TrackedIds> _keys = new(StringComparer.Ordinal);
     private string? _activeModel;
+    private (Document Document, string ModelId)? _saving;
     private bool _isBusy = true;
     private bool _subscribed;
 
@@ -45,6 +50,10 @@ internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache paramet
 
     public event EventHandler<SourceId>? ParameterDefinitionsChanged;
 
+    public event EventHandler<DocumentKey>? ViewFiltersRemoved;
+
+    public event EventHandler<ModelRename>? ModelRenamed;
+
     public void Subscribe(UIControlledApplication application)
     {
         if (_subscribed)
@@ -61,9 +70,14 @@ internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache paramet
         controlled.DocumentCreated += OnDocumentCreated;
         controlled.DocumentSynchronizedWithCentral += OnSynchronized;
         controlled.DocumentReloadedLatest += OnReloadedLatest;
+        controlled.DocumentSaving += OnSaving;
+        controlled.DocumentSavingAs += OnSavingAs;
+        controlled.DocumentSaved += OnSaved;
+        controlled.DocumentSavedAs += OnSavedAs;
         application.ViewActivated += OnViewActivated;
         application.SelectionChanged += OnSelectionChanged;
-        LinkFilters.Subscribe(controlled);
+        LinkViewFilters.Subscribe(controlled);
+        LinkViewFilters.Cleaned += OnFiltersCleaned;
         _subscribed = true;
     }
 
@@ -82,9 +96,14 @@ internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache paramet
         controlled.DocumentCreated -= OnDocumentCreated;
         controlled.DocumentSynchronizedWithCentral -= OnSynchronized;
         controlled.DocumentReloadedLatest -= OnReloadedLatest;
+        controlled.DocumentSaving -= OnSaving;
+        controlled.DocumentSavingAs -= OnSavingAs;
+        controlled.DocumentSaved -= OnSaved;
+        controlled.DocumentSavedAs -= OnSavedAs;
         application.ViewActivated -= OnViewActivated;
         application.SelectionChanged -= OnSelectionChanged;
-        LinkFilters.Unsubscribe(controlled);
+        LinkViewFilters.Unsubscribe(controlled);
+        LinkViewFilters.Cleaned -= OnFiltersCleaned;
         _keys.Clear();
         _subscribed = false;
     }
@@ -193,7 +212,7 @@ internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache paramet
     {
         try
         {
-            if (!IsActive || LinkedHideShow.IsRunning)
+            if (!IsActive || LinkHideShow.IsRunning)
             {
                 return;
             }
@@ -214,7 +233,7 @@ internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache paramet
             scopes.Clear();
             SetBusy(false);
             var model = e.Document;
-            var view = RevitViewActions.ViewInfoOf(model, e.CurrentActiveView);
+            var view = CurrentView.InfoOf(model, e.CurrentActiveView);
             var modelId = DocumentRegistry.ModelIdOf(model);
             if (!string.Equals(_activeModel, modelId, StringComparison.Ordinal))
             {
@@ -256,6 +275,89 @@ internal sealed class RevitModelEvents(ScopeCache scopes, ParameterCache paramet
         {
             RevitProfiler.Logger.Swallowed(exception, "Document closing", _activeModel);
         }
+    }
+
+    private void OnSaving(object? sender, DocumentSavingEventArgs e)
+    {
+        BeginSave(e.Document);
+    }
+
+    private void OnSavingAs(object? sender, DocumentSavingAsEventArgs e)
+    {
+        BeginSave(e.Document);
+    }
+
+    private void OnSaved(object? sender, DocumentSavedEventArgs e)
+    {
+        EndSave(e.Document);
+    }
+
+    private void OnSavedAs(object? sender, DocumentSavedAsEventArgs e)
+    {
+        EndSave(e.Document);
+    }
+
+    private void BeginSave(Document document)
+    {
+        try
+        {
+            _saving = document.IsLinked ? null : (document, DocumentRegistry.ModelIdOf(document));
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Document saving", _activeModel);
+        }
+    }
+
+    private void EndSave(Document document)
+    {
+        try
+        {
+            if (_saving is not { } saving || !saving.Document.Equals(document))
+            {
+                return;
+            }
+
+            _saving = null;
+            var newId = DocumentRegistry.ModelIdOf(document);
+            if (!string.Equals(saving.ModelId, newId, StringComparison.Ordinal))
+            {
+                Rename(saving.ModelId, newId);
+            }
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Document saved", _activeModel);
+        }
+    }
+
+    private void Rename(string oldId, string newId)
+    {
+        viewActions.Rename(oldId, newId);
+        LinkViewFilters.Rename(oldId, newId);
+        if (_keys.TryGetValue(oldId, out var keys))
+        {
+            _keys.Remove(oldId);
+            _keys[newId] = keys;
+        }
+
+        if (string.Equals(_activeModel, oldId, StringComparison.Ordinal))
+        {
+            _activeModel = newId;
+        }
+
+        scopes.Clear();
+        var oldSource = DocumentRegistry.SourceOfModel(oldId);
+        parameterCache.Invalidate(oldSource);
+        var rename = new ModelRename(oldId, newId, oldSource, DocumentRegistry.SourceOfModel(newId));
+        Post(nameof(ModelRenamed), () => ModelRenamed?.Invoke(this, rename));
+        Post(nameof(DocumentsChanged), () => DocumentsChanged?.Invoke(this, EventArgs.Empty));
+    }
+
+    private void OnFiltersCleaned(string modelId)
+    {
+        var key = DocumentKey.Current(modelId);
+        Post(nameof(ViewFiltersRemoved), () => ViewFiltersRemoved?.Invoke(this, key));
     }
 
     private void OnDocumentClosed(object? sender, DocumentClosedEventArgs e)

@@ -97,6 +97,18 @@ public sealed class TagCheckComboBoxTests
     }
 
     [TestMethod]
+    public void NarrowBoxKeepsFirstTag()
+    {
+        var (box, docs) = CreateBox(3, width: 90);
+        using var host = ThemeHost.Show(box);
+        SelectAll(box, docs);
+
+        Assert.AreEqual(2, WpfSta.Invoke(() => box.HiddenTagCount));
+        var tags = host.FindInWindow(BoxId).FindAllChildren().Count(c => c.Properties.AutomationId.ValueOrDefault == BoxId + ".Tag");
+        Assert.AreEqual(1, tags);
+    }
+
+    [TestMethod]
     public void TagRemoveDeselectsItem()
     {
         var (box, docs) = CreateBox(3, width: 600);

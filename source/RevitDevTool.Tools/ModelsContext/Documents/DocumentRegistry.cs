@@ -33,7 +33,12 @@ internal static class DocumentRegistry
 
     public static SourceId SourceOf(Document model)
     {
-        return new SourceId(ModelPrefix + ModelIdOf(model));
+        return SourceOfModel(ModelIdOf(model));
+    }
+
+    public static SourceId SourceOfModel(string modelId)
+    {
+        return new SourceId(ModelPrefix + modelId);
     }
 
     public static SourceId LinkSourceOf(RevitLinkInstance instance)

@@ -21,8 +21,6 @@ public enum MenuAction
 
 public sealed partial class MenuItemViewModel : ObservableObject
 {
-    public const string LinkCommandsNote = "Goes through link commands";
-
     internal MenuItemViewModel(MenuAction? action, string text, string iconKey, string? shortcut, Func<Task>? execute)
     {
         Action = action;
@@ -49,9 +47,7 @@ public sealed partial class MenuItemViewModel : ObservableObject
 
     public bool IsEnabled => DisabledReason is null;
 
-    public string? ToolTipText => DisabledReason
-                                  ?? (UsesLinkFilter ? VisibilityReasons.LinkFilterNote : null)
-                                  ?? (UsesReferenceCommands ? LinkCommandsNote : null);
+    public string? ToolTipText => DisabledReason ?? Note;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEnabled))]
@@ -61,11 +57,7 @@ public sealed partial class MenuItemViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ToolTipText))]
-    public partial bool UsesReferenceCommands { get; internal set; }
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ToolTipText))]
-    public partial bool UsesLinkFilter { get; internal set; }
+    public partial string? Note { get; internal set; }
 
     public IAsyncRelayCommand Command { get; }
 
@@ -94,7 +86,6 @@ internal sealed record MenuTarget(
 
 public sealed partial class ContextMenuViewModel : ObservableObject
 {
-    public const string NeedsThreeDView = "Section box needs a 3D view.";
     public const string NeedsOneElement = "One element only.";
 
     private readonly Dictionary<MenuAction, MenuItemViewModel> _byAction = [];
@@ -117,7 +108,7 @@ public sealed partial class ContextMenuViewModel : ObservableObject
             Add(MenuAction.Isolate, "Isolate", "Isolate", "I", () => RunAsync(VisibilityAction.Isolate)),
             Add(MenuAction.HideShow, "Hide", "Hide", "H", HideShowAsync),
             Add(MenuAction.Halftone, "Halftone", "Halftone", null, () => RunAsync(VisibilityAction.Halftone)),
-            Add(MenuAction.Color, "Color…", "Color", null, RequestColorAsync),
+            Add(MenuAction.Color, "Color", "Color", null, RequestColorAsync),
             MenuItemViewModel.Separator(),
             Add(MenuAction.WhyHidden, "Why hidden?", "WhyHidden", null, WhyHiddenAsync)
         ];
@@ -159,10 +150,9 @@ public sealed partial class ContextMenuViewModel : ObservableObject
         hideShow.IconKey = target.IsHidden ? "Show" : "Hide";
         foreach (var item in Items.Where(item => !item.IsSeparator))
         {
-            var check = Evaluate(target, item.Action!.Value);
-            item.DisabledReason = check.DisabledReason;
-            item.UsesReferenceCommands = check.UsesReferenceCommands;
-            item.UsesLinkFilter = check.UsesLinkFilter;
+            var state = Evaluate(target, item.Action!.Value);
+            item.DisabledReason = state.DisabledReason;
+            item.Note = state.Note;
         }
     }
 
@@ -179,25 +169,25 @@ public sealed partial class ContextMenuViewModel : ObservableObject
         return Evaluate(target, action).DisabledReason;
     }
 
-    private VisibilityCheck Evaluate(MenuTarget target, MenuAction action)
+    private ActionState Evaluate(MenuTarget target, MenuAction action)
     {
         if (_runtime.IsBusy)
         {
-            return new VisibilityCheck(_runtime.BusyText, false);
+            return new ActionState(_runtime.BusyText);
         }
 
         return action switch
         {
-            MenuAction.SelectInHost or MenuAction.Zoom => new VisibilityCheck(EmptyReason(target), false),
-            MenuAction.SectionBox => new VisibilityCheck(EmptyReason(target) ?? SectionBoxReason(), false),
-            MenuAction.WhyHidden => new VisibilityCheck(SingleElementOf(target) is null ? NeedsOneElement : null, false),
+            MenuAction.SelectInHost or MenuAction.Zoom => new ActionState(EmptyReason(target)),
+            MenuAction.SectionBox => new ActionState(EmptyReason(target) ?? SectionBoxReason()),
+            MenuAction.WhyHidden => new ActionState(SingleElementOf(target) is null ? NeedsOneElement : null),
             _ => _visibility.Check(target.Request(VisibilityActionOf(action, target.IsHidden)))
         };
     }
 
     private static string? EmptyReason(MenuTarget target)
     {
-        return target.IsEmpty ? VisibilityReasons.Nothing : null;
+        return target.IsEmpty ? VisibilityText.Nothing : null;
     }
 
     private static ElementRef? SingleElementOf(MenuTarget target)
@@ -212,7 +202,7 @@ public sealed partial class ContextMenuViewModel : ObservableObject
 
     private string? SectionBoxReason()
     {
-        return _visibility.View?.Is3D == true ? null : NeedsThreeDView;
+        return _visibility.View?.Is3D == true ? null : VisibilityText.Needs3DView;
     }
 
     private static VisibilityAction VisibilityActionOf(MenuAction action, bool isHidden)

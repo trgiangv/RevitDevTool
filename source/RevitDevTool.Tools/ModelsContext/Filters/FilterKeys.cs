@@ -20,7 +20,7 @@ internal static class FilterKeys
                     }
 
                     break;
-                case RuleNode { Operator: FilterOperator.NotEmpty or FilterOperator.Empty or FilterOperator.Defined or FilterOperator.Undefined } rule:
+                case RuleNode { Operator: FilterOperator.NotEmpty or FilterOperator.Empty or FilterOperator.Defined or FilterOperator.Undefined or FilterOperator.NotEqual } rule:
                     keys.Add(rule.Parameter);
                     break;
             }

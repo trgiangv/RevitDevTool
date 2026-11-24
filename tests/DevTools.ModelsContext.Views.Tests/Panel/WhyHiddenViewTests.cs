@@ -28,10 +28,11 @@ public sealed class WhyHiddenViewTests
         using var ui = StripUi.Open();
 
         Assert.IsNull(ui.Host.TryFindInWindow("WhyHiddenStrip"));
-        ui.Open([HiddenCues.TemporaryHideIsolate]);
+        ui.HideDucts();
+        ui.Open([HiddenReasons.Temporary]);
 
         Assert.IsNotNull(ui.Host.FindInWindow("WhyHiddenStrip"));
-        Assert.AreEqual(HiddenCues.TemporaryHideIsolate.Text, ui.Host.FindInWindow("WhyHiddenCause").Name);
+        Assert.AreEqual(HiddenReasons.Temporary.Text, ui.Host.FindInWindow("WhyHiddenCause").Name);
         Assert.IsNotNull(ui.Host.FindInWindow("WhyHiddenFix"));
         Assert.IsNull(ui.Host.TryFindInWindow("WhyHiddenExpand"));
     }
@@ -41,7 +42,7 @@ public sealed class WhyHiddenViewTests
     {
         using var ui = StripUi.Open();
 
-        ui.Open([HiddenCues.Category("Ducts")]);
+        ui.Open([HiddenReasons.Category("Ducts")]);
 
         Assert.IsNull(ui.Host.TryFindInWindow("WhyHiddenFix"));
     }
@@ -53,29 +54,32 @@ public sealed class WhyHiddenViewTests
 
         ui.Open([]);
 
-        Assert.AreEqual(HiddenCues.NoneFound.Text, ui.Host.FindInWindow("WhyHiddenCause").Name);
+        Assert.AreEqual(HiddenReasons.None.Text, ui.Host.FindInWindow("WhyHiddenCause").Name);
         Assert.IsNull(ui.Host.TryFindInWindow("WhyHiddenFix"));
     }
 
     [TestMethod]
-    public void ExpandListsAllCauses()
+    public void ExpandListsOtherCauses()
     {
         using var ui = StripUi.Open();
-        ui.Open([HiddenCues.HiddenInView, HiddenCues.Filter("Walls-Demo"), HiddenCues.OutsideCrop]);
+        ui.Open([HiddenReasons.InView, HiddenReasons.Filter("Walls-Demo"), HiddenReasons.OutsideCrop]);
 
         ui.Host.FindInWindow("WhyHiddenExpand").Patterns.Toggle.Pattern.Toggle();
 
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.WhyHidden.IsExpanded), "The chevron did not expand.");
         var list = ui.Host.FindInWindow("WhyHiddenList");
-        Assert.IsTrue(ThemeHost.WaitForUi(() => list.FindAllDescendants(cf => cf.ByAutomationId("WhyHiddenItem")).Length == 3),
-            "The list does not show every cause.");
+        Assert.IsTrue(ThemeHost.WaitForUi(() => list.FindAllDescendants(cf => cf.ByAutomationId("WhyHiddenItem"))
+                .Select(item => item.Name)
+                .SequenceEqual([HiddenReasons.Filter("Walls-Demo").Text, HiddenReasons.OutsideCrop.Text])),
+            "The list does not show only the causes after the first.");
     }
 
     [TestMethod]
     public void FixButtonShowsAndCloses()
     {
         using var ui = StripUi.Open();
-        ui.Explainer.CausesOf = _ => ui.Explainer.Calls.Count == 1 ? [HiddenCues.TemporaryHideIsolate] : [];
+        ui.HideDucts();
+        ui.Explainer.ReasonsOf = _ => ui.Explainer.Calls.Count == 1 ? [HiddenReasons.Temporary] : [];
         ui.Open(null);
 
         ui.Host.FindInWindow("WhyHiddenFix").AsButton().Invoke();
@@ -88,7 +92,7 @@ public sealed class WhyHiddenViewTests
     public void CloseButtonClosesStrip()
     {
         using var ui = StripUi.Open();
-        ui.Open([HiddenCues.OutsideCrop]);
+        ui.Open([HiddenReasons.OutsideCrop]);
 
         ui.Host.FindInWindow("WhyHiddenClose").AsButton().Invoke();
 
@@ -99,7 +103,7 @@ public sealed class WhyHiddenViewTests
     public void EscapeClosesStrip()
     {
         using var ui = StripUi.Open();
-        ui.Open([HiddenCues.OutsideCrop]);
+        ui.Open([HiddenReasons.OutsideCrop]);
 
         WpfSta.Invoke(() =>
         {
@@ -129,8 +133,8 @@ public sealed class WhyHiddenViewTests
     public void StripSitsAboveTemporaryBar()
     {
         using var ui = StripUi.Open();
-        WpfSta.Run(() => ui.Panel.Explorer.ToggleEyeCommand.ExecuteAsync(ui.Ducts()));
-        ui.Open([HiddenCues.TemporaryHideIsolate]);
+        ui.HideDucts();
+        ui.Open([HiddenReasons.Temporary]);
 
         var strip = ui.Host.FindInWindow("WhyHiddenStrip").BoundingRectangle;
         var keep = ui.Host.FindInWindow("Temporary.Keep").BoundingRectangle;
@@ -192,11 +196,16 @@ public sealed class WhyHiddenViewTests
                 row.Kind == TreeRowKind.Group && row.Document == FakeModelGenerator.Current && row.Text == "Ducts"));
         }
 
-        public void Open(IReadOnlyList<HiddenCause>? causes)
+        public void HideDucts()
         {
-            if (causes is not null)
+            WpfSta.Run(() => Panel.Explorer.ToggleEyeCommand.ExecuteAsync(Ducts()));
+        }
+
+        public void Open(IReadOnlyList<HiddenReason>? reasons)
+        {
+            if (reasons is not null)
             {
-                Explainer.Causes = causes;
+                Explainer.Reasons = reasons;
             }
 
             var element = WpfSta.Invoke(() => Panel.Explorer.ElementsOf([Ducts()]).First());

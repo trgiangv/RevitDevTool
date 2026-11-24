@@ -12,6 +12,8 @@ public interface IModelSource
 
     Task<IReadOnlyList<DocumentInfo>> GetDocumentsAsync(CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<DocumentKey>> GetViewLinksAsync(CancellationToken cancellationToken);
+
     Task<DocumentSnapshot> BuildSnapshotAsync(
         SourceId source,
         IProgress<SnapshotProgress>? progress,

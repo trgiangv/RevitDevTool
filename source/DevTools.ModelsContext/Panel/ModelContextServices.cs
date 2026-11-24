@@ -72,7 +72,7 @@ internal sealed class PanelRuntime
 
     public SnapshotStore Store { get; }
 
-    public TemporaryJournal Journal { get; } = new();
+    public ChangeJournal Journal { get; } = new();
 
     public SelectionGuard Guard { get; }
 
@@ -84,7 +84,7 @@ internal sealed class PanelRuntime
 
     public bool IsBusy { get; set; }
 
-    public string BusyText => VisibilityReasons.HostBusy(Services.Source.HostName);
+    public string BusyText => VisibilityText.HostBusy(Services.Source.HostName);
 
     public PanelActivity Activity => new(Volatile.Read(ref _running) == 0 && Volatile.Read(ref _scheduled) == 0,
         Volatile.Read(ref _generation));

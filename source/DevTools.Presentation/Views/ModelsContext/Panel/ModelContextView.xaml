@@ -8,10 +8,7 @@
              xmlns:filterViews="clr-namespace:DevTools.Presentation.Views.ModelsContext.Filters"
              xmlns:hc="https://handyorg.github.io/handycontrol"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:panel="clr-namespace:DevTools.ModelsContext.Panel;assembly=DevTools.ModelsContext"
              xmlns:views="clr-namespace:DevTools.Presentation.Views.ModelsContext.Panel"
-             xmlns:visibility="clr-namespace:DevTools.ModelsContext.Visibility;assembly=DevTools.ModelsContext"
-             d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
              d:DesignHeight="800"
              d:DesignWidth="320"
              AutomationProperties.AutomationId="ModelContext.Panel"
@@ -31,14 +28,12 @@
             </ResourceDictionary.MergedDictionaries>
 
             <Style x:Key="DocumentsBoxStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
                    BasedOn="{StaticResource TagCheckComboBoxBaseStyle}"
                    TargetType="controls:TagCheckComboBox">
                 <Setter Property="ShowSelectAllButton" Value="True" />
             </Style>
 
             <Style x:Key="DocumentItemStyle"
-                   d:DataContext="{d:DesignInstance panel:DocumentItemViewModel}"
                    BasedOn="{StaticResource TagCheckComboBoxItemBaseStyle}"
                    TargetType="controls:TagCheckComboBoxItem">
                 <Setter Property="IsEnabled" Value="{Binding IsEnabled}" />
@@ -47,9 +42,7 @@
                 <Setter Property="AutomationProperties.HelpText" Value="{Binding Info.DisplayName}" />
             </Style>
 
-            <Style x:Key="ExplorerBodyStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
-                   TargetType="explorerViews:ExplorerTabView">
+            <Style x:Key="ExplorerBodyStyle" TargetType="explorerViews:ExplorerTabView">
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding IsExplorerTab}" Value="False">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -57,9 +50,7 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="FilterBodyStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
-                   TargetType="filterViews:FilterTabView">
+            <Style x:Key="FilterBodyStyle" TargetType="filterViews:FilterTabView">
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding IsFilterTab}" Value="False">
                         <Setter Property="Visibility" Value="Collapsed" />
@@ -68,7 +59,6 @@
             </Style>
 
             <Style x:Key="WhyHiddenStripStyle"
-                   d:DataContext="{d:DesignInstance visibility:WhyHiddenStripViewModel}"
                    BasedOn="{StaticResource BorderTipInfo}"
                    TargetType="Border">
                 <Setter Property="Margin" Value="0,8,0,0" />
@@ -80,8 +70,15 @@
                 </Style.Triggers>
             </Style>
 
+            <Style x:Key="OtherCauseStyle" TargetType="ContentPresenter">
+                <Style.Triggers>
+                    <Trigger Property="ItemsControl.AlternationIndex" Value="0">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+
             <Style x:Key="TemporaryBarStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
                    BasedOn="{StaticResource BorderTipWarning}"
                    TargetType="Border">
                 <Setter Property="Margin" Value="0,8,0,0" />
@@ -93,9 +90,7 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="ConfirmPanelStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
-                   TargetType="StackPanel">
+            <Style x:Key="ConfirmPanelStyle" TargetType="StackPanel">
                 <Setter Property="Margin" Value="0,6,0,0" />
                 <Setter Property="Visibility" Value="Collapsed" />
                 <Style.Triggers>
@@ -106,7 +101,6 @@
             </Style>
 
             <Style x:Key="UpdatingBarStyle"
-                   d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
                    BasedOn="{StaticResource ProgressBarFlat}"
                    TargetType="ProgressBar">
                 <Setter Property="IsIndeterminate" Value="False" />
@@ -230,18 +224,13 @@
                                Text="{Binding Text}"
                                TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding Text}" />
-                    <StackPanel Grid.Column="1"
-                                Orientation="Horizontal"
-                                Visibility="{Binding HasFix, Converter={StaticResource Boolean2VisibilityConverter}}">
-                        <TextBlock Margin="6,0"
-                                   VerticalAlignment="Center"
-                                   Style="{StaticResource TextBlockDefault}"
-                                   Text="·" />
-                        <Button AutomationProperties.AutomationId="WhyHiddenFix"
-                                Command="{Binding FixCommand}"
-                                Content="{x:Static visibility:WhyHiddenStripViewModel.FixText}"
-                                Style="{StaticResource ButtonPrimary.Small}" />
-                    </StackPanel>
+                    <Button Grid.Column="1"
+                            Margin="6,0,0,0"
+                            AutomationProperties.AutomationId="WhyHiddenFix"
+                            Command="{Binding ShowCommand}"
+                            Content="Show"
+                            Style="{StaticResource ButtonPrimary.Small}"
+                            Visibility="{Binding CanShow, Converter={StaticResource Boolean2VisibilityConverter}}" />
                     <ToggleButton Grid.Column="2"
                                   Width="20"
                                   Margin="4,0,0,0"
@@ -265,13 +254,15 @@
                             Style="{StaticResource ButtonIcon.Small}"
                             ToolTip="Close" />
                 </Grid>
-                <ItemsControl Margin="0,4,0,0"
+                <ItemsControl Margin="0,2,0,0"
+                              AlternationCount="1000"
                               AutomationProperties.AutomationId="WhyHiddenList"
                               Focusable="False"
-                              ItemsSource="{Binding Causes}"
+                              ItemContainerStyle="{StaticResource OtherCauseStyle}"
+                              ItemsSource="{Binding Reasons}"
                               Visibility="{Binding IsExpanded, Converter={StaticResource Boolean2VisibilityConverter}}">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type visibility:HiddenCause}">
+                        <DataTemplate>
                             <TextBlock Margin="0,2,0,0"
                                        HorizontalAlignment="Left"
                                        AutomationProperties.AutomationId="WhyHiddenItem"
@@ -303,9 +294,11 @@
                                Text="{Binding TemporaryBar.Text}" />
                     <Button Grid.Column="1"
                             AutomationProperties.AutomationId="Temporary.Keep"
+                            AutomationProperties.Name="Make hides permanent in this view"
                             Command="{Binding TemporaryBar.KeepCommand}"
                             Content="Keep"
-                            Style="{StaticResource ButtonPrimary.Small}" />
+                            Style="{StaticResource ButtonDefault.Small}"
+                            ToolTip="Make hides permanent in this view" />
                     <Button Grid.Column="2"
                             Margin="4,0,0,0"
                             AutomationProperties.AutomationId="Temporary.Reset"
@@ -348,7 +341,6 @@
 
         <Popup x:Name="ColorPopup"
                Grid.Row="0"
-               d:DataContext="{d:DesignInstance panel:ModelContextViewModel}"
                Placement="Bottom"
                StaysOpen="False">
             <hc:ColorPicker x:Name="ColorPicker"

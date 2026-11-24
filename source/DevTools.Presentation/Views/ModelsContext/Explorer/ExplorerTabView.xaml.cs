@@ -127,7 +127,7 @@ public partial class ExplorerTabView : UserControl
 
     private async void OnToolClick(object sender, RoutedEventArgs e)
     {
-        if (_panel is not { } panel || sender is not FrameworkElement { DataContext: TreeRow row, Tag: MenuAction action } button)
+        if (_panel is not { } panel || sender is not FrameworkElement { DataContext: TreeRow row, Tag: string tag } button || !Enum.TryParse(tag, out MenuAction action))
         {
             return;
         }
@@ -156,7 +156,7 @@ public partial class ExplorerTabView : UserControl
 
     private void RefreshTool(object sender)
     {
-        if (_panel is not { } panel || sender is not Button { DataContext: TreeRow row, Tag: MenuAction action } button)
+        if (_panel is not { } panel || sender is not Button { DataContext: TreeRow row, Tag: string tag } button || !Enum.TryParse(tag, out MenuAction action))
         {
             return;
         }
@@ -172,7 +172,7 @@ public partial class ExplorerTabView : UserControl
         {
             MenuAction.Color when row.HasColor => "Color: " + row.ColorHex + " · " + (reason ?? "click to change"),
             MenuAction.Halftone when row.IsHalftone => reason is null ? "Halftone: on" : "Halftone: on · " + reason,
-            MenuAction.Color => reason ?? "Color…",
+            MenuAction.Color => reason ?? "Color",
             _ => reason ?? action.ToString()
         };
     }
