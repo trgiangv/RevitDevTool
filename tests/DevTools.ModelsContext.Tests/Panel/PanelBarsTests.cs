@@ -158,7 +158,7 @@ public sealed class PanelBarsTests
         fixture.Panel.ContextBar.Tick([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
-        fixture.Actions.ShowError = VisibilityText.NotShown;
+        fixture.Actions.LinkedNotShown = true;
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Walls"));
 
         await fixture.Panel.ContextMenu[MenuAction.HideShow].Command.ExecuteAsync(null);
@@ -189,7 +189,7 @@ public sealed class PanelBarsTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Tick([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
-        fixture.Actions.ShowError = VisibilityText.NotShown;
+        fixture.Actions.LinkedNotShown = true;
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
         var first = fixture.Panel.Message;
@@ -226,7 +226,7 @@ public sealed class PanelBarsTests
         fixture.Panel.ContextBar.Tick([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
-        fixture.Actions.ShowError = VisibilityText.NotShown;
+        fixture.Actions.LinkedNotShown = true;
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 

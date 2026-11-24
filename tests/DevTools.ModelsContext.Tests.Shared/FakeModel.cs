@@ -1,5 +1,4 @@
 using DevTools.ModelsContext.Documents;
-using DevTools.ModelsContext.Explorer;
 using DevTools.ModelsContext.Filters;
 using DevTools.ModelsContext.Parameters;
 using DevTools.ModelsContext.Scope;
@@ -49,6 +48,8 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
 
     public HashSet<long>? ViewKeptCategories { get; set; }
 
+    public HashSet<ElementRef> ViewHiddenElements { get; } = [];
+
     public int BuildCount { get; private set; }
 
     public int DocumentReads { get; private set; }
@@ -92,8 +93,6 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
     public event EventHandler<ModelRename>? ModelRenamed;
 
     public string HostName => FakeHostName;
-
-    public TreeSchema Schema => FakeModelGenerator.Schema;
 
     public Task<IReadOnlyList<DocumentInfo>> GetDocumentsAsync(CancellationToken cancellationToken)
     {
@@ -595,6 +594,11 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
 
     private bool IsDrawn(DocumentKey document, ElementRecord element)
     {
+        if (ViewHiddenElements.Contains(new ElementRef(document, element.Id)))
+        {
+            return false;
+        }
+
         if (ViewHiddenCategories.Count == 0 && ViewKeptCategories is null)
         {
             return true;

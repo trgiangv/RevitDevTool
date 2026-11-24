@@ -21,6 +21,13 @@ internal static class Oracle
         BuiltInCategory.OST_Materials
     ];
 
+    private static readonly HashSet<BuiltInCategory> NoSubcategoryRows =
+    [
+        BuiltInCategory.OST_Site,
+        BuiltInCategory.OST_Lines,
+        BuiltInCategory.OST_Topography
+    ];
+
     public static int Count(FilterDefinition definition, IReadOnlyList<SampleDocument> documents, ScopeKind scope)
     {
         return Matches(definition, documents, scope).Count;
@@ -68,9 +75,23 @@ internal static class Oracle
         var ids = new HashSet<long>();
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType == CategoryType.Model && !NotElementCategories.Contains(category.BuiltInCategory))
+            if (category.CategoryType != CategoryType.Model || NotElementCategories.Contains(category.BuiltInCategory))
             {
-                ids.Add(category.Id.ToLong());
+                continue;
+            }
+
+            ids.Add(category.Id.ToLong());
+            if (NoSubcategoryRows.Contains(category.BuiltInCategory))
+            {
+                continue;
+            }
+
+            foreach (Category subcategory in category.SubCategories)
+            {
+                if (subcategory.CategoryType == CategoryType.Model && subcategory.BuiltInCategory != BuiltInCategory.INVALID)
+                {
+                    ids.Add(subcategory.Id.ToLong());
+                }
             }
         }
 

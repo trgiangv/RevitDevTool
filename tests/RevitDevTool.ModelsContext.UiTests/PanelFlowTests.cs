@@ -121,7 +121,7 @@ public sealed class PanelFlowTests : RecordedTest
     }
 
     [TestMethod]
-    public void LivePausesAboveLimit()
+    public void SyncPausesAboveLimit()
     {
         var flow = CaseFiles.Flow("UI-04");
         Record(flow, () =>
@@ -134,7 +134,7 @@ public sealed class PanelFlowTests : RecordedTest
             _panel.Invoke("Filter.CategoryAll");
             Evidence.Step("Opened Categories and clicked All.");
             var count = _panel.Count();
-            var live = _panel.Find("Filter.Live").Patterns.Toggle.Pattern.ToggleState.Value;
+            var sync = _panel.Find("Filter.SelectionSync").Patterns.Toggle.Pattern.ToggleState.Value;
             var paused = _panel.Shown("Filter.Paused")?.Name;
             _panel.Shot("paused");
 
@@ -142,13 +142,13 @@ public sealed class PanelFlowTests : RecordedTest
             Evidence.Step("Clicked None.");
             var cleared = _panel.Shown("Filter.Paused") is null;
             _panel.Shot("after");
-            Evidence.Values($"{item.ExpectedText}; Live On; '{FilterRunner.LivePausedText}'; then no line",
-                $"{count}; Live {live}; '{paused}'; then {(cleared ? "no line" : "line still shown")}");
+            Evidence.Values($"{item.ExpectedText}; Selection sync On; '{FilterRunner.SelectionSyncPausedText}'; then no line",
+                $"{count}; Selection sync {sync}; '{paused}'; then {(cleared ? "no line" : "line still shown")}");
 
             Assert.AreEqual(item.ExpectedCount, count);
-            Assert.IsGreaterThan(FilterRunner.LivePauseLimit, count, "SC-02 must exceed the Live limit for this flow.");
-            Assert.AreEqual(ToggleState.On, live, "The Live switch must keep the user's choice.");
-            Assert.AreEqual(FilterRunner.LivePausedText, paused);
+            Assert.IsGreaterThan(FilterRunner.SelectionSyncPauseLimit, count, "SC-02 must exceed the selection sync limit for this flow.");
+            Assert.AreEqual(ToggleState.On, sync, "Selection sync must keep the user's choice.");
+            Assert.AreEqual(FilterRunner.SelectionSyncPausedText, paused);
             Assert.IsTrue(cleared, "The paused line stayed at 0 matches.");
         });
     }

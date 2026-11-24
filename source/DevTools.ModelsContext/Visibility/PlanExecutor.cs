@@ -20,7 +20,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
 
         var outcome = await runtime.Services.ViewActions.ExecuteAsync(plan with { ViewId = view.ViewId }, cancellationToken);
         _notice = outcome.Notice;
-        Track(ledger, plan, outcome.LinkHides);
+        Track(ledger, plan);
         await RecordAsync(view, plan, outcome.LinkHides, cancellationToken);
         return null;
     }
@@ -40,7 +40,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
             {
                 await runtime.Services.ViewActions.ShowLinkedAsync(shown, cancellationToken);
             }
-            catch (InvalidOperationException exception) when (exception.Message == VisibilityText.NotShown)
+            catch (LinkedNotShownException)
             {
                 reason = VisibilityText.LinkedStayHidden;
             }
@@ -51,7 +51,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
         return reason;
     }
 
-    private static void Track(ViewLedger ledger, VisibilityPlan plan, IReadOnlyList<ElementRef> hidden)
+    private static void Track(ViewLedger ledger, VisibilityPlan plan)
     {
         switch (plan.Action)
         {
@@ -59,8 +59,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
                 ledger.Add(plan);
                 break;
             case VisibilityAction.Isolate:
-                ledger.Isolation = Isolation.From(plan, hidden);
-                ledger.HiddenElements.UnionWith(hidden);
+                ledger.Isolation = Isolation.From(plan);
                 break;
             default:
                 ledger.OverridePlans.Add(plan);
@@ -93,7 +92,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
 
         if (linked.Count > 0)
         {
-            await ShowLinkedAsync(view, ledger, linked, cancellationToken);
+            await ShowLinkedAsync(view, linked, cancellationToken);
         }
 
         return null;
@@ -108,12 +107,10 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
 
     private async Task ShowLinkedAsync(
         ViewInfo view,
-        ViewLedger ledger,
         IReadOnlyList<ElementRef> linked,
         CancellationToken cancellationToken)
     {
         await runtime.Services.ViewActions.ShowLinkedAsync(linked, cancellationToken);
-        ledger.HiddenElements.ExceptWith(linked);
         runtime.Journal.Remove(view.Model, view.ViewId, linked);
     }
 
@@ -123,14 +120,14 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
         VisibilityPlan plan,
         CancellationToken cancellationToken)
     {
-        var journaled = JournaledOf(view);
-        var rest = ledger.Isolation?.HiddenRest
-            .Where(element => journaled.Contains(element) && CanUnhide(element.Document))
-            .ToList() ?? [];
+        var rest = runtime.Journal.Get(view.Model, view.ViewId).LinkHides
+            .Where(hide => hide.IsIsolateRest && CanUnhide(hide.Element.Document))
+            .Select(hide => hide.Element)
+            .ToList();
         await runtime.Services.ViewActions.ResetAsync(view.ViewId, cancellationToken);
         ledger.Remove(plan);
         ledger.Isolation = null;
-        _notice = rest.Count > 0 ? await ShowRestAsync(view, ledger, rest, cancellationToken) : null;
+        _notice = rest.Count > 0 ? await ShowRestAsync(view, rest, cancellationToken) : null;
         runtime.Journal.ClearChanges(view.Model, view.ViewId);
         await ReapplyAsync(view, ledger, cancellationToken);
     }
@@ -144,18 +141,16 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
 
     private async Task<string?> ShowRestAsync(
         ViewInfo view,
-        ViewLedger ledger,
         IReadOnlyList<ElementRef> rest,
         CancellationToken cancellationToken)
     {
         try
         {
-            await ShowLinkedAsync(view, ledger, rest, cancellationToken);
+            await ShowLinkedAsync(view, rest, cancellationToken);
             return null;
         }
-        catch (InvalidOperationException exception) when (exception.Message == VisibilityText.NotShown)
+        catch (LinkedNotShownException)
         {
-            ledger.HiddenElements.ExceptWith(rest);
             runtime.Journal.Remove(view.Model, view.ViewId, rest);
             return VisibilityText.LinkedStayHidden;
         }
@@ -194,13 +189,19 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
             runtime.Journal.AddChange(view.Model, view.ViewId, plan.KeepConverts);
         }
 
+        var isolate = plan.Action == VisibilityAction.Isolate;
+        if (isolate)
+        {
+            runtime.Journal.EndIsolateRest(view.Model, view.ViewId);
+        }
+
         var hides = new List<LinkHide>();
         foreach (var group in hidden.Where(element => !element.Document.IsCurrentModel).GroupBy(element => element.Document))
         {
             var ids = group.Select(element => element.Id).ToList();
             var uniqueIds = await runtime.Services.Source.GetUniqueIdsAsync(group.Key, ids, cancellationToken);
             hides.AddRange(ids.Select(id => new LinkHide(new ElementRef(group.Key, id),
-                uniqueIds.TryGetValue(id, out var uniqueId) ? uniqueId : string.Empty)));
+                uniqueIds.TryGetValue(id, out var uniqueId) ? uniqueId : string.Empty, isolate)));
         }
 
         if (hides.Count > 0)

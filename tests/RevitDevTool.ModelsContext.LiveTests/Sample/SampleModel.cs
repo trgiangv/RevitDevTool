@@ -38,24 +38,25 @@ internal static class SampleModel
         }
     }
 
-    public static SampleDocument Architectural
-    {
-        get
-        {
-            var host = Host;
-            foreach (var instance in new FilteredElementCollector(host).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>())
-            {
-                if (instance.GetLinkDocument() is { } link
-                    && link.Title.StartsWith(ArchitecturalTitle, StringComparison.OrdinalIgnoreCase))
-                {
-                    return new SampleDocument(DocumentRegistry.KeyOf(host, instance), DocumentRegistry.LinkSourceOf(instance),
-                        link, "Arch");
-                }
-            }
+    public static SampleDocument Architectural => LinkTitled(ArchitecturalTitle, "Arch");
 
-            Assert.Inconclusive($"Load the '{ArchitecturalTitle}' link in '{HostTitle}'.");
-            return null!;
+    public static SampleDocument Site => LinkTitled(CaseFiles.Facts.SiteLinkTitle, "Site");
+
+    private static SampleDocument LinkTitled(string title, string label)
+    {
+        var host = Host;
+        foreach (var instance in new FilteredElementCollector(host).OfClass(typeof(RevitLinkInstance)).Cast<RevitLinkInstance>())
+        {
+            if (instance.GetLinkDocument() is { } link
+                && link.Title.StartsWith(title, StringComparison.OrdinalIgnoreCase))
+            {
+                return new SampleDocument(DocumentRegistry.KeyOf(host, instance), DocumentRegistry.LinkSourceOf(instance),
+                    link, label);
+            }
         }
+
+        Assert.Inconclusive($"Load the '{title}' link in '{HostTitle}'.");
+        return null!;
     }
 
     public static IReadOnlyList<SampleDocument> All

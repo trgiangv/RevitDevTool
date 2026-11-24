@@ -120,9 +120,9 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
         var ids = scope == ScopeKind.WholeModel
             ? null
             : await runtime.Services.Source.CollectScopeAsync(key, scope, ticket.Token);
-        if (scope == ScopeKind.ActiveView && ids is not null && visibility.CategoryOffIds(key) is { Count: > 0 } off)
+        if (scope == ScopeKind.ActiveView && ids is not null && visibility.HiddenInViewIds(key) is { Count: > 0 } hidden)
         {
-            ids = [.. ids.Union(off)];
+            ids = [.. ids.Union(hidden)];
         }
 
         return owner.IsCurrent(ticket) ? new DocumentScope(info, owner.ContextBar.LabelOf(key), snapshot, ids) : null;

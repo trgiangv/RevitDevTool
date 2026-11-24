@@ -89,6 +89,29 @@ public sealed class HiddenCategoryCountTests
         Assert.AreNotEqual(RowEye.Hidden, ducts.Eye);
     }
 
+    [TestMethod]
+    public async Task WholeModelHideThenActiveView()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var expected = await InViewCountAsync(fixture, Current, "Ducts");
+
+        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        fixture.Panel.ContextBar.Scope = ScopeKind.ActiveView;
+        await fixture.Panel.RefreshAsync();
+
+        var ducts = fixture.Group(Current, "Ducts");
+        Assert.AreEqual(expected, ducts.Count);
+        Assert.AreEqual(RowEye.HiddenByCategory, ducts.Eye);
+    }
+
+    private static async Task<int> InViewCountAsync(PanelFixture fixture, DocumentKey document, string group)
+    {
+        var snapshot = fixture.Model.SnapshotOf(document);
+        var index = snapshot.GroupIndexOf(snapshot.Groups.First(row => snapshot.Names[row.NameIndex] == group).GroupId);
+        var ids = await fixture.Model.CollectScopeAsync(document, ScopeKind.ActiveView, CancellationToken.None);
+        return ids.Count(id => snapshot.TryGetRow(id, out var row) && row.GroupIndex == index);
+    }
+
     private static CategoryItemViewModel Item(PanelFixture fixture, string name)
     {
         return fixture.Explorer.Categories.Picker.Items.First(item => item.Name == name);

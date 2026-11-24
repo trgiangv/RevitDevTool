@@ -230,6 +230,11 @@ count.
     view count dropped to 0 a moment later (live, 2026-11-24). When a category Hide or Isolate runs, the
     controller records the Active view ids it takes away (`ViewLedger.CategoryOffIds`), and
     `ContextLoader` adds back the ones whose category is still off. The row keeps its count and reads hidden.
+    In Whole model or Selection scope the controller reads the Active view ids once per scoped document just
+    before a category Hide or Isolate (one guarded view collector call each, never after a view switch in the
+    same call), so switching to Active view later still finds them. Linked elements hidden with Hide in View
+    leave the link view collector too; the journal's ids are added back the same way, which keeps the row,
+    its Hidden eye and the saved-hide dot.
 
 ## Layers and ports
 
@@ -239,7 +244,7 @@ DevTools.ModelsContext                  core: no Revit API, no WPF
                DeltaApplier, ChangeClassifier, VersionRule, IModelSource, IModelEvents
   Scope/       ScopeKind, CountNode, ScopeCounter, SnapshotAggregator, ContextData,
                CategoryPicker and ScopeOption view models
-  Explorer/    TreeRow, TreeSchema, RowPath, RowEye, RowOverride, ExplorerTabViewModel,
+  Explorer/    TreeRow, RowPath, RowEye, RowOverride, ExplorerTabViewModel,
                ExplorerTree, RowSelectionSync, RowPainter, ExplorerRows, ExplorerSearch,
                RowFactory, TreeReveal, RowTargets, DocumentStates, VisibleIds,
                RowOverrides, ExplorerSelection, ExplorerCategories, ExplorerPick
@@ -348,21 +353,21 @@ Debounce lives in the core (`Debouncer` on `IScheduler`); the views implement
 | 150 ms | Explorer search; `AutoCompleteComboBox` typing |
 | 200 ms | Panel events: Revit selection, element deltas, document list, view activation |
 | 200 ms | Explorer Selection sync to Revit |
-| 300 ms | Filter Live push to Revit |
+| 300 ms | Filter Selection sync to Revit |
 
 `SelectionGuard` remembers each selection the panel sent for 2 s and drops the
 matching `SelectionChanged` echo, so the panel never reacts to its own change.
 
-### Live versus refresh
+### Selection sync versus refresh
 
 `FilterRunner.EvaluateAsync(sync)` is the one evaluation path:
 
-- An edit (categories, rules, mode, source) triggers the Live debouncer, which
+- An edit (categories, rules, mode, source) triggers the selection sync debouncer, which
   evaluates with `sync: true` and sends the result to Revit.
 - A model edit or context refresh reloads the tab and evaluates with
   `sync: false`: the count updates, the selection does not. This is why an edit
   in Revit's Properties palette never drops the element being edited.
-- Live pauses above `FilterRunner.LivePauseLimit` (5,000) and sends nothing for an empty
+- Selection sync pauses above `FilterRunner.SelectionSyncPauseLimit` (5,000) and sends nothing for an empty
   custom filter.
 
 ## Logging
@@ -553,10 +558,14 @@ and the planner plans only from those refs, so Select, Hide, Isolate, overrides
 and the counts act on the same set. Hidden state is read back by `ElementRef`
 for both tabs (`ReadBackCache`), and overrides are kept per element. The
 controller splits into `ViewLedger` (what the panel changed per view: hidden
-elements, categories and links, the isolate, and overrides for the eyes and
-marks), `ChangeJournal` (what the bar counts and Reset undoes, with the linked
-hides), `ReadBackCache` (what the view shows) and `PlanExecutor` (runs a plan
-through `IViewActions`). `IViewActions` is the one port to the host view:
+Current model elements, categories and link instances, the isolate, the Active view ids
+a category action took away, and overrides for the eyes and marks), `ChangeJournal` (what
+the bar counts and Reset undoes, and the one record of linked elements the panel hid,
+each flagged when it is the rest of a link isolate), `ReadBackCache` (what the view
+shows) and `PlanExecutor` (runs a plan through `IViewActions`). Eyes, Why hidden and the
+Active view scope read linked hides from the journal only. When Revit shows none of the
+linked elements asked for, the adapter throws `LinkedNotShownException` and the executor
+catches that type (no message matching). `IViewActions` is the one port to the host view:
 `ExecuteAsync`, `ShowLinkedAsync`, `KeepAsync`, `ResetAsync`, `ZoomAsync`,
 `SectionBoxAsync`, `ReadActiveViewAsync` (`ActiveView`: the view and whether a
 temporary mode is on) and `ReadHiddenAsync`. On the Current model `NestedComponents.AddWithNested` adds
@@ -593,7 +602,7 @@ no parameter reads), then `SetReferences` on the picked set. Esc raises
 `OperationCanceledException`, which becomes `PickResult.Cancel`. One pick runs at
 a time. The picked set is the Revit selection, so Selection sync and Scope =
 Selection show it with no extra step. While a pick runs, `PanelRuntime.IsBusy` is
-true, so row tools, the menu, Selection sync and Live select stay off until it ends.
+true, so row tools, the menu and both Selection sync toggles stay off until it ends.
 
 ### State
 
@@ -604,7 +613,7 @@ true, so row tools, the menu, Selection sync and Live select stay off until it e
 | Linked elements the panel hid | `ChangeJournal` link hides (`ElementRef` and its `UniqueId`), in memory |
 | Element overrides before the panel's first change | `RevitViewActions`, per (model, view), in memory |
 | Panel view filters (T4) | `LinkViewFilters` registry, per (model, view), `UniqueId` by rules, in memory; the element itself is in the model until Reset, save, sync or pane close |
-| Expansion, selected filter, Selection sync, Live, selection mode | `PanelSession`, in memory |
+| Expansion, selected filter, both Selection sync toggles, selection mode | `PanelSession`, in memory |
 | Document ticks | Set from `IModelSource.GetViewLinksAsync` (link instances in the Current model's active view collector) on show and on every view change; the user's ticks hold until then |
 | Unsaved custom filter (new, or edits and rename of a saved one) | `PanelSession` (`FilterState.Draft`: the editor's definition and name), in memory per model; restored dirty on switch back, no prompt |
 | Custom filters | Settings file through `DevTools.Settings` (`CustomFilterStore`) |
@@ -632,7 +641,7 @@ link stays listed and keeps its entries); Undo and Redo mark the pages stale.
 Release build, Revit 2024 and 2026:
 
 - 100k elements and three links: first Category rows < 300 ms, a 200-instance
-  page < 50 ms, Live change to Revit selection < 200 ms after the debounce,
+  page < 50 ms, Filter selection sync to Revit selection < 200 ms after the debounce,
   about 40 realized row containers.
 - 1M elements across five models: first Category rows < 1 s, no UI stall over
   50 ms, snapshot memory < 64 MB per million elements.

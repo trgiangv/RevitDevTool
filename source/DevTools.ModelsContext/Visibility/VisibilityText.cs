@@ -6,7 +6,6 @@ public static class VisibilityText
     public const string PageRowHasNoActions = "This row has no actions.";
     public const string LinkElementsUnavailable = "Actions on single elements inside a link are not available.";
     public const string ShowFromReveal = "Show these from Reveal Hidden Elements in Revit.";
-    public const string NotShown = "Revit did not show these linked elements.";
     public const string NotHidden = "Revit did not hide these linked elements.";
     public const string LinkedStayHidden = "Revit did not show some linked elements; they stay hidden.";
     public const string LinkOverrideNeedsRule = "Revit can color linked elements only by family, type or a rule filter.";

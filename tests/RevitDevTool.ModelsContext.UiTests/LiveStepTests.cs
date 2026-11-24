@@ -38,6 +38,7 @@ public sealed class LiveStepTests : RecordedTest
 {
     public const string ExpectVariable = "MODELS_CONTEXT_EXPECT";
     public const string ExpectModelVariable = "MODELS_CONTEXT_EXPECT_MODEL";
+    public const string ExpectDocumentsVariable = "MODELS_CONTEXT_EXPECT_DOCS";
 
     private static readonly Lazy<CaseFile<LiveStepSetup, CaseItem>> LazyData =
         new(() => CaseFiles.Read<CaseFile<LiveStepSetup, CaseItem>>("live-steps.json"));
@@ -140,6 +141,34 @@ public sealed class LiveStepTests : RecordedTest
             Evidence.Step("Read the HelpText of the Current model item in ModelContext.Documents.");
             Evidence.Values(expected, title);
             Assert.IsTrue(title.StartsWith(expected!, StringComparison.OrdinalIgnoreCase), $"The panel shows '{title}', expected '{expected}'.");
+        });
+    }
+
+    [TestMethod]
+    public void TicksFollowView()
+    {
+        Record(Find("LS-04"), () =>
+        {
+            var expected = (Environment.GetEnvironmentVariable(ExpectDocumentsVariable) ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (expected.Length == 0)
+            {
+                Assert.Inconclusive($"Set {ExpectDocumentsVariable} to the documents the view draws, for example 'Current model,Architectural'.");
+            }
+
+            _panel.Settle();
+            var ticked = _panel.Find("ModelContext.Documents").FindAllDescendants(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.ListItem))
+                .Where(item => item.Patterns.Toggle.IsSupported && item.Patterns.Toggle.Pattern.ToggleState.Value == FlaUI.Core.Definitions.ToggleState.On)
+                .Select(item => item.Name).ToList();
+            _panel.Shot("after");
+            Evidence.Step("Read the ticked items of ModelContext.Documents after the view change.");
+            Evidence.Values(string.Join(", ", expected), string.Join(", ", ticked));
+
+            Assert.AreEqual(expected.Length, ticked.Count, "Ticked: " + string.Join(", ", ticked));
+            foreach (var part in expected)
+            {
+                Assert.IsTrue(ticked.Any(name => name.Contains(part, StringComparison.OrdinalIgnoreCase)), $"'{part}' is not ticked: {string.Join(", ", ticked)}.");
+            }
         });
     }
 

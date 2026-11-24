@@ -67,9 +67,6 @@ internal sealed class ViewLedger
                 case ElementsStep elements:
                     HiddenElements.UnionWith(elements.Ids.Select(id => new ElementRef(elements.Document, id)));
                     break;
-                case LinkElementsStep linked:
-                    HiddenElements.UnionWith(linked.Ids.Select(id => new ElementRef(linked.Document, id)));
-                    break;
             }
         }
     }
@@ -125,14 +122,9 @@ internal sealed class ViewLedger
 
         Overrides.Remove(InstanceOf(link));
         HiddenLinks.Remove(link);
-        HiddenElements.RemoveWhere(element => element.Document == link);
         CategoryOffIds.Remove(link);
         OverridePlans.RemoveAll(plan => plan.Steps.Any(step => step is DocumentStep document && document.Document == link));
-        if (Isolation is { } isolation)
-        {
-            isolation.KeptLinks.Remove(link);
-            isolation.HiddenRest.RemoveWhere(element => element.Document == link);
-        }
+        Isolation?.KeptLinks.Remove(link);
     }
 
     public void Keep()
@@ -140,7 +132,7 @@ internal sealed class ViewLedger
         HiddenElements.Clear();
         HiddenLinks.Clear();
         Isolation = Isolation is { KeptCategories.Count: > 0 } isolation
-            ? new Isolation([], [.. isolation.KeptCategories], [], [])
+            ? new Isolation([], [.. isolation.KeptCategories], [])
             : null;
     }
 
@@ -174,7 +166,7 @@ internal sealed class ViewLedger
         if (Isolation is { } isolation)
         {
             Isolation = new Isolation([.. isolation.KeptElements.Select(rename.Map)], isolation.KeptCategories,
-                [.. isolation.KeptLinks.Select(rename.Map)], [.. isolation.HiddenRest.Select(rename.Map)]);
+                [.. isolation.KeptLinks.Select(rename.Map)]);
         }
     }
 
@@ -243,12 +235,11 @@ internal sealed class ViewLedger
 internal sealed record Isolation(
     HashSet<ElementRef> KeptElements,
     HashSet<long> KeptCategories,
-    HashSet<DocumentKey> KeptLinks,
-    HashSet<ElementRef> HiddenRest)
+    HashSet<DocumentKey> KeptLinks)
 {
-    public static Isolation From(VisibilityPlan plan, IEnumerable<ElementRef> hiddenRest)
+    public static Isolation From(VisibilityPlan plan)
     {
-        var isolation = new Isolation([], [], [], [.. hiddenRest]);
+        var isolation = new Isolation([], [], []);
         foreach (var step in plan.Steps)
         {
             switch (step)

@@ -80,6 +80,11 @@ public sealed class VisibilityController
             return _readBacks.HiddenOf(View, element.Document) is { } hidden && hidden.Contains(element.Id);
         }
 
+        if (View is { } view && _runtime.Journal.HasLinkHide(view.Model, view.ViewId, element))
+        {
+            return true;
+        }
+
         return Current is { IsEmpty: false } ledger
                && _runtime.Store.TryGet(element.Document) is { } snapshot
                && snapshot.TryGetRow(element.Id, out var row)
@@ -98,7 +103,7 @@ public sealed class VisibilityController
             return _readBacks.HiddenOf(View, document.Key) is { } readBack ? [.. readBack] : [];
         }
 
-        var hidden = new HashSet<long>();
+        var hidden = View is { } view ? _runtime.Journal.LinkHideIds(view.Model, view.ViewId, document.Key) : [];
         if (Current is not { IsEmpty: false } ledger)
         {
             return hidden;
@@ -136,12 +141,13 @@ public sealed class VisibilityController
 
         var timer = TraceTimer.Start(_runtime.Logger);
         var ledger = LedgerOf(view);
+        var before = await InViewBeforeAsync(plan);
         if (await _executor.ApplyAsync(view, ledger, plan, CancellationToken.None) is { } reason)
         {
             return reason;
         }
 
-        RecordCategoryOff(ledger, plan);
+        RecordCategoryOff(ledger, before);
 
         _readBacks.Touch(view, plan);
         _readBacks.Drop(view);
@@ -208,39 +214,75 @@ public sealed class VisibilityController
         }
     }
 
-    internal IReadOnlyCollection<long> CategoryOffIds(DocumentKey document)
+    internal HashSet<long> HiddenInViewIds(DocumentKey document)
     {
-        if (Current is not { } ledger
-            || !ledger.CategoryOffIds.TryGetValue(document, out var ids)
-            || _runtime.Store.TryGet(document) is not { } snapshot)
+        var ids = View is { } view && !document.IsCurrentModel
+            ? _runtime.Journal.LinkHideIds(view.Model, view.ViewId, document)
+            : [];
+        if (Current is { } ledger
+            && ledger.CategoryOffIds.TryGetValue(document, out var off)
+            && _runtime.Store.TryGet(document) is { } snapshot)
         {
-            return [];
+            ids.UnionWith(off.Where(id => snapshot.TryGetRow(id, out var row)
+                                          && ledger.IsCategoryOff(snapshot.Groups[row.GroupIndex].GroupId)));
         }
 
-        return ids.Where(id => snapshot.TryGetRow(id, out var row)
-                               && ledger.IsCategoryOff(snapshot.Groups[row.GroupIndex].GroupId))
-            .ToList();
+        return ids;
     }
 
-    private void RecordCategoryOff(ViewLedger ledger, VisibilityPlan plan)
+    private async Task<List<(DocumentScope Document, IReadOnlyCollection<long> Ids)>> InViewBeforeAsync(VisibilityPlan plan)
     {
-        if (plan.Action is not (VisibilityAction.Hide or VisibilityAction.Isolate)
-            || !plan.Steps.Any(step => step is CategoryStep)
-            || _runtime.Data.Scope != ScopeKind.ActiveView)
+        var before = new List<(DocumentScope, IReadOnlyCollection<long>)>();
+        if (plan.Action is not (VisibilityAction.Hide or VisibilityAction.Isolate) || !plan.Steps.Any(step => step is CategoryStep))
         {
-            return;
+            return before;
         }
 
-        foreach (var document in _runtime.Data.Documents.Where(document => document.Ids is not null))
+        foreach (var document in _runtime.Data.Documents.Where(document => document.Info.IsLoaded))
+        {
+            if (_runtime.Data.Scope == ScopeKind.ActiveView)
+            {
+                if (document.Ids is { } ids)
+                {
+                    before.Add((document, ids));
+                }
+
+                continue;
+            }
+
+            try
+            {
+                before.Add((document, await _runtime.Services.Source.CollectScopeAsync(document.Key, ScopeKind.ActiveView,
+                    CancellationToken.None)));
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _runtime.Logger.Swallowed(exception, "View ids before category action", document.Key.ToString());
+            }
+        }
+
+        return before;
+    }
+
+    private static void RecordCategoryOff(
+        ViewLedger ledger,
+        List<(DocumentScope Document, IReadOnlyCollection<long> Ids)> before)
+    {
+        foreach (var (document, ids) in before)
         {
             var snapshot = document.Snapshot;
-            ledger.AddCategoryOffIds(document.Key, document.Ids!.Where(id =>
+            ledger.AddCategoryOffIds(document.Key, ids.Where(id =>
                 snapshot.TryGetRow(id, out var row) && ledger.IsCategoryOff(snapshot.Groups[row.GroupIndex].GroupId)));
         }
     }
 
     public bool HidByPanel(ElementRef element)
     {
+        if (View is { } view && _runtime.Journal.HasLinkHide(view.Model, view.ViewId, element))
+        {
+            return true;
+        }
+
         if (Current is not { } ledger)
         {
             return false;
@@ -343,13 +385,7 @@ public sealed class VisibilityController
 
     private async Task ClearAsync(ViewInfo view, CancellationToken cancellationToken)
     {
-        var remaining = _runtime.Journal.Get(view.Model, view.ViewId).LinkHides;
         _ledgers.Remove((view.Model, view.ViewId));
-        if (remaining.Count > 0)
-        {
-            LedgerOf(view).HiddenElements.UnionWith(remaining.Select(hide => hide.Element));
-        }
-
         _readBacks.Drop(view);
         await ReadBackAsync(cancellationToken);
         Changed?.Invoke(this, EventArgs.Empty);

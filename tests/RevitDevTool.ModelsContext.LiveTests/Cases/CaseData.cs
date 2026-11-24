@@ -94,6 +94,8 @@ internal sealed class SampleFacts
 
     public string LinkLabel { get; set; } = string.Empty;
 
+    public string SiteLinkTitle { get; set; } = string.Empty;
+
     public string ViewName { get; set; } = string.Empty;
 
     public string ThreeDViewName { get; set; } = string.Empty;

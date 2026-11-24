@@ -1,0 +1,117 @@
+{
+  "setup": {
+    "parent": "OST_Toposolid",
+    "child": "OST_Subdivision",
+    "hostViewCategory": "OST_Walls",
+    "color": { "r": 244, "g": 67, "b": 54 },
+    "childColor": { "r": 33, "g": 150, "b": 243 }
+  },
+  "cases": [
+    {
+      "id": "CA-01",
+      "description": "Subcategory collection: in the Site link the snapshot holds Toposolid 2 and its subcategory group Sub-divisions 8, keyed by the subcategory id, named plainly and carrying Toposolid as parent",
+      "expected": { "parent": 2, "child": 8 },
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with every link loaded and open the Model Context panel; Scope 'Whole model'.",
+        "Tick the 'Snowdon Towers Sample Site' link in the document list.",
+        "On the Explorer tab expand the Site link: Toposolid shows 2 and its child Sub-divisions shows 8 (the parent row reads 10 when the tree nests children).",
+        "Check without the panel: open the Site model (do not save), select every toposolid and sub-division and read the Properties count per category: 2 Toposolid, 8 Sub-divisions."
+      ]
+    },
+    {
+      "id": "CA-10",
+      "description": "Subcategories of Site, Lines and Topography (base and survey points, internal origin, sketch lines, contours) never become groups, in the Current model and in the Site link",
+      "expected": "no snapshot group whose parent is Site, Lines or Topography",
+      "manualSteps": [
+        "Open the sample with every link loaded and the Model Context panel; Scope 'Whole model'; tick Current model and the Site link.",
+        "Expand the Categories box and the Explorer tree: no Project Base Point, Survey Point, Internal Origin, <Sketch> or Primary Contours row appears, under Site, Lines, Topography or on its own."
+      ]
+    },
+    {
+      "id": "CA-02",
+      "description": "Box Hide reaches By Host View links: a category hide (T2) on Walls removes the walls of the Current model and of every By Host View link from the active {3D} view collector, inside Temporary View Properties; Reset brings every count back",
+      "expected": "Walls 0 in every document after Hide; temporary view properties on; counts as before after Reset",
+      "images": [ "before", "after", "reset" ],
+      "manualSteps": [
+        "Make '{3D}' the active view; every link By Host View (Visibility/Graphics > Revit Links).",
+        "In the panel, Categories box, click the eye of Walls: the walls of the HVAC model and of the Architectural link disappear, and the view title shows Temporary View Properties.",
+        "Click Reset on the temporary bar: every wall is back."
+      ]
+    },
+    {
+      "id": "CA-03",
+      "description": "Parent overrides children for Hide: a category hide of Toposolid with its subcategory Sub-divisions removes all 10 Site link elements from the {3D} view collector; Reset brings them back",
+      "expected": { "before": 10, "after": 0 },
+      "images": [ "before", "after", "reset" ],
+      "manualSteps": [
+        "Make '{3D}' the active view with the Site link By Host View.",
+        "In the Categories box click the eye of Toposolid: the 2 toposolids and the 8 sub-divisions of the Site link disappear; Sub-divisions reads hidden too.",
+        "Reset: all 10 are back."
+      ]
+    },
+    {
+      "id": "CA-04",
+      "description": "Revit keeps a subcategory hidden under a hidden parent: with only Toposolid hidden (Sub-divisions left on), the 8 sub-divisions also leave the {3D} view collector. This is why the panel refuses Show on a child while its parent is hidden",
+      "expected": { "child": 0 },
+      "manualSteps": [
+        "Make '{3D}' the active view with the Site link By Host View.",
+        "Visibility/Graphics > Model Categories: untick Toposolid and leave its Sub-divisions subcategory ticked; the sub-divisions disappear too. Cancel the dialog."
+      ]
+    },
+    {
+      "id": "CA-05",
+      "description": "Box Color is a category override inside Temporary View Properties, which By Host View links follow: Walls get the panel color; Reset removes it. The drawn color of linked walls is checked on the images",
+      "expected": "category override color #F44336 on Walls with temporary view properties on; none after Reset",
+      "images": [ "before", "after", "reset" ],
+      "manualSteps": [
+        "Make '{3D}' the active view; every link By Host View.",
+        "Categories box: tick only Walls, right-click > Color, pick red: the walls of the HVAC model and of the Architectural link turn red.",
+        "Reset: the colors are gone."
+      ]
+    },
+    {
+      "id": "CA-06",
+      "description": "Keep leaves a category hide in place: after a box Hide of Walls, Keep does not end Temporary View Properties, Walls stay hidden in every document; Reset ends it",
+      "expected": "after Keep: temporary view properties on, Walls 0; after Reset: counts as before",
+      "manualSteps": [
+        "Make '{3D}' the active view. Categories box: eye of Walls (hidden).",
+        "Click Keep on the temporary bar: the walls stay hidden and the bar still counts the change.",
+        "Click Reset: the walls are back."
+      ]
+    },
+    {
+      "id": "CA-07",
+      "description": "A link that keeps its own settings (Custom) is not reached by a box action; the panel returns the one-line notice 'Links By Linked View or Custom keep their own settings.'",
+      "expected": "notice = VisibilityText.LinksKeepOwnSettings",
+      "manualSteps": [
+        "Make '{3D}' the active view. Visibility/Graphics > Revit Links: set the Architectural link to Custom (leave its categories as they are).",
+        "Categories box: eye of Walls. The panel says 'Links By Linked View or Custom keep their own settings.' and the Architectural walls stay drawn.",
+        "Reset, then set the link back to By Host View."
+      ]
+    },
+    {
+      "id": "CA-08",
+      "description": "Parent overrides children on a link row: Color on the Site link's Toposolid row makes one 'Model Context <n>' view filter whose categories are Toposolid and Sub-divisions; Reset deletes it",
+      "expected": "one panel filter with categories {Toposolid, Sub-divisions}; none after Reset",
+      "images": [ "before", "after" ],
+      "manualSteps": [
+        "Make '{3D}' the active view with the Site link By Host View.",
+        "Explorer: right-click the Site link's Toposolid row > Color, pick red: all 10 elements turn red.",
+        "Visibility/Graphics > Filters lists one 'Model Context <n>' filter; Edit/New shows its categories Toposolid and Sub-divisions.",
+        "Reset: the filter is gone."
+      ]
+    },
+    {
+      "id": "CA-09",
+      "description": "Latest wins between view filters: child color then parent color puts the parent's filter above the child's; child color again puts the child's on top; Reset deletes both",
+      "expected": "order after parent: parent, child; after child again: child, parent; no panel filter after Reset",
+      "images": [ "after" ],
+      "manualSteps": [
+        "Make '{3D}' the active view with the Site link By Host View.",
+        "Explorer: color Sub-divisions blue, then Toposolid red: all 10 are red (the parent wins).",
+        "Color Sub-divisions blue again: only the 8 sub-divisions are blue.",
+        "Visibility/Graphics > Filters shows the most recent 'Model Context <n>' first. Reset removes both."
+      ]
+    }
+  ]
+}

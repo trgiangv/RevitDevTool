@@ -2,7 +2,7 @@ using DevTools.ModelsContext.Documents;
 
 namespace DevTools.ModelsContext.Visibility;
 
-public sealed record LinkHide(ElementRef Element, string UniqueId);
+public sealed record LinkHide(ElementRef Element, string UniqueId, bool IsIsolateRest = false);
 
 public sealed record JournalPage(int ChangeCount, IReadOnlyList<LinkHide> LinkHides, bool IsStale)
 {
@@ -72,8 +72,45 @@ public sealed class ChangeJournal
             var batch = ++page.Batches;
             foreach (var hide in hides)
             {
-                page.Hides[hide.Element] = new Batched(hide, batch);
+                if (!hide.IsIsolateRest || !page.Hides.ContainsKey(hide.Element))
+                {
+                    page.Hides[hide.Element] = new Batched(hide, batch);
+                }
             }
+        }
+    }
+
+    public void EndIsolateRest(DocumentKey model, string viewId)
+    {
+        lock (_gate)
+        {
+            if (!_pages.TryGetValue((model.CurrentModel, viewId), out var page))
+            {
+                return;
+            }
+
+            foreach (var pair in page.Hides.Where(pair => pair.Value.Hide.IsIsolateRest).ToList())
+            {
+                page.Hides[pair.Key] = pair.Value with { Hide = pair.Value.Hide with { IsIsolateRest = false } };
+            }
+        }
+    }
+
+    public bool HasLinkHide(DocumentKey model, string viewId, ElementRef element)
+    {
+        lock (_gate)
+        {
+            return _pages.TryGetValue((model.CurrentModel, viewId), out var page) && page.Hides.ContainsKey(element);
+        }
+    }
+
+    public HashSet<long> LinkHideIds(DocumentKey model, string viewId, DocumentKey document)
+    {
+        lock (_gate)
+        {
+            return _pages.TryGetValue((model.CurrentModel, viewId), out var page)
+                ? [.. page.Hides.Keys.Where(element => element.Document == document).Select(element => element.Id)]
+                : [];
         }
     }
 

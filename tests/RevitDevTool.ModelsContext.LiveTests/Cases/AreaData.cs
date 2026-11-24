@@ -159,6 +159,19 @@ internal sealed class VisibilityExpect
     public List<string>? PlannedTiers { get; set; }
 }
 
+internal sealed class CategoryActionSetup
+{
+    public string Parent { get; set; } = string.Empty;
+
+    public string Child { get; set; } = string.Empty;
+
+    public string HostViewCategory { get; set; } = string.Empty;
+
+    public RgbData Color { get; set; } = new();
+
+    public RgbData ChildColor { get; set; } = new();
+}
+
 internal sealed class ProbeData
 {
     public string Docs { get; set; } = string.Empty;
@@ -176,6 +189,9 @@ internal static class Areas
     private static readonly Lazy<CaseFile<EditSetup, CaseItem>> LazyEdits = new(() => CaseFiles.Read<CaseFile<EditSetup, CaseItem>>("edits.json"));
     private static readonly Lazy<List<VisibilityCase>> LazyVisibility = new(() => CaseFiles.Read<CaseFile<VisibilityCase>>("visibility.json").Cases);
     private static readonly Lazy<List<ProbeData>> LazyProbes = new(() => CaseFiles.Read<List<ProbeData>>("probes.json"));
+    private static readonly Lazy<CaseFile<CategoryActionSetup, CaseItem>> LazyCategoryActions = new(() => CaseFiles.Read<CaseFile<CategoryActionSetup, CaseItem>>("category-actions.json"));
+
+    public static CaseFile<CategoryActionSetup, CaseItem> CategoryActions => LazyCategoryActions.Value;
 
     public static IReadOnlyList<ExplorerCase> Explorer => LazyExplorer.Value;
 

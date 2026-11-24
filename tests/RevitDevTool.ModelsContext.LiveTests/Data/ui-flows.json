@@ -39,14 +39,14 @@
     },
     {
       "id": "UI-04",
-      "description": "Live pauses above 5,000 matches: every category in the Architectural link (SC-02) keeps the Live switch on and shows the line 'Paused: over 5,000 matches'; None clears it",
-      "test": "LivePausesAboveLimit",
+      "description": "Selection sync pauses above 5,000 matches: every category in the Architectural link (SC-02) keeps the Selection sync toggle on and shows the line 'Paused: over 5,000 matches'; None clears it",
+      "test": "SyncPausesAboveLimit",
       "cases": ["SC-02"],
-      "expected": "count = SC-02 expected; Live switch on; paused line shown; no line after None",
+      "expected": "count = SC-02 expected; Selection sync on; paused line shown; no line after None",
       "images": ["before", "paused", "after"],
       "manualSteps": [
         "Tick only the Architectural link. Filter tab: + New filter, open Categories, click All.",
-        "The count reads 7,526. The Live switch stays on with its label Live, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
+        "The count reads 7,526. The Selection sync toggle stays on, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
         "Click None: the count reads 0 and the line is gone."
       ]
     },
@@ -103,6 +103,118 @@
         "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link ticked: click Collapse all, expand the link's row, expand Doors, expand its first family.",
         "Right-click the first type row and pick Color… (or select the row and click its Color tool). In the picker click the first swatch (red, #F44336) and Confirm.",
         "Those linked doors turn red in the view, the row shows a red mark and the temporary bar shows a change count. Click Reset: the doors lose the color, the mark is gone and the bar is gone."
+      ]
+    },
+    {
+      "id": "UI-09",
+      "description": "Categories box tree: ticking Toposolid ticks Sub-divisions, unticking the child leaves the parent partly ticked, ticking it again checks the parent",
+      "test": "BoxTreeTicksChildren",
+      "cases": [],
+      "expected": "Sub-divisions On; Toposolid Indeterminate; then Toposolid On",
+      "images": ["before", "parent", "partly", "after"],
+      "manualSteps": [
+        "Explorer tab, Whole model, Architectural and Site links ticked. Open Categories, click None.",
+        "Tick Toposolid and open its chevron: Sub-divisions is ticked.",
+        "Untick Sub-divisions: the Toposolid box shows the partial mark. Tick it again: Toposolid reads ticked."
+      ]
+    },
+    {
+      "id": "UI-10",
+      "description": "Categories box search for a child lists its parent and opens it",
+      "test": "BoxSearchOpensParent",
+      "cases": [],
+      "expected": "rows Toposolid, Sub-divisions; chevron open",
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Explorer tab, Site link ticked. Open Categories, close the Toposolid chevron, type 'Sub-div' in the search.",
+        "The list shows Toposolid with Sub-divisions under it, the chevron open."
+      ]
+    },
+    {
+      "id": "UI-11",
+      "description": "Categories box selection is the tick: select Walls, add Doors, both and only they are ticked",
+      "test": "BoxRowsSelectMany",
+      "cases": [],
+      "expected": "ticked Walls, Doors",
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Explorer tab, Architectural link ticked. Open Categories, click None.",
+        "Click Walls, Ctrl+click Doors: only those two are ticked and neither row is painted selected."
+      ]
+    },
+    {
+      "id": "UI-12",
+      "description": "Explorer nests a subcategory under its parent: Site link, Toposolid 10 (2 own + 8), Sub-divisions 8 under it",
+      "test": "SiteNestsSubdivisions",
+      "cases": [],
+      "expected": "Toposolid 10, Sub-divisions 8",
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Explorer tab, Whole model, Site link ticked. In Categories tick only Toposolid, close the box, Collapse all.",
+        "Expand the Site link row: Toposolid reads 10. Expand it: Sub-divisions reads 8."
+      ]
+    },
+    {
+      "id": "UI-13",
+      "description": "The Categories box eye hides Walls in the Architectural link (Temporary View Properties); Reset shows them",
+      "test": "BoxEyeHidesLinkWalls",
+      "cases": [],
+      "category": "OST_Walls",
+      "expected": "eye Hidden, temporary bar with a count; then eye Shown and no bar after Reset",
+      "images": ["before", "after", "reset"],
+      "manualSteps": [
+        "Make {3D} active. Explorer tab, only the Architectural link ticked. Open Categories, click the eye on Walls.",
+        "The linked walls disappear, the eye is closed and the temporary bar shows a count. Click Reset: walls back, eye open, no bar."
+      ]
+    },
+    {
+      "id": "UI-14",
+      "description": "Filter result bar at the docked width: count, mode and sync toggle on one line, the toggle fully inside the bar and left of the overflow arrow, every tool in the bar or behind the arrow",
+      "test": "ResultBarKeepsSync",
+      "cases": [],
+      "expected": "one line; sync toggle inside the bar; tools in the bar or the overflow",
+      "images": ["before", "after"],
+      "manualSteps": [
+        "Filter tab: + New filter, Categories All.",
+        "The result row stays one line; the Selection sync toggle is fully drawn; tools that do not fit sit behind the arrow at the end."
+      ]
+    },
+    {
+      "id": "UI-15",
+      "description": "The two selection sync toggles are separate: Explorer off leaves Filter on; Filter off hides the paused line, on brings it back; Explorer stays off",
+      "test": "SyncTogglesAreSeparate",
+      "cases": [],
+      "expected": "Filter On; paused line; gone with Filter off; back with Filter on; Explorer Off",
+      "images": ["before", "paused", "off", "after"],
+      "manualSteps": [
+        "Explorer tab: turn Selection sync off. Filter tab: its Selection sync is still on. + New filter, Categories All: 'Paused: over 5,000 matches'.",
+        "Turn the Filter toggle off: the line goes. On: it comes back. The Explorer toggle is still off; turn it on."
+      ]
+    },
+    {
+      "id": "UI-16",
+      "description": "Why hidden: Ducts hidden by the panel's eye, select a duct instance row, the strip reads 'Temporary hide/isolate' with Show; the close button closes it",
+      "test": "WhyHiddenNamesTempHide",
+      "cases": [],
+      "category": "OST_DuctCurves",
+      "expected": "'Temporary hide/isolate' with Show; closed by the close button",
+      "images": ["before", "strip", "after"],
+      "manualSteps": [
+        "Explorer tab, Current model ticked, Categories only Ducts. Collapse all, expand Current model, click the eye on Ducts.",
+        "Expand Ducts down to an instance and select it: the strip reads 'Temporary hide/isolate' with Show. Click the close button, then Reset."
+      ]
+    },
+    {
+      "id": "UI-17",
+      "description": "Keep asks first when linked elements are hidden: Doors hidden under the Architectural link, Keep shows the question, Cancel keeps the bar, Reset clears it",
+      "test": "KeepAsksForLinkHides",
+      "cases": [],
+      "category": "OST_Doors",
+      "expected": "question '… link elements stay hidden in this view'; Cancel keeps the bar; Reset clears it",
+      "images": ["before", "ask", "after", "reset"],
+      "manualSteps": [
+        "Make {3D} active. Explorer tab, Architectural link ticked: Collapse all, expand the link, click the eye on Doors.",
+        "Click Keep: the bar asks 'N link elements stay hidden in this view' (Keep · Cancel). Click Cancel: the bar stays. Click Reset."
       ]
     }
   ]

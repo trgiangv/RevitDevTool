@@ -9,8 +9,6 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
 
     public List<IReadOnlyList<long>> HiddenReads { get; } = [];
 
-    public HashSet<ElementRef> HiddenLinked { get; } = [];
-
     public List<IReadOnlyList<ElementRef>> ShownLinked { get; } = [];
 
     public List<IReadOnlyCollection<ElementRef>> Zoomed { get; } = [];
@@ -19,7 +17,9 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
 
     public int ResetCount { get; private set; }
 
-    public string? ShowError { get; set; }
+    public bool LinkedNotShown { get; set; }
+
+    public string? Refusal { get; set; }
 
     public string? Notice { get; set; }
 
@@ -31,6 +31,11 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         }
 
         RequireView(plan.ViewId);
+        if (Refusal is { } refusal)
+        {
+            throw new InvalidOperationException(refusal);
+        }
+
         ExecutedPlans.Add(plan);
         var hidden = new List<ElementRef>();
         foreach (var step in plan.Steps)
@@ -49,7 +54,7 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
             }
         }
 
-        HiddenLinked.UnionWith(hidden);
+        model.ViewHiddenElements.UnionWith(hidden);
         var categories = plan.Steps.OfType<CategoryStep>().Select(step => step.CategoryId).ToList();
         if (plan.Action == VisibilityAction.Hide)
         {
@@ -68,12 +73,12 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
     public Task ShowLinkedAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
     {
         ShownLinked.Add(elements.ToList());
-        if (ShowError is { } error)
+        if (LinkedNotShown)
         {
-            throw new InvalidOperationException(error);
+            throw new LinkedNotShownException();
         }
 
-        HiddenLinked.ExceptWith(elements);
+        model.ViewHiddenElements.ExceptWith(elements);
         return Task.CompletedTask;
     }
 

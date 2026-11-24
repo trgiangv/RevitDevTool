@@ -29,6 +29,15 @@
       "manualSteps": [
         "Switch to the other open model (click one of its view tabs): the Revit title bar names it, and the panel's Explorer lists that model's categories under Current model."
       ]
+    },
+    {
+      "id": "LS-04",
+      "description": "After an MCP view change the Documents ticks become the Current model plus each loaded link the new view draws; MODELS_CONTEXT_EXPECT_DOCS lists them (comma-separated parts of the labels)",
+      "expected": "ticked documents = MODELS_CONTEXT_EXPECT_DOCS",
+      "manualSteps": [
+        "Untick a link in the Documents box, then open another view in Revit (for example {3D}).",
+        "The Documents box ticks the Current model and every link that view draws; your untick is gone."
+      ]
     }
   ]
 }

@@ -134,13 +134,13 @@
     },
     {
       "id": "VI-09",
-      "description": "T2 category eye: the eye on 'Ducts' in the Categories box hides the Ducts category temporarily",
+      "description": "T2 category eye: the eye on 'Ducts' in the Categories box hides the Ducts category inside Temporary View Properties (category visibility, which By Host View links follow), not with temporary hide",
       "tier": "T2",
       "source": "ExplorerRow",
       "action": "Hide",
       "target": { "category": "OST_DuctCurves", "everywhere": true },
       "other": { "docs": "Host", "category": "OST_DuctTerminal" },
-      "expected": { "temporaryHideIsolate": true, "targetVisible": false, "otherVisible": true, "linkVisible": true },
+      "expected": { "temporaryHideIsolate": false, "temporaryProperties": true, "targetVisible": false, "otherVisible": true, "linkVisible": true },
       "images": ["before", "after", "reset"],
       "manualSteps": [
         "Activate '{3D}'. Explorer tab: open Categories and click the eye on 'Ducts'.",

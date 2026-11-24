@@ -18,9 +18,9 @@ L3 panel inside Revit       tests/RevitDevTool.ModelsContext.UiTests            
 
 | Layer | Carries | Why here |
 |-------|---------|----------|
-| L1 | View model logic, debounce, Live and pause, library (save, rename, switch), scope pruning, tree moves, planner tiers, picker filtering, AutomationIds | Pure logic on a seeded fake model; runs in CI on every change |
+| L1 | View model logic, debounce, selection sync and pause, library (save, rename, switch), scope pruning, tree moves, planner tiers, picker filtering, AutomationIds | Pure logic on a seeded fake model; runs in CI on every change |
 | L2 | Every count in this matrix, catalog facts, host filter read-back, edits and cache refresh | The Revit API is the thing under test, not the UI. Calls go straight to `RevitFilterEvaluator`, `RevitModelSource`, `RevitFilterCatalog` and `ParameterCatalogReader` inside Revit, with no waits |
-| L3 | A few end-to-end flows: build a rule, Aa, AND to OR, save and reload, Live pause, link hide and Reset, linked element hide (T3) and Reset | Proves the wiring from UIA input to count. Each flow repeats a golden L2 count, so a UI failure is never a counting question. T3 runs only here, through the panel's own click path |
+| L3 | A few end-to-end flows: build a rule, Aa, AND to OR, save and reload, selection sync pause, link hide and Reset, linked element hide (T3) and Reset | Proves the wiring from UIA input to count. Each flow repeats a golden L2 count, so a UI failure is never a counting question. T3 runs only here, through the panel's own click path |
 
 L2 and L3 projects do not end in `.Tests`, so `ProjectGraph.TestProjects` leaves
 them out of CI and `tests/Directory.Build.props` does not compile
@@ -257,7 +257,13 @@ Current results (Snowdon HVAC + six links):
 - Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
 - Revit 2024, run `20261118-093432`: L2 127/131, L3 5/6; the differences are listed under Mismatches. A case where the oracle differs from the golden value there means the 2024 sample file differs, not that the panel is wrong: record it with both values and decide per-version golden values before changing `Data/*.json`.
 - L1 (net10.0-windows, run 2026-11-21): core 431 tests in 4 s, views 120 tests in 70 s. Another agent may still be adding tests, so these are the counts at the time of writing.
-- Not run yet: L2 `WhyHiddenTests` (WH-01 to WH-06), `NestedChairsFollowHost` (NE-01) and `FilterKeepsTickedOnly` (PI-03); the manual Pick check (MP-01).
+- Not run yet: L2 `WhyHiddenTests` (WH-01 to WH-06), `NestedChairsFollowHost` (NE-01) and `FilterKeepsTickedOnly` (PI-03); the manual Pick check (MP-01); L2 `CategoryActionTests` (CA-01 to CA-09).
+- Goldens to re-read from the oracle on the next 2026 run (rule 2), because the product changed after they were recorded:
+  SC-01, SC-02, SC-05, SC-06 and UI-04 (model subcategories are collected, so whole-document totals grow
+  where a document has Slab Edges, railing parts, Sub-divisions and the like); TX-04, TX-05, NU-05, YN-03,
+  EN-02, EN-05, RF-02 (*not equals* now also matches an element whose value is empty); L3 flows that
+  assumed only the Current model ticked at open (the view's links tick now). VI-09 expects Temporary View
+  Properties instead of temporary hide (Gotcha 30).
 
 `L2 matrix` below means `FilterMatrixTests.CountMatchesOracle(<id>)`.
 
@@ -302,7 +308,10 @@ Current results (Snowdon HVAC + six links):
 |----|----------|----------|------|
 | CB-01 | Categories box: all ticked at first, untick drops the group row, model count follows ticks, a new category shows ticked | state | L1 `CategoryBoxTests` (`CategoriesStartTicked`, `UntickDropsGroupRow`, `ModelCountFollowsTicks`, `NewCategoryShowsTicked`) |
 | CB-02 | Menu acts on the ticked categories, no tick disables it with *Select categories*, search keeps hidden ticks, `SetTicks` is one change, the link notice shows after Isolate, the eye hides the category everywhere, tooltip names the links | plan, message, CanExecute | L1 `CategoryBoxTests` (`IsolateActsOnTicked`, `HalftoneActsOnTicked`, `NoTickDisablesMenu`, `TickEnablesMenu`, `SearchKeepsHiddenTicks`, `SetTicksBatchesOneChange`, `NoTickReportsReason`, `IsolateShowsLinkNotice`, `EyeHidesCategoryEverywhere`, `EyeTipNamesLinks`) |
-| CB-03 | Box lists the ticked categories, untick removes the group row, eye hides, menu lists Isolate, Halftone, Color; list reports CanSelectMultiple, AddToSelection ticks two rows and Isolate runs on both, menu off without ticks, selecting a row ticks only it, a tick selects its row | UI state | Views `ExplorerViewTests` (`CategoriesBoxListsTicked`, `UntickRemovesGroupRow`, `CategoryEyeHidesCategory`, `CategoryMenuListsActions`, `CategoryListSelectsMany`, `AddToSelectionKeepsBoth`, `MenuOffWithoutTicks`, `SelectRowTicksOnlyIt`, `TickSelectsRow`) |
+| CB-03 | Box lists the ticked categories, untick removes the group row, eye hides, menu lists Isolate, Halftone, Color; Isolate runs on two ticked rows, menu off without ticks; selecting a row ticks only it, Add keeps both, Remove unticks, the box keeps the others, rows are never painted selected, All selects every row; live: select and add tick exactly two | UI state | Views `ExplorerViewTests` (`CategoriesBoxListsTicked`, `UntickRemovesGroupRow`, `CategoryEyeHidesCategory`, `CategoryMenuListsActions`, `IsolateRunsOnTicked`, `MenuOffWithoutTicks`), `CategorySectionTests` (`SelectTicksOnlyRow`, `AddKeepsBothTicked`, `RemoveUnticksRow`, `BoxTickKeepsOthers`, `SelectedRowIsPlain`, `AllSelectsEveryRow`); L3 UI-11 |
+| CB-04 | Box tree: parent tick and select tick the children, a child untick shows the partial mark, a partial click ticks all, hand-ticked children check the parent, search for a child opens its parent, collapse keeps ticks; live on the Site link (Toposolid › Sub-divisions); the box eye on a link category | UI state | Views `CategoryTreeViewTests` (12, Explorer and Filter); L3 UI-09, UI-10, UI-13 |
+| CB-05 | Explorer nests a subcategory row under its parent; the parent counts own + children | Site: Toposolid 10, Sub-divisions 8 | L1 `SubcategoryRowTests`; L3 UI-12 |
+| RB-01 | Filter result bar: one line, the mode and the Selection sync toggle never overflow and stay fully drawn left of the overflow arrow (*matches* hides first), tools overflow from the end and run from the overflow | layout | Views `ResultBarViewTests` (`BarStaysOneLine`, `WideBarShowsAllTools`, `NarrowToolsOverflow`); L3 UI-14 |
 | HR-01 | Active view: group counts its hidden elements, Whole model has none, a click on *+N hidden* lists them dimmed and a second click closes | counts, rows | L1 `HiddenRowsTests` (`GroupCountsHiddenElements`, `WholeModelHasNoHidden`, `HiddenClickListsDimmedRows`, `HiddenClickAgainCloses`), Views `HiddenCountShowsInActiveView` |
 | HR-02 | Group Select and Hide skip hidden elements, a dimmed row acts alone and sets the Why hidden element, search finds hidden elements | ids | L1 `HiddenRowsTests` (`GroupSelectSkipsHidden`, `GroupHideSkipsHidden`, `DimmedRowActsAlone`, `DimmedRowSetsWhyElement`, `SearchFindsHiddenElement`) |
 | PI-01 | Pick is off with no ticked link or no ticked category and on with a link; it sends the ticked links only, skips the port with no link | enabled, args | L1 `PickTests` (`NoLinkDisablesPick`, `NoCategoryDisablesPick`, `LinkEnablesPick`, `PickSendsLinksOnly`, `NoLinkSkipsPort`), `ExplorerPickTests`; Views `PickOffWithoutLink`, `PickOnWithTickedLink` |
@@ -417,16 +426,16 @@ Equipment in the Current model.
 TX-02 to TX-05, TX-18, TX-19 above; widening and exact pass also in L1
 `CaseSensitiveTests`.
 
-### Live, recount, edits
+### Selection sync, recount, edits
 
 | ID | Use case | Expected | Test |
 |----|----------|----------|------|
-| LV-01 | Edit runs once after 300 ms | one selection | L1 `LiveDebounceFiresOnce` |
+| LV-01 | Edit runs once after 300 ms | one selection | L1 `SyncDebounceFiresOnce` |
 | LV-02 | Model edit recounts, never selects | no selection sent | L1 `ModelEditRecountsWithoutSelecting` |
 | LV-03 | Value edit (3 ducts get a comment), cache dropped as `DocumentChanged` does | 0 → 3 | L2 `ValueEditRecounts` |
 | LV-04 | Copied duct: candidates stay until the cache drops (version does not change per transaction) | n → n, then n + 1 | L2 `AddedElementCountsAfterRefresh` |
-| LV-05 | Live pauses above 5,000 | paused, nothing sent | L1 `LivePausesAbove5000` |
-| LV-06 | Live pause shows in the panel: switch and label *Live* unchanged, line *Paused: over 5,000 matches*; the line goes away under the limit, with no categories, with no filter, with Live off | SC-02 > 5,000 | L1 `PauseEnds*` (logic), Views `PausedLineShowsOverLimit`, `PausedLineHidesUnderLimit` (binding), L3 UI-04 |
+| LV-05 | Selection sync pauses above 5,000 | paused, nothing sent | L1 `ResultSyncPausesAbove5000` |
+| LV-06 | Selection sync pause shows in the panel: the `Filter.SelectionSync` toggle unchanged, line *Paused: over 5,000 matches*; the line goes away under the limit, with no categories, with no filter, with selection sync off | SC-02 > 5,000 | L1 `PauseEnds*` (logic), Views `PausedLineShowsOverLimit`, `PausedLineHidesUnderLimit` (binding), L3 UI-04 |
 | LV-07 | Add / Remove keep the baseline | selection | L1 `AddModeKeepsBaseline` |
 | LV-08 | Readiness: edit Busy, run Idle, generation grows | status | L1 `ActivityTests`, Views `ActivityViewTests` |
 
@@ -498,7 +507,7 @@ tick = selection.
 | VI-06 | T1 link model row | Hide | link instance hidden, ducts visible | L2 |
 | VI-07 | T1 link model row | Isolate | link visible, ducts hidden | L2 |
 | VI-08 | T1 link model row | Color | link instance colored; Reset restores its overrides | L2 |
-| VI-09 | T2 All models Ducts | Hide | ducts hidden, terminals visible | L2 |
+| VI-09 | T2 Categories box Ducts | Hide | Temporary View Properties on, no temporary hide/isolate (category visibility, Gotcha 30); ducts hidden, terminals visible | L2 |
 | VI-10 | T2 Categories box Ducts | Isolate | Temporary View Properties on, no temporary hide/isolate; Current model and every By Host View link show only ducts (center lines count as Ducts) besides duct systems, link instances and the case's leftovers; Reset restores every count | L2 |
 | VI-11 | T2 All models Ducts | Color | category override colored, cleared by Reset | L2 |
 | VI-12 | T2 Categories box Doors (in links) | Isolate | Current model and every By Host View link show only Doors (141, unchanged), link instances and the leftovers Cameras, Model Groups, Divisions, Multistory Stairs; Reset restores every count (Architectural 7,823 -> 183 -> 7,823) | L2 |
@@ -510,6 +519,46 @@ tick = selection.
 | VI-18 | T4 link door type repeated 51 times | Color | refused: "Over 100 rules to color in a link.", view unchanged | L2 |
 | VI-19 | T3 isolate GR-02 (link doors) | Isolate | planned as T3, not run (Gotcha 13) | L2 |
 | VI-20 | T0 + T3 isolate GS-02 | Isolate | planned as T0 + T3, not run | L2 |
+
+### Subcategories, parent rule, category actions, linked-hide record (L1; L2 `CategoryActionTests`, `category-actions.json`)
+
+The L2 cases need `{3D}` active from a run of its own (Gotcha 21; `user-action-activate-view.cs` with
+`ViewName` = `{3D}`), every link By Host View, and the Site link loaded. CA-07 sets the Architectural
+link to Custom inside a transaction group that it rolls back.
+
+Product behaviors (cleanup audit numbering) and their rows: B20 subcategory rows SU-01, CA-01; B21 Site, Lines,
+Topography left out CA-10; B30 box eye reaches links CA-02, HC-04, CA-07; B31 box menu on ticked rows CB-02,
+CA-05; B32 category Isolate VI-10, VI-12; B33 Reset and the own-settings notice HC-04, CA-07; B34 parent
+overrides children PO-01, CA-03, CA-08, CA-09; B35 child Show refused PO-02, CA-04; B37 hidden category keeps
+its count HC-01; B38 hidden in Whole model then Active view HC-02; B45 link children through Hide in View LH-01,
+LA-02, UI-06; B46 link isolate refusals LA-03; B54 saved-hide dot LH-03; B55 one record of linked hides LH-01,
+LH-02; model sync relay MS-01.
+
+| ID | Use case | Expected | Test | Status |
+|----|----------|----------|------|--------|
+| CA-10 | No group under Site, Lines or Topography (points, sketch lines, contours) in the Current model and the Site link | none | L2 `NoisySubcategoriesLeftOut` | written, not run |
+| LA-03 | Link isolate refusals: Reveal Hidden Elements on, a view that cannot show links, over 10,000 linked elements to hide; the sentence shows, nothing is journaled, no eye changes | refusal text, state unchanged | L1 `LinkIsolateRefusalTests` (`RefusedIsolateChangesNothing` ×3, `TooManyNamesTheCap`); the adapter checks run before any Hide in View, so L2 does not run them (Gotcha 13) | pass |
+| MS-01 | Model sync relay: a sync of the active model whose snapshot already reflects the version keeps it; a missed change rebuilds it and the counts follow; a sync of another model is ignored | builds, counts | L1 `ModelSyncTests` (`SyncKeepsReflectedSnapshot`, `SyncRebuildsMissedChange`, `SyncOfOtherModelIgnored`) | pass |
+| CA-01 | Site link snapshot: Toposolid and its subcategory Sub-divisions, plain name, parent id | 2 + 8, parent Toposolid | L2 `SubcategoryCollected` | written, not run |
+| CA-02 | Box Hide of Walls reaches By Host View links (category visibility in Temporary View Properties) | Walls 0 in every view collector; Reset restores every count | L2 `BoxHideReachesLinks` | written, not run |
+| CA-03 | Hide Toposolid with Sub-divisions in the Site link | 10, then 0, then 10 | L2 `ParentHideCoversChild` | written, not run |
+| CA-04 | Revit fact behind the child Show refusal: Toposolid hidden alone takes Sub-divisions out too | Sub-divisions 0 | L2 `HiddenParentHidesChild` | written, not run |
+| CA-05 | Box Color is a category override in Temporary View Properties; linked walls checked on the images | override set, cleared by Reset | L2 `BoxColorIsCategoryOverride` | written, not run |
+| CA-06 | Keep with a category hide: the mode stays, Walls stay hidden, Reset ends it | Walls 0 after Keep; counts back after Reset | L2 `KeepLeavesCategoryHide` | written, not run |
+| CA-07 | A Custom link is not reached; the notice says so | *Links By Linked View or Custom keep their own settings.* | L2 `OwnSettingsLinkNotice` | written, not run |
+| CA-08 | Color on the Site link's Toposolid row: one panel filter with both category ids | {Toposolid, Sub-divisions}; none after Reset | L2 `ParentLinkFilterHasBoth` | written, not run |
+| CA-09 | Latest wins between panel view filters | parent on top, then child on top; none after Reset | L2 `LatestFilterOnTop` | written, not run |
+| SU-01 | Subgroup data: plain name, `ParentId`, parent and child rows, untick, child-only Isolate, link Hide counts | data, plans | L1 `SubcategoryRowTests` (7) | pass |
+| PO-01 | Parent overrides children for Color, Halftone, Hide, select; Current model and link; latest wins; Reset clears both; box parent covers children | plans, marks | L1 `ParentOverrideTests` (14) | pass |
+| PO-02 | Child Show refused while its parent is hidden | *Show its parent category first.* | L1 `ParentOverrideTests.ChildShowWaitsForParent`; L2 CA-04 | L1 pass |
+| HC-01 | A category the panel hid (Hide or Isolate) keeps its Active view count and reads hidden; Current model, link, subcategory; Reset | counts unchanged | L1 `HiddenCategoryCountTests` (`HiddenCategoryKeepsCount`, `LinkHiddenCategoryKeepsCount`, `SubcategoryKeepsCountUnderParent`, `IsolateKeepsOtherCounts`, `ResetKeepsCount`) | pass |
+| HC-02 | Category hidden in Whole model, then Active view | the view's own count, hidden | L1 `WholeModelHideThenActiveView` | pass |
+| HC-03 | Keep with a category hide keeps the eye hidden; Show after Keep works | state | L1 `CategoryHideTests`; L2 CA-06 | L1 pass |
+| HC-04 | Box action with a link By Linked View or Custom reports the notice | message | L1 `CategoryHideTests.EyeHideShowsLinkNotice`; L2 CA-07 | L1 pass |
+| LH-01 | One record of linked hides (the journal): eye, bar count, Show, Reset, rename, view switch, isolate rest shown by Show, an explicit hide outlives it | agree | L1 `LinkHideRecordTests` | pass |
+| LH-02 | Typed failure when Revit shows no linked element (`LinkedNotShownException`) | *linked stay hidden* message | L1 `LinkHideRecordTests.UnshownTypedFailureReports`, `PanelBarsTests` (`MenuRefusalShowsInPanel`, `ResetDropsUnshownOnce`, `EyeOnUnshownRestReports`) | pass |
+| LH-03 | Active view, linked hide (T3): the row keeps its count, eye Hidden, so the saved-hide dot shows | count, eye, `IsHiddenInView` | L1 `LinkHideRecordTests.ActiveViewLinkHideKeepsRow`; L3 UI-06 to also check `Explorer.Row.SavedHide` (mc-ux) | L1 pass |
+| TV-01 | View framing when Temporary View Properties turns on and off | same zoom corners and camera | manual probe (round-10 report) | open |
 
 ### Why hidden and nested families
 
@@ -574,6 +623,7 @@ so the script's full L3 run never runs it.
 | LS-01 | Build Ducts + Comments equals `mc-live-step` (Whole model, Current model ticked) | a count | `BuildsStepFilter` |
 | LS-02 | Settle, read `Filter.ResultCount` | `MODELS_CONTEXT_EXPECT` | `CountIs` |
 | LS-03 | Current model item of `ModelContext.Documents` (`ModelContext.Document`, title in HelpText) | starts with `MODELS_CONTEXT_EXPECT_MODEL` | `ShowsModel` |
+| LS-04 | Ticked items of `ModelContext.Documents` after an MCP view change (`user-action-activate-view.cs`) | the Current model plus each link the view draws = `MODELS_CONTEXT_EXPECT_DOCS` | `TicksFollowView` |
 
 ```powershell
 $env:MODELS_CONTEXT_LIVE_STEP = '1'; $env:MODELS_CONTEXT_REVIT_PID = '<pid>'
@@ -581,6 +631,7 @@ $ui = 'tests/RevitDevTool.ModelsContext.UiTests/RevitDevTool.ModelsContext.UiTes
 dotnet run --project $ui -- --filter BuildsStepFilter
 $env:MODELS_CONTEXT_EXPECT = '3'; dotnet run --project $ui -- --filter CountIs
 $env:MODELS_CONTEXT_EXPECT_MODEL = '<title>'; dotnet run --project $ui -- --filter ShowsModel
+$env:MODELS_CONTEXT_EXPECT_DOCS = 'Current model,Architectural'; dotnet run --project $ui -- --filter TicksFollowView
 ```
 
 Step order (MCP steps are `execute_csharp_code` with the file in `scripts/models-context/`):
@@ -620,18 +671,33 @@ name; files land in the run folder.
 | MC | A stored-format JSON filter run through the core ports with no panel view (`headless-filters.json`), and three evaluations started together | = panel and oracle; no exception | L2 `HeadlessFilterTests` |
 | PF | Cold, warm and invalidated time of snapshot, quick counts, scope ids, catalog, value index and filter match per document; longest Revit call; memory per million (a model under 100,000 elements is judged as 100,000, so fixed name and type costs do not scale up); 20 repeats without memory growth (`perf-budgets.json`) | within budget and the `perf/2026.json` baseline; `perf.json` in the run folder | L2 `PerformanceTests` (`MODELS_CONTEXT_RECORD_PERF=1` records the baseline) |
 
-### L3 flows (`PanelFlowTests`, `ui-flows.json`)
+### L3 flows (`PanelFlowTests`, `BoxAndBarTests`, `ui-flows.json`)
 
 | ID | Flow | Expected | Test |
 |----|------|----------|------|
 | UI-01 | TX-01, then Aa on | TX-01, then TX-02 | `CaseToggleChangesCount` |
 | UI-02 | Connector to OR (GR-02) | GR-02 | `ConnectorMakesOrGroup` |
 | UI-03 | Build NU-04 (picker takes "Swing Angle"), save, new filter, reload | parameter "Swing Angle", NU-04, NU-04 again | `SavedFilterReloads` |
-| UI-04 | All categories in the link (SC-02), then None | Live switch on, line *Paused: over 5,000 matches*, then no line | `LivePausesAboveLimit` |
+| UI-04 | All categories in the link (SC-02), then None | Selection sync on, line *Paused: over 5,000 matches*, then no line | `SyncPausesAboveLimit` |
 | UI-05 | Eye on the link model row, Reset | bar "1 change", then no bar | `LinkHideShowsTemporaryBar` |
 | UI-06 | Eye on Doors under the link (T3, Hide in View), Reset | eye Hidden and bar "1 change", then eye Shown and no bar | `LinkDoorsHideThenReset` |
 | UI-07 | Isolate tool on the first door type under the link (part A), Reset | bar with a count, no error, type eye Shown, another link category Hidden; then Shown and no bar; Isolate and Reset times | `LinkTypeIsolateThenReset` |
 | UI-08 | Color tool on the first door type under the link, first picker swatch, Confirm (part B), Reset | bar with a count, no error, row color `#F44336`; then no color and no bar; Color and Reset times | `LinkTypeColorThenReset` |
+| UI-09 | Box tree on the Site link: tick Toposolid, open it, untick then tick Sub-divisions (CB-04) | Sub-divisions On; Toposolid partial; then On | `BoxTreeTicksChildren` |
+| UI-10 | Box search "Sub-div" with Toposolid closed (CB-04) | rows Toposolid, Sub-divisions; chevron open | `BoxSearchOpensParent` |
+| UI-11 | Box None, select Walls, add Doors (CB-03) | exactly Walls and Doors ticked | `BoxRowsSelectMany` |
+| UI-12 | Only Toposolid ticked, expand the Site link and Toposolid (CB-05) | Toposolid 10, Sub-divisions 8 | `SiteNestsSubdivisions` |
+| UI-13 | Box eye on Walls with only the Architectural link ticked, Reset (CB-04, B30) | eye Hidden, bar with a count; then eye Shown, no bar | `BoxEyeHidesLinkWalls` |
+| UI-14 | New filter, Categories All, at the docked width (RB-01) | one line; sync toggle inside the bar, left of the arrow; every tool in the bar or behind the arrow | `ResultBarKeepsSync` |
+| UI-15 | Explorer sync off, Filter sync off then on above 5,000 (EX-11, LV-06) | Filter stays On; paused line gone with it off, back on; Explorer stays Off | `SyncTogglesAreSeparate` |
+| UI-16 | Eye on Ducts (Current model), select a duct instance row, close the strip (WH) | *Temporary hide/isolate* with Show; closed | `WhyHiddenNamesTempHide` |
+| UI-17 | Eye on Doors under the link, Keep, Cancel, Reset (B61) | *… link elements stay hidden in this view*; Cancel keeps the bar; Reset clears it | `KeepAsksForLinkHides` |
+
+UI-09 to UI-17 change only temporary state and reset it; UI-09, UI-10 and UI-12 need the Site link loaded
+(Inconclusive otherwise). The context menus (B56, the box Isolate and Halftone, the result right-click) have no
+L3 test: WPF does not implement UI Automation `ShowContextMenu`, so only a right-click or Shift+F10 opens them,
+which is not a pattern. They stay covered by Views `CategoryMenuListsActions`, `IsolateRunsOnTicked` and
+`PanelViewTests`; the row tools (UI-07, UI-08) run the same menu items.
 
 ## Mismatches found
 

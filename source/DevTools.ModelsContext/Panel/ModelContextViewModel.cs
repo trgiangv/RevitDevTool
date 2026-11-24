@@ -195,7 +195,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     internal void ShowNoModel()
     {
         Explorer.Reset(ExplorerState.Fresh(Explorer.IsSelectionSyncOn));
-        Filter.Reset(new FilterState(null, Filter.Runner.IsLiveOn));
+        Filter.Reset(new FilterState(null, Filter.Runner.IsSelectionSyncOn));
         SetDocumentsQuietly([], null);
         ShowView(null);
         IsUpdating = false;

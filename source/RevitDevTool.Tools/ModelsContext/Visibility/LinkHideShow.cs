@@ -75,7 +75,7 @@ internal static class LinkHideShow
             RevitProfiler.Logger.ZLogTrace($"Show links: {shown} of {hidden.Count} hidden elements shown");
             if (shown == 0)
             {
-                throw new InvalidOperationException(VisibilityText.NotShown);
+                throw new LinkedNotShownException();
             }
         });
     }
