@@ -22,15 +22,17 @@ public static class ModelsContextExtensions
     {
         services.AddSingleton<ScopeCache>();
         services.AddSingleton<ParameterCache>();
+        services.AddSingleton<RevitViewActions>();
         services.AddSingleton<RevitModelEvents>(sp => new RevitModelEvents(
             sp.GetRequiredService<ScopeCache>(),
             sp.GetRequiredService<ParameterCache>(),
+            sp.GetRequiredService<RevitViewActions>(),
             Dispatcher.CurrentDispatcher));
         services.AddSingleton<IRevitModelEvents>(sp => sp.GetRequiredService<RevitModelEvents>());
         services.AddSingleton<IModelEvents>(sp => sp.GetRequiredService<RevitModelEvents>());
         services.AddSingleton<IModelSource, RevitModelSource>();
         services.AddSingleton<ISelectionPort, RevitSelectionPort>();
-        services.AddSingleton<IViewActions, RevitViewActions>();
+        services.AddSingleton<IViewActions>(sp => sp.GetRequiredService<RevitViewActions>());
         services.AddSingleton<IVisibilityExplainer, RevitVisibilityExplainer>();
         services.AddSingleton<IFilterEvaluator, RevitFilterEvaluator>();
         services.AddSingleton<IHostFilterCatalog, RevitFilterCatalog>();
@@ -49,6 +51,7 @@ public static class ModelsContextExtensions
             sp.GetRequiredService<IClock>(),
             sp.GetRequiredService<IScheduler>(),
             sp.GetRequiredService<ILogger<ModelsContextPane>>()));
+        services.AddSingleton<ModelsContextPanel>();
         services.AddSingleton<ModelsContextPane>();
         return services;
     }

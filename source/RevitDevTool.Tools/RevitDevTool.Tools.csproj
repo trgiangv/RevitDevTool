@@ -3,6 +3,21 @@
     <UseRevit>true</UseRevit>
     <UseWpf>true</UseWpf>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(CommandBuild)' == 'true'">
+    <ILRepackable>true</ILRepackable>
+    <OutputPath>bin\$(Configuration).Command\</OutputPath>
+    <RepackBinariesExcludes>
+      FSharp.Core.dll;
+      DevTools.UI.dll;
+      IronPython*.dll;
+      Microsoft.Dynamic.dll;
+      Microsoft.Scripting*.dll;
+    </RepackBinariesExcludes>
+    <RepackBinariesExcludes Condition="$(TargetFramework.StartsWith('net10'))">
+      $(RepackBinariesExcludes)
+      Nice3point.Revit.Extensions.dll;
+    </RepackBinariesExcludes>
+  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <ProjectReference Include="..\RevitDevTool.Core\RevitDevTool.Core.csproj" />

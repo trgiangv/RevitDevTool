@@ -1,23 +1,19 @@
-using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Panel;
-using DevTools.Presentation.Views.ModelsContext.Panel;
-using Microsoft.Extensions.Logging;
 using RevitDevTool.Core;
-using RevitDevTool.Tools.ModelsContext.Documents;
-using RevitDevTool.Tools.ModelsContext.Visibility;
 using System.Windows;
 using System.Windows.Controls;
 
 namespace RevitDevTool.Tools.ModelsContext.Pane;
 
-public sealed class ModelsContextPane(ModelContextServices services, IRevitModelEvents events, ILogger<ModelsContextPane> logger)
+public sealed class ModelsContextPane(ModelsContextPanel panel)
 {
     private static readonly Guid PaneGuid = new("6C1E3B7A-52D4-4F0B-9E57-2E8B1C4D9A31");
     public static readonly DockablePaneId PaneId = new(PaneGuid);
 
     private readonly ContentControl _host = new();
-    private ModelContextViewModel? _panel;
     private bool _initialized;
+
+    public static bool IsShown => DockablePane.PaneExists(PaneId) && new DockablePane(PaneId).IsShown();
 
     public void Initialize(UIControlledApplication application)
     {
@@ -26,7 +22,6 @@ public sealed class ModelsContextPane(ModelContextServices services, IRevitModel
             return;
         }
 
-        RevitProfiler.Use(logger);
         _initialized = true;
         _host.IsVisibleChanged += OnVisibleChanged;
         DockablePaneProvider
@@ -42,9 +37,9 @@ public sealed class ModelsContextPane(ModelContextServices services, IRevitModel
                     TabBehind = DockablePanes.BuiltInDockablePanes.ProjectBrowser
                 };
             });
-        events.Subscribe(application);
-        ViewActivations.Watch(application);
+        panel.Start(application);
     }
+
     public void ToggleVisibility()
     {
         if (!_initialized || !DockablePane.PaneIsRegistered(PaneId) || !DockablePane.PaneExists(PaneId))
@@ -63,13 +58,18 @@ public sealed class ModelsContextPane(ModelContextServices services, IRevitModel
         }
     }
 
+    public static void Hide()
+    {
+        if (DockablePane.PaneIsRegistered(PaneId) && IsShown)
+        {
+            new DockablePane(PaneId).Hide();
+        }
+    }
+
     public void Shutdown()
     {
         _host.IsVisibleChanged -= OnVisibleChanged;
-        events.Unsubscribe();
-        ViewActivations.Unwatch();
-        _panel?.Dispose();
-        _panel = null;
+        panel.Stop();
         _initialized = false;
     }
 
@@ -81,47 +81,15 @@ public sealed class ModelsContextPane(ModelContextServices services, IRevitModel
         }
 
         var visible = (bool)e.NewValue;
-        events.IsActive = visible;
-        if (visible && _panel is null)
+        panel.IsActive = visible;
+        if (visible && !panel.IsBuilt)
         {
-            Build();
+            _host.Content = panel.Build();
         }
 
         if (!visible)
         {
-            _ = DropFiltersAsync();
+            _ = ModelsContextPanel.DropFiltersAsync(() => IsShown);
         }
-    }
-
-    private static async Task DropFiltersAsync()
-    {
-        if (!LinkFilters.HasAnyAnywhere)
-        {
-            return;
-        }
-
-        try
-        {
-            await RevitProfiler.RunAsync("Drop view filters", application =>
-            {
-                if (!DockablePane.PaneExists(PaneId) || !new DockablePane(PaneId).IsShown())
-                {
-                    LinkFilters.RemoveEverywhere(application);
-                }
-            }, CancellationToken.None);
-        }
-        catch (Exception exception)
-        {
-            RevitProfiler.Logger.Swallowed(exception, "Drop view filters", "pane closed");
-        }
-    }
-
-    private void Build()
-    {
-        using var timer = TraceTimer.Start(logger, "Panel build");
-        _panel = new ModelContextViewModel(services) { IsPaneVisible = false };
-        var view = new ModelContextView { DataContext = _panel };
-        view.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "RegionBrush");
-        _host.Content = view;
     }
 }
