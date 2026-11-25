@@ -2,6 +2,7 @@ using DevTools.ModelsContext.Explorer;
 using DevTools.ModelsContext.Selection;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.Visibility;
+using DevTools.Presentation.Views.ModelsContext.Explorer;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 
@@ -167,5 +168,212 @@ public sealed class ExplorerViewTests
         var row = ui.Host.Row("Ducts");
 
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Has(row, "Explorer.Row.HiddenCount")), "The Ducts row has no hidden count.");
+    }
+
+    [TestMethod]
+    public void SelectedDimmedRowIsFull()
+    {
+        using var ui = PanelUi.Open();
+        ui.ShowView("ModelContext.Scope.ActiveView");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.HiddenCount > 0)), "No row counts hidden elements.");
+        List<TreeRow> dimmed = [];
+        WpfSta.Run(async () =>
+        {
+            var explorer = ui.Panel.Explorer;
+            var ducts = explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" } && row.Document == FakeModelGenerator.Current);
+            await explorer.ExpandAsync(ducts);
+            var family = explorer.Rows.First(row => row.Parent == ducts && row is { HiddenCount: > 1, Count: > 0 });
+            await explorer.ExpandAsync(family);
+            var type = explorer.Rows.First(row => row.Parent == family && row is { HiddenCount: > 1, Count: > 0 });
+            await explorer.ExpandAsync(type);
+            dimmed = explorer.Rows.Where(row => row.Parent == type && row.IsDimmed).Take(2).ToList();
+        });
+        Assert.HasCount(2, dimmed);
+
+        WpfSta.Invoke(() =>
+        {
+            var list = RowList(ui);
+            list.SelectedItems.Clear();
+            list.SelectedItems.Add(dimmed[0]);
+            list.ScrollIntoView(dimmed[1]);
+        });
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => RowOpacity(ui, dimmed[0]) == 1), $"The selected dimmed row reads opacity {WpfSta.Invoke(() => RowOpacity(ui, dimmed[0]))}.");
+        Assert.AreEqual(0.55, WpfSta.Invoke(() => RowOpacity(ui, dimmed[1])), 0.001, "The unselected dimmed row is not dimmed.");
+        Assert.AreEqual(RowEye.Hidden, dimmed[0].Eye);
+    }
+
+    [TestMethod]
+    [DataRow(System.Windows.Input.Key.Z)]
+    [DataRow(System.Windows.Input.Key.I)]
+    [DataRow(System.Windows.Input.Key.H)]
+    public void LetterKeyRunsOnRow(System.Windows.Input.Key key)
+    {
+        using var ui = PanelUi.Open();
+        var ducts = WpfSta.Invoke(() => ui.Panel.Explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" }));
+        WpfSta.Invoke(() => RowList(ui).SelectedItems.Add(ducts));
+
+        WpfSta.Invoke(() => PressKey(ui, ducts, key));
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => key == System.Windows.Input.Key.Z
+                ? ui.Actions.Zoomed.Count == 1
+                : ui.Actions.ExecutedPlans.Any(plan => plan.Action == (key == System.Windows.Input.Key.I ? VisibilityAction.Isolate : VisibilityAction.Hide))),
+            key + " did not run on the selected row.");
+    }
+
+    [TestMethod]
+    public void DoubleClickZoomsInstance()
+    {
+        using var ui = PanelUi.Open();
+        var instance = ExpandToInstance(ui);
+
+        WpfSta.Invoke(() => DoubleClick(ui, instance, null));
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.Zoomed.Count == 1), "Double-click did not zoom.");
+        Assert.AreEqual(instance.Id, ui.Actions.Zoomed[0].Single().Id);
+        Assert.IsTrue(WpfSta.Invoke(() => RowList(ui).SelectedItems.Cast<TreeRow>().SequenceEqual([instance])),
+            "Double-click did not select only the row.");
+    }
+
+    [TestMethod]
+    public void DoubleClickExpandsGroup()
+    {
+        using var ui = PanelUi.Open();
+        var ducts = WpfSta.Invoke(() => ui.Panel.Explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" }));
+
+        WpfSta.Invoke(() => DoubleClick(ui, ducts, null));
+        Assert.IsTrue(ThemeHost.WaitFor(() => ducts.IsExpanded), "Double-click did not open the group.");
+        WpfSta.Invoke(() => DoubleClick(ui, ducts, null));
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => !ducts.IsExpanded), "Double-click did not close the group.");
+        Assert.IsEmpty(ui.Actions.Zoomed);
+    }
+
+    [TestMethod]
+    public void DoubleClickOnEyeSkipsRow()
+    {
+        using var ui = PanelUi.Open();
+        var instance = ExpandToInstance(ui);
+
+        WpfSta.Invoke(() => DoubleClick(ui, instance, "Eye"));
+
+        Assert.IsFalse(ThemeHost.WaitFor(() => ui.Actions.Zoomed.Count > 0), "A double-click on the eye zoomed.");
+    }
+
+    private static TreeRow ExpandToInstance(PanelUi ui)
+    {
+        TreeRow? instance = null;
+        WpfSta.Run(async () =>
+        {
+            var explorer = ui.Panel.Explorer;
+            var parent = explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" } && row.Document == FakeModelGenerator.Current);
+            while (instance is null)
+            {
+                await explorer.ExpandAsync(parent);
+                var child = explorer.Rows.First(row => row.Parent == parent);
+                instance = child.Kind == TreeRowKind.Instance ? child : null;
+                parent = child;
+            }
+        });
+        return instance!;
+    }
+
+    private static void DoubleClick(PanelUi ui, TreeRow row, string? part)
+    {
+        var list = RowList(ui);
+        list.ScrollIntoView(row);
+        list.UpdateLayout();
+        var item = (System.Windows.Controls.ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(row);
+        var presenter = FindPresenter(item)!;
+        var source = part is null ? item : presenter.ContentTemplate.FindName(part, presenter);
+        item.RaiseEvent(new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0, System.Windows.Input.MouseButton.Left)
+        {
+            RoutedEvent = System.Windows.Controls.Control.MouseDoubleClickEvent,
+            Source = source,
+        });
+    }
+
+    private static void PressKey(PanelUi ui, TreeRow row, System.Windows.Input.Key key)
+    {
+        var list = RowList(ui);
+        list.UpdateLayout();
+        var item = (System.Windows.Controls.ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(row);
+        var source = System.Windows.PresentationSource.FromVisual(item)!;
+        foreach (var routed in new[] { System.Windows.Input.Keyboard.PreviewKeyDownEvent, System.Windows.Input.Keyboard.KeyDownEvent })
+        {
+            item.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, source, 0, key) { RoutedEvent = routed });
+        }
+    }
+
+    private static System.Windows.Controls.ListBox RowList(PanelUi ui)
+    {
+        var explorer = (ExplorerTabView)ui.View.FindName("ExplorerView");
+        return (System.Windows.Controls.ListBox)explorer.FindName("RowList");
+    }
+
+    private static double RowOpacity(PanelUi ui, TreeRow row)
+    {
+        var list = RowList(ui);
+        list.UpdateLayout();
+        if (list.ItemContainerGenerator.ContainerFromItem(row) is not System.Windows.Controls.ListBoxItem item)
+        {
+            return double.NaN;
+        }
+
+        var presenter = FindPresenter(item);
+        return presenter?.ContentTemplate.FindName("RowGrid", presenter) is System.Windows.UIElement grid ? grid.Opacity : double.NaN;
+    }
+
+    private static System.Windows.Controls.ContentPresenter? FindPresenter(System.Windows.DependencyObject node)
+    {
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(node); index++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(node, index);
+            if (child is System.Windows.Controls.ContentPresenter { ContentTemplate: not null } presenter)
+            {
+                return presenter;
+            }
+
+            if (FindPresenter(child) is { } found)
+            {
+                return found;
+            }
+        }
+
+        return null;
+    }
+
+    [TestMethod]
+    public void SelectedRowKeepsNameAndEye()
+    {
+        using var ui = PanelUi.Open();
+        ui.ShowView("ModelContext.Scope.ActiveView");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.HiddenCount > 0)), "No row counts hidden elements.");
+        TreeRow? type = null;
+        WpfSta.Run(async () =>
+        {
+            var explorer = ui.Panel.Explorer;
+            var ducts = explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" } && row.Document == FakeModelGenerator.Current);
+            await explorer.ExpandAsync(ducts);
+            var family = explorer.Rows.First(row => row.Parent == ducts && row is { HiddenCount: > 0, Count: > 0 });
+            await explorer.ExpandAsync(family);
+            type = explorer.Rows.First(row => row.Parent == family && row is { HiddenCount: > 0, Count: > 0 }
+                                              && explorer.Rows.Count(other => other.Text == row.Text) == 1);
+        });
+
+        var list = ui.Host.FindInWindow("Explorer.Rows").BoundingRectangle;
+        var item = ui.Host.Row(type!.Text);
+        item.Patterns.SelectionItem.Pattern.Select();
+
+        Assert.IsTrue(ThemeHost.WaitForUi(() => item.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Isolate")) is { IsOffscreen: false }),
+            "The row tools did not show on the selected row.");
+        var text = item.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Text"))!.BoundingRectangle;
+        var eye = item.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Eye"))!.BoundingRectangle;
+        Assert.IsGreaterThanOrEqualTo(24, text.Width, $"The name keeps no characters: {text}.");
+        Assert.IsTrue(text.Left >= list.Left && text.Right <= list.Right, $"The name {text} is not inside the list {list}.");
+        var row = item.BoundingRectangle;
+        Assert.IsTrue(row.Right <= list.Right, $"The row {row} is wider than the list {list}.");
+        Assert.IsTrue(eye.Width >= 16 && eye.Left >= row.Left && eye.Right <= row.Right, $"The eye {eye} is clipped by the row {row}.");
+        Assert.IsNull(item.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Count")), "The count still takes width beside the row tools.");
     }
 }

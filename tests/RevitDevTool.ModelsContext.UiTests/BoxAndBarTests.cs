@@ -554,11 +554,13 @@ public sealed class BoxAndBarTests : RecordedTest
     {
         _panel.Settle();
         var row = RowUnder(link, name);
-        var count = _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Count")).BoundingRectangle;
-        var left = count.Right;
-        if (row.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.HiddenCount")) is { IsOffscreen: false } hidden)
+        var left = _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Text")).BoundingRectangle.Right;
+        foreach (var id in new[] { "Explorer.Row.Count", "Explorer.Row.HiddenCount" })
         {
-            left = Math.Max(left, hidden.BoundingRectangle.Right);
+            if (row.FindFirstDescendant(cf => cf.ByAutomationId(id)) is { IsOffscreen: false } part)
+            {
+                left = Math.Max(left, part.BoundingRectangle.Right);
+            }
         }
 
         var eye = _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Eye")).BoundingRectangle;

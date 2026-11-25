@@ -74,11 +74,6 @@ internal sealed class ExplorerSearch(PanelRuntime runtime, ExplorerTree tree, Tr
                 continue;
             }
 
-            if (row.IsDimmed && _hits?.Contains(row) != true && !tree.ShowsHidden(row.Parent))
-            {
-                continue;
-            }
-
             into.Add(row);
             if (row.IsExpanded && row.Children is { } children)
             {

@@ -111,7 +111,6 @@ internal sealed class RowPainter(
         row.Count = paths.Sum(scope.Counts.CountAt);
         row.SelectedInside = paths.Sum(branch.Selected.CountAt);
         row.HiddenCount = paths.Sum(branch.Unseen.CountAt);
-        row.IsHiddenOpen = tree.IsHiddenOpen(row);
         row.IsDimmed = row.Count == 0 && hidden == 0 && row.HiddenCount > 0;
         row.Eye = row.IsDimmed
             ? RowEye.None
@@ -124,9 +123,8 @@ internal sealed class RowPainter(
         var state = states[scope.Key];
         row.SelectedInside = selection.Elements.Contains(new ElementRef(scope.Key, row.Id)) ? 1 : 0;
         row.IsDimmed = state.UnseenIds.Contains(row.Id);
-        row.Eye = row.IsDimmed
-            ? RowEye.None
-            : InheritedEye(row, stale) ?? (state.HiddenIds.Contains(row.Id) ? RowEye.Hidden : RowEye.Shown);
+        row.Eye = InheritedEye(row, stale)
+                  ?? (row.IsDimmed || state.HiddenIds.Contains(row.Id) ? RowEye.Hidden : RowEye.Shown);
     }
 
     private RowEye? InheritedEye(TreeRow row, bool stale)

@@ -24,7 +24,6 @@ public sealed class TreeRow : INotifyPropertyChanged
     private static readonly PropertyChangedEventArgs HiddenCountChanged = new(nameof(HiddenCount));
     private static readonly PropertyChangedEventArgs HiddenTextChanged = new(nameof(HiddenText));
     private static readonly PropertyChangedEventArgs HasHiddenChanged = new(nameof(HasHidden));
-    private static readonly PropertyChangedEventArgs HiddenOpenChanged = new(nameof(IsHiddenOpen));
     private static readonly PropertyChangedEventArgs DimmedChanged = new(nameof(IsDimmed));
     private static readonly PropertyChangedEventArgs HiddenInViewChanged = new(nameof(IsHiddenInView));
 
@@ -199,19 +198,6 @@ public sealed class TreeRow : INotifyPropertyChanged
     public string HiddenText { get; private set; } = string.Empty;
 
     public bool HasHidden => HiddenCount > 0;
-
-    public bool IsHiddenOpen
-    {
-        get;
-        internal set
-        {
-            if (field != value)
-            {
-                field = value;
-                Raise(HiddenOpenChanged);
-            }
-        }
-    }
 
     public bool IsDimmed
     {

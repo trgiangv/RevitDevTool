@@ -115,7 +115,44 @@ internal static class Oracle
         var collector = document.Key.IsCurrentModel
             ? new FilteredElementCollector(host, view.Id)
             : new FilteredElementCollector(host, view.Id, document.Key.LinkInstanceId.ToElementId());
-        return [.. collector.WhereElementIsNotElementType().ToElementIds().Select(id => id.ToLong())];
+        var ids = new HashSet<long>(collector.WhereElementIsNotElementType().ToElementIds().Select(id => id.ToLong()));
+        ids.UnionWith(RailingPartsOf(document.Document, view, ids));
+        return ids;
+    }
+
+    private static List<long> RailingPartsOf(Document document, View view, HashSet<long> drawn)
+    {
+        BuiltInCategory[] railings = [BuiltInCategory.OST_StairsRailing, BuiltInCategory.OST_RailingHandRail, BuiltInCategory.OST_RailingTopRail];
+        BuiltInCategory[] parts = [BuiltInCategory.OST_StairsRailingBaluster, BuiltInCategory.OST_RailingSupport, BuiltInCategory.OST_RailingTermination];
+        var found = new List<long>();
+        foreach (var id in drawn)
+        {
+            if (document.GetElement(id.ToElementId()) is not { Category: { } category } railing
+                || !railings.Contains(category.BuiltInCategory))
+            {
+                continue;
+            }
+
+            found.AddRange(railing.GetDependentElements(null)
+                .Select(document.GetElement)
+                .Where(part => part?.Category is { } partCategory && parts.Contains(partCategory.BuiltInCategory)
+                               && !CategoryOff(view, partCategory.Id))
+                .Select(part => part!.Id.ToLong()));
+        }
+
+        return found;
+    }
+
+    private static bool CategoryOff(View view, ElementId category)
+    {
+        try
+        {
+            return view.GetCategoryHidden(category);
+        }
+        catch (Autodesk.Revit.Exceptions.ApplicationException)
+        {
+            return false;
+        }
     }
 
     internal static bool Matches(FilterNode node, Element element, SourceId source, ICollection<SourceId> known, Units units)

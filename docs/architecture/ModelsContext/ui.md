@@ -118,6 +118,15 @@ commits, Esc cancels, losing focus commits a valid name or restores the old one.
 - **Tree:** `FlatTreeList`, a `ListBox` with recycling virtualization and fixed
   28 px rows in a star-sized grid row. Expand inserts a range and collapse removes
   one, each with a single collection reset.
+- **Tree keys and double-click:** `ExplorerTabView.OnRowsKeyDown` (PreviewKeyDown on
+  `RowList`) runs Z / B / I / H through `ContextMenuViewModel.RunShortcutAsync`, so a key
+  needs keyboard focus inside the list. In Revit that focus held only once the DevTools
+  pane stopped re-showing itself on every log line ([Logging](../Logging/README.md)).
+  `TreeRowContainerStyle` sets a `MouseDoubleClick` EventSetter; `OnRowDoubleClick`
+  skips a double-click that starts in a button (chevron, eye, row tools) and calls
+  `ExplorerTabViewModel.OpenRowCommand`: an instance row becomes the only selected row
+  and `ContextMenuViewModel.SelectAndZoomAsync` runs Select then Zoom (even while sync
+  hides *Select* in the menu); any other row toggles expand.
 - **Small drop-downs:** `SmallComboBox`, `SmallComboBoxExtend` and `TagCheckComboBoxItem.Small` (`DevTools.UI/Theme/Styles/SmallItems.xaml`) give every item HC's small height (20) and font size 11, check boxes included. The editable value box uses `SmallComboBoxExtend` because only HC's Extend templates draw `InfoElement.Placeholder`. `SmallDropDownItemsAreSmall` and `ScopeDropDownItemsAreSmall` check height and every text size.
 - **Scope boxes:** `TagCheckComboBox.Small` has `Padding` 10,0. The template pulls the tag row 4 px left (as HC's `CheckComboBox` does), so the first tag sits 6 px from the left edge, the same as above and below, with 2 px between tags. `ScopeTagsHaveEvenInsets` checks it.
 - **Documents box:** `TagCheckComboBox` (tags, `+N` overflow, search, All). When
@@ -286,7 +295,14 @@ Every interactive control has an `AutomationProperties.AutomationId`, named
 `<Area>.<Part>`: `ModelContext.Scope.ActiveView`, `ModelContext.Documents` (each
 item `ModelContext.Document`, its model title in HelpText),
 `Explorer.Row.Eye`, `Explorer.Row.SavedHide` (orange dot: a linked row the panel
-hid with Hide in View), `Explorer.SelectionSync`, `Filter.Source`, `Filter.SelectionSync`,
+hid with Hide in View), `Explorer.Row.HiddenCount` (plain *+N hidden* text, `WarningBrush`
+on an unselected row and the item foreground on a selected one, so it never sits orange
+on the primary selection), `Explorer.Row.Text` (the row name). The count and *+N hidden*
+share one slot (`Counts`) with the row tools: on hover or selection the tools show and
+`Counts` collapses (header rows, which have no tools, keep it), so the tools never add
+width and the `*` name column keeps room for its first characters. The same selected trigger
+sets `RowGrid` back to opacity 1, after the dimming triggers (`IsDimmed`, Hidden eye,
+hidden by category), so a selected hidden row is not pale on the selection, `Explorer.SelectionSync`, `Filter.Source`, `Filter.SelectionSync`,
 `Filter.Paused`,
 `Filter.Rule.Parameter`, `Filter.Rule.CaseSensitive`, `Temporary.Reset`, and so
 on. The rule builder uses `Filter.Rules`, `Filter.NoRules`, `Filter.Rule.Add`

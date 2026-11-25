@@ -337,12 +337,10 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
         }
 
         ViewActivations.ThrowIfChangedInCall();
-        HashSet<long> ids;
+        ICollection<ElementId> drawn;
         try
         {
-            ids = ViewCollector(resolved, view) is { } collector
-                ? [.. collector.WhereElementIsNotElementType().ToElementIds().Select(id => id.ToLong())]
-                : [];
+            drawn = ViewCollector(resolved, view) is { } collector ? collector.WhereElementIsNotElementType().ToElementIds() : [];
         }
         catch (Exception exception)
         {
@@ -350,8 +348,23 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
             return [];
         }
 
+        var ids = new HashSet<long>(drawn.Select(id => id.ToLong()));
+        ids.UnionWith(PartsDrawnWith(resolved.Target, view, drawn, document));
         scopes.Store(document, viewId, ids);
         return ids;
+    }
+
+    internal static List<long> PartsDrawnWith(Document target, View view, ICollection<ElementId> drawn, DocumentKey document)
+    {
+        try
+        {
+            return RailingParts.DrawnWith(target, view, drawn);
+        }
+        catch (Exception exception)
+        {
+            RevitProfiler.Logger.Swallowed(exception, "Railing parts", document);
+            return [];
+        }
     }
 
     private static string DisplayNameOf(Element? element)

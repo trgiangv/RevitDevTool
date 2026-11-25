@@ -31,6 +31,7 @@ public static class VisibilityText
     public const string NotSupported = "This model does not support this action.";
     public const string Updating = "Model data is updating.";
     public const string Nothing = "Nothing to act on.";
+    public const string ShownInView = "Shown in this view.";
 
     public static string LinkFilterTooMany => $"Over {LinkRules.MaxRules} rules to color in a link.";
 

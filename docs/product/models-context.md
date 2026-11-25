@@ -95,6 +95,11 @@ are not listed, so Whole model is the set a Revit schedule lists.
   with *Tick a link to pick in it* (no link ticked) or *Tick a category to pick*.
   Current model elements are picked in Revit as usual.
 - **Expand all** opens down to Type rows; **Collapse all** leaves the roots.
+- **Double-click** an instance row: it becomes the selected row and the menu's
+  Select and Zoom run on its element, also while sync is on and on a hidden row
+  (Zoom on a hidden element may show nothing). Double-click any other row opens
+  or closes it, like the chevron. A double-click on the chevron, the eye or a
+  row tool does only that button's action.
 - **Status line**: *N selected* (elements under the selected rows, hidden at
   0) and **Clear**. When part of the Revit selection is in unticked documents, **Show in
   Explorer** ticks them and reveals the rows.
@@ -150,13 +155,20 @@ appears later shows ticked.
 
 ### Hidden elements (Active view)
 
-A group row shows *+N hidden* after its count when the view hides some of its
-elements. Click it to list them, dimmed; click again to stop. Group actions
-(Select, Hide, Isolate) act on the visible elements only; a dimmed row acts
-alone, when selected. Whole model has no hidden counts. Only elements a view of
-this type can draw count: sheets, elements with no geometry, view-owned elements
-of another view (all view-owned elements of a link), rooms and spaces in 3D, and
-areas outside area plans never count.
+A row shows *+N hidden* after its count, as plain text in the warning color, when
+the view does not draw some of its elements. The hidden children are always
+listed under it, in the normal order, dimmed with the eye closed; a branch whose
+elements are all hidden is listed dimmed too. Group actions (Select, Hide,
+Isolate) act on the visible elements only; a dimmed row acts alone, when
+selected. Whole model has no hidden counts. Only elements a view of this type can
+draw count: sheets, elements with no geometry, view-owned elements of another
+view (all view-owned elements of a link), rooms and spaces in 3D, and areas
+outside area plans never count.
+
+Railing parts count as Revit draws them: a baluster, support or termination
+whose railing (or top rail or handrail) the view draws is shown, in the main
+count with an open eye, unless its own category is off in the view. Revit's view
+collector leaves these parts out, but Revit draws them with the railing.
 
 ### Selection sync
 
@@ -175,7 +187,8 @@ select together*). Shown only with Scope = Active view or Whole model.
 ### Visibility on rows
 
 The eye (**Show / Hide**) is always visible. **Isolate**, **Halftone** and
-**Color** show on the hovered or selected row. A row acts on exactly the group it
+**Color** show on the hovered or selected row, in place of its counts, so the
+name keeps its first characters and the eye stays whole. A row acts on exactly the group it
 sits in:
 
 | Row | Acts on |
@@ -214,7 +227,9 @@ until the next Reset, like any override.
   element of the row that the active view can draw is hidden; elements the view
   does not draw (another level, outside the crop) never make it partly hidden.
   Hovering it highlights every row the click will change.
-- Rows the panel hid stay in the tree, dimmed, so they can be shown again.
+- Rows the panel hid stay in the tree, dimmed, so they can be shown again. A
+  selected hidden row drops the dimming so its name reads on the selection; its
+  closed eye still says it is hidden.
 - While a category is hidden with the Categories box eye, its rows in every
   group show it as hidden by the category and are disabled until it is shown.
 - Hide, Isolate, Halftone and Color on a Current model family instance also
@@ -230,9 +245,13 @@ until the next Reset, like any override.
 
 Right-click the selected rows (or Shift+F10). Items: *Select* (hidden
 while sync is on), Zoom (Z), Section box (B, 3D views only), Isolate (I),
-Hide / Show (H), Halftone, Color and *Why hidden?*. Reset lives only on the
+Hide / Show (H), Halftone, Color and *Why hidden?*. The letters also work on the
+selected tree rows without opening the menu. Reset lives only on the
 Temporary bar. An item that cannot run on the target is disabled with the reason
-as its tooltip. *Why hidden?* needs one element. When an item or a row tool
+as its tooltip. *Why hidden?* needs one element, and in Active view one the view
+does not draw (dimmed, or hidden by its eye); on a shown element it is disabled
+with *Shown in this view.* Whole model and Selection do not read the view, so
+there it stays enabled. When an item or a row tool
 runs and Revit refuses, the reason shows in the panel's message line. An action
 that started always finishes, even when the model changes while it runs.
 
@@ -257,8 +276,9 @@ row, and closes with ✕, Esc, or when the selection has no element.
 - A nested family element that is not drawn and has no cause of its own takes
   its parent's causes, else reads *Hidden by its family: name* (the parent
   family's visibility settings or parameters turn it off).
-- A baluster or railing support that Revit draws as part of its railing reads
-  *Drawn with its railing*.
+- A baluster or railing support that Revit draws as part of its railing counts
+  as shown, so Why hidden is not offered for it; asked directly, it reads *Drawn
+  with its railing*.
 - Anything else that Revit does not draw reads *Revit does not draw it in this view*.
 - A filter that cannot be tested reads *Filter: name (possible)*.
 - It only explains. **Show** appears only where the panel can undo the cause: a

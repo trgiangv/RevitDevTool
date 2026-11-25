@@ -604,6 +604,28 @@ catches that type (no message matching). `IViewActions` is the one port to the h
 temporary mode is on) and `ReadHiddenAsync`. On the Current model `NestedComponents.AddWithNested` adds
 shared nested instances before T0 isolate, hide and overrides (gotcha 23).
 
+### Hidden rows
+
+In Active view `DocumentStates` keeps, per document, the ids the view can draw but its
+collector leaves out (`UnseenIds`, `DocumentScope.OutsideIds`). `RowPainter` puts their count
+in `TreeRow.HiddenText` (*+N hidden*, plain text, `WarningBrush` unless the row is selected) and
+paints an unseen instance dimmed with the Hidden eye. `ExplorerTree.InstanceRowsAsync` always
+merges the scope ids, the hidden ids and the unseen ids under the row into one id-sorted list
+and pages it like any other (`AppendPageAsync`, 200 names at a time), so an expand builds only
+the first page. `ExplorerSearch` lists dimmed rows like the others. There is no toggle.
+
+`RevitModelSource.ViewIds` and `ScopeGroupCounter` (quick counts) add to the view collector's
+ids the parts Revit draws with a drawn railing, top rail or handrail
+(`RailingParts.DrawnWith`: one `GetDependentElements` per drawn railing, filtered to balusters,
+supports and terminations whose category is on in the view). `ScopeCache` keeps the result per
+(document, view). The L2 oracle (`Oracle.ViewIds`) applies the same rule its own way.
+
+`ContextMenuViewModel` enables *Why hidden?* for one element only when the panel reads it as
+not drawn: in Active view, out of the scope ids, hidden by the read-back or the journal, hidden
+or isolated out by the panel (`HidByPanel`), or its category hidden by the panel. Otherwise
+the reason is `VisibilityText.ShownInView`. Whole model and Selection have no view ids, so the
+item stays enabled there.
+
 ### Why hidden
 
 `WhyHiddenStripViewModel` asks `IVisibilityExplainer.ExplainAsync(ElementRef)`;
@@ -648,7 +670,7 @@ Message catalog (`HiddenReasons`; Show is offered only where the table says so):
 | BelowRange | *Below view depth*, *Below cut plane* | plan: top at or below the view depth; ceiling plan: below the cut | no | `HiddenChecks.ViewRange` |
 | OutsideCrop | *Outside crop*, *Outside section box* | outside the active crop region or 3D section box | no | `HiddenChecks.Crop` |
 | OutsideCrop | *Behind the section line*, *Behind the elevation line*, *Beyond far clip* | section, elevation or detail: behind the view line, or past the far clip when it is on | no | `HiddenChecks.Depth` |
-| Railing | *Drawn with its railing* | a baluster or support that the view collector leaves out while its railing is drawn | no | explainer `RailingParts` |
+| Railing | *Drawn with its railing* | a baluster or support that the view collector leaves out while its railing is drawn (the panel counts it shown, so it is asked only directly) | no | explainer `RailingParts` |
 | None | *No view setting hides it* | Revit draws the element | no | explainer |
 | None | *Not a model view* | the active view is a sheet, schedule or other non-model view | no | explainer | The panel's own journal adds *Hidden in view* for a linked
 element it hid (`WithJournal`). `CanShow` stays only for a

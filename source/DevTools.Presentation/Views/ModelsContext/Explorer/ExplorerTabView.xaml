@@ -25,6 +25,7 @@
                    BasedOn="{StaticResource FlatTreeListItemStyle}"
                    TargetType="ListBoxItem">
                 <Setter Property="AutomationProperties.Name" Value="{Binding Text, Mode=OneTime}" />
+                <EventSetter Event="MouseDoubleClick" Handler="OnRowDoubleClick" />
             </Style>
 
             <Style x:Key="RowBadgeStyle"
@@ -78,6 +79,7 @@
                     <TextBlock x:Name="RowText"
                                Grid.Column="3"
                                VerticalAlignment="Center"
+                               AutomationProperties.AutomationId="Explorer.Row.Text"
                                Text="{Binding Text, Mode=OneTime}"
                                TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding Text, Mode=OneTime}" />
@@ -106,7 +108,9 @@
                             IsHitTestVisible="False"
                             Style="{StaticResource RowBadgeStyle}" />
 
-                    <StackPanel Grid.Column="5" Orientation="Horizontal">
+                    <StackPanel x:Name="Counts"
+                                Grid.Column="5"
+                                Orientation="Horizontal">
                         <TextBlock x:Name="CountText"
                                    MinWidth="50"
                                    Margin="6,0,0,0"
@@ -115,17 +119,13 @@
                                    Opacity="0.6"
                                    Text="{Binding CountText}"
                                    TextAlignment="Right" />
-                        <Button x:Name="HiddenCount"
-                                Margin="4,0,0,0"
-                                AutomationProperties.AutomationId="Explorer.Row.HiddenCount"
-                                AutomationProperties.ItemStatus="{Binding IsHiddenOpen}"
-                                Command="{Binding Path=DataContext.Explorer.ShowHiddenCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
-                                CommandParameter="{Binding}"
-                                Content="{Binding HiddenText}"
-                                FontSize="11"
-                                Style="{StaticResource PanelLinkButton}"
-                                ToolTip="List hidden"
-                                Visibility="Collapsed" />
+                        <TextBlock x:Name="HiddenCount"
+                                   Margin="4,0,0,0"
+                                   VerticalAlignment="Center"
+                                   AutomationProperties.AutomationId="Explorer.Row.HiddenCount"
+                                   FontSize="11"
+                                   Text="{Binding HiddenText}"
+                                   Visibility="Collapsed" />
                     </StackPanel>
 
                     <Ellipse x:Name="LinkDot"
@@ -278,8 +278,8 @@
                     <DataTrigger Binding="{Binding HasHidden}" Value="True">
                         <Setter TargetName="HiddenCount" Property="Visibility" Value="Visible" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding IsHiddenOpen}" Value="True">
-                        <Setter TargetName="HiddenCount" Property="ToolTip" Value="Stop listing hidden" />
+                    <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="False">
+                        <Setter TargetName="HiddenCount" Property="Foreground" Value="{DynamicResource WarningBrush}" />
                     </DataTrigger>
 
                     <DataTrigger Binding="{Binding IsHighlighted}" Value="True">
@@ -290,13 +290,16 @@
                         <Setter TargetName="Isolate" Property="Visibility" Value="Visible" />
                         <Setter TargetName="Halftone" Property="Visibility" Value="Visible" />
                         <Setter TargetName="ColorCell" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="Counts" Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
                         <Setter TargetName="Isolate" Property="Visibility" Value="Visible" />
                         <Setter TargetName="Halftone" Property="Visibility" Value="Visible" />
                         <Setter TargetName="ColorCell" Property="Visibility" Value="Visible" />
+                        <Setter TargetName="Counts" Property="Visibility" Value="Collapsed" />
                         <Setter TargetName="BadgeBox" Property="Visibility" Value="Collapsed" />
                         <Setter TargetName="RowGrid" Property="Background" Value="{x:Null}" />
+                        <Setter TargetName="RowGrid" Property="Opacity" Value="1" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding HasColor}" Value="True">
                         <Setter TargetName="ColorCell" Property="Visibility" Value="Visible" />
@@ -315,6 +318,7 @@
 
                     <DataTrigger Binding="{Binding IsHeader}" Value="True">
                         <Setter TargetName="Actions" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="Counts" Property="Visibility" Value="Visible" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding Kind}" Value="MorePage">
                         <Setter TargetName="Actions" Property="Visibility" Value="Collapsed" />

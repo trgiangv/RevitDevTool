@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using DevTools.ModelsContext.Documents;
 using DevTools.ModelsContext.Explorer;
 using DevTools.ModelsContext.Filters;
+using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Visibility;
 
 namespace DevTools.ModelsContext.Panel;
@@ -138,6 +139,20 @@ public sealed partial class ContextMenuViewModel : ObservableObject
         return true;
     }
 
+    internal Task SelectAndZoomAsync()
+    {
+        if (_target is not { } target || Evaluate(target, MenuAction.Zoom).DisabledReason is not null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return _runtime.RunAsync(async () =>
+        {
+            await SelectAsync();
+            await ZoomAsync();
+        });
+    }
+
     internal void Open(MenuTarget target)
     {
         _target = target;
@@ -180,7 +195,7 @@ public sealed partial class ContextMenuViewModel : ObservableObject
         {
             MenuAction.SelectInHost or MenuAction.Zoom => new ActionState(EmptyReason(target)),
             MenuAction.SectionBox => new ActionState(EmptyReason(target) ?? SectionBoxReason()),
-            MenuAction.WhyHidden => new ActionState(SingleElementOf(target) is null ? NeedsOneElement : null),
+            MenuAction.WhyHidden => new ActionState(WhyHiddenReason(target)),
             _ => _visibility.Check(target.Request(VisibilityActionOf(action, target.IsHidden)))
         };
     }
@@ -188,6 +203,32 @@ public sealed partial class ContextMenuViewModel : ObservableObject
     private static string? EmptyReason(MenuTarget target)
     {
         return target.IsEmpty ? VisibilityText.Nothing : null;
+    }
+
+    private string? WhyHiddenReason(MenuTarget target)
+    {
+        if (SingleElementOf(target) is not { } element)
+        {
+            return NeedsOneElement;
+        }
+
+        return IsShown(element) ? VisibilityText.ShownInView : null;
+    }
+
+    private bool IsShown(ElementRef element)
+    {
+        var data = _runtime.Data;
+        if (data.Scope != ScopeKind.ActiveView
+            || data.Find(element.Document) is not { } document
+            || !document.InScope(element.Id)
+            || _visibility.IsHidden(element)
+            || _visibility.HidByPanel(element))
+        {
+            return false;
+        }
+
+        return !document.Snapshot.TryGetRow(element.Id, out var row)
+               || !_visibility.IsCategoryHidden(document.Snapshot.Groups[row.GroupIndex].GroupId);
     }
 
     private static ElementRef? SingleElementOf(MenuTarget target)

@@ -37,11 +37,6 @@ internal sealed class TreeReveal(PanelRuntime runtime, ExplorerTree tree)
                 return next;
             }
 
-            if (next is { Kind: TreeRowKind.Group } && tree.IsUnseen(element.Document, element.Id))
-            {
-                await tree.SetHiddenOpenAsync(next, true);
-            }
-
             row = next;
         }
 

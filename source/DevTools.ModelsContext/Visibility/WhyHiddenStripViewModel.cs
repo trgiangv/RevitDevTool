@@ -11,6 +11,7 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
 {
     public const string CheckingText = "Checking…";
     public const string FailedText = "Check failed";
+    public static readonly TimeSpan CheckingDelay = TimeSpan.FromMilliseconds(300);
 
     private readonly PanelRuntime _runtime;
     private readonly VisibilityController _visibility;
@@ -172,7 +173,13 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
         }
 
         IsBusy = true;
-        Text = CheckingText;
+        using var checking = _runtime.Scheduler.Schedule(CheckingDelay, () =>
+        {
+            if (!token.IsCancellationRequested)
+            {
+                Text = CheckingText;
+            }
+        });
         try
         {
             var result = await _runtime.Services.Explainer.ExplainAsync(element, token);

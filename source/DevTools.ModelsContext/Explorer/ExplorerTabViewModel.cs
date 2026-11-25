@@ -219,7 +219,6 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         ClearHighlight();
         Data = ContextData.Empty;
         _tree.Clear();
-        _tree.ForgetHidden();
         _states.Clear();
         _search.Clear();
         _sync.Reset(state.IsSelectionSyncOn);
@@ -293,15 +292,28 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private Task LoadMoreAsync(TreeRow? more)
+    private Task OpenRowAsync(TreeRow? row)
     {
-        return Run(() => _rows.LoadMoreAsync(more));
+        if (row is not { Kind: TreeRowKind.Instance })
+        {
+            return row is { HasChildren: true } ? ToggleExpandAsync(row) : Task.CompletedTask;
+        }
+
+        if (_selection.Rows.Count != 1 || !_selection.Rows.Contains(row))
+        {
+            SetSelectedRows([row]);
+            RowSelectionChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        _report(null);
+        _targets.Open(IsSelectionSyncing, _tree.Token);
+        return _menu.SelectAndZoomAsync();
     }
 
     [RelayCommand]
-    private Task ShowHiddenAsync(TreeRow? row)
+    private Task LoadMoreAsync(TreeRow? more)
     {
-        return row is null ? Task.CompletedTask : Run(() => _rows.ToggleHiddenAsync(row));
+        return Run(() => _rows.LoadMoreAsync(more));
     }
 
     [RelayCommand]

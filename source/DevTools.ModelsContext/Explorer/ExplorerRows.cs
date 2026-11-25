@@ -89,18 +89,6 @@ internal sealed class ExplorerRows(
         Publish();
     }
 
-    public async Task ToggleHiddenAsync(TreeRow row)
-    {
-        await tree.SetHiddenOpenAsync(row, !tree.IsHiddenOpen(row));
-        if (row.HasChildren && !row.IsExpanded)
-        {
-            await tree.EnsureChildrenAsync(row);
-            row.IsExpanded = true;
-        }
-
-        Publish();
-    }
-
     public async Task LoadMoreAsync(TreeRow? more)
     {
         if (more is not { Kind: TreeRowKind.MorePage, Parent: { } parent })

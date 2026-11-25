@@ -1,5 +1,6 @@
 using DevTools.ModelsContext.Documents;
 using DevTools.ModelsContext.Explorer;
+using DevTools.ModelsContext.Panel;
 using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.Visibility;
@@ -35,29 +36,77 @@ public sealed class HiddenRowsTests
     }
 
     [TestMethod]
-    public async Task HiddenClickListsDimmedRows()
+    public async Task ExpandListsHiddenDimmed()
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var type = await HiddenTypeAsync(fixture);
 
-        await fixture.Explorer.ShowHiddenCommand.ExecuteAsync(type);
+        var children = fixture.Explorer.Rows.Where(row => row.Parent == type && row.Kind == TreeRowKind.Instance).ToList();
 
-        Assert.IsTrue(type.IsHiddenOpen);
-        Assert.IsTrue(fixture.Explorer.Rows.Any(row => row.Parent == type && row.IsDimmed));
-        Assert.IsTrue(fixture.Explorer.Rows.Any(row => row.Parent == type && !row.IsDimmed));
+        Assert.IsTrue(children.Any(row => row is { IsDimmed: true, Eye: RowEye.Hidden }));
+        Assert.IsTrue(children.Any(row => row is { IsDimmed: false, Eye: RowEye.Shown }));
+        CollectionAssert.AreEqual(children.Select(row => row.Id).OrderBy(id => id).ToList(),
+            children.Select(row => row.Id).ToList());
     }
 
     [TestMethod]
-    public async Task HiddenClickAgainCloses()
+    public async Task FullyHiddenBranchListed()
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        var ducts = fixture.Group(Current, "Ducts");
+
+        await fixture.Explorer.ExpandAsync(ducts);
+
+        CollectionAssert.AreEqual(ducts.Children!.ToList(), fixture.Explorer.Rows.Where(row => row.Parent == ducts).ToList());
+    }
+
+    [TestMethod]
+    public async Task WhyHiddenOffForShown()
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var type = await HiddenTypeAsync(fixture);
-        await fixture.Explorer.ShowHiddenCommand.ExecuteAsync(type);
+        var shown = fixture.Explorer.Rows.First(row => row.Parent == type && row is { Kind: TreeRowKind.Instance, IsDimmed: false });
 
-        await fixture.Explorer.ShowHiddenCommand.ExecuteAsync(type);
+        fixture.Explorer.OpenMenu(shown);
 
-        Assert.IsFalse(type.IsHiddenOpen);
-        Assert.IsFalse(fixture.Explorer.Rows.Any(row => row.IsDimmed));
+        Assert.AreEqual(VisibilityText.ShownInView, fixture.Panel.ContextMenu[MenuAction.WhyHidden].DisabledReason);
+    }
+
+    [TestMethod]
+    public async Task WhyHiddenOnForDimmed()
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        var type = await HiddenTypeAsync(fixture);
+        var dimmed = fixture.Explorer.Rows.First(row => row.Parent == type && row.IsDimmed);
+
+        fixture.Explorer.OpenMenu(dimmed);
+
+        Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.WhyHidden].IsEnabled);
+    }
+
+    [TestMethod]
+    public async Task FakeCauseMatchesDimmed()
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        var type = await HiddenTypeAsync(fixture);
+
+        var rows = fixture.Explorer.Rows.Where(row => row.Parent == type && row.Kind == TreeRowKind.Instance).ToList();
+
+        Assert.IsTrue(rows.All(row => fixture.Model.ViewCauses(new ElementRef(Current, row.Id)).Count > 0 == row.IsDimmed));
+    }
+
+    [TestMethod]
+    public async Task WhyHiddenOnAfterHide()
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        var type = await HiddenTypeAsync(fixture);
+        var shown = fixture.Explorer.Rows.First(row => row.Parent == type && row is { Kind: TreeRowKind.Instance, IsDimmed: false });
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(shown);
+
+        fixture.Explorer.OpenMenu(shown);
+
+        Assert.AreEqual(RowEye.Hidden, shown.Eye);
+        Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.WhyHidden].IsEnabled);
     }
 
     [TestMethod]
@@ -89,7 +138,6 @@ public sealed class HiddenRowsTests
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var type = await HiddenTypeAsync(fixture);
-        await fixture.Explorer.ShowHiddenCommand.ExecuteAsync(type);
         var dimmed = fixture.Explorer.Rows.First(row => row.Parent == type && row.IsDimmed);
 
         var elements = fixture.Explorer.ElementsOf([dimmed]);
@@ -102,7 +150,6 @@ public sealed class HiddenRowsTests
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var type = await HiddenTypeAsync(fixture);
-        await fixture.Explorer.ShowHiddenCommand.ExecuteAsync(type);
         var dimmed = fixture.Explorer.Rows.First(row => row.Parent == type && row.IsDimmed);
         var shown = fixture.Explorer.Rows.First(row => row.Parent == type && row is { Kind: TreeRowKind.Instance, IsDimmed: false });
         var changes = new List<string?>();
@@ -128,7 +175,7 @@ public sealed class HiddenRowsTests
 
         var row = fixture.Explorer.Rows.Single(row => row.Kind == TreeRowKind.Instance && row.Id == id);
         Assert.IsTrue(row.IsDimmed);
-        Assert.AreEqual(RowEye.None, row.Eye);
+        Assert.AreEqual(RowEye.Hidden, row.Eye);
     }
 
     private static async Task<TreeRow> HiddenTypeAsync(PanelFixture fixture)

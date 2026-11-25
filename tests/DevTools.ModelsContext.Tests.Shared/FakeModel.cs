@@ -3,6 +3,7 @@ using DevTools.ModelsContext.Filters;
 using DevTools.ModelsContext.Parameters;
 using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Selection;
+using DevTools.ModelsContext.Visibility;
 using System.Globalization;
 
 namespace DevTools.ModelsContext.Tests.Shared;
@@ -601,6 +602,28 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
                 .ToList(),
             _ => elements.Select(element => element.Id).ToList()
         };
+    }
+
+    public IReadOnlyList<HiddenReason> ViewCauses(ElementRef element)
+    {
+        if (ViewHiddenElements.Contains(element))
+        {
+            return [HiddenReasons.Temporary];
+        }
+
+        var snapshot = SnapshotOf(element.Document);
+        if (!snapshot.TryGetRow(element.Id, out var row))
+        {
+            return [];
+        }
+
+        var group = snapshot.Groups[row.GroupIndex].GroupId;
+        if (ViewHiddenCategories.Contains(group) || ViewKeptCategories?.Contains(group) == false)
+        {
+            return [HiddenReasons.Category(snapshot.GroupName(row.GroupIndex))];
+        }
+
+        return element.Id % 3 == 0 ? [] : [HiddenReasons.OutsideCrop];
     }
 
     private bool IsDrawn(DocumentKey document, ElementRecord element)

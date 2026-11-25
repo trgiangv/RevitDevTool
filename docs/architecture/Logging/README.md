@@ -203,7 +203,7 @@ private static ServiceProvider CreateServiceProvider()
 
 - The third-party addin does **not** need a dependency on DevTools libraries.
 - Only `System.Diagnostics.Trace` and `ZLogger` are required.
-- The `NotifyListener.TraceReceived` event fires for every bridged entry, triggering auto-show of the DevTools dockable pane or floating window.
+- The `NotifyListener.TraceReceived` event fires for every bridged entry, triggering auto-show of the DevTools dockable pane or floating window. The pane is shown only when it is not shown already: `DockablePane.Show()` on a shown pane activates it and takes keyboard focus from the pane the user is typing in (each Models Context click logs a trace line, so its Z / B / I / H keys went to the DevTools pane).
 - For addins that already use `Trace.Write`, no ZLogger setup is needed — `LoggerTraceListener` captures `Trace` output directly.
 - The `[level]` prefix in the formatter (`${0:short}`) is required: `Trace.WriteLine` does not carry level information, so `LogLevelDetector` scans the message for level prefixes like `[DBG]`, `[ERR]`, `[WRN]` to determine the correct MEL log level.
 

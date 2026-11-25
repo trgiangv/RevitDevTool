@@ -95,6 +95,47 @@ public sealed class WhyHiddenStripTests
     }
 
     [TestMethod]
+    public async Task FastAnswerSkipsChecking()
+    {
+        using var strip = await StripHost.OpenAsync();
+        strip.Explainer.Reasons = [HiddenReasons.Temporary];
+        var texts = new List<string>();
+        strip.ViewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(WhyHiddenStripViewModel.Text))
+            {
+                texts.Add(strip.ViewModel.Text);
+            }
+        };
+
+        await strip.ViewModel.OpenAsync(strip.Duct(Current));
+        strip.Clock.Advance(TimeSpan.FromSeconds(1));
+
+        CollectionAssert.AreEqual(new[] { HiddenReasons.Temporary.Text }, texts);
+    }
+
+    [TestMethod]
+    public async Task SlowAnswerShowsChecking()
+    {
+        using var strip = await StripHost.OpenAsync();
+        strip.Explainer.Reasons = [HiddenReasons.Temporary];
+        var gate = new TaskCompletionSource<bool>();
+        strip.Explainer.Gate = gate;
+        var open = strip.ViewModel.OpenAsync(strip.Duct(Current));
+
+        strip.Clock.Advance(WhyHiddenStripViewModel.CheckingDelay - TimeSpan.FromMilliseconds(1));
+        var early = strip.ViewModel.Text;
+        strip.Clock.Advance(TimeSpan.FromMilliseconds(1));
+        var late = strip.ViewModel.Text;
+        gate.SetResult(true);
+        await open;
+
+        Assert.AreEqual(string.Empty, early);
+        Assert.AreEqual(WhyHiddenStripViewModel.CheckingText, late);
+        Assert.AreEqual(HiddenReasons.Temporary.Text, strip.ViewModel.Text);
+    }
+
+    [TestMethod]
     public async Task NewerOpenCancelsOlder()
     {
         using var strip = await StripHost.OpenAsync();
@@ -261,11 +302,14 @@ public sealed class WhyHiddenStripTests
     {
         private readonly FakeHost _host;
 
-        private StripHost(FakeHost host, ModelContextViewModel panel)
+        private StripHost(FakeHost host, FakeClock clock, ModelContextViewModel panel)
         {
             _host = host;
+            Clock = clock;
             Panel = panel;
         }
+
+        public FakeClock Clock { get; }
 
         public ModelContextViewModel Panel { get; }
 
@@ -281,7 +325,7 @@ public sealed class WhyHiddenStripTests
             var clock = new FakeClock();
             var panel = new ModelContextViewModel(host.Services(clock, clock));
             await panel.InitializeAsync(CancellationToken.None);
-            return new StripHost(host, panel);
+            return new StripHost(host, clock, panel);
         }
 
         public Task HideDuctsAsync(DocumentKey document)

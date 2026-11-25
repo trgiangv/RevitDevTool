@@ -537,6 +537,50 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
+    public async Task OpenInstanceSelectsAndZooms()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var instance = await FirstInstanceAsync(fixture);
+
+        await fixture.Explorer.OpenRowCommand.ExecuteAsync(instance);
+
+        var element = new ElementRef(instance.Document!.Value, instance.Id);
+        CollectionAssert.AreEqual(new[] { element }, fixture.Actions.Zoomed.Single().ToArray());
+        CollectionAssert.Contains((await fixture.Model.GetSelectionAsync(CancellationToken.None)).ToArray(), element);
+        CollectionAssert.AreEqual(new[] { instance }, fixture.Explorer.SelectedRows.ToArray());
+    }
+
+    [TestMethod]
+    public async Task OpenGroupTogglesExpand()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+
+        await fixture.Explorer.OpenRowCommand.ExecuteAsync(ducts);
+        Assert.IsTrue(ducts.IsExpanded);
+        await fixture.Explorer.OpenRowCommand.ExecuteAsync(ducts);
+
+        Assert.IsFalse(ducts.IsExpanded);
+        Assert.IsEmpty(fixture.Actions.Zoomed);
+    }
+
+    private static async Task<TreeRow> FirstInstanceAsync(PanelFixture fixture)
+    {
+        var parent = fixture.Group(Current, "Ducts");
+        while (true)
+        {
+            await fixture.Explorer.ExpandAsync(parent);
+            var child = fixture.Explorer.Rows.First(row => row.Parent == parent);
+            if (child.Kind == TreeRowKind.Instance)
+            {
+                return child;
+            }
+
+            parent = child;
+        }
+    }
+
+    [TestMethod]
     public async Task DefaultTicksCurrentModelOnly()
     {
         using var fixture = await PanelFixture.OpenAsync();

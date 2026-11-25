@@ -7,7 +7,6 @@ namespace DevTools.ModelsContext.Explorer;
 internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, ExplorerCategories categories)
 {
     private readonly Dictionary<TreeRow, long[]> _instanceIds = [];
-    private readonly HashSet<string> _openHidden = new(StringComparer.Ordinal);
 
     public List<TreeRow> Roots { get; private set; } = [];
 
@@ -19,11 +18,6 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
     {
         Roots = [];
         _instanceIds.Clear();
-    }
-
-    public void ForgetHidden()
-    {
-        _openHidden.Clear();
     }
 
     public void Build()
@@ -54,53 +48,6 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
     public DocumentScope? DocumentOf(TreeRow row)
     {
         return row.Document is { } key ? Data.Find(key) : null;
-    }
-
-    public bool IsHiddenOpen(TreeRow row)
-    {
-        return _openHidden.Contains(row.Key);
-    }
-
-    public bool ShowsHidden(TreeRow? row)
-    {
-        for (var current = row; current is not null; current = current.Parent)
-        {
-            if (_openHidden.Contains(current.Key))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public bool IsUnseen(DocumentKey document, long id)
-    {
-        return states.TryGet(document, out var state) && state.UnseenIds.Contains(id);
-    }
-
-    public async Task SetHiddenOpenAsync(TreeRow row, bool open)
-    {
-        var changed = open ? _openHidden.Add(row.Key) : _openHidden.Remove(row.Key);
-        if (!changed)
-        {
-            return;
-        }
-
-        var holders = new List<TreeRow>();
-        Visit([row], visited =>
-        {
-            if (_instanceIds.ContainsKey(visited))
-            {
-                holders.Add(visited);
-            }
-        });
-        foreach (var holder in holders)
-        {
-            _instanceIds.Remove(holder);
-            holder.Children = null;
-            await EnsureChildrenAsync(holder);
-        }
     }
 
     public async Task EnsureChildrenAsync(TreeRow row)
@@ -310,7 +257,7 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
         var state = states[scope.Key];
         var snapshot = scope.Snapshot;
         var ids = new HashSet<long>(scope.IdsUnder(parent.Path));
-        foreach (var id in state.HiddenIds)
+        foreach (var id in state.HiddenIds.Concat(state.UnseenIds))
         {
             if (snapshot.TryGetRow(id, out var row) && snapshot.IsUnder(row, parent.Path))
             {
@@ -318,15 +265,7 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
             }
         }
 
-        var ordered = ids.OrderBy(id => id).ToList();
-        if (ShowsHidden(parent))
-        {
-            ordered.AddRange(state.UnseenIds
-                .Where(id => !ids.Contains(id) && snapshot.TryGetRow(id, out var row) && snapshot.IsUnder(row, parent.Path))
-                .OrderBy(id => id));
-        }
-
-        _instanceIds[parent] = [.. ordered];
+        _instanceIds[parent] = [.. ids.OrderBy(id => id)];
         parent.Children = [];
         return await AppendPageAsync(parent);
     }

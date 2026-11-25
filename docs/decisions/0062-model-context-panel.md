@@ -146,7 +146,8 @@ means read from the Revit API assemblies 2023.0–2027 or run on a host;
      action reaches the whole branch. Hidden state is read back by element
      reference for Explorer and Filter alike. Active view keeps listing visible
      elements, counts hidden ones per group (*+N hidden*) and lists them dimmed
-     on click or search. On the Current model, temporary isolate, hide and
+     on click or search. *Amended 2026-11-25:* hidden children are always listed,
+     dimmed; *+N hidden* is plain text (no toggle). On the Current model, temporary isolate, hide and
      element overrides also expand to shared nested instances (Revit does not
      reach them); T3 on a linked host already hides its nested ones.
    Why: an earlier row that also hid the category in links gave users no way

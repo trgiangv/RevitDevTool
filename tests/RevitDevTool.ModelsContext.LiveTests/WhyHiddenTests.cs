@@ -1,4 +1,5 @@
 using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Visibility;
 using Nice3point.Revit.Extensions;
 using RevitDevTool.Tools.ModelsContext.Documents;
@@ -182,8 +183,8 @@ public sealed class WhyHiddenTests : RecordedTest
     [Test]
     public void RailingPartNamesRailing()
     {
-        Record(Case("WH-12", "Baluster or support that the view collector leaves out while its railing is drawn", HiddenReasons.WithRailing.Text,
-            $"Pick balusters and supports of drawn railings that the panel lists as hidden; none reads a fallback, and one with no view-range or crop cause reads '{HiddenReasons.WithRailing.Text}'."), () =>
+        Record(Case("WH-12", "Baluster or support that the view collector leaves out while its railing is drawn", "Shown (in the panel's view ids)",
+            $"Pick balusters and supports of drawn railings that the view collector leaves out; the panel counts each as shown (in its Active view ids, so not in +N hidden and no Why hidden), and Why hidden, if asked, reads no fallback and once '{HiddenReasons.WithRailing.Text}'."), () =>
         {
             var parts = FindRailingParts();
             if (parts.Count == 0)
@@ -191,8 +192,17 @@ public sealed class WhyHiddenTests : RecordedTest
                 Assert.Inconclusive($"No baluster or support of a drawn railing is left out of '{View.Name}'.");
             }
 
+            var source = new Adapter().Source;
+            var missing = parts.GroupBy(part => part.Document)
+                .SelectMany(group =>
+                {
+                    var ids = Adapter.Run(source.CollectScopeAsync(group.Key, ScopeKind.ActiveView, CancellationToken.None));
+                    return group.Where(part => !ids.Contains(part.Id));
+                })
+                .ToList();
             var results = parts.Select(Explain).ToList();
-            Evidence.Values(HiddenReasons.WithRailing.Text, string.Join(" | ", results.Select(Describe)));
+            Evidence.Values("shown: " + parts.Count, $"shown: {parts.Count - missing.Count}; " + string.Join(" | ", results.Select(Describe)));
+            Assert.That(missing, Is.Empty, "Railing parts the panel does not count as shown.");
             Assert.That(results.Select(result => result.First),
                 Has.None.EqualTo(HiddenReasons.None).And.None.EqualTo(HiddenReasons.NotDrawnHere));
             Assert.That(results.Select(result => result.First), Has.Some.EqualTo(HiddenReasons.WithRailing));

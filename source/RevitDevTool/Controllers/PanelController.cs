@@ -111,7 +111,10 @@ public sealed class PanelController(LogViewModel logViewModel, ILogger<PanelCont
         if (HasUiDocument)
         {
             if (!TryGetDockablePane(out var pane)) return;
-            HostUiHelper.RunOnMainThread(() => pane.Show());
+            HostUiHelper.RunOnMainThread(() =>
+            {
+                if (!pane.IsShown()) pane.Show();
+            });
             return;
         }
 

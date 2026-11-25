@@ -43,7 +43,12 @@ internal static class ExplorerShotRun
 
             section.IsOpen = false;
             var type = await SmallHiddenTypeAsync(explorer);
-            await explorer.ShowHiddenCommand.ExecuteAsync(type);
+            list.SelectedItems.Clear();
+            list.SelectedItems.Add(type);
+            list.ScrollIntoView(type);
+            await Settle(800);
+            Save(window, directory, $"{theme}-explorer-hidden-selected.png");
+
             var dimmed = explorer.Rows.First(row => row.Parent == type && row.IsDimmed);
             list.SelectedItems.Clear();
             list.SelectedItems.Add(dimmed);

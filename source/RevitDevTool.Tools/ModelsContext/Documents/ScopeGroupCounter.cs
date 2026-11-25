@@ -66,9 +66,15 @@ internal static class ScopeGroupCounter
             return ElementReader.CollectIds(resolved.Target);
         }
 
-        return ActiveViewOf(application, document) is { } view && RevitModelSource.ViewCollector(resolved, view) is { } collector
-            ? collector.WherePasses(ElementReader.AnyOptionFilter(resolved.Target)).ToElementIds().Select(id => id.ToLong()).ToArray()
-            : [];
+        if (ActiveViewOf(application, document) is not { } view || RevitModelSource.ViewCollector(resolved, view) is not { } collector)
+        {
+            return [];
+        }
+
+        var drawn = collector.WherePasses(ElementReader.AnyOptionFilter(resolved.Target)).ToElementIds();
+        return drawn.Select(id => id.ToLong())
+            .Union(RevitModelSource.PartsDrawnWith(resolved.Target, view, drawn, document))
+            .ToArray();
     }
 
     private static int CountSlice(

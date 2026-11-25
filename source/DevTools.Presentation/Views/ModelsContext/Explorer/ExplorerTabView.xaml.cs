@@ -222,6 +222,35 @@ public partial class ExplorerTabView : UserControl
         }
     }
 
+    private async void OnRowDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (_panel is null || e.ChangedButton != MouseButton.Left || sender is not ListBoxItem { DataContext: TreeRow row }
+            || IsInButton(e.OriginalSource as DependencyObject))
+        {
+            return;
+        }
+
+        e.Handled = true;
+        await _panel.Explorer.OpenRowCommand.ExecuteAsync(row);
+    }
+
+    private static bool IsInButton(DependencyObject? source)
+    {
+        while (source is not null and not ListBoxItem)
+        {
+            if (source is System.Windows.Controls.Primitives.ButtonBase)
+            {
+                return true;
+            }
+
+            source = source is Visual or System.Windows.Media.Media3D.Visual3D
+                ? VisualTreeHelper.GetParent(source)
+                : LogicalTreeHelper.GetParent(source);
+        }
+
+        return false;
+    }
+
     private static TreeRow? RowOf(DependencyObject? source)
     {
         while (source is not null and not ListBoxItem)
