@@ -559,6 +559,7 @@ cover tick = selection.
 | VI-18 | T4 link door type repeated 51 times | Color | refused: "Over 100 rules to color in a link.", view unchanged | L2 |
 | VI-19 | T3 isolate GR-02 (link doors) | Isolate | planned as T3, not run (Gotcha 13) | L2 |
 | VI-20 | T0 + T3 isolate GS-02 | Isolate | planned as T0 + T3, not run | L2 |
+| VI-21 | T3 isolate rest, every loaded link in {3D} | Isolate | `LinkIsolation.RestOf` holds every linked Level and Scope Box the view draws and no Model Group; not run (Gotcha 13) | L2 `IsolateRestHoldsLinkedDatums` |
 
 ### Subcategories, parent rule, category actions, linked-hide record (L1; L2 `CategoryActionTests`, `category-actions.json`)
 

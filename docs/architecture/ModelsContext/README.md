@@ -442,9 +442,9 @@ live in `LinkRules`.
 - `RevitViewActions.IsolateWithLinksAsync` refuses when the active view is not
   the plan's view (`ViewChangedException`, see Temporary modes), when Reveal Hidden is on, or when
   the view cannot show links (`LinkElements.InView` is null). The rest =
-  elements of that link the link view collector returns for the active view,
-  limited to model categories and instances (`ElementReader.AnyOptionFilter`),
-  minus the kept ids, their nested shared instances and their `SuperComponent`
+  elements of that link the link view collector returns for the active view:
+  every instance of any category (Levels and Scope Boxes too) except Model
+  Groups, since hiding a group hides its kept members; minus the kept ids, their nested shared instances and their `SuperComponent`
   chain (`LinkIsolation`). Over 10,000 is refused before any change.
 - One outer `TransactionGroup` "Model Context Isolate": temporary isolate of
   the link instance(s) plus the Current model ids (with nested instances), then

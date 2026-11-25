@@ -1,7 +1,6 @@
 using DevTools.ModelsContext.Documents;
 using DevTools.ModelsContext.Visibility;
 using Nice3point.Revit.Extensions;
-using RevitDevTool.Tools.ModelsContext.Documents;
 
 namespace RevitDevTool.Tools.ModelsContext.Visibility;
 
@@ -16,7 +15,7 @@ internal static class LinkIsolation
             var collector = LinkElements.InView(model, view, instance.Id)
                             ?? throw new InvalidOperationException(VisibilityText.NoLinkView);
             var keep = KeptOf(linkDocument, step.KeptIds);
-            foreach (var id in collector.WherePasses(ElementReader.AnyOptionFilter(linkDocument)).ToElementIds())
+            foreach (var id in collector.WhereElementIsNotElementType().WherePasses(new ElementClassFilter(typeof(Group), true)).ToElementIds())
             {
                 if (!keep.Contains(id))
                 {
