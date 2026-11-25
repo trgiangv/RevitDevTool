@@ -73,7 +73,13 @@ public sealed partial class FilterLibraryViewModel : ObservableValidator
 
     public bool CanSave => Current is { IsCustom: true } && IsDirty && NameError is null;
 
-    internal FilterSourceItem? Current { get; private set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedSource))]
+    [NotifyCanExecuteChangedFor(nameof(RenameCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DeleteCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DuplicateCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    internal partial FilterSourceItem? Current { get; private set; }
 
     private bool IsCustomSelected => Current is { IsCustom: true };
 
@@ -172,14 +178,17 @@ public sealed partial class FilterLibraryViewModel : ObservableValidator
             return;
         }
 
-        if (!ReferenceEquals(keep, Current))
+        if (ReferenceEquals(keep, Current))
+        {
+            OnPropertyChanged(nameof(SelectedSource));
+        }
+        else
         {
             keep.Name = Current!.Name;
             keep.IsDirty = IsDirty;
             Current = keep;
         }
 
-        OnPropertyChanged(nameof(SelectedSource));
         await _runner.EvaluateAsync(false);
     }
 
@@ -233,17 +242,12 @@ public sealed partial class FilterLibraryViewModel : ObservableValidator
         }
 
         Current = item;
-        OnPropertyChanged(nameof(SelectedSource));
-        RenameCommand.NotifyCanExecuteChanged();
-        DeleteCommand.NotifyCanExecuteChanged();
-        DuplicateCommand.NotifyCanExecuteChanged();
         await _host.LoadEditorAsync(item);
         Name = item?.Name ?? string.Empty;
         IsEditingName = false;
         EditName = Name;
         ClearErrors(nameof(EditName));
         IsDirty = item is { IsCustom: true, Saved: null };
-        SaveCommand.NotifyCanExecuteChanged();
         _runner.Trigger();
     }
 

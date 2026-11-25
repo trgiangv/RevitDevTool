@@ -9,8 +9,6 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
 {
     private readonly VisibilityController _visibility;
     private readonly PanelRuntime _runtime;
-    private bool _isTemporaryActive;
-    private int _linkHideCount;
 
     internal TemporaryBarViewModel(PanelRuntime runtime, VisibilityController visibility)
     {
@@ -19,7 +17,7 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
         _visibility.Changed += (_, _) => _ = _runtime.RunAsync(() => RefreshAsync(CancellationToken.None));
     }
 
-    public bool IsVisible => _isTemporaryActive || ChangeCount > 0;
+    public bool IsVisible => IsTemporaryActive || ChangeCount > 0;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Text))]
@@ -35,23 +33,29 @@ public sealed partial class TemporaryBarViewModel : ObservableObject
 
     public string ConfirmText => string.Format(CultureInfo.CurrentCulture,
         "{0:N0} link elements stay hidden in this view. Show them later with Reveal Hidden Elements.",
-        _linkHideCount);
+        LinkHideCount);
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVisible))]
+    private partial bool IsTemporaryActive { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfirmText))]
+    private partial int LinkHideCount { get; set; }
 
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
         var active = await _runtime.Services.ViewActions.ReadActiveViewAsync(cancellationToken);
-        _isTemporaryActive = active?.IsTemporary == true;
+        IsTemporaryActive = active?.IsTemporary == true;
         ChangeCount = _visibility.Journal.ChangeCount;
-        OnPropertyChanged(nameof(IsVisible));
     }
 
     [RelayCommand]
     private Task KeepAsync()
     {
-        _linkHideCount = _visibility.LinkHideCount;
-        if (_linkHideCount > 0)
+        LinkHideCount = _visibility.LinkHideCount;
+        if (LinkHideCount > 0)
         {
-            OnPropertyChanged(nameof(ConfirmText));
             IsConfirmingKeep = true;
             return Task.CompletedTask;
         }

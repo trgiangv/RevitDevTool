@@ -15,7 +15,6 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
     private readonly ExplorerSelection _selection;
     private readonly Debouncer _sendDebouncer;
     private readonly ExplorerTree _tree;
-    private bool _isSelectionSyncOn = true;
     private bool _revealPending;
     private IReadOnlyList<ElementRef>? _rowElements;
     private int _sendsInFlight;
@@ -42,24 +41,9 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
 
     public event EventHandler<TreeRow>? ScrollRequested;
 
-    public bool IsSelectionSyncOn
-    {
-        get => _isSelectionSyncOn;
-        set
-        {
-            if (!SetProperty(ref _isSelectionSyncOn, value))
-            {
-                return;
-            }
-
-            IsSelectionSyncPaused = false;
-            OnPropertyChanged(nameof(IsSelectionSyncing));
-            if (value)
-            {
-                _sendDebouncer.Trigger();
-            }
-        }
-    }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSelectionSyncing))]
+    public partial bool IsSelectionSyncOn { get; set; } = true;
 
     public bool IsSelectionSyncVisible => _bar.Scope != ScopeKind.Selection;
 
@@ -112,13 +96,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
         _revealPending = false;
         SelectionSyncHint = null;
         IsSelectionSyncPaused = false;
-        if (_isSelectionSyncOn != isSelectionSyncOn)
-        {
-            _isSelectionSyncOn = isSelectionSyncOn;
-            OnPropertyChanged(nameof(IsSelectionSyncOn));
-            OnPropertyChanged(nameof(IsSelectionSyncing));
-        }
-
+        IsSelectionSyncOn = isSelectionSyncOn;
         _sendDebouncer.Cancel();
     }
 
@@ -221,6 +199,15 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
     public void RaiseRowSelectionChanged()
     {
         RowSelectionChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    partial void OnIsSelectionSyncOnChanged(bool value)
+    {
+        IsSelectionSyncPaused = false;
+        if (value)
+        {
+            _sendDebouncer.Trigger();
+        }
     }
 
     private async Task SendAsync()

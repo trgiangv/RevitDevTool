@@ -16,9 +16,7 @@ public sealed partial class RuleSetViewModel : FilterNodeViewModel
 
     private readonly List<long> _categories = [];
     private readonly List<SourceId> _documents = [];
-    private EffectiveScope _effective = EffectiveScope.Empty;
     private SetMatch _match;
-    private IReadOnlyList<ParameterInfo> _parameters = [];
 
     internal RuleSetViewModel(IFilterEditor editor, bool isReadOnly, SetMatch match = SetMatch.All,
         FilterScope? scope = null)
@@ -73,9 +71,11 @@ public sealed partial class RuleSetViewModel : FilterNodeViewModel
 
     public bool HasScope => _documents.Count > 0 || _categories.Count > 0;
 
-    public EffectiveScope Effective => _effective;
+    [ObservableProperty]
+    public partial EffectiveScope Effective { get; private set; } = EffectiveScope.Empty;
 
-    public IReadOnlyList<ParameterInfo> Parameters => _parameters;
+    [ObservableProperty]
+    public partial IReadOnlyList<ParameterInfo> Parameters { get; private set; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasWarning))]
@@ -124,14 +124,8 @@ public sealed partial class RuleSetViewModel : FilterNodeViewModel
     internal override void RefreshScope()
     {
         var parent = Parent?.Effective ?? Editor.RootScope;
-        _effective = parent.Narrow(HasScope ? FilterScope.Of(_documents, _categories) : null);
-        var parameters = Editor.Parameters.For(_effective);
-        OnPropertyChanged(nameof(Effective));
-        if (!ReferenceEquals(parameters, _parameters))
-        {
-            _parameters = parameters;
-            OnPropertyChanged(nameof(Parameters));
-        }
+        Effective = parent.Narrow(HasScope ? FilterScope.Of(_documents, _categories) : null);
+        Parameters = Editor.Parameters.For(Effective);
 
         if (IsRoot)
         {
@@ -298,7 +292,7 @@ public sealed partial class RuleSetViewModel : FilterNodeViewModel
         foreach (var item in wanted)
         {
             var option = new ScopeOptionViewModel(item.Key, item.Name, changed);
-            option.Init(isChecked(item.Key), item.Outside, item.Unresolved);
+            option.Set(isChecked(item.Key), item.Outside, item.Unresolved);
             options.Add(option);
         }
     }
