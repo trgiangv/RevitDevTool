@@ -390,6 +390,37 @@ public sealed class LifecycleTests
     }
 
     [TestMethod]
+    public async Task EmptyDeltaKeepsRows()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+        await fixture.Explorer.ExpandAsync(ducts);
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
+
+        fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
+        fixture.Settle();
+
+        var row = fixture.Group(Current, "Ducts");
+        Assert.AreSame(ducts, row);
+        Assert.Contains(row, fixture.Explorer.Rows);
+        Assert.IsTrue(row.HasChildren);
+        Assert.IsTrue(row.IsExpanded);
+        Assert.AreEqual(RowEye.Hidden, row.Eye);
+    }
+
+    [TestMethod]
+    public async Task EmptyDeltaReloadsActiveView()
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        var ducts = fixture.Group(Current, "Ducts");
+
+        fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
+        fixture.Settle();
+
+        Assert.AreNotSame(ducts, fixture.Group(Current, "Ducts"));
+    }
+
+    [TestMethod]
     public async Task ReadBackAsksVisibleRowsOnly()
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);

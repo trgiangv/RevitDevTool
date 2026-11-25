@@ -1,5 +1,6 @@
 using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Documents;
+using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Visibility;
 
 namespace DevTools.ModelsContext.Panel;
@@ -228,6 +229,13 @@ internal sealed class HostEventRelay : IDisposable
         if (timer.IsEnabled)
         {
             _runtime.Logger.DeltasApplied(deltas.Count, deltas.Sum(delta => delta.ChangedCount), timer.ElapsedMs);
+        }
+
+        if (_owner.ContextBar.Scope != ScopeKind.ActiveView
+            && deltas.TrueForAll(delta => delta.ChangedCount == 0 && !delta.IsUndoRedo))
+        {
+            await _visibility.RefreshHiddenAsync(CancellationToken.None);
+            return;
         }
 
         await _owner.RefreshAsync();
