@@ -214,7 +214,7 @@ public partial class ExplorerTabView : UserControl
                 e.Handled = true;
                 await _panel.Explorer.ToggleExpandCommand.ExecuteAsync(row);
                 break;
-            case Key.Z or Key.B or Key.I or Key.H when Keyboard.Modifiers == ModifierKeys.None:
+            case Key.Z or Key.B or Key.I or Key.H when e.KeyboardDevice.Modifiers == ModifierKeys.None:
                 e.Handled = true;
                 _panel.Explorer.OpenMenu(null);
                 await _panel.ContextMenu.RunShortcutAsync(e.Key.ToString());

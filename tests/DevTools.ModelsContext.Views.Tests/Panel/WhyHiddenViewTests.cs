@@ -67,8 +67,8 @@ public sealed class WhyHiddenViewTests
         ui.Host.FindInWindow("WhyHiddenExpand").Patterns.Toggle.Pattern.Toggle();
 
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.WhyHidden.IsExpanded), "The chevron did not expand.");
-        var list = ui.Host.FindInWindow("WhyHiddenList");
-        Assert.IsTrue(ThemeHost.WaitForUi(() => list.FindAllDescendants(cf => cf.ByAutomationId("WhyHiddenItem"))
+        var strip = ui.Host.FindInWindow("WhyHiddenStrip");
+        Assert.IsTrue(ThemeHost.WaitForUi(() => strip.FindAllDescendants(cf => cf.ByAutomationId("WhyHiddenItem"))
                 .Select(item => item.Name)
                 .SequenceEqual([HiddenReasons.Filter("Walls-Demo").Text, HiddenReasons.OutsideCrop.Text])),
             "The list does not show only the causes after the first.");

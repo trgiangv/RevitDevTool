@@ -104,7 +104,7 @@ One step at a time. Each step stops for review. Nothing is committed unless aske
    - publish the report artifact;
    - update test-matrix.md with the new groups and manual steps.
 
-Later, tracked in Progress: the same cases on Snowdon 2024, 2025 and 2027 with expected values per year (a data split saved in `git stash`, "stopped phase-1 data refactor"); Revit 2023 on another sample. Not in this plan: the MCP filter tool itself.
+Later, tracked in Progress: the same cases on Snowdon 2024, 2025 and 2027 with expected values per year; Revit 2023 on another sample. Live tests cover Revit 2026 only until then. The idea when it starts: case JSON says what to check, a per-sample facts file holds the model data, expected values are keyed by year, and a record mode writes them from one live run. Not in this plan: the MCP filter tool itself.
 
 ## Risks And Recovery
 

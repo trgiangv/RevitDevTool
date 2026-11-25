@@ -36,7 +36,7 @@ public partial class CategorySection : UserControl
 
     private void OnListKeyDown(object sender, KeyEventArgs e)
     {
-        if (Keyboard.Modifiers != ModifierKeys.None || IsLocked
+        if (e.KeyboardDevice.Modifiers != ModifierKeys.None || IsLocked
             || e.OriginalSource is not ListBoxItem { DataContext: CategoryItemViewModel item })
         {
             return;

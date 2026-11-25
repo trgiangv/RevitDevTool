@@ -470,12 +470,14 @@ public sealed class FilterViewTests
     public void ValueBoxShowsExample()
     {
         using var ui = OpenFilterWithRule();
-        var rule = (RuleViewModel)ui.Panel.Filter.Root.Children[0];
+        WpfSta.Invoke(() =>
+        {
+            var rule = (RuleViewModel)ui.Panel.Filter.Root.Children[0];
+            rule.SelectedParameter = rule.Parameters.First(parameter => parameter.DisplayName == "Width");
+        });
 
-        WpfSta.Invoke(() => rule.SelectedParameter = rule.Parameters.First(parameter => parameter.DisplayName == "Width"));
-
-        Assert.IsTrue(ThemeHost.WaitForUi(() => WpfSta.Invoke(() =>
-                HandyControl.Controls.InfoElement.GetPlaceholder(FindByAutomationId(ui, "Filter.Rule.Value")) == "300 mm")),
+        Assert.IsTrue(ThemeHost.WaitFor(() => TryFindByAutomationId(ui, "Filter.Rule.Value") is { } box
+                && HandyControl.Controls.InfoElement.GetPlaceholder(box) == "300 mm"),
             "The value box does not show the example.");
     }
 
@@ -688,6 +690,11 @@ public sealed class FilterViewTests
 
     private static System.Windows.FrameworkElement FindByAutomationId(PanelUi ui, string automationId)
     {
+        return TryFindByAutomationId(ui, automationId) ?? throw new InvalidOperationException(automationId + " was not found.");
+    }
+
+    private static System.Windows.FrameworkElement? TryFindByAutomationId(PanelUi ui, string automationId)
+    {
         var queue = new Queue<System.Windows.DependencyObject>();
         queue.Enqueue(ui.View);
         while (queue.Count > 0)
@@ -705,6 +712,6 @@ public sealed class FilterViewTests
             }
         }
 
-        throw new InvalidOperationException(automationId + " was not found.");
+        return null;
     }
 }

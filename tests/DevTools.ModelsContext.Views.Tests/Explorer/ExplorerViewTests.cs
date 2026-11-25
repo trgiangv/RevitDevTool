@@ -301,7 +301,7 @@ public sealed class ExplorerViewTests
         var source = System.Windows.PresentationSource.FromVisual(item)!;
         foreach (var routed in new[] { System.Windows.Input.Keyboard.PreviewKeyDownEvent, System.Windows.Input.Keyboard.KeyDownEvent })
         {
-            item.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, source, 0, key) { RoutedEvent = routed });
+            item.RaiseEvent(new System.Windows.Input.KeyEventArgs(NoModifierKeyboard.Device, source, 0, key) { RoutedEvent = routed });
         }
     }
 
