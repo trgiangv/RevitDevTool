@@ -105,9 +105,10 @@ pwsh -File $uia invoke -ProcessId $app.Id -Id Close
 
 ## Focus, DPI, theme
 
-- Patterns do not need focus. Keyboard input does, and it goes to the
-  foreground window, which another app can take at any time. Prefer patterns;
-  when you must type, focus the element and read the value back.
+- Patterns do not need focus, but on another process an action pattern
+  (Invoke, Toggle, Select) still brings its window to the front; reads do not.
+  Keyboard input and UIA `Focus()` take the keyboard as well. Prefer `SetValue`
+  to typing, and keep live UI runs opt-in.
 - An IME or a non-English layout rewrites typed keys (Vietnamese Telex turns
   "Door" into "Dổ"). The script types text as Unicode input to avoid that;
   `SetValue` avoids it entirely.
@@ -122,6 +123,8 @@ pwsh -File $uia invoke -ProcessId $app.Id -Id Close
 1. Capture the element, not the screen: `uia.ps1 shot -Root <pane id>` or
    `Capture.Element(element).ToFile(path)`. A capture copies screen pixels, so
    the window must be visible, not minimized, and not covered.
+   `PrintWindow(hwnd, PW_RENDERFULLCONTENT)` (`WindowShot` in the Model Context
+   UI tests) draws a covered window too.
 2. A top-level window's rect includes the invisible resize border; the edges of
    a window shot can show what is behind it. Capture an inner element for a
    clean image.

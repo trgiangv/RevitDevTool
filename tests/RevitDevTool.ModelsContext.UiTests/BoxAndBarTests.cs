@@ -18,6 +18,7 @@ public sealed class BoxAndBarTests : RecordedTest
     private const string Child = "Sub-divisions";
     private const int ParentCount = 10;
     private const int ChildCount = 8;
+    private const int DotMinimum = 10;
 
     private static readonly TimeSpan Wait = TimeSpan.FromSeconds(10);
     private static readonly string[] Tools = ["Filter.Result.Isolate", "Filter.Result.Halftone", "Filter.Result.Color", "Filter.Result.Eye"];
@@ -527,13 +528,13 @@ public sealed class BoxAndBarTests : RecordedTest
                     var after = DotPixels(link, doors, warning);
                     var shownEye = EyeOf(link, doors);
                     _panel.Shot("after");
-                    Evidence.Values($"dot pixels (near {ColorTranslator.ToHtml(warning)}): 0 before; > 0 after Keep, eye Hidden; 0 after Show, eye Shown",
+                    Evidence.Values($"dot pixels (hue of {ColorTranslator.ToHtml(warning)}, any row opacity): under {DotMinimum} before; {DotMinimum} or more after Keep, eye Hidden; under {DotMinimum} after Show, eye Shown",
                         $"{before} before; {kept} after Keep, eye {keptEye}; {after} after Show, eye {shownEye}");
 
-                    Assert.AreEqual(0, before, "The saved-hide dot shows before any hide.");
-                    Assert.IsGreaterThan(0, kept, "No saved-hide dot after Keep.");
+                    Assert.IsLessThan(DotMinimum, before, "The saved-hide dot shows before any hide.");
+                    Assert.IsGreaterThanOrEqualTo(DotMinimum, kept, "No saved-hide dot after Keep.");
                     Assert.AreEqual("Hidden", keptEye);
-                    Assert.AreEqual(0, after, "The saved-hide dot stayed after Show.");
+                    Assert.IsLessThan(DotMinimum, after, "The saved-hide dot stayed after Show.");
                     Assert.AreEqual("Shown", shownEye);
                 }, ResetLeftovers);
             }
@@ -564,7 +565,7 @@ public sealed class BoxAndBarTests : RecordedTest
         var rowBounds = row.BoundingRectangle;
         var area = new Rectangle(left, rowBounds.Top, Math.Max(1, eye.Left - left), rowBounds.Height);
         using var image = WindowShot.Capture(_panel.PanelWindow, area);
-        return WindowShot.CountNear(image, dot, 40);
+        return WindowShot.CountHue(image, dot, 10);
     }
 
     private static AutomationElement BoxRow(string name)
@@ -715,10 +716,11 @@ public sealed class BoxAndBarTests : RecordedTest
             var before = Rows();
             var index = Array.FindIndex(before, item => item.Equals(row));
             _panel.Settle();
-            var expand = _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Expand"));
-            Assert.IsTrue(Retry.WhileFalse(() => expand.IsEnabled, Wait, ignoreException: true).Result,
+            var expand = Retry.WhileNull(() => row.FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Expand")), Wait, ignoreException: true).Result;
+            Assert.IsNotNull(expand, $"'{string.Join(" > ", path)}' has no expander; rows: {string.Join(" | ", before.Select(item => item.Name))}.");
+            Assert.IsTrue(Retry.WhileFalse(() => expand!.IsEnabled, Wait, ignoreException: true).Result,
                 $"Expand on '{path[^1]}' stayed disabled.");
-            expand.Patterns.Invoke.Pattern.Invoke();
+            expand!.Patterns.Invoke.Pattern.Invoke();
             var child = Retry.WhileNull(() => Rows() is var items && items.Length > before.Length
                     ? items[index + (level == 0 ? items.Length - before.Length : 1)]
                     : null,

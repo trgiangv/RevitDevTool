@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Runs the Model Context live tests (L2, then L3) in one command and checks that Revit stayed safe.
+    Runs the Model Context live tests (L2, and L3 with -Ui) in one command and checks that Revit stayed safe.
 
 .DESCRIPTION
     The sample must already be the active model in the Revit given by -RevitPid.
@@ -15,10 +15,15 @@
     the sample view and shows the Model Context pane through the Revit API; when it
     had to switch the view it ends Inconclusive and runs again, up to three times; the
     script goes on only once it passed, else it exits with code 4), then
-    the full suite in a second run on the same Revit. L3 follows and attaches to
-    the Revit that L2 recorded; it uses UI Automation only for the panel's own
-    controls. The visibility cases export view images only for a failing case;
-    -Images exports the full set.
+    the full suite in a second run on the same Revit. L2 works through the Revit
+    API only: it takes no mouse, keyboard or front window, so Revit can stay behind
+    other windows while you work. The visibility cases export view images only for
+    a failing case; -Images exports the full set.
+
+    L3 runs only with -Ui. It attaches to the Revit that L2 recorded and drives the
+    panel through UI Automation, so it uses the screen: every UIA action brings the
+    Revit window to the front, and UI-18 to UI-20 focus a row and press Shift+F10.
+    Do not work at the machine during -Ui.
 
     Safety: before the run the script notes the Revit journal position and the crash
     dump files. After L2 and after L3 it checks that the Revit process is alive and
@@ -36,7 +41,7 @@
 
 .EXAMPLE
     scripts/test-models-context.ps1 -RevitPid 12345
-    scripts/test-models-context.ps1 -RevitPid 12345 -SkipUi
+    scripts/test-models-context.ps1 -RevitPid 12345 -Ui
     scripts/test-models-context.ps1 -RevitPid 12345 -Year 2026 -Images
     scripts/test-models-context.ps1 -RevitPid 12345 -Year 2026 -Filter UserActionTests
 #>
@@ -44,7 +49,7 @@ param(
     [Parameter(Mandatory)]
     [int]$RevitPid,
     [string]$Year = '2024',
-    [switch]$SkipUi,
+    [switch]$Ui,
     [switch]$Images,
     [string]$Filter
 )
@@ -52,7 +57,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $live = Join-Path $root 'tests\RevitDevTool.ModelsContext.LiveTests\RevitDevTool.ModelsContext.LiveTests.csproj'
-$ui = Join-Path $root 'tests\RevitDevTool.ModelsContext.UiTests\RevitDevTool.ModelsContext.UiTests.csproj'
+$uiProject = Join-Path $root 'tests\RevitDevTool.ModelsContext.UiTests\RevitDevTool.ModelsContext.UiTests.csproj'
 $runs = Join-Path $root 'artifacts\models-context-tests'
 $flag = Join-Path $runs 'images.on'
 New-Item -ItemType Directory -Force $runs | Out-Null
@@ -186,12 +191,12 @@ $l2 = $LASTEXITCODE
 $l2Safe = Test-Safety 'after-L2'
 if ($l2 -ne 0 -or -not $l2Safe) { Complete $l2 }
 
-if ($SkipUi -or $Filter) {
+if (-not $Ui -or $Filter) {
     Complete 0
 }
 
 $env:MODELS_CONTEXT_REVIT_PID = $RevitPid
-dotnet run --project $ui
+dotnet run --project $uiProject
 $l3 = $LASTEXITCODE
 $l3Safe = Test-Safety 'after-L3'
 

@@ -265,11 +265,6 @@ internal sealed class RevitPanel : IDisposable
         }
     }
 
-    public void CloseMenu()
-    {
-        Keyboard.Type(VirtualKeyShort.ESCAPE);
-    }
-
     public string Message()
     {
         return Shown("ModelContext.Message")?.Name is { } text && !string.IsNullOrWhiteSpace(text) ? text : string.Empty;

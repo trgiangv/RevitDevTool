@@ -68,6 +68,11 @@ What to rebuild:
   fails with one sentence when it is not a running host of the kind and year or when
   `ForceLaunch=true`. Unit tests: `TestSessionTests`, `RunnerCommandContextTests`,
   `PidOptionTests`, `TestRunSettingsLoaderTests` (`Pid*`).
+- A run needs no focus. The Runner sends tests over the pipe and the host runs them on its API thread
+  (Revit: `ExternalEvent`), so the host can stay behind other windows while a person keeps typing
+  elsewhere. Neither the Runner nor the TestAdapter raises, restores or focuses the host window.
+  UIA tests of the host's UI are different: each UIA action brings the window forward, so they are
+  opt-in ([test-matrix.md](test-matrix.md#current-gaps)).
 - Consumer properties: `HostName`, `HostVersion`, `ForceLaunch`, `HostPid`, `PerTestTimeout`,
   `LaunchTimeout`, `TestingFramework` (`nunit` default, `tunit` or `mstest` opt-in).
   An `mstest` project is `Sdk="MSTest.Sdk"` (or `EnableMSTestRunner=true`).

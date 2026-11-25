@@ -57,16 +57,19 @@ internal static class WindowShot
         }
     }
 
-    public static int CountNear(Bitmap image, Color target, int tolerance)
+    public static int CountHue(Bitmap image, Color target, float degrees)
     {
+        var hue = target.GetHue();
         var count = 0;
         for (var y = 0; y < image.Height; y++)
         {
             for (var x = 0; x < image.Width; x++)
             {
                 var pixel = image.GetPixel(x, y);
-                if (Math.Abs(pixel.R - target.R) <= tolerance && Math.Abs(pixel.G - target.G) <= tolerance
-                    && Math.Abs(pixel.B - target.B) <= tolerance)
+                var max = Math.Max(pixel.R, Math.Max(pixel.G, pixel.B));
+                var min = Math.Min(pixel.R, Math.Min(pixel.G, pixel.B));
+                var distance = Math.Abs(pixel.GetHue() - hue);
+                if (max >= 64 && max - min >= max / 2 && Math.Min(distance, 360 - distance) <= degrees)
                 {
                     count++;
                 }

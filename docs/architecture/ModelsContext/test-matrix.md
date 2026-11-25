@@ -135,8 +135,10 @@ Panel preconditions a flow (and anyone checking the panel by hand) must meet:
    UIA tree while it is busy. A collapsed or hidden control is still in the UIA
    tree (offscreen): test presence with `Shown` / `Gone`, never with a bare
    `FindFirstDescendant`.
-   L3 must not take the user's mouse, keyboard or screen, so a person can work
-   in other windows during a run:
+   L3 uses the screen and runs only when asked (`scripts/test-models-context.ps1 -Ui`):
+   every UIA action (Invoke, Toggle, Select) brings the target window to the front,
+   even a plain WPF window with none of our code, and UI-18 to UI-20 take the
+   keyboard focus for Shift+F10. L2 takes nothing (Revit API only). Within L3:
    - Pick a combo item with `RevitPanel.Choose`. It finds the item through
      `ItemContainer` and selects it while the drop-down stays closed. A WPF combo
      box makes its item containers only when the drop-down first opens. For a combo
@@ -147,9 +149,7 @@ Panel preconditions a flow (and anyone checking the panel by hand) must meet:
    - Images come from `PrintWindow` of the window that holds the panel (`Shot`),
      never from the screen. Another window on top does not show in the image.
    - `RevitPanel.Act` records a step when Revit comes to the front during an
-     action. Run `20261118-130820` (Revit 2026) recorded it once, in UI-05 at
-     `Temporary.Reset`. Link hide and show run Revit's own UI commands
-     (`LinkHideShow`). This is product behaviour, not the test. See Current gaps
+     action; with the UIA behavior above that is expected. See Current gaps
      in [docs/agents/test-matrix.md](../../agents/test-matrix.md).
 6. The model ends unmodified: edits run in rolled-back transactions and
    temporary modes are reset through the panel's own Reset; a test never
@@ -284,7 +284,10 @@ Current results (Snowdon HVAC + six links):
   color at about 55% opacity), outside a ±40 color match; the flow now matches the warning color's hue and needs a
   dot-sized cluster. UI-16 fails often on this build and on the build before it (2 of 3 in an A/B on the old code):
   after the duct hide, the Explorer rebuild sometimes leaves Ducts (or Taps) without an expander for over 10 s.
-  This is an Explorer race, not a Why hidden change; open.
+  Cause (found offline): the hide's document change is a delta with no element change, and it still reloaded the
+  whole context after the panel had gone idle, replacing every row object; a row the flow had just found lost its
+  expander. Fixed in `HostEventRelay` (outside Active view such a delta only re-reads hidden states); L1
+  `LifecycleTests.EmptyDeltaKeepsRows` and `EmptyDeltaReloadsActiveView`. Live rerun of UI-16 pending.
 - Explicit L2 cases, Revit 2026, 2026-11-25 (Why hidden matrix build): WH-04 PASS (*Above view range*), WH-09 PASS
   (240 sampled linked elements, none falls back; first causes BelowRange 80, AboveRange 72, FilterPossible 38,
   Category 33, Phase 9, OutsideCrop 4, Railing 2, NotDrawn 2), WH-11 PASS (run `20261125-091514`, `L3`); WH-12 PASS
@@ -739,8 +742,10 @@ name; files land in the run folder.
 
 UI-09 to UI-17 change only temporary state and reset it; UI-09, UI-10 and UI-12 need the Site link loaded
 (Inconclusive otherwise). WPF does not implement UI Automation `ShowContextMenu`, so the context menus (UI-18 to
-UI-20) open with one Shift+F10 on the focused row (`RevitPanel.MenuItem`, the one key the owner allows in L3; it
-takes the keyboard focus for that moment). The menu is a popup window of Revit's process; the item is found by
+UI-20) open with one Shift+F10 on the focused row (`RevitPanel.MenuItem`; it takes the keyboard focus for that
+moment, one more reason L3 is opt-in). The menus themselves are covered without focus by the L1 view tests, which
+open them offscreen (`PanelUi.OpenRowMenu`, `MenuListsActions`, `CategoryMenuListsActions`). The menu is a popup
+window of Revit's process; the item is found by
 AutomationId (`Menu.<Action>`, `Explorer.CategoryMenu.<Action>`) and run by its Invoke pattern, which closes the menu.
 `RevitPanel.MenuItems` lists the items through the raw view walker: the control view of this menu leaves out its
 first visible item (Zoom), which the popup capture (`menu` image, the popup window itself) shows on screen.

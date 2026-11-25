@@ -81,6 +81,7 @@ dotnet test --project Host.Tests.csproj -c <Config> -- --pid 12345 --filter Meth
 | Discovery | `--list-tests` and Test Explorer refresh start no host |
 | Run | Starts or reuses a host (`ForceLaunch=false` still launches if none match). With several matching hosts open it reuses the oldest process |
 | `--pid <n>` | Runs in that host process only and never launches. Fails with one sentence when `<n>` is not a running host of `HostName` and `HostVersion`, or when `ForceLaunch=true`. `HostPid` in the csproj or `hostPid` in `testconfig.json` does the same |
+| Focus | None needed. The host runs tests on its API thread and may stay behind other windows; the run takes no mouse, keyboard or front window. A UIA test that drives the host's UI does take the screen ([ui-automation](../ui-automation/SKILL.md)) |
 | Passed stdout | `--output Detailed` shows Console, Trace, and `Assert.Pass` on passes; the default `Normal` expands failures only |
 | `--filter` | Method-name regex (NUnit `<name re="1">`); VSTest `FullyQualifiedName~` matches nothing |
 | `[Explicit]` | Selected only when `--filter` matches the method name |

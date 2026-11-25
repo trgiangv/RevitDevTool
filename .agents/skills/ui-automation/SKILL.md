@@ -42,6 +42,12 @@ peers, popups       screenshot vs design            safety limits
    window alone, including an open Revit or editor the user is working in.
 5. **Stop at the safety limits** below; say what blocked you instead of working
    around it.
+6. **A live UIA action uses the screen.** Invoke, Toggle or Select on another
+   process's window brings that window to the front (seen on Revit and on a plain
+   WPF window); reading (`find`, `tree`) does not. Do not add `Focus()` or
+   `SetForeground` on top, and run live UI flows only when the user asked and
+   is not working at the machine. API-level checks (MCP, host tests) need none
+   of this.
 
 ## Pick the path
 
@@ -80,7 +86,7 @@ pwsh -File scripts/uia.ps1 <action> (-ProcessId N | -ProcessName exe | -WindowTi
 | `items` | List, tree, menu, or tab items, expanding a combo first; `-Realize` walks virtualized items | a query |
 | `wait` | Until the element exists, or with `-Gone` until it disappears | a query |
 | `dialog` | Lists dialogs with their text and buttons; with `-Button` presses one | `-Title`, `-Button` |
-| `keys` | Focuses the element (or main window), types `-Value` as Unicode, sends `-Keys` chord | `-Value` or `-Keys` |
+| `keys` | Brings the window to the front, focuses the element, types `-Value` as Unicode, sends `-Keys` chord. Takes the user's keyboard: only for an app with no pattern | `-Value` or `-Keys` |
 | `shot` | PNG of the element, `-Root`, or the main window | `-Path` |
 
 Every element prints as one line, stable and easy to grep:

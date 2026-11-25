@@ -110,6 +110,10 @@ repo: `PanelButtonGroup`, `ColorEyeDropperAutomationPeer`, `TagCheckComboBox`.
 
 ## Popups, menus, tooltips
 
+- WPF does not implement UIA `ShowContextMenu`. In a view test, open the menu
+  in process (`PlacementTarget` + `IsOpen`, as `PanelUi.OpenRowMenu` does) and
+  act on its items by pattern; live, Shift+F10 on the focused element is the
+  only way, and it takes the keyboard.
 - A WPF `Popup`, `ContextMenu`, drop-down, or tooltip is a separate HWND. In UIA
   it is a top-level window of the same process (class `Popup`), not a child of
   the control. Search the process's windows, not just the main window.
