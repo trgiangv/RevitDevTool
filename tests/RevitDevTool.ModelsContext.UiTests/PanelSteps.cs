@@ -38,7 +38,7 @@ internal sealed class PanelSteps(RevitPanel panel)
             cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(DocumentName(part))));
     }
 
-    public void TickOnly(string part)
+    public void CheckOnly(string part)
     {
         var keep = DocumentName(part);
         panel.Toggle(Document(part), true);
@@ -50,7 +50,7 @@ internal sealed class PanelSteps(RevitPanel panel)
                 cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(name))), false);
         }
 
-        Evidence.Step($"Ticked only '{keep}' in the documents box.");
+        Evidence.Step($"Checked only '{keep}' in the documents box.");
     }
 
     public string DocumentName(string part)

@@ -186,7 +186,7 @@
                 </Style.Triggers>
             </Style>
 
-            <Style x:Key="WhenLocked" TargetType="StackPanel">
+            <Style x:Key="WhenLocked" TargetType="FrameworkElement">
                 <Style.Triggers>
                     <DataTrigger Binding="{Binding IsLocked, ElementName=Root}" Value="True">
                         <Setter Property="IsEnabled" Value="False" />
@@ -230,51 +230,64 @@
                 </Grid>
             </ToggleButton>
             <Border Style="{StaticResource CategoryListStyle}">
-                <StackPanel Style="{StaticResource WhenLocked}">
+                <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <hc:SearchBar hc:InfoElement.Placeholder="Search categories"
-                                      hc:InfoElement.ShowClearButton="True"
-                                      AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategorySearch}"
-                                      Style="{StaticResource SearchBarPlus.Small}"
-                                      Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" />
+                        <Border Style="{StaticResource WhenLocked}">
+                            <hc:SearchBar hc:InfoElement.Placeholder="Search categories"
+                                          hc:InfoElement.ShowClearButton="True"
+                                          AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategorySearch}"
+                                          Style="{StaticResource SearchBarPlus.Small}"
+                                          Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" />
+                        </Border>
                         <StackPanel Grid.Column="1"
                                     Margin="6,0,0,0"
                                     VerticalAlignment="Center"
-                                    Orientation="Horizontal">
+                                    Orientation="Horizontal"
+                                    Style="{StaticResource WhenLocked}">
                             <Button AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategoryAll}"
                                     Command="{Binding CheckAllCommand}"
                                     Content="All"
                                     Style="{StaticResource PanelLinkButton}"
-                                    ToolTip="Tick every listed category" />
+                                    ToolTip="Check every listed category" />
                             <TextBlock Style="{StaticResource CategoryNoteText}" Text="·" />
                             <Button AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategoryNone}"
                                     Command="{Binding CheckNoneCommand}"
                                     Content="None"
                                     Style="{StaticResource PanelLinkButton}"
-                                    ToolTip="Untick every listed category" />
+                                    ToolTip="Uncheck every listed category" />
                         </StackPanel>
+                        <CheckBox Grid.Column="2"
+                                  Margin="8,0,0,0"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategoryHideUnchecked}"
+                                  Content="Hide unchecked"
+                                  IsChecked="{Binding HideUnchecked}"
+                                  ToolTip="Show only checked categories" />
                     </Grid>
-                    <ListBox x:Name="CategoryList"
-                             MaxHeight="176"
-                             Margin="0,3,0,0"
-                             Padding="0"
-                             AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategoryList}"
-                             Background="Transparent"
-                             BorderThickness="0"
-                             ContextMenu="{Binding ItemMenu, ElementName=Root}"
-                             ItemContainerStyle="{StaticResource CategoryRowStyle}"
-                             ItemTemplate="{StaticResource CategoryTemplate}"
-                             ItemsSource="{Binding VisibleItems}"
-                             PreviewKeyDown="OnListKeyDown"
-                             PreviewMouseRightButtonDown="OnListRightButtonDown"
-                             SelectionMode="Extended"
-                             Style="{StaticResource ListBoxCustom}"
-                             Tag="{Binding MenuContext, ElementName=Root}"
-                             VirtualizingPanel.IsVirtualizing="False" />
+                    <Border Style="{StaticResource WhenLocked}">
+                        <ListBox x:Name="CategoryList"
+                                 MaxHeight="176"
+                                 Margin="0,3,0,0"
+                                 Padding="0"
+                                 AutomationProperties.AutomationId="{Binding AutomationPrefix, ElementName=Root, StringFormat={}{0}.CategoryList}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 ContextMenu="{Binding ItemMenu, ElementName=Root}"
+                                 ItemContainerStyle="{StaticResource CategoryRowStyle}"
+                                 ItemTemplate="{StaticResource CategoryTemplate}"
+                                 ItemsSource="{Binding VisibleItems}"
+                                 PreviewKeyDown="OnListKeyDown"
+                                 PreviewMouseRightButtonDown="OnListRightButtonDown"
+                                 SelectionMode="Extended"
+                                 Style="{StaticResource ListBoxCustom}"
+                                 Tag="{Binding MenuContext, ElementName=Root}"
+                                 VirtualizingPanel.IsVirtualizing="False" />
+                    </Border>
                 </StackPanel>
             </Border>
         </StackPanel>

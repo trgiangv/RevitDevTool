@@ -32,7 +32,7 @@ public sealed class HiddenCategoryCountTests
     public async Task LinkHiddenCategoryKeepsCount()
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Panel.RefreshAsync();
         var before = fixture.Group(Mep, "Ducts").Count;
 

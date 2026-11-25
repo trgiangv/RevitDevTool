@@ -62,7 +62,7 @@ public sealed class EyeDrawnTests
     {
         var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Scope = ScopeKind.WholeModel;
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         fixture.Settle();
         return fixture;
     }

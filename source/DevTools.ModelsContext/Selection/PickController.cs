@@ -6,8 +6,8 @@ namespace DevTools.ModelsContext.Selection;
 public sealed class PickController(ISelectionPort selection)
 {
     public const string PickingCue = "Picking · Esc to finish";
-    public const string NoLinkReason = "Tick a link to pick in it";
-    public const string NoCategoryReason = "Tick a category to pick";
+    public const string NoLinkReason = "Check a link to pick in it";
+    public const string NoCategoryReason = "Check a category to pick";
     public const string CancelledCue = "Pick cancelled";
     public const string NothingCue = "Nothing picked";
 

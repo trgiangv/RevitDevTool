@@ -12,7 +12,7 @@ public sealed class ExplorerPickTests
     private static readonly DocumentKey Mep = FakeModelGenerator.Mep;
 
     [TestMethod]
-    public async Task PickNeedsTickedLink()
+    public async Task PickNeedsCheckedLink()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var pick = fixture.Explorer.Pick;
@@ -23,11 +23,11 @@ public sealed class ExplorerPickTests
     }
 
     [TestMethod]
-    public async Task TickedLinkEnablesPick()
+    public async Task CheckedLinkEnablesPick()
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
 
         var pick = fixture.Explorer.Pick;
         Assert.IsNull(pick.DisabledReason);
@@ -39,7 +39,7 @@ public sealed class ExplorerPickTests
     public async Task NoCategoryDisablesPick()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
 
         fixture.Explorer.Categories.Picker.CheckNoneCommand.Execute(null);
 
@@ -48,10 +48,10 @@ public sealed class ExplorerPickTests
     }
 
     [TestMethod]
-    public async Task PickUsesTickedBoxes()
+    public async Task PickUsesCheckedBoxes()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var picker = fixture.Explorer.Categories.Picker;
         picker.CheckNoneCommand.Execute(null);
         picker.Items.First(item => item.Name == "Ducts").IsChecked = true;
@@ -68,7 +68,7 @@ public sealed class ExplorerPickTests
     public async Task PickShowsCueUntilDone()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         fixture.Model.PickGate = new TaskCompletionSource<bool>();
 
         var running = fixture.Explorer.Pick.PickCommand.ExecuteAsync(null);
@@ -87,7 +87,7 @@ public sealed class ExplorerPickTests
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.Selection);
 
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
 
         Assert.IsNotEmpty(fixture.Explorer.Categories.Picker.Items);
         Assert.IsNull(fixture.Explorer.Pick.DisabledReason);

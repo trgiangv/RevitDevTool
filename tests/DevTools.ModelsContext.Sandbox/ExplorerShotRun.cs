@@ -29,7 +29,7 @@ internal static class ExplorerShotRun
             var theme = ThemeManager.Current.ActualApplicationTheme;
 
             panel.ContextBar.Scope = ScopeKind.ActiveView;
-            panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+            panel.ContextBar.Check([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
             await panel.RefreshAsync();
             await Settle(800);
             explorer.CollapseTree();

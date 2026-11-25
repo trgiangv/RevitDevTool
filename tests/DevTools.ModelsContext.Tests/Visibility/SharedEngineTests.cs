@@ -105,7 +105,7 @@ public sealed class SharedEngineTests
     public async Task LinkRowHalftoneMarksRow()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var link = fixture.Explorer.Rows.First(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep);
 
         await fixture.Explorer.RunToolAsync(link, MenuAction.Halftone);

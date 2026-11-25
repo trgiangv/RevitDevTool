@@ -32,7 +32,7 @@ internal static class WhyHiddenShotRun
             var elements = panel.Explorer.ElementsOf([ducts]).OrderBy(element => element.Id).ToList();
             var prefix = $"{ThemeManager.Current.ActualApplicationTheme}-{(int)window.Width}";
 
-            panel.ContextBar.Tick([FakeModelGenerator.Mep]);
+            panel.ContextBar.Check([FakeModelGenerator.Mep]);
             await Settle(800);
             var linkedDucts = panel.Explorer.Rows.First(row => row.Document == FakeModelGenerator.Mep && row.Text == "Ducts");
             var linked = panel.Explorer.ElementsOf([linkedDucts]).OrderBy(element => element.Id).First();

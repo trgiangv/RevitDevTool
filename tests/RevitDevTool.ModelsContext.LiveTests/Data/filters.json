@@ -10,9 +10,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'equals', value 's10'.",
         "Read the number before 'matches' in the result row: it must be 1.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark equals s10', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -28,9 +28,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'equals', value 's10', and turn Aa on (match case).",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark equals s10', turn on Grand totals > Count and read the total. Schedule filters ignore case, so read the column and count only rows with the exact case. Close the file without saving."
@@ -46,9 +46,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'equals', value 'S10', and turn Aa on (match case).",
         "Read the number before 'matches' in the result row: it must be 1.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark equals S10', turn on Grand totals > Count and read the total. Schedule filters ignore case, so read the column and count only rows with the exact case. Close the file without saving."
@@ -64,9 +64,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'does not equal', value 'S10', and turn Aa on (match case).",
         "Read the number before 'matches' in the result row: it must be 141.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark does not equal S10', turn on Grand totals > Count and read the total. Schedule filters ignore case, so read the column and count only rows with the exact case. Close the file without saving."
@@ -82,9 +82,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'does not equal', value 's10', and turn Aa on (match case).",
         "Read the number before 'matches' in the result row: it must be 142.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark does not equal s10', turn on Grand totals > Count and read the total. Schedule filters ignore case, so read the column and count only rows with the exact case. Close the file without saving."
@@ -100,9 +100,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'contains', value '1'.",
         "Read the number before 'matches' in the result row: it must be 61.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark contains 1', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -118,9 +118,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'does not contain', value '1'.",
         "Read the number before 'matches' in the result row: it must be 81.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark does not contain 1', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -136,9 +136,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'begins with', value 'S'.",
         "Read the number before 'matches' in the result row: it must be 22.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark begins with S', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -154,9 +154,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'does not begin with', value 'S'.",
         "Read the number before 'matches' in the result row: it must be 120.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark does not begin with S', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -172,9 +172,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'ends with', value '0'.",
         "Read the number before 'matches' in the result row: it must be 3.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark ends with 0', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -190,9 +190,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'does not end with', value '0'.",
         "Read the number before 'matches' in the result row: it must be 139.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark does not end with 0', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -208,9 +208,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'is greater than', value 'S5'.",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark is greater than S5', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -226,9 +226,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'is less than or equal to', value 'S5'.",
         "Read the number before 'matches' in the result row: it must be 142.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark is less than or equal to S5', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -244,9 +244,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Comments', operator 'empty'.",
         "Read the number before 'matches' in the result row: it must be 142.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Comments, on the Filter tab add 'Comments has no value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -262,9 +262,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Comments', operator 'not empty'.",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Comments, on the Filter tab add 'Comments has a value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -280,9 +280,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'defined'.",
         "Read the number before 'matches' in the result row: it must be 142.",
         "Check without the panel: Revit schedules cannot test whether a parameter exists or combine OR groups. Open Snowdon Towers Sample Architectural.rvt (do not save), select one element of each category, right-click > Select All Instances > In Entire Project, and read each condition in Properties for the elements the panel selected (the panel's result row > Select)."
@@ -298,9 +298,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'undefined'.",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: Revit schedules cannot test whether a parameter exists or combine OR groups. Open Snowdon Towers Sample Architectural.rvt (do not save), select one element of each category, right-click > Select All Instances > In Entire Project, and read each condition in Properties for the elements the panel selected (the panel's result row > Select)."
@@ -316,9 +316,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'contains', value 's1', and turn Aa on (match case).",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark contains s1', turn on Grand totals > Count and read the total. Schedule filters ignore case, so read the column and count only rows with the exact case. Close the file without saving."
@@ -334,9 +334,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'begins with', value 'S', and turn Aa on (match case).",
         "Read the number before 'matches' in the result row: it must be 22.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Mark, on the Filter tab add 'Mark begins with S', turn on Grand totals > Count and read the total. Schedule filters ignore case, so read the column and count only rows with the exact case. Close the file without saving."
@@ -352,9 +352,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'not empty'.",
         "Read the number before 'matches' in the result row: it must be 131.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle has a value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -370,9 +370,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'undefined'.",
         "Read the number before 'matches' in the result row: it must be 11.",
         "Check without the panel: Revit schedules cannot test whether a parameter exists or combine OR groups. Open Snowdon Towers Sample Architectural.rvt (do not save), select one element of each category, right-click > Select All Instances > In Entire Project, and read each condition in Properties for the elements the panel selected (the panel's result row > Select)."
@@ -388,9 +388,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'is greater than', value '45°'.",
         "Read the number before 'matches' in the result row: it must be 130.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle is greater than 45°', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -406,9 +406,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'equals', value '90°'.",
         "Read the number before 'matches' in the result row: it must be 130.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle equals 90°', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -424,9 +424,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'does not equal', value '90°'.",
         "Read the number before 'matches' in the result row: it must be 1.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle does not equal 90°', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -442,9 +442,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'is less than or equal to', value '45°'.",
         "Read the number before 'matches' in the result row: it must be 1.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle is less than or equal to 45°', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -460,9 +460,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'is greater than or equal to', value '90°'.",
         "Read the number before 'matches' in the result row: it must be 130.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle is greater than or equal to 90°', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -478,9 +478,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'is less than', value '90°'.",
         "Read the number before 'matches' in the result row: it must be 1.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle is less than 90°', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -496,9 +496,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'empty'.",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle has no value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -514,9 +514,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'defined'.",
         "Read the number before 'matches' in the result row: it must be 131.",
         "Check without the panel: Revit schedules cannot test whether a parameter exists or combine OR groups. Open Snowdon Towers Sample Architectural.rvt (do not save), select one element of each category, right-click > Select All Instances > In Entire Project, and read each condition in Properties for the elements the panel selected (the panel's result row > Select)."
@@ -532,9 +532,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only 'Current model'.",
+        "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Ducts.",
+        "Open Categories and check Ducts.",
         "Click + Condition, pick parameter 'Length', operator 'is greater than', value '3000 mm'.",
         "Read the number before 'matches' in the result row: it must be 131.",
         "Check without the panel: open Snowdon Towers Sample HVAC.rvt (do not save), create a Ducts schedule (View > Schedules > Schedule/Quantities) with field(s) Length, on the Filter tab add 'Length is greater than 3000 mm', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -550,9 +550,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Width', operator 'is greater than or equal to', value '200 mm'.",
         "Read the number before 'matches' in the result row: it must be 349.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Width, on the Filter tab add 'Width is greater than or equal to 200 mm', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -568,9 +568,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Unconnected Height', operator 'is less than', value '3000 mm'.",
         "Read the number before 'matches' in the result row: it must be 665.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Unconnected Height, on the Filter tab add 'Unconnected Height is less than 3000 mm', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -586,9 +586,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Stairs.",
+        "Open Categories and check Stairs.",
         "Click + Condition, pick parameter 'Actual Number of Risers', operator 'is greater than', value '10'.",
         "Read the number before 'matches' in the result row: it must be 23.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Stairs schedule (View > Schedules > Schedule/Quantities) with field(s) Actual Number of Risers, on the Filter tab add 'Actual Number of Risers is greater than 10', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -604,9 +604,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Stairs.",
+        "Open Categories and check Stairs.",
         "Click + Condition, pick parameter 'Actual Number of Risers', operator 'is less than or equal to', value '10'.",
         "Read the number before 'matches' in the result row: it must be 3.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Stairs schedule (View > Schedules > Schedule/Quantities) with field(s) Actual Number of Risers, on the Filter tab add 'Actual Number of Risers is less than or equal to 10', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -622,9 +622,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Stairs.",
+        "Open Categories and check Stairs.",
         "Click + Condition, pick parameter 'Actual Number of Risers', operator 'not empty'.",
         "Read the number before 'matches' in the result row: it must be 26.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Stairs schedule (View > Schedules > Schedule/Quantities) with field(s) Actual Number of Risers, on the Filter tab add 'Actual Number of Risers has a value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -640,9 +640,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Room Bounding', operator 'equals', value 'Yes'.",
         "Read the number before 'matches' in the result row: it must be 872.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Room Bounding, on the Filter tab add 'Room Bounding equals Yes', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -658,9 +658,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Room Bounding', operator 'equals', value 'No'.",
         "Read the number before 'matches' in the result row: it must be 248.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Room Bounding, on the Filter tab add 'Room Bounding equals No', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -676,9 +676,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Structural', operator 'does not equal', value 'Yes'.",
         "Read the number before 'matches' in the result row: it must be 1103.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Structural, on the Filter tab add 'Structural does not equal Yes', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -694,9 +694,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Function', operator 'equals', value 'Exterior'.",
         "Read the number before 'matches' in the result row: it must be 303.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Function, on the Filter tab add 'Function equals Exterior', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -712,9 +712,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Function', operator 'does not equal', value 'Exterior'.",
         "Read the number before 'matches' in the result row: it must be 817.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Function, on the Filter tab add 'Function does not equal Exterior', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -730,9 +730,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Location Line', operator 'equals', value 'Wall Centerline'.",
         "Read the number before 'matches' in the result row: it must be 333.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Location Line, on the Filter tab add 'Location Line equals Wall Centerline', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -748,9 +748,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Function', operator 'equals', value 'No Such Function'.",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Function, on the Filter tab add 'Function equals No Such Function', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -766,9 +766,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Function', operator 'does not equal', value 'No Such Function'.",
         "Read the number before 'matches' in the result row: it must be 1120.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Function, on the Filter tab add 'Function does not equal No Such Function', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -784,9 +784,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only 'Current model'.",
+        "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Ducts.",
+        "Open Categories and check Ducts.",
         "Click + Condition, pick parameter 'Reference Level', operator 'equals', value 'L3'.",
         "Read the number before 'matches' in the result row: it must be 319.",
         "Check without the panel: open Snowdon Towers Sample HVAC.rvt (do not save), create a Ducts schedule (View > Schedules > Schedule/Quantities) with field(s) Reference Level, on the Filter tab add 'Reference Level equals L3', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -802,9 +802,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only 'Current model'.",
+        "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Ducts.",
+        "Open Categories and check Ducts.",
         "Click + Condition, pick parameter 'Reference Level', operator 'does not equal', value 'L3'.",
         "Read the number before 'matches' in the result row: it must be 734.",
         "Check without the panel: open Snowdon Towers Sample HVAC.rvt (do not save), create a Ducts schedule (View > Schedules > Schedule/Quantities) with field(s) Reference Level, on the Filter tab add 'Reference Level does not equal L3', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -820,9 +820,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Base Constraint', operator 'equals', value 'L4'.",
         "Read the number before 'matches' in the result row: it must be 210.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Base Constraint, on the Filter tab add 'Base Constraint equals L4', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -838,9 +838,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Phase Created', operator 'equals', value 'New Construction'.",
         "Read the number before 'matches' in the result row: it must be 142.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Phase Created, on the Filter tab add 'Phase Created equals New Construction', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -856,9 +856,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only 'Current model'.",
+        "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Ducts.",
+        "Open Categories and check Ducts.",
         "Click + Condition, pick parameter 'Reference Level', operator 'not empty'.",
         "Read the number before 'matches' in the result row: it must be 1053.",
         "Check without the panel: open Snowdon Towers Sample HVAC.rvt (do not save), create a Ducts schedule (View > Schedules > Schedule/Quantities) with field(s) Reference Level, on the Filter tab add 'Reference Level has a value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -874,9 +874,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Fire Rating', operator 'equals', value '2 HR'.",
         "Read the number before 'matches' in the result row: it must be 293.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Fire Rating, on the Filter tab add 'Fire Rating equals 2 HR', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -892,9 +892,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Fire Rating', operator 'not empty'.",
         "Read the number before 'matches' in the result row: it must be 683.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Fire Rating, on the Filter tab add 'Fire Rating has a value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -910,9 +910,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Fire Rating', operator 'empty'.",
         "Read the number before 'matches' in the result row: it must be 437.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Walls schedule (View > Schedules > Schedule/Quantities) with field(s) Fire Rating, on the Filter tab add 'Fire Rating has no value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -928,9 +928,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Fire Rating', operator 'equals', value '60 MIN'.",
         "Read the number before 'matches' in the result row: it must be 25.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Fire Rating, on the Filter tab add 'Fire Rating equals 60 MIN', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -946,9 +946,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Fire Rating', operator 'empty'.",
         "Read the number before 'matches' in the result row: it must be 29.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Fire Rating, on the Filter tab add 'Fire Rating has no value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -964,9 +964,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Fire Rating', operator 'not empty'.",
         "Read the number before 'matches' in the result row: it must be 113.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Fire Rating, on the Filter tab add 'Fire Rating has a value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -982,9 +982,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only 'Current model'.",
+        "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Ducts.",
+        "Open Categories and check Ducts.",
         "Click + Condition, pick parameter 'Family Name', operator 'equals', value 'Round Duct'.",
         "Read the number before 'matches' in the result row: it must be 1045.",
         "Check without the panel: open Snowdon Towers Sample HVAC.rvt (do not save), create a Ducts schedule (View > Schedules > Schedule/Quantities) with field(s) Family Name, on the Filter tab add 'Family Name equals Round Duct', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -1000,9 +1000,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Type Mark', operator 'empty'.",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a Doors schedule (View > Schedules > Schedule/Quantities) with field(s) Type Mark, on the Filter tab add 'Type Mark has no value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -1018,7 +1018,7 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
         "Leave Categories empty (every model category counts).",
         "Click + Condition, pick parameter 'the first shared parameter by name that a model element in the Architectural link carries', operator 'defined'.",
@@ -1036,7 +1036,7 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
         "Leave Categories empty (every model category counts).",
         "Click + Condition, pick parameter 'the first shared parameter by name that a model element in the Architectural link carries', operator 'not empty'.",
@@ -1054,9 +1054,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only 'Current model'.",
+        "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Ducts.",
+        "Open Categories and check Ducts.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'not empty'.",
         "Read the number before 'matches' in the result row: it must be 0.",
         "Check without the panel: open Snowdon Towers Sample HVAC.rvt (do not save), create a Ducts schedule (View > Schedules > Schedule/Quantities) with field(s) Swing Angle, on the Filter tab add 'Swing Angle has a value', turn on Grand totals > Count and read the total. Close the file without saving."
@@ -1072,9 +1072,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only 'Current model'.",
+        "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Ducts.",
+        "Open Categories and check Ducts.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'undefined'.",
         "Read the number before 'matches' in the result row: it must be 1053.",
         "Check without the panel: Revit schedules cannot test whether a parameter exists or combine OR groups. Open Snowdon Towers Sample HVAC.rvt (do not save), select one element of each category, right-click > Select All Instances > In Entire Project, and read each condition in Properties for the elements the panel selected (the panel's result row > Select)."
@@ -1090,9 +1090,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'equals', value '90°'.",
         "Click + Condition, pick parameter 'Mark', operator 'begins with', value 'S'.",
         "Read the number before 'matches' in the result row: it must be 22.",
@@ -1109,9 +1109,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Set the top connector to OR.",
         "Click + Condition, pick parameter 'Mark', operator 'equals', value 'S10'.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'undefined'.",
@@ -1129,9 +1129,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Walls.",
+        "Open Categories and check Walls.",
         "Click + Condition, pick parameter 'Function', operator 'equals', value 'Exterior'.",
         "Click + Group and set its connector to OR.",
         "Inside that group, click + Condition, pick parameter 'Fire Rating', operator 'equals', value '2 HR'.",
@@ -1150,9 +1150,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Read the number before 'matches' in the result row: it must be 142.",
         "Check without the panel: open Snowdon Towers Sample Architectural.rvt (do not save), create a schedule (View > Schedules > Schedule/Quantities) of Doors with 'Itemize every instance' on, turn on Grand totals > Count and read the total. Close the file without saving."
       ]
@@ -1167,9 +1167,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Group and set its connector to OR.",
         "Read the number before 'matches' in the result row: it must be 142.",
         "Check without the panel: Revit schedules cannot test whether a parameter exists or combine OR groups. Open Snowdon Towers Sample Architectural.rvt (do not save), select one element of each category, right-click > Select All Instances > In Entire Project, and read each condition in Properties for the elements the panel selected (the panel's result row > Select)."
@@ -1185,9 +1185,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Set the top connector to OR.",
         "Click + Condition, pick parameter 'Swing Angle', operator 'undefined'.",
         "Click + Group and set its connector to AND.",
@@ -1207,9 +1207,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors, Walls.",
+        "Open Categories and check Doors, Walls.",
         "Set the top connector to OR.",
         "Click + Group and set its connector to AND; in the group header set the scope categories Doors.",
         "Inside that group, click + Condition, pick parameter 'Swing Angle', operator 'equals', value '90°'.",
@@ -1229,9 +1229,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick 'Current model' and the 'Architectural' link.",
+        "In the document list check 'Current model' and the 'Architectural' link.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors, Ducts.",
+        "Open Categories and check Doors, Ducts.",
         "Set the top connector to OR.",
         "Click + Group and set its connector to AND; in the group header set the scope documents the Architectural link; categories Doors.",
         "Inside that group, click + Condition, pick parameter 'Mark', operator 'not empty'.",
@@ -1251,9 +1251,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Set the top connector to OR.",
         "Click + Condition, pick parameter 'Mark', operator 'equals', value 'S10'.",
         "Click + Group and set its connector to AND; in the group header set the scope documents a link that is not loaded.",
@@ -1272,9 +1272,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Condition, pick parameter 'Mark', operator 'not empty'.",
         "Click + Group and set its connector to AND; in the group header set the scope documents a link that is not loaded.",
         "Inside that group, click + Condition, pick parameter 'Mark', operator 'not empty'.",
@@ -1284,7 +1284,7 @@
     },
     {
       "id": "GS-05",
-      "description": "Group naming only the Current model, AND parent, link ticked: Doors where [group scope: documents Current model] (Mark not empty)",
+      "description": "Group naming only the Current model, AND parent, link checked: Doors where [group scope: documents Current model] (Mark not empty)",
       "docs": "Both",
       "scope": "WholeModel",
       "filter": {"categories":["OST_Doors"],"rules":[{"match":"All","scope":{"documents":["Host"]},"rules":[{"parameter":"Mark","operator":"NotEmpty"}]}]},
@@ -1292,9 +1292,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick 'Current model' and the 'Architectural' link.",
+        "In the document list check 'Current model' and the 'Architectural' link.",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors.",
+        "Open Categories and check Doors.",
         "Click + Group and set its connector to AND; in the group header set the scope documents Current model.",
         "Inside that group, click + Condition, pick parameter 'Mark', operator 'not empty'.",
         "Read the number before 'matches' in the result row: it must be 0.",
@@ -1311,9 +1311,9 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
-        "In the document list tick only the 'Architectural' link (untick 'Current model').",
+        "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Open Categories and tick Doors, Walls.",
+        "Open Categories and check Doors, Walls.",
         "Click + Group and set its connector to AND; in the group header set the scope categories Doors, Walls.",
         "Inside that group, click + Group and set its connector to AND; in the group header set the scope categories Walls.",
         "Inside that group, click + Condition, pick parameter 'Fire Rating', operator 'not empty'.",
@@ -1343,7 +1343,7 @@
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded (do not save).",
         "Manage > Project Units > Length: Millimeters in the HVAC model. The Architectural link keeps feet and inches.",
-        "Model Context panel, Scope 'Whole model', tick only the Architectural link, Filter tab, + New filter, Categories Walls.",
+        "Model Context panel, Scope 'Whole model', check only the Architectural link, Filter tab, + New filter, Categories Walls.",
         "+ Condition, 'Width', 'is greater than or equal to', type 200 (no unit). The value box placeholder reads in millimeters.",
         "The count is 349, the same as NU-12 ('200 mm'): 200 is read in the Current model's millimeters, not the link's feet.",
         "Undo the unit change or close without saving."
@@ -1370,7 +1370,7 @@
       "expected": 8,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded.",
-        "Model Context panel, Scope 'Whole model', tick only the Architectural link, Filter tab, + New filter, Categories Roofs.",
+        "Model Context panel, Scope 'Whole model', check only the Architectural link, Filter tab, + New filter, Categories Roofs.",
         "+ Condition, 'Slope', 'equals', open the value box and pick '2' (8 roofs).",
         "The count is 8: the picked value keeps the stored 2° slope; it is not read again as 2\"/12\" in the HVAC model's units."
       ]

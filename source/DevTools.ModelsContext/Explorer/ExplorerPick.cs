@@ -8,7 +8,7 @@ namespace DevTools.ModelsContext.Explorer;
 
 public sealed partial class ExplorerPick : ObservableObject
 {
-    public const string PickTip = "Pick in ticked links";
+    public const string PickTip = "Pick in checked links";
 
     private readonly Func<IReadOnlyList<long>> _categories;
     private readonly PickController _controller;

@@ -17,7 +17,7 @@
       "description": "Three ducts get a comment in a rolled-back edit; after the value cache drops, the count of the rule Comments equals the comment, in both documents, follows the oracle",
       "expected": "0 before, 3 after, both equal to the oracle",
       "manualSteps": [
-        "Tick Current model and the link; Filter tab: + New filter, Categories Ducts, + Condition Comments equals mc-user-edit: count 0.",
+        "Check Current model and the link; Filter tab: + New filter, Categories Ducts, + Condition Comments equals mc-user-edit: count 0.",
         "Select three ducts and type mc-user-edit in Comments: the count becomes 3 without a click in the panel.",
         "Undo the edit: the count returns to 0."
       ]
@@ -68,7 +68,7 @@
       "expected": "panel = oracle in both documents, link collector available",
       "viewKind": "Plan",
       "manualSteps": [
-        "Open a floor plan and tick Current model and the link; Scope Active view: the Explorer counts are the elements shown in that plan.",
+        "Open a floor plan and check Current model and the link; Scope Active view: the Explorer counts are the elements shown in that plan.",
         "Switch to another plan: the counts follow the new view."
       ]
     },
@@ -88,7 +88,7 @@
       "expected": "Current model = oracle, link 0, no link collector",
       "viewKind": "Sheet",
       "manualSteps": [
-        "Open a sheet, Scope Active view, tick the link: the link rows show 0 and Revit stays responsive.",
+        "Open a sheet, Scope Active view, check the link: the link rows show 0 and Revit stays responsive.",
         "Switch back to a plan: the link counts return."
       ]
     },
@@ -98,7 +98,7 @@
       "expected": "Current model = oracle, link 0, no link collector",
       "viewKind": "Schedule",
       "manualSteps": [
-        "Open a schedule, Scope Active view, tick the link: the link rows show 0 and Revit stays responsive."
+        "Open a schedule, Scope Active view, check the link: the link rows show 0 and Revit stays responsive."
       ]
     },
     {
@@ -107,7 +107,7 @@
       "expected": "Current model = oracle, link 0, no link collector",
       "viewKind": "Drafting",
       "manualSteps": [
-        "Open a drafting view, Scope Active view, tick the link: the link rows show 0 and Revit stays responsive."
+        "Open a drafting view, Scope Active view, check the link: the link rows show 0 and Revit stays responsive."
       ]
     },
     {
@@ -116,7 +116,7 @@
       "expected": "Current model = oracle, link 0, no link collector",
       "viewKind": "Legend",
       "manualSteps": [
-        "Open a legend, Scope Active view, tick the link: the link rows show 0 and Revit stays responsive."
+        "Open a legend, Scope Active view, check the link: the link rows show 0 and Revit stays responsive."
       ]
     },
     {
@@ -124,7 +124,7 @@
       "description": "Eight evaluate requests for alternating documents, each new request canceling the previous one: no request fails except by cancel, the last one completes and equals the oracle, and a fresh count afterwards is still correct",
       "expected": "last request = oracle, fresh count = oracle",
       "manualSteps": [
-        "Filter tab with Ducts: untick and tick the link and switch Current model and link quickly several times.",
+        "Filter tab with Ducts: uncheck and check the link and switch Current model and link quickly several times.",
         "The panel settles Idle and the count shows the last choice."
       ]
     },
@@ -154,7 +154,7 @@
       "description": "In the active plan, whose template controls V/G Filters (Snowdon HVAC L3 with 'Mechanical Plan'), Color on an Architectural door type (T4) puts one 'Model Context <n>' rule filter inside Temporary View Properties, where Revit draws it; Reset deletes it, inside a transaction group that is rolled back",
       "expected": "the panel filter is on the view with a red override while Temporary View Properties is on; after Reset no Model Context filter is left, no temporary mode, the same template",
       "manualSteps": [
-        "Activate the L3 plan (template 'Mechanical Plan'). Explorer tab: tick the Architectural link, open Doors > a family > its type row, right-click > Color… and pick red.",
+        "Activate the L3 plan (template 'Mechanical Plan'). Explorer tab: check the Architectural link, open Doors > a family > its type row, right-click > Color… and pick red.",
         "The linked doors of that type draw red although the template controls Filters.",
         "Click Reset: the color, the filter and the temporary mode are gone."
       ]

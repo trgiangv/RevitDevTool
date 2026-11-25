@@ -188,7 +188,7 @@ public sealed class ParentOverrideTests
         var fixture = await PanelFixture.OpenAsync(WithToposolid());
         if (!document.IsCurrentModel)
         {
-            fixture.Panel.ContextBar.Tick([document]);
+            fixture.Panel.ContextBar.Check([document]);
         }
 
         return fixture;

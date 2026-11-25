@@ -18,21 +18,21 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
     private readonly HashSet<long> _closedInSearch = [];
     private readonly List<CategoryItemViewModel> _rowBatch = [];
     private readonly Func<bool> _isReadOnly;
-    private readonly bool _ticksNew;
+    private readonly bool _checksNew;
     private readonly Func<bool> _emptyMatchesAll;
 
-    internal CategoryPickerViewModel(Func<bool> isReadOnly, Action changed, bool ticksNew = false,
+    internal CategoryPickerViewModel(Func<bool> isReadOnly, Action changed, bool checksNew = false,
         Func<bool>? emptyMatchesAll = null)
     {
         _isReadOnly = isReadOnly;
         _changed = changed;
-        _ticksNew = ticksNew;
+        _checksNew = checksNew;
         _emptyMatchesAll = emptyMatchesAll ?? (static () => true);
     }
 
     public ObservableCollection<CategoryItemViewModel> Items { get; } = [];
 
-    public event EventHandler? TicksChanged;
+    public event EventHandler? ChecksChanged;
 
     public string Search
     {
@@ -47,9 +47,12 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         }
     } = string.Empty;
 
+    [ObservableProperty]
+    public partial bool HideUnchecked { get; set; }
+
     public ObservableCollection<CategoryItemViewModel> VisibleItems { get; } = [];
 
-    public string Summary => _ticksNew ? TickSummary() : PickSummary();
+    public string Summary => _checksNew ? CheckSummary() : PickSummary();
 
     internal IReadOnlyList<long> Ids => Items.Select(item => item.GroupId).ToList();
 
@@ -91,8 +94,8 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         {
             var parent = group.ParentId != GroupRow.TopLevel && byId.TryGetValue(group.ParentId, out var found) ? found : null;
             var item = new CategoryItemViewModel(group.GroupId, group.Name, group.Count, OnItemChanged, parent,
-                OnExpandedChanged, OnRowTicked);
-            item.SetChecked(_ticksNew ? Lists(group.GroupId) : checkedIds.Contains(group.GroupId));
+                OnExpandedChanged, OnRowChecked);
+            item.SetChecked(_checksNew ? Lists(group.GroupId) : checkedIds.Contains(group.GroupId));
             item.SetExpanded(_expanded.Contains(group.GroupId));
             byId[group.GroupId] = item;
             Items.Add(item);
@@ -100,7 +103,7 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
 
         RefreshCounts();
         UpdateVisible();
-        RaiseTicks();
+        RaiseChecks();
     }
 
     private static List<GroupCount> TreeOrder(IReadOnlyList<GroupCount> groups)
@@ -132,7 +135,7 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         }
     }
 
-    private void OnRowTicked(CategoryItemViewModel item)
+    private void OnRowChecked(CategoryItemViewModel item)
     {
         var first = _rowBatch.Count == 0;
         if (!_rowBatch.Contains(item))
@@ -163,7 +166,7 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         {
             if (parent.IsChecked || !parent.Children.Any(batch.Contains))
             {
-                parent.TickChildren(parent.IsChecked);
+                parent.CheckChildren(parent.IsChecked);
             }
         }
 
@@ -172,7 +175,7 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         {
             if (batch.Count > 1 && parent.IsChecked && parent.Children.All(child => batch.Contains(child) && !child.IsChecked))
             {
-                parent.TickChildren(true);
+                parent.CheckChildren(true);
             }
             else
             {
@@ -207,10 +210,10 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
             item.SetChecked(ids.Contains(item.GroupId));
         }
 
-        RaiseTicks();
+        RaiseChecks();
     }
 
-    public void SetTicks(IEnumerable<CategoryItemViewModel> ticked, IEnumerable<CategoryItemViewModel> unticked)
+    public void SetChecks(IEnumerable<CategoryItemViewModel> toCheck, IEnumerable<CategoryItemViewModel> toUncheck)
     {
         if (_isReadOnly())
         {
@@ -218,13 +221,13 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         }
 
         var changed = false;
-        foreach (var item in ticked.Where(item => !item.IsChecked))
+        foreach (var item in toCheck.Where(item => !item.IsChecked))
         {
             item.SetChecked(true);
             changed = true;
         }
 
-        foreach (var item in unticked.Where(item => item.IsChecked))
+        foreach (var item in toUncheck.Where(item => item.IsChecked))
         {
             item.SetChecked(false);
             changed = true;
@@ -272,7 +275,7 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
 
     private void OnItemChanged()
     {
-        if (_ticksNew)
+        if (_checksNew)
         {
             foreach (var item in Items)
             {
@@ -287,14 +290,19 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
             }
         }
 
-        RaiseTicks();
+        RaiseChecks();
         _changed();
     }
 
-    private void RaiseTicks()
+    private void RaiseChecks()
     {
         OnPropertyChanged(nameof(Summary));
-        TicksChanged?.Invoke(this, EventArgs.Empty);
+        if (HideUnchecked)
+        {
+            UpdateVisible();
+        }
+
+        ChecksChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private string PickSummary()
@@ -313,17 +321,22 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         OnPropertyChanged(nameof(Summary));
     }
 
-    private string TickSummary()
+    private string CheckSummary()
     {
-        var ticked = Items.Count(item => item.IsChecked);
-        if (ticked == Items.Count)
+        var checkedCount = Items.Count(item => item.IsChecked);
+        if (checkedCount == Items.Count)
         {
             return AllCategories;
         }
 
-        return ticked == 0
+        return checkedCount == 0
             ? NoCategories
-            : string.Format(CultureInfo.CurrentCulture, "{0:N0} of {1:N0}", ticked, Items.Count);
+            : string.Format(CultureInfo.CurrentCulture, "{0:N0} of {1:N0}", checkedCount, Items.Count);
+    }
+
+    partial void OnHideUncheckedChanged(bool value)
+    {
+        UpdateVisible();
     }
 
     private void UpdateVisible()
@@ -333,8 +346,8 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
         foreach (var root in Items.Where(item => !item.IsChild))
         {
             var self = text.Length == 0 || Matches(root, text);
-            var children = self ? root.Children : root.Children.Where(child => Matches(child, text)).ToList();
-            if (!self && children.Count == 0)
+            var children = root.Children.Where(child => (self || Matches(child, text)) && Kept(child)).ToList();
+            if ((!self && children.Count == 0) || !(Kept(root) || root.Children.Any(Kept)))
             {
                 continue;
             }
@@ -369,6 +382,11 @@ public sealed partial class CategoryPickerViewModel : ObservableObject
                 VisibleItems.Insert(index, visible[index]);
             }
         }
+    }
+
+    private bool Kept(CategoryItemViewModel item)
+    {
+        return !HideUnchecked || item.IsChecked;
     }
 
     private static bool Matches(CategoryItemViewModel item, string text)

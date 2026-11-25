@@ -35,7 +35,7 @@ From top to bottom:
 A thin progress bar shows under the context bar while counts rebuild. A
 one-line message shows when something fails; the panel never throws into Revit.
 The message stays while the context stays and goes away when the scope, the
-ticked documents, the tab, the active model or the active view changes.
+checked documents, the tab, the active model or the active view changes.
 With no open model, and while a Pick runs, actions are disabled with "Revit is
 busy". In edit mode an action that changes the view stops with "Revit is busy."
 when it runs. During a modal command a request waits until Revit is idle, then
@@ -51,8 +51,8 @@ Three icon buttons decide which elements the panel counts and filters:
 | Scope | Elements |
 |-------|----------|
 | Selection | What is selected in Revit, from any document, including elements of a secondary design option shown in the view they were picked in. The documents box hides: the selection decides the documents. |
-| Active view (default) | What the active view shows, per ticked document, with the view's design option settings: a view that shows a secondary option counts that option and not the primary. Links count only in plan, ceiling, engineering, area, section, elevation, detail, 3D and walkthrough views; other views (sheets, schedules, legends, drafting) show no linked elements. |
-| Whole model | Every model element of the ticked documents, main model and primary design options, the same set a Revit schedule lists. Secondary options never count, match or get selected here. Materials are not model elements and never count. |
+| Active view (default) | What the active view shows, per checked document, with the view's design option settings: a view that shows a secondary option counts that option and not the primary. Links count only in plan, ceiling, engineering, area, section, elevation, detail, 3D and walkthrough views; other views (sheets, schedules, legends, drafting) show no linked elements. |
+| Whole model | Every model element of the checked documents, main model and primary design options, the same set a Revit schedule lists. Secondary options never count, match or get selected here. Materials are not model elements and never count. |
 
 Visibility actions always work on the active view, whatever the scope.
 
@@ -60,17 +60,17 @@ Visibility actions always work on the active view, whatever the scope.
 
 - Lists the Current model and each loaded link instance as equal entries. Duplicate
   file names get an instance suffix.
-- Ticked entries show as tags; tags that do not fit fold into a `+N` tag. When
+- Checked entries show as tags; tags that do not fit fold into a `+N` tag. When
   even one tag does not fit, the first tag shrinks with an ellipsis. The
   drop-down has search and **All**.
-- When the panel opens and on every view change (a model switch too), the ticks become
+- When the panel opens and on every view change (a model switch too), the checks become
   the Current model plus each loaded link the active view draws (instance not hidden,
-  RVT Links shown, not filtered out). Your own ticks then hold until the next view change.
-- The last ticked entry cannot be unticked (from the list, **All** or its tag), so
+  RVT Links shown, not filtered out). Your own checks then hold until the next view change.
+- The last checked entry cannot be unchecked (from the list, **All** or its tag), so
   the panel always has something to query.
-- A refresh (link reload, model edit) keeps your ticks. An unloaded link shows
-  disabled and keeps its tick; **All** skips it.
-- Ticks live in memory per open model, not in settings.
+- A refresh (link reload, model edit) keeps your checks. An unloaded link shows
+  disabled and keeps its check; **All** skips it.
+- Checks live in memory per open model, not in settings.
 
 ## Explorer
 
@@ -82,17 +82,17 @@ its own elements plus its children. Subcategories of Site, Lines and Topography 
 lines, contours) and every Center line subcategory (ducts, duct fittings, flex ducts, pipes, conduits, cable trays)
 are not listed, so Whole model is the set a Revit schedule lists.
 
-- The tree starts with **Current model**, then one group per ticked link.
+- The tree starts with **Current model**, then one group per checked link.
 - Every row shows its count in grey. Instances load on expand in pages of 200
   ("200 of 1,402 · more").
 - **Search** matches row text only: model, category, family, type and instance
   names, and Element Id (`linkInstanceId@id` works). Parameter values belong to
   the Filter view. In Active view it also finds hidden elements, dimmed.
-- **Pick** (icon beside the search box): click or box elements of the ticked
-  links in the view, no Tab needed. Only elements of the ticked links and
+- **Pick** (icon beside the search box): click or box elements of the checked
+  links in the view, no Tab needed. Only elements of the checked links and
   categories can be picked. The picked set becomes the Revit selection. While
   picking the status reads *Picking · Esc to finish*; Esc ends it. Disabled
-  with *Tick a link to pick in it* (no link ticked) or *Tick a category to pick*.
+  with *Check a link to pick in it* (no link checked) or *Check a category to pick*.
   Current model elements are picked in Revit as usual.
 - **Expand all** opens down to Type rows; **Collapse all** leaves the roots.
 - **Double-click** an instance row: it becomes the selected row and the menu's
@@ -101,31 +101,35 @@ are not listed, so Whole model is the set a Revit schedule lists.
   or closes it, like the chevron. A double-click on the chevron, the eye or a
   row tool does only that button's action.
 - **Status line**: *N selected* (elements under the selected rows, hidden at
-  0) and **Clear**. When part of the Revit selection is in unticked documents, **Show in
-  Explorer** ticks them and reveals the rows.
+  0) and **Clear**. When part of the Revit selection is in unchecked documents, **Show in
+  Explorer** checks them and reveals the rows.
 
 ### Categories box
 
-Under the documents box. Lists the categories of the ticked documents with
-counts, search, **All · None**. Every category starts ticked; a category that
-appears later shows ticked.
+Under the documents box. Lists the categories of the checked documents with
+counts, search, **All · None**. Every category starts checked; a category that
+appears later shows checked.
 
-- Selection is the tick. A click on a name ticks only that row; Ctrl+click adds
-  or removes, Shift+click and Shift+arrows tick a range, Ctrl+A ticks every
+- Selection is the check. A click on a name checks only that row; Ctrl+click adds
+  or removes, Shift+click and Shift+arrows check a range, Ctrl+A checks every
   listed row, Space toggles the focused row. The checkbox toggles its own row and
-  keeps the others. Right-click keeps the ticks. Rows are never painted as
-  selected. Ticks hidden by the search stay.
+  keeps the others. Right-click keeps the checks. Rows are never painted as
+  selected. Checks hidden by the search stay.
 - Subcategories list under their category, collapsed at first; the chevron (or
   Right / Left on the row) opens and closes them. The parent counts its own
-  elements plus its children. The parent drives its children: ticking or
-  selecting the parent (box, name click, Ctrl, Shift, Space) ticks all of them,
-  unticking or deselecting it clears them. A child still ticks on its own; the
-  parent box then shows a partial mark, reads ticked once every child is ticked
-  and clear once none is. Clicking a partial box ticks everything. A search
+  elements plus its children. The parent drives its children: checking or
+  selecting the parent (box, name click, Ctrl, Shift, Space) checks all of them,
+  unchecking or deselecting it clears them. A child still checks on its own; the
+  parent box then shows a partial mark, reads checked once every child is checked
+  and clear once none is. Clicking a partial box checks everything. A search
   that finds a subcategory opens its parent while the search lasts; clearing the
   search restores what you had opened. **All · None** also reach the children
   of a closed parent. A parent with no elements in scope still shows, with 0.
-- The ticks decide what the tree lists.
+- **Hide unchecked** (beside **All · None**, off by default) lists only the
+  checked rows; a category stays while any of its subcategories is checked. It
+  works with the search, drops a row as soon as it is unchecked, and only
+  filters the list, never the view. It stays usable on a read-only filter.
+- The checks decide what the tree lists.
 - The eye after the count hides or shows the category in the view, in the
   Current model and in every link that follows the view (By Host View). A
   hidden category dims. The tooltip names what the eye reaches, for example
@@ -134,9 +138,9 @@ appears later shows ticked.
   Linked View or Custom keep their own settings* after the click. The eye acts on
   its own row only.
 - Right-click a category: **Isolate**, **Halftone**, **Color** for the
-  ticked rows. Right-click never changes the ticks. With no row ticked the
+  checked rows. Right-click never changes the checks. With no row checked the
   items are disabled with *Select categories*.
-- **Isolate** leaves only the ticked categories: in Temporary View Properties
+- **Isolate** leaves only the checked categories: in Temporary View Properties
   it hides every other category the view can hide (model, annotation,
   analytical, imports, lines, levels, grids). It reaches the Current model and
   every link By Host View, so isolating Doors leaves only doors, linked doors
@@ -146,7 +150,7 @@ appears later shows ticked.
   tree or the Categories box, Current model or link) covers the parent and all its subcategories and replaces
   what a subcategory had; an action on a subcategory covers that subcategory only, and the latest action wins.
   Reset brings both back to how the model was. Revit cannot show a subcategory under a hidden parent, so its eye
-  then says *Show its parent category first.* A ticked subcategory alone keeps its parent drawn on Isolate.
+  then says *Show its parent category first.* A checked subcategory alone keeps its parent drawn on Isolate.
   Reset ends the mode and every category is back. A link By Linked View or
   Custom keeps its own settings; the panel says so: *Links By Linked View or
   Custom keep their own settings.*
@@ -312,11 +316,11 @@ saved with the view and work under a locked view template.
 ## Filter
 
 One editor: categories plus rules. The result is a count of matching elements
-in the ticked documents and current scope.
+in the checked documents and current scope.
 
 ### Source
 
-The source combo lists **custom filters** first, then each ticked document's
+The source combo lists **custom filters** first, then each checked document's
 Revit filters grouped under the model name: rule-based (funnel icon) and
 selection filters (cursor icon). A Revit filter applied to the active view (or to
 the link's linked view) shows "in view".
@@ -346,7 +350,7 @@ the link's linked view) shows "in view".
 A checkbox list with counts and search, folded to a summary line. An element
 counts under its own category (a wall used as a curtain panel counts as Curtain
 Panels). *All · None*
-tick or untick the categories the search shows. Checked categories always mean
+check or uncheck the categories the search shows. Checked categories always mean
 "any of". With no categories checked the filter looks at every model category,
 and the summary reads *All categories*; when the filter also has no condition it
 matches nothing, so the summary reads *None*.
@@ -419,7 +423,7 @@ what the Properties palette shows as blank: a reference set to *None* is
 empty. A parameter Properties does not show for an element is undefined there,
 even when another element of the same type has it.
 
-- The value drop-down lists real values in the ticked documents with counts, at
+- The value drop-down lists real values in the checked documents with counts, at
   most 500 (**more…** opens the list; type to narrow), and a `[No parameter] · N`
   line.
 - **Aa** (Text only, off by default) makes the rule match case. Revit's own text

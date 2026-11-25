@@ -221,7 +221,7 @@ count.
     (`SubcategoryRule`: Revit's internal duct, pipe, conduit and cable tray center lines, 2,032 of them in
     Snowdon HVAC, are not in a schedule and would double the Ducts count). A subcategory group keeps its own id and plain
     name and carries `ParentId` (`TypeRecord`, `GroupRow`, `GroupCount`; 0 = top-level), so it is a
-    child of its category in the tree. Parent overrides children: a parent row, eye or ticked box row
+    child of its category in the tree. Parent overrides children: a parent row, eye or checked box row
     acts on the parent plus its subgroups (`DocumentSnapshot.WithSubgroups`, `CategoryTree.WithChildren`,
     `LinkRules.CategoriesOf` gives one link view filter with all ids); a child acts on itself, and the
     latest action wins. Element overrides and ledger overrides merge per property, so the order of plans is
@@ -496,9 +496,9 @@ live in `LinkRules`.
 
 ### Category isolate (`CategoryStep` with Isolate)
 
-- In the Categories box, ListBox selection is the tick (`IsSelected` bound to
+- In the Categories box, ListBox selection is the check (`IsSelected` bound to
   `IsChecked` in XAML, selected rows not painted). Isolate, Halftone and Color
-  act on the ticked rows.
+  act on the checked rows.
 - `RevitViewActions` enables Temporary View Properties, then
   `CategoryIsolation.Apply` walks `Settings.Categories` (every type) and hides
   each one `CanCategoryBeHidden` allows, except the kept ones, their parents
@@ -549,7 +549,7 @@ live in `LinkRules`.
   `ReadActiveViewAsync`, and when it is another view of the same model sets that view
   (ledger and journal keyed by it) and runs the action, Keep or Reset again; a second
   mismatch, or another model, reaches the panel message. `ModelContextViewModel.ShowView`
-  clears the message when the view changes; scope, ticks and tab changes clear it too
+  clears the message when the view changes; scope, checks and tab changes clear it too
   (product: [Layout](../../product/models-context.md)).
 - Hide and isolate use the temporary API. Halftone and Color enable Temporary
   View Properties first (after `CanEnableTemporaryViewPropertiesMode`, with the
@@ -686,7 +686,7 @@ menu item *Why hidden?* for one element.
 
 ### Pick
 
-`ExplorerPick` and `PickController` (core) pass the ticked link documents and
+`ExplorerPick` and `PickController` (core) pass the checked link documents and
 category ids to `ISelectionPort.PickAsync`. `RevitSelectionPort` runs it on the
 Revit thread: `Selection.PickObjects(ObjectType.LinkedElement, LinkPickFilter, ...)`
 with the filter checking the link instance id and the category id (set checks,
@@ -706,7 +706,7 @@ true, so row tools, the menu and both Selection sync toggles stay off until it e
 | Element overrides before the panel's first change | `RevitViewActions`, per (model, view), in memory |
 | Panel view filters (T4) | `LinkViewFilters` registry, per (model, view), `UniqueId` by rules, in memory; the element itself is in the model until Reset, save, sync or pane close |
 | Expansion, selected filter, both Selection sync toggles, selection mode | `PanelSession`, in memory |
-| Document ticks | Set from `IModelSource.GetViewLinksAsync` (link instances in the Current model's active view collector) on show and on every view change; the user's ticks hold until then |
+| Document checks | Set from `IModelSource.GetViewLinksAsync` (link instances in the Current model's active view collector) on show and on every view change; the user's checks hold until then |
 | Unsaved custom filter (new, or edits and rename of a saved one) | `PanelSession` (`FilterState.Draft`: the editor's definition and name), in memory per model; restored dirty on switch back, no prompt |
 | Custom filters | Settings file through `DevTools.Settings` (`CustomFilterStore`) |
 
@@ -719,10 +719,10 @@ link stays listed and keeps its entries); Undo and Redo mark the pages stale.
 
 | Event | Panel does |
 |-------|------------|
-| View activated, same model | Cancel scope jobs, drop view id sets, read the new view's temporary state, tick the Current model and the loaded links the view draws; expansion kept. |
+| View activated, same model | Cancel scope jobs, drop view id sets, read the new view's temporary state, check the Current model and the loaded links the view draws; expansion kept. |
 | Active model switched | Park the old session in memory, with an unsaved custom filter as a draft; show the new model's session (built on first show). |
 | `DocumentClosing` | Drop that session, its journal pages and its snapshots (shared link snapshots by user count). |
-| Save As, or the first save of a new model (the model id is its path) | `RevitModelEvents` keeps the id from `DocumentSaving` / `DocumentSavingAs`; when `DocumentSaved` / `DocumentSavedAs` gives another id it re-keys the adapter (`RevitViewActions` recorded overrides and category isolate, the `LinkViewFilters` registry, tracked ids, the active model), drops the scope and parameter caches of the old source, and posts `IModelEvents.ModelRenamed` (`ModelRename`: old and new id and source). The core moves the session, ticks, journal pages, view ledgers (with their plans), the view and the snapshot store to the new key, then refreshes. |
+| Save As, or the first save of a new model (the model id is its path) | `RevitModelEvents` keeps the id from `DocumentSaving` / `DocumentSavingAs`; when `DocumentSaved` / `DocumentSavedAs` gives another id it re-keys the adapter (`RevitViewActions` recorded overrides and category isolate, the `LinkViewFilters` registry, tracked ids, the active model), drops the scope and parameter caches of the old source, and posts `IModelEvents.ModelRenamed` (`ModelRename`: old and new id and source). The core moves the session, checks, journal pages, view ledgers (with their plans), the view and the snapshot store to the new key, then refreshes. |
 | Elements changed (debounced deltas) | Apply them to the snapshots and reload the context. When no delta changes an element (a temporary hide or a V/G edit only touches the view) and none is an undo or redo, outside Active view scope only the hidden read-back runs (`VisibilityController.RefreshHiddenAsync`), so the rows stay the same objects with their expansion; a full reload there replaced every row after the panel was already idle (UI-16, L1 `EmptyDeltaKeepsRows`). Active view scope still reloads, since the view decides its scope. |
 | Link unloaded | Rows disable with the reason; the snapshot is kept until a reload decides by version. |
 | Revit busy (modal command, edit mode, no open model) | Actions disable with "Revit is busy."; nothing is queued. |

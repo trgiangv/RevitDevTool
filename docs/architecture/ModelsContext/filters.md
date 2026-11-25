@@ -443,7 +443,7 @@ case-sensitive matching, so the panel builds its own rules on the public
 
 ## Revit filters as sources
 
-`RevitFilterCatalog` lists each ticked document's `ParameterFilterElement`s and
+`RevitFilterCatalog` lists each checked document's `ParameterFilterElement`s and
 `SelectionFilterElement`s.
 
 - Running one uses the filter itself in its own document:

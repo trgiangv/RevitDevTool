@@ -9,7 +9,7 @@
       "expected": 142,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel.",
-        "Choose Scope 'Whole model' and tick the 'Architectural' link in the document list.",
+        "Choose Scope 'Whole model' and check the 'Architectural' link in the document list.",
         "On the Explorer tab expand the Architectural link row: the Doors row shows 142.",
         "Check without the panel: open 'Snowdon Towers Sample Architectural.rvt' (do not save), create a Doors schedule with 'Itemize every instance' on and Grand totals > Count; the total is 142 when every secondary design option is excluded (Visibility/Graphics > Design Options: each option set shows its primary)."
       ]
@@ -23,7 +23,7 @@
       "expected": 1120,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel.",
-        "Choose Scope 'Whole model' and tick the 'Architectural' link in the document list.",
+        "Choose Scope 'Whole model' and check the 'Architectural' link in the document list.",
         "On the Explorer tab expand the Architectural link row: the Walls row shows 1,120.",
         "Check without the panel: open 'Snowdon Towers Sample Architectural.rvt' (do not save), create a Walls schedule with 'Itemize every instance' on and Grand totals > Count; walls in secondary design options are not counted."
       ]
@@ -37,7 +37,7 @@
       "expected": 1053,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 and open the Model Context panel.",
-        "Choose Scope 'Whole model' and tick 'Current model' in the document list.",
+        "Choose Scope 'Whole model' and check 'Current model' in the document list.",
         "On the Explorer tab expand 'Current model': the Ducts row shows 1,053.",
         "Check without the panel: create a Duct schedule (do not save) with 'Itemize every instance' on and Grand totals > Count; the total is 1,053."
       ]
@@ -62,7 +62,7 @@
       "expected": "equal to the oracle for every category",
       "manualSteps": [
         "Open the sample with the Architectural link and the Model Context panel; Scope 'Whole model'.",
-        "Tick a document: the Explorer counts appear at once and must not change when loading finishes."
+        "Check a document: the Explorer counts appear at once and must not change when loading finishes."
       ]
     },
     {
@@ -96,7 +96,7 @@
       "expected": "snapshot count = oracle main + primary count",
       "manualSteps": [
         "Open 'Snowdon Towers Sample Architectural.rvt' (do not save) and open Manage > Design Options to see the option sets and their primary options.",
-        "In the HVAC model with the panel, Scope 'Whole model', tick the Architectural link: Walls shows 1,120, which excludes walls in secondary options."
+        "In the HVAC model with the panel, Scope 'Whole model', check the Architectural link: Walls shows 1,120, which excludes walls in secondary options."
       ]
     },
     {

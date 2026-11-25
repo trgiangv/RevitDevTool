@@ -320,7 +320,7 @@ time on Snowdon, undo entries, behavior with a locked template.
       0 failed, 3 skipped; safety ok after L2 and L3, `EndStateIsUnchanged`
       passed. The first run failed only WH-04 (it needs a plan; now Explicit).
 - [x] 2026-11-21 rerun after the last changes (run `20261121-005619`): L2
-      436 passed, 0 failed, 111 skipped (PI-03 `FilterKeepsTickedOnly`
+      436 passed, 0 failed, 111 skipped (PI-03 `FilterKeepsCheckedOnly`
       included); L3 13 passed, 3 skipped; safety ok. NE-01
       `NestedChairsFollowHost` passed alone on the Architectural copy in
       `{3D}`. The TestAdapter now reports `Assert.Inconclusive` as skipped

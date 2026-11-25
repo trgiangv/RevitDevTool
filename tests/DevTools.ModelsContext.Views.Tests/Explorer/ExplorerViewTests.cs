@@ -13,7 +13,7 @@ namespace DevTools.ModelsContext.Views.Tests.Explorer;
 public sealed class ExplorerViewTests
 {
     [TestMethod]
-    public void CategoriesBoxListsTicked()
+    public void CategoriesBoxListsChecked()
     {
         using var ui = PanelUi.Open();
 
@@ -36,7 +36,7 @@ public sealed class ExplorerViewTests
     }
 
     [TestMethod]
-    public void UntickRemovesGroupRow()
+    public void UncheckRemovesGroupRow()
     {
         using var ui = PanelUi.Open();
         ui.Host.FindInWindow("Explorer.Categories").Patterns.Toggle.Pattern.Toggle();
@@ -77,35 +77,35 @@ public sealed class ExplorerViewTests
         ui.Host.FindInMenu(menu, "Explorer.CategoryMenu.Isolate").Patterns.Invoke.Pattern.Invoke();
 
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.ExecutedPlans.Any(plan => plan.Action == VisibilityAction.Isolate)),
-            "Isolate did not run on the ticked categories.");
+            "Isolate did not run on the checked categories.");
     }
 
     [TestMethod]
-    public void IsolateRunsOnTicked()
+    public void IsolateRunsOnChecked()
     {
         using var ui = PanelUi.Open();
         ui.Host.FindInWindow("Explorer.Categories").Patterns.Toggle.Pattern.Toggle();
         ui.Press("Explorer.CategoryNone");
-        Assert.IsTrue(ThemeHost.WaitFor(() => SelectedCount(ui) == 0), "None left ticks.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => SelectedCount(ui) == 0), "None left checks.");
         var items = ui.Host.FindAllInWindow("Explorer.Category.Item");
 
         items[0].Patterns.Toggle.Pattern.Toggle();
         items[1].Patterns.Toggle.Pattern.Toggle();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => SelectedCount(ui) == 2), "Two ticks did not stay.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => SelectedCount(ui) == 2), "Two checks did not stay.");
         var menu = OpenCategoryMenu(ui);
         ui.Host.FindInMenu(menu, "Explorer.CategoryMenu.Isolate").Patterns.Invoke.Pattern.Invoke();
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.ExecutedPlans.Any(plan =>
                 plan.Action == VisibilityAction.Isolate && plan.Steps.Count(step => step is CategoryStep) == 2)),
-            "Isolate did not run on both ticked categories.");
+            "Isolate did not run on both checked categories.");
     }
     [TestMethod]
-    public void MenuOffWithoutTicks()
+    public void MenuOffWithoutChecks()
     {
         using var ui = PanelUi.Open();
         ui.Host.FindInWindow("Explorer.Categories").Patterns.Toggle.Pattern.Toggle();
         ui.Press("Explorer.CategoryNone");
-        Assert.IsTrue(ThemeHost.WaitFor(() => SelectedCount(ui) == 0), "None left ticks.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => SelectedCount(ui) == 0), "None left checks.");
 
         var menu = OpenCategoryMenu(ui);
 
@@ -146,13 +146,13 @@ public sealed class ExplorerViewTests
     }
 
     [TestMethod]
-    public void PickOnWithTickedLink()
+    public void PickOnWithCheckedLink()
     {
         using var ui = PanelUi.Open();
 
-        WpfSta.Invoke(() => ui.Panel.ContextBar.Tick([FakeModelGenerator.Mep]));
+        WpfSta.Invoke(() => ui.Panel.ContextBar.Check([FakeModelGenerator.Mep]));
 
-        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.FindInWindow("Explorer.Pick").IsEnabled), "Pick stayed off with a link ticked.");
+        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.FindInWindow("Explorer.Pick").IsEnabled), "Pick stayed off with a link checked.");
         ui.Press("Explorer.Pick");
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Explorer.PickStatus") is not null),
             "Pick left no status cue.");

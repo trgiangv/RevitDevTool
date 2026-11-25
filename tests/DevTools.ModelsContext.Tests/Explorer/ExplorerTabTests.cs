@@ -291,7 +291,7 @@ public sealed class ExplorerTabTests
     public async Task ToolAndMenuShareReason()
     {
         using var fixture = await PanelFixture.OpenAsync(TestModel.WithoutLinkFilters());
-        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Mep]);
+        fixture.Panel.ContextBar.Check([FakeModelGenerator.Mep]);
         var linked = fixture.Group(FakeModelGenerator.Mep, "Ducts");
 
         var tool = fixture.Explorer.ReasonFor(linked, MenuAction.Halftone);
@@ -307,7 +307,7 @@ public sealed class ExplorerTabTests
     public async Task DisabledToolReportsReason()
     {
         using var fixture = await PanelFixture.OpenAsync(TestModel.WithoutLinkFilters());
-        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Mep]);
+        fixture.Panel.ContextBar.Check([FakeModelGenerator.Mep]);
 
         await fixture.Explorer.RunToolAsync(fixture.Group(FakeModelGenerator.Mep, "Ducts"), MenuAction.Halftone);
 
@@ -381,7 +381,7 @@ public sealed class ExplorerTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var picker = fixture.Explorer.Categories.Picker;
-        picker.SetTicks([], picker.Items.Where(item => item.Name != "Ducts").ToList());
+        picker.SetChecks([], picker.Items.Where(item => item.Name != "Ducts").ToList());
 
         await fixture.Explorer.Categories.ColorCommand.ExecuteAsync(null);
         await fixture.Panel.ContextMenu.ApplyColorCommand.ExecuteAsync(new RgbColor(1, 2, 3));

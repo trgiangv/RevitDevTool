@@ -8,14 +8,14 @@ namespace RevitDevTool.ModelsContext.LiveTests;
 public sealed class PickFilterTests : RecordedTest
 {
     [Test]
-    public void FilterKeepsTickedOnly()
+    public void FilterKeepsCheckedOnly()
     {
         Record(new CaseItem
         {
             Id = "PI-03",
             Description = "Pick filter for the Architectural link and Doors: only its doors pass",
             Expected = JsonSerializer.SerializeToElement("door true, wall false, other link door false, link instance true, duct false"),
-            ManualSteps = ["Tick the Architectural link and Doors, press Pick: only doors of that link highlight; walls, other links and Current model ducts do not."]
+            ManualSteps = ["Check the Architectural link and Doors, press Pick: only doors of that link highlight; walls, other links and Current model ducts do not."]
         }, () =>
         {
             var model = SampleModel.Host;

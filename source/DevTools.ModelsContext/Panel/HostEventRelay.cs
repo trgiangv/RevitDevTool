@@ -263,13 +263,13 @@ internal sealed class HostEventRelay : IDisposable
 
         _owner.ShowView(view);
         var documents = _owner.ContextBar.Documents.Select(item => item.Info).ToList();
-        var ticks = await _sessions.ViewTicksAsync(documents, session.Token);
+        var checks = await _sessions.ViewChecksAsync(documents, session.Token);
         if (!ReferenceEquals(session, _sessions.Active))
         {
             return;
         }
 
-        _owner.SetDocumentsQuietly(documents, ticks);
+        _owner.SetDocumentsQuietly(documents, checks);
         await _owner.TemporaryBar.RefreshAsync(session.Token);
         await _owner.RefreshAsync();
     }

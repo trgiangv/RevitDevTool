@@ -173,7 +173,7 @@ public sealed class WhyHiddenStripTests
     public async Task JournalHideComesFirst()
     {
         using var strip = await StripHost.OpenAsync();
-        strip.Panel.ContextBar.Tick([Mep]);
+        strip.Panel.ContextBar.Check([Mep]);
         var ducts = strip.Panel.Explorer.Rows.First(row =>
             row.Kind == TreeRowKind.Group && row.Document == Mep && row.Text == "Ducts");
         await strip.Panel.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);

@@ -206,7 +206,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
         }
 
         _revealPending = true;
-        _bar.Tick(missing);
+        _bar.Check(missing);
     }
 
     public void RaiseSelectionCounts()

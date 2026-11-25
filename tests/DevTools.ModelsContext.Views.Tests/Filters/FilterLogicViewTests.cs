@@ -149,7 +149,7 @@ public sealed class FilterLogicViewTests
         arch.Patterns.Toggle.Pattern.Toggle();
 
         Assert.IsTrue(ThemeHost.WaitFor(() => outer.ScopeDocuments.SequenceEqual([FakeModelGenerator.ArchSource])),
-            "Ticking Arch.rvt did not narrow the outer group.");
+            "Checking Arch.rvt did not narrow the outer group.");
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Set.Warning")?.Name.Contains("MEP-Mech.rvt") == true),
             "The inner group shows no warning for MEP-Mech.rvt.");
     }
@@ -271,7 +271,7 @@ public sealed class FilterLogicViewTests
         var ui = PanelUi.Open(width);
         WpfSta.Run(async () =>
         {
-            ui.Panel.ContextBar.Tick(ui.Model.Data.Documents.Select(document => document.Key));
+            ui.Panel.ContextBar.Check(ui.Model.Data.Documents.Select(document => document.Key));
             await ui.Panel.RefreshAsync();
         });
         ui.ShowView("ModelContext.View.Filter");

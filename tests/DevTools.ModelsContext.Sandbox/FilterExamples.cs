@@ -11,7 +11,7 @@ internal static class FilterExamples
 
     public static void UpperLevelDoorsWithoutMark(FilterTabViewModel filter, ParameterKey? mark = null)
     {
-        Tick(filter, "Doors");
+        Check(filter, "Doors");
         var root = filter.Root;
         root.Children.Clear();
         root.Match = SetMatch.All;
@@ -25,7 +25,7 @@ internal static class FilterExamples
 
     public static void ArchWallsOrMepDucts(FilterTabViewModel filter)
     {
-        Tick(filter, "Ducts", "Walls");
+        Check(filter, "Ducts", "Walls");
         var root = filter.Root;
         root.Children.Clear();
         root.Match = SetMatch.Any;
@@ -41,7 +41,7 @@ internal static class FilterExamples
 
     public static void NestedWideScopes(FilterTabViewModel filter)
     {
-        Tick(filter, filter.Categories.Items.Select(category => category.Name).Take(10).ToArray());
+        Check(filter, filter.Categories.Items.Select(category => category.Name).Take(10).ToArray());
         var root = filter.Root;
         root.Children.Clear();
         root.Match = SetMatch.All;
@@ -77,7 +77,7 @@ internal static class FilterExamples
         return condition;
     }
 
-    private static void Tick(FilterTabViewModel filter, params string[] names)
+    private static void Check(FilterTabViewModel filter, params string[] names)
     {
         filter.Categories.CheckNoneCommand.Execute(null);
         foreach (var category in filter.Categories.Items.Where(category => names.Contains(category.Name)))

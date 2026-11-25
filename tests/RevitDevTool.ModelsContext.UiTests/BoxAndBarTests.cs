@@ -36,7 +36,7 @@ public sealed class BoxAndBarTests : RecordedTest
         _panel.Settle();
         _panel.Select("ModelContext.Scope.WholeModel");
         _panel.Select("ModelContext.View.Explorer");
-        _steps.TickOnly(CaseFiles.Facts.LinkLabel);
+        _steps.CheckOnly(CaseFiles.Facts.LinkLabel);
     }
 
     [ClassCleanup]
@@ -46,7 +46,7 @@ public sealed class BoxAndBarTests : RecordedTest
     }
 
     [TestMethod]
-    public void BoxTreeTicksChildren()
+    public void BoxTreeChecksChildren()
     {
         Record(CaseFiles.Flow("UI-09"), () =>
         {
@@ -57,25 +57,25 @@ public sealed class BoxAndBarTests : RecordedTest
 
                 _panel.Toggle(Named("Explorer.Category.Item", Parent), true, false);
                 _panel.Toggle(Named("Explorer.Category.Expand", Parent), true, false);
-                Evidence.Step($"Ticked {Parent} and opened its chevron (Toggle pattern).");
+                Evidence.Step($"Checked {Parent} and opened its chevron (Toggle pattern).");
                 var childOn = WaitBox(Child, ToggleState.On);
                 _panel.Shot("parent");
 
                 _panel.Toggle(Named("Explorer.Category.Item", Child), false, false);
-                Evidence.Step($"Unticked {Child}.");
+                Evidence.Step($"Unchecked {Child}.");
                 var cleared = WaitBox(Parent, ToggleState.Off);
                 _panel.Shot("cleared");
 
                 _panel.Toggle(Named("Explorer.Category.Item", Child), true, false);
-                Evidence.Step($"Ticked {Child} again.");
+                Evidence.Step($"Checked {Child} again.");
                 var full = WaitBox(Parent, ToggleState.On);
                 _panel.Shot("after");
                 Evidence.Values($"{Child} On; {Parent} Off; then {Parent} On",
                     $"{Child} {Box(Child)}; {Parent} {(cleared ? "Off" : "not cleared")}; then {Parent} {Box(Parent)}");
 
-                Assert.IsTrue(childOn, $"Ticking {Parent} did not tick {Child}.");
-                Assert.IsTrue(cleared, $"Unticking {Child}, its only child, did not clear {Parent}.");
-                Assert.IsTrue(full, $"Ticking every child did not check {Parent}.");
+                Assert.IsTrue(childOn, $"Checking {Parent} did not check {Child}.");
+                Assert.IsTrue(cleared, $"Unchecking {Child}, its only child, did not clear {Parent}.");
+                Assert.IsTrue(full, $"Checking every child did not check {Parent}.");
             });
         });
     }
@@ -120,12 +120,12 @@ public sealed class BoxAndBarTests : RecordedTest
                 Named("Explorer.Category.Row", walls).Patterns.SelectionItem.Pattern.Select();
                 Named("Explorer.Category.Row", doors).Patterns.SelectionItem.Pattern.AddToSelection();
                 Evidence.Step($"Selected {walls}, then added {doors} (SelectionItem Select, AddToSelection).");
-                Retry.WhileFalse(() => Ticked().Count == 2, Wait, ignoreException: true);
-                var ticked = Ticked();
+                Retry.WhileFalse(() => Checked().Count == 2, Wait, ignoreException: true);
+                var checkedNames = Checked();
                 _panel.Shot("after");
-                Evidence.Values($"ticked {walls}, {doors}", "ticked " + string.Join(", ", ticked));
+                Evidence.Values($"checked {walls}, {doors}", "checked " + string.Join(", ", checkedNames));
 
-                CollectionAssert.AreEquivalent(new[] { walls, doors }, ticked.ToList());
+                CollectionAssert.AreEquivalent(new[] { walls, doors }, checkedNames.ToList());
             });
         });
     }
@@ -143,7 +143,7 @@ public sealed class BoxAndBarTests : RecordedTest
                 _panel.Settle();
                 var site = _steps.DocumentName("Site");
                 _panel.Find("Explorer.CollapseAll").Patterns.Invoke.Pattern.Invoke();
-                Evidence.Step($"Ticked only {Parent} in the box, collapsed all rows.");
+                Evidence.Step($"Checked only {Parent} in the box, collapsed all rows.");
                 _panel.Shot("before");
                 var siteRow = _panel.Item(_panel.Find("Explorer.Rows"), cf => cf.ByControlType(ControlType.ListItem).And(cf.ByName(site)));
                 _panel.Item(siteRow, cf => cf.ByAutomationId("Explorer.Row.Expand")).Patterns.Invoke.Pattern.Invoke();
@@ -171,12 +171,12 @@ public sealed class BoxAndBarTests : RecordedTest
             WithBox(() =>
             {
                 _panel.Toggle(_panel.Find("Explorer.Categories"), true, false);
-                TickAllBoxes();
+                CheckAllBoxes();
                 _panel.Shot("before");
                 var stale = _panel.Message();
 
                 _panel.Act(() => Named("Explorer.CategoryEye", walls).Patterns.Invoke.Pattern.Invoke());
-                Evidence.Step($"Invoked the box eye on {walls} with only the Architectural link ticked.");
+                Evidence.Step($"Invoked the box eye on {walls} with only the Architectural link checked.");
                 var hidden = Named("Explorer.CategoryEye", walls).Properties.ItemStatus.ValueOrDefault;
                 var bar = _panel.Shown("Temporary.Text")?.Name ?? string.Empty;
                 var message = _panel.NewMessage(stale);
@@ -593,7 +593,7 @@ public sealed class BoxAndBarTests : RecordedTest
         }
 
         _panel.Toggle(site!, true);
-        Evidence.Step($"Ticked '{site!.Name}' in ModelContext.Documents.");
+        Evidence.Step($"Checked '{site!.Name}' in ModelContext.Documents.");
         WithBox(body, () => _panel.Toggle(_steps.Document("Site"), false));
     }
 
@@ -607,18 +607,18 @@ public sealed class BoxAndBarTests : RecordedTest
         {
             _panel.Toggle(_panel.Find("Explorer.Categories"), true, false);
             _panel.SetValue(_panel.Find("Explorer.CategorySearch"), string.Empty, false);
-            TickAllBoxes();
+            CheckAllBoxes();
             _panel.Toggle(_panel.Find("Explorer.Categories"), false, false);
             after?.Invoke();
         }
     }
 
-    private static void TickAllBoxes()
+    private static void CheckAllBoxes()
     {
         _panel.Find("Explorer.CategoryAll").Patterns.Invoke.Pattern.Invoke();
         Assert.IsTrue(Retry.WhileFalse(() => _panel.Root.FindAllDescendants(cf => cf.ByAutomationId("Explorer.Category.Item"))
                 .All(box => box.Patterns.Toggle.Pattern.ToggleState.Value == ToggleState.On), Wait, ignoreException: true).Result,
-            "All left categories unticked.");
+            "All left categories unchecked.");
         _panel.Settle();
     }
 
@@ -627,7 +627,7 @@ public sealed class BoxAndBarTests : RecordedTest
         _panel.Toggle(_panel.Find("Explorer.Categories"), true, false);
         _panel.SetValue(_panel.Find("Explorer.CategorySearch"), string.Empty, false);
         _panel.Invoke("Explorer.CategoryNone");
-        Assert.IsTrue(Retry.WhileFalse(() => Ticked().Count == 0, Wait, ignoreException: true).Result, "None left ticks.");
+        Assert.IsTrue(Retry.WhileFalse(() => Checked().Count == 0, Wait, ignoreException: true).Result, "None left checks.");
         Evidence.Step("Opened Explorer.Categories and clicked None.");
     }
 
@@ -658,7 +658,7 @@ public sealed class BoxAndBarTests : RecordedTest
         return Retry.WhileFalse(() => Box(name) == state, Wait, ignoreException: true).Result;
     }
 
-    private static HashSet<string> Ticked()
+    private static HashSet<string> Checked()
     {
         return _panel.Root.FindAllDescendants(cf => cf.ByAutomationId("Explorer.Category.Item"))
             .Where(box => box.Patterns.Toggle.Pattern.ToggleState.Value == ToggleState.On)

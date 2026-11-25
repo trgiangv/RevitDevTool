@@ -37,7 +37,7 @@ public sealed class FilterTabTests
     public async Task CatalogMergesAcrossDocuments()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        fixture.Panel.ContextBar.Check(fixture.Model.Data.Documents.Select(document => document.Key));
         fixture.Settle();
 
         var parameters = fixture.Filter.Root.Parameters;
@@ -135,7 +135,7 @@ public sealed class FilterTabTests
     public async Task UnloadedLinkSkipsFilter()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        fixture.Panel.ContextBar.Check([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
         var filter = fixture.Filter;
         filter.Library.AddCommand.Execute(null);
         filter.Root.AddConditionCommand.Execute(null);
@@ -160,7 +160,7 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.UnitFactors[FakeModelGenerator.MepSource] = 1000;
-        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        fixture.Panel.ContextBar.Check([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
         var filter = fixture.Filter;
         filter.Library.AddCommand.Execute(null);
         filter.Root.AddConditionCommand.Execute(null);
@@ -182,7 +182,7 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.DisplayFactors[FakeModelGenerator.MepSource] = 1000;
-        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        fixture.Panel.ContextBar.Check([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
         var filter = fixture.Filter;
         filter.Library.AddCommand.Execute(null);
         filter.Root.AddConditionCommand.Execute(null);
@@ -207,7 +207,7 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.DisplayFactors[FakeModelGenerator.MepSource] = 1000;
-        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        fixture.Panel.ContextBar.Check([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
         var filter = fixture.Filter;
         filter.Library.AddCommand.Execute(null);
         filter.Root.AddConditionCommand.Execute(null);
@@ -228,7 +228,7 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.Examples[FakeParameters.LengthSpec] = "1' - 0\"";
-        fixture.Panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+        fixture.Panel.ContextBar.Check([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
         var filter = fixture.Filter;
         filter.Library.AddCommand.Execute(null);
         filter.Root.AddConditionCommand.Execute(null);
@@ -510,7 +510,7 @@ public sealed class FilterTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        fixture.Panel.ContextBar.Check(fixture.Model.Data.Documents.Select(document => document.Key));
         filter.Library.AddCommand.Execute(null);
         var sent = 0;
         fixture.Model.SelectionChanged += (_, _) => sent++;
@@ -582,7 +582,7 @@ public sealed class FilterTabTests
     private static async Task<PanelFixture> PausedAsync()
     {
         var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        fixture.Panel.ContextBar.Check(fixture.Model.Data.Documents.Select(document => document.Key));
         fixture.Filter.Library.AddCommand.Execute(null);
         foreach (var category in fixture.Filter.Categories.Items)
         {
@@ -662,12 +662,12 @@ public sealed class FilterTabTests
     }
 
     [TestMethod]
-    public async Task UntickLinksKeepsHostFilter()
+    public async Task UncheckLinksKeepsHostFilter()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
         var bar = fixture.Panel.ContextBar;
-        bar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        bar.Check(fixture.Model.Data.Documents.Select(document => document.Key));
         filter.Library.SelectedSource = filter.Library.Sources.First(source => source.Kind == FilterSourceKind.RuleBased);
         fixture.Settle();
         var expected = filter.Runner.Result;
@@ -784,7 +784,7 @@ public sealed class FilterTabTests
     private static async Task<PanelFixture> OpenAllAsync()
     {
         var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        fixture.Panel.ContextBar.Check(fixture.Model.Data.Documents.Select(document => document.Key));
         fixture.Settle();
         fixture.Filter.Library.AddCommand.Execute(null);
         fixture.Settle();

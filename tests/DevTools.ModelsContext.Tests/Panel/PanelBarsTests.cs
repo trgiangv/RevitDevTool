@@ -17,7 +17,7 @@ public sealed class PanelBarsTests
     public async Task KeepAsksWhenLinkChangesPending()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
@@ -86,7 +86,7 @@ public sealed class PanelBarsTests
     public async Task LinkGroupMenuOffersLinkActions()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
 
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
 
@@ -103,7 +103,7 @@ public sealed class PanelBarsTests
     public async Task LinkOverridesNeedNewerRevit()
     {
         using var fixture = await PanelFixture.OpenAsync(TestModel.WithoutLinkFilters());
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
 
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
 
@@ -116,7 +116,7 @@ public sealed class PanelBarsTests
     public async Task LinkIsolateJournalsRest()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var ducts = fixture.Group(Mep, "Ducts");
         var kept = fixture.Explorer.ElementsOf([ducts]).ToHashSet();
         fixture.Explorer.OpenMenu(ducts);
@@ -138,7 +138,7 @@ public sealed class PanelBarsTests
     public async Task ReloadKeepsLinkIsolate()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         fixture.Model.UniqueIdGate = new TaskCompletionSource<bool>();
 
@@ -155,7 +155,7 @@ public sealed class PanelBarsTests
     public async Task MenuRefusalShowsInPanel()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
         fixture.Actions.LinkedNotShown = true;
@@ -170,7 +170,7 @@ public sealed class PanelBarsTests
     public async Task ResetShowsIsolateRest()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var ducts = fixture.Group(Mep, "Ducts");
         fixture.Explorer.OpenMenu(ducts);
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
@@ -187,7 +187,7 @@ public sealed class PanelBarsTests
     public async Task ResetDropsUnshownOnce()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Actions.LinkedNotShown = true;
 
@@ -204,7 +204,7 @@ public sealed class PanelBarsTests
     public async Task EyeOnEndsLinkIsolate()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         var ducts = fixture.Group(Mep, "Ducts");
         fixture.Explorer.OpenMenu(ducts);
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
@@ -223,7 +223,7 @@ public sealed class PanelBarsTests
     public async Task EyeOnUnshownRestReports()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
         fixture.Actions.LinkedNotShown = true;
@@ -238,7 +238,7 @@ public sealed class PanelBarsTests
     public async Task KeepTakesIsolateOffBar()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
 
@@ -255,7 +255,7 @@ public sealed class PanelBarsTests
     public async Task EyeOnReappliesLinkColorOnce()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Halftone].Command.ExecuteAsync(null);
         var walls = fixture.Group(Current, "Walls");
@@ -271,7 +271,7 @@ public sealed class PanelBarsTests
     public async Task ClosedLinkDropsFilterPlan()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Halftone].Command.ExecuteAsync(null);
         var walls = fixture.Group(Current, "Walls");
@@ -289,7 +289,7 @@ public sealed class PanelBarsTests
     public async Task LinkColorMarksRows()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var ducts = fixture.Group(Mep, "Ducts");
         fixture.Explorer.OpenMenu(ducts);
 
@@ -304,7 +304,7 @@ public sealed class PanelBarsTests
     public async Task LinkChildHideRunsAndJournals()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var ducts = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Ducts")]);
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
@@ -319,7 +319,7 @@ public sealed class PanelBarsTests
     public async Task LinkChildShowUnhidesItsEntries()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var ducts = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Ducts")]);
         var pipes = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Pipes")]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
@@ -340,7 +340,7 @@ public sealed class PanelBarsTests
     public async Task ShowWithoutUnhideIsDisabled()
     {
         using var fixture = await PanelFixture.OpenAsync(WithoutUnhide());
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
@@ -354,7 +354,7 @@ public sealed class PanelBarsTests
     public async Task ResetShowsJournaledLinkElements()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var group = fixture.Group(Mep, "Ducts");
         var ducts = fixture.Explorer.ElementsOf([group]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(group);
@@ -370,7 +370,7 @@ public sealed class PanelBarsTests
     public async Task ResetFailureShowsMessage()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Actions.ResetError = "Reset failed in the host.";
 
@@ -383,7 +383,7 @@ public sealed class PanelBarsTests
     public async Task MenuOpenClearsOldError()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Actions.ResetError = "Reset failed in the host.";
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
@@ -397,7 +397,7 @@ public sealed class PanelBarsTests
     public async Task ResetLeavesHidesWithoutUnhide()
     {
         using var fixture = await PanelFixture.OpenAsync(WithoutUnhide());
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
@@ -411,7 +411,7 @@ public sealed class PanelBarsTests
     public async Task KeepTakesLinkHidesOffBar()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
@@ -427,7 +427,7 @@ public sealed class PanelBarsTests
     public async Task KeptLinkHideKeepsEyeAndDot()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
@@ -441,7 +441,7 @@ public sealed class PanelBarsTests
     public async Task ResetLeavesKeptLinkHides()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
@@ -457,7 +457,7 @@ public sealed class PanelBarsTests
     public async Task EyeShowsKeptLinkHide()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
@@ -473,7 +473,7 @@ public sealed class PanelBarsTests
     public async Task CurrentShowKeepsLinkHides()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Doors"));
@@ -581,18 +581,18 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task DefaultTicksCurrentModelOnly()
+    public async Task DefaultChecksCurrentModelOnly()
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        var ticked = fixture.Panel.ContextBar.TickedDocuments;
+        var checkedDocs = fixture.Panel.ContextBar.CheckedDocuments;
 
-        CollectionAssert.AreEqual(new[] { Current }, ticked.ToArray());
+        CollectionAssert.AreEqual(new[] { Current }, checkedDocs.ToArray());
         Assert.AreEqual(ContextBarViewModel.CurrentModelLabel, fixture.Panel.ContextBar.Summary);
     }
 
     [TestMethod]
-    public async Task AtLeastOneDocumentStaysTicked()
+    public async Task AtLeastOneDocumentStaysChecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var current = fixture.Panel.ContextBar.Documents.Single(item => item.Key == Current);
@@ -603,7 +603,7 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task LastUntickShowsHint()
+    public async Task LastUncheckShowsHint()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var current = fixture.Panel.ContextBar.Documents.Single(item => item.Key == Current);
@@ -614,7 +614,7 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task HintClearsOnNextTick()
+    public async Task HintClearsOnNextCheck()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Documents.Single(item => item.Key == Current).IsChecked = false;
@@ -625,20 +625,20 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task CurrentModelUnticksWithLink()
+    public async Task CurrentModelUnchecksWithLink()
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        UntickCurrentForMep(fixture);
+        UncheckCurrentForMep(fixture);
 
-        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
     }
 
     [TestMethod]
-    public async Task LastLinkStaysTicked()
+    public async Task LastLinkStaysChecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        UntickCurrentForMep(fixture);
+        UncheckCurrentForMep(fixture);
         var mep = fixture.Panel.ContextBar.Documents.Single(item => item.Key == Mep);
 
         mep.IsChecked = false;
@@ -647,27 +647,27 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task DocumentRefreshKeepsCurrentUnticked()
+    public async Task DocumentRefreshKeepsCurrentUnchecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        UntickCurrentForMep(fixture);
+        UncheckCurrentForMep(fixture);
 
         fixture.Model.RaiseDocumentsChanged();
         fixture.Settle();
 
-        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
     }
 
     [TestMethod]
-    public async Task ViewChangeResetsManualTicks()
+    public async Task ViewChangeResetsManualChecks()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        UntickCurrentForMep(fixture);
+        UncheckCurrentForMep(fixture);
 
         fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
         fixture.Settle();
 
-        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
     }
 
     [TestMethod]
@@ -688,7 +688,7 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task OpenTicksViewLinks()
+    public async Task OpenChecksViewLinks()
     {
         var model = new FakeModel(TestModel.SmallData);
         model.ViewLinks.Add(Mep);
@@ -696,11 +696,11 @@ public sealed class PanelBarsTests
 
         await fixture.Panel.InitializeAsync(CancellationToken.None);
 
-        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
     }
 
     [TestMethod]
-    public async Task ViewChangeTicksViewLinks()
+    public async Task ViewChangeChecksViewLinks()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.ViewLinks.Add(Mep);
@@ -708,11 +708,11 @@ public sealed class PanelBarsTests
         fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
         fixture.Settle();
 
-        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
     }
 
     [TestMethod]
-    public async Task ManualTickHoldsUntilViewChange()
+    public async Task ManualCheckHoldsUntilViewChange()
     {
         var model = new FakeModel(TestModel.SmallData);
         model.ViewLinks.Add(Mep);
@@ -723,16 +723,16 @@ public sealed class PanelBarsTests
 
         fixture.Model.RaiseDocumentsChanged();
         fixture.Settle();
-        var held = fixture.Panel.ContextBar.TickedDocuments.ToArray();
+        var held = fixture.Panel.ContextBar.CheckedDocuments.ToArray();
         fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
         fixture.Settle();
 
         CollectionAssert.AreEqual(new[] { Current }, held);
-        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEquivalent(new[] { Current, Mep }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
     }
 
     [TestMethod]
-    public async Task HiddenLinkNotTicked()
+    public async Task HiddenLinkNotChecked()
     {
         var model = new FakeModel(TestModel.SmallData);
         model.ViewLinks.Add(Mep);
@@ -740,13 +740,13 @@ public sealed class PanelBarsTests
 
         await fixture.Panel.InitializeAsync(CancellationToken.None);
 
-        var ticked = fixture.Panel.ContextBar.TickedDocuments;
-        CollectionAssert.DoesNotContain(ticked.ToList(), FakeModelGenerator.ArchFirst);
-        CollectionAssert.DoesNotContain(ticked.ToList(), FakeModelGenerator.ArchSecond);
+        var checkedDocs = fixture.Panel.ContextBar.CheckedDocuments;
+        CollectionAssert.DoesNotContain(checkedDocs.ToList(), FakeModelGenerator.ArchFirst);
+        CollectionAssert.DoesNotContain(checkedDocs.ToList(), FakeModelGenerator.ArchSecond);
     }
 
     [TestMethod]
-    public async Task UnloadedViewLinkStaysUnticked()
+    public async Task UnloadedViewLinkStaysUnchecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.SetLoaded(Mep, false);
@@ -756,29 +756,29 @@ public sealed class PanelBarsTests
         fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
         fixture.Settle();
 
-        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
     }
 
     [TestMethod]
-    public async Task LinkReloadKeepsCurrentUnticked()
+    public async Task LinkReloadKeepsCurrentUnchecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        UntickCurrentForMep(fixture);
+        UncheckCurrentForMep(fixture);
 
         fixture.Model.SetLoaded(Mep, false);
         fixture.Settle();
         fixture.Model.SetLoaded(Mep, true);
         fixture.Settle();
 
-        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEqual(new[] { Mep }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
     }
 
     [TestMethod]
-    public async Task ExplorerSkipsUntickedCurrent()
+    public async Task ExplorerSkipsUncheckedCurrent()
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        UntickCurrentForMep(fixture);
+        UncheckCurrentForMep(fixture);
 
         var rows = fixture.Explorer.Rows;
         Assert.IsTrue(rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep));
@@ -786,11 +786,11 @@ public sealed class PanelBarsTests
     }
 
     [TestMethod]
-    public async Task FilterSkipsUntickedCurrent()
+    public async Task FilterSkipsUncheckedCurrent()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var filter = fixture.Filter;
-        UntickCurrentForMep(fixture);
+        UncheckCurrentForMep(fixture);
         filter.Library.AddCommand.Execute(null);
 
         filter.Categories.Items.First(category => category.Name == "Ducts").IsChecked = true;
@@ -811,10 +811,10 @@ public sealed class PanelBarsTests
         Assert.IsFalse(fixture.Panel.IsExplorerTab);
     }
 
-    private static void UntickCurrentForMep(PanelFixture fixture)
+    private static void UncheckCurrentForMep(PanelFixture fixture)
     {
         var bar = fixture.Panel.ContextBar;
-        bar.Tick([Mep]);
+        bar.Check([Mep]);
         bar.Documents.Single(item => item.Key == Current).IsChecked = false;
         fixture.Settle();
     }

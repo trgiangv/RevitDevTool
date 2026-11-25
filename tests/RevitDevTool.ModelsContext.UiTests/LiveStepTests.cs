@@ -82,7 +82,7 @@ public sealed class LiveStepTests : RecordedTest
             _panel.Settle();
             var count = _panel.Count();
             _panel.Shot("after");
-            Evidence.Step($"Built Ducts with {Setup.Parameter} equals '{Setup.Value}' on Whole model with the Current model ticked.");
+            Evidence.Step($"Built Ducts with {Setup.Parameter} equals '{Setup.Value}' on Whole model with the Current model checked.");
             Evidence.Values("a count", count);
         });
     }
@@ -145,7 +145,7 @@ public sealed class LiveStepTests : RecordedTest
     }
 
     [TestMethod]
-    public void TicksFollowView()
+    public void ChecksFollowView()
     {
         Record(Find("LS-04"), () =>
         {
@@ -157,17 +157,17 @@ public sealed class LiveStepTests : RecordedTest
             }
 
             _panel.Settle();
-            var ticked = _panel.Find("ModelContext.Documents").FindAllDescendants(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.ListItem))
+            var checkedNames = _panel.Find("ModelContext.Documents").FindAllDescendants(cf => cf.ByControlType(FlaUI.Core.Definitions.ControlType.ListItem))
                 .Where(item => item.Patterns.Toggle.IsSupported && item.Patterns.Toggle.Pattern.ToggleState.Value == FlaUI.Core.Definitions.ToggleState.On)
                 .Select(item => item.Name).ToList();
             _panel.Shot("after");
-            Evidence.Step("Read the ticked items of ModelContext.Documents after the view change.");
-            Evidence.Values(string.Join(", ", expected), string.Join(", ", ticked));
+            Evidence.Step("Read the checked items of ModelContext.Documents after the view change.");
+            Evidence.Values(string.Join(", ", expected), string.Join(", ", checkedNames));
 
-            Assert.AreEqual(expected.Length, ticked.Count, "Ticked: " + string.Join(", ", ticked));
+            Assert.AreEqual(expected.Length, checkedNames.Count, "Checked: " + string.Join(", ", checkedNames));
             foreach (var part in expected)
             {
-                Assert.IsTrue(ticked.Any(name => name.Contains(part, StringComparison.OrdinalIgnoreCase)), $"'{part}' is not ticked: {string.Join(", ", ticked)}.");
+                Assert.IsTrue(checkedNames.Any(name => name.Contains(part, StringComparison.OrdinalIgnoreCase)), $"'{part}' is not checked: {string.Join(", ", checkedNames)}.");
             }
         });
     }

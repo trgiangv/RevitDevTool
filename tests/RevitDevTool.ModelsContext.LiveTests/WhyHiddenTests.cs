@@ -58,7 +58,7 @@ public sealed class WhyHiddenTests : RecordedTest
     public void ViewFilterNamesFilter()
     {
         Record(Case("WH-03", "View filter with visibility off", "Filter: " + FilterName,
-            $"Add a rule-less filter '{FilterName}' on the element's category to the view and untick its visibility; Why hidden reads 'Filter: {FilterName}'."), () =>
+            $"Add a rule-less filter '{FilterName}' on the element's category to the view and uncheck its visibility; Why hidden reads 'Filter: {FilterName}'."), () =>
         {
             var element = VisibleElement();
             using var edit = new RolledBack(Model, "Why hidden filter");

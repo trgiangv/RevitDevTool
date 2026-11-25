@@ -38,15 +38,15 @@ public sealed partial class ExplorerCategories : ObservableObject
         _menu = menu;
         _token = token;
         _report = report;
-        Picker = new CategoryPickerViewModel(() => false, changed, ticksNew: true);
-        Picker.TicksChanged += OnTicksChanged;
+        Picker = new CategoryPickerViewModel(() => false, changed, checksNew: true);
+        Picker.ChecksChanged += OnChecksChanged;
     }
 
     public CategoryPickerViewModel Picker { get; }
 
     public string? MenuReason => HasSelection() ? null : SelectReason;
 
-    internal IReadOnlyList<long> Ticked => Picker.Checked();
+    internal IReadOnlyList<long> Checked => Picker.Checked();
 
     public static string EyeTipOf(bool hidden, int links)
     {
@@ -70,7 +70,7 @@ public sealed partial class ExplorerCategories : ObservableObject
         var groups = data.MergedGroups().ToDictionary(group => group.GroupId);
         if (data.Scope == ScopeKind.Selection)
         {
-            AddTickedDocuments(groups);
+            AddCheckedDocuments(groups);
         }
 
         foreach (var document in data.Documents)
@@ -88,14 +88,14 @@ public sealed partial class ExplorerCategories : ObservableObject
         Apply(groups.Values);
     }
 
-    internal async Task ReadTickedAsync(ContextData data, CancellationToken cancellationToken)
+    internal async Task ReadCheckedAsync(ContextData data, CancellationToken cancellationToken)
     {
         if (data.Scope != ScopeKind.Selection)
         {
             return;
         }
 
-        foreach (var key in _bar.TickedDocuments)
+        foreach (var key in _bar.CheckedDocuments)
         {
             if (_runtime.Store.Find(key) is { IsLoaded: true } && _runtime.Store.TryGet(key) is null)
             {
@@ -114,9 +114,9 @@ public sealed partial class ExplorerCategories : ObservableObject
         return _bar.Documents.Count(item => !item.Key.IsCurrentModel && item.Info.IsLoaded);
     }
 
-    private void AddTickedDocuments(Dictionary<long, GroupCount> groups)
+    private void AddCheckedDocuments(Dictionary<long, GroupCount> groups)
     {
-        foreach (var key in _bar.TickedDocuments)
+        foreach (var key in _bar.CheckedDocuments)
         {
             if (_runtime.Store.TryGet(key) is not { } snapshot)
             {
@@ -151,7 +151,7 @@ public sealed partial class ExplorerCategories : ObservableObject
     private IEnumerable<DocumentSnapshot> Snapshots()
     {
         return _runtime.Data.Documents.Select(document => document.Snapshot)
-            .Concat(_bar.TickedDocuments.Select(key => _runtime.Store.TryGet(key)).OfType<DocumentSnapshot>());
+            .Concat(_bar.CheckedDocuments.Select(key => _runtime.Store.TryGet(key)).OfType<DocumentSnapshot>());
     }
 
     private bool IsParentHidden(long groupId)
@@ -179,7 +179,7 @@ public sealed partial class ExplorerCategories : ObservableObject
         return Picker.Items.Any(item => item.IsChecked);
     }
 
-    private void OnTicksChanged(object? sender, EventArgs e)
+    private void OnChecksChanged(object? sender, EventArgs e)
     {
         OnPropertyChanged(nameof(MenuReason));
         IsolateCommand.NotifyCanExecuteChanged();
@@ -196,8 +196,8 @@ public sealed partial class ExplorerCategories : ObservableObject
         }
 
         var names = _groups.ToDictionary(group => group.GroupId, group => group.Name);
-        var ticked = Picker.Items.Where(item => item.IsChecked).Select(item => item.GroupId);
-        return CategoryTree.WithChildren(_groups, ticked)
+        var checkedIds = Picker.Items.Where(item => item.IsChecked).Select(item => item.GroupId);
+        return CategoryTree.WithChildren(_groups, checkedIds)
             .Select(id => RowFactory.Category(key, id, names.TryGetValue(id, out var name) ? name : string.Empty))
             .ToList();
     }

@@ -140,7 +140,7 @@ public sealed partial class CategoryItemViewModel : ObservableObject
 {
     private readonly Action _changed;
     private readonly Action<CategoryItemViewModel> _expandedChanged;
-    private readonly Action<CategoryItemViewModel>? _rowTicked;
+    private readonly Action<CategoryItemViewModel>? _rowChecked;
     private readonly List<CategoryItemViewModel> _children = [];
     private bool _isChecked;
     private bool _isExpanded;
@@ -148,9 +148,9 @@ public sealed partial class CategoryItemViewModel : ObservableObject
 
     internal CategoryItemViewModel(long groupId, string name, int count, Action changed,
         CategoryItemViewModel? parent = null, Action<CategoryItemViewModel>? expandedChanged = null,
-        Action<CategoryItemViewModel>? rowTicked = null)
+        Action<CategoryItemViewModel>? rowChecked = null)
     {
-        _rowTicked = rowTicked;
+        _rowChecked = rowChecked;
         GroupId = groupId;
         Name = name;
         _ownCount = count;
@@ -181,9 +181,9 @@ public sealed partial class CategoryItemViewModel : ObservableObject
         get => _isChecked;
         set
         {
-            if (_rowTicked is null)
+            if (_rowChecked is null)
             {
-                if (Tick(value))
+                if (Check(value))
                 {
                     _changed();
                 }
@@ -193,7 +193,7 @@ public sealed partial class CategoryItemViewModel : ObservableObject
 
             if (SetChecked(value))
             {
-                _rowTicked(this);
+                _rowChecked(this);
             }
         }
     }
@@ -207,12 +207,12 @@ public sealed partial class CategoryItemViewModel : ObservableObject
                 return _isChecked;
             }
 
-            var ticked = _children.Count(child => child.IsChecked) + (_isChecked ? 1 : 0);
-            return ticked == 0 ? false : ticked == _children.Count + 1 ? true : null;
+            var checkedCount = _children.Count(child => child.IsChecked) + (_isChecked ? 1 : 0);
+            return checkedCount == 0 ? false : checkedCount == _children.Count + 1 ? true : null;
         }
         set
         {
-            if (Tick(value == true || (value == false && BoxState is null)))
+            if (Check(value == true || (value == false && BoxState is null)))
             {
                 _changed();
             }
@@ -241,13 +241,13 @@ public sealed partial class CategoryItemViewModel : ObservableObject
 
     internal long ParentId => Parent?.GroupId ?? GroupRow.TopLevel;
 
-    private bool Tick(bool value)
+    private bool Check(bool value)
     {
-        var changed = TickChildren(value) | SetChecked(value);
+        var changed = CheckChildren(value) | SetChecked(value);
         return Parent?.FollowChildren() is true || changed;
     }
 
-    internal bool TickChildren(bool value)
+    internal bool CheckChildren(bool value)
     {
         var changed = false;
         foreach (var child in _children)

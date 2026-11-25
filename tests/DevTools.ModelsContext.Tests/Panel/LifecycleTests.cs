@@ -45,7 +45,7 @@ public sealed class LifecycleTests
 
         fixture.Model.HoldScopes();
         bar.Scope = ScopeKind.ActiveView;
-        bar.Tick([Mep]);
+        bar.Check([Mep]);
         fixture.Model.ReleaseScope(1);
         fixture.Model.ReleaseScope(2);
         var newer = fixture.Explorer.Rows.Any(row => row.Kind == TreeRowKind.LinkModel && row.Document == Mep);
@@ -103,7 +103,7 @@ public sealed class LifecycleTests
         model.AddModel(Other.Value);
         using var fixture = PanelFixture.Create(model);
         await fixture.Panel.InitializeAsync(CancellationToken.None);
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         await fixture.Explorer.ExpandAsync(fixture.Group(Current, "Ducts"));
         var builds = model.BuildCount;
 
@@ -115,7 +115,7 @@ public sealed class LifecycleTests
         fixture.Settle();
 
         Assert.IsTrue(otherRows);
-        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.TickedDocuments.ToArray());
+        CollectionAssert.AreEqual(new[] { Current }, fixture.Panel.ContextBar.CheckedDocuments.ToArray());
         Assert.IsTrue(fixture.Group(Current, "Ducts").IsExpanded);
         Assert.AreEqual(2, fixture.Panel.SessionCount);
         Assert.AreEqual(builds + 1, model.BuildCount);
@@ -335,7 +335,7 @@ public sealed class LifecycleTests
     public async Task UnloadedLinkCountsNothingInView()
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         fixture.Settle();
 
         fixture.Model.SetLoaded(Mep, false);
@@ -348,7 +348,7 @@ public sealed class LifecycleTests
     public async Task UnloadedLinkRowsDisable()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
         var builds = fixture.Model.BuildCount;
 
         fixture.Model.SetLoaded(Mep, false);
@@ -366,7 +366,7 @@ public sealed class LifecycleTests
     public async Task JournalResolvesUniqueIds()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Mep]);
+        fixture.Panel.ContextBar.Check([Mep]);
 
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 

@@ -62,7 +62,7 @@
       "expected": { "temporaryProperties": true, "targetColor": true, "otherColor": false },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Filter tab: build RF-01 (Ducts, Reference Level equals L3) with only 'Current model' ticked.",
+        "Activate '{3D}'. Filter tab: build RF-01 (Ducts, Reference Level equals L3) with only 'Current model' checked.",
         "Result row menu (...) > Color, pick green (40, 160, 60): the 319 ducts on L3 draw green, other ducts do not.",
         "Click Reset in the temporary bar."
       ]
@@ -78,7 +78,7 @@
       "expected": { "temporaryHideIsolate": true, "targetVisible": false, "otherVisible": true, "linkVisible": true },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Filter tab: build RF-01 with only 'Current model' ticked.",
+        "Activate '{3D}'. Filter tab: build RF-01 with only 'Current model' checked.",
         "Result row menu > Hide: the L3 ducts disappear inside the temporary frame.",
         "Click Reset."
       ]
@@ -159,7 +159,7 @@
       "expected": { "temporaryHideIsolate": false, "temporaryProperties": true, "targetVisible": true, "otherVisible": false, "linkVisible": true, "onlyTargetStays": true, "leftovers": ["Duct Systems", "Cameras", "Model Groups", "Divisions", "Multistory Stairs"] },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Explorer tab: open Categories, click 'Ducts' (only Ducts stays ticked), right-click it and click Isolate.",
+        "Activate '{3D}'. Explorer tab: open Categories, click 'Ducts' (only Ducts stays checked), right-click it and click Isolate.",
         "Only ducts stay visible, in the Current model and in links By Host View; the view title shows Temporary View Properties.",
         "Click Reset: everything is back."
       ]
@@ -175,7 +175,7 @@
       "expected": { "temporaryProperties": true, "targetColor": true, "otherColor": false },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Explorer tab: open Categories, click 'Ducts' (only Ducts stays ticked), right-click it, click Color… and pick orange (230, 150, 20).",
+        "Activate '{3D}'. Explorer tab: open Categories, click 'Ducts' (only Ducts stays checked), right-click it, click Color… and pick orange (230, 150, 20).",
         "Every duct draws orange (category override in Temporary View Properties).",
         "Click Reset."
       ]
@@ -191,7 +191,7 @@
       "expected": { "temporaryProperties": true, "otherVisible": false, "linkVisible": true, "onlyTargetStays": true, "leftovers": ["Cameras", "Model Groups", "Divisions", "Multistory Stairs"] },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Explorer tab: tick the Architectural link, open Categories, click 'Doors', right-click it and click Isolate.",
+        "Activate '{3D}'. Explorer tab: check the Architectural link, open Categories, click 'Doors', right-click it and click Isolate.",
         "Only the doors stay; walls, floors, levels, lines and the HVAC ducts are gone.",
         "Click Reset: everything is back."
       ]
@@ -206,7 +206,7 @@
       "expected": { "plannedTiers": ["T3"] },
       "images": ["before", "after"],
       "manualSteps": [
-        "Activate '{3D}'. Filter tab: build GR-02 (Doors, OR: Mark equals S10, Swing Angle undefined) with only the Architectural link ticked.",
+        "Activate '{3D}'. Filter tab: build GR-02 (Doors, OR: Mark equals S10, Swing Angle undefined) with only the Architectural link checked.",
         "Result row menu > Hide: the 12 linked doors disappear (Hide in View, one undo entry, marked with the orange T3 dot).",
         "Click Reset in the temporary bar: the panel shows them again."
       ]
@@ -222,7 +222,7 @@
       "expected": { "error": "Revit can color linked elements only by family, type or a rule filter." },
       "images": ["before", "after"],
       "manualSteps": [
-        "Activate '{3D}'. Filter tab: build GR-02 with only the Architectural link ticked (its 'Swing Angle undefined' rule has no Revit filter rule).",
+        "Activate '{3D}'. Filter tab: build GR-02 with only the Architectural link checked (its 'Swing Angle undefined' rule has no Revit filter rule).",
         "Result row menu: Color is disabled and its tooltip gives the reason; nothing changes in the view."
       ]
     },
@@ -237,7 +237,7 @@
       "expected": { "plannedTiers": ["T0", "T3"] },
       "images": ["before", "after"],
       "manualSteps": [
-        "Activate '{3D}'. Filter tab: build GS-02 with 'Current model' and the Architectural link ticked.",
+        "Activate '{3D}'. Filter tab: build GS-02 with 'Current model' and the Architectural link checked.",
         "Result row menu > Hide: ducts disappear in the temporary frame and the linked doors disappear too.",
         "Click Reset: both come back."
       ]
@@ -254,7 +254,7 @@
       "expected": { "temporaryProperties": true, "linkFilter": true, "otherColor": false },
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Activate '{3D}'. Explorer tab: tick the Architectural link, open Doors > a family > its type row, right-click > Color… and pick red (230, 40, 40).",
+        "Activate '{3D}'. Explorer tab: check the Architectural link, open Doors > a family > its type row, right-click > Color… and pick red (230, 40, 40).",
         "The linked doors of that type draw red; the tooltip says it applies to every By Host View link with this type.",
         "Visibility/Graphics > Filters lists 'Model Context 1' while the temporary view properties are on.",
         "Click Reset: the doors lose the color, the filter is gone from Manage > Filters and the mode ends."
@@ -300,7 +300,7 @@
       "expected": { "plannedTiers": ["T3"] },
       "images": ["before", "after"],
       "manualSteps": [
-        "Activate a plan. Filter tab: build GR-02 with only the Architectural link ticked.",
+        "Activate a plan. Filter tab: build GR-02 with only the Architectural link checked.",
         "Result row menu > Isolate: only the 12 linked doors stay; the rest of the link is hidden (Hide in View, saved with the view) and the Current model is hidden temporarily.",
         "Click Reset: the panel shows the rest of the link again and ends the temporary isolate."
       ]
@@ -315,7 +315,7 @@
       "expected": { "plannedTiers": ["T0", "T3"] },
       "images": ["before", "after"],
       "manualSteps": [
-        "Activate a plan. Filter tab: build GS-02 with 'Current model' and the Architectural link ticked.",
+        "Activate a plan. Filter tab: build GS-02 with 'Current model' and the Architectural link checked.",
         "Result row menu > Isolate: the ducts and the linked doors stay; everything else is hidden.",
         "Click Reset: everything comes back."
       ]

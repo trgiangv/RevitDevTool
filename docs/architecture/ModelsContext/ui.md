@@ -257,34 +257,38 @@ row eye binds it to its own tooltip). The panel has one message line,
 report into `ModelContextViewModel.Message`, so only one line ever shows.
 
 `CategorySection` (both tabs) is an Extended ListBox whose selection is the
-tick: `CategoryRowStyle` (based on stock `ListBoxItemBaseStyle`, rows
+check: `CategoryRowStyle` (based on stock `ListBoxItemBaseStyle`, rows
 `<Area>.Category.Row`) binds `IsSelected` to `IsChecked` two-way and keeps a
 selected row unpainted (stock hover and focus). The checkbox has no content, so
 a click on the name reaches the ListBox. Right-click is handled before the
-ListBox so it keeps the ticks; Space toggles the focused row. Virtualization is
+ListBox so it keeps the checks; Space toggles the focused row. Virtualization is
 off (about 150 rows), so every row's selection stays bound.
 Subcategories stay in the same ListBox: `CategoryPickerViewModel` orders
 `Items` parent-then-children (`GroupCount.ParentId`) and keeps `VisibleItems`
 as one `ObservableCollection` it edits in place (roots, plus the children of
 expanded roots or the search hits). Replacing the list would regenerate every
 container while the Selector still holds the old selection, and the two-way
-`IsSelected` binding would push stale ticks back (`TickDuringExpandHolds`). The
+`IsSelected` binding would push stale checks back (`CheckDuringExpandHolds`). The
 row's chevron (`<Area>.Category.Expand`, a stock `ToggleButtonCustom`) binds
-`IsExpanded`; the checkbox binds the three-state `BoxState` (own tick plus the
-children's). Parent drives children: setting `BoxState` ticks or clears the
+`IsExpanded`; the checkbox binds the three-state `BoxState` (own check plus the
+children's). Parent drives children: setting `BoxState` checks or clears the
 parent and its children at once (a click on the partial box arrives as `false`
 from the stock toggle and the setter turns it into `true`), and a child change
-makes the parent follow (all ticked, ticked; none, clear). Row selection stays
+makes the parent follow (all checked, checked; none, clear). Row selection stays
 bound to the row's own `IsChecked`, but a row change is batched per dispatcher
 frame (`CategoryPickerViewModel.SettleRows`) because one Selector gesture
-changes several rows: a single click on an already ticked child unselects its
+changes several rows: a single click on an already checked child unselects its
 parent and siblings but not the child, so the parent cascade must not run on
-the kept child. The batch rule: a parent turned on ticks its children; a parent
+the kept child. The batch rule: a parent turned on checks its children; a parent
 turned off clears them unless a sibling changed in the same gesture; a parent
 left on whose children were all cleared in a multi-row gesture keeps them
 (re-selecting the parent); otherwise the parent follows its children. Search
 opens parents only while it lasts (`_closedInSearch` keeps a parent the user
-closed during the search). Children indent 16 px. A parent missing from
+closed during the search). `HideUnchecked` (stock CheckBox
+`<Area>.CategoryHideUnchecked`, per picker, not saved) narrows `VisibleItems`
+to checked rows and roots with a checked child, and every check change rebuilds it
+in place; it sits outside the `WhenLocked` parts, so a read-only filter can
+still use it. Children indent 16 px. A parent missing from
 the scope comes from `CategoryTree.WithParents` (count 0, name from a loaded
 snapshot). In the Explorer tree, `ExplorerTree.GroupRows` puts a subgroup row in
 its parent group row's `Subgroups`; they lead the parent's children, the

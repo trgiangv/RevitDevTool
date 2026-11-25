@@ -35,7 +35,7 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
     {
         if (scope != ScopeKind.Selection)
         {
-            return owner.ContextBar.TickedDocuments;
+            return owner.ContextBar.CheckedDocuments;
         }
 
         var selection = await runtime.Services.Selection.GetSelectionAsync(cancellationToken);

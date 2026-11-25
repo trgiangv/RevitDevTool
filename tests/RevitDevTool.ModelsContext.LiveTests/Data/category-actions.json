@@ -13,7 +13,7 @@
       "expected": { "parent": 2, "child": 8 },
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with every link loaded and open the Model Context panel; Scope 'Whole model'.",
-        "Tick the 'Snowdon Towers Sample Site' link in the document list.",
+        "Check the 'Snowdon Towers Sample Site' link in the document list.",
         "On the Explorer tab expand the Site link: Toposolid shows 2 and its child Sub-divisions shows 8 (the parent row reads 10 when the tree nests children).",
         "Check without the panel: open the Site model (do not save), select every toposolid and sub-division and read the Properties count per category: 2 Toposolid, 8 Sub-divisions."
       ]
@@ -23,7 +23,7 @@
       "description": "Subcategories of Site, Lines and Topography (base and survey points, internal origin, sketch lines, contours) and every Center line subcategory (ducts, duct fittings, flex ducts, pipes, conduits, cable trays) never become groups, in the Current model and in the Site link",
       "expected": "no snapshot group whose parent is Site, Lines or Topography, and no Center line group",
       "manualSteps": [
-        "Open the sample with every link loaded and the Model Context panel; Scope 'Whole model'; tick Current model and the Site link.",
+        "Open the sample with every link loaded and the Model Context panel; Scope 'Whole model'; check Current model and the Site link.",
         "Expand the Categories box and the Explorer tree: no Project Base Point, Survey Point, Internal Origin, <Sketch> or Primary Contours row appears, under Site, Lines, Topography or on its own.",
         "Expand Ducts and Duct Fittings: no Center line row appears under them."
       ]
@@ -56,7 +56,7 @@
       "expected": { "child": 0 },
       "manualSteps": [
         "Make '{3D}' the active view with the Site link By Host View.",
-        "Visibility/Graphics > Model Categories: untick Toposolid and leave its Sub-divisions subcategory ticked; the sub-divisions disappear too. Cancel the dialog."
+        "Visibility/Graphics > Model Categories: uncheck Toposolid and leave its Sub-divisions subcategory checked; the sub-divisions disappear too. Cancel the dialog."
       ]
     },
     {
@@ -66,7 +66,7 @@
       "images": [ "before", "after", "reset" ],
       "manualSteps": [
         "Make '{3D}' the active view; every link By Host View.",
-        "Categories box: tick only Walls, right-click > Color, pick red: the walls of the HVAC model and of the Architectural link turn red.",
+        "Categories box: check only Walls, right-click > Color, pick red: the walls of the HVAC model and of the Architectural link turn red.",
         "Reset: the colors are gone."
       ]
     },

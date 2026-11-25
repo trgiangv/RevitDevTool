@@ -67,7 +67,7 @@ public sealed class ViewStateTests
     public async Task FilterCleanupDropsLinkColor()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Halftone].Command.ExecuteAsync(null);
 
@@ -83,7 +83,7 @@ public sealed class ViewStateTests
     public async Task ResetDropsRemovedLinkEntries()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Model.RemoveDocument(Mep);
         fixture.Settle();
@@ -125,7 +125,7 @@ public sealed class ViewStateTests
     public async Task RenameKeepsResetWorking()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         var ducts = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Ducts")]);
         await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Walls"));
@@ -147,7 +147,7 @@ public sealed class ViewStateTests
     public async Task PickingBlocksRowActions()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         fixture.Model.PickGate = new TaskCompletionSource<bool>();
         var picking = fixture.Explorer.Pick.PickCommand.ExecuteAsync(null);
 

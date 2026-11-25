@@ -102,7 +102,7 @@ public sealed class FilterLogicTests
     }
 
     [TestMethod]
-    public async Task ScopeOptionTickNarrowsGroup()
+    public async Task ScopeOptionCheckNarrowsGroup()
     {
         using var fixture = await OpenAllAsync();
         var group = AddGroup(fixture.Filter.Root);
@@ -416,7 +416,7 @@ public sealed class FilterLogicTests
     private static async Task<PanelFixture> OpenAllAsync()
     {
         var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        fixture.Panel.ContextBar.Check(fixture.Model.Data.Documents.Select(document => document.Key));
         fixture.Settle();
         fixture.Filter.Library.AddCommand.Execute(null);
         fixture.Settle();

@@ -190,7 +190,7 @@ public sealed class SyncTests
     }
 
     [TestMethod]
-    public async Task ShowInExplorerTicksDocuments()
+    public async Task ShowInExplorerChecksDocuments()
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.RaiseSelectionChanged(fixture.Elements(FakeModelGenerator.Mep, 2));
@@ -199,7 +199,7 @@ public sealed class SyncTests
         Assert.IsTrue(fixture.Explorer.CanShowInExplorer);
         fixture.Explorer.ShowInExplorerCommand.Execute(null);
 
-        CollectionAssert.Contains(fixture.Panel.ContextBar.TickedDocuments.ToList(), FakeModelGenerator.Mep);
+        CollectionAssert.Contains(fixture.Panel.ContextBar.CheckedDocuments.ToList(), FakeModelGenerator.Mep);
         Assert.HasCount(2, fixture.Explorer.SelectedRows);
     }
 }

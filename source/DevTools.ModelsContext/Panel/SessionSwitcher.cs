@@ -203,7 +203,7 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
         owner.ShowNoModel();
     }
 
-    public async Task<IReadOnlyList<DocumentKey>> ViewTicksAsync(
+    public async Task<IReadOnlyList<DocumentKey>> ViewChecksAsync(
         IReadOnlyList<DocumentInfo> documents,
         CancellationToken cancellationToken)
     {
@@ -232,14 +232,14 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
             return;
         }
 
-        var ticks = await ViewTicksAsync(documents, ticket.Token);
+        var checks = await ViewChecksAsync(documents, ticket.Token);
         if (!owner.IsCurrent(ticket))
         {
             return;
         }
 
         runtime.Forget(runtime.Store.SetDocuments(documents));
-        owner.SetDocumentsQuietly(documents, ticks);
+        owner.SetDocumentsQuietly(documents, checks);
         var active = await runtime.Services.ViewActions.ReadActiveViewAsync(ticket.Token);
         if (!owner.IsCurrent(ticket))
         {

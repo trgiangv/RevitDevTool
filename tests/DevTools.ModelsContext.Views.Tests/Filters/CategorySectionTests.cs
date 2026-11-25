@@ -12,19 +12,19 @@ public sealed class CategorySectionTests
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void SelectTicksOnlyRow(string prefix)
+    public void SelectChecksOnlyRow(string prefix)
     {
         using var ui = OpenBox(prefix);
 
         Rows(ui, prefix)[1].Patterns.SelectionItem.Pattern.Select();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SequenceEqual([1])), "Select did not tick only that row.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([1])), "Select did not check only that row.");
     }
 
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void AddKeepsBothTicked(string prefix)
+    public void AddKeepsBothChecked(string prefix)
     {
         using var ui = OpenBox(prefix);
         var rows = Rows(ui, prefix);
@@ -32,13 +32,13 @@ public sealed class CategorySectionTests
         rows[0].Patterns.SelectionItem.Pattern.Select();
         rows[2].Patterns.SelectionItem.Pattern.AddToSelection();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SequenceEqual([0, 2])), "Add did not keep both ticked.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([0, 2])), "Add did not keep both checked.");
     }
 
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void RemoveUnticksRow(string prefix)
+    public void RemoveUnchecksRow(string prefix)
     {
         using var ui = OpenBox(prefix);
         var rows = Rows(ui, prefix);
@@ -47,22 +47,22 @@ public sealed class CategorySectionTests
 
         rows[0].Patterns.SelectionItem.Pattern.RemoveFromSelection();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SequenceEqual([2])), "Remove did not untick the row.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([2])), "Remove did not uncheck the row.");
     }
 
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void BoxTickKeepsOthers(string prefix)
+    public void BoxCheckKeepsOthers(string prefix)
     {
         using var ui = OpenBox(prefix);
         Rows(ui, prefix)[0].Patterns.SelectionItem.Pattern.Select();
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SequenceEqual([0])), "Select did not tick the row.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([0])), "Select did not check the row.");
 
         ui.Host.FindAllInWindow(prefix + ".Category.Item")[3].Patterns.Toggle.Pattern.Toggle();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SequenceEqual([0, 3])), "The box did not keep the other tick.");
-        Assert.IsTrue(WpfSta.Invoke(() => Container(ui, prefix, 3).IsSelected), "The box tick did not select its row.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([0, 3])), "The box did not keep the other check.");
+        Assert.IsTrue(WpfSta.Invoke(() => Container(ui, prefix, 3).IsSelected), "The box check did not select its row.");
     }
 
     [TestMethod]
@@ -98,6 +98,20 @@ public sealed class CategorySectionTests
         })), "All did not select every row.");
     }
 
+    [TestMethod]
+    [DataRow("Explorer")]
+    [DataRow("Filter")]
+    public void HideUncheckedShrinksList(string prefix)
+    {
+        using var ui = OpenBox(prefix);
+        Rows(ui, prefix)[1].Patterns.SelectionItem.Pattern.Select();
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([1])), "Select did not check the row.");
+
+        ui.Host.FindInWindow(prefix + ".CategoryHideUnchecked").Patterns.Toggle.Pattern.Toggle();
+
+        Assert.IsTrue(ThemeHost.WaitForUi(() => Rows(ui, prefix).Length == 1), "Hide unchecked kept unchecked rows.");
+    }
+
     private static PanelUi OpenBox(string prefix)
     {
         var ui = PanelUi.Open();
@@ -111,7 +125,7 @@ public sealed class CategorySectionTests
 
         ui.Host.FindInWindow(prefix + ".Categories").Patterns.Toggle.Pattern.Toggle();
         ui.Press(prefix + ".CategoryNone");
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).Length == 0), "None left ticks.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).Length == 0), "None left checks.");
         Assert.IsTrue(ThemeHost.WaitForUi(() => Rows(ui, prefix).Length > 3), "The box lists too few rows.");
         return ui;
     }
@@ -121,7 +135,7 @@ public sealed class CategorySectionTests
         return ui.Host.FindAllInWindow(prefix + ".Category.Row");
     }
 
-    private static int[] Ticked(PanelUi ui, string prefix)
+    private static int[] Checked(PanelUi ui, string prefix)
     {
         return WpfSta.Invoke(() => List(ui, prefix).Items.Cast<CategoryItemViewModel>()
             .Select((item, index) => (item, index)).Where(pair => pair.item.IsChecked).Select(pair => pair.index).ToArray());

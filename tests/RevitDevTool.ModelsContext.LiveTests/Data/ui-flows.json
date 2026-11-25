@@ -8,7 +8,7 @@
       "expected": "TX-01 expected, then TX-02 expected",
       "images": ["before", "after-off", "after"],
       "manualSteps": [
-        "Tick only the Architectural link. Filter tab: + New filter, Categories Doors, + Condition Mark equals s10: count 1.",
+        "Check only the Architectural link. Filter tab: + New filter, Categories Doors, + Condition Mark equals s10: count 1.",
         "Turn Aa on in that rule: count 0."
       ]
     },
@@ -20,7 +20,7 @@
       "expected": "GR-02 expected",
       "images": ["before", "after"],
       "manualSteps": [
-        "Tick only the Architectural link. Filter tab: + New filter, Categories Doors, + Condition Mark equals S10, + Condition Swing Angle undefined.",
+        "Check only the Architectural link. Filter tab: + New filter, Categories Doors, + Condition Mark equals S10, + Condition Swing Angle undefined.",
         "Click the connector until it reads OR: count 12."
       ]
     },
@@ -32,7 +32,7 @@
       "expected": "parameter 'Swing Angle'; NU-04 expected, and again after reload",
       "images": ["before", "saved", "after"],
       "manualSteps": [
-        "Tick only the Architectural link. Build NU-04 (Doors, Swing Angle equals 90°): count 130.",
+        "Check only the Architectural link. Build NU-04 (Doors, Swing Angle equals 90°): count 130.",
         "The parameter box reads Swing Angle. Rename it (pencil), Save, then + New filter (Discard if asked).",
         "Pick the saved filter in the source list: count 130 again. Delete it with the trash button."
       ]
@@ -45,7 +45,7 @@
       "expected": "count = SC-02 expected; Selection sync on; paused line shown; no line after None",
       "images": ["before", "paused", "after"],
       "manualSteps": [
-        "Tick only the Architectural link. Filter tab: + New filter, open Categories, click All.",
+        "Check only the Architectural link. Filter tab: + New filter, open Categories, click All.",
         "The count reads 11,195. The Selection sync toggle stays on, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
         "Click None: the count reads 0 and the line is gone."
       ]
@@ -58,7 +58,7 @@
       "expected": "temporary bar '1 change', then no bar after Reset",
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Explorer tab, Scope 'Whole model', Architectural link ticked: click the eye on the link's model row.",
+        "Explorer tab, Scope 'Whole model', Architectural link checked: click the eye on the link's model row.",
         "The linked building disappears in the active view and the temporary bar reads 1 change.",
         "Click Reset: the link is back and the bar is gone."
       ]
@@ -72,7 +72,7 @@
       "expected": "eye Hidden and temporary bar '1 change', then eye Shown and no bar after Reset",
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link ticked: click Collapse all, expand the link's row, click the eye on its Doors row.",
+        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link checked: click Collapse all, expand the link's row, click the eye on its Doors row.",
         "The linked doors disappear in the view, the eye on Doors is off and the temporary bar reads 1 change. In Revit, Reveal Hidden Elements shows the doors as hidden in the view.",
         "Click Reset: the doors are back, the eye is on and the bar is gone."
       ]
@@ -86,7 +86,7 @@
       "expected": "temporary bar with a change count, no error, type eye Shown, at least one other link category eye Hidden; then those eyes Shown and no bar after Reset",
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link ticked: click Collapse all, expand the link's row, expand Doors, expand its first family.",
+        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link checked: click Collapse all, expand the link's row, expand Doors, expand its first family.",
         "Right-click the first type row and pick Isolate (or select the row and click its Isolate tool). Only that door type of the link stays visible in the view; the temporary bar shows a change count and no error line shows.",
         "The link's other category rows show the closed eye. Click Reset: the linked building is back, the eyes are open and the bar is gone."
       ]
@@ -100,22 +100,22 @@
       "expected": "temporary bar with a change count, no error, row color #F44336; then no row color and no bar after Reset",
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link ticked: click Collapse all, expand the link's row, expand Doors, expand its first family.",
+        "Make {3D} the active view. Explorer tab, Scope 'Whole model', Architectural link checked: click Collapse all, expand the link's row, expand Doors, expand its first family.",
         "Right-click the first type row and pick Color… (or select the row and click its Color tool). In the picker click the first swatch (red, #F44336) and Confirm.",
         "Those linked doors turn red in the view, the row shows a red mark and the temporary bar shows a change count. Click Reset: the doors lose the color, the mark is gone and the bar is gone."
       ]
     },
     {
       "id": "UI-09",
-      "description": "Categories box tree: ticking Toposolid ticks Sub-divisions, unticking its only child clears the parent, ticking it again checks the parent",
-      "test": "BoxTreeTicksChildren",
+      "description": "Categories box tree: checking Toposolid checks Sub-divisions, unchecking its only child clears the parent, checking it again checks the parent",
+      "test": "BoxTreeChecksChildren",
       "cases": [],
       "expected": "Sub-divisions On; Toposolid Off; then Toposolid On",
       "images": ["before", "parent", "cleared", "after"],
       "manualSteps": [
-        "Explorer tab, Whole model, Architectural and Site links ticked. Open Categories, click None.",
-        "Tick Toposolid and open its chevron: Sub-divisions is ticked.",
-        "Untick Sub-divisions (Toposolid's only child): the Toposolid box clears. Tick it again: Toposolid reads ticked."
+        "Explorer tab, Whole model, Architectural and Site links checked. Open Categories, click None.",
+        "Check Toposolid and open its chevron: Sub-divisions is checked.",
+        "Uncheck Sub-divisions (Toposolid's only child): the Toposolid box clears. Check it again: Toposolid reads checked."
       ]
     },
     {
@@ -126,20 +126,20 @@
       "expected": "rows Toposolid, Sub-divisions; chevron open",
       "images": ["before", "after"],
       "manualSteps": [
-        "Explorer tab, Site link ticked. Open Categories, close the Toposolid chevron, type 'Sub-div' in the search.",
+        "Explorer tab, Site link checked. Open Categories, close the Toposolid chevron, type 'Sub-div' in the search.",
         "The list shows Toposolid with Sub-divisions under it, the chevron open."
       ]
     },
     {
       "id": "UI-11",
-      "description": "Categories box selection is the tick: select Walls, add Doors, both and only they are ticked",
+      "description": "Categories box selection is the check: select Walls, add Doors, both and only they are checked",
       "test": "BoxRowsSelectMany",
       "cases": [],
-      "expected": "ticked Walls, Doors",
+      "expected": "checked Walls, Doors",
       "images": ["before", "after"],
       "manualSteps": [
-        "Explorer tab, Architectural link ticked. Open Categories, click None.",
-        "Click Walls, Ctrl+click Doors: only those two are ticked and neither row is painted selected."
+        "Explorer tab, Architectural link checked. Open Categories, click None.",
+        "Click Walls, Ctrl+click Doors: only those two are checked and neither row is painted selected."
       ]
     },
     {
@@ -150,7 +150,7 @@
       "expected": "Toposolid 10, Sub-divisions 8",
       "images": ["before", "after"],
       "manualSteps": [
-        "Explorer tab, Whole model, Site link ticked. In Categories tick only Toposolid, close the box, Collapse all.",
+        "Explorer tab, Whole model, Site link checked. In Categories check only Toposolid, close the box, Collapse all.",
         "Expand the Site link row: Toposolid reads 10. Expand it: Sub-divisions reads 8."
       ]
     },
@@ -163,7 +163,7 @@
       "expected": "eye Hidden, temporary bar with a count; then eye Shown and no bar after Reset",
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Make {3D} active. Explorer tab, only the Architectural link ticked. Open Categories, click the eye on Walls.",
+        "Make {3D} active. Explorer tab, only the Architectural link checked. Open Categories, click the eye on Walls.",
         "The linked walls disappear, the eye is closed and the temporary bar shows a count. Click Reset: walls back, eye open, no bar."
       ]
     },
@@ -200,7 +200,7 @@
       "expected": "'Temporary hide/isolate' with Show; closed by the close button",
       "images": ["before", "strip", "after"],
       "manualSteps": [
-        "Explorer tab, Current model ticked, Categories only Ducts. Collapse all, expand Current model, click the eye on Ducts.",
+        "Explorer tab, Current model checked, Categories only Ducts. Collapse all, expand Current model, click the eye on Ducts.",
         "Expand Ducts down to an instance and select it: the strip reads 'Temporary hide/isolate' with Show. Click the close button, then Reset."
       ]
     },
@@ -213,7 +213,7 @@
       "expected": "question '… link elements stay hidden in this view'; Cancel keeps the bar; Reset clears it",
       "images": ["before", "ask", "after", "reset"],
       "manualSteps": [
-        "Make {3D} active. Explorer tab, Architectural link ticked: Collapse all, expand the link, click the eye on Doors.",
+        "Make {3D} active. Explorer tab, Architectural link checked: Collapse all, expand the link, click the eye on Doors.",
         "Click Keep: the bar asks 'N link elements stay hidden in this view' (Keep · Cancel). Click Cancel: the bar stays. Click Reset."
       ]
     },
@@ -226,21 +226,21 @@
       "expected": "menu lists Zoom, Isolate, Hide, Halftone, Color, Why hidden (Select only while selection sync is off); eye Hidden, bar with a count; then no bar",
       "images": ["before", "menu", "after", "reset"],
       "manualSteps": [
-        "Explorer tab, Whole model, only the Architectural link ticked: Collapse all, expand the link, select the Doors row.",
+        "Explorer tab, Whole model, only the Architectural link checked: Collapse all, expand the link, select the Doors row.",
         "Press Shift+F10 (or right-click): the menu lists Zoom, Isolate, Hide, Halftone, Color and Why hidden? (Select shows only while selection sync is off). Click Hide: the Doors eye reads Hidden and the bar shows a count.",
         "Click Reset: the bar goes away."
       ]
     },
     {
       "id": "UI-19",
-      "description": "Categories box menu (B31): Shift+F10 on the ticked Walls row, Isolate, Reset, then Halftone, Reset",
+      "description": "Categories box menu (B31): Shift+F10 on the checked Walls row, Isolate, Reset, then Halftone, Reset",
       "test": "BoxMenuIsolateHalftone",
       "cases": [],
       "category": "OST_Walls",
       "expected": "Isolate: bar with a count, then no bar; Halftone: bar with a count, then no bar",
       "images": ["before", "isolate", "halftone", "after"],
       "manualSteps": [
-        "Explorer tab, Whole model, only the Architectural link ticked: open Categories, click None, tick Walls.",
+        "Explorer tab, Whole model, only the Architectural link checked: open Categories, click None, check Walls.",
         "Press Shift+F10 on the Walls row (or right-click it), click Isolate: only walls stay drawn and the bar shows a count. Click Reset.",
         "Open the menu again, click Halftone: walls draw halftone and the bar shows a count. Click Reset."
       ]
@@ -253,7 +253,7 @@
       "expected": "TX-01 count; bar with a count; then no bar",
       "images": ["before", "after", "reset"],
       "manualSteps": [
-        "Filter tab, Whole model, only the Architectural link ticked: + (new filter), Categories Doors, rule Mark equals 's10' (1 match).",
+        "Filter tab, Whole model, only the Architectural link checked: + (new filter), Categories Doors, rule Mark equals 's10' (1 match).",
         "Click the mode box in the result row and press Shift+F10 (or right-click the row), click Hide: the bar shows a count.",
         "Click Reset: the bar goes away."
       ]
@@ -267,7 +267,7 @@
       "expected": "no dot before; dot and eye Hidden after Keep; no dot and eye Shown after Show",
       "images": ["before", "kept", "after"],
       "manualSteps": [
-        "Make L3 active. Explorer tab, Active view, only the Architectural link ticked: Collapse all, expand the link.",
+        "Make L3 active. Explorer tab, Active view, only the Architectural link checked: Collapse all, expand the link.",
         "Click the eye on Doors, then Keep and confirm Keep: the bar goes away, the Doors eye reads hidden and a small orange dot shows left of the row tools.",
         "Click the Doors eye again: the doors show and the dot goes away."
       ]

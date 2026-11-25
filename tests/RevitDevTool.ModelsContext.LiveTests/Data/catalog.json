@@ -12,7 +12,7 @@
       "bindings": "Instance",
       "expected": "one item: Number, Family, Instance",
       "manualSteps": [
-        "Open the sample with the Architectural link and the Model Context panel; tick only the Architectural link.",
+        "Open the sample with the Architectural link and the Model Context panel; check only the Architectural link.",
         "Filter tab: + New filter, + Condition, open the parameter picker and type 'Swing'.",
         "Exactly one 'Swing Angle' item is listed, tagged Family and Instance, and its value box takes an angle."
       ]
@@ -28,7 +28,7 @@
       "bindingsInclude": ["Instance"],
       "expected": "Text, Built-in, Instance",
       "manualSteps": [
-        "Tick only the Architectural link; Filter tab: + New filter, + Condition, type 'Mark' in the picker.",
+        "Check only the Architectural link; Filter tab: + New filter, + Condition, type 'Mark' in the picker.",
         "'Mark' is tagged Built-in and Instance; the operator list offers the text operators (contains, begins with ...) and the Aa toggle."
       ]
     },
@@ -42,7 +42,7 @@
       "bindingsInclude": ["Type"],
       "expected": "Enumerated, Type",
       "manualSteps": [
-        "Tick only the Architectural link; Filter tab: + New filter, Categories Walls, + Condition, type 'Function'.",
+        "Check only the Architectural link; Filter tab: + New filter, Categories Walls, + Condition, type 'Function'.",
         "'Function' is tagged Type; the operators are equals / does not equal / empty / defined, and the value box lists Interior, Exterior, Foundation ..."
       ]
     },
@@ -55,7 +55,7 @@
       "kind": "YesNo",
       "expected": "YesNo",
       "manualSteps": [
-        "Tick only the Architectural link; Filter tab: + New filter, Categories Walls, + Condition, pick 'Room Bounding'.",
+        "Check only the Architectural link; Filter tab: + New filter, Categories Walls, + Condition, pick 'Room Bounding'.",
         "The value box offers Yes and No only."
       ]
     },
@@ -68,7 +68,7 @@
       "kind": "Reference",
       "expected": "Reference",
       "manualSteps": [
-        "Tick only 'Current model'; Filter tab: + New filter, Categories Ducts, + Condition, pick 'Reference Level'.",
+        "Check only 'Current model'; Filter tab: + New filter, Categories Ducts, + Condition, pick 'Reference Level'.",
         "The value box takes a level name (for example L3) and the operators are equality only."
       ]
     },
@@ -81,7 +81,7 @@
       "kind": "Integer",
       "expected": "Integer",
       "manualSteps": [
-        "Tick only the Architectural link; Filter tab: + New filter, Categories Stairs, + Condition, pick 'Actual Number of Risers'.",
+        "Check only the Architectural link; Filter tab: + New filter, Categories Stairs, + Condition, pick 'Actual Number of Risers'.",
         "The operators include is greater than / is less than and the value box takes whole numbers."
       ]
     },
@@ -94,7 +94,7 @@
       "origins": ["Shared"],
       "expected": "Shared",
       "manualSteps": [
-        "Tick only the Architectural link; Filter tab: + New filter, + Condition, type the shared parameter name from sample-facts.json.",
+        "Check only the Architectural link; Filter tab: + New filter, + Condition, type the shared parameter name from sample-facts.json.",
         "The item carries the Shared tag."
       ]
     },
@@ -106,7 +106,7 @@
       "models": 2,
       "expected": "2 models",
       "manualSteps": [
-        "Tick 'Current model' and the Architectural link; Filter tab: + New filter, + Condition, type 'Mark'.",
+        "Check 'Current model' and the Architectural link; Filter tab: + New filter, + Condition, type 'Mark'.",
         "Hover 'Mark': the tooltip lists both models under Models."
       ]
     },
@@ -118,7 +118,7 @@
       "models": 1,
       "expected": "1 model",
       "manualSteps": [
-        "Tick 'Current model' and the Architectural link; Filter tab: + New filter, + Condition, type 'Swing'.",
+        "Check 'Current model' and the Architectural link; Filter tab: + New filter, + Condition, type 'Swing'.",
         "'Swing Angle' has no warning color; its tooltip lists only the Architectural link under Models."
       ]
     },
@@ -133,7 +133,7 @@
       "values": 131,
       "expected": "total 142, elements with a value 131",
       "manualSteps": [
-        "Tick only the Architectural link; Filter tab: + New filter, Categories Doors, + Condition, pick 'Swing Angle', operator equals.",
+        "Check only the Architectural link; Filter tab: + New filter, Categories Doors, + Condition, pick 'Swing Angle', operator equals.",
         "Open the value box: the listed values add up to 131 doors out of 142 (11 doors have no Swing Angle).",
         "Check without the panel: open 'Snowdon Towers Sample Architectural.rvt' (do not save), Doors schedule with field Swing Angle, sort and group by it, Grand totals > Count."
       ]
@@ -144,7 +144,7 @@
       "check": "BuildTime",
       "expected": "Trace lines recorded for both documents",
       "manualSteps": [
-        "Settings > Logging level Trace, open the Model Context panel on the sample with the Architectural link ticked, Filter tab, + New filter, + Condition.",
+        "Settings > Logging level Trace, open the Model Context panel on the sample with the Architectural link checked, Filter tab, + New filter, + Condition.",
         "The log has 'Revit Catalog', 'Revit Catalog samples' and 'Revit Catalog build' lines for both documents; set the level back."
       ]
     },

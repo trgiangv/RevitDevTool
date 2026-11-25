@@ -10,7 +10,7 @@ namespace DevTools.ModelsContext.Views.Tests.Filters;
 public sealed class FilterViewTests
 {
     [TestMethod]
-    public void AllTicksListedCategories()
+    public void AllChecksListedCategories()
     {
         using var ui = OpenFilter();
         ui.Host.FindInWindow("Filter.Categories").Patterns.Toggle.Pattern.Toggle();
@@ -18,7 +18,7 @@ public sealed class FilterViewTests
         ui.Press("Filter.CategoryAll");
 
         Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Categories.Items.All(category => category.IsChecked)),
-            "All did not tick every category.");
+            "All did not check every category.");
     }
 
     [TestMethod]
@@ -143,7 +143,7 @@ public sealed class FilterViewTests
         using var ui = OpenPaused();
 
         ui.Press("Filter.CategoryNone");
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Categories.Items.All(category => !category.IsChecked)), "None did not untick.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Categories.Items.All(category => !category.IsChecked)), "None did not uncheck.");
         WpfSta.Invoke(() => ui.Clock.Advance(FilterRunner.SelectionSyncDelay));
 
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Paused") is null),
@@ -582,10 +582,10 @@ public sealed class FilterViewTests
     private static PanelUi OpenPaused()
     {
         var ui = OpenFilter();
-        WpfSta.Invoke(() => ui.Panel.ContextBar.Tick(ui.Model.Data.Documents.Select(document => document.Key)));
+        WpfSta.Invoke(() => ui.Panel.ContextBar.Check(ui.Model.Data.Documents.Select(document => document.Key)));
         ui.Host.FindInWindow("Filter.Categories").Patterns.Toggle.Pattern.Toggle();
         ui.Press("Filter.CategoryAll");
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Categories.Items.All(category => category.IsChecked)), "All did not tick.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Filter.Categories.Items.All(category => category.IsChecked)), "All did not check.");
         WpfSta.Invoke(() => ui.Clock.Advance(FilterRunner.SelectionSyncDelay));
         Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Host.TryFindInWindow("Filter.Paused") is not null),
             "The paused line did not show over the limit.");

@@ -13,7 +13,7 @@ public sealed class CategoryBoxTests
     private static readonly DocumentKey Current = FakeModelGenerator.Current;
 
     [TestMethod]
-    public async Task CategoriesStartTicked()
+    public async Task CategoriesStartChecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var picker = fixture.Explorer.Categories.Picker;
@@ -24,7 +24,7 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task UntickDropsGroupRow()
+    public async Task UncheckDropsGroupRow()
     {
         using var fixture = await PanelFixture.OpenAsync();
 
@@ -35,7 +35,7 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task ModelCountFollowsTicks()
+    public async Task ModelCountFollowsChecks()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var before = fixture.Explorer.Rows[0].Count;
@@ -47,26 +47,26 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task NewCategoryShowsTicked()
+    public async Task NewCategoryShowsChecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var bar = fixture.Panel.ContextBar;
-        bar.Tick([FakeModelGenerator.ArchFirst]);
+        bar.Check([FakeModelGenerator.ArchFirst]);
         bar.Documents.First(item => item.Key == Current).IsChecked = false;
         Assert.IsFalse(fixture.Explorer.Categories.Picker.Items.Any(item => item.Name == "Ducts"));
         Item(fixture, "Walls").IsChecked = false;
 
-        bar.Tick([Current]);
+        bar.Check([Current]);
 
         Assert.IsTrue(Item(fixture, "Ducts").IsChecked);
         Assert.IsFalse(Item(fixture, "Walls").IsChecked);
     }
 
     [TestMethod]
-    public async Task IsolateActsOnTicked()
+    public async Task IsolateActsOnChecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        TickOnly(fixture, "Ducts", "Walls");
+        CheckOnly(fixture, "Ducts", "Walls");
 
         await fixture.Explorer.Categories.IsolateCommand.ExecuteAsync(null);
 
@@ -77,10 +77,10 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task HalftoneActsOnTicked()
+    public async Task HalftoneActsOnChecked()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        TickOnly(fixture, "Ducts");
+        CheckOnly(fixture, "Ducts");
 
         await fixture.Explorer.Categories.HalftoneCommand.ExecuteAsync(null);
 
@@ -89,12 +89,12 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task NoTickDisablesMenu()
+    public async Task NoCheckDisablesMenu()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var categories = fixture.Explorer.Categories;
 
-        TickOnly(fixture);
+        CheckOnly(fixture);
 
         Assert.IsFalse(categories.IsolateCommand.CanExecute(null));
         Assert.IsFalse(categories.HalftoneCommand.CanExecute(null));
@@ -103,11 +103,11 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task TickEnablesMenu()
+    public async Task CheckEnablesMenu()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var categories = fixture.Explorer.Categories;
-        TickOnly(fixture);
+        CheckOnly(fixture);
 
         Item(fixture, "Ducts").IsChecked = true;
 
@@ -116,11 +116,11 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task SearchKeepsHiddenTicks()
+    public async Task SearchKeepsHiddenChecks()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var picker = fixture.Explorer.Categories.Picker;
-        TickOnly(fixture, "Ducts");
+        CheckOnly(fixture, "Ducts");
 
         picker.Search = "Walls";
 
@@ -129,14 +129,66 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task SetTicksBatchesOneChange()
+    public async Task HideUncheckedListsCheckedOnly()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var picker = fixture.Explorer.Categories.Picker;
+        CheckOnly(fixture, "Ducts", "Walls");
+
+        picker.HideUnchecked = true;
+
+        CollectionAssert.AreEquivalent(new[] { "Ducts", "Walls" }, Visible(picker));
+    }
+
+    [TestMethod]
+    public async Task HideUncheckedCombinesWithSearch()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var picker = fixture.Explorer.Categories.Picker;
+        CheckOnly(fixture, "Ducts", "Walls");
+        picker.HideUnchecked = true;
+
+        picker.Search = "Duct";
+
+        CollectionAssert.AreEqual(new[] { "Ducts" }, Visible(picker));
+    }
+
+    [TestMethod]
+    public async Task UncheckDropsHiddenRow()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var picker = fixture.Explorer.Categories.Picker;
+        CheckOnly(fixture, "Ducts", "Walls");
+        picker.HideUnchecked = true;
+
+        Item(fixture, "Ducts").IsChecked = false;
+
+        CollectionAssert.AreEqual(new[] { "Walls" }, Visible(picker));
+    }
+
+    [TestMethod]
+    public async Task HideOffListsAllAgain()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var picker = fixture.Explorer.Categories.Picker;
+        var all = Visible(picker);
+        CheckOnly(fixture, "Ducts");
+        picker.HideUnchecked = true;
+
+        picker.HideUnchecked = false;
+
+        CollectionAssert.AreEqual(all, Visible(picker));
+    }
+
+    [TestMethod]
+    public async Task SetChecksBatchesOneChange()
     {
         using var fixture = await PanelFixture.OpenAsync();
         var picker = fixture.Explorer.Categories.Picker;
         var changes = 0;
-        picker.TicksChanged += (_, _) => changes++;
+        picker.ChecksChanged += (_, _) => changes++;
 
-        picker.SetTicks([Item(fixture, "Ducts")], picker.Items.Where(item => item.Name != "Ducts").ToList());
+        picker.SetChecks([Item(fixture, "Ducts")], picker.Items.Where(item => item.Name != "Ducts").ToList());
 
         Assert.AreEqual(1, changes);
         Assert.AreEqual("Ducts", picker.Items.Single(item => item.IsChecked).Name);
@@ -144,10 +196,10 @@ public sealed class CategoryBoxTests
     }
 
     [TestMethod]
-    public async Task NoTickReportsReason()
+    public async Task NoCheckReportsReason()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        TickOnly(fixture);
+        CheckOnly(fixture);
 
         await fixture.Explorer.Categories.HalftoneCommand.ExecuteAsync(null);
 
@@ -159,7 +211,7 @@ public sealed class CategoryBoxTests
     public async Task IsolateShowsLinkNotice()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        TickOnly(fixture, "Ducts");
+        CheckOnly(fixture, "Ducts");
         fixture.Actions.Notice = VisibilityText.LinksKeepOwnSettings;
 
         await fixture.Explorer.Categories.IsolateCommand.ExecuteAsync(null);
@@ -196,7 +248,7 @@ public sealed class CategoryBoxTests
         Assert.AreEqual("Show in view: Current model", ExplorerCategories.EyeTipOf(true, 0));
     }
 
-    private static void TickOnly(PanelFixture fixture, params string[] names)
+    private static void CheckOnly(PanelFixture fixture, params string[] names)
     {
         var picker = fixture.Explorer.Categories.Picker;
         picker.CheckNoneCommand.Execute(null);
@@ -204,6 +256,11 @@ public sealed class CategoryBoxTests
         {
             Item(fixture, name).IsChecked = true;
         }
+    }
+
+    private static string[] Visible(CategoryPickerViewModel picker)
+    {
+        return picker.VisibleItems.Select(item => item.Name).ToArray();
     }
 
     private static CategoryItemViewModel Item(PanelFixture fixture, string name)

@@ -41,7 +41,7 @@ public sealed class CategoryNestingTests
     }
 
     [TestMethod]
-    public async Task BoxTickCascades()
+    public async Task BoxCheckCascades()
     {
         var (fixture, picker, parent, child) = await OpenNoneAsync();
         using var _ = fixture;
@@ -55,7 +55,7 @@ public sealed class CategoryNestingTests
     }
 
     [TestMethod]
-    public async Task RowTickTicksChildren()
+    public async Task RowCheckChecksChildren()
     {
         var (fixture, _, parent, child) = await OpenNoneAsync();
         using var _ = fixture;
@@ -82,11 +82,11 @@ public sealed class CategoryNestingTests
     }
 
     [TestMethod]
-    public async Task PartlyClickTicksAll()
+    public async Task PartlyClickChecksAll()
     {
         var (fixture, picker, parent, child) = await OpenNoneAsync();
         using var _ = fixture;
-        picker.SetTicks([parent], [child]);
+        picker.SetChecks([parent], [child]);
         Assert.IsNull(parent.BoxState);
 
         parent.BoxState = false;
@@ -108,6 +108,19 @@ public sealed class CategoryNestingTests
         Assert.DoesNotContain(SubDivisionName, picker.VisibleItems.Select(item => item.Name).ToList());
     }
 
+    [TestMethod]
+    public async Task HideKeepsParentOfCheckedChild()
+    {
+        var (fixture, picker, parent, child) = await OpenNoneAsync();
+        using var _ = fixture;
+        picker.SetChecks([child], [parent]);
+
+        picker.HideUnchecked = true;
+        parent.IsExpanded = true;
+
+        CollectionAssert.AreEqual(new[] { "Toposolid", SubDivisionName }, picker.VisibleItems.Select(item => item.Name).ToArray());
+    }
+
     private static async Task<(PanelFixture Fixture, CategoryPickerViewModel Picker, CategoryItemViewModel Parent,
         CategoryItemViewModel Child)> OpenNoneAsync()
     {
@@ -118,7 +131,7 @@ public sealed class CategoryNestingTests
             picker.Items.First(item => item.Name == SubDivisionName));
     }
     [TestMethod]
-    public async Task AllTicksCollapsedChildren()
+    public async Task AllChecksCollapsedChildren()
     {
         using var fixture = await PanelFixture.OpenAsync(WithToposolid());
         var picker = fixture.Explorer.Categories.Picker;

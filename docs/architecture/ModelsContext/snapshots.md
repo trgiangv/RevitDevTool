@@ -6,7 +6,7 @@ How the panel knows what is in each model without holding Revit objects.
 
 | Key | Means | Used for |
 |-----|-------|----------|
-| `DocumentKey(ModelId, LinkInstanceId)` | One entry in the documents box: the Current model (`LinkInstanceId = -1`) or one link instance inside it. | Ticks, tree groups, selection, view actions, the T3 journal. |
+| `DocumentKey(ModelId, LinkInstanceId)` | One entry in the documents box: the Current model (`LinkInstanceId = -1`) or one link instance inside it. | Checks, tree groups, selection, view actions, the T3 journal. |
 | `SourceId` | One document file: `model:<path>` for a Current model, `link:<path, lower case>` for a link document. | Snapshots, parameter catalogs, value caches. |
 | `ElementRef(DocumentKey, long)` | One element in one entry. | Selection and results. |
 

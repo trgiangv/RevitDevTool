@@ -25,7 +25,7 @@ internal static class CategoryShotRun
             var theme = ThemeManager.Current.ActualApplicationTheme;
 
             panel.ContextBar.Scope = ScopeKind.ActiveView;
-            panel.ContextBar.Tick([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
+            panel.ContextBar.Check([FakeModelGenerator.Current, FakeModelGenerator.Mep]);
             await panel.RefreshAsync();
             await Task.Delay(2500);
 
@@ -60,6 +60,10 @@ internal static class CategoryShotRun
             Reveal(filterSection, panel.Filter.Categories);
             await Task.Delay(800);
             ShotRun.Save(window, Path.Combine(directory, $"{theme}-filter-categories.png"));
+
+            panel.Filter.Categories.HideUnchecked = true;
+            await Task.Delay(600);
+            ShotRun.Save(window, Path.Combine(directory, $"{theme}-filter-categories-hide-unchecked.png"));
             return 0;
         }
         catch (Exception ex)

@@ -13,20 +13,20 @@ public sealed class CategoryTreeViewTests
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void ParentTickTicksChildren(string prefix)
+    public void ParentCheckChecksChildren(string prefix)
     {
         using var ui = OpenBox(prefix);
 
         Box(ui, prefix, "Toposolid").Patterns.Toggle.Pattern.Toggle();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SetEquals(["Toposolid", "Sub-divisions"])),
-            "The parent tick did not tick its children.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SetEquals(["Toposolid", "Sub-divisions"])),
+            "The parent check did not check its children.");
     }
 
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void ChildUntickShowsPartly(string prefix)
+    public void ChildUncheckShowsPartly(string prefix)
     {
         using var ui = OpenBox(prefix);
         Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.Toggle();
@@ -35,8 +35,8 @@ public sealed class CategoryTreeViewTests
         Box(ui, prefix, "Top Rails").Patterns.Toggle.Pattern.Toggle();
 
         Assert.IsTrue(ThemeHost.WaitForUi(() => Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.ToggleState.Value
-                                                == ToggleState.Indeterminate), "The parent box is not partly ticked.");
-        Assert.IsTrue(Ticked(ui, prefix).SetEquals(["Railings", "Balusters"]));
+                                                == ToggleState.Indeterminate), "The parent box is not partly checked.");
+        Assert.IsTrue(Checked(ui, prefix).SetEquals(["Railings", "Balusters"]));
     }
 
     [TestMethod]
@@ -56,46 +56,46 @@ public sealed class CategoryTreeViewTests
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void ParentSelectTicksChildren(string prefix)
+    public void ParentSelectChecksChildren(string prefix)
     {
         using var ui = OpenBox(prefix);
 
         Row(ui, prefix, "Railings").Patterns.SelectionItem.Pattern.Select();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SetEquals(Railings)), "Selecting the parent did not tick its children.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SetEquals(Railings)), "Selecting the parent did not check its children.");
         Assert.AreEqual(ToggleState.On, Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.ToggleState.Value);
     }
 
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void ParentDeselectUnticks(string prefix)
+    public void ParentDeselectUnchecks(string prefix)
     {
         using var ui = OpenBox(prefix);
         var row = Row(ui, prefix, "Railings");
         row.Patterns.SelectionItem.Pattern.Select();
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SetEquals(Railings)), "Selecting the parent did not tick it.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SetEquals(Railings)), "Selecting the parent did not check it.");
 
         row.Patterns.SelectionItem.Pattern.RemoveFromSelection();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).Count == 0), "Deselecting the parent left ticks.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).Count == 0), "Deselecting the parent left checks.");
     }
 
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void PartlyClickTicksAll(string prefix)
+    public void PartlyClickChecksAll(string prefix)
     {
         using var ui = OpenBox(prefix);
         Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.Toggle();
         Expander(ui, prefix, "Railings").Patterns.Toggle.Pattern.Toggle();
         Box(ui, prefix, "Top Rails").Patterns.Toggle.Pattern.Toggle();
         Assert.IsTrue(ThemeHost.WaitForUi(() => Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.ToggleState.Value
-                                                == ToggleState.Indeterminate), "The parent box is not partly ticked.");
+                                                == ToggleState.Indeterminate), "The parent box is not partly checked.");
 
         Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.Toggle();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SetEquals(Railings)), "A partly ticked parent click did not tick all.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SetEquals(Railings)), "A partly checked parent click did not check all.");
         Assert.IsTrue(ThemeHost.WaitForUi(() => Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.ToggleState.Value
                                                 == ToggleState.On), "The parent box does not read checked.");
     }
@@ -103,19 +103,19 @@ public sealed class CategoryTreeViewTests
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void HandTickedChildrenCheckParent(string prefix)
+    public void HandCheckedChildrenCheckParent(string prefix)
     {
         using var ui = OpenBox(prefix);
         Expander(ui, prefix, "Railings").Patterns.Toggle.Pattern.Toggle();
 
         Box(ui, prefix, "Top Rails").Patterns.Toggle.Pattern.Toggle();
         Assert.IsTrue(ThemeHost.WaitForUi(() => Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.ToggleState.Value
-                                                == ToggleState.Indeterminate), "One child did not leave the parent partly ticked.");
+                                                == ToggleState.Indeterminate), "One child did not leave the parent partly checked.");
         Box(ui, prefix, "Balusters").Patterns.Toggle.Pattern.Toggle();
 
         Assert.IsTrue(ThemeHost.WaitForUi(() => Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.ToggleState.Value
-                                                == ToggleState.On), "Every child ticked did not check the parent.");
-        Assert.IsTrue(Ticked(ui, prefix).SetEquals(Railings));
+                                                == ToggleState.On), "Every child checked did not check the parent.");
+        Assert.IsTrue(Checked(ui, prefix).SetEquals(Railings));
     }
 
     [TestMethod]
@@ -128,8 +128,8 @@ public sealed class CategoryTreeViewTests
         Row(ui, prefix, "Railings").Patterns.SelectionItem.Pattern.Select();
         Row(ui, prefix, "Toposolid").Patterns.SelectionItem.Pattern.AddToSelection();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SetEquals([.. Railings, "Toposolid", "Sub-divisions"])),
-            "Select and add did not tick both parents with their children.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SetEquals([.. Railings, "Toposolid", "Sub-divisions"])),
+            "Select and add did not check both parents with their children.");
     }
 
     [TestMethod]
@@ -143,13 +143,13 @@ public sealed class CategoryTreeViewTests
 
         Row(ui, prefix, "Top Rails").Patterns.SelectionItem.Pattern.Select();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SetEquals(["Top Rails"])), "Selecting a child did not tick only it: " + string.Join(", ", Ticked(ui, prefix)));
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SetEquals(["Top Rails"])), "Selecting a child did not check only it: " + string.Join(", ", Checked(ui, prefix)));
         Assert.AreEqual(ToggleState.Indeterminate, Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.ToggleState.Value);
     }
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void CollapseKeepsChildTicks(string prefix)
+    public void CollapseKeepsChildChecks(string prefix)
     {
         using var ui = OpenBox(prefix);
         Box(ui, prefix, "Railings").Patterns.Toggle.Pattern.Toggle();
@@ -160,13 +160,13 @@ public sealed class CategoryTreeViewTests
         expander.Patterns.Toggle.Pattern.Toggle();
 
         Assert.IsTrue(ThemeHost.WaitForUi(() => !RowNames(ui, prefix).Contains("Top Rails")), "Collapse left the children.");
-        Assert.IsTrue(Ticked(ui, prefix).SetEquals(["Railings", "Top Rails", "Balusters"]), "Collapse changed the ticks.");
+        Assert.IsTrue(Checked(ui, prefix).SetEquals(["Railings", "Top Rails", "Balusters"]), "Collapse changed the checks.");
     }
 
     [TestMethod]
     [DataRow("Explorer")]
     [DataRow("Filter")]
-    public void TickDuringExpandHolds(string prefix)
+    public void CheckDuringExpandHolds(string prefix)
     {
         using var ui = OpenBox(prefix);
         ui.Press(prefix + ".CategoryAll");
@@ -180,7 +180,7 @@ public sealed class CategoryTreeViewTests
         });
 
         Assert.IsTrue(ThemeHost.WaitForUi(() => RowNames(ui, prefix).Contains("Sub-divisions")), "Expand did not list the child.");
-        Assert.IsFalse(Ticked(ui, prefix).Contains("Roofs"), "The list ticked Roofs again.");
+        Assert.IsFalse(Checked(ui, prefix).Contains("Roofs"), "The list checked Roofs again.");
     }
     [TestMethod]
     [DataRow("Explorer")]
@@ -190,11 +190,11 @@ public sealed class CategoryTreeViewTests
         using var ui = OpenBox(prefix);
         var row = Row(ui, prefix, "Railings");
         row.Patterns.SelectionItem.Pattern.Select();
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SetEquals(Railings)), "Selecting the parent did not tick it.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SetEquals(Railings)), "Selecting the parent did not check it.");
 
         row.Patterns.SelectionItem.Pattern.Select();
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).SetEquals(Railings)), "Selecting the parent again dropped its children.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SetEquals(Railings)), "Selecting the parent again dropped its children.");
     }
     private static PanelUi OpenBox(string prefix)
     {
@@ -209,7 +209,7 @@ public sealed class CategoryTreeViewTests
 
         ui.Host.FindInWindow(prefix + ".Categories").Patterns.Toggle.Pattern.Toggle();
         ui.Press(prefix + ".CategoryNone");
-        Assert.IsTrue(ThemeHost.WaitFor(() => Ticked(ui, prefix).Count == 0), "None left ticks.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).Count == 0), "None left checks.");
         return ui;
     }
 
@@ -218,7 +218,7 @@ public sealed class CategoryTreeViewTests
         return prefix == "Filter" ? ui.Panel.Filter.Categories : ui.Panel.Explorer.Categories.Picker;
     }
 
-    private static HashSet<string> Ticked(PanelUi ui, string prefix)
+    private static HashSet<string> Checked(PanelUi ui, string prefix)
     {
         return WpfSta.Invoke(() => Picker(ui, prefix).Items.Where(item => item.IsChecked).Select(item => item.Name).ToHashSet());
     }

@@ -24,7 +24,7 @@ public sealed class LinkIsolateRefusalTests
     public async Task RefusedIsolateChangesNothing(string refusal)
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         fixture.Actions.Refusal = refusal;
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
 

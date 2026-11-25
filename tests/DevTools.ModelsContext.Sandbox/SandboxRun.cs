@@ -103,10 +103,10 @@ internal sealed class SandboxRun : IDisposable
         Report($"first rows {rowsMs:F0} ms (rendered {renderedMs:F0} ms), rows {explorer.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
 
         watch.Restart();
-        Panel.ContextBar.Tick(Data.Documents.Select(document => document.Key));
+        Panel.ContextBar.Check(Data.Documents.Select(document => document.Key));
         await Panel.RefreshAsync();
         await Idle();
-        Report($"all {Data.Documents.Count} documents ticked {watch.Elapsed.TotalMilliseconds:F0} ms, rows {explorer.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
+        Report($"all {Data.Documents.Count} documents checked {watch.Elapsed.TotalMilliseconds:F0} ms, rows {explorer.Rows.Count}, longest stall {stall.TakeMax():F0} ms");
 
         var type = await FindTypeAsync(explorer);
         stall.TakeMax();

@@ -44,9 +44,9 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _visibility = visibility;
         _menu = menu;
         _states = new DocumentStates(visibility);
-        Categories = new ExplorerCategories(runtime, visibility, bar, menu, () => _tree!.Token, OnTicksChanged,
+        Categories = new ExplorerCategories(runtime, visibility, bar, menu, () => _tree!.Token, OnChecksChanged,
             report);
-        Pick = new ExplorerPick(runtime, () => bar.TickedDocuments, () => Categories.Ticked);
+        Pick = new ExplorerPick(runtime, () => bar.CheckedDocuments, () => Categories.Checked);
         _tree = new ExplorerTree(runtime, _states, Categories);
         var reveal = new TreeReveal(runtime, _tree);
         _search = new ExplorerSearch(runtime, _tree, reveal);
@@ -246,7 +246,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _tree.Token = cancellationToken;
         _tree.Clear();
         await _rows.ReadHiddenAsync();
-        await Categories.ReadTickedAsync(data, cancellationToken);
+        await Categories.ReadCheckedAsync(data, cancellationToken);
         Categories.Rebuild(data);
         Pick.Refresh();
         await BuildTreeAsync(state);
@@ -394,7 +394,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _rows.Publish();
     }
 
-    private void OnTicksChanged()
+    private void OnChecksChanged()
     {
         Pick.Refresh();
         Pick.Clear();

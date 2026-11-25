@@ -55,7 +55,7 @@ Rules for the test body:
 - Mark the class `[DoNotParallelize]`; windows and focus are shared state.
 - Dispose the window and the automation object in `Dispose`, or the next test
   finds the previous window.
-- Name the test for the behavior in a few plain words (`AllTicksListedCategories`).
+- Name the test for the behavior in a few plain words (`AllChecksListedCategories`).
 
 ## Live checks on a running app
 

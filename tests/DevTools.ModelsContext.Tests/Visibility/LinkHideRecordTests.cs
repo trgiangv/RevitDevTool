@@ -143,7 +143,7 @@ public sealed class LinkHideRecordTests
     {
         var fixture = await PanelFixture.OpenAsync(scope: scope);
         fixture.Model.ViewLinks.Add(Mep);
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
         await fixture.Panel.RefreshAsync();
         return fixture;
     }

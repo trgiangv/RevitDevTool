@@ -35,11 +35,11 @@ public sealed class MessageTests
     }
 
     [TestMethod]
-    public async Task TickChangeClearsMessage()
+    public async Task CheckChangeClearsMessage()
     {
         using var fixture = await RefusedAsync();
 
-        fixture.Panel.ContextBar.Tick([Current, Mep]);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
 
         Assert.IsNull(fixture.Panel.Message);
     }

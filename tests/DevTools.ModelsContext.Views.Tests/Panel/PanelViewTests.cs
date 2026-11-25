@@ -433,15 +433,15 @@ public sealed class PanelViewTests
     }
 
     [TestMethod]
-    public void TicksShowAsTags()
+    public void ChecksShowAsTags()
     {
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
         var keys = new[] { FakeModelGenerator.ArchFirst, FakeModelGenerator.ArchSecond, FakeModelGenerator.Mep };
 
-        WpfSta.Invoke(() => ui.Panel.ContextBar.Tick(keys));
+        WpfSta.Invoke(() => ui.Panel.ContextBar.Check(keys));
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 4), "The box did not tick every document.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 4), "The box did not check every document.");
         WpfSta.Invoke(() =>
         {
             box.UpdateLayout();
@@ -468,11 +468,11 @@ public sealed class PanelViewTests
 
         ToggleAll(ui);
 
-        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 3), "All did not tick only the loaded documents.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 3), "All did not check only the loaded documents.");
         WpfSta.Invoke(() =>
         {
             var mep = ui.Panel.ContextBar.Documents.Single(item => item.Key == FakeModelGenerator.Mep);
-            Assert.IsFalse(mep.IsChecked, "All ticked the unloaded link.");
+            Assert.IsFalse(mep.IsChecked, "All checked the unloaded link.");
             Assert.IsFalse(box.IsItemEnabled(mep), "The unloaded link is not disabled.");
         });
     }
@@ -483,12 +483,12 @@ public sealed class PanelViewTests
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
         ToggleAll(ui);
-        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 4), "All did not tick every document.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 4), "All did not check every document.");
 
         ToggleAll(ui);
 
         Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "All off did not leave one document.");
-        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
+        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.CheckedDocuments.ToList()));
     }
 
     [TestMethod]
@@ -496,56 +496,56 @@ public sealed class PanelViewTests
     {
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
-        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "The current model is not ticked.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "The current model is not checked.");
 
         CloseTag(ui, ContextBarViewModel.CurrentModelLabel);
 
         Assert.AreEqual(1, WpfSta.Invoke(() => box.SelectedItems.Count), "Closing the last tag changed the selection.");
-        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
+        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.CheckedDocuments.ToList()));
         Assert.IsNotNull(TagRemove(ui, ContextBarViewModel.CurrentModelLabel), "The last tag disappeared.");
     }
 
     [TestMethod]
-    public void ClosedBoxUnticksCurrentModel()
+    public void ClosedBoxUnchecksCurrentModel()
     {
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
         ToggleItem(ui, WpfSta.Invoke(() => ui.Panel.ContextBar.LabelOf(FakeModelGenerator.Mep)));
-        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not tick.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not check.");
 
         ToggleItem(ui, ContextBarViewModel.CurrentModelLabel);
 
         Assert.IsFalse(WpfSta.Invoke(() => box.IsDropDownOpen), "The drop-down opened.");
-        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "Current model did not untick.");
-        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Mep }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "Current model did not uncheck.");
+        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Mep }, WpfSta.Invoke(() => ui.Panel.ContextBar.CheckedDocuments.ToList()));
     }
 
     [TestMethod]
-    public void TagCloseUnticksCurrentModel()
+    public void TagCloseUnchecksCurrentModel()
     {
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
-        WpfSta.Invoke(() => ui.Panel.ContextBar.Tick([FakeModelGenerator.Mep]));
-        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not tick.");
+        WpfSta.Invoke(() => ui.Panel.ContextBar.Check([FakeModelGenerator.Mep]));
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not check.");
 
         CloseTag(ui, ContextBarViewModel.CurrentModelLabel);
 
         Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "The current model tag did not close.");
-        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Mep }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
+        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Mep }, WpfSta.Invoke(() => ui.Panel.ContextBar.CheckedDocuments.ToList()));
     }
 
     [TestMethod]
-    public void TagCloseUnticksLink()
+    public void TagCloseUnchecksLink()
     {
         using var ui = PanelUi.Open();
         var box = DocumentsBox(ui);
-        WpfSta.Invoke(() => ui.Panel.ContextBar.Tick([FakeModelGenerator.Mep]));
-        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not tick.");
+        WpfSta.Invoke(() => ui.Panel.ContextBar.Check([FakeModelGenerator.Mep]));
+        Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 2), "The link did not check.");
 
         CloseTag(ui, WpfSta.Invoke(() => ui.Panel.ContextBar.LabelOf(FakeModelGenerator.Mep)));
 
         Assert.IsTrue(ThemeHost.WaitFor(() => box.SelectedItems.Count == 1), "The link tag did not close.");
-        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.TickedDocuments.ToList()));
+        CollectionAssert.AreEqual(new[] { FakeModelGenerator.Current }, WpfSta.Invoke(() => ui.Panel.ContextBar.CheckedDocuments.ToList()));
     }
 
     [TestMethod]
@@ -575,7 +575,7 @@ public sealed class PanelViewTests
     public void KeepAsksForLinkChanges()
     {
         using var ui = PanelUi.Open();
-        WpfSta.Invoke(() => ui.Panel.ContextBar.Tick([FakeModelGenerator.Mep]));
+        WpfSta.Invoke(() => ui.Panel.ContextBar.Check([FakeModelGenerator.Mep]));
         Assert.IsTrue(
             ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.Text == "MEP-Mech.rvt")),
             "The link did not appear in Explorer.");
@@ -596,7 +596,7 @@ public sealed class PanelViewTests
     public void LinkedRowShowsColorTool()
     {
         using var ui = PanelUi.Open();
-        WpfSta.Invoke(() => ui.Panel.ContextBar.Tick([FakeModelGenerator.Mep]));
+        WpfSta.Invoke(() => ui.Panel.ContextBar.Check([FakeModelGenerator.Mep]));
         Assert.IsTrue(
             ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.Text == "Ducts" && row.IsInsideLink)),
             "The link rows did not appear in Explorer.");

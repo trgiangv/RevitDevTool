@@ -29,7 +29,7 @@ public sealed class PanelFlowTests : RecordedTest
         _panel.Settle();
         _panel.Select("ModelContext.Scope.WholeModel");
         _panel.Select("ModelContext.View.Filter");
-        _steps.TickOnly(CaseFiles.Facts.LinkLabel);
+        _steps.CheckOnly(CaseFiles.Facts.LinkLabel);
     }
 
     [ClassCleanup]

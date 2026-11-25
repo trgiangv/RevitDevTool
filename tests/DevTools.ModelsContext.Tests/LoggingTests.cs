@@ -120,7 +120,7 @@ public sealed class LoggingTests
     {
         var logger = new CollectingLogger(LogLevel.Trace);
         using var fixture = await PanelFixture.OpenAsync(logger: logger);
-        fixture.Panel.ContextBar.Tick(fixture.Model.Data.Documents.Select(document => document.Key));
+        fixture.Panel.ContextBar.Check(fixture.Model.Data.Documents.Select(document => document.Key));
         fixture.Filter.Library.AddCommand.Execute(null);
 
         fixture.Filter.Categories.CheckAllCommand.Execute(null);

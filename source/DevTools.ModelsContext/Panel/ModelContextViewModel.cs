@@ -160,12 +160,12 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         return _selection.ResyncAsync();
     }
 
-    internal void SetDocumentsQuietly(IReadOnlyList<DocumentInfo> documents, IReadOnlyCollection<DocumentKey>? ticks)
+    internal void SetDocumentsQuietly(IReadOnlyList<DocumentInfo> documents, IReadOnlyCollection<DocumentKey>? checks)
     {
         _suppressContextChanged = true;
         try
         {
-            ContextBar.SetDocuments(documents, ticks);
+            ContextBar.SetDocuments(documents, checks);
         }
         finally
         {
@@ -175,14 +175,14 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     internal void Rename(ModelRename rename)
     {
-        var ticks = ContextBar.TickedDocuments.Select(rename.Map).ToList();
+        var checks = ContextBar.CheckedDocuments.Select(rename.Map).ToList();
         var documents = ContextBar.Documents.Select(item => rename.Map(item.Info)).ToList();
         _runtime.Store.Rename(rename);
         _runtime.Forget([rename.OldSource]);
         _runtime.Journal.Rename(rename);
         _visibility.Rename(rename);
         _sessions.Rename(rename);
-        SetDocumentsQuietly(documents, ticks);
+        SetDocumentsQuietly(documents, checks);
         NotifyActiveModel();
         _ = RefreshAsync();
     }

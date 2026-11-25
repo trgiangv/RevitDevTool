@@ -28,7 +28,7 @@ public sealed class SubcategoryRowTests
     }
 
     [TestMethod]
-    public async Task SubcategoryUntickDropsRow()
+    public async Task SubcategoryUncheckDropsRow()
     {
         using var fixture = await PanelFixture.OpenAsync(WithToposolid());
         var before = fixture.Explorer.Rows[0].Count;
@@ -36,7 +36,7 @@ public sealed class SubcategoryRowTests
         Item(fixture, SubDivisionName).IsChecked = false;
 
         Assert.IsNull(fixture.FindGroup(Current, SubDivisionName));
-        Assert.IsNull(fixture.FindGroup(Current, "Toposolid"), "The parent stayed with no child ticked.");
+        Assert.IsNull(fixture.FindGroup(Current, "Toposolid"), "The parent stayed with no child checked.");
         Assert.AreEqual(before - SubDivisionCount - ToposolidCount, fixture.Explorer.Rows[0].Count);
     }
 
@@ -45,7 +45,7 @@ public sealed class SubcategoryRowTests
     {
         using var fixture = await PanelFixture.OpenAsync(WithToposolid());
         fixture.Explorer.Categories.Picker.CheckNoneCommand.Execute(null);
-        fixture.Explorer.Categories.Picker.SetTicks([Item(fixture, SubDivisionName)], []);
+        fixture.Explorer.Categories.Picker.SetChecks([Item(fixture, SubDivisionName)], []);
 
         await fixture.Explorer.Categories.IsolateCommand.ExecuteAsync(null);
 

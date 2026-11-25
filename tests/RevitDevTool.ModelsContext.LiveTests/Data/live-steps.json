@@ -7,10 +7,10 @@
   "cases": [
     {
       "id": "LS-01",
-      "description": "The live panel builds the step filter (Whole model, Current model ticked, Ducts, Comments equals mc-live-step) on the Filter tab and reports its count; the filter stays in the panel for the next MCP step",
+      "description": "The live panel builds the step filter (Whole model, Current model checked, Ducts, Comments equals mc-live-step) on the Filter tab and reports its count; the filter stays in the panel for the next MCP step",
       "expected": "the panel settles and shows a count",
       "manualSteps": [
-        "Model Context, Whole model, tick Current model; Filter tab: + New filter, Categories Ducts, + Condition Comments equals mc-live-step.",
+        "Model Context, Whole model, check Current model; Filter tab: + New filter, Categories Ducts, + Condition Comments equals mc-live-step.",
         "Read the number before 'matches'."
       ]
     },
@@ -32,11 +32,11 @@
     },
     {
       "id": "LS-04",
-      "description": "After an MCP view change the Documents ticks become the Current model plus each loaded link the new view draws; MODELS_CONTEXT_EXPECT_DOCS lists them (comma-separated parts of the labels)",
-      "expected": "ticked documents = MODELS_CONTEXT_EXPECT_DOCS",
+      "description": "After an MCP view change the Documents checks become the Current model plus each loaded link the new view draws; MODELS_CONTEXT_EXPECT_DOCS lists them (comma-separated parts of the labels)",
+      "expected": "checked documents = MODELS_CONTEXT_EXPECT_DOCS",
       "manualSteps": [
-        "Untick a link in the Documents box, then open another view in Revit (for example {3D}).",
-        "The Documents box ticks the Current model and every link that view draws; your untick is gone."
+        "Uncheck a link in the Documents box, then open another view in Revit (for example {3D}).",
+        "The Documents box checks the Current model and every link that view draws; your uncheck is gone."
       ]
     }
   ]

@@ -44,7 +44,7 @@ public sealed class DocumentItemViewModel : ObservableObject
 
             _isChecked = value;
             OnPropertyChanged();
-            _owner.OnTicksChanged();
+            _owner.OnChecksChanged();
         }
     }
 
@@ -76,7 +76,7 @@ public sealed partial class ContextBarViewModel : ObservableObject
 {
     public const string CurrentModelLabel = "Current model";
 
-    public const string LastDocumentHint = "Keep at least one document ticked.";
+    public const string LastDocumentHint = "Keep at least one document checked.";
 
     private int _batch;
 
@@ -112,7 +112,7 @@ public sealed partial class ContextBarViewModel : ObservableObject
 
     public DocumentKey? CurrentModel => Documents.FirstOrDefault(item => item.Key.IsCurrentModel)?.Key;
 
-    public IReadOnlyList<DocumentKey> TickedDocuments => Documents
+    public IReadOnlyList<DocumentKey> CheckedDocuments => Documents
         .Where(item => item.IsChecked)
         .Select(item => item.Key)
         .ToList();
@@ -130,7 +130,7 @@ public sealed partial class ContextBarViewModel : ObservableObject
         SetDocuments(documents, null);
     }
 
-    internal void SetDocuments(IReadOnlyList<DocumentInfo> documents, IReadOnlyCollection<DocumentKey>? ticks)
+    internal void SetDocuments(IReadOnlyList<DocumentInfo> documents, IReadOnlyCollection<DocumentKey>? checks)
     {
         var labels = Labels(documents);
         var known = Documents.ToDictionary(item => item.Key);
@@ -149,9 +149,9 @@ public sealed partial class ContextBarViewModel : ObservableObject
                 item.SetChecked(first && info.Key.IsCurrentModel && info.IsLoaded);
             }
 
-            if (ticks is not null)
+            if (checks is not null)
             {
-                item.SetChecked(ticks.Contains(info.Key));
+                item.SetChecked(checks.Contains(info.Key));
             }
 
             Documents.Add(item);
@@ -164,10 +164,10 @@ public sealed partial class ContextBarViewModel : ObservableObject
 
         _batch--;
         OnPropertyChanged(nameof(CurrentModel));
-        OnTicksChanged();
+        OnChecksChanged();
     }
 
-    public void Tick(IEnumerable<DocumentKey> keys)
+    public void Check(IEnumerable<DocumentKey> keys)
     {
         var wanted = keys.ToHashSet();
         var changed = false;
@@ -179,7 +179,7 @@ public sealed partial class ContextBarViewModel : ObservableObject
 
         if (changed)
         {
-            OnTicksChanged();
+            OnChecksChanged();
         }
     }
 
@@ -201,7 +201,7 @@ public sealed partial class ContextBarViewModel : ObservableObject
         }
     }
 
-    internal void OnTicksChanged()
+    internal void OnChecksChanged()
     {
         if (_batch > 0)
         {

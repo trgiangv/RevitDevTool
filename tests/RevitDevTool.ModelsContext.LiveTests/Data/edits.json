@@ -12,7 +12,7 @@
       "description": "Three ducts get the comment 'mc-live-edit'; after the value cache drops (as DocumentChanged does) the rule Comments equals 'mc-live-edit' counts 3 instead of 0",
       "expected": "0 before, 3 after",
       "manualSteps": [
-        "Tick only 'Current model'; Filter tab: + New filter, Categories Ducts, + Condition Comments equals mc-live-edit: count 0.",
+        "Check only 'Current model'; Filter tab: + New filter, Categories Ducts, + Condition Comments equals mc-live-edit: count 0.",
         "Select three ducts and type mc-live-edit in Comments (Properties): the count becomes 3 without any click in the panel.",
         "Undo the edit (Ctrl+Z): the count returns to 0."
       ]
@@ -22,7 +22,7 @@
       "description": "A copied duct is counted after the cache drops; before that the candidates stay as they were",
       "expected": "n, n, then n + 1",
       "manualSteps": [
-        "Tick only 'Current model'; Filter tab: + New filter, Categories Ducts, no rules: note the count n.",
+        "Check only 'Current model'; Filter tab: + New filter, Categories Ducts, no rules: note the count n.",
         "Copy one duct (Modify > Copy): the count becomes n + 1.",
         "Undo the copy: the count returns to n."
       ]
