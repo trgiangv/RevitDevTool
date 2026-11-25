@@ -34,6 +34,12 @@ count.
    views, and do not run view collectors on views of a link document either.
    A Why hidden spike on 2026-11-20 reproduced the crash with a plan that was not
    the active view, which is why Why hidden reads links in the active view only.
+   It also crashes in the active view for a link that the view hides and has never
+   drawn in the session (Snowdon Architectural `{3D}` hides the Structural, Plumbing,
+   HVAC and Electrical links; 2026-11-25, three crashes on the first count). So
+   `LinkElements.InView` also returns `null` unless the host view collector holds
+   the link instance, or a temporary mode is on and the link is neither hidden nor
+   its category off (WH-14).
 2. **Family parameters are invisible to the usual lookups.** A non-shared family
    parameter has a positive id and a `ParameterElement`, but no
    `ParameterBindings` entry, it is not in `GetFilterableParametersInCommon`, and
@@ -601,12 +607,50 @@ shared nested instances before T0 isolate, hide and overrides (gotcha 23).
 ### Why hidden
 
 `WhyHiddenStripViewModel` asks `IVisibilityExplainer.ExplainAsync(ElementRef)`;
-`RevitVisibilityExplainer` runs `HiddenChecks` on the Revit thread in the active
+`RevitVisibilityExplainer` runs on the Revit thread in the active
 view only and returns `HiddenReason`s (a `HiddenCause`, the text, and `CanShow`).
+It first adds the view-wide causes (temporary mode, hidden in view; for a link:
+link hidden, link temporary, link category, link workset, display mode). Then it asks
+the view collector whether Revit draws the element (`LinkElements.InView` for a
+link). A drawn element gets no element check, so a visible element never claims a
+cause. Only an element that is not drawn runs `HiddenChecks`. Its plane and crop
+comparisons count touching as outside. With no hit, it falls back to the nested
+parent, then the railing of a baluster or support, then *Revit does not draw it in
+this view*.
 `WhyHidden.Of` orders them by cause (`WhyHidden.Order`; the order is in
 [product/models-context.md](../../product/models-context.md#why-hidden)) and keeps
-*No view setting hides it* only when nothing else hits. A filter that cannot be tested is a
-*possible* cause. The panel's own journal adds *Hidden in view* for a linked
+*No view setting hides it* only when nothing else hits (a drawn element). A filter that cannot be tested is a
+*possible* cause.
+
+Message catalog (`HiddenReasons`; Show is offered only where the table says so):
+
+| Cause | Text | When | Show | Check |
+|-------|------|------|------|-------|
+| LinkInstance | *Link hidden in view* | the link instance is hidden in the view | no | explainer `instance.IsHidden` |
+| LinkCategory | *Category off: RVT Links* | the host turns off RVT Links | no | explainer, host V/G |
+| LinkWorkset | *Link workset hidden: name* | the link instance's host workset is hidden | no | explainer `HiddenWorksetName` |
+| LinkDisplayMode | *By Linked View: link's own settings*, *Custom: link's own settings* | the link override is not By Host View; checks stop here | no | explainer `DisplayModeOf` |
+| LinkElement | *Hidden in view* | the panel hid this linked element (journal, kept or not) | yes | core `WhyHidden.WithJournal` |
+| Temporary | *Temporary hide/isolate* | out of the view's temporary hide or isolate | only when the panel did it | explainer |
+| Temporary | *Link hidden by temporary hide/isolate* | the link instance is out of the temporary mode | no | explainer |
+| InView | *Hidden in view* | the element is hidden in the view | no | explainer `element.IsHidden` |
+| Category | *Category off: name* (*Parent: Sub* for a subcategory or line style) | the category, a parent or the line style is off | no | `HiddenChecks.Category` |
+| Filter | *Filter: name* | a view filter with visibility off passes the element | no | `HiddenChecks.Filter` |
+| FilterPossible | *Filter: name (possible)* | a parameter filter on the category whose rules cannot be tested (every linked element, the panel's own link filters too) | no | `HiddenChecks.Filter` |
+| Workset | *Workset hidden: name*, *Workset closed: name* | the element's workset is hidden in the view or closed | no | `HiddenChecks.Workset` |
+| Phase | *Phase: created in name*, *Phase: demolished in name* | created after, or demolished by, the view's phase | no | `HiddenChecks.Phase` |
+| DesignOption | *Design option: name* | a secondary option the view draws nothing of | no | `HiddenChecks.DesignOption` |
+| NotDrawn | *No geometry to draw*, *Not drawn in this view type* | no bounding box, or a kind the view type never draws (a space in 3D) | no | `HiddenChecks.NotDrawn` |
+| NotDrawn | *Hidden by its family: name* | a nested instance with no cause of its own or of its parent | no | explainer, nested fallback |
+| NotDrawn | *Revit does not draw it in this view* | not drawn and nothing above explains it | no | explainer, last fallback |
+| OwnerView | *Owned by view: name* | an element owned by another view | no | `HiddenChecks.OwnerView` |
+| AboveRange | *Above view range*, *Above cut plane* | plan: bottom at or above the top clip, or at or above the cut for a category not shown above the cut; ceiling plan: above the range | no | `HiddenChecks.ViewRange` |
+| BelowRange | *Below view depth*, *Below cut plane* | plan: top at or below the view depth; ceiling plan: below the cut | no | `HiddenChecks.ViewRange` |
+| OutsideCrop | *Outside crop*, *Outside section box* | outside the active crop region or 3D section box | no | `HiddenChecks.Crop` |
+| OutsideCrop | *Behind the section line*, *Behind the elevation line*, *Beyond far clip* | section, elevation or detail: behind the view line, or past the far clip when it is on | no | `HiddenChecks.Depth` |
+| Railing | *Drawn with its railing* | a baluster or support that the view collector leaves out while its railing is drawn | no | explainer `RailingParts` |
+| None | *No view setting hides it* | Revit draws the element | no | explainer |
+| None | *Not a model view* | the active view is a sheet, schedule or other non-model view | no | explainer | The panel's own journal adds *Hidden in view* for a linked
 element it hid (`WithJournal`). `CanShow` stays only for a
 Current model element the panel's ledger hid (`VisibilityController.HidByPanel`:
 hidden by id, or outside the panel's isolate) and a journaled linked hide;

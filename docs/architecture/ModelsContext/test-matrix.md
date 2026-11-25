@@ -274,16 +274,26 @@ Current results (Snowdon HVAC + six links):
 - Earlier: Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
 - Revit 2024, run `20261118-093432`: L2 127/131, L3 5/6; the differences are listed under Mismatches. A case where the oracle differs from the golden value there means the 2024 sample file differs, not that the panel is wrong: record it with both values and decide per-version golden values before changing `Data/*.json`.
 - L1 last run (net10.0-windows, 2026-11-25): core and views all pass.
-- Explicit L2 cases, Revit 2026, 2026-11-25: WH-04 PASS (*Above cut plane*, run `20261125-024110`, `L3` active by
-  MCP); NE-01 PASS (4 of 4 nested chairs follow Isolate, Hide, Halftone and Color; Reset restores them; run
-  `20261125-030129`, the Architectural work copy opened by MCP with `{3D}` active, not saved). WH-09 open: 2 sampled
-  Architectural railing supports (701522, 2659946) read *No view setting hides it*. 2659946 belongs to handrail
-  701146, which `L3` draws while none of its 89 supports is in the view collector; no view setting hides them, so
-  whether handrail supports get a cue of their own (or WH-09 accepts them) is a product decision.
-- Run `20261125-024241` (L2 441 PASS / 0 FAIL, safety ok): UI-18 to UI-20 failed with "Access is denied." and
-  UI-21 captured a blank panel. The Windows session was locked (no input desktop, LogonUI running), so Shift+F10
-  and PrintWindow could not work; rerun those four on an unlocked desktop. UI-21 already showed the eye Hidden after
-  Keep and Shown after Show.
+- Revit 2026, run `20261125-091712` (Why hidden matrix build, unlocked desktop): L2 443 PASS, 0 FAIL, 8
+  Inconclusive (CA by design; WH-01 to WH-03, WH-05, WH-06, WH-13 pass, WH-12 10 of 10 *Drawn with its railing* in
+  `{3D}`), safety ok after L2 and L3; L3 27 of 32 (UI-19, UI-20 passed; UI-16, UI-18, UI-21, UI-07, UI-08 failed). The flows
+  alone on the same build, `{3D}` active: runs `20261125-093511` (6 of 7: UI-18 to UI-21, UI-07, UI-08 pass) and
+  `20261125-095040` (UI-18 to UI-21 and UI-07 pass; UI-08 failed while another session was changing the UI test
+  harness). UI-21 dot pixels 0 before, 32 after Keep (eye Hidden), 0 after Show (eye Shown). The first UI-21
+  failure was a test bug: the Doors row is dimmed once all its doors are hidden, so the dot is #8d6d1f (the warning
+  color at about 55% opacity), outside a ±40 color match; the flow now matches the warning color's hue and needs a
+  dot-sized cluster. UI-16 fails often on this build and on the build before it (2 of 3 in an A/B on the old code):
+  after the duct hide, the Explorer rebuild sometimes leaves Ducts (or Taps) without an expander for over 10 s.
+  This is an Explorer race, not a Why hidden change; open.
+- Explicit L2 cases, Revit 2026, 2026-11-25 (Why hidden matrix build): WH-04 PASS (*Above view range*), WH-09 PASS
+  (240 sampled linked elements, none falls back; first causes BelowRange 80, AboveRange 72, FilterPossible 38,
+  Category 33, Phase 9, OutsideCrop 4, Railing 2, NotDrawn 2), WH-11 PASS (run `20261125-091514`, `L3`); WH-12 PASS
+  (`20261125-091643`, `L3`); WH-14 PASS on the Architectural work copy in `{3D}` (4 hidden links, Revit stays up);
+  WH-15 PASS on its Longitudinal Section (`20261125-090007`). NE-01 PASS earlier (run `20261125-030129`).
+- Why hidden sample (MCP, every hidden row by the panel rule, 4 explained per category, weighted by the category's
+  count): HVAC `L3` 4 of 21,015 fall back (Facades slab edges), HVAC `{3D}` 0 of 2,054, Architectural `L3` 149 of
+  22,239, Architectural `{3D}` 0 of 15,056, Architectural Longitudinal Section 0 of 17,643. Before the matrix
+  work, HVAC `{3D}` had 1,869 of 2,054 (railing parts) and the section 5,634 of 17,643 (behind the section line).
 - L3 flows tick only the Architectural link at start (`PanelSteps.TickOnly`), since a view's links now tick at open.
 
 `L2 matrix` below means `FilterMatrixTests.CountMatchesOracle(<id>)`.
@@ -588,21 +598,26 @@ LH-02; model sync relay MS-01.
 
 Why hidden reads the active view only. The L2 cases build the cause in the
 Snowdon model, ask `RevitVisibilityExplainer`, and read the cue; each case uses
-the safety guard before and after. WH-01 to WH-03, WH-05 and WH-06 passed live (run `20261125-001901`),
-WH-04 too (run `20261125-024110`); WH-09 is open (Current results).
+the safety guard before and after. WH-01 to WH-06, WH-09 and WH-11 to WH-15 passed live on 2026-11-25
+(Current results). The architecture README holds the message catalog.
 
 | ID | Use case | Expected | Test |
 |----|----------|----------|------|
 | WH-01 | Category off in the active view | *Category off: <category>* | L2 `WhyHiddenTests.CategoryOffNamesCategory` |
 | WH-02 | Element hidden in the active view | *Hidden in view*, no Show | L2 `HiddenElementNoFix` |
 | WH-03 | View filter with visibility off | *Filter: <name>* | L2 `ViewFilterNamesFilter` |
-| WH-04 | Linked L4 door in the L3 plan | *Above cut plane* | L2 `LinkedDoorAboveCutPlane`, Explicit: run alone after `user-action-activate-view.cs` with `ViewName` = `L3` (the full run stays in `{3D}`) |
+| WH-04 | Linked L4 door in the L3 plan (its bottom on the top clip) | *Above view range* | L2 `LinkedDoorAboveCutPlane`, Explicit: run alone after `user-action-activate-view.cs` with `ViewName` = `L3` (the full run stays in `{3D}`) |
 | WH-05 | Element of a secondary design option | *Design option: <option>* | L2 `SecondaryOptionNamesOption` |
 | WH-06 | Element visible in the active view | *No view setting hides it* | L2 `VisibleElementHasNoCause` |
-| WH-07 | Cue text, check order, one cause per kind, *No view setting hides it* only alone, not-drawn, nested-family and ceiling cues, journaled linked hide first, only Show is a fix | list | L1 `WhyHiddenTests` (headless, fake explainer) |
+| WH-07 | Cue text, check order, one cause per kind, *No view setting hides it* only alone, not-drawn, nested-family, ceiling, section-depth and railing cues, *Revit does not draw it in this view* is a found cause, journaled linked hide first, only Show is a fix | list | L1 `WhyHiddenTests` (headless, fake explainer) |
 | WH-08 | Strip: open shows the first cause, follows the selected row, closes (✕, Esc, no row), newer open cancels older, an error becomes one cue, Show re-explains, category cue has no Show, menu needs one element | state | L1 `WhyHiddenStripTests`; Views `WhyHiddenViewTests` (strip hidden until opened, expand lists causes, Show and ✕ and Esc, sits above the Temporary bar) |
-| WH-09 | Hidden linked elements of each loaded link in the L3 plan (panel rule: drawable in this view type, not shown) | a cause for each sampled element | L2 `LinkedHiddenAllHaveCause`, Explicit: run alone after `user-action-activate-view.cs` with `ViewName` = `L3` |
+| WH-09 | Hidden linked elements of each loaded link in the L3 plan (panel rule: drawable in this view type, not shown) | a cause for each sampled element (never *No view setting hides it*); the evidence lists the first causes | L2 `LinkedHiddenAllHaveCause`, Explicit: run alone after `user-action-activate-view.cs` with `ViewName` = `L3` |
 | WH-10 | Hidden counts skip sheets, no-geometry, view-owned (other view or any in a link), rooms and spaces in 3D, areas outside area plans | outside ids | L1 `HiddenRuleTests` |
+| WH-11 | Element whose top touches the view depth (rolled back) | *Below view depth* | L2 `TouchingViewDepthNamesRange`, Explicit: run alone with `L3` active |
+| WH-12 | Up to 10 balusters or supports left out of the view collector while their railing is drawn | none reads a fallback; one reads *Drawn with its railing* (the others name their view range or crop) | L2 `RailingPartNamesRailing` |
+| WH-13 | Demolished element that Show All still draws (rolled back) | *No view setting hides it* | L2 `DrawnDemolishedHasNoCause` |
+| WH-14 | Element of a link that the active view hides and never drew; Revit keeps running | *Link hidden in view* | L2 `HiddenLinkNamesLink`, Explicit: run alone on a copy of Snowdon Architectural with `{3D}` active |
+| WH-15 | Wall behind the section line, and one beyond the far clip | *Behind the section line*, *Beyond far clip* | L2 `SectionDepthNamesSide`, Explicit: run alone on a copy of Snowdon Architectural with `Longitudinal Section` active |
 | NE-01 | Current model table 738550 with nested chairs (or the first instance in the view with nested instances): Isolate, Hide, Halftone and Color through `RevitViewActions` reach each `GetSubComponentIds` chair; Reset shows them and restores their overrides | chairs follow the host | L2 `NestedFamilyTests.NestedChairsFollowHost`, Explicit: run alone on a copy of Snowdon Architectural as the active model with `{3D}` active (MCP `open_document`, then `user-action-activate-view.cs` with `ViewName` = `{3D}`) |
 
 ### User actions (L2 `UserActionTests`, `user-actions.json`)

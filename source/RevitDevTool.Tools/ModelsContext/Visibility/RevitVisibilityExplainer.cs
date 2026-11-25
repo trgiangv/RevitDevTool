@@ -44,8 +44,7 @@ internal sealed class RevitVisibilityExplainer : IVisibilityExplainer
             causes.Add(HiddenReasons.InView);
         }
 
-        causes.AddRange(new HiddenChecks(model, view, element, null).Run());
-        return causes.Count > 0 ? causes : NestedCauses(model, view, element, null);
+        return ElementCauses(model, view, element, null, causes);
     }
 
     private static List<HiddenReason> LinkedCauses(Document model, View view, ElementRef element)
@@ -84,19 +83,44 @@ internal sealed class RevitVisibilityExplainer : IVisibilityExplainer
             return causes;
         }
 
-        causes.AddRange(new HiddenChecks(model, view, linked, instance).Run());
-        return causes.Count > 0 ? causes : NestedCauses(model, view, linked, instance);
+        return ElementCauses(model, view, linked, instance, causes);
     }
 
-    private static List<HiddenReason> NestedCauses(Document model, View view, Element element, RevitLinkInstance? link)
+    private static List<HiddenReason> ElementCauses(Document model, View view, Element element, RevitLinkInstance? link,
+        List<HiddenReason> causes)
     {
-        if (element is not FamilyInstance { SuperComponent: FamilyInstance parent } || IsDrawn(model, view, element.Id, link))
+        if (IsDrawn(model, view, element.Id, link))
         {
-            return [];
+            return causes;
         }
 
-        var causes = new HiddenChecks(model, view, parent, link).Run().ToList();
-        return causes.Count > 0 ? causes : [HiddenReasons.FamilySettings(parent.Symbol.FamilyName)];
+        causes.AddRange(new HiddenChecks(model, view, element, link).Run());
+        return causes.Count > 0 ? causes : NotDrawnCauses(model, view, element, link);
+    }
+
+    private static List<HiddenReason> NotDrawnCauses(Document model, View view, Element element, RevitLinkInstance? link)
+    {
+        if (element is FamilyInstance { SuperComponent: FamilyInstance parent })
+        {
+            var causes = new HiddenChecks(model, view, parent, link).Run().ToList();
+            return causes.Count > 0 ? causes : [HiddenReasons.FamilySettings(parent.Symbol.FamilyName)];
+        }
+
+        if (RailingParts.RailingOf(element) is { } railing)
+        {
+            if (IsDrawn(model, view, railing.Id, link))
+            {
+                return [HiddenReasons.WithRailing];
+            }
+
+            var causes = new HiddenChecks(model, view, railing, link).Run().ToList();
+            if (causes.Count > 0)
+            {
+                return causes;
+            }
+        }
+
+        return [HiddenReasons.NotDrawnHere];
     }
 
     private static bool IsDrawn(Document model, View view, ElementId id, RevitLinkInstance? link)

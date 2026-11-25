@@ -87,6 +87,36 @@ public sealed class WhyHiddenTests
     }
 
     [TestMethod]
+    public void UndrawnSaysRevitDoesNotDraw()
+    {
+        var result = WhyHidden.Of([HiddenReasons.NotDrawnHere], 1);
+
+        Assert.AreEqual("Revit does not draw it in this view", result.First.Text);
+        Assert.IsTrue(result.Found);
+        Assert.IsFalse(result.First.CanShow);
+    }
+
+    [TestMethod]
+    public void RailingPartNamesRailing()
+    {
+        var result = WhyHidden.Of([HiddenReasons.WithRailing], 1);
+
+        Assert.AreEqual("Drawn with its railing", result.First.Text);
+        Assert.AreEqual(HiddenCause.Railing, result.First.Cause);
+        Assert.IsTrue(result.Found);
+        Assert.IsFalse(result.First.CanShow);
+    }
+
+    [TestMethod]
+    public void SectionDepthCuesNameSide()
+    {
+        Assert.AreEqual("Behind the section line", HiddenReasons.BehindSectionLine.Text);
+        Assert.AreEqual("Behind the elevation line", HiddenReasons.BehindElevationLine.Text);
+        Assert.AreEqual("Beyond far clip", HiddenReasons.BeyondFarClip.Text);
+        Assert.AreEqual(HiddenCause.OutsideCrop, HiddenReasons.BeyondFarClip.Cause);
+    }
+
+    [TestMethod]
     public void CeilingCuesNameRange()
     {
         Assert.AreEqual("Below cut plane", HiddenReasons.BelowCutPlane.Text);

@@ -241,18 +241,25 @@ that started always finishes, even when the model changes while it runs.
 Select one dimmed row (or choose *Why hidden?* on one element, in Explorer or a
 Filter result) and a strip opens above the Temporary bar with the first cause
 in the active view, for example *Category off: Duct Fittings*. The chevron lists
-the other causes; *No view setting hides it* when no check hits. The strip follows the selected
+the other causes. The strip follows the selected
 row, and closes with ✕, Esc, or when the selection has no element.
 
+- It states what Revit does. An element that Revit draws reads *No view setting
+  hides it*. An element that Revit does not draw always gets a cause.
 - Checks, first hit first: temporary hide or isolate, hidden in view, category,
   view filter, workset, phase, design option, not drawn (*No geometry to draw*,
   *Not drawn in this view type*), owner view, view range, crop or section box.
   The category check includes the line style under Lines. A ceiling plan reads
-  *Below cut plane* or *Above view range*. A link adds its own first: link hidden, its category or workset,
+  *Below cut plane* or *Above view range*. An element that touches a plane counts
+  as beyond it. A section or elevation reads *Behind the section line* (*Behind
+  the elevation line*) or *Beyond far clip*. A link adds its own first: link hidden, its category or workset,
   its display mode (By Linked View and Custom use the link's own settings).
 - A nested family element that is not drawn and has no cause of its own takes
   its parent's causes, else reads *Hidden by its family: name* (the parent
   family's visibility settings or parameters turn it off).
+- A baluster or railing support that Revit draws as part of its railing reads
+  *Drawn with its railing*.
+- Anything else that Revit does not draw reads *Revit does not draw it in this view*.
 - A filter that cannot be tested reads *Filter: name (possible)*.
 - It only explains. **Show** appears only where the panel can undo the cause: a
   Current model element the panel hid or left out of its isolate, or a linked

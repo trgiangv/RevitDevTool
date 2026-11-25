@@ -24,6 +24,7 @@ public sealed record WhyHidden(IReadOnlyList<HiddenReason> Reasons, double Elaps
         HiddenCause.AboveRange,
         HiddenCause.BelowRange,
         HiddenCause.OutsideCrop,
+        HiddenCause.Railing,
         HiddenCause.None
     ];
 

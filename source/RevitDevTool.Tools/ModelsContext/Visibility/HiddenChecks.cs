@@ -295,7 +295,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
 
     private HiddenReason? CeilingRange(ViewPlan plan, PlanViewRange range, double minZ, double maxZ)
     {
-        if (Elevation(plan, range, PlanViewPlane.CutPlane) is { } cut && maxZ < cut - Tolerance)
+        if (Elevation(plan, range, PlanViewPlane.CutPlane) is { } cut && maxZ <= cut + Tolerance)
         {
             return HiddenReasons.BelowCutPlane;
         }
@@ -303,22 +303,22 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         var top = Elevation(plan, range, PlanViewPlane.TopClipPlane);
         var depth = Elevation(plan, range, PlanViewPlane.ViewDepthPlane);
         var limit = top is { } t && depth is { } d ? Math.Max(t, d) : top ?? depth;
-        return limit is { } above && minZ > above + Tolerance ? HiddenReasons.AboveViewRange : null;
+        return limit is { } above && minZ >= above - Tolerance ? HiddenReasons.AboveViewRange : null;
     }
 
     private HiddenReason? PlanRange(ViewPlan plan, PlanViewRange range, double minZ, double maxZ)
     {
-        if (Elevation(plan, range, PlanViewPlane.TopClipPlane) is { } top && minZ > top + Tolerance)
+        if (Elevation(plan, range, PlanViewPlane.TopClipPlane) is { } top && minZ >= top - Tolerance)
         {
             return HiddenReasons.AboveViewRange;
         }
 
-        if (Elevation(plan, range, PlanViewPlane.CutPlane) is { } cut && minZ > cut + Tolerance && !IsShownAboveCut())
+        if (Elevation(plan, range, PlanViewPlane.CutPlane) is { } cut && minZ >= cut - Tolerance && !IsShownAboveCut())
         {
             return HiddenReasons.AboveCutPlane;
         }
 
-        return Elevation(plan, range, PlanViewPlane.ViewDepthPlane) is { } depth && maxZ < depth - Tolerance
+        return Elevation(plan, range, PlanViewPlane.ViewDepthPlane) is { } depth && maxZ <= depth + Tolerance
             ? HiddenReasons.BelowViewDepth
             : null;
     }
@@ -347,6 +347,11 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
             return Outside(sectioned.GetSectionBox(), corners, withDepth: true) ? HiddenReasons.OutsideSectionBox : null;
         }
 
+        if (view is ViewSection && Depth(corners) is { } depth)
+        {
+            return depth;
+        }
+
         if (!view.CropBoxActive || view is View3D { IsPerspective: true })
         {
             return null;
@@ -355,14 +360,28 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         return Outside(view.CropBox, corners, withDepth: false) ? HiddenReasons.OutsideCrop : null;
     }
 
+    private HiddenReason? Depth(List<XYZ> corners)
+    {
+        var box = view.CropBox;
+        var inverse = box.Transform.Inverse;
+        var local = corners.Select(inverse.OfPoint).ToList();
+        if (local.Min(point => point.Z) >= box.Max.Z - Tolerance)
+        {
+            return view.ViewType == ViewType.Elevation ? HiddenReasons.BehindElevationLine : HiddenReasons.BehindSectionLine;
+        }
+
+        var farClip = view.get_Parameter(BuiltInParameter.VIEWER_BOUND_FAR_CLIPPING)?.AsInteger() ?? 0;
+        return farClip != 0 && local.Max(point => point.Z) <= box.Min.Z + Tolerance ? HiddenReasons.BeyondFarClip : null;
+    }
+
     private static bool Outside(BoundingBoxXYZ box, List<XYZ> corners, bool withDepth)
     {
         var inverse = box.Transform.Inverse;
         var local = corners.Select(inverse.OfPoint).ToList();
-        return local.Max(point => point.X) < box.Min.X - Tolerance || local.Min(point => point.X) > box.Max.X + Tolerance
-            || local.Max(point => point.Y) < box.Min.Y - Tolerance || local.Min(point => point.Y) > box.Max.Y + Tolerance
-            || (withDepth && (local.Max(point => point.Z) < box.Min.Z - Tolerance
-                              || local.Min(point => point.Z) > box.Max.Z + Tolerance));
+        return local.Max(point => point.X) <= box.Min.X + Tolerance || local.Min(point => point.X) >= box.Max.X - Tolerance
+            || local.Max(point => point.Y) <= box.Min.Y + Tolerance || local.Min(point => point.Y) >= box.Max.Y - Tolerance
+            || (withDepth && (local.Max(point => point.Z) <= box.Min.Z + Tolerance
+                              || local.Min(point => point.Z) >= box.Max.Z - Tolerance));
     }
 
     private List<XYZ>? Corners()

@@ -20,6 +20,7 @@ public enum HiddenCause
     LinkDisplayMode,
     LinkElement,
     NotDrawn,
+    Railing,
     None
 }
 
@@ -49,9 +50,19 @@ public static class HiddenReasons
 
     public static HiddenReason NotInViewType { get; } = new(HiddenCause.NotDrawn, "Not drawn in this view type");
 
+    public static HiddenReason NotDrawnHere { get; } = new(HiddenCause.NotDrawn, "Revit does not draw it in this view");
+
+    public static HiddenReason WithRailing { get; } = new(HiddenCause.Railing, "Drawn with its railing");
+
     public static HiddenReason OutsideCrop { get; } = new(HiddenCause.OutsideCrop, "Outside crop");
 
     public static HiddenReason OutsideSectionBox { get; } = new(HiddenCause.OutsideCrop, "Outside section box");
+
+    public static HiddenReason BehindSectionLine { get; } = new(HiddenCause.OutsideCrop, "Behind the section line");
+
+    public static HiddenReason BehindElevationLine { get; } = new(HiddenCause.OutsideCrop, "Behind the elevation line");
+
+    public static HiddenReason BeyondFarClip { get; } = new(HiddenCause.OutsideCrop, "Beyond far clip");
 
     public static HiddenReason NotModelView { get; } = new(HiddenCause.None, "Not a model view");
 

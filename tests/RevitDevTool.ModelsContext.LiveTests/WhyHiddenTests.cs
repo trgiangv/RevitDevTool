@@ -76,8 +76,8 @@ public sealed class WhyHiddenTests : RecordedTest
     [Explicit("Run alone after the MCP step scripts/models-context/user-action-activate-view.cs with ViewName set to 'L3': it checks the active plan and never switches views.")]
     public void LinkedDoorAboveCutPlane()
     {
-        Record(Case("WH-04", "Linked L4 door in the L3 plan", "Above cut plane",
-            "Snowdon Federated, plan L3 active: Why hidden on the Architectural door 631587 (L4) reads 'Above cut plane'."), () =>
+        Record(Case("WH-04", "Linked L4 door in the L3 plan", "Above view range",
+            "Snowdon HVAC, plan L3 active: Why hidden on the Architectural door 631587 (L4, its bottom on the top clip) reads 'Above view range'."), () =>
         {
             if (View is not ViewPlan)
             {
@@ -108,6 +108,7 @@ public sealed class WhyHiddenTests : RecordedTest
             }
 
             var unexplained = new List<string>();
+            var causes = new Dictionary<HiddenCause, int>();
             var checkedCount = 0;
             foreach (var instance in LoadedLinks())
             {
@@ -119,6 +120,7 @@ public sealed class WhyHiddenTests : RecordedTest
                 {
                     checkedCount++;
                     var result = Adapter.Run(Explainer.ExplainAsync(new ElementRef(key, id), CancellationToken.None));
+                    causes[result.First.Cause] = causes.GetValueOrDefault(result.First.Cause) + 1;
                     if (!result.Found)
                     {
                         var element = instance.GetLinkDocument()!.GetElement(id.ToElementId());
@@ -132,9 +134,176 @@ public sealed class WhyHiddenTests : RecordedTest
                 Assert.Inconclusive($"No hidden linked element in '{View.Name}'.");
             }
 
+            Evidence.Step("First cause of the sampled elements: "
+                          + string.Join(", ", causes.OrderByDescending(pair => pair.Value).Select(pair => $"{pair.Key} {pair.Value}")) + ".");
             Evidence.Values(0, unexplained.Count);
             Assert.That(unexplained, Is.Empty, string.Join("; ", unexplained.Take(10)));
         });
+    }
+
+    [Test]
+    [Explicit("Run alone after the MCP step scripts/models-context/user-action-activate-view.cs with ViewName set to 'L3': it checks the active plan and never switches views.")]
+    public void TouchingViewDepthNamesRange()
+    {
+        Record(Case("WH-11", "Element whose top touches the view depth", "Below view depth",
+            "Plan L3 active: set the view depth and bottom to the top of a visible duct (cut and top above it); Why hidden reads 'Below view depth'."), () =>
+        {
+            if (View is not ViewPlan { GenLevel: { } level } plan)
+            {
+                Assert.Inconclusive($"The active view '{View.Name}' is not a plan.");
+                return;
+            }
+
+            var element = VisibleElement();
+            var top = element.get_BoundingBox(null)!.Max.Z - level.ProjectElevation;
+            using var edit = new RolledBack(Model, "Why hidden view depth");
+            Build(() =>
+            {
+                plan.ViewTemplateId = ElementId.InvalidElementId;
+                var range = plan.GetViewRange();
+                foreach (var (plane, offset) in new[]
+                         {
+                             (PlanViewPlane.TopClipPlane, top + 3), (PlanViewPlane.CutPlane, top + 2),
+                             (PlanViewPlane.BottomClipPlane, top), (PlanViewPlane.ViewDepthPlane, top)
+                         })
+                {
+                    range.SetLevelId(plane, level.Id);
+                    range.SetOffset(plane, offset);
+                }
+
+                plan.SetViewRange(range);
+                Model.Regenerate();
+            }, true);
+            Evidence.Step($"Set the view depth of '{View.Name}' to the top of element {element.Id} in a transaction that is rolled back.");
+            ExpectFirst(Explain(CurrentOf(element)), HiddenReasons.BelowViewDepth);
+        });
+    }
+
+    [Test]
+    public void RailingPartNamesRailing()
+    {
+        Record(Case("WH-12", "Baluster or support that the view collector leaves out while its railing is drawn", HiddenReasons.WithRailing.Text,
+            $"Pick balusters and supports of drawn railings that the panel lists as hidden; none reads a fallback, and one with no view-range or crop cause reads '{HiddenReasons.WithRailing.Text}'."), () =>
+        {
+            var parts = FindRailingParts();
+            if (parts.Count == 0)
+            {
+                Assert.Inconclusive($"No baluster or support of a drawn railing is left out of '{View.Name}'.");
+            }
+
+            var results = parts.Select(Explain).ToList();
+            Evidence.Values(HiddenReasons.WithRailing.Text, string.Join(" | ", results.Select(Describe)));
+            Assert.That(results.Select(result => result.First),
+                Has.None.EqualTo(HiddenReasons.None).And.None.EqualTo(HiddenReasons.NotDrawnHere));
+            Assert.That(results.Select(result => result.First), Has.Some.EqualTo(HiddenReasons.WithRailing));
+        });
+    }
+
+    [Test]
+    public void DrawnDemolishedHasNoCause()
+    {
+        Record(Case("WH-13", "Demolished element that the view still draws (phase filter Show All)", HiddenReasons.None.Text,
+            "Set the view's phase filter to Show All and demolish a visible element in the view's phase; Revit still draws it and Why hidden reads no cause."), () =>
+        {
+            var element = VisibleElement();
+            if (!element.HasPhases()
+                || View.get_Parameter(BuiltInParameter.VIEW_PHASE)?.AsElementId() is not { } phase
+                || new FilteredElementCollector(Model).OfClass(typeof(PhaseFilter)).FirstOrDefault(filter => filter.Name == "Show All") is not { } showAll)
+            {
+                Assert.Inconclusive($"'{View.Name}' has no phase or the model has no 'Show All' phase filter.");
+                return;
+            }
+
+            using var edit = new RolledBack(Model, "Why hidden drawn demolished");
+            Build(() =>
+            {
+                View.ViewTemplateId = ElementId.InvalidElementId;
+                View.get_Parameter(BuiltInParameter.VIEW_PHASE_FILTER).Set(showAll.Id);
+                element.DemolishedPhaseId = phase;
+                Model.Regenerate();
+            }, true);
+            if (!new FilteredElementCollector(Model, View.Id).WherePasses(new ElementIdSetFilter([element.Id])).Any())
+            {
+                Assert.Inconclusive($"'{View.Name}' does not draw the demolished element {element.Id} under Show All.");
+            }
+
+            Evidence.Step($"Demolished element {element.Id} under 'Show All' in '{View.Name}' in a transaction that is rolled back.");
+            var result = Explain(CurrentOf(element));
+            Evidence.Values(HiddenReasons.None.Text, Describe(result));
+            Assert.That(result.Reasons, Is.EqualTo(new[] { HiddenReasons.None }));
+        });
+    }
+
+    [Test]
+    [Explicit("Run alone on a copy of Snowdon Architectural with {3D} active (MCP open_document, then user-action-activate-view.cs with ViewName set to '{3D}'): that view hides links it never draws.")]
+    public void HiddenLinkNamesLink()
+    {
+        Record(Case("WH-14", "Element of a link that the active view hides and never drew", HiddenReasons.LinkInstance.Text,
+            $"Snowdon Architectural copy, {{3D}} active: Why hidden on an element of each link hidden in the view reads '{HiddenReasons.LinkInstance.Text}' and Revit keeps running."), () =>
+        {
+            var hidden = LoadedLinks().Where(instance => instance.IsHidden(View)).ToList();
+            if (hidden.Count == 0)
+            {
+                Assert.Inconclusive($"'{View.Name}' hides no loaded link.");
+            }
+
+            foreach (var instance in hidden)
+            {
+                var element = new FilteredElementCollector(instance.GetLinkDocument()!).OfCategory(BuiltInCategory.OST_Walls)
+                    .WhereElementIsNotElementType().FirstElement();
+                if (element is null)
+                {
+                    continue;
+                }
+
+                Evidence.Step($"{instance.Name} is hidden in '{View.Name}'.");
+                ExpectFirst(Explain(new ElementRef(DocumentRegistry.KeyOf(Model, instance), element.Id.ToLong())), HiddenReasons.LinkInstance);
+            }
+        });
+    }
+
+    [Test]
+    [Explicit("Run alone with a section view active (MCP user-action-activate-view.cs with ViewName set to the section, e.g. 'Longitudinal Section' on a copy of Snowdon Architectural): it checks the active section and never switches views.")]
+    public void SectionDepthNamesSide()
+    {
+        Record(Case("WH-15", "Elements behind the section line and beyond the far clip", "Behind the section line / Beyond far clip",
+            "Section active: Why hidden on a model element whose box is behind the section line reads 'Behind the section line'; with far clip on, one beyond the far clip reads 'Beyond far clip'."), () =>
+        {
+            if (View is not ViewSection || View.ViewType != ViewType.Section)
+            {
+                Assert.Inconclusive($"The active view '{View.Name}' is not a section.");
+            }
+
+            var box = View.CropBox;
+            var inverse = box.Transform.Inverse;
+            var drawn = new HashSet<ElementId>(new FilteredElementCollector(Model, View.Id).ToElementIds());
+            var candidates = new FilteredElementCollector(Model).OfCategory(BuiltInCategory.OST_Walls).WhereElementIsNotElementType()
+                .Where(wall => !drawn.Contains(wall.Id) && wall.get_BoundingBox(null) is not null)
+                .Select(wall => (Wall: wall, Z: Local(wall.get_BoundingBox(null)!, inverse)))
+                .ToList();
+            var behind = candidates.FirstOrDefault(pair => pair.Z.Min >= box.Max.Z + 1).Wall;
+            if (behind is null)
+            {
+                Assert.Inconclusive($"No wall lies behind the section line of '{View.Name}'.");
+                return;
+            }
+
+            ExpectFirst(Explain(CurrentOf(behind)), HiddenReasons.BehindSectionLine);
+            if (View.get_Parameter(BuiltInParameter.VIEWER_BOUND_FAR_CLIPPING)?.AsInteger() is not (null or 0)
+                && candidates.FirstOrDefault(pair => pair.Z.Max <= box.Min.Z - 1).Wall is { } beyond)
+            {
+                ExpectFirst(Explain(CurrentOf(beyond)), HiddenReasons.BeyondFarClip);
+            }
+        });
+    }
+
+    private static (double Min, double Max) Local(BoundingBoxXYZ box, Transform inverse)
+    {
+        var z = new[] { box.Min.X, box.Max.X }
+            .SelectMany(x => new[] { box.Min.Y, box.Max.Y }.SelectMany(y => new[] { box.Min.Z, box.Max.Z }
+                .Select(depth => inverse.OfPoint(box.Transform.OfPoint(new XYZ(x, y, depth))).Z)))
+            .ToList();
+        return (z.Min(), z.Max());
     }
 
     [Test]
@@ -288,6 +457,44 @@ public sealed class WhyHiddenTests : RecordedTest
 
         Assert.Inconclusive($"No loaded link holds door {LinkedDoor}; open Snowdon Federated with plan L3 active.");
         return default;
+    }
+
+    private static List<ElementRef> FindRailingParts()
+    {
+        const int Wanted = 10;
+        var found = new List<ElementRef>();
+        var parts = new ElementMulticategoryFilter([BuiltInCategory.OST_StairsRailingBaluster, BuiltInCategory.OST_RailingSupport]);
+        foreach (var instance in LoadedLinks())
+        {
+            if (LinkElements.InView(Model, View, instance.Id) is not { } collector)
+            {
+                continue;
+            }
+
+            var drawn = new HashSet<ElementId>(collector.ToElementIds());
+            var document = instance.GetLinkDocument()!;
+            var railings = new FilteredElementCollector(document).OfCategory(BuiltInCategory.OST_StairsRailing)
+                .WhereElementIsNotElementType()
+                .Where(railing => drawn.Contains(railing.Id));
+            foreach (var railing in railings)
+            {
+                var part = railing.GetDependentElements(parts).Where(id => !drawn.Contains(id)).Select(document.GetElement)
+                    .FirstOrDefault(candidate => RailingParts.RailingOf(candidate) is { } parent && drawn.Contains(parent.Id));
+                if (part is null)
+                {
+                    continue;
+                }
+
+                Evidence.Step($"{instance.Name}: {part.Category!.Name} {part.Id} is left out of '{View.Name}'; its railing is drawn.");
+                found.Add(new ElementRef(DocumentRegistry.KeyOf(Model, instance), part.Id.ToLong()));
+                if (found.Count == Wanted)
+                {
+                    return found;
+                }
+            }
+        }
+
+        return found;
     }
 
     private static (ElementRef Element, string Option)? FindSecondaryOption()

@@ -70,7 +70,22 @@ internal static class LinkElements
     public static FilteredElementCollector? InView(Document model, View view, ElementId linkInstanceId)
     {
         ViewActivations.ThrowIfChangedInCall();
-        return ShowsLinks(view) ? new FilteredElementCollector(model, view.Id, linkInstanceId) : null;
+        return ShowsLinks(view) && DrawsLink(model, view, linkInstanceId)
+            ? new FilteredElementCollector(model, view.Id, linkInstanceId)
+            : null;
+    }
+
+    private static bool DrawsLink(Document model, View view, ElementId linkInstanceId)
+    {
+        if (new FilteredElementCollector(model, view.Id).WherePasses(new ElementIdSetFilter([linkInstanceId])).Any())
+        {
+            return true;
+        }
+
+        return view.IsTemporaryHideIsolateActive()
+               && model.GetElement(linkInstanceId) is RevitLinkInstance { Category: { } category } instance
+               && !instance.IsHidden(view)
+               && !HiddenChecks.IsCategoryHidden(view, category.Id);
     }
 
     internal static bool ShowsLinks(View view)
