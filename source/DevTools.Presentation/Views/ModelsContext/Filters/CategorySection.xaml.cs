@@ -59,6 +59,14 @@ public partial class CategorySection : UserControl
         }
     }
 
+    private void OnRowGotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (ReferenceEquals(e.OriginalSource, sender))
+        {
+            e.Handled = true;
+        }
+    }
+
     private void OnListRightButtonDown(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;

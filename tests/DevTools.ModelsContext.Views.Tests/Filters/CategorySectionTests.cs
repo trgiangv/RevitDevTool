@@ -1,6 +1,7 @@
 using DevTools.ModelsContext.Filters;
 using DevTools.Presentation.Views.ModelsContext.Filters;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 
 namespace DevTools.ModelsContext.Views.Tests.Filters;
@@ -33,6 +34,22 @@ public sealed class CategorySectionTests
         rows[2].Patterns.SelectionItem.Pattern.AddToSelection();
 
         Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([0, 2])), "Add did not keep both checked.");
+    }
+
+    [TestMethod]
+    [DataRow("Explorer")]
+    [DataRow("Filter")]
+    public void FocusAfterKeyKeepsChecks(string prefix)
+    {
+        using var ui = OpenBox(prefix);
+        var rows = Rows(ui, prefix);
+        rows[0].Patterns.SelectionItem.Pattern.Select();
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([0])), "Select did not check the row.");
+
+        WpfSta.Invoke(() => KeyboardFocusMoves(Container(ui, prefix, 0), Container(ui, prefix, 2)));
+        rows[2].Patterns.SelectionItem.Pattern.AddToSelection();
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => Checked(ui, prefix).SequenceEqual([0, 2])), "Focus replaced the checks.");
     }
 
     [TestMethod]
@@ -144,6 +161,24 @@ public sealed class CategorySectionTests
     private static ListBoxItem Container(PanelUi ui, string prefix, int index)
     {
         return (ListBoxItem)List(ui, prefix).ItemContainerGenerator.ContainerFromIndex(index);
+    }
+
+    private static void KeyboardFocusMoves(ListBoxItem from, ListBoxItem to)
+    {
+        var recent = typeof(InputManager).GetProperty(nameof(InputManager.MostRecentInputDevice))!;
+        var before = InputManager.Current.MostRecentInputDevice;
+        recent.SetValue(InputManager.Current, NoModifierKeyboard.Device);
+        try
+        {
+            to.RaiseEvent(new KeyboardFocusChangedEventArgs(NoModifierKeyboard.Device, 0, from, to)
+            {
+                RoutedEvent = Keyboard.GotKeyboardFocusEvent
+            });
+        }
+        finally
+        {
+            recent.SetValue(InputManager.Current, before);
+        }
     }
 
     private static ListBox List(PanelUi ui, string prefix)

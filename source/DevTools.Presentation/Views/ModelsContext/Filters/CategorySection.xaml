@@ -67,6 +67,7 @@
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="hc:BorderElement.CornerRadius" Value="0" />
                 <Setter Property="hc:VisualElement.StaysHighlighted" Value="True" />
+                <EventSetter Event="GotKeyboardFocus" Handler="OnRowGotKeyboardFocus" />
                 <Style.Triggers>
                     <Trigger Property="IsSelected" Value="True">
                         <Setter Property="Background" Value="Transparent" />
