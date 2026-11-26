@@ -7,6 +7,10 @@ internal sealed class ExplorerCase : CaseItem
     public string Docs { get; set; } = string.Empty;
 
     public string? Category { get; set; }
+
+    public string? Scope { get; set; }
+
+    public string? View { get; set; }
 }
 
 internal sealed class CatalogCase : CaseItem

@@ -99,7 +99,7 @@ public sealed class DocumentSnapshot
 
     public bool InModel(long id)
     {
-        return TryGetRow(id, out var row) && !row.SecondaryOption;
+        return TryGetRow(id, out var row) && row.InWholeModel;
     }
 
     public int GroupIndexOf(long groupId)
@@ -199,7 +199,7 @@ public sealed class DocumentSnapshot
     {
         if (branch.ElementId != RowPath.Unset)
         {
-            if (TryGetRow(branch.ElementId, out var element) && !(modelOnly && element.SecondaryOption))
+            if (TryGetRow(branch.ElementId, out var element) && (!modelOnly || element.InWholeModel))
             {
                 yield return branch.ElementId;
             }
@@ -209,7 +209,7 @@ public sealed class DocumentSnapshot
 
         foreach (var row in _rows)
         {
-            if (!(modelOnly && row.SecondaryOption) && IsUnder(row, branch))
+            if ((!modelOnly || row.InWholeModel) && IsUnder(row, branch))
             {
                 yield return row.Id;
             }
@@ -291,7 +291,7 @@ public sealed class DocumentSnapshot
 
         var old = _rows[index];
         if (old.GroupIndex != row.GroupIndex || old.TypeIndex != row.TypeIndex
-                                             || old.SecondaryOption != row.SecondaryOption)
+                                             || old.InWholeModel != row.InWholeModel)
         {
             Count(old, -1);
             Count(row, 1);
@@ -355,7 +355,7 @@ public sealed class DocumentSnapshot
 
     private void Count(ElementRow row, int amount)
     {
-        if (row.SecondaryOption)
+        if (!row.InWholeModel)
         {
             return;
         }

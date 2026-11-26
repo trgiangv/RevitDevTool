@@ -106,7 +106,20 @@ internal static class SweepSchedules
             reasons.Add($"groups ({grouped} in groups)");
         }
 
-        reasons.Add("phase filter of the new schedule");
-        return string.Join(", ", reasons);
+        var segments = elements.OfType<Grid>()
+            .Select(MultiSegmentGrid.GetMultiSegementGridId)
+            .Where(id => id != ElementId.InvalidElementId)
+            .ToList();
+        if (segments.Count > 0)
+        {
+            reasons.Add($"multi-segment grids ({segments.Count} segments in {segments.Distinct().Count()} grids)");
+        }
+
+        if (elements.Any(element => element.HasPhases()))
+        {
+            reasons.Add("phase filter of the new schedule");
+        }
+
+        return reasons.Count == 0 ? SweepNative.Unexplained : string.Join(", ", reasons);
     }
 }

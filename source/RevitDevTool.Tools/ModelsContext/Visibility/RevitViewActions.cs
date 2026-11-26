@@ -464,7 +464,7 @@ internal sealed class RevitViewActions : IViewActions
     {
         if (ids.Count > 0)
         {
-            view.IsolateElementsTemporary(ids);
+            view.IsolateElementsTemporary(TagHosts.WithHosts(model, ids));
         }
 
         if (categories.Count > 0)

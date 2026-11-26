@@ -47,6 +47,9 @@ public sealed class ExplorerCountTests : RecordedTest
                 case "DocumentList":
                     DocumentList();
                     break;
+                case "AnnotationCounts":
+                    AnnotationCounts(item);
+                    break;
                 default:
                     Assert.Fail($"{id}: unknown check '{item.Check}' in explorer.json.");
                     break;
@@ -60,7 +63,7 @@ public sealed class ExplorerCountTests : RecordedTest
         var id = Cases.Category(item.Category!);
         var oracle = Evidence.Time("oracle", () => OracleCounts(document).TryGetValue(id, out var count) ? count : 0);
         var snapshot = Evidence.Time("panel", () => Adapter.Run(_adapter.Source.BuildSnapshotAsync(document.Source, null, CancellationToken.None)));
-        var panel = snapshot.Rows.Count(row => !row.SecondaryOption && snapshot.Groups[row.GroupIndex].GroupId == id);
+        var panel = snapshot.Rows.Count(row => InWholeModel(row) && snapshot.Groups[row.GroupIndex].GroupId == id);
         Evidence.Step($"Built the Explorer snapshot of {document.Document.Title} and counted the {item.Category} rows.");
         Evidence.Values(oracle, panel);
 
@@ -93,10 +96,66 @@ public sealed class ExplorerCountTests : RecordedTest
     {
         var oracle = Evidence.Time("oracle", () => OracleCounts(document));
         var snapshot = Evidence.Time("panel", () => Adapter.Run(_adapter.Source.BuildSnapshotAsync(document.Source, null, CancellationToken.None)));
-        var panel = snapshot.Rows.Where(row => !row.SecondaryOption).GroupBy(row => snapshot.Groups[row.GroupIndex].GroupId)
-            .ToDictionary(group => group.Key, group => group.Count());
+        var panel = RowCounts(snapshot, InWholeModel);
         Evidence.Step($"{document.Document.Title}: compared the snapshot count of each category with the oracle.");
         return Compare(oracle, panel);
+    }
+
+    private static void AnnotationCounts(ExplorerCase item)
+    {
+        var document = SampleModel.Of(item.Docs)[0];
+        var scope = (ScopeKind)Enum.Parse(typeof(ScopeKind), item.Scope!);
+        var previous = SampleViews.Active.ActiveView;
+        try
+        {
+            if (item.View is { } view)
+            {
+                SampleViews.Activate(SampleViews.Of(view));
+            }
+
+            var inView = scope == ScopeKind.ActiveView;
+            var oracle = Evidence.Time("oracle", () => inView ? ViewOracleCounts(document) : OracleCounts(document));
+            var quick = Evidence.Time("panel", () => Adapter.Run(_adapter.Source.CountGroupsAsync(document.Key, scope, CancellationToken.None)))
+                .Where(group => group.Count > 0)
+                .ToDictionary(group => group.GroupId, group => group.Count);
+            var snapshot = Evidence.Time("panel", () => Adapter.Run(_adapter.Source.BuildSnapshotAsync(document.Source, null, CancellationToken.None)));
+            var ids = inView
+                ? new HashSet<long>(Evidence.Time("panel", () => Adapter.Run(_adapter.Source.CollectScopeAsync(document.Key, scope, CancellationToken.None))))
+                : null;
+            var tree = RowCounts(snapshot, row => ids?.Contains(row.Id) ?? InWholeModel(row));
+            var quickResult = Compare(oracle, quick);
+            var treeResult = Compare(oracle, tree);
+            Evidence.Step($"{document.Document.Title}, {item.Scope}{(item.View is null ? "" : $" ({item.View})")}: compared the quick count and the tree count of each category with the oracle.");
+            Evidence.Values(quickResult.Item1, $"quick {quickResult.Item2}; tree {treeResult.Item2}");
+
+            var expected = item.Expected.GetProperty("categories").EnumerateObject()
+                .ToDictionary(property => property.Name, property => property.Value.GetInt32());
+            var found = expected.Keys.ToDictionary(name => name, name => oracle.TryGetValue(Cases.Category(name), out var count) ? count : 0);
+            var absent = item.Expected.GetProperty("absent").EnumerateArray().Select(name => name.GetString()!);
+
+            Assert.That(found, Is.EquivalentTo(expected), "oracle");
+            Assert.That(absent.Where(name => oracle.ContainsKey(Cases.Category(name))), Is.Empty, "listed by the oracle");
+            Assert.That(quickResult.Item3, Is.True, "quick counts differ from the oracle");
+            Assert.That(treeResult.Item3, Is.True, "tree counts differ from the oracle");
+        }
+        finally
+        {
+            if (SampleViews.Switch(previous))
+            {
+                SampleViews.Active.RefreshActiveView();
+            }
+        }
+    }
+
+    private static bool InWholeModel(ElementRow row)
+    {
+        return !row.SecondaryOption && row.OwnerViewId == ViewDraws.NoOwner;
+    }
+
+    private static Dictionary<long, int> RowCounts(DocumentSnapshot snapshot, Func<ElementRow, bool> counted)
+    {
+        return snapshot.Rows.Where(counted).GroupBy(row => snapshot.Groups[row.GroupIndex].GroupId)
+            .ToDictionary(group => group.Key, group => group.Count());
     }
 
     private static (string, string, bool) QuickCounts(SampleDocument document)
@@ -110,14 +169,7 @@ public sealed class ExplorerCountTests : RecordedTest
     private static (string, string, bool) ViewCounts(SampleDocument document)
     {
         SampleViews.Activate();
-        var oracle = Evidence.Time("oracle", () =>
-        {
-            var view = Oracle.ViewIds(document);
-            return Oracle.Candidates(document.Document, [], true)
-                .Where(element => view.Contains(element.Id.ToLong()))
-                .GroupBy(element => element.Category.Id.ToLong())
-                .ToDictionary(group => group.Key, group => group.Count());
-        });
+        var oracle = Evidence.Time("oracle", () => ViewOracleCounts(document));
         var quick = Evidence.Time("panel", () => Adapter.Run(_adapter.Source.CountGroupsAsync(document.Key, ScopeKind.ActiveView, CancellationToken.None)));
         Evidence.Step($"{document.Document.Title}: compared Active view counts in '{CaseFiles.Facts.ViewName}' with the view collector.");
         return Compare(oracle, quick.ToDictionary(group => group.GroupId, group => group.Count));
@@ -181,8 +233,19 @@ public sealed class ExplorerCountTests : RecordedTest
 
     private static Dictionary<long, int> OracleCounts(SampleDocument document)
     {
-        return Oracle.Candidates(document.Document, [])
-            .GroupBy(element => element.Category.Id.ToLong())
+        return CountByCategory(Oracle.Candidates(document.Document, []));
+    }
+
+    private static Dictionary<long, int> ViewOracleCounts(SampleDocument document)
+    {
+        var view = Oracle.ViewIds(document);
+        return CountByCategory(Oracle.Candidates(document.Document, [], true, true)
+            .Where(element => view.Contains(element.Id.ToLong())));
+    }
+
+    private static Dictionary<long, int> CountByCategory(IEnumerable<Element> elements)
+    {
+        return elements.GroupBy(element => element.Category.Id.ToLong())
             .ToDictionary(group => group.Key, group => group.Count());
     }
 }

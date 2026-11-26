@@ -67,6 +67,6 @@ internal static class ParameterCatalogReader
     private static List<long> FilterableCategories(Document document)
     {
         var filterable = new HashSet<long>(ParameterFilterUtilities.GetAllFilterableCategories().Select(id => id.ToLong()));
-        return ElementReader.ModelCategoryIds(document).Select(id => id.ToLong()).Where(filterable.Contains).ToList();
+        return ElementReader.ListedCategoryIds(document).Select(id => id.ToLong()).Where(filterable.Contains).ToList();
     }
 }

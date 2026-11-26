@@ -8,7 +8,10 @@ public readonly record struct ElementRow(
     long WorksetId,
     bool SecondaryOption = false,
     ViewDraw Draw = ViewDraw.Model,
-    long OwnerViewId = ViewDraws.NoOwner);
+    long OwnerViewId = ViewDraws.NoOwner)
+{
+    public bool InWholeModel => !SecondaryOption && OwnerViewId == ViewDraws.NoOwner;
+}
 
 public readonly record struct TypeRow(long TypeId, int GroupIndex, int FamilyNameIndex, int TypeNameIndex);
 

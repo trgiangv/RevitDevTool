@@ -120,6 +120,7 @@ Tradeoffs:
   actions and the manual Pick check (a click or box in the view needs a person).
   Status stays Proposed until they pass.
 - MCP filter tool on the same core (0062 direction).
+- Annotation in Explorer: [0064](0064-model-context-annotation-in-explorer.md).
 - Expand by MEP system: the deferred context strip (0062 Decision 13), once a
   MEP user asks for it.
 - Later actions, one at a time under item 2: color by value, Excel

@@ -109,6 +109,94 @@
         "Open 'Snowdon Towers Sample HVAC.rvt' with its links loaded and open the Model Context panel.",
         "The document list starts with 'Current model' and then lists each loaded link (compare with Manage > Manage Links)."
       ]
+    },
+    {
+      "id": "AN-01",
+      "description": "Active view annotation on floor plan L3: quick counts and tree counts equal the oracle per category",
+      "check": "AnnotationCounts",
+      "docs": "Host",
+      "scope": "ActiveView",
+      "view": "Plan",
+      "expected": {
+        "categories": {
+          "OST_DuctTags": 73,
+          "OST_MEPSpaceTags": 17,
+          "OST_Grids": 15,
+          "OST_MechanicalEquipmentTags": 10,
+          "OST_FlexDuctTags": 5,
+          "OST_TextNotes": 3,
+          "OST_IOSDetailGroups": 1
+        },
+        "absent": [ "OST_WeakDims", "OST_SectionBox" ]
+      },
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026, make floor plan 'L3' the active view and open the Model Context panel; Scope 'Active view', check 'Current model' only.",
+        "On the Explorer tab read: Duct Tags 73, Space Tags 17, Grids 15, Mechanical Equipment Tags 10, Flex Duct Tags 5, Text Notes 3, Detail Groups 1.",
+        "No Automatic Sketch Dimensions or Section Boxes row appears.",
+        "Check without the panel: drag a selection window over the whole plan, click Filter (Modify tab) and compare the counts."
+      ]
+    },
+    {
+      "id": "AN-02",
+      "description": "Active view annotation on sheet Cover Sheet: quick counts and tree counts equal the oracle per category",
+      "check": "AnnotationCounts",
+      "docs": "Host",
+      "scope": "ActiveView",
+      "view": "Sheet",
+      "expected": {
+        "categories": {
+          "OST_TextNotes": 5,
+          "OST_Viewports": 2,
+          "OST_TitleBlocks": 1,
+          "OST_ScheduleGraphics": 1,
+          "OST_GenericAnnotation": 1
+        },
+        "absent": [ "OST_WeakDims", "OST_SectionBox" ]
+      },
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026, make sheet 'M000 - Cover Sheet' the active view and open the Model Context panel; Scope 'Active view', check 'Current model' only.",
+        "On the Explorer tab read: Text Notes 5, Viewports 2, Title Blocks 1, Schedule Graphics 1, Generic Annotations 1.",
+        "Check without the panel: drag a selection window over the whole sheet, click Filter (Modify tab) and compare the counts."
+      ]
+    },
+    {
+      "id": "AN-03",
+      "description": "Whole model annotation: only elements with no owner view, quick counts and tree counts equal the oracle per category",
+      "check": "AnnotationCounts",
+      "docs": "Host",
+      "scope": "WholeModel",
+      "expected": {
+        "categories": {
+          "OST_Grids": 15,
+          "OST_Levels": 11,
+          "OST_CLines": 7,
+          "OST_Elev": 12,
+          "OST_VolumeOfInterest": 5,
+          "OST_GuideGrid": 1
+        },
+        "absent": [
+          "OST_WeakDims",
+          "OST_SectionBox",
+          "OST_DuctTags",
+          "OST_MEPSpaceTags",
+          "OST_MechanicalEquipmentTags",
+          "OST_FlexDuctTags",
+          "OST_TextNotes",
+          "OST_TitleBlocks",
+          "OST_Viewports",
+          "OST_ScheduleGraphics",
+          "OST_GenericAnnotation",
+          "OST_IOSDetailGroups",
+          "OST_Lines",
+          "OST_DetailComponents",
+          "OST_RasterImages"
+        ]
+      },
+      "manualSteps": [
+        "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 and open the Model Context panel; Scope 'Whole model', check 'Current model' only.",
+        "On the Explorer tab read: Grids 15, Levels 11, Reference Planes 7, Elevations 12, Scope Boxes 5, Guide Grid 1.",
+        "No tag, Text Notes, Title Blocks, Viewports, Detail Groups, Lines, Detail Items, Raster Images, Automatic Sketch Dimensions or Section Boxes row appears."
+      ]
     }
   ]
 }

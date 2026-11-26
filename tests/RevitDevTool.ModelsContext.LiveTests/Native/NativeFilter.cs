@@ -41,7 +41,7 @@ internal static class NativeFilter
 
             try
             {
-                var categories = definition.Groups.Count > 0 ? definition.Groups.ToList() : Oracle.ModelCategories(document.Document).ToList();
+                var categories = definition.Groups.Count > 0 ? definition.Groups.ToList() : Oracle.ListedCategories(document.Document).ToList();
                 var filter = Compile(document.Document, root, definition.Groups);
                 total += Collect(document, categories, filter, scope).Count;
                 if (document.Key.IsCurrentModel)
@@ -70,7 +70,7 @@ internal static class NativeFilter
 
     private static HashSet<long> Collect(SampleDocument document, List<long> categories, ElementFilter? filter, ScopeKind scope)
     {
-        var collector = new FilteredElementCollector(document.Document).WhereElementIsNotElementType().WherePasses(Multicategory(categories));
+        var collector = InScope(document, categories, scope);
         if (filter is not null)
         {
             collector = collector.WherePasses(filter);
@@ -83,6 +83,14 @@ internal static class NativeFilter
         }
 
         return ids;
+    }
+
+    private static FilteredElementCollector InScope(SampleDocument document, IEnumerable<long> categories, ScopeKind scope)
+    {
+        var collector = new FilteredElementCollector(document.Document).WhereElementIsNotElementType().WherePasses(Multicategory(categories));
+        return scope == ScopeKind.ActiveView && !document.Document.IsLinked
+            ? collector
+            : collector.WherePasses(new ElementOwnerViewFilter(ElementId.InvalidElementId));
     }
 
     private static ElementMulticategoryFilter Multicategory(IEnumerable<long> categories)
@@ -114,7 +122,7 @@ internal static class NativeFilter
                 var element = filter is null
                     ? ParameterFilterElement.Create(doc, name, ids)
                     : ParameterFilterElement.Create(doc, name, ids, filter);
-                var collector = new FilteredElementCollector(doc).WhereElementIsNotElementType().WherePasses(Multicategory(usable));
+                var collector = InScope(document, usable, scope);
                 if (element.GetElementFilter() is { } created)
                 {
                     collector = collector.WherePasses(created);
@@ -349,7 +357,7 @@ internal static class NativeFilter
             var (instance, type) = Oracle.Read(element, key);
             foreach (var parameter in new[] { instance, type })
             {
-                if (parameter is { HasValue: true } && string.Equals(parameter.AsValueString(), text, StringComparison.OrdinalIgnoreCase))
+                if (parameter is { HasValue: true } && string.Equals(parameter.AsValueString()?.Trim(), text.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     return read(parameter);
                 }

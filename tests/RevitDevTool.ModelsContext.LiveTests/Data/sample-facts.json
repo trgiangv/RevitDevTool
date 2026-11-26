@@ -5,6 +5,7 @@
   "siteLinkTitle": "Snowdon Towers Sample Site",
   "viewName": "L3",
   "threeDViewName": "{3D}",
+  "sheetViewName": "Cover Sheet",
   "missingSource": "link:c:\\missing\\gone.rvt",
   "categoryNames": {
     "OST_Doors": "Doors",

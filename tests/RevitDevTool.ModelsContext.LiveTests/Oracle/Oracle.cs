@@ -15,10 +15,14 @@ internal static class Oracle
 
     private static readonly Dictionary<(string Title, long Element), HashSet<long>> DeclaredIds = [];
 
-    private static readonly HashSet<BuiltInCategory> NotElementCategories =
+    private static readonly HashSet<BuiltInCategory> NeverListed =
     [
         BuiltInCategory.OST_RvtLinks,
-        BuiltInCategory.OST_Materials
+        BuiltInCategory.OST_Materials,
+        BuiltInCategory.OST_WeakDims,
+        BuiltInCategory.OST_SectionBox,
+        BuiltInCategory.OST_Views,
+        BuiltInCategory.OST_Schedules
     ];
 
     private static readonly HashSet<BuiltInCategory> NoSubcategoryRows =
@@ -46,7 +50,7 @@ internal static class Oracle
         foreach (var document in documents)
         {
             var view = scope == ScopeKind.ActiveView ? ViewIds(document, host) : null;
-            foreach (var element in Candidates(document.Document, definition.Groups, view is not null))
+            foreach (var element in Candidates(document.Document, definition.Groups, view is not null, view is not null))
             {
                 if (view is not null && !view.Contains(element.Id.ToLong()))
                 {
@@ -63,19 +67,29 @@ internal static class Oracle
         return matches;
     }
 
-    public static IEnumerable<Element> Candidates(Document document, IReadOnlyCollection<long> categories, bool anyOption = false)
+    public static IEnumerable<Element> Candidates(Document document, IReadOnlyCollection<long> categories, bool anyOption = false,
+        bool viewOwned = false)
     {
-        var wanted = categories.Count > 0 ? new HashSet<long>(categories) : ModelCategories(document);
+        var wanted = categories.Count > 0 ? new HashSet<long>(categories) : ListedCategories(document);
+        var owned = viewOwned && !document.IsLinked;
         return new FilteredElementCollector(document).WhereElementIsNotElementType()
-            .Where(element => element.Category is { } category && wanted.Contains(category.Id.ToLong()) && (anyOption || InMainOrPrimary(element)));
+            .Where(element => element.Category is { } category && wanted.Contains(category.Id.ToLong())
+                              && (owned || element.OwnerViewId == ElementId.InvalidElementId)
+                              && (anyOption || InMainOrPrimary(element)));
     }
 
-    public static HashSet<long> ModelCategories(Document document)
+    public static HashSet<long> ListedCategories(Document document)
     {
+        var linked = document.IsLinked;
         var ids = new HashSet<long>();
+        if (!linked)
+        {
+            ids.Add((long)BuiltInCategory.OST_IOSDetailGroups);
+        }
+
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType != CategoryType.Model || NotElementCategories.Contains(category.BuiltInCategory))
+            if (!Listed(category, linked))
             {
                 continue;
             }
@@ -88,7 +102,7 @@ internal static class Oracle
 
             foreach (Category subcategory in category.SubCategories)
             {
-                if (subcategory.CategoryType == CategoryType.Model && subcategory.BuiltInCategory != BuiltInCategory.INVALID
+                if (Listed(subcategory, linked) && subcategory.BuiltInCategory != BuiltInCategory.INVALID
                     && subcategory.BuiltInCategory.ToString().IndexOf("CenterLine", StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     ids.Add(subcategory.Id.ToLong());
@@ -97,6 +111,13 @@ internal static class Oracle
         }
 
         return ids;
+    }
+
+    private static bool Listed(Category category, bool linked)
+    {
+        return (category.CategoryType == CategoryType.Model || !linked && category.CategoryType == CategoryType.Annotation)
+               && category.IsVisibleInUI
+               && !NeverListed.Contains(category.BuiltInCategory);
     }
 
     public static bool InMainOrPrimary(Element element)
@@ -112,12 +133,32 @@ internal static class Oracle
     public static HashSet<long> ViewIds(SampleDocument document, Document host)
     {
         var view = SampleModel.Application.ActiveUIDocument.ActiveView;
-        var collector = document.Key.IsCurrentModel
-            ? new FilteredElementCollector(host, view.Id)
-            : new FilteredElementCollector(host, view.Id, document.Key.LinkInstanceId.ToElementId());
+        FilteredElementCollector collector;
+        if (document.Key.IsCurrentModel)
+        {
+            collector = new FilteredElementCollector(host, view.Id);
+        }
+        else
+        {
+            var link = document.Key.LinkInstanceId.ToElementId();
+            if (!DrawsLink(host, view, link))
+            {
+                return [];
+            }
+
+            collector = new FilteredElementCollector(host, view.Id, link);
+        }
+
         var ids = new HashSet<long>(collector.WhereElementIsNotElementType().ToElementIds().Select(id => id.ToLong()));
         ids.UnionWith(RailingPartsOf(document.Document, view, ids));
         return ids;
+    }
+
+    private static bool DrawsLink(Document host, View view, ElementId link)
+    {
+        return view.ViewType is ViewType.FloorPlan or ViewType.CeilingPlan or ViewType.EngineeringPlan or ViewType.AreaPlan
+                   or ViewType.Section or ViewType.Elevation or ViewType.Detail or ViewType.ThreeD or ViewType.Walkthrough
+               && new FilteredElementCollector(host, view.Id).ToElementIds().Contains(link);
     }
 
     private static List<long> RailingPartsOf(Document document, View view, HashSet<long> drawn)
@@ -224,7 +265,7 @@ internal static class Oracle
             case StorageType.Integer when int.TryParse(rule.Value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number):
                 return filled && Compare(rule.Operator, value.AsInteger().CompareTo(number));
             case StorageType.Integer:
-                return filled && EqualityMatches(rule.Operator, string.Equals(value.AsValueString(), rule.Value.Trim(), StringComparison.Ordinal));
+                return filled && EqualityMatches(rule.Operator, string.Equals(value.AsValueString()?.Trim(), rule.Value.Trim(), StringComparison.Ordinal));
             case StorageType.Double when rule.Picked is not null:
                 return filled && EqualityMatches(rule.Operator, string.Equals(value.AsValueString(), rule.Value.Trim(), StringComparison.Ordinal));
             case StorageType.Double:
@@ -432,7 +473,7 @@ internal static class Oracle
             return id.ToLong() == number;
         }
 
-        return string.Equals(parameter.Element.Document.GetElement(id)?.Name, text, StringComparison.Ordinal);
+        return string.Equals(parameter.Element.Document.GetElement(id)?.Name.Trim(), text, StringComparison.Ordinal);
     }
 
     private static bool Compare(FilterOperator op, int sign)

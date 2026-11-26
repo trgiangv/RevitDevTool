@@ -92,14 +92,20 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
         IProgress<SnapshotProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var (ids, stamp) = await RevitProfiler.RunAsync("Snapshot ids", application =>
+        var (categories, stamp) = await RevitProfiler.RunAsync("Snapshot categories", application =>
         {
             var document = DocumentRegistry.RequireSource(application, source);
-            return (ElementReader.CollectAnyOption(document), ElementReader.VersionOf(document));
+            return (ElementReader.ListedCategoryIds(document), ElementReader.VersionOf(document));
         }, cancellationToken).ConfigureAwait(false);
+        long[] ids = categories.Count == 0
+            ? []
+            : await RevitProfiler.RunAsync("Snapshot ids", application =>
+                ElementReader.CollectAnyOption(DocumentRegistry.RequireSource(application, source), categories),
+                cancellationToken).ConfigureAwait(false);
         progress?.Report(new SnapshotProgress(source, 0, ids.Length));
+        var listed = new HashSet<long>(categories.Select(id => id.ToLong()));
         var records = await ReadAsync(source, ids,
-            count => progress?.Report(new SnapshotProgress(source, count, ids.Length)), cancellationToken)
+            count => progress?.Report(new SnapshotProgress(source, count, ids.Length)), cancellationToken, listed)
             .ConfigureAwait(false);
         return await Task.Run(() => Assemble(source, records, stamp), cancellationToken).ConfigureAwait(false);
     }
@@ -257,7 +263,8 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
         SourceId source,
         IReadOnlyList<long> ids,
         Action<int>? progress,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        HashSet<long>? listed = null)
     {
         var knownTypes = new HashSet<long>();
         var records = new ReadRecords(new List<TypeRecord>(), new List<ElementRecord>(ids.Count));
@@ -269,7 +276,9 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
             var start = index;
             var (next, types, elements) = await RevitProfiler.RunAsync("Read slice", application =>
             {
-                var reader = new ElementReader(DocumentRegistry.RequireSource(application, source), knownTypes);
+                var document = DocumentRegistry.RequireSource(application, source);
+                listed ??= ElementReader.ListedSet(document);
+                var reader = new ElementReader(document, knownTypes, listed);
                 var end = reader.ReadSlice(ids, start);
                 return (end, reader.Types, reader.Elements);
             }, cancellationToken, stats).ConfigureAwait(false);

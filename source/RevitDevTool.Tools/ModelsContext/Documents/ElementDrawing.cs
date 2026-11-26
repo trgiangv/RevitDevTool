@@ -8,7 +8,8 @@ internal static class ElementDrawing
 {
     public static ViewDraw DrawOf(Element element)
     {
-        if (element is View || element.OwnerViewId != ElementId.InvalidElementId)
+        if (element is View || element.OwnerViewId != ElementId.InvalidElementId
+                            || element.Category?.BuiltInCategory is BuiltInCategory.OST_VolumeOfInterest or BuiltInCategory.OST_GuideGrid)
         {
             return ViewDraw.None;
         }

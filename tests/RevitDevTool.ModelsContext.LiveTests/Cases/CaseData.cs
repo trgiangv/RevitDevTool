@@ -100,6 +100,8 @@ internal sealed class SampleFacts
 
     public string ThreeDViewName { get; set; } = string.Empty;
 
+    public string SheetViewName { get; set; } = string.Empty;
+
     public string MissingSource { get; set; } = string.Empty;
 
     public Dictionary<string, string> CategoryNames { get; set; } = [];

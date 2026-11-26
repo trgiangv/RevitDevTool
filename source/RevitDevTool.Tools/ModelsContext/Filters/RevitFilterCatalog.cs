@@ -80,7 +80,7 @@ internal sealed class RevitFilterCatalog : IHostFilterCatalog
                 ParameterFilterElement rule when rule.GetCategories() is { Count: > 0 } categories =>
                     ElementReader.CandidatesOf(target, categories),
                 SelectionFilterElement selection => ElementReader.CandidatesAmong(target, selection.GetElementIds()),
-                _ => new CandidateSet([], [])
+                _ => new CandidateSet([], [], [])
             };
             return (DocumentRegistry.SourceOf(resolved).Label, candidates.InScope(scope));
         }, cancellationToken).ConfigureAwait(false);

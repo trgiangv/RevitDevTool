@@ -119,7 +119,7 @@ internal static class SampledBuiltIns
         excluded = new SortedSet<string>(StringComparer.Ordinal);
         var filterableCategories = new HashSet<ElementId>(ParameterFilterUtilities.GetAllFilterableCategories());
         var filterable = new HashSet<ElementId>();
-        foreach (var category in ElementReader.ModelCategoryIds(document).Where(filterableCategories.Contains))
+        foreach (var category in ElementReader.ListedCategoryIds(document).Where(filterableCategories.Contains))
         {
             filterable.UnionWith(ParameterFilterUtilities.GetFilterableParametersInCommon(document, [category]));
         }

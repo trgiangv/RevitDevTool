@@ -52,7 +52,7 @@ internal static class VisibleIds
         var snapshot = scope.Snapshot;
         if (scope.Ids is null)
         {
-            return snapshot.Rows.Where(row => !row.SecondaryOption && groups.Contains(row.GroupIndex))
+            return snapshot.Rows.Where(row => row.InWholeModel && groups.Contains(row.GroupIndex))
                 .Select(row => row.Id);
         }
 

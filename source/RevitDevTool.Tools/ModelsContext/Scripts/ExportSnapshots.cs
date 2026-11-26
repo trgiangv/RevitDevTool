@@ -7,6 +7,7 @@ using System.Text;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
+using DevTools.ModelsContext.Documents;
 
 [Transaction(TransactionMode.ReadOnly)]
 public class Command : IExternalCommand
@@ -45,7 +46,7 @@ public class Command : IExternalCommand
 
     private static string Write(string folder, string name, string source, Document document)
     {
-        var categories = ModelCategoryIds(document);
+        var categories = ListedCategoryIds(document);
         var modelCategories = new HashSet<long>(categories.Select(Value));
         var types = new StringBuilder();
         var rows = new StringBuilder();
@@ -74,38 +75,54 @@ public class Command : IExternalCommand
         return path;
     }
 
-    private static List<ElementId> ModelCategoryIds(Document document)
+    private static List<ElementId> ListedCategoryIds(Document document)
     {
         var categories = new List<ElementId>();
+        var inLink = document.IsLinked;
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType != CategoryType.Model
-                || category.BuiltInCategory == BuiltInCategory.OST_RvtLinks
-                || category.BuiltInCategory == BuiltInCategory.OST_Materials)
+            var parent = category.BuiltInCategory.ToString();
+            if (!CategoryRule.Lists(KindOf(category), category.IsVisibleInUI, parent, inLink))
             {
                 continue;
             }
 
             categories.Add(category.Id);
-            if (category.BuiltInCategory == BuiltInCategory.OST_Site
-                || category.BuiltInCategory == BuiltInCategory.OST_Lines
-                || category.BuiltInCategory == BuiltInCategory.OST_Topography)
+            if (!SubcategoryRule.ListsChildrenOf(parent))
             {
                 continue;
             }
 
             foreach (Category subcategory in category.SubCategories)
             {
-                if (subcategory.CategoryType == CategoryType.Model
-                    && subcategory.BuiltInCategory != BuiltInCategory.INVALID
-                    && subcategory.BuiltInCategory.ToString().IndexOf("CenterLine", StringComparison.OrdinalIgnoreCase) < 0)
+                if (CategoryRule.ListsSubcategory(KindOf(subcategory), subcategory.IsVisibleInUI, parent,
+                        subcategory.BuiltInCategory.ToString(), inLink))
                 {
                     categories.Add(subcategory.Id);
                 }
             }
         }
 
+        var detailGroups = new ElementId(BuiltInCategory.OST_IOSDetailGroups);
+        if (CategoryRule.Lists(CategoryKind.Other, true, CategoryRule.DetailGroups, inLink) && !categories.Contains(detailGroups))
+        {
+            categories.Add(detailGroups);
+        }
+
         return categories;
+    }
+
+    private static CategoryKind KindOf(Category category)
+    {
+        switch (category.CategoryType)
+        {
+            case CategoryType.Model:
+                return CategoryKind.Model;
+            case CategoryType.Annotation:
+                return CategoryKind.Annotation;
+            default:
+                return CategoryKind.Other;
+        }
     }
 
     private static long ParentOf(Category category)
@@ -118,7 +135,8 @@ public class Command : IExternalCommand
         var filters = new List<ElementFilter>
         {
             new ElementMulticategoryFilter(categories),
-            new ElementIsElementTypeFilter(true)
+            new ElementIsElementTypeFilter(true),
+            new ElementOwnerViewFilter(ElementId.InvalidElementId)
         };
         filters.AddRange(new FilteredElementCollector(document)
             .OfClass(typeof(DesignOption))

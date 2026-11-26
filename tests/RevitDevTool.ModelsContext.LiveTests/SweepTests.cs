@@ -63,19 +63,19 @@ public sealed class SweepTests : RecordedTest
             }
 
             var view = SampleModel.Application.ActiveUIDocument.ActiveView;
-            if (DrawsModel(view))
+            if (!view.IsTemplate && FilteredElementCollector.IsViewValidForElementIteration(host, view.Id))
             {
                 foreach (var document in ActiveModel.Documents)
                 {
                     var ids = Evidence.Time("oracle", () => Oracle.ViewIds(document, host));
-                    var oracle = Evidence.Time("oracle", () => Group(Oracle.Candidates(document.Document, [], true).Where(element => ids.Contains(element.Id.ToLong()))));
+                    var oracle = Evidence.Time("oracle", () => Group(Oracle.Candidates(document.Document, [], true, true).Where(element => ids.Contains(element.Id.ToLong()))));
                     var panel = Evidence.Time("panel", () => Quick(adapter, document, ScopeKind.ActiveView));
                     compared += Compare(problems, document, $"Active view '{view.Name}'", oracle, panel);
                 }
             }
             else
             {
-                Evidence.Step($"The active view '{view.Name}' ({view.ViewType}) is not a plan or 3D view: Active view counts skipped; the run never switches views.");
+                Evidence.Step($"The active view '{view.Name}' ({view.ViewType}) cannot be collected: Active view counts skipped; the run never switches views.");
             }
 
             var schedules = new List<ScheduleRow>();
@@ -415,12 +415,6 @@ public sealed class SweepTests : RecordedTest
         return Adapter.Run(adapter.Source.CountGroupsAsync(document.Key, scope, None))
             .Where(group => group.Count > 0)
             .ToDictionary(group => group.GroupId, group => group.Count);
-    }
-
-    private static bool DrawsModel(View view)
-    {
-        return !view.IsTemplate && view.ViewType is ViewType.FloorPlan or ViewType.CeilingPlan or ViewType.EngineeringPlan
-            or ViewType.AreaPlan or ViewType.ThreeD;
     }
 
     private static List<long> Pool(Adapter adapter, IReadOnlyList<SampleDocument> documents)

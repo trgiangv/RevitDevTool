@@ -9,7 +9,7 @@ using ElementRecord = DevTools.ModelsContext.Documents.ElementRecord;
 
 namespace RevitDevTool.Tools.ModelsContext.Documents;
 
-internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
+internal sealed class ElementReader(Document document, HashSet<long> knownTypes, HashSet<long>? listedCategories = null)
 {
     public const int SliceSize = 5000;
     public static readonly TimeSpan SliceTime = TimeSpan.FromMilliseconds(30);
@@ -19,26 +19,26 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
     private const long CategorySpan = 10_000_000L;
     private const string NoType = "No type";
 
-    private readonly HashSet<long> _modelCategories = [.. ModelCategoryIds(document).Select(id => id.ToLong())];
+    private readonly HashSet<long> _listedCategories = listedCategories ?? ListedSet(document);
     private readonly Dictionary<long, ElementType?> _types = [];
 
     public List<TypeRecord> Types { get; } = [];
 
     public List<ElementRecord> Elements { get; } = [];
 
-    public static List<ElementId> ModelCategoryIds(Document document)
+    public static List<ElementId> ListedCategoryIds(Document document)
     {
         var ids = new List<ElementId>();
+        var inLink = document.IsLinked;
         foreach (Category category in document.Settings.Categories)
         {
-            if (category.CategoryType != CategoryType.Model
-                || category.BuiltInCategory is BuiltInCategory.OST_RvtLinks or BuiltInCategory.OST_Materials)
+            var parent = category.BuiltInCategory.ToString();
+            if (!CategoryRule.Lists(KindOf(category), category.IsVisibleInUI, parent, inLink))
             {
                 continue;
             }
 
             ids.Add(category.Id);
-            var parent = category.BuiltInCategory.ToString();
             if (!SubcategoryRule.ListsChildrenOf(parent))
             {
                 continue;
@@ -46,21 +46,41 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
 
             foreach (Category subcategory in category.SubCategories)
             {
-                if (subcategory.CategoryType == CategoryType.Model
-                    && subcategory.BuiltInCategory != BuiltInCategory.INVALID
-                    && SubcategoryRule.Lists(parent, subcategory.BuiltInCategory.ToString()))
+                if (CategoryRule.ListsSubcategory(KindOf(subcategory), subcategory.IsVisibleInUI, parent,
+                        subcategory.BuiltInCategory.ToString(), inLink))
                 {
                     ids.Add(subcategory.Id);
                 }
             }
         }
 
+        var detailGroups = new ElementId(BuiltInCategory.OST_IOSDetailGroups);
+        if (CategoryRule.Lists(CategoryKind.Other, true, CategoryRule.DetailGroups, inLink) && !ids.Contains(detailGroups))
+        {
+            ids.Add(detailGroups);
+        }
+
         return ids;
+    }
+
+    public static HashSet<long> ListedSet(Document document)
+    {
+        return [.. ListedCategoryIds(document).Select(id => id.ToLong())];
+    }
+
+    private static CategoryKind KindOf(Category category)
+    {
+        return category.CategoryType switch
+        {
+            CategoryType.Model => CategoryKind.Model,
+            CategoryType.Annotation => CategoryKind.Annotation,
+            _ => CategoryKind.Other
+        };
     }
 
     public static List<ElementId> OwnedCategoryIds(Document document)
     {
-        var all = ModelCategoryIds(document);
+        var all = ListedCategoryIds(document);
         var subcategories = all.Where(id => Category.GetCategory(document, id)?.Parent is not null).ToList();
         var owned = new HashSet<ElementId>(all.Except(subcategories));
         if (subcategories.Count > 0)
@@ -89,16 +109,46 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
         ICollection<ElementId>? categories = null,
         IReadOnlyList<ElementFilter>? options = null)
     {
-        var filters = new List<ElementFilter> { AnyOptionFilter(document, categories) };
+        var filters = new List<ElementFilter> { AnyOptionFilter(document, categories), FreeFilter() };
         filters.AddRange(options ?? OptionFilters(document));
         return new LogicalAndFilter(filters);
     }
 
     public static ElementFilter AnyOptionFilter(Document document, ICollection<ElementId>? categories = null)
     {
-        return new LogicalAndFilter(
-            new ElementMulticategoryFilter(categories is { Count: > 0 } ? categories : ModelCategoryIds(document)),
-            new ElementIsElementTypeFilter(true));
+        var filters = new List<ElementFilter>
+        {
+            new ElementMulticategoryFilter(categories is { Count: > 0 } ? categories : ListedCategoryIds(document)),
+            new ElementIsElementTypeFilter(true)
+        };
+        if (document.IsLinked)
+        {
+            filters.Add(FreeFilter());
+        }
+
+        return new LogicalAndFilter(filters);
+    }
+
+    private static ElementOwnerViewFilter FreeFilter()
+    {
+        return new ElementOwnerViewFilter(ElementId.InvalidElementId);
+    }
+
+    public static HashSet<long> ViewOwnedIds(Document document, ICollection<ElementId>? categories = null)
+    {
+        if (document.IsLinked)
+        {
+            return [];
+        }
+
+        return
+        [
+            .. document.CollectElements()
+                .WherePasses(AnyOptionFilter(document, categories))
+                .WherePasses(new ElementOwnerViewFilter(ElementId.InvalidElementId, true))
+                .ToElementIds()
+                .Select(id => id.ToLong())
+        ];
     }
 
     public static List<ElementFilter> OptionFilters(Document document)
@@ -128,14 +178,15 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
 
     public static CandidateSet CandidatesOf(Document document, ICollection<ElementId>? categories = null)
     {
-        return new CandidateSet(CollectAnyOption(document, categories), SecondaryIds(document, categories));
+        return new CandidateSet(CollectAnyOption(document, categories), SecondaryIds(document, categories),
+            ViewOwnedIds(document, categories));
     }
 
     public static CandidateSet CandidatesAmong(Document document, ICollection<ElementId> ids)
     {
         if (ids.Count == 0)
         {
-            return new CandidateSet([], []);
+            return new CandidateSet([], [], []);
         }
 
         var inModel = document.CollectElements(ids)
@@ -145,7 +196,9 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
             .ToArray();
         var secondary = SecondaryIds(document);
         secondary.IntersectWith(inModel);
-        return new CandidateSet(inModel, secondary);
+        var owned = ViewOwnedIds(document);
+        owned.IntersectWith(inModel);
+        return new CandidateSet(inModel, secondary, owned);
     }
 
     public static HashSet<long> SecondaryIds(Document document, ICollection<ElementId>? categories = null)
@@ -236,13 +289,13 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
             return;
         }
 
-        if (element.Category is not { } category)
+        if (element.Category is not { } category || (document.IsLinked && element.OwnerViewId != ElementId.InvalidElementId))
         {
             return;
         }
 
         var categoryId = category.Id.ToLong();
-        if (!_modelCategories.Contains(categoryId))
+        if (!_listedCategories.Contains(categoryId))
         {
             return;
         }
@@ -298,7 +351,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes)
         }
 
         var categoryId = category.Id.ToLong();
-        if (!_modelCategories.Contains(categoryId))
+        if (!_listedCategories.Contains(categoryId))
         {
             return;
         }

@@ -51,8 +51,14 @@ Three icon buttons decide which elements the panel counts and filters:
 | Scope | Elements |
 |-------|----------|
 | Selection | What is selected in Revit, from any document, including elements of a secondary design option shown in the view they were picked in. The documents box hides: the selection decides the documents. |
-| Active view (default) | What the active view shows, per checked document, with the view's design option settings: a view that shows a secondary option counts that option and not the primary. Links count only in plan, ceiling, engineering, area, section, elevation, detail, 3D and walkthrough views; other views (sheets, schedules, legends, drafting) show no linked elements. |
-| Whole model | Every model element of the checked documents, main model and primary design options, the same set a Revit schedule lists. Secondary options never count, match or get selected here. Materials are not model elements and never count. |
+| Active view (default) | What the active view shows, per checked document, annotation included, with the view's design option settings: a view that shows a secondary option counts that option and not the primary. Links count only in plan, ceiling, engineering, area, section, elevation, detail, 3D and walkthrough views; other views (sheets, schedules, legends, drafting) show no linked elements. |
+| Whole model | Every listed element of the checked documents that has no owner view, main model and primary design options: model elements, and annotation such as grids, levels, reference planes, scope boxes and elevation markers. Secondary options never count, match or get selected here. Materials never count. |
+
+An element that belongs to one view (tags, text, dimensions, title blocks, viewports,
+detail items, detail lines, filled regions, raster images, detail groups) counts only in
+Active view, in its own view. Sheets, drafting views and legends list their annotation
+there. A link only ever contributes elements with no owner view, in Model categories
+([0064](../decisions/0064-model-context-annotation-in-explorer.md)).
 
 Visibility actions always work on the active view, whatever the scope.
 
@@ -76,11 +82,16 @@ Visibility actions always work on the active view, whatever the scope.
 
 A flat, virtualized tree: **Model › Category › Family › Type › Instance**.
 
-A category is a model category, or a built-in model subcategory that owns elements. A subcategory is a child of
+Explorer lists what Visibility/Graphics shows: Model and Annotation categories, plus Detail Groups. It never lists
+Automatic Sketch Dimensions, Section Boxes, RVT Links, Materials, Views, Schedules (a schedule placed on a sheet
+counts as Schedule Graphics) or a category hidden from the user interface. Links list Model categories only
+([0064](../decisions/0064-model-context-annotation-in-explorer.md)).
+
+A category row is a category, or a built-in subcategory that owns elements. A subcategory is a child of
 its category in the tree (Toposolid › Sub-divisions, Railings › Top Rails), with its own count; the parent counts
 its own elements plus its children. Subcategories of Site, Lines and Topography (base and survey points, sketch
 lines, contours) and every Center line subcategory (ducts, duct fittings, flex ducts, pipes, conduits, cable trays)
-are not listed, so Whole model is the set a Revit schedule lists.
+are not listed.
 
 - The tree starts with **Current model**, then one group per checked link.
 - Every row shows its count in grey. Instances load on expand in pages of 200
@@ -164,10 +175,11 @@ the view does not draw some of its elements. The hidden children are always
 listed under it, in the normal order, dimmed with the eye closed; a branch whose
 elements are all hidden is listed dimmed too. Group actions (Select, Hide,
 Isolate) act on the visible elements only; a dimmed row acts alone, when
-selected. Whole model has no hidden counts. Only elements a view of this type can
-draw count: sheets, elements with no geometry, view-owned elements of another
-view (all view-owned elements of a link), rooms and spaces in 3D, and areas
-outside area plans never count.
+selected. Whole model has no hidden counts. Annotation and other elements of the
+active view count in every view type, sheets and drafting views too. Of the
+rest, only elements a view of this type can draw count: sheets, elements with no
+geometry, rooms and spaces in 3D, and areas outside area plans never count.
+View-owned elements of another view, or of a link, never count.
 
 Railing parts count as Revit draws them: a baluster, support or termination
 whose railing (or top rail or handrail) the view draws is shown, in the main
@@ -351,7 +363,7 @@ A checkbox list with counts and search, folded to a summary line. An element
 counts under its own category (a wall used as a curtain panel counts as Curtain
 Panels). *All · None*
 check or uncheck the categories the search shows. Checked categories always mean
-"any of". With no categories checked the filter looks at every model category,
+"any of". With no categories checked the filter looks at every listed category,
 and the summary reads *All categories*; when the filter also has no condition it
 matches nothing, so the summary reads *None*.
 

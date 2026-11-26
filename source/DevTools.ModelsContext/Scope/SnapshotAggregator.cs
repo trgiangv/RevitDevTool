@@ -10,7 +10,7 @@ public static class SnapshotAggregator
         Span<int> path = stackalloc int[DocumentSnapshot.MaxGroupingDepth];
         foreach (var row in snapshot.Rows)
         {
-            if (row.SecondaryOption)
+            if (!row.InWholeModel)
             {
                 continue;
             }

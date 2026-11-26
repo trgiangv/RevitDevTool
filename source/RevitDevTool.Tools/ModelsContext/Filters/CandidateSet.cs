@@ -3,7 +3,7 @@ using Nice3point.Revit.Extensions;
 
 namespace RevitDevTool.Tools.ModelsContext.Filters;
 
-internal sealed class CandidateSet(long[] ids, HashSet<long> secondary)
+internal sealed class CandidateSet(long[] ids, HashSet<long> secondary, HashSet<long> viewOwned)
 {
     private const long NoType = -1;
 
@@ -14,7 +14,7 @@ internal sealed class CandidateSet(long[] ids, HashSet<long> secondary)
 
     public long[] Ids { get; } = ids;
 
-    public long[] ModelIds => _modelIds ??= secondary.Count == 0 ? Ids : Ids.Where(id => !secondary.Contains(id)).ToArray();
+    public long[] ModelIds => _modelIds ??= secondary.Count == 0 && viewOwned.Count == 0 ? Ids : Ids.Where(InModel).ToArray();
 
     public bool Contains(long id)
     {
@@ -23,7 +23,7 @@ internal sealed class CandidateSet(long[] ids, HashSet<long> secondary)
 
     public bool InModel(long id)
     {
-        return !secondary.Contains(id);
+        return !secondary.Contains(id) && !viewOwned.Contains(id);
     }
 
     public long[] InScope(IReadOnlyCollection<long>? scope)

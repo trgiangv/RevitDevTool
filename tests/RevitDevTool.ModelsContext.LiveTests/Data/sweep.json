@@ -20,12 +20,12 @@
   "cases": [
     {
       "id": "SW-01",
-      "description": "Every category of the active model and each loaded link: the panel's quick count equals the oracle for Whole model, and for Active view when the active view is a plan or 3D view; for the active model a rolled-back itemized schedule per schedulable category is a second reference",
+      "description": "Every category of the active model and each loaded link: the panel's quick count equals the oracle for Whole model, and for Active view in whatever non-template view is active (links count only in model views); for the active model a rolled-back itemized schedule per schedulable category is a second reference",
       "expected": "panel = oracle in every category of every document; schedule differences listed with a reason",
       "manualSteps": [
         "Open any project with its links loaded; Model Context, Explorer, Whole model, check every document.",
         "For a category, compare the row count with a new schedule of that category (Itemize every instance on, no filters) in the active model.",
-        "Switch the scope to Active view in a plan or 3D view: the counts are the elements drawn in that view."
+        "Switch the scope to Active view in a plan, section, 3D, drafting, legend or sheet view: the counts are the elements that view shows."
       ]
     },
     {

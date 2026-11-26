@@ -2,36 +2,36 @@
   "cases": [
     {
       "id": "SC-01",
-      "description": "Whole model, Current model, every model category",
+      "description": "Whole model, Current model, every listed category (elements with no owner view)",
       "docs": "Host",
       "scope": "WholeModel",
       "filter": {},
-      "expected": 2929,
+      "expected": 2928,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
         "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Leave Categories empty (every model category counts).",
-        "Read the number before 'matches' in the result row: it must be 2929.",
-        "Check without the panel: Revit has no single count of every model element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
+        "Leave Categories empty (every listed category counts).",
+        "Read the number before 'matches' in the result row: it must be 2928.",
+        "Check without the panel: Revit has no single count of every listed element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
       ]
     },
     {
       "id": "SC-02",
-      "description": "Whole model, Architectural link, every model category",
+      "description": "Whole model, Architectural link, every listed category (elements with no owner view)",
       "docs": "Arch",
       "scope": "WholeModel",
       "filter": {},
-      "expected": 11195,
+      "expected": 9743,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
         "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Leave Categories empty (every model category counts).",
-        "Read the number before 'matches' in the result row: it must be 11195.",
-        "Check without the panel: Revit has no single count of every model element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
+        "Leave Categories empty (every listed category counts).",
+        "Read the number before 'matches' in the result row: it must be 9743.",
+        "Check without the panel: Revit has no single count of every listed element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
       ]
     },
     {
@@ -70,36 +70,36 @@
     },
     {
       "id": "SC-05",
-      "description": "Active view, Current model, every model category",
+      "description": "Active view, Current model, every listed category, annotation included",
       "docs": "Host",
       "scope": "ActiveView",
       "filter": {},
-      "expected": 917,
+      "expected": 1041,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Make floor plan 'L3' the active view, then choose Scope 'Active view' in the panel.",
         "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
-        "Leave Categories empty (every model category counts).",
-        "Read the number before 'matches' in the result row: it must be 917.",
-        "Check without the panel: in view L3 drag a selection window over the whole plan and click Filter (Modify tab); the dialog counts the Current model elements per category (every model category). Revit has no dialog that counts linked elements in a view, so the link part is checked by the oracle only."
+        "Leave Categories empty (every listed category counts).",
+        "Read the number before 'matches' in the result row: it must be 1041.",
+        "Check without the panel: in view L3 drag a selection window over the whole plan and click Filter (Modify tab); the dialog counts the Current model elements per category (every listed category). Revit has no dialog that counts linked elements in a view, so the link part is checked by the oracle only."
       ]
     },
     {
       "id": "SC-06",
-      "description": "Active view, Architectural link, every model category",
+      "description": "Active view, Architectural link, every listed category",
       "docs": "Arch",
       "scope": "ActiveView",
       "filter": {},
-      "expected": 1978,
+      "expected": 1956,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Make floor plan 'L3' the active view, then choose Scope 'Active view' in the panel.",
         "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
-        "Leave Categories empty (every model category counts).",
-        "Read the number before 'matches' in the result row: it must be 1978 (balusters and supports drawn with their railing count, rule HR-04).",
-        "Check without the panel: in view L3 drag a selection window over the whole plan and click Filter (Modify tab); the dialog counts the Current model elements per category (every model category). Revit has no dialog that counts linked elements in a view, so the link part is checked by the oracle only."
+        "Leave Categories empty (every listed category counts).",
+        "Read the number before 'matches' in the result row: it must be 1956 (balusters and supports drawn with their railing count, rule HR-04).",
+        "Check without the panel: in view L3 drag a selection window over the whole plan and click Filter (Modify tab); the dialog counts the Current model elements per category (every listed category). Revit has no dialog that counts linked elements in a view, so the link part is checked by the oracle only."
       ]
     },
     {

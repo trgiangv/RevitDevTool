@@ -40,6 +40,11 @@ count.
    `LinkElements.InView` also returns `null` unless the host view collector holds
    the link instance, or a temporary mode is on and the link is neither hidden nor
    its category off (WH-14).
+   A link that the active view does not draw crashes it the same way: on Golden
+   Nugget Architektur, plan `UG 1_Genehmigung` with the Gebäudetechnik link
+   loaded, a raw link view collector ended Revit 2026 with
+   `ExecutionEngineException` in `WhereElementIsNotElementType` (2026-11-26).
+   Test oracles that build the collector themselves need the same check.
 2. **Family parameters are invisible to the usual lookups.** A non-shared family
    parameter has a positive id and a `ParameterElement`, but no
    `ParameterBindings` entry, it is not in `GetFilterableParametersInCommon`, and

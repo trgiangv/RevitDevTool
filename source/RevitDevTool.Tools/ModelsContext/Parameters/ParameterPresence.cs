@@ -10,7 +10,7 @@ internal static class ParameterPresence
     public static ICollection<ElementId> TypeIdsOf(Document document, ICollection<ElementId> categories)
     {
         var types = new HashSet<ElementId>(document.CollectElements()
-            .WherePasses(new ElementMulticategoryFilter(categories.Count > 0 ? categories : ElementReader.ModelCategoryIds(document)))
+            .WherePasses(new ElementMulticategoryFilter(categories.Count > 0 ? categories : ElementReader.ListedCategoryIds(document)))
             .WhereElementIsElementType()
             .ToElementIds());
         foreach (var element in document.CollectElements().WherePasses(ElementReader.AnyOptionFilter(document, categories)))

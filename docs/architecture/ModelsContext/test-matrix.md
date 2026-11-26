@@ -255,6 +255,26 @@ sample, 2026-11-17). Change them there, not here alone.
 Revit 2026 is the primary test host, Revit 2024 the secondary (`-Year 2024` is the script default).
 Current results (Snowdon HVAC + six links):
 
+- Revit 2026, final deploy (warm snapshot back to one id pass; Categories box focus keeps the checks), fresh Revit,
+  0064 rule: `-Ui` run `20261126-202825` gives L2 447 PASS, 0 FAIL, 8 Inconclusive (CA by design) and L3 28 of 28
+  (UI-11 checks Doors and Walls), 4 live steps skipped; safety ok after L2, after L3 and at host end. CA-01 to CA-10
+  pass alone in `{3D}` (run `20261126-203659`). Docked pane through UIA: `L3` 1,041 with Duct Tags 73; Whole model
+  2,928.
+
+- Revit 2026, deployed add-in (`scripts/build-host.ps1 -HostApp Revit -Year 2026`, fresh Revit, 0064 rule):
+  L2 run `20261126-194036` 447 PASS, 0 FAIL, 8 Inconclusive (CA by design); CA-01 to CA-10 pass alone in `{3D}` (run
+  `20261126-194505`); the `-Ui` run `20261126-194559` gives L2 0 FAIL again and L3 27 of 28 (UI-11 fails, also alone
+  in run `20261126-195428`: after Select Walls and AddToSelection Doors only Doors is checked; Views
+  `AddKeepsBothChecked` passes offline), 4 live steps skipped; safety ok after L2, after L3 and at host end. HVAC SW-01
+  run `20261126-195723`: every document's Whole model count equals `ExportSnapshots` (Current 2,928, Architectural
+  9,743, Structural 1,475, Facades 528, Plumbing 6,563, Electrical 3,003, Site 119). Docked pane through UIA: Whole
+  model 2,928; `L3` 1,041 with Duct Tags 73.
+
+- Revit 2026, runs `20261126-185127` and `20261126-192631`, the latter on a fresh Revit with the oracle link guard
+  ([0064](../../decisions/0064-model-context-annotation-in-explorer.md) rule, window restored on an unlocked desktop):
+  L2 447 PASS, 0 FAIL, 8 Inconclusive (CA by design) in each, safety ok after L2; SC-01 2,928, SC-02 9,743, SC-05 1,041, SC-06 1,956, AN-01 to AN-03 and SB-01 pass. L3 did not run. In the
+  earlier run `20261126-180708` the `L3` collector gave 1,257 (50 Duct Tags for 73, oracle = panel) with ducts of
+  other levels in it; Revit was minimized when checked afterwards (Gotcha 19).
 - Revit 2026, run `20261125-013631` (fresh Revit after a restart): L2 441 PASS, 0 FAIL, 8 Inconclusive (CA by design)
   in 268 s, SC-05 917; L3 18 of 20 in 298 s, the new menu flows UI-18 and UI-20 then passed after test fixes
   (runs `20261125-014836`, `-014723`); UI-19 passed in the full run; safety ok after L2, after L3 and at host end.
@@ -268,7 +288,7 @@ Current results (Snowdon HVAC + six links):
   elements: Railings › Supports 2,608, Wall Sweeps 258, Curtain Wall Grids 235 …), SC-06 780 → 1,028, EN-02 816 → 817,
   EN-05 1,119 → 1,120 (2026-11-24). SC-01 went 2,929 → 4,961 with Center line collected and back to 2,929 once Center
   line was left out (run `20261125-005153`). TX-04, TX-05, NU-05, YN-03 and RF-02 kept their values.
-- SC-05 (Active view `L3`) stays 917 (oracle = panel). On 2026-11-25 the L3 view collector gave 917 in 21 probes:
+- Before 0064, SC-05 (Active view `L3`) stayed 917 (oracle = panel). On 2026-11-25 the L3 view collector gave 917 in 21 probes:
   fresh session never in front, Revit minimized with L3 reopened, in front after `ZoomToFit`, after a full L2 run.
   Earlier sessions gave 1,198 and 1,669 (only Ducts and Flex Ducts moved) and could not be repeated (Gotcha 19).
 - Earlier: Revit 2026, run `20261118-103516`: L2 130 cases PASS in 110 s; L3 6 flows PASS plus 7 data rule tests. A later L3 run, `20261118-133615`, passed 13/13 in 73 s.
@@ -305,17 +325,20 @@ Current results (Snowdon HVAC + six links):
 
 | ID | Use case | Docs | Expected | Test |
 |----|----------|------|----------|------|
-| SC-01 | Whole model, every model category (materials excluded) | Current | 2,929 | L2 matrix |
-| SC-02 | Whole model, every model category (materials excluded) | Arch | 11,195 | L2 matrix, L3 UI-04 |
+| SC-01 | Whole model, every listed category, elements with no owner view | Current | 2,928 | L2 matrix |
+| SC-02 | Whole model, every listed category, elements with no owner view | Arch | 9,743 | L2 matrix, L3 UI-04 |
 | SC-03 | Link unchecked: Doors in the Current model only | Current | 0 | L2 matrix |
 | SC-04 | Link checked: Doors in both | Both | 142 | L2 matrix |
-| SC-05 | Active view, every model category | Current | 917 | L2 matrix |
-| SC-06 | Active view through the link (railing parts drawn with their railing count, HR-04) | Arch | 1,978 | L2 matrix |
+| SC-05 | Active view, every listed category, annotation included | Current | 1,041 | L2 matrix |
+| SC-06 | Active view through the link (railing parts drawn with their railing count, HR-04) | Arch | 1,956 | L2 matrix |
 | SC-07 | Active view, Doors | Both | 24 | L2 matrix |
 | SC-08 | Active view, Swing Angle > 45° | Both | 22 | L2 matrix |
 | SC-09 | Secondary design options: Whole model only counts main + primary; view and selection follow the collector | Arch | snapshot counts = oracle (main + primary) | L2 `ExplorerMatchesOracle` |
 | SC-10 | Documents list: Current model first, then each loaded link | all | keys equal | L2 `ExplorerMatchesOracle` |
 | SC-11 | Checks, last check, unloaded link | fake | state | L1 `PanelBarsTests.AtLeastOneDocumentStaysChecked`, Views `PanelViewTests.AllSkipsUnloadedLink` … |
+| AN-01 | Active view annotation on floor plan `L3`: quick and tree counts per category | Current | equal to the oracle | L2 `ExplorerMatchesOracle` |
+| AN-02 | Active view annotation on sheet `Cover Sheet`: quick and tree counts per category | Current | equal to the oracle | L2 `ExplorerMatchesOracle` |
+| AN-03 | Whole model annotation: only elements with no owner view, quick and tree counts | Current | equal to the oracle | L2 `ExplorerMatchesOracle` |
 
 ### Explorer counts and visibility tiers
 
@@ -708,10 +731,31 @@ name; files land in the run folder.
 
 | ID | Use case | Expected | Test |
 |----|----------|----------|------|
-| SW-01 | Every category of every document, Whole model, and Active view when the active view is a plan or 3D view; a rolled-back itemized schedule per schedulable category of the active model as a second reference (links are not scheduled: they cannot be written). `MODELS_CONTEXT_SWEEP_SCHEDULES` caps the schedules (60) | panel = oracle; schedule differences with a reason in `sweep-counts.json` | `SweepCountsMatchOracle` |
+| SW-01 | Every category of every document, Whole model, and Active view in whatever non-template view is active (links count only in model views); a rolled-back itemized schedule per schedulable category of the active model as a second reference (links are not scheduled: they cannot be written). `MODELS_CONTEXT_SWEEP_SCHEDULES` caps the schedules (60) | panel = oracle; schedule differences with a reason in `sweep-counts.json` | `SweepCountsMatchOracle` |
 | SW-02 | Every category with elements, every catalog parameter: Has value, Has no value, Equals the most common value, Contains a middle part (text), at least the median (numbers; the active model only, as `TreeBuilder`). Native Revit rule per document and, in the active model, a `ParameterFilterElement` per rule in one rolled-back transaction. `MODELS_CONTEXT_SWEEP_LIMIT` caps evaluations (6,000, spread evenly) | panel ids = oracle ids; native agreement by reason, unexplained rows in `sweep-mismatches.json` | `SweepParametersMatchOracle` |
 | SW-03 | Seeded random trees over 1 to 3 of all loaded documents and all their categories; `MODELS_CONTEXT_SWEEP_TREES` limits the count (100) | panel = oracle; a failing tree in `sweep-tree-<id>.json` | `SweepTreesMatchOracle` |
 | SW-04 | Cold, warm and invalidated snapshot, quick counts, catalog, a value list and a filter per document; longest call, memory per million | no Revit call over 1 s; ratings in `sweep-perf.json` | `SweepTimingsPerDocument` |
+
+Runs with the [0064](../../decisions/0064-model-context-annotation-in-explorer.md) rule, Revit 2026, 2026-11-26:
+
+- サンプル意匠 as the Current model (its link unloaded): SW-01 run `20261126-190145` PASS, Whole model 7,478 = 7,478,
+  floor plan `平面詳図 7階` 818 = 818 (Dimensions, Wall, Door and Room Tags among them); schedules 22 of 28 equal, 6
+  with a known reason. SW-04 run `20261126-190212` PASS: snapshot 17,325 rows, cold 291 ms (longest call 101 ms), warm
+  108 ms; the same file as a link before 0064 read 11,087 rows, warm 48 ms.
+- Golden Nugget Architektur as the Current model, floor plan `UG 1_Genehmigung` active, Gebäudetechnik link loaded:
+  SW-01 crashed Revit (`ExecutionEngineException` in `WhereElementIsNotElementType`): `Oracle.ViewIds` built the link
+  view collector for a link the view does not draw ([README](README.md#gotchas) Gotcha 1). The oracle now builds it
+  only in a model view whose collector holds the link instance.
+- After that fix, Revit 2026 PID 14484 with the window restored: SW-01 passes everywhere, panel = oracle and no crash.
+  Golden Nugget (Whole model 5,121, link 6,971): plan `UG 1_Genehmigung` 431 with the hidden link 0 (run
+  `20261126-191925`), section `WP-01` 486 (`-192012`), legend `Legende Entwurf` 13 (`-192047`), sheet `GOLDEN NUGGET`
+  18 (`-192123`). サンプル意匠 (Whole model 7,478): section `断面図A` 533 (`-192237`), legend `05 壁リスト 全て` 283
+  (`-192305`), sheet `展開図 1階` 31 (`-192332`).
+- Deployed add-in with sliced snapshot ids: SW-04 on サンプル意匠 (run `20261126-195820`) has its longest snapshot call
+  at 36.6 ms (was 101.3), no hitch over 50 ms; the snapshot takes 231 ms both cold and warm, in 9 calls. SW-01 on Golden
+  Nugget `UG 1_Genehmigung` (run `20261126-195958`): 431 = 431, hidden link 0 = 0.
+- Final deploy, one id pass again: SW-04 on サンプル意匠 (run `20261126-203920`) reads the snapshot in 103 ms cold,
+  105 ms warm and 116 ms invalidated, in 6 calls; the longest snapshot call is 31 ms and no call in the run is over 50 ms.
 
 ### Robustness, headless and performance
 

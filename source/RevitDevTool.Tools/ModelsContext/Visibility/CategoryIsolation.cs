@@ -7,9 +7,11 @@ internal static class CategoryIsolation
     public static HashSet<ElementId> Apply(
         Document model,
         View view,
-        IReadOnlyCollection<ElementId> kept,
+        IReadOnlyCollection<ElementId> checkedCategories,
         HashSet<ElementId> stayHidden)
     {
+        var kept = new HashSet<ElementId>(checkedCategories);
+        kept.UnionWith(TagHosts.HostCategoriesIn(model, view, [.. checkedCategories]));
         var keep = KeepOf(model, kept);
         var hidden = new HashSet<ElementId>();
         foreach (Category category in model.Settings.Categories)
