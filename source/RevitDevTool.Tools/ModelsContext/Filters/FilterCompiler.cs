@@ -198,7 +198,7 @@ internal sealed class FilterCompiler(
         }
 
         var text = rule.Value.Trim();
-        long[] targets = values.TryGetValue(text, out var named) ? named
+        long[] targets = RawValueNames.TryFind(values, text, out var named) ? named
             : long.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id) ? [id]
             : [];
         return RevitRuleFactory.Reference(parameter.ElementId, rule.Operator, targets);
@@ -240,7 +240,7 @@ internal sealed class FilterCompiler(
             return Compiled.None;
         }
 
-        if (names.TryGetValue(rule.Value.Trim(), out var raws))
+        if (RawValueNames.TryFind(names, rule.Value, out var raws))
         {
             var rules = raws.Select(raw => RevitRuleFactory.Integer(parameter.ElementId, rule.Operator, (int)raw));
             return rule.Operator == FilterOperator.NotEqual ? Compiled.And(rules) : Compiled.Or(rules);
