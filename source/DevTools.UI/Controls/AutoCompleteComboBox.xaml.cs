@@ -502,11 +502,9 @@ public class AutoCompleteComboBoxSetting
     /// </summary>
     public virtual TimeSpan Delay => TimeSpan.FromMilliseconds(150);
 
-    private static AutoCompleteComboBoxSetting _default = new();
-
     public static AutoCompleteComboBoxSetting Default
     {
-        get => _default;
-        set => _default = value ?? throw new ArgumentNullException(nameof(value));
-    }
+        get;
+        set => field = value ?? throw new ArgumentNullException(nameof(value));
+    } = new();
 }

@@ -8,13 +8,12 @@ internal sealed class CandidateSet(long[] ids, HashSet<long> secondary, HashSet<
     private const long NoType = -1;
 
     private TypeMembership? _members;
-    private long[]? _modelIds;
     private Dictionary<long, long>? _typeOf;
     private HashSet<long>? _ids;
 
     public long[] Ids { get; } = ids;
 
-    public long[] ModelIds => _modelIds ??= secondary.Count == 0 && viewOwned.Count == 0 ? Ids : Ids.Where(InModel).ToArray();
+    public long[] ModelIds => field ??= secondary.Count == 0 && viewOwned.Count == 0 ? Ids : Ids.Where(InModel).ToArray();
 
     public bool Contains(long id)
     {

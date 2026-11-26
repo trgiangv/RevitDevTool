@@ -12,7 +12,6 @@ public sealed class DragAdorner : Adorner
 
     private readonly ImageSource _image;
     private readonly Size _size;
-    private readonly Point _grab;
     private Point _at;
 
     internal DragAdorner(UIElement root, FrameworkElement card, Point grab)
@@ -20,7 +19,7 @@ public sealed class DragAdorner : Adorner
     {
         _image = Snapshot(card);
         _size = new Size(card.ActualWidth, card.ActualHeight);
-        _grab = grab;
+        Grab = grab;
         _at = card.TranslatePoint(grab, root);
         Card = card;
         IsHitTestVisible = false;
@@ -29,7 +28,9 @@ public sealed class DragAdorner : Adorner
 
     public FrameworkElement Card { get; }
 
-    public Point Location => new(_at.X - _grab.X, _at.Y - _grab.Y);
+    public Point Location => new(_at.X - Grab.X, _at.Y - Grab.Y);
+
+    private Point Grab { get; }
 
     public void MoveTo(Point pointer)
     {

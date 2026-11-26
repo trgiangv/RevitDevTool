@@ -9,8 +9,6 @@ namespace DevTools.UI.Theme;
 /// </summary>
 public class ControlsResources : ResourceDictionary
 {
-    private static ResourceDictionary? _controls;
-
     static ControlsResources()
     {
         CommandManager.RegisterClassCommandBinding(typeof(SearchBar), new CommandBinding(ControlCommands.Clear, OnSearchBarClear));
@@ -24,7 +22,7 @@ public class ControlsResources : ResourceDictionary
     /// <summary>
     /// Gets the static HandyControl resource dictionary (Themes/Theme.xaml).
     /// </summary>
-    private static ResourceDictionary Controls => _controls ??= ResourceUtils.GetHandyControls();
+    private static ResourceDictionary Controls => field ??= ResourceUtils.GetHandyControls();
 
     private static void OnSearchBarClear(object sender, ExecutedRoutedEventArgs e)
     {

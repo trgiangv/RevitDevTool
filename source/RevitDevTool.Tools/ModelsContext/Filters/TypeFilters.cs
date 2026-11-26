@@ -5,8 +5,6 @@ namespace RevitDevTool.Tools.ModelsContext.Filters;
 
 internal sealed class TypeFilters(Func<TypeMembership> members)
 {
-    private TypeMembership? _members;
-
     public Compiled In(IReadOnlyCollection<long> types)
     {
         if (types.Count == 0)
@@ -60,7 +58,7 @@ internal sealed class TypeFilters(Func<TypeMembership> members)
         return ids.Count == 0 ? Compiled.All : Exclude([.. ids]);
     }
 
-    private TypeMembership Members => _members ??= members();
+    private TypeMembership Members => field ??= members();
 
     private static Compiled Exclude(IReadOnlyList<long> ids)
     {

@@ -8,33 +8,23 @@ namespace RevitDevTool.Controllers;
 
 internal static class VisualizationController
 {
-    private static BoundingBoxVisualizationServer? _boundingBoxVisualizationServer;
-    private static MeshVisualizationServer? _meshVisualizationServer;
-    private static PolylineVisualizationServer? _polylineVisualizationServer;
-    private static SolidVisualizationServer? _solidVisualizationServer;
-    private static XyzVisualizationServer? _xyzVisualizationServer;
-    private static FaceVisualizationServer? _faceVisualizationServer;
-    private static PlaneVisualizationServer? _planeVisualizationServer;
-
     public static BoundingBoxVisualizationServer BoundingBoxVisualizationServer =>
-        _boundingBoxVisualizationServer ??= Host.GetService<BoundingBoxVisualizationServer>();
+        field ??= Host.GetService<BoundingBoxVisualizationServer>();
     public static MeshVisualizationServer MeshVisualizationServer =>
-        _meshVisualizationServer ??= Host.GetService<MeshVisualizationServer>();
+        field ??= Host.GetService<MeshVisualizationServer>();
     public static PolylineVisualizationServer PolylineVisualizationServer =>
-        _polylineVisualizationServer ??= Host.GetService<PolylineVisualizationServer>();
+        field ??= Host.GetService<PolylineVisualizationServer>();
     public static SolidVisualizationServer SolidVisualizationServer =>
-        _solidVisualizationServer ??= Host.GetService<SolidVisualizationServer>();
+        field ??= Host.GetService<SolidVisualizationServer>();
     public static XyzVisualizationServer XyzVisualizationServer =>
-        _xyzVisualizationServer ??= Host.GetService<XyzVisualizationServer>();
+        field ??= Host.GetService<XyzVisualizationServer>();
     public static FaceVisualizationServer FaceVisualizationServer =>
-        _faceVisualizationServer ??= Host.GetService<FaceVisualizationServer>();
+        field ??= Host.GetService<FaceVisualizationServer>();
     public static PlaneVisualizationServer PlaneVisualizationServer =>
-        _planeVisualizationServer ??= Host.GetService<PlaneVisualizationServer>();
-
-    private static IVisualizationServerLifeCycle[]? _servers;
+        field ??= Host.GetService<PlaneVisualizationServer>();
 
     private static IVisualizationServerLifeCycle[] Servers =>
-        _servers ??=
+        field ??=
         [
             BoundingBoxVisualizationServer,
             MeshVisualizationServer,
@@ -45,10 +35,8 @@ internal static class VisualizationController
             PlaneVisualizationServer
         ];
 
-    private static IVisualizationViewModel[]? _viewModels;
-
     private static IVisualizationViewModel[] ViewModels =>
-        _viewModels ??=
+        field ??=
         [
             Host.GetService<BoundingBoxVisualizationViewModel>(),
             Host.GetService<MeshVisualizationViewModel>(),

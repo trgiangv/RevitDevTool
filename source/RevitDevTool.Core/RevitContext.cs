@@ -16,7 +16,6 @@ namespace RevitDevTool.Core;
 public static class RevitContext
 {
     private static readonly RibbonItemEventArgs RibbonItemEventArgs = new();
-    private static UIControlledApplication? _uiControlledApplication;
     private static readonly Func<bool> GetIsInApiContext;
     private static readonly IntPtr IncrementConstructorPointer;
     private static readonly IntPtr IncrementDestructorPointer;
@@ -65,7 +64,7 @@ public static class RevitContext
     ///     <see cref="Autodesk.Revit.UI.UIControlledApplication"/> instance for the current session.
     ///     Created lazily via internal constructor reflection.
     /// </summary>
-    public static UIControlledApplication UiControlledApplication => _uiControlledApplication ??= CreateUiControlledApplication();
+    public static UIControlledApplication UiControlledApplication => field ??= CreateUiControlledApplication();
 
     /// <summary>
     ///     Database-level <see cref="Autodesk.Revit.ApplicationServices.Application"/> for the current session.

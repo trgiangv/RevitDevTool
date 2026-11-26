@@ -33,7 +33,6 @@ public sealed class AddToolsTool : IBuiltInMcpTool
         """;
 
     private readonly IServiceProvider _services;
-    private McpCatalogStore? _store;
 
     public AddToolsTool(IServiceProvider services)
     {
@@ -53,7 +52,7 @@ public sealed class AddToolsTool : IBuiltInMcpTool
     public string Name => McpSpecKeys.Tool.AddTools;
     public McpServerTool ServerTool { get; }
 
-    private McpCatalogStore Store => _store ??= _services.GetRequiredService<McpCatalogStore>();
+    private McpCatalogStore Store => field ??= _services.GetRequiredService<McpCatalogStore>();
 
     [Description("Add, reload, remove, or list the host's MCP toolsets.")]
     private async Task<CallToolResult> InvokeAsync(
