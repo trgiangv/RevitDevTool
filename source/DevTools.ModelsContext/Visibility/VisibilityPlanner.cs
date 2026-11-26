@@ -60,7 +60,6 @@ public sealed class VisibilityPlanner(
     {
         return row.Kind switch
         {
-            TreeRowKind.CurrentModelHeader => VisibilityText.HeaderHasNoActions,
             TreeRowKind.MorePage => VisibilityText.PageRowHasNoActions,
             TreeRowKind.Category => AddCategory(builder, row),
             _ => AddDocumentRow(builder, row)
@@ -113,9 +112,14 @@ public sealed class VisibilityPlanner(
         }
 
         builder.Add(info.Key, builder.Action == VisibilityAction.Show && row.Kind != TreeRowKind.Instance
-            ? () => scope.Snapshot.WithSubgroups(row.Path).SelectMany(scope.Snapshot.IdsUnder)
+            ? () => BranchesOf(scope.Snapshot, row).SelectMany(scope.Snapshot.IdsUnder)
             : () => scope.IdsOf(row));
         return null;
+    }
+
+    private static IReadOnlyList<RowPath> BranchesOf(DocumentSnapshot snapshot, TreeRow row)
+    {
+        return row.Kind == TreeRowKind.CurrentModelHeader ? row.Branches : snapshot.WithSubgroups(row.Path);
     }
 
     private static string? AddLinkRuleRow(Builder builder, TreeRow row, DocumentKey key, DocumentScope scope)

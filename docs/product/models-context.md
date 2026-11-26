@@ -196,8 +196,8 @@ collector leaves these parts out, but Revit draws them with the railing.
 An icon toggle beside the search box (tooltip *Selection sync: tree and Revit
 select together*). Shown only with Scope = Active view or Whole model.
 
-- On: selecting rows selects their elements in Revit (a Type or Category row
-  selects all its instances in scope), and selecting in Revit opens and
+- On: selecting rows selects their elements in Revit (a Type, Category or
+  Current model row selects all its instances in scope), and selecting in Revit opens and
   highlights rows.
 - Up to 50 selected elements the tree opens each path and scrolls to the first.
   Above that rows stay closed with blue badges and the hint reads *Too many to
@@ -215,7 +215,8 @@ sits in:
 
 | Row | Acts on |
 |-----|---------|
-| Current model, any level | That branch's elements by id, the whole branch (not only what is listed). Links keep their state. |
+| The Current model row | Every element of the categories it lists, by id, never by category, so a By Host View link keeps the category. Links keep their state; Isolate hides them like any element outside the set. |
+| Current model, any level below | That branch's elements by id, the whole branch (not only what is listed). Links keep their state. |
 | A link's model row | The whole link instance (all four actions). |
 | Rows below a link's model row | Hide and Show (Hide in View). Isolate keeps the row's elements and hides the rest of that link in the active view. Halftone and Color on a category, family or type row color that family or type (see below); on an instance row they are disabled with the reason. |
 

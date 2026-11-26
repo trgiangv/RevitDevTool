@@ -125,6 +125,8 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public IReadOnlyList<TreeRow>? Subgroups { get; internal set; }
 
+    public IReadOnlyList<RowPath> Branches { get; set; } = [];
+
     public RowEye Eye
     {
         get;
@@ -170,8 +172,6 @@ public sealed class TreeRow : INotifyPropertyChanged
     public int Badge => IsExpanded ? 0 : SelectedInside;
 
     public bool ChildrenLoaded => Children is not null;
-
-    public bool IsHeader => Kind == TreeRowKind.CurrentModelHeader;
 
     public int HiddenCount
     {

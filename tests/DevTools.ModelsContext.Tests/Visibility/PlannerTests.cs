@@ -275,14 +275,20 @@ public sealed class PlannerTests
     }
 
     [TestMethod]
-    public void GroupHeaderHasNoActions()
+    public void ModelRowHidesListedIds()
     {
-        var header = new TreeRow(TreeRowKind.CurrentModelHeader, "Current model", document: Current);
+        var snapshot = TestModel.Snapshot(Current);
+        var header = new TreeRow(TreeRowKind.CurrentModelHeader, "Current model", document: Current)
+        {
+            Branches = [.. snapshot.Counts.Children.Keys.Select(RowPath.ForGroup)]
+        };
 
         var plan = TestModel.Planner(TestModel.SmallData, Current)
             .Plan(VisibilityRequest.ForRows(VisibilityAction.Hide, header));
 
-        Assert.AreEqual(VisibilityText.HeaderHasNoActions, plan.DisabledReason);
+        var step = (ElementsStep)plan.Steps.Single();
+        Assert.AreEqual(Current, step.Document);
+        Assert.AreEqual(snapshot.Counts.Count, step.Ids.Count);
     }
 
     [TestMethod]

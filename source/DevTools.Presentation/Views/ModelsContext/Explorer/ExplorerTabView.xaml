@@ -316,10 +316,6 @@
                         <Setter TargetName="Halftone" Property="Foreground" Value="{DynamicResource PrimaryBrush}" />
                     </MultiDataTrigger>
 
-                    <DataTrigger Binding="{Binding IsHeader}" Value="True">
-                        <Setter TargetName="Actions" Property="Visibility" Value="Collapsed" />
-                        <Setter TargetName="Counts" Property="Visibility" Value="Visible" />
-                    </DataTrigger>
                     <DataTrigger Binding="{Binding Kind}" Value="MorePage">
                         <Setter TargetName="Actions" Property="Visibility" Value="Collapsed" />
                         <Setter TargetName="Eye" Property="Visibility" Value="Collapsed" />

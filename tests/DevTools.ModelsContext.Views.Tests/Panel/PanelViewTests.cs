@@ -242,19 +242,17 @@ public sealed class PanelViewTests
     }
 
     [TestMethod]
-    public void GroupHeaderHasNoControls()
+    public void ModelRowEyeHidesHost()
     {
         using var ui = PanelUi.Open();
+        Assert.IsTrue(ui.Has(ui.Host.Row("Current model"), "Explorer.Row.Eye"), "Current model row has no eye.");
 
-        var header = ui.Host.Row("Current model");
-        var group = ui.Host.Row("Ducts");
+        ui.PressIn(ui.Host.Row("Current model"), "Explorer.Row.Eye");
 
-        foreach (var id in new[] { "Explorer.Row.Eye", "Explorer.Row.Isolate", "Explorer.Row.Halftone", "Explorer.Row.Color" })
-        {
-            Assert.IsFalse(ui.Has(header, id), "Header row has " + id);
-        }
-
-        Assert.IsTrue(ui.Has(group, "Explorer.Row.Eye"), "Group row has no eye.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.ExecutedPlans.Count == 1), "The eye did not run a plan.");
+        Assert.IsTrue(
+            ThemeHost.WaitForUi(() => ui.Host.Row("Current model").FindFirstDescendant(cf => cf.ByAutomationId("Explorer.Row.Eye"))?.ItemStatus == "Hidden"),
+            "The row did not show the hidden eye.");
     }
 
     [TestMethod]

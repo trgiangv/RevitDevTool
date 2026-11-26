@@ -62,7 +62,7 @@ internal sealed class RowTargets(PanelRuntime runtime, ExplorerSelection selecti
 
     private List<TreeRow> Actionable()
     {
-        return selection.Rows.Where(row => !row.IsHeader && row.Kind != TreeRowKind.MorePage).ToList();
+        return selection.Rows.Where(row => row.Kind != TreeRowKind.MorePage).ToList();
     }
 
     private MenuTarget TargetOf(List<TreeRow> rows, bool syncing, CancellationToken token)

@@ -62,7 +62,10 @@ internal sealed class RowPainter(
     {
         switch (row.Kind)
         {
-            case TreeRowKind.CurrentModelHeader or TreeRowKind.LinkModel when document is not null:
+            case TreeRowKind.CurrentModelHeader when document is not null:
+                ApplyHeaderState(row, document, stale);
+                break;
+            case TreeRowKind.LinkModel when document is not null:
                 ApplyModelState(row, document, stale);
                 break;
             case TreeRowKind.Group or TreeRowKind.Family or TreeRowKind.Type when document is not null:
@@ -85,19 +88,22 @@ internal sealed class RowPainter(
             .Where(group => categories.Lists(snapshot.Groups[group.Key].GroupId))
             .Sum(group => group.Count);
         row.SelectedInside = state.Selected.Count;
-        row.Eye = ModelEye(row, scope, state, stale);
-    }
-
-    private static RowEye ModelEye(TreeRow row, DocumentScope scope, DocumentState state, bool stale)
-    {
-        if (row.IsHeader)
-        {
-            return RowEye.None;
-        }
-
-        return stale
+        row.Eye = stale
             ? RowEye.Unknown
             : EyeOf(state.Hidden.Count, scope.Counts.Count + state.Outside.Count - state.NotDrawn.Count);
+    }
+
+    private void ApplyHeaderState(TreeRow row, DocumentScope scope, bool stale)
+    {
+        var snapshot = scope.Snapshot;
+        var state = states[scope.Key];
+        row.Branches = RowFactory.KeysOf(scope.Counts, state.Hidden, state.Unseen)
+            .Where(index => categories.Lists(snapshot.Groups[index].GroupId))
+            .OrderBy(index => index)
+            .Select(RowPath.ForGroup)
+            .ToList();
+        var depth = snapshot.GroupingDepth;
+        ApplyPathsState(row, scope, stale, [.. row.Branches.Select(path => RowFactory.KeyPath(path, depth))]);
     }
 
     private void ApplyBranchState(TreeRow row, DocumentScope scope, bool stale)
@@ -106,6 +112,11 @@ internal sealed class RowPainter(
         var paths = row.Subgroups is { } subgroups
             ? subgroups.Select(subgroup => RowFactory.KeyPath(subgroup.Path, depth)).Prepend(RowFactory.KeyPath(row.Path, depth)).ToList()
             : [RowFactory.KeyPath(row.Path, depth)];
+        ApplyPathsState(row, scope, stale, paths);
+    }
+
+    private void ApplyPathsState(TreeRow row, DocumentScope scope, bool stale, List<int[]> paths)
+    {
         var branch = states[scope.Key];
         var hidden = paths.Sum(branch.Hidden.CountAt);
         row.Count = paths.Sum(scope.Counts.CountAt);

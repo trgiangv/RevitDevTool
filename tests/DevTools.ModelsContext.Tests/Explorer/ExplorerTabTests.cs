@@ -214,6 +214,36 @@ public sealed class ExplorerTabTests
     }
 
     [TestMethod]
+    public async Task ModelEyeHidesOnlyHost()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+        var hidden = ModelRow(fixture).Eye;
+        var steps = fixture.Actions.ExecutedPlans.SelectMany(plan => plan.Steps).ToList();
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+
+        Assert.AreEqual(RowEye.Hidden, hidden);
+        Assert.AreEqual(Current, ((ElementsStep)steps.Single()).Document);
+        Assert.AreEqual(RowEye.Shown, ModelRow(fixture).Eye);
+        Assert.IsTrue(fixture.Explorer.Rows.Where(row => row.Kind == TreeRowKind.LinkModel)
+            .All(row => row.Eye == RowEye.Shown));
+    }
+
+    [TestMethod]
+    public async Task ModelIsolateKeepsHostIds()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var model = ModelRow(fixture);
+
+        await fixture.Explorer.RunToolAsync(model, MenuAction.Isolate);
+
+        var plan = fixture.Actions.ExecutedPlans.Single();
+        Assert.AreEqual(VisibilityAction.Isolate, plan.Action);
+        Assert.AreEqual(model.Count, ((ElementsStep)plan.Steps.Single()).Ids.Count);
+    }
+
+    [TestMethod]
     public async Task CategoryEyeMarksGroupRow()
     {
         using var fixture = await PanelFixture.OpenAsync();
@@ -476,5 +506,10 @@ public sealed class ExplorerTabTests
         var familyRow = groupRow.Children!.First(row => row.Text == snapshot.Names[family.Key]);
         await fixture.Explorer.ExpandAsync(familyRow);
         return familyRow.Children!.First(row => row.Text == snapshot.TypeName(type.Key));
+    }
+
+    private static TreeRow ModelRow(PanelFixture fixture)
+    {
+        return fixture.Explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader);
     }
 }

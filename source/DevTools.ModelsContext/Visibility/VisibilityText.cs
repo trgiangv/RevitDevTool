@@ -2,7 +2,6 @@ namespace DevTools.ModelsContext.Visibility;
 
 public static class VisibilityText
 {
-    public const string HeaderHasNoActions = "Group headers have no actions.";
     public const string PageRowHasNoActions = "This row has no actions.";
     public const string LinkElementsUnavailable = "Actions on single elements inside a link are not available.";
     public const string ShowFromReveal = "Show these from Reveal Hidden Elements in Revit.";
