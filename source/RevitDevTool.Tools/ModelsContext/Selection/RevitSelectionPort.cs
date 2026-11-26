@@ -75,8 +75,9 @@ internal sealed class RevitSelectionPort : ISelectionPort
                 return PickResult.Of([]);
             }
 
-            active.Selection.SetReferences(picked);
-            return PickResult.Of([.. ToRefs(model, picked)]);
+            var result = PickResult.Of(ToRefs(model, picked));
+            Select(application, result.Picked);
+            return result;
         }
         catch (Autodesk.Revit.Exceptions.OperationCanceledException)
         {

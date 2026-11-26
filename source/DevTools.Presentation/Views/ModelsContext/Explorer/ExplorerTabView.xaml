@@ -476,7 +476,10 @@
                           Text="{Binding Explorer.SearchText, UpdateSourceTrigger=PropertyChanged}" />
             <Button Grid.Column="1"
                     Margin="4,0,0,0"
-                    hc:IconElement.Geometry="{StaticResource Point}"
+                    Padding="4,1"
+                    hc:IconElement.Geometry="{StaticResource PickLink}"
+                    hc:IconElement.Height="16"
+                    hc:IconElement.Width="16"
                     AutomationProperties.AutomationId="Explorer.Pick"
                     AutomationProperties.HelpText="{Binding Explorer.Pick.ToolTip}"
                     AutomationProperties.Name="Pick"
@@ -485,7 +488,7 @@
                     ToolTip="{Binding Explorer.Pick.ToolTip}"
                     ToolTipService.ShowOnDisabled="True" />
             <Button Grid.Column="2"
-                    Margin="4,0,0,0"
+                    Padding="4,1"
                     hc:IconElement.Geometry="{StaticResource Expand}"
                     AutomationProperties.AutomationId="Explorer.ExpandAll"
                     AutomationProperties.Name="Expand all"
@@ -493,6 +496,7 @@
                     Style="{StaticResource ButtonIcon.Small}"
                     ToolTip="Expand all down to types" />
             <Button Grid.Column="3"
+                    Padding="4,1"
                     hc:IconElement.Geometry="{StaticResource Collapse}"
                     AutomationProperties.AutomationId="Explorer.CollapseAll"
                     AutomationProperties.Name="Collapse all"

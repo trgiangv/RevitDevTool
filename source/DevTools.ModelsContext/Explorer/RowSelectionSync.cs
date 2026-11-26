@@ -15,6 +15,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
     private readonly ExplorerSelection _selection;
     private readonly Debouncer _sendDebouncer;
     private readonly ExplorerTree _tree;
+    private IReadOnlyList<ElementRef>? _hostElements;
     private bool _revealPending;
     private IReadOnlyList<ElementRef>? _rowElements;
     private int _sendsInFlight;
@@ -56,7 +57,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
     [ObservableProperty]
     public partial string? SelectionSyncHint { get; private set; }
 
-    public int SelectedCount => RowElements.Count;
+    public int SelectedCount => CountsHost ? HostElements.Count : RowElements.Count;
 
     public bool HasSelection => SelectedCount > 0 || _selection.Elements.Count > 0;
 
@@ -69,7 +70,12 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
 
     private bool IsSyncActive => IsSelectionSyncOn && IsSelectionSyncVisible;
 
+    private bool CountsHost => IsSelectionSyncing && !IsLocalSelectionPending;
+
     private IReadOnlyList<ElementRef> RowElements => _rowElements ??= _runtime.Data.ElementsOf(_selection.Rows);
+
+    private IReadOnlyList<ElementRef> HostElements => _hostElements ??=
+        [.. _selection.Elements.Where(element => _runtime.Data.Find(element.Document) is not null)];
 
     public void Dispose()
     {
@@ -80,12 +86,13 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
     {
         _selection.NextVersion();
         _selection.ReplaceRows(rows);
-        RaiseSelectionCounts();
         if (IsSyncActive && !_runtime.IsBusy)
         {
             _tree.ClearBadges();
             _sendDebouncer.Trigger();
         }
+
+        RaiseSelectionCounts();
     }
 
     public void Reset(bool isSelectionSyncOn)
@@ -190,6 +197,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
     public void RaiseSelectionCounts()
     {
         _rowElements = null;
+        _hostElements = null;
         OnPropertyChanged(nameof(SelectedCount));
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(StatusText));
@@ -208,18 +216,20 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
         {
             _sendDebouncer.Trigger();
         }
+        else
+        {
+            SelectionSyncHint = null;
+        }
+
+        RaiseSelectionCounts();
     }
 
     private async Task SendAsync()
     {
-        if (!IsSyncActive || _runtime.IsBusy)
-        {
-            return;
-        }
-
         var elements = RowElements;
-        if (PauseIfTooMany(elements.Count))
+        if (!IsSyncActive || _runtime.IsBusy || PauseIfTooMany(elements.Count))
         {
+            RaiseSelectionCounts();
             return;
         }
 

@@ -46,7 +46,8 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _states = new DocumentStates(visibility);
         Categories = new ExplorerCategories(runtime, visibility, bar, menu, () => _tree!.Token, OnChecksChanged,
             report);
-        Pick = new ExplorerPick(runtime, () => bar.CheckedDocuments, () => Categories.Checked);
+        Pick = new ExplorerPick(runtime, () => bar.CheckedDocuments, () => Categories.Checked,
+            () => IsSelectionSyncing);
         _tree = new ExplorerTree(runtime, _states, Categories);
         var reveal = new TreeReveal(runtime, _tree);
         _search = new ExplorerSearch(runtime, _tree, reveal);

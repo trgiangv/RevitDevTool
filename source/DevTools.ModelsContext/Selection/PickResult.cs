@@ -8,8 +8,8 @@ public sealed record PickResult(IReadOnlyCollection<ElementRef> Picked, bool Can
 
     public int Count => Picked.Count;
 
-    public static PickResult Of(IReadOnlyCollection<ElementRef> picked)
+    public static PickResult Of(IEnumerable<ElementRef> picked)
     {
-        return new PickResult(picked, false);
+        return new PickResult(picked.ToHashSet(), false);
     }
 }

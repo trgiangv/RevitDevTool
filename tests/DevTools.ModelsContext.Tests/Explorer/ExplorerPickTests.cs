@@ -61,7 +61,20 @@ public sealed class ExplorerPickTests
 
         CollectionAssert.AreEqual(new[] { Mep }, fixture.Model.LastPickLinks.ToList());
         CollectionAssert.AreEqual(new[] { TestModel.Ducts }, fixture.Model.LastPickCategories.ToList());
-        Assert.AreEqual("Picked 1", fixture.Explorer.Pick.Status);
+        Assert.IsNull(fixture.Explorer.Pick.Status);
+    }
+
+    [TestMethod]
+    public async Task SyncOffPickShowsCount()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Check([Mep]);
+        fixture.Explorer.IsSelectionSyncOn = false;
+        fixture.Model.PickCandidates = [new ElementRef(Mep, 7), new ElementRef(Mep, 7), new ElementRef(Mep, 8)];
+
+        await fixture.Explorer.Pick.PickCommand.ExecuteAsync(null);
+
+        Assert.AreEqual("Picked 2", fixture.Explorer.Pick.Status);
     }
 
     [TestMethod]

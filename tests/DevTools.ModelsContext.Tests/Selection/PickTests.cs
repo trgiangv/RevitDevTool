@@ -94,6 +94,16 @@ public sealed class PickTests
     }
 
     [TestMethod]
+    public void PickCountsEachElementOnce()
+    {
+        var element = new ElementRef(FakeModelGenerator.Mep, 7);
+
+        var result = PickResult.Of([element, element]);
+
+        Assert.AreEqual("Picked 1", PickController.StatusOf(result));
+    }
+
+    [TestMethod]
     public async Task SecondPickIsBlocked()
     {
         var model = new FakeModel(TestModel.SmallData) { PickGate = new TaskCompletionSource<bool>() };

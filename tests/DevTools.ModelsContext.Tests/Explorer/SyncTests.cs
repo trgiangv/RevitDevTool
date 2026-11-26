@@ -132,22 +132,45 @@ public sealed class SyncTests
     }
 
     [TestMethod]
-    public async Task CountFollowsTreeRows()
+    public async Task CountShowsHostOutsideTree()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Model.EchoSelection = false;
         var element = fixture.Elements(Current, 1)[0];
-        fixture.Model.RaiseSelectionChanged([element]);
-        fixture.Settle();
-        var row = fixture.Explorer.SelectedRows.Single();
-        fixture.Explorer.SetSelectedRows([row]);
-        fixture.Settle();
 
         fixture.Model.RaiseSelectionChanged([element, new ElementRef(Current, 987654321)]);
         fixture.Settle();
 
-        Assert.AreEqual(1, fixture.Explorer.SelectedCount);
-        Assert.AreEqual("1 selected", fixture.Explorer.StatusText);
+        Assert.AreEqual("2 selected", fixture.Explorer.StatusText);
+        Assert.IsNull(fixture.Explorer.SelectionSyncHint);
+    }
+
+    [TestMethod]
+    public async Task LargeHostSelectionKeepsFullCount()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var selection = fixture.Elements(Current, 60);
+        fixture.Model.RaiseSelectionChanged(selection);
+        fixture.Settle();
+
+        await fixture.Explorer.ExpandAllCommand.ExecuteAsync(null);
+        fixture.Settle();
+
+        Assert.AreEqual("60 selected", fixture.Explorer.StatusText);
+        var host = await fixture.Model.GetSelectionAsync(CancellationToken.None);
+        Assert.HasCount(60, host);
+    }
+
+    [TestMethod]
+    public async Task SyncOffCountsTreeRows()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Model.RaiseSelectionChanged(fixture.Elements(Current, 60));
+        fixture.Settle();
+
+        fixture.Explorer.IsSelectionSyncOn = false;
+
+        Assert.AreEqual(0, fixture.Explorer.SelectedCount);
+        Assert.IsNull(fixture.Explorer.SelectionSyncHint);
     }
 
     [TestMethod]

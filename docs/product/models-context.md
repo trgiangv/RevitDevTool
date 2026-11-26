@@ -101,9 +101,12 @@ are not listed.
   the Filter view. In Active view it also finds hidden elements, dimmed.
 - **Pick** (icon beside the search box): click or box elements of the checked
   links in the view, no Tab needed. Only elements of the checked links and
-  categories can be picked. The picked set becomes the Revit selection. While
-  picking the status reads *Picking · Esc to finish*; Esc ends it. Disabled
-  with *Check a link to pick in it* (no link checked) or *Check a category to pick*.
+  categories can be picked. Tooltip *Pick in selected links*. The picked set
+  becomes the Revit selection, one reference per element (Revit can return a
+  family instance twice, as the element and as its geometry). While picking the
+  status reads *Picking · Esc to finish*; Esc ends it. With sync on the status
+  line then shows the count; with sync off it reads *Picked N*. Disabled with
+  *Check a link to pick in it* (no link checked) or *Check a category to pick*.
   Current model elements are picked in Revit as usual.
 - **Expand all** opens down to Type rows; **Collapse all** leaves the roots.
 - **Double-click** an instance row: it becomes the selected row and the menu's
@@ -111,9 +114,11 @@ are not listed.
   (Zoom on a hidden element may show nothing). Double-click any other row opens
   or closes it, like the chevron. A double-click on the chevron, the eye or a
   row tool does only that button's action.
-- **Status line**: *N selected* (elements under the selected rows, hidden at
-  0) and **Clear**. When part of the Revit selection is in unchecked documents, **Show in
-  Explorer** checks them and reveals the rows.
+- **Status line**: *N selected* (hidden at 0) and **Clear**. With sync on, N is
+  the Revit selection in the checked documents; a row click shows its own count
+  at once, before Revit answers. With sync off, or Scope = Selection, N counts
+  the elements under the selected rows. When part of the Revit selection is in
+  unchecked documents, **Show in Explorer** checks them and reveals the rows.
 
 ### Categories box
 
@@ -195,8 +200,9 @@ select together*). Shown only with Scope = Active view or Whole model.
   selects all its instances in scope), and selecting in Revit opens and
   highlights rows.
 - Up to 50 selected elements the tree opens each path and scrolls to the first.
-  Above that rows stay closed with blue badges and the hint *Too many to reveal ·
-  Reveal all*.
+  Above that rows stay closed with blue badges and the hint reads *Too many to
+  reveal · Reveal all*; Reveal all opens every path. Loading, expanding or
+  collapsing rows never changes the Revit selection.
 - Above 5,000 elements sync pauses for that change and *Select* shows in the
   menu.
 

@@ -8,19 +8,21 @@ namespace DevTools.ModelsContext.Explorer;
 
 public sealed partial class ExplorerPick : ObservableObject
 {
-    public const string PickTip = "Pick in checked links";
+    public const string PickTip = "Pick in selected links";
 
     private readonly Func<IReadOnlyList<long>> _categories;
     private readonly PickController _controller;
     private readonly Func<IReadOnlyList<DocumentKey>> _documents;
+    private readonly Func<bool> _isSyncing;
     private readonly PanelRuntime _runtime;
 
     internal ExplorerPick(PanelRuntime runtime, Func<IReadOnlyList<DocumentKey>> documents,
-        Func<IReadOnlyList<long>> categories)
+        Func<IReadOnlyList<long>> categories, Func<bool> isSyncing)
     {
         _runtime = runtime;
         _documents = documents;
         _categories = categories;
+        _isSyncing = isSyncing;
         _controller = new PickController(runtime.Services.Selection);
         _controller.PickingChanged += (_, _) => OnPickingChanged();
     }
@@ -57,7 +59,7 @@ public sealed partial class ExplorerPick : ObservableObject
         return _runtime.RunAsync(async () =>
         {
             var result = await _controller.PickAsync(_documents(), _categories(), CancellationToken.None);
-            Status = PickController.StatusOf(result);
+            Status = result is { Cancelled: false, Count: > 0 } && _isSyncing() ? null : PickController.StatusOf(result);
         });
     }
 
