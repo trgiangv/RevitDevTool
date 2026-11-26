@@ -150,7 +150,7 @@ the border, because the Documents box and the Categories section are its scope.
   first; a click runs `ToggleConnectorCommand`, which switches the whole group.
 - **Group:** `PrimaryBrush` border, header (grip, "Group", collapse toggle,
   remove), scope row ("Search", documents and categories `TagCheckComboBox.Small`
-  with the placeholder "Parent" when empty, set in `FilterRuleTemplates.xaml`), and a `BorderTipWarning` line when a scope
+  with the placeholders "Parent documents" and "Parent categories" when empty, set in `FilterRuleTemplates.xaml`), and a `BorderTipWarning` line when a scope
   value is outside the parent or unresolved. `CheckedItems.Path` keeps the
   boxes' selection and `ScopeOptionViewModel.IsChecked` in step.
 - **Reorder:** the grip is a focusable `Thumb`. `DragReorder` (`DevTools.UI`,

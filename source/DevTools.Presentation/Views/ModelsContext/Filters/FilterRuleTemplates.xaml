@@ -368,7 +368,6 @@
         <Setter Property="DisplayMemberPath" Value="Name" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource ScopeItemStyle}" />
         <Setter Property="MaxDropDownHeight" Value="240" />
-        <Setter Property="Placeholder" Value="Parent" />
         <Setter Property="behaviors:CheckedItems.Path" Value="IsChecked" />
     </Style>
 
@@ -503,12 +502,14 @@
                     <ui:TagCheckComboBox Grid.Column="1"
                                          AutomationProperties.AutomationId="Filter.Set.Scope.Documents"
                                          ItemsSource="{Binding DocumentOptions}"
+                                         Placeholder="Parent documents"
                                          SearchPlaceholder="Search documents"
                                          Style="{StaticResource ScopeBoxStyle}"
                                          ToolTip="Documents this group searches" />
                     <ui:TagCheckComboBox Grid.Column="2"
                                          AutomationProperties.AutomationId="Filter.Set.Scope.Categories"
                                          ItemsSource="{Binding CategoryOptions}"
+                                         Placeholder="Parent categories"
                                          SearchPlaceholder="Search categories"
                                          Style="{StaticResource ScopeBoxStyle}"
                                          ToolTip="Categories this group searches" />

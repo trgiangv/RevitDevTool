@@ -384,8 +384,8 @@ matches nothing, so the summary reads *None*.
   of the checked categories matches. A custom filter with no categories and no
   conditions matches nothing.
 - **Group scope**: each nested group can limit its documents (by file, so every
-  instance of a link) and its categories. An empty box shows *Parent*: the group
-  uses its parent's documents and categories. A scope
+  instance of a link) and its categories. An empty box shows *Parent documents* or
+  *Parent categories*: the group uses its parent's documents and categories. A scope
   only narrows its parent, and the lists offer only the parent's items.
   - A value that is no longer in the parent stays as a tag and the group shows a
     warning.
