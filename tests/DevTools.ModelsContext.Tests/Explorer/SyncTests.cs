@@ -3,6 +3,7 @@ using DevTools.ModelsContext.Explorer;
 using DevTools.ModelsContext.Panel;
 using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Tests.Shared;
+using DevTools.ModelsContext.Visibility;
 
 namespace DevTools.ModelsContext.Tests.Explorer;
 
@@ -10,6 +11,72 @@ namespace DevTools.ModelsContext.Tests.Explorer;
 public sealed class SyncTests
 {
     private static readonly DocumentKey Current = FakeModelGenerator.Current;
+
+    [TestMethod]
+    public async Task EyeKeepsRowSelection()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var (walls, host) = await SelectWallsAsync(fixture);
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        fixture.Settle();
+
+        await AssertSelectionKeptAsync(fixture, walls, host);
+        Assert.AreEqual(fixture.Group(Current, "Ducts").Count, Ids(fixture).Count);
+    }
+
+    [TestMethod]
+    public async Task RowToolKeepsRowSelection()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var (walls, host) = await SelectWallsAsync(fixture);
+
+        await fixture.Explorer.RunToolAsync(fixture.Group(Current, "Ducts"), MenuAction.Isolate);
+        fixture.Settle();
+
+        await AssertSelectionKeptAsync(fixture, walls, host);
+        Assert.AreEqual(fixture.Group(Current, "Ducts").Count, Ids(fixture).Count);
+    }
+
+    [TestMethod]
+    public async Task RowToolLeavesNothingSelected()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+
+        await fixture.Explorer.RunToolAsync(fixture.Group(Current, "Ducts"), MenuAction.Halftone);
+        fixture.Settle();
+
+        Assert.IsEmpty(fixture.Explorer.SelectedRows);
+        Assert.IsEmpty(await fixture.Model.GetSelectionAsync(CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task MenuHideActsOnSelection()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var (walls, host) = await SelectWallsAsync(fixture);
+
+        fixture.Explorer.OpenMenu(walls);
+        await fixture.Panel.ContextMenu[MenuAction.HideShow].Command.ExecuteAsync(null);
+        fixture.Settle();
+
+        await AssertSelectionKeptAsync(fixture, walls, host);
+        Assert.AreEqual(walls.Count, Ids(fixture).Count);
+    }
+
+    [TestMethod]
+    public async Task HotkeyActsOnSelection()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var (walls, host) = await SelectWallsAsync(fixture);
+
+        fixture.Explorer.OpenMenu(null);
+        await fixture.Panel.ContextMenu.RunShortcutAsync("H");
+        fixture.Settle();
+
+        await AssertSelectionKeptAsync(fixture, walls, host);
+        Assert.AreEqual(walls.Count, Ids(fixture).Count);
+    }
 
     [TestMethod]
     public async Task SyncOpensPathUnder50()
@@ -224,5 +291,26 @@ public sealed class SyncTests
 
         CollectionAssert.Contains(fixture.Panel.ContextBar.CheckedDocuments.ToList(), FakeModelGenerator.Mep);
         Assert.HasCount(2, fixture.Explorer.SelectedRows);
+    }
+
+    private static async Task<(TreeRow Walls, HashSet<ElementRef> Host)> SelectWallsAsync(PanelFixture fixture)
+    {
+        var walls = fixture.Group(Current, "Walls");
+        fixture.Explorer.SetSelectedRows([walls]);
+        fixture.Settle();
+        var host = (await fixture.Model.GetSelectionAsync(CancellationToken.None)).ToHashSet();
+        Assert.HasCount(walls.Count, host);
+        return (walls, host);
+    }
+
+    private static async Task AssertSelectionKeptAsync(PanelFixture fixture, TreeRow walls, HashSet<ElementRef> host)
+    {
+        CollectionAssert.AreEqual(new[] { walls.Key }, fixture.Explorer.SelectedRows.Select(row => row.Key).ToList());
+        Assert.IsTrue(host.SetEquals(await fixture.Model.GetSelectionAsync(CancellationToken.None)));
+    }
+
+    private static IReadOnlyList<long> Ids(PanelFixture fixture)
+    {
+        return fixture.Actions.ExecutedPlans.Last().Steps.OfType<ElementsStep>().Single().Ids;
     }
 }

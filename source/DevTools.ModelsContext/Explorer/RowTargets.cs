@@ -47,6 +47,11 @@ internal sealed class RowTargets(PanelRuntime runtime, ExplorerSelection selecti
         menu.Open(TargetOf(Actionable(), syncing, token));
     }
 
+    public void OpenFor(TreeRow row, bool syncing, CancellationToken token)
+    {
+        menu.Open(TargetOf(TargetsFor(row), syncing, token));
+    }
+
     private static bool IsAffected(TreeRow row, HashSet<TreeRow> targets)
     {
         for (var current = row; current is not null; current = current.Parent)

@@ -270,6 +270,43 @@ public sealed class PanelViewTests
     }
 
     [TestMethod]
+    public void EyeKeepsPanelSelection()
+    {
+        using var ui = PanelUi.Open();
+        ui.Host.Row("Walls").Patterns.SelectionItem.Pattern.Select();
+        Assert.IsTrue(ThemeHost.WaitFor(() => WpfSta.Invoke(() => ui.Panel.Explorer.SelectedRows.Count) == 1), "Walls was not selected.");
+        var host = WpfSta.Invoke(() => ui.Panel.Explorer.SelectedElements.ToHashSet());
+
+        ui.PressIn(ui.Host.Row("Ducts"), "Explorer.Row.Eye");
+
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Actions.ExecutedPlans.Count == 1), "The eye did not run a plan.");
+        Assert.AreEqual("Walls", WpfSta.Invoke(() => ui.Panel.Explorer.SelectedRows.Single().Text));
+        Assert.IsTrue(host.SetEquals(WpfSta.Invoke(() => ui.Panel.Explorer.SelectedElements)));
+    }
+
+    [TestMethod]
+    public void RowButtonsTakeNoFocus()
+    {
+        using var ui = PanelUi.Open();
+
+        var focusable = WpfSta.Invoke(() =>
+        {
+            var explorer = (ExplorerTabView)ui.View.FindName("ExplorerView");
+            var list = (ListBox)explorer.FindName("RowList");
+            var row = ui.Panel.Explorer.Rows.First(row => row.Kind == DevTools.ModelsContext.Explorer.TreeRowKind.Group);
+            var container = (System.Windows.DependencyObject)list.ItemContainerGenerator.ContainerFromItem(row);
+            return Descendants(container).OfType<Button>()
+                .Select(button => (Id: System.Windows.Automation.AutomationProperties.GetAutomationId(button), button.Focusable))
+                .Where(button => button.Id is "Explorer.Row.Eye" or "Explorer.Row.Isolate" or "Explorer.Row.Halftone" or "Explorer.Row.Color")
+                .ToList();
+        });
+
+        Assert.HasCount(4, focusable);
+        Assert.IsTrue(focusable.All(button => !button.Focusable),
+            "A row button takes focus: " + string.Join(", ", focusable.Where(button => button.Focusable).Select(button => button.Id)));
+    }
+
+    [TestMethod]
     public void MenuListsActions()
     {
         using var ui = PanelUi.Open();
