@@ -380,7 +380,7 @@ internal static class VisibilityRun
 
     private static void Reset()
     {
-        Adapter.Run(_actions.ResetAsync(null, CancellationToken.None));
+        Adapter.Run(_actions.ResetAsync(null, null, CancellationToken.None));
     }
 
     private static void Shot(string label)

@@ -10,7 +10,7 @@ public interface IViewActions
 
     Task KeepAsync(string? viewId, CancellationToken cancellationToken);
 
-    Task ResetAsync(string? viewId, CancellationToken cancellationToken);
+    Task<HiddenRead?> ResetAsync(string? viewId, HiddenProbe? readBack, CancellationToken cancellationToken);
 
     Task ZoomAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken);
 
@@ -24,9 +24,13 @@ public interface IViewActions
         CancellationToken cancellationToken);
 }
 
-public sealed record PlanOutcome(IReadOnlyList<ElementRef> LinkHides, string? Notice = null)
+public sealed record PlanOutcome(IReadOnlyList<ElementRef> LinkHides, string? Notice = null, HiddenRead? ReadBack = null)
 {
     public static PlanOutcome None { get; } = new([]);
 }
+
+public sealed record HiddenProbe(DocumentKey Document, IReadOnlyList<long> Candidates);
+
+public sealed record HiddenRead(DocumentKey Document, IReadOnlyCollection<long> Checked, IReadOnlyCollection<long> Hidden);
 
 public sealed record ActiveView(ViewInfo View, bool IsTemporary);

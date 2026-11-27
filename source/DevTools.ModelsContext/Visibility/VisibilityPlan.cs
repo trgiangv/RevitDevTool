@@ -10,6 +10,8 @@ public sealed record VisibilityPlan(
 {
     public string? ViewId { get; init; }
 
+    public HiddenProbe? ReadBack { get; init; }
+
     public bool IsDisabled => DisabledReason is not null;
 
     public bool UsesLinkHide => Steps.Any(step => step is LinkElementsStep or LinkIsolateStep);

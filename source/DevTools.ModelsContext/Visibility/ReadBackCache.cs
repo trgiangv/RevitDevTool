@@ -60,6 +60,13 @@ internal sealed class ReadBackCache(PanelRuntime runtime)
             : null;
     }
 
+    public HashSet<long>? CheckedOf(ViewInfo view, DocumentKey document)
+    {
+        return view.Model.CurrentModel == document && _readBacks.TryGetValue(KeyOf(view), out var readBack)
+            ? readBack.Checked
+            : null;
+    }
+
     public void Touch(ViewInfo view, VisibilityPlan plan)
     {
         var model = view.Model.CurrentModel;
@@ -73,6 +80,25 @@ internal sealed class ReadBackCache(PanelRuntime runtime)
 
             touched.UnionWith(step.Ids);
         }
+    }
+
+    public HiddenProbe ProbeOf(ViewInfo view)
+    {
+        var document = view.Model.CurrentModel;
+        return new HiddenProbe(document, [.. CandidatesOf(KeyOf(view), document)]);
+    }
+
+    public void Seed(ViewInfo view, HiddenRead read)
+    {
+        if (read.Document != view.Model.CurrentModel)
+        {
+            return;
+        }
+
+        var readBack = new ReadBack();
+        readBack.Checked.UnionWith(read.Checked);
+        readBack.Hidden.UnionWith(read.Hidden);
+        _readBacks[KeyOf(view)] = readBack;
     }
 
     public async Task<bool> ReadAsync(ViewInfo view, CancellationToken cancellationToken)

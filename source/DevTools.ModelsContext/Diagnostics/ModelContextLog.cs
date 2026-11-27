@@ -29,6 +29,9 @@ public static partial class ModelContextLog
     [LoggerMessage(EventId = 5, Level = LogLevel.Trace, Message = "Panel work canceled")]
     public static partial void Canceled(this ILogger logger);
 
+    [LoggerMessage(EventId = 27, Level = LogLevel.Trace, Message = "Context load dropped: a visibility action ran during it")]
+    public static partial void LoadDropped(this ILogger logger);
+
     [LoggerMessage(EventId = 4, Level = LogLevel.Trace, Message = "{Operation} in {ElapsedMs} ms")]
     public static partial void Timed(this ILogger logger, string operation, double elapsedMs);
 

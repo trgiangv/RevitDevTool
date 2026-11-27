@@ -83,7 +83,7 @@ public sealed class TemplateViewTests : RecordedTest
                     problems.Add($"expected the panel filter inside Temporary View Properties, got properties {properties}, drawn {drawn}");
                 }
 
-                Evidence.Time("reset", () => Adapter.Run(actions.ResetAsync(null, None)));
+                Evidence.Time("reset", () => Adapter.Run(actions.ResetAsync(null, null, None)));
                 var left = VisibilityRun.PanelFilterCount(host);
                 Evidence.Step($"Reset: {left} panel filters left in the model.");
                 if (left > 0)
@@ -145,7 +145,7 @@ public sealed class TemplateViewTests : RecordedTest
             outcomes.Add($"{name}: {outcome}");
             Evidence.Step($"{name}: {outcome}.");
             Note(problems, name, outcome);
-            var reset = Outcome(() => Adapter.Run(actions.ResetAsync(null, None)));
+            var reset = Outcome(() => Adapter.Run(actions.ResetAsync(null, null, None)));
             if (reset != Ok)
             {
                 problems.Add($"{name}: Reset gave {reset}");

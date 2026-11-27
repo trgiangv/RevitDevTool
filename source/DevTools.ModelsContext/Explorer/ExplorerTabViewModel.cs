@@ -31,6 +31,8 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private readonly VisibilityController _visibility;
     private readonly Action<string?> _report;
     private ExplorerState? _pending;
+    private int _building;
+    private bool _repaintPending;
 
     internal ExplorerTabViewModel(
         PanelRuntime runtime,
@@ -192,7 +194,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     public async Task RunToolAsync(TreeRow row, MenuAction action)
     {
-        OpenMenu(row);
+        _targets.OpenFor(row, IsSelectionSyncing, _tree.Token);
         var item = _menu[action];
         if (!item.IsEnabled)
         {
@@ -240,20 +242,45 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         Rows.ReplaceAll(_tree.ShowQuickCounts(documents, state));
     }
 
-    internal async Task LoadAsync(ContextData data, CancellationToken cancellationToken)
+    internal Task LoadAsync(ContextData data, CancellationToken cancellationToken)
     {
         var state = _pending ?? Capture();
         Data = data;
         _tree.Token = cancellationToken;
-        _tree.Clear();
-        await _rows.ReadHiddenAsync();
-        await Categories.ReadCheckedAsync(data, cancellationToken);
-        Categories.Rebuild(data);
-        Pick.Refresh();
-        await BuildTreeAsync(state);
+        return BuildingAsync(async () =>
+        {
+            _tree.Clear();
+            await _rows.ReadHiddenAsync();
+            await Categories.ReadCheckedAsync(data, cancellationToken);
+            Categories.Rebuild(data);
+            Pick.Refresh();
+            await BuildTreeAsync(state);
+        });
     }
 
-    private async Task BuildTreeAsync(ExplorerState state)
+    private async Task BuildingAsync(Func<Task> build)
+    {
+        _building++;
+        try
+        {
+            await build();
+        }
+        finally
+        {
+            _building--;
+            if (_building == 0 && _repaintPending && !_tree.Token.IsCancellationRequested)
+            {
+                OnVisibilityChanged();
+            }
+        }
+    }
+
+    private Task BuildTreeAsync(ExplorerState state)
+    {
+        return BuildingAsync(() => BuildRowsAsync(state));
+    }
+
+    private async Task BuildRowsAsync(ExplorerState state)
     {
         _selection.NextVersion();
         _selection.Rows.Clear();
@@ -390,6 +417,12 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     private void OnVisibilityChanged()
     {
+        _repaintPending = _building > 0;
+        if (_repaintPending)
+        {
+            return;
+        }
+
         Categories.Rebuild(Data);
         _rows.ComputeStates();
         _rows.Publish();

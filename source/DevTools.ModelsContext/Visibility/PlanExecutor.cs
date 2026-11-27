@@ -6,19 +6,24 @@ namespace DevTools.ModelsContext.Visibility;
 internal sealed class PlanExecutor(PanelRuntime runtime)
 {
     private string? _notice;
+    private HiddenProbe? _probe;
+    private HiddenRead? _read;
 
     public async Task<string?> ApplyAsync(
         ViewInfo view,
         ViewLedger ledger,
         VisibilityPlan plan,
+        HiddenProbe? probe,
         CancellationToken cancellationToken)
     {
+        _probe = probe;
+        _read = null;
         if (plan.Action == VisibilityAction.Show)
         {
             return await ShowAsync(view, ledger, plan, cancellationToken);
         }
 
-        var outcome = await runtime.Services.ViewActions.ExecuteAsync(plan with { ViewId = view.ViewId }, cancellationToken);
+        var outcome = await ExecuteAsync(view, plan, cancellationToken);
         _notice = outcome.Notice;
         Track(ledger, plan);
         await RecordAsync(view, plan, outcome.LinkHides, cancellationToken);
@@ -124,7 +129,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
             .Where(hide => hide.IsIsolateRest && CanUnhide(hide.Element.Document))
             .Select(hide => hide.Element)
             .ToList();
-        await runtime.Services.ViewActions.ResetAsync(view.ViewId, cancellationToken);
+        _read = await runtime.Services.ViewActions.ResetAsync(view.ViewId, _probe, cancellationToken);
         ledger.Remove(plan);
         ledger.Isolation = null;
         _notice = rest.Count > 0 ? await ShowRestAsync(view, rest, cancellationToken) : null;
@@ -137,6 +142,22 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
         var notice = _notice;
         _notice = null;
         return notice;
+    }
+
+    public HiddenRead? TakeRead()
+    {
+        var read = _read;
+        _read = null;
+        _probe = null;
+        return read;
+    }
+
+    private async Task<PlanOutcome> ExecuteAsync(ViewInfo view, VisibilityPlan plan, CancellationToken cancellationToken)
+    {
+        var outcome = await runtime.Services.ViewActions.ExecuteAsync(
+            plan with { ViewId = view.ViewId, ReadBack = _probe }, cancellationToken);
+        _read = outcome.ReadBack;
+        return outcome;
     }
 
     private async Task<string?> ShowRestAsync(
@@ -164,16 +185,15 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
 
     private async Task ReapplyAsync(ViewInfo view, ViewLedger ledger, CancellationToken cancellationToken)
     {
-        var actions = runtime.Services.ViewActions;
         if (ledger.HidePlan() is { } hide)
         {
-            var outcome = await actions.ExecuteAsync(hide with { ViewId = view.ViewId }, cancellationToken);
+            var outcome = await ExecuteAsync(view, hide, cancellationToken);
             await RecordAsync(view, hide, outcome.LinkHides, cancellationToken);
         }
 
         foreach (var plan in ledger.OverridePlans)
         {
-            var outcome = await actions.ExecuteAsync(plan with { ViewId = view.ViewId }, cancellationToken);
+            var outcome = await ExecuteAsync(view, plan, cancellationToken);
             await RecordAsync(view, plan, outcome.LinkHides, cancellationToken);
         }
     }

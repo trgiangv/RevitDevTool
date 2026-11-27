@@ -84,7 +84,7 @@ A flat, virtualized tree: **Model › Category › Family › Type › Instance*
 
 Explorer lists what Visibility/Graphics shows: Model and Annotation categories, plus Detail Groups. It never lists
 Automatic Sketch Dimensions, Section Boxes, RVT Links, Materials, Views, Schedules (a schedule placed on a sheet
-counts as Schedule Graphics) or a category hidden from the user interface. Links list Model categories only
+counts as Schedule Graphics), Sheets, Project Information or a category hidden from the user interface. Links list Model categories only
 ([0064](../decisions/0064-model-context-annotation-in-explorer.md)).
 
 A category row is a category, or a built-in subcategory that owns elements. A subcategory is a child of
@@ -186,6 +186,12 @@ rest, only elements a view of this type can draw count: sheets, elements with no
 geometry, rooms and spaces in 3D, and areas outside area plans never count.
 View-owned elements of another view, or of a link, never count.
 
+What the panel hid is not "hidden" in this sense: rows the panel hid (an eye,
+Isolate, a category eye, a whole link) keep their count with a closed eye, in the
+tree and in the Categories box, and a hidden link lists no rows the view cannot
+draw. Only what Revit hides by itself (Visibility/Graphics, filters, view range,
+Revit's own Hide in View) shows as *+N hidden*.
+
 Railing parts count as Revit draws them: a baluster, support or termination
 whose railing (or top rail or handrail) the view draws is shown, in the main
 count with an open eye, unless its own category is off in the view. Revit's view
@@ -210,8 +216,10 @@ select together*). Shown only with Scope = Active view or Whole model.
 
 The eye (**Show / Hide**) is always visible. **Isolate**, **Halftone** and
 **Color** show on the hovered or selected row, in place of its counts, so the
-name keeps its first characters and the eye stays whole. A row acts on exactly the group it
-sits in:
+name keeps its first characters and the eye stays whole. The eye and these tools never change
+the selection, in the panel or in Revit: on a selected row they act on every selected row, on
+any other row on that row alone. The Z, B, I and H keys act on the selected rows and leave
+them selected. A row acts on exactly the group it sits in:
 
 | Row | Acts on |
 |-----|---------|
@@ -250,7 +258,7 @@ until the next Reset, like any override.
   element of the row that the active view can draw is hidden; elements the view
   does not draw (another level, outside the crop) never make it partly hidden.
   Hovering it highlights every row the click will change.
-- Rows the panel hid stay in the tree, dimmed, so they can be shown again. A
+- Rows the panel hid stay in the tree with their count, dimmed, so they can be shown again. A
   selected hidden row drops the dimming so its name reads on the selection; its
   closed eye still says it is hidden.
 - While a category is hidden with the Categories box eye, its rows in every

@@ -74,6 +74,8 @@ internal sealed class PanelRuntime
 
     public ChangeJournal Journal { get; } = new();
 
+    public ActionVersion Actions { get; } = new();
+
     public SelectionGuard Guard { get; }
 
     public ValueIndexCache Values { get; }

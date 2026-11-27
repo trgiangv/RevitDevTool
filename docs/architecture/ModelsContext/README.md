@@ -609,6 +609,34 @@ catches that type (no message matching). `IViewActions` is the one port to the h
 temporary mode is on) and `ReadHiddenAsync`. On the Current model `NestedComponents.AddWithNested` adds
 shared nested instances before T0 isolate, hide and overrides (gotcha 23).
 
+An eye or menu action reads the Current model back in the same Revit call that changes the
+view: the controller sends `ReadBackCache.ProbeOf` (the watched and touched ids) as
+`VisibilityPlan.ReadBack` or the `ResetAsync` probe, the adapter runs one `HiddenSlice` after
+the commit and returns a `HiddenRead`, and the last call of the plan seeds the cache. Only ids
+past that slice cost a second, queued trip, which waits behind Revit's redraw.
+
+**What the panel hid stays in the Active view scope.** A Hide or Isolate first takes the Current
+model ids the view drew (`InViewBeforeAsync`: the scope ids in Active view, one view collector
+call in the other scopes). After the read-back, those that read hidden go to
+`ViewLedger.PanelHiddenIds`, and ids the read-back checked and found shown leave it (Show, Reset
+removes the ledger, Keep clears the set). `HiddenInViewIds` adds them to the Current model scope
+ids on every load, beside link Hide in View ids and category-off ids, so a row the panel hid
+keeps its count with a closed eye. Elements Revit hides itself (Visibility/Graphics, filters,
+view range, a Revit Hide in View) still leave the scope and count as *+N hidden*.
+
+A link hidden whole (`ViewLedger.HiddenLinks`) or outside an isolation marks only the link rows
+the view can draw (in scope or `DocumentScope.OutsideIds`) in `VisibilityController.HiddenIds`,
+so a hidden link lists no Sheets, Project Information, Rooms or Spaces rows.
+
+**A load never wins over a later action.** `PanelRuntime.Actions` (`ActionVersion`) moves at the
+start and end of every visibility action (`RunAsync`, `KeepAsync`, `ResetAsync`).
+`ContextLoader.LoadAsync` takes the version first and drops its result, before it assigns
+`Data` and again after the Explorer load, when an action ran or is running (`Context load
+dropped` at Trace). A dropped load asks for one `RefreshAsync`: at once when no action runs,
+else when the last action ends (`VisibilityController.RefreshNeeded`). While the Explorer
+builds its tree (`LoadAsync`, `BuildTreeAsync`), `OnVisibilityChanged` only marks a repaint and
+runs it when the build ends, so an action never publishes a half-built (empty) tree.
+
 ### Hidden rows
 
 In Active view `DocumentStates` keeps, per document, the ids the view can draw but its

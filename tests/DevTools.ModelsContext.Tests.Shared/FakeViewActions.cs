@@ -68,7 +68,7 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
 
         var notice = Notice;
         Notice = null;
-        return Task.FromResult(new PlanOutcome(hidden, notice));
+        return Task.FromResult(new PlanOutcome(hidden, notice, ReadBackOf(plan.ReadBack)));
     }
 
     public Task ShowLinkedAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
@@ -92,7 +92,7 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
 
     public string? ResetError { get; set; }
 
-    public Task ResetAsync(string? viewId, CancellationToken cancellationToken)
+    public Task<HiddenRead?> ResetAsync(string? viewId, HiddenProbe? readBack, CancellationToken cancellationToken)
     {
         if (ResetError is { } error)
         {
@@ -104,7 +104,20 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         ExecutedPlans.Clear();
         model.ViewHiddenCategories.Clear();
         model.ViewKeptCategories = null;
-        return Task.CompletedTask;
+        return Task.FromResult(ReadBackOf(readBack));
+    }
+
+    public int ActionReads { get; private set; }
+
+    private HiddenRead? ReadBackOf(HiddenProbe? probe)
+    {
+        if (probe is not { Candidates.Count: > 0 })
+        {
+            return null;
+        }
+
+        ActionReads++;
+        return new HiddenRead(probe.Document, probe.Candidates, HiddenOf(probe.Document, probe.Candidates));
     }
 
     private void RequireView(string? viewId)
@@ -133,12 +146,25 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         return Task.FromResult<ActiveView?>(new ActiveView(model.View, ExecutedPlans.Count > 0));
     }
 
-    public Task<IReadOnlyCollection<long>> ReadHiddenAsync(
+    public TaskCompletionSource<bool>? NextHiddenReadGate { get; set; }
+
+    public async Task<IReadOnlyCollection<long>> ReadHiddenAsync(
         DocumentKey document,
         IReadOnlyCollection<long> candidates,
         CancellationToken cancellationToken)
     {
         HiddenReads.Add(candidates.ToList());
+        if (NextHiddenReadGate is { } gate)
+        {
+            NextHiddenReadGate = null;
+            await gate.Task;
+        }
+
+        return HiddenOf(document, candidates);
+    }
+
+    private IReadOnlyCollection<long> HiddenOf(DocumentKey document, IReadOnlyCollection<long> candidates)
+    {
         var snapshot = model.SnapshotOf(document);
         var hidden = new PlanTargets(document, snapshot);
         PlanTargets? kept = null;
@@ -155,12 +181,11 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
             }
         }
 
-        IReadOnlyCollection<long> ids = candidates
+        return candidates
             .Where(id => !model.ViewNotDrawn.Contains(new ElementRef(document, id))
                          && snapshot.TryGetRow(id, out var row)
                          && (hidden.Contains(row) || (kept is not null && !kept.Contains(row))))
             .ToList();
-        return Task.FromResult(ids);
     }
 
     private sealed class PlanTargets(DocumentKey document, DocumentSnapshot snapshot)

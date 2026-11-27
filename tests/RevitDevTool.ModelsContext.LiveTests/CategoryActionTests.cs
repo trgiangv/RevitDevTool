@@ -297,7 +297,7 @@ public sealed class CategoryActionTests : RecordedTest
 
     private void Reset()
     {
-        Adapter.Run(_actions.ResetAsync(null, CancellationToken.None));
+        Adapter.Run(_actions.ResetAsync(null, null, CancellationToken.None));
         Evidence.Step("Reset: RevitViewActions.ResetAsync.");
     }
 

@@ -44,6 +44,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
         Explorer.RowSelectionChanged += OnExplorerRowsChanged;
         Explorer.Pick.PropertyChanged += OnPickChanged;
         _runtime.Failed += OnFailed;
+        _visibility.RefreshNeeded += OnRefreshNeeded;
         _runtime.ActivityChanged += OnActivityChanged;
         ContextBar.Changed += OnContextChanged;
         ContextBar.Refused += OnFailed;
@@ -133,6 +134,7 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     public void Dispose()
     {
         _runtime.ActivityChanged -= OnActivityChanged;
+        _visibility.RefreshNeeded -= OnRefreshNeeded;
         Explorer.PropertyChanged -= OnExplorerChanged;
         Explorer.RowSelectionChanged -= OnExplorerRowsChanged;
         Explorer.Pick.PropertyChanged -= OnPickChanged;
@@ -309,6 +311,11 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     private void OnFailed(object? sender, string message)
     {
         Message = message;
+    }
+
+    private void OnRefreshNeeded(object? sender, EventArgs e)
+    {
+        _ = RefreshAsync();
     }
 
     private void OnMenuChanged(object? sender, PropertyChangedEventArgs e)

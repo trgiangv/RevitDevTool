@@ -54,7 +54,7 @@ public sealed class NestedFamilyTests : RecordedTest
     private static void Act(Document model, View view, FamilyInstance host, List<ElementId> nested, RevitViewActions actions,
         VisibilityAction action, List<string> outcomes, List<string> problems)
     {
-        Adapter.Run(actions.ResetAsync(null, None));
+        Adapter.Run(actions.ResetAsync(null, null, None));
         var before = nested.ToDictionary(id => id, view.GetElementOverrides);
         var plan = new VisibilityPlan(action, action == VisibilityAction.Color ? Red : null,
             [new ElementsStep(DocumentRegistry.KeyOf(model), [host.Id.ToLong()])], null);
@@ -71,7 +71,7 @@ public sealed class NestedFamilyTests : RecordedTest
         }
         finally
         {
-            Adapter.Run(actions.ResetAsync(null, None));
+            Adapter.Run(actions.ResetAsync(null, null, None));
             Evidence.Step($"{action}: Reset through RevitViewActions.ResetAsync.");
         }
 

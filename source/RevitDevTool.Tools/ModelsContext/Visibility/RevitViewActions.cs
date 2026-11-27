@@ -53,8 +53,11 @@ internal sealed class RevitViewActions : IViewActions
 
         if (!plan.UsesLinkHide)
         {
-            return RevitProfiler.RunAsync("Visibility", application => new PlanOutcome([], Execute(application, plan)),
-                cancellationToken);
+            return RevitProfiler.RunAsync("Visibility", application =>
+            {
+                var notice = Execute(application, plan);
+                return new PlanOutcome([], notice, ReadBackOf(application, plan.ReadBack));
+            }, cancellationToken);
         }
 
         if (plan.Action != VisibilityAction.Hide)
@@ -92,51 +95,57 @@ internal sealed class RevitViewActions : IViewActions
         }, cancellationToken);
     }
 
-    public Task ResetAsync(string? viewId, CancellationToken cancellationToken)
+    public Task<HiddenRead?> ResetAsync(string? viewId, HiddenProbe? readBack, CancellationToken cancellationToken)
     {
         return RevitProfiler.RunAsync("Reset", application =>
         {
-            var (active, view) = CurrentView.Require(application, viewId);
-            var hideIsolate = view.IsTemporaryHideIsolateActive();
-            var properties = IsPropertiesModeActive(view);
-            var key = KeyOf(active.Document, view);
-            _prior.TryGetValue(key, out var prior);
-            var filters = LinkViewFilters.HasAny(active.Document, view);
-            if (!hideIsolate && !properties && prior is null && !filters)
-            {
-                return;
-            }
-
-            RevitErrors.EnsureEditable(active.Document);
-            using var transaction = new Transaction(active.Document, TransactionName);
-            transaction.Start();
-            var failed = LinkViewFilters.Remove(active.Document, view);
-            if (hideIsolate)
-            {
-                view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
-            }
-
-            if (properties)
-            {
-                view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryViewProperties);
-            }
-
-            foreach (var pair in prior ?? [])
-            {
-                if (active.Document.GetElement(pair.Key) is not null)
-                {
-                    view.SetElementOverrides(pair.Key, pair.Value);
-                }
-            }
-
-            transaction.Commit();
-            _prior.Remove(key);
-            _categoriesOff.Remove(key);
-            if (failed is not null)
-            {
-                throw new InvalidOperationException(failed);
-            }
+            Reset(application, viewId);
+            return ReadBackOf(application, readBack);
         }, cancellationToken);
+    }
+
+    private void Reset(UIApplication application, string? viewId)
+    {
+        var (active, view) = CurrentView.Require(application, viewId);
+        var hideIsolate = view.IsTemporaryHideIsolateActive();
+        var properties = IsPropertiesModeActive(view);
+        var key = KeyOf(active.Document, view);
+        _prior.TryGetValue(key, out var prior);
+        var filters = LinkViewFilters.HasAny(active.Document, view);
+        if (!hideIsolate && !properties && prior is null && !filters)
+        {
+            return;
+        }
+
+        RevitErrors.EnsureEditable(active.Document);
+        using var transaction = new Transaction(active.Document, TransactionName);
+        transaction.Start();
+        var failed = LinkViewFilters.Remove(active.Document, view);
+        if (hideIsolate)
+        {
+            view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
+        }
+
+        if (properties)
+        {
+            view.DisableTemporaryViewMode(TemporaryViewMode.TemporaryViewProperties);
+        }
+
+        foreach (var pair in prior ?? [])
+        {
+            if (active.Document.GetElement(pair.Key) is not null)
+            {
+                view.SetElementOverrides(pair.Key, pair.Value);
+            }
+        }
+
+        transaction.Commit();
+        _prior.Remove(key);
+        _categoriesOff.Remove(key);
+        if (failed is not null)
+        {
+            throw new InvalidOperationException(failed);
+        }
     }
 
     public Task ZoomAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken)
@@ -229,6 +238,21 @@ internal sealed class RevitViewActions : IViewActions
         return hidden;
     }
 
+    private HiddenRead? ReadBackOf(UIApplication application, HiddenProbe? probe)
+    {
+        if (probe is not { Candidates.Count: > 0 }
+            || !DocumentRegistry.IsActive(application, probe.Document)
+            || application.ActiveUIDocument?.ActiveView is not { } view)
+        {
+            return null;
+        }
+
+        var model = application.ActiveUIDocument.Document;
+        var ids = probe.Candidates as long[] ?? [.. probe.Candidates];
+        var (next, hidden) = HiddenSlice(model, view, ids, 0, IsolatedOutOf(model, view));
+        return new HiddenRead(probe.Document, ids.Take(next).ToList(), hidden);
+    }
+
     private HashSet<ElementId> IsolatedOutOf(Document model, View view)
     {
         return IsPropertiesModeActive(view) && _categoriesOff.TryGetValue(KeyOf(model, view), out var off) ? off.All : [];
@@ -275,11 +299,12 @@ internal sealed class RevitViewActions : IViewActions
         return RevitProfiler.RunAsync("Hide links", application =>
         {
             var (active, _) = CurrentView.Require(application, plan.ViewId);
-            return InGroup(active.Document, HideName, () =>
+            var outcome = InGroup(active.Document, HideName, () =>
             {
                 var notice = apiSteps.Count > 0 ? Execute(application, plan with { Steps = apiSteps }) : null;
                 return new PlanOutcome(LinkHideShow.Hide(application, linked), notice);
             });
+            return outcome with { ReadBack = ReadBackOf(application, plan.ReadBack) };
         }, cancellationToken);
     }
 
@@ -295,11 +320,12 @@ internal sealed class RevitViewActions : IViewActions
 
             var model = active.Document;
             var rest = LinkIsolation.RestOf(model, view, plan.Steps.OfType<LinkIsolateStep>());
-            return InGroup(model, IsolateName, () =>
+            var outcome = InGroup(model, IsolateName, () =>
             {
                 var notice = Execute(application, plan);
                 return new PlanOutcome(rest.Count > 0 ? LinkHideShow.Hide(application, rest) : [], notice);
             });
+            return outcome with { ReadBack = ReadBackOf(application, plan.ReadBack) };
         }, cancellationToken);
     }
 

@@ -1,3 +1,4 @@
+using DevTools.ModelsContext.Diagnostics;
 using DevTools.ModelsContext.Documents;
 using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Visibility;
@@ -8,13 +9,14 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
 {
     public async Task<int> LoadAsync(JobTicket ticket, ScopeKind scope)
     {
+        var version = runtime.Actions.Value;
         var keys = await KeysInScopeAsync(scope, ticket.Token);
         if (!owner.IsCurrent(ticket) || !await ShowQuickCountsAsync(ticket, scope, keys))
         {
             return -1;
         }
 
-        if (await ReadDocumentsAsync(ticket, scope, keys) is not { } documents)
+        if (await ReadDocumentsAsync(ticket, scope, keys) is not { } documents || Dropped(version))
         {
             return -1;
         }
@@ -22,13 +24,29 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
         var data = new ContextData(scope, owner.ContextBar.CurrentModel, documents,
             owner.ContextBar.Documents.Select(item => item.Info).ToList());
         await owner.Explorer.LoadAsync(data, ticket.Token);
-        if (!owner.IsCurrent(ticket))
+        if (!owner.IsCurrent(ticket) || Dropped(version))
         {
             return -1;
         }
 
         await owner.Filter.LoadAsync(data, ticket.Token);
         return documents.Count;
+    }
+
+    private bool Dropped(int version)
+    {
+        if (!runtime.Actions.IsStale(version))
+        {
+            return false;
+        }
+
+        runtime.Logger.LoadDropped();
+        if (runtime.Actions.Drop())
+        {
+            _ = owner.RefreshAsync();
+        }
+
+        return true;
     }
 
     private async Task<IReadOnlyList<DocumentKey>> KeysInScopeAsync(ScopeKind scope, CancellationToken cancellationToken)

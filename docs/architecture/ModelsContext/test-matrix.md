@@ -255,6 +255,12 @@ sample, 2026-11-17). Change them there, not here alone.
 Revit 2026 is the primary test host, Revit 2024 the secondary (`-Year 2024` is the script default).
 Current results (Snowdon HVAC + six links):
 
+- Revit 2026, window run loop (CommandBuild), 2026-11-27, `{3D}`, Active view, Current model + Architectural +
+  Reload-Link (LH-04, LH-05): the Architectural eye 3 hide/show cycles flip eyes only (50 rows, no Sheets, Project
+  Information, Rooms or Spaces rows); the Current model eye 3 cycles keep 2,806 and the Categories box through each
+  scope load; the eye of the second document clicked 400 ms after the first, inside the scope load, twice (hide, show):
+  no empty tree, no dimmed rows, counts kept, one follow-up load; Show on Architectural › Doors opens the eye when
+  Revit returns (Show links about 2.6 s), before the scope load. Rows read in process from the panel view model.
 - Revit 2026, final deploy (warm snapshot back to one id pass; Categories box focus keeps the checks), fresh Revit,
   0064 rule: `-Ui` run `20261126-202825` gives L2 447 PASS, 0 FAIL, 8 Inconclusive (CA by design) and L3 28 of 28
   (UI-11 checks Doors and Walls), 4 live steps skipped; safety ok after L2, after L3 and at host end. CA-01 to CA-10
@@ -325,8 +331,8 @@ Current results (Snowdon HVAC + six links):
 
 | ID | Use case | Docs | Expected | Test |
 |----|----------|------|----------|------|
-| SC-01 | Whole model, every listed category, elements with no owner view | Current | 2,928 | L2 matrix |
-| SC-02 | Whole model, every listed category, elements with no owner view | Arch | 9,743 | L2 matrix, L3 UI-04 |
+| SC-01 | Whole model, every listed category, elements with no owner view | Current | 2,910 | L2 matrix |
+| SC-02 | Whole model, every listed category, elements with no owner view | Arch | 9,687 | L2 matrix, L3 UI-04 |
 | SC-03 | Link unchecked: Doors in the Current model only | Current | 0 | L2 matrix |
 | SC-04 | Link checked: Doors in both | Both | 142 | L2 matrix |
 | SC-05 | Active view, every listed category, annotation included | Current | 1,041 | L2 matrix |
@@ -626,6 +632,8 @@ LH-02; model sync relay MS-01.
 | LH-01 | One record of linked hides (the journal): eye, bar count, Show, Reset, rename, view switch, isolate rest shown by Show, an explicit hide outlives it | agree | L1 `LinkHideRecordTests` | pass |
 | LH-02 | Typed failure when Revit shows no linked element (`LinkedNotShownException`) | *linked stay hidden* message | L1 `LinkHideRecordTests.UnshownTypedFailureReports`, `PanelBarsTests` (`MenuRefusalShowsInPanel`, `ResetDropsUnshownOnce`, `EyeOnUnshownRestReports`) | pass |
 | LH-03 | Active view, linked hide (T3): the row keeps its count, eye Hidden, so the saved-hide dot shows; after Keep the hides leave the bar and Reset, the eye and the dot stay, and the eye shows them again | count, eye, `IsHiddenInView`, dot pixels | L1 `LinkHideRecordTests.ActiveViewLinkHideKeepsRow`, `PanelBarsTests` (`KeepTakesLinkHidesOffBar`, `KeptLinkHideKeepsEyeAndDot`, `ResetLeavesKeptLinkHides`, `EyeShowsKeptLinkHide`), `JournalTests.KeepClearsConvertedChanges`; L3 UI-21 | L1 pass |
+| LH-04 | Active view, the panel's own hides keep their count: Current model eye and Isolate keep the counts and the Categories box after a scope load; Revit's own hides still drop out; a hidden link lists no rows the view cannot draw; a Show inside a link opens the eye before the scope load | count, eye, rows | L1 `HideCountTests` (`ModelHideKeepsViewCount`, `IsolateKeepsOtherCounts`, `HostHiddenStaysUncounted`, `LinkHideAddsNoUndrawnRows`, `ViewLinkShowOpensEye`), `ExplorerTabTests.ViewScopeShowSkipsDimming`; live window run 2026-11-27 (below) | L1 pass |
+| LH-05 | A visibility action during a scope load: the load's result is dropped and one refresh follows; no empty tree, no dimmed or *+N hidden* rows from the stale load | count, eye, row count | L1 `HideCountTests` (`StaleLoadDoesNotWin`, `ShowDuringLoadKeepsRows`); live window run 2026-11-27 (below) | L1 pass |
 | TV-01 | View framing when Temporary View Properties turns on and off | same zoom corners and camera | MCP probe on `{3D}` (Revit 2026, 2026-11-24): zoom corners, eye and direction read before, after the mode on, after it off, after the panel's box eye Hide and after its Show; all five equal | not reproduced |
 | BZ-01 | Edit mode: a view action stops with *Revit is busy.*; during a modal command a request waits, then runs (product: Layout) | message, then the run | none | open |
 

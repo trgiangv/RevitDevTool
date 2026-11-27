@@ -1,6 +1,7 @@
 using DevTools.ModelsContext.Documents;
 using DevTools.ModelsContext.Explorer;
 using DevTools.ModelsContext.Panel;
+using DevTools.ModelsContext.Scope;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.Visibility;
 using System.Collections.Specialized;
@@ -231,6 +232,43 @@ public sealed class ExplorerTabTests
     }
 
     [TestMethod]
+    public async Task ModelEyeReadsInSameCall()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Actions.HiddenReads.Clear();
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+        var hidden = ModelRow(fixture).Eye;
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+
+        Assert.AreEqual(RowEye.Hidden, hidden);
+        Assert.AreEqual(RowEye.Shown, ModelRow(fixture).Eye);
+        Assert.AreEqual(2, fixture.Actions.ActionReads);
+        Assert.IsEmpty(fixture.Actions.HiddenReads);
+    }
+
+    [TestMethod]
+    public async Task ViewScopeShowSkipsDimming()
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        var count = ModelRow(fixture).Count;
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+        var ids = ((ElementsStep)fixture.Actions.ExecutedPlans.Single().Steps.Single()).Ids;
+        fixture.Model.ViewHiddenElements.UnionWith(ids.Select(id => new ElementRef(Current, id)));
+        fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
+        fixture.Settle();
+        var reloaded = ModelRow(fixture);
+        var hidden = (reloaded.Eye, reloaded.Count);
+        fixture.Model.ViewHiddenElements.Clear();
+
+        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+
+        Assert.AreEqual((RowEye.Hidden, count), hidden);
+        Assert.AreEqual(RowEye.Shown, ModelRow(fixture).Eye);
+        Assert.AreEqual(count, ModelRow(fixture).Count);
+    }
+
+    [TestMethod]
     public async Task ModelIsolateKeepsHostIds()
     {
         using var fixture = await PanelFixture.OpenAsync();
@@ -302,19 +340,6 @@ public sealed class ExplorerTabTests
         var plan = fixture.Actions.ExecutedPlans.Single();
         Assert.AreEqual(VisibilityAction.Isolate, plan.Action);
         CollectionAssert.AreEquivalent(new[] { ducts, walls }, fixture.Explorer.SelectedRows.ToList());
-    }
-
-    [TestMethod]
-    public async Task ToolOutsideSelectionSelectsRow()
-    {
-        using var fixture = await PanelFixture.OpenAsync();
-        var ducts = fixture.Group(Current, "Ducts");
-        fixture.Explorer.SetSelectedRows([fixture.Group(Current, "Walls")]);
-
-        await fixture.Explorer.RunToolAsync(ducts, MenuAction.Isolate);
-
-        CollectionAssert.AreEqual(new[] { ducts }, fixture.Explorer.SelectedRows.ToList());
-        Assert.HasCount(1, fixture.Actions.ExecutedPlans);
     }
 
     [TestMethod]

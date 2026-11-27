@@ -21,6 +21,19 @@ internal sealed class ViewLedger
 
     public Dictionary<DocumentKey, HashSet<long>> CategoryOffIds { get; } = [];
 
+    public Dictionary<DocumentKey, HashSet<long>> PanelHiddenIds { get; } = [];
+
+    public void AddPanelHiddenIds(DocumentKey document, IEnumerable<long> ids)
+    {
+        if (!PanelHiddenIds.TryGetValue(document, out var set))
+        {
+            set = [];
+            PanelHiddenIds.Add(document, set);
+        }
+
+        set.UnionWith(ids);
+    }
+
     public bool IsCategoryOff(long categoryId)
     {
         return HiddenCategories.ContainsKey(categoryId)
@@ -131,6 +144,7 @@ internal sealed class ViewLedger
     {
         HiddenElements.Clear();
         HiddenLinks.Clear();
+        PanelHiddenIds.Clear();
         Isolation = Isolation is { KeptCategories.Count: > 0 } isolation
             ? new Isolation([], [.. isolation.KeptCategories], [])
             : null;
@@ -149,6 +163,13 @@ internal sealed class ViewLedger
         foreach (var pair in off)
         {
             CategoryOffIds[rename.Map(pair.Key)] = pair.Value;
+        }
+
+        var panel = PanelHiddenIds.ToList();
+        PanelHiddenIds.Clear();
+        foreach (var pair in panel)
+        {
+            PanelHiddenIds[rename.Map(pair.Key)] = pair.Value;
         }
 
         var overrides = Overrides.ToList();
