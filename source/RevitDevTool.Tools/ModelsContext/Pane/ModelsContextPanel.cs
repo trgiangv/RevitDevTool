@@ -7,31 +7,41 @@ using RevitDevTool.Tools.ModelsContext.Visibility;
 
 namespace RevitDevTool.Tools.ModelsContext.Pane;
 
-public sealed class ModelsContextPanel(
-    ModelContextServices services,
-    IRevitModelEvents events,
-    ILogger<ModelsContextPane> logger)
+public sealed class ModelsContextPanel
 {
+    private readonly RevitModelEvents _events;
+    private readonly ILogger<ModelsContextPane> _logger;
+    private readonly ModelContextServices _services;
     private ModelContextViewModel? _panel;
+
+    internal ModelsContextPanel(
+        ModelContextServices services,
+        RevitModelEvents events,
+        ILogger<ModelsContextPane> logger)
+    {
+        _services = services;
+        _events = events;
+        _logger = logger;
+    }
 
     public bool IsActive
     {
-        set => events.IsActive = value;
+        set => _events.IsActive = value;
     }
 
     public bool IsBuilt => _panel is not null;
 
     public void Start(UIControlledApplication application)
     {
-        RevitProfiler.Use(logger);
-        events.Subscribe(application);
+        RevitProfiler.Use(_logger);
+        _events.Subscribe(application);
         ViewActivations.Watch(application);
     }
 
     public ModelContextView Build()
     {
-        using var timer = TraceTimer.Start(logger, "Panel build");
-        _panel = new ModelContextViewModel(services) { IsPaneVisible = false };
+        using var timer = TraceTimer.Start(_logger, "Panel build");
+        _panel = new ModelContextViewModel(_services) { IsPaneVisible = false };
         var view = new ModelContextView { DataContext = _panel };
         view.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "RegionBrush");
         return view;
@@ -39,7 +49,7 @@ public sealed class ModelsContextPanel(
 
     public void Stop()
     {
-        events.Unsubscribe();
+        _events.Unsubscribe();
         ViewActivations.Unwatch();
         _panel?.Dispose();
         _panel = null;

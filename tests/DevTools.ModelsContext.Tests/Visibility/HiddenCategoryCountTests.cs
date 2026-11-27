@@ -19,12 +19,12 @@ public sealed class HiddenCategoryCountTests
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var before = fixture.Group(Current, "Ducts").Count;
 
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
         await fixture.Panel.RefreshAsync();
 
         var ducts = fixture.Group(Current, "Ducts");
         Assert.AreEqual(before, ducts.Count);
-        Assert.AreEqual(RowEye.HiddenByCategory, ducts.Eye);
+        Assert.AreEqual(HideState.HiddenByCategory, ducts.HideState);
         Assert.AreEqual(before, Item(fixture, "Ducts").Count);
     }
 
@@ -36,12 +36,12 @@ public sealed class HiddenCategoryCountTests
         await fixture.Panel.RefreshAsync();
         var before = fixture.Group(Mep, "Ducts").Count;
 
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
         await fixture.Panel.RefreshAsync();
 
         var ducts = fixture.Group(Mep, "Ducts");
         Assert.AreEqual(before, ducts.Count);
-        Assert.AreEqual(RowEye.HiddenByCategory, ducts.Eye);
+        Assert.AreEqual(HideState.HiddenByCategory, ducts.HideState);
     }
 
     [TestMethod]
@@ -50,7 +50,7 @@ public sealed class HiddenCategoryCountTests
         using var fixture = await PanelFixture.OpenAsync(WithToposolid(), ScopeKind.ActiveView);
         var before = fixture.FindGroup(Current, SubDivisionName)?.Count;
 
-        await Item(fixture, "Toposolid").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Toposolid").ToggleHiddenCommand.ExecuteAsync(null);
         await fixture.Panel.RefreshAsync();
 
         Assert.AreEqual(before, fixture.FindGroup(Current, SubDivisionName)?.Count);
@@ -70,7 +70,7 @@ public sealed class HiddenCategoryCountTests
 
         var ducts = fixture.Group(Current, "Ducts");
         Assert.AreEqual(before, ducts.Count);
-        Assert.AreEqual(RowEye.Hidden, ducts.Eye);
+        Assert.AreEqual(HideState.Hidden, ducts.HideState);
     }
 
     [TestMethod]
@@ -78,7 +78,7 @@ public sealed class HiddenCategoryCountTests
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var before = fixture.Group(Current, "Ducts").Count;
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
         await fixture.Panel.RefreshAsync();
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
@@ -86,7 +86,7 @@ public sealed class HiddenCategoryCountTests
 
         var ducts = fixture.Group(Current, "Ducts");
         Assert.AreEqual(before, ducts.Count);
-        Assert.AreNotEqual(RowEye.Hidden, ducts.Eye);
+        Assert.AreNotEqual(HideState.Hidden, ducts.HideState);
     }
 
     [TestMethod]
@@ -95,13 +95,13 @@ public sealed class HiddenCategoryCountTests
         using var fixture = await PanelFixture.OpenAsync();
         var expected = await InViewCountAsync(fixture, Current, "Ducts");
 
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
         fixture.Panel.ContextBar.Scope = ScopeKind.ActiveView;
         await fixture.Panel.RefreshAsync();
 
         var ducts = fixture.Group(Current, "Ducts");
         Assert.AreEqual(expected, ducts.Count);
-        Assert.AreEqual(RowEye.HiddenByCategory, ducts.Eye);
+        Assert.AreEqual(HideState.HiddenByCategory, ducts.HideState);
     }
 
     private static async Task<int> InViewCountAsync(PanelFixture fixture, DocumentKey document, string group)

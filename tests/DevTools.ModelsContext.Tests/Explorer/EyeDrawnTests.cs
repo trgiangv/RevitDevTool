@@ -17,9 +17,9 @@ public sealed class EyeDrawnTests
         using var fixture = await WholeModelAsync();
         MarkHalfUndrawn(fixture, Mep, "Ducts");
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Mep, "Ducts").HideState);
     }
 
     [TestMethod]
@@ -28,9 +28,9 @@ public sealed class EyeDrawnTests
         using var fixture = await WholeModelAsync();
         MarkHalfUndrawn(fixture, Current, "Walls");
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Current, "Walls").Eye);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Current, "Walls").HideState);
     }
 
     [TestMethod]
@@ -38,11 +38,11 @@ public sealed class EyeDrawnTests
     {
         using var fixture = await WholeModelAsync();
         MarkHalfUndrawn(fixture, Mep, "Ducts");
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Mep, "Ducts").HideState);
     }
 
     [TestMethod]
@@ -50,11 +50,11 @@ public sealed class EyeDrawnTests
     {
         using var fixture = await WholeModelAsync();
         MarkHalfUndrawn(fixture, Mep, "Ducts");
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Mep, "Ducts").HideState);
         Assert.IsEmpty(fixture.Panel.Journal.LinkHides);
     }
 

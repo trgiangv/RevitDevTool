@@ -67,7 +67,7 @@ internal sealed class RevitVisibilityExplainer : IVisibilityExplainer
             causes.Add(HiddenReasons.LinkTemporary);
         }
 
-        if (instance.Category is { } linkCategory && HiddenChecks.IsCategoryHidden(view, linkCategory.Id))
+        if (instance.Category is { } linkCategory && HiddenChecks.IsCategoryOff(view, linkCategory.Id))
         {
             causes.Add(HiddenReasons.LinkCategory(linkCategory.Name));
         }

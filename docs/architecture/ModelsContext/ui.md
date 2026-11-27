@@ -299,12 +299,12 @@ Every interactive control has an `AutomationProperties.AutomationId`, named
 `<Area>.<Part>`: `ModelContext.Scope.ActiveView`, `ModelContext.Documents` (each
 item `ModelContext.Document`, its model title in HelpText),
 `Explorer.Row.Eye`, `Explorer.Row.SavedHide` (orange dot: a linked row the panel
-hid with Hide in View), `Explorer.Row.HiddenCount` (plain *+N hidden* text, `WarningBrush`
+hid with Hide in View), `Explorer.Row.DimmedCount` (plain *+N hidden* text, `WarningBrush`
 on an unselected row and the item foreground on a selected one, so it never sits orange
 on the primary selection), `Explorer.Row.Text` (the row name). The count and *+N hidden*
 share one slot (`Counts`) with the row tools: on hover or selection the tools show and
 `Counts` collapses (header rows, which have no tools, keep it), so the tools never add
-width and the `*` name column keeps room for its first characters. The same selected trigger
+width and the `*` name column keeps room for its first characters. A disabled row button (an eye while the shared hide command runs, a tool with a disabled reason, a category eye mid-action) takes no input, so the row's `PreviewMouseLeftButtonDown` hit-tests the point (`RowButtons.SwallowDisabledClick`) and swallows a click over it: the row is not selected and a category is not unchecked. The same selected trigger
 sets `RowGrid` back to opacity 1, after the dimming triggers (`IsDimmed`, Hidden eye,
 hidden by category), so a selected hidden row is not pale on the selection, `Explorer.SelectionSync`, `Filter.Source`, `Filter.SelectionSync`,
 `Filter.Paused`,

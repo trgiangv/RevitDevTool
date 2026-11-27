@@ -19,42 +19,20 @@ internal sealed class ViewLedger
 
     public Isolation? Isolation { get; set; }
 
-    public Dictionary<DocumentKey, HashSet<long>> CategoryOffIds { get; } = [];
+    public DocumentIds CategoryTaken { get; } = new();
 
-    public Dictionary<DocumentKey, HashSet<long>> PanelHiddenIds { get; } = [];
+    public DocumentIds ElementTaken { get; } = new();
 
-    public void AddPanelHiddenIds(DocumentKey document, IEnumerable<long> ids)
-    {
-        if (!PanelHiddenIds.TryGetValue(document, out var set))
-        {
-            set = [];
-            PanelHiddenIds.Add(document, set);
-        }
-
-        set.UnionWith(ids);
-    }
-
-    public bool IsCategoryOff(long categoryId)
+    public bool HidesCategory(long categoryId)
     {
         return HiddenCategories.ContainsKey(categoryId)
                || Isolation is { KeptCategories.Count: > 0 } isolation && !isolation.KeptCategories.Contains(categoryId);
     }
 
-    public void AddCategoryOffIds(DocumentKey document, IEnumerable<long> ids)
-    {
-        if (!CategoryOffIds.TryGetValue(document, out var set))
-        {
-            set = [];
-            CategoryOffIds.Add(document, set);
-        }
-
-        set.UnionWith(ids);
-    }
-
     public bool IsEmpty => HiddenElements.Count == 0 && HiddenCategories.Count == 0 && HiddenLinks.Count == 0
                            && Isolation is null;
 
-    public bool IsHidden(ElementRef element, long categoryId)
+    public bool Hides(ElementRef element, long categoryId)
     {
         if (Isolation is { } isolation && !isolation.Keeps(element, categoryId))
         {
@@ -64,6 +42,7 @@ internal sealed class ViewLedger
         return HiddenElements.Contains(element) || HiddenCategories.ContainsKey(categoryId)
                                                 || HiddenLinks.Contains(element.Document);
     }
+
 
     public void Add(VisibilityPlan plan)
     {
@@ -135,7 +114,7 @@ internal sealed class ViewLedger
 
         Overrides.Remove(InstanceOf(link));
         HiddenLinks.Remove(link);
-        CategoryOffIds.Remove(link);
+        CategoryTaken.Remove(link);
         OverridePlans.RemoveAll(plan => plan.Steps.Any(step => step is DocumentStep document && document.Document == link));
         Isolation?.KeptLinks.Remove(link);
     }
@@ -144,7 +123,7 @@ internal sealed class ViewLedger
     {
         HiddenElements.Clear();
         HiddenLinks.Clear();
-        PanelHiddenIds.Clear();
+        ElementTaken.Clear();
         Isolation = Isolation is { KeptCategories.Count: > 0 } isolation
             ? new Isolation([], [.. isolation.KeptCategories], [])
             : null;
@@ -158,19 +137,8 @@ internal sealed class ViewLedger
         var links = HiddenLinks.Select(rename.Map).ToList();
         HiddenLinks.Clear();
         HiddenLinks.UnionWith(links);
-        var off = CategoryOffIds.ToList();
-        CategoryOffIds.Clear();
-        foreach (var pair in off)
-        {
-            CategoryOffIds[rename.Map(pair.Key)] = pair.Value;
-        }
-
-        var panel = PanelHiddenIds.ToList();
-        PanelHiddenIds.Clear();
-        foreach (var pair in panel)
-        {
-            PanelHiddenIds[rename.Map(pair.Key)] = pair.Value;
-        }
+        CategoryTaken.Rename(rename);
+        ElementTaken.Rename(rename);
 
         var overrides = Overrides.ToList();
         Overrides.Clear();
@@ -191,7 +159,7 @@ internal sealed class ViewLedger
         }
     }
 
-    public bool DropLinkFilters()
+    public bool ForgetLinkFilters()
     {
         var plans = OverridePlans.Where(plan => plan.Steps.Any(step => step is LinkFilterStep)).ToList();
         foreach (var step in plans.SelectMany(plan => plan.Steps).OfType<LinkFilterStep>())

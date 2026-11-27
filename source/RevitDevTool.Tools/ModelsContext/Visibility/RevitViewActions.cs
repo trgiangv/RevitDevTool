@@ -95,12 +95,12 @@ internal sealed class RevitViewActions : IViewActions
         }, cancellationToken);
     }
 
-    public Task<HiddenRead?> ResetAsync(string? viewId, HiddenProbe? readBack, CancellationToken cancellationToken)
+    public Task<ReadBackResult?> ResetAsync(string? viewId, ReadBackRequest? request, CancellationToken cancellationToken)
     {
         return RevitProfiler.RunAsync("Reset", application =>
         {
             Reset(application, viewId);
-            return ReadBackOf(application, readBack);
+            return ReadBackOf(application, request);
         }, cancellationToken);
     }
 
@@ -201,25 +201,23 @@ internal sealed class RevitViewActions : IViewActions
         }, cancellationToken);
     }
 
-    public async Task<IReadOnlyCollection<long>> ReadHiddenAsync(
-        DocumentKey document,
-        IReadOnlyCollection<long> candidates,
-        CancellationToken cancellationToken)
+    public async Task<ReadBackResult> ReadBackAsync(ReadBackRequest request, CancellationToken cancellationToken)
     {
-        if (!document.IsCurrentModel || candidates.Count == 0)
+        var document = request.Document;
+        if (!document.IsCurrentModel || request.Ids.Count == 0)
         {
-            return [];
+            return new ReadBackResult(document, request.Ids, []);
         }
 
-        var ids = candidates.ToArray();
+        var ids = request.Ids as long[] ?? [.. request.Ids];
         var hidden = new HashSet<long>();
-        var stats = ProfileStats.Start("Hidden");
+        var stats = ProfileStats.Start("Read-back");
         var index = 0;
         while (index < ids.Length)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var start = index;
-            var (next, found) = await RevitProfiler.RunAsync("Hidden slice", application =>
+            var (next, found) = await RevitProfiler.RunAsync("Read-back slice", application =>
             {
                 if (!DocumentRegistry.IsActive(application, document)
                     || application.ActiveUIDocument?.ActiveView is not { } view)
@@ -228,29 +226,29 @@ internal sealed class RevitViewActions : IViewActions
                 }
 
                 var model = application.ActiveUIDocument.Document;
-                return HiddenSlice(model, view, ids, start, IsolatedOutOf(model, view));
+                return ReadBackSlice(model, view, ids, start, IsolatedOutOf(model, view));
             }, cancellationToken, stats).ConfigureAwait(false);
             hidden.UnionWith(found);
             index = next;
         }
 
         stats?.Flush(document, ids.Length);
-        return hidden;
+        return new ReadBackResult(document, ids, hidden);
     }
 
-    private HiddenRead? ReadBackOf(UIApplication application, HiddenProbe? probe)
+    private ReadBackResult? ReadBackOf(UIApplication application, ReadBackRequest? request)
     {
-        if (probe is not { Candidates.Count: > 0 }
-            || !DocumentRegistry.IsActive(application, probe.Document)
+        if (request is not { Ids.Count: > 0 }
+            || !DocumentRegistry.IsActive(application, request.Document)
             || application.ActiveUIDocument?.ActiveView is not { } view)
         {
             return null;
         }
 
         var model = application.ActiveUIDocument.Document;
-        var ids = probe.Candidates as long[] ?? [.. probe.Candidates];
-        var (next, hidden) = HiddenSlice(model, view, ids, 0, IsolatedOutOf(model, view));
-        return new HiddenRead(probe.Document, ids.Take(next).ToList(), hidden);
+        var ids = request.Ids as long[] ?? [.. request.Ids];
+        var (next, hidden) = ReadBackSlice(model, view, ids, 0, IsolatedOutOf(model, view));
+        return new ReadBackResult(request.Document, ids.Take(next).ToList(), hidden);
     }
 
     private HashSet<ElementId> IsolatedOutOf(Document model, View view)
@@ -258,7 +256,7 @@ internal sealed class RevitViewActions : IViewActions
         return IsPropertiesModeActive(view) && _categoriesOff.TryGetValue(KeyOf(model, view), out var off) ? off.All : [];
     }
 
-    private static (int Next, List<long> Hidden) HiddenSlice(
+    private static (int Next, List<long> Hidden) ReadBackSlice(
         Document model,
         View view,
         long[] ids,

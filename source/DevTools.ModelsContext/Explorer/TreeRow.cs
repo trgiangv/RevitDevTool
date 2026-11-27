@@ -14,18 +14,18 @@ public sealed class TreeRow : INotifyPropertyChanged
     private static readonly PropertyChangedEventArgs BadgeChanged = new(nameof(Badge));
     private static readonly PropertyChangedEventArgs ExpandedChanged = new(nameof(IsExpanded));
     private static readonly PropertyChangedEventArgs HasChildrenChanged = new(nameof(HasChildren));
-    private static readonly PropertyChangedEventArgs EyeChanged = new(nameof(Eye));
+    private static readonly PropertyChangedEventArgs HideStateChanged = new(nameof(HideState));
     private static readonly PropertyChangedEventArgs DisabledReasonChanged = new(nameof(DisabledReason));
     private static readonly PropertyChangedEventArgs IsEnabledChanged = new(nameof(IsEnabled));
     private static readonly PropertyChangedEventArgs OverrideColorChanged = new(nameof(OverrideColor));
     private static readonly PropertyChangedEventArgs ColorHexChanged = new(nameof(ColorHex));
     private static readonly PropertyChangedEventArgs HasColorChanged = new(nameof(HasColor));
     private static readonly PropertyChangedEventArgs HalftoneChanged = new(nameof(IsHalftone));
-    private static readonly PropertyChangedEventArgs HiddenCountChanged = new(nameof(HiddenCount));
-    private static readonly PropertyChangedEventArgs HiddenTextChanged = new(nameof(HiddenText));
-    private static readonly PropertyChangedEventArgs HasHiddenChanged = new(nameof(HasHidden));
+    private static readonly PropertyChangedEventArgs DimmedCountChanged = new(nameof(DimmedCount));
+    private static readonly PropertyChangedEventArgs DimmedTextChanged = new(nameof(DimmedText));
+    private static readonly PropertyChangedEventArgs HasDimmedChanged = new(nameof(HasDimmed));
     private static readonly PropertyChangedEventArgs DimmedChanged = new(nameof(IsDimmed));
-    private static readonly PropertyChangedEventArgs HiddenInViewChanged = new(nameof(IsHiddenInView));
+    private static readonly PropertyChangedEventArgs LinkHiddenChanged = new(nameof(IsLinkHidden));
 
     public TreeRow(
         TreeRowKind kind,
@@ -127,19 +127,19 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public IReadOnlyList<RowPath> Branches { get; set; } = [];
 
-    public RowEye Eye
+    public HideState HideState
     {
         get;
         set
         {
             if (field != value)
             {
-                var saved = IsHiddenInView;
+                var saved = IsLinkHidden;
                 field = value;
-                Raise(EyeChanged);
-                if (saved != IsHiddenInView)
+                Raise(HideStateChanged);
+                if (saved != IsLinkHidden)
                 {
-                    Raise(HiddenInViewChanged);
+                    Raise(LinkHiddenChanged);
                 }
             }
         }
@@ -173,31 +173,31 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public bool ChildrenLoaded => Children is not null;
 
-    public int HiddenCount
+    public int DimmedCount
     {
         get;
         internal set
         {
             if (field != value)
             {
-                var had = HasHidden;
+                var had = HasDimmed;
                 field = value;
-                HiddenText = value > 0
+                DimmedText = value > 0
                     ? string.Format(CultureInfo.CurrentCulture, "+{0:N0} hidden", value)
                     : string.Empty;
-                Raise(HiddenCountChanged);
-                Raise(HiddenTextChanged);
-                if (had != HasHidden)
+                Raise(DimmedCountChanged);
+                Raise(DimmedTextChanged);
+                if (had != HasDimmed)
                 {
-                    Raise(HasHiddenChanged);
+                    Raise(HasDimmedChanged);
                 }
             }
         }
     }
 
-    public string HiddenText { get; private set; } = string.Empty;
+    public string DimmedText { get; private set; } = string.Empty;
 
-    public bool HasHidden => HiddenCount > 0;
+    public bool HasDimmed => DimmedCount > 0;
 
     public bool IsDimmed
     {
@@ -214,7 +214,7 @@ public sealed class TreeRow : INotifyPropertyChanged
 
     public bool IsInsideLink => Document is { IsCurrentModel: false } && Kind != TreeRowKind.LinkModel;
 
-    public bool IsHiddenInView => IsInsideLink && Eye is RowEye.Hidden or RowEye.Partly;
+    public bool IsLinkHidden => IsInsideLink && HideState is HideState.Hidden or HideState.Partly;
 
     public bool IsHighlighted
     {

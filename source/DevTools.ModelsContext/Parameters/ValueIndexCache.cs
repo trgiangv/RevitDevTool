@@ -16,14 +16,14 @@ public sealed class ValueIndexCache(
     public const int MaxValues = 500;
 
     private readonly Dictionary<Key, LinkedListNode<Entry>> _entries = [];
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly LinkedList<Entry> _order = new();
 
     public int Count
     {
         get
         {
-            lock (_gate)
+            lock (_lock)
             {
                 return _entries.Count;
             }
@@ -38,7 +38,7 @@ public sealed class ValueIndexCache(
     {
         var key = KeyOf(source, parameter, groups);
         Task<ValueIndex> task;
-        lock (_gate)
+        lock (_lock)
         {
             if (_entries.TryGetValue(key, out var node))
             {
@@ -67,7 +67,7 @@ public sealed class ValueIndexCache(
 
     public bool Contains(SourceId source, ParameterKey parameter, IReadOnlyCollection<long> groups)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _entries.ContainsKey(KeyOf(source, parameter, groups));
         }
@@ -75,7 +75,7 @@ public sealed class ValueIndexCache(
 
     public void Invalidate(SourceId source)
     {
-        lock (_gate)
+        lock (_lock)
         {
             foreach (var key in _entries.Keys.Where(key => key.Source == source).ToList())
             {
@@ -87,7 +87,7 @@ public sealed class ValueIndexCache(
 
     public void Clear()
     {
-        lock (_gate)
+        lock (_lock)
         {
             _entries.Clear();
             _order.Clear();
@@ -141,7 +141,7 @@ public sealed class ValueIndexCache(
 
     private void Forget(Key key, Task<ValueIndex> task)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (_entries.TryGetValue(key, out var node) && ReferenceEquals(node.Value.Index, task))
             {

@@ -9,7 +9,7 @@ internal sealed class RowTargets(PanelRuntime runtime, ExplorerSelection selecti
     public void Highlight(TreeRow? row, IEnumerable<TreeRow> visibleRows)
     {
         ClearHighlight();
-        if (row is null || row.Eye is RowEye.None or RowEye.HiddenByCategory)
+        if (row is null || row.HideState is HideState.None or HideState.HiddenByCategory)
         {
             return;
         }
@@ -72,7 +72,7 @@ internal sealed class RowTargets(PanelRuntime runtime, ExplorerSelection selecti
 
     private MenuTarget TargetOf(List<TreeRow> rows, bool syncing, CancellationToken token)
     {
-        var hidden = rows.Count > 0 && rows.All(row => row.Eye == RowEye.Hidden);
+        var hidden = rows.Count > 0 && rows.All(row => row.HideState == HideState.Hidden);
         return new MenuTarget(rows, [], () => runtime.Data.ElementsOf(rows), syncing, hidden, token);
     }
 }

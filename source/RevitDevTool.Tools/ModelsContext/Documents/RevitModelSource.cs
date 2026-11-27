@@ -277,7 +277,7 @@ internal sealed class RevitModelSource(ScopeCache scopes, ParameterCache paramet
             var (next, types, elements) = await RevitProfiler.RunAsync("Read slice", application =>
             {
                 var document = DocumentRegistry.RequireSource(application, source);
-                listed ??= ElementReader.ListedSet(document);
+                listed ??= ElementReader.ListedCategorySet(document);
                 var reader = new ElementReader(document, knownTypes, listed);
                 var end = reader.ReadSlice(ids, start);
                 return (end, reader.Types, reader.Elements);

@@ -20,41 +20,41 @@ public sealed class HiddenRuleTests
     [TestMethod]
     public void PlanCountsDrawableOnly()
     {
-        var outside = Outside(DocumentKey.Current("rule"), ViewKind.Plan);
+        var undrawn = Undrawn(DocumentKey.Current("rule"), ViewKind.Plan);
 
-        CollectionAssert.AreEquivalent(new[] { Hidden, OwnedHere, Room }, outside.ToList());
+        CollectionAssert.AreEquivalent(new[] { Hidden, OwnedHere, Room }, undrawn.ToList());
     }
 
     [TestMethod]
     public void LinkSkipsViewOwned()
     {
-        var outside = Outside(DocumentKey.Link("rule", 50), ViewKind.Plan);
+        var undrawn = Undrawn(DocumentKey.Link("rule", 50), ViewKind.Plan);
 
-        CollectionAssert.AreEquivalent(new[] { Hidden, Room }, outside.ToList());
+        CollectionAssert.AreEquivalent(new[] { Hidden, Room }, undrawn.ToList());
     }
 
     [TestMethod]
     public void ThreeDSkipsRooms()
     {
-        var outside = Outside(DocumentKey.Link("rule", 50), ViewKind.ThreeD);
+        var undrawn = Undrawn(DocumentKey.Link("rule", 50), ViewKind.ThreeD);
 
-        CollectionAssert.AreEquivalent(new[] { Hidden }, outside.ToList());
+        CollectionAssert.AreEquivalent(new[] { Hidden }, undrawn.ToList());
     }
 
     [TestMethod]
     public void AreaPlanCountsAreas()
     {
-        var outside = Outside(DocumentKey.Link("rule", 50), ViewKind.AreaPlan);
+        var undrawn = Undrawn(DocumentKey.Link("rule", 50), ViewKind.AreaPlan);
 
-        CollectionAssert.AreEquivalent(new[] { Hidden, Room, Area }, outside.ToList());
+        CollectionAssert.AreEquivalent(new[] { Hidden, Room, Area }, undrawn.ToList());
     }
 
     [TestMethod]
     public void NonModelViewKeepsOwnedOnly()
     {
-        var outside = Outside(DocumentKey.Current("rule"), ViewKind.Other);
+        var undrawn = Undrawn(DocumentKey.Current("rule"), ViewKind.Other);
 
-        CollectionAssert.AreEquivalent(new[] { OwnedHere }, outside.ToList());
+        CollectionAssert.AreEquivalent(new[] { OwnedHere }, undrawn.ToList());
     }
 
     [TestMethod]
@@ -67,21 +67,21 @@ public sealed class HiddenRuleTests
     }
 
     [TestMethod]
-    public void ViewChangeRecountsOutside()
+    public void ViewChangeRecountsUndrawn()
     {
         var key = DocumentKey.Current("rule");
         var scope = Scope(key);
 
-        var plan = scope.OutsideIds(View(key, ViewKind.Plan)).Count;
-        var threeD = scope.OutsideIds(View(key, ViewKind.ThreeD)).Count;
+        var plan = scope.UndrawnIds(View(key, ViewKind.Plan)).Count;
+        var threeD = scope.UndrawnIds(View(key, ViewKind.ThreeD)).Count;
 
         Assert.AreEqual(3, plan);
         Assert.AreEqual(2, threeD);
     }
 
-    private static HashSet<long> Outside(DocumentKey key, ViewKind kind)
+    private static HashSet<long> Undrawn(DocumentKey key, ViewKind kind)
     {
-        return Scope(key).OutsideIds(View(key, kind));
+        return Scope(key).UndrawnIds(View(key, kind));
     }
 
     private static ViewInfo View(DocumentKey key, ViewKind kind)

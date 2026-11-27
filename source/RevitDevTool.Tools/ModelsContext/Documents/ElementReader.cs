@@ -19,7 +19,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes,
     private const long CategorySpan = 10_000_000L;
     private const string NoType = "No type";
 
-    private readonly HashSet<long> _listedCategories = listedCategories ?? ListedSet(document);
+    private readonly HashSet<long> _listedCategories = listedCategories ?? ListedCategorySet(document);
     private readonly Dictionary<long, ElementType?> _types = [];
 
     public List<TypeRecord> Types { get; } = [];
@@ -63,7 +63,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes,
         return ids;
     }
 
-    public static HashSet<long> ListedSet(Document document)
+    public static HashSet<long> ListedCategorySet(Document document)
     {
         return [.. ListedCategoryIds(document).Select(id => id.ToLong())];
     }
@@ -78,7 +78,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes,
         };
     }
 
-    public static List<ElementId> OwnedCategoryIds(Document document)
+    public static List<ElementId> UsedCategoryIds(Document document)
     {
         var all = ListedCategoryIds(document);
         var subcategories = all.Where(id => Category.GetCategory(document, id)?.Parent is not null).ToList();
@@ -109,7 +109,7 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes,
         ICollection<ElementId>? categories = null,
         IReadOnlyList<ElementFilter>? options = null)
     {
-        var filters = new List<ElementFilter> { AnyOptionFilter(document, categories), FreeFilter() };
+        var filters = new List<ElementFilter> { AnyOptionFilter(document, categories), NoOwnerViewFilter() };
         filters.AddRange(options ?? OptionFilters(document));
         return new LogicalAndFilter(filters);
     }
@@ -123,13 +123,13 @@ internal sealed class ElementReader(Document document, HashSet<long> knownTypes,
         };
         if (document.IsLinked)
         {
-            filters.Add(FreeFilter());
+            filters.Add(NoOwnerViewFilter());
         }
 
         return new LogicalAndFilter(filters);
     }
 
-    private static ElementOwnerViewFilter FreeFilter()
+    private static ElementOwnerViewFilter NoOwnerViewFilter()
     {
         return new ElementOwnerViewFilter(ElementId.InvalidElementId);
     }

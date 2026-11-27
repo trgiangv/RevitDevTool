@@ -7,7 +7,7 @@ namespace DevTools.ModelsContext.Panel;
 internal sealed class SelectionSync : IDisposable
 {
     private readonly Debouncer _debouncer;
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly ModelContextViewModel _owner;
     private readonly PanelRuntime _runtime;
     private readonly SessionSwitcher _sessions;
@@ -32,7 +32,7 @@ internal sealed class SelectionSync : IDisposable
     public void Cancel()
     {
         _debouncer.Cancel();
-        lock (_gate)
+        lock (_lock)
         {
             _incoming = null;
         }
@@ -60,7 +60,7 @@ internal sealed class SelectionSync : IDisposable
             return;
         }
 
-        lock (_gate)
+        lock (_lock)
         {
             _incoming = selection;
         }
@@ -71,7 +71,7 @@ internal sealed class SelectionSync : IDisposable
     private async Task SettleAsync()
     {
         IReadOnlyCollection<ElementRef>? incoming;
-        lock (_gate)
+        lock (_lock)
         {
             incoming = _incoming;
             _incoming = null;
@@ -95,8 +95,8 @@ internal sealed class SelectionSync : IDisposable
 
     private bool Accept(IReadOnlyCollection<ElementRef> incoming)
     {
-        var awaitingEcho = _runtime.Guard.IsPending;
-        if (_runtime.Guard.ShouldDrop(incoming))
+        var awaitingEcho = _runtime.SentSelection.IsPending;
+        if (_runtime.SentSelection.ShouldDrop(incoming))
         {
             return false;
         }

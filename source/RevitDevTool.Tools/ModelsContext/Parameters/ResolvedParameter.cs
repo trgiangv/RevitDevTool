@@ -16,7 +16,7 @@ internal sealed record ResolvedParameter(
 
     public SilentElements Silent { get; init; } = SilentElements.None;
 
-    public bool SilentChecked { get; init; }
+    public bool SilentRead { get; init; }
 
     public ElementId ElementId => Id.ToElementId();
 

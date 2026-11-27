@@ -176,7 +176,7 @@ public sealed class WhyHiddenStripTests
         strip.Panel.ContextBar.Check([Mep]);
         var ducts = strip.Panel.Explorer.Rows.First(row =>
             row.Kind == TreeRowKind.Group && row.Document == Mep && row.Text == "Ducts");
-        await strip.Panel.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
+        await strip.Panel.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts);
         strip.Explainer.Reasons = [HiddenReasons.OutsideCrop];
 
         await strip.ViewModel.OpenAsync(strip.Duct(Mep));
@@ -332,7 +332,7 @@ public sealed class WhyHiddenStripTests
         {
             var ducts = Panel.Explorer.Rows.First(row =>
                 row.Kind == TreeRowKind.Group && row.Document == document && row.Text == "Ducts");
-            return Panel.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
+            return Panel.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts);
         }
 
         public ElementRef Duct(DocumentKey document, int index = 0)

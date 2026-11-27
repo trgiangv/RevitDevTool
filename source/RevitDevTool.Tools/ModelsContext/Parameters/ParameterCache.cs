@@ -16,13 +16,13 @@ internal sealed class ParameterCache
 {
     private readonly Dictionary<CandidateKey, Stamped<CandidateSet>> _candidates = [];
     private readonly Dictionary<SourceId, Stamped<CatalogEntry>> _catalogs = [];
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly Dictionary<ValueKey, Stamped<IReadOnlyList<ResolvedParameter>>> _resolved = [];
     private readonly Dictionary<ValueKey, Stamped<ValueEntry>> _values = [];
 
     public IReadOnlyList<ParameterInfo>? FindCatalog(SourceId source, DocumentVersion? version)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _catalogs.TryGetValue(source, out var entry) && Same(entry.Version, version) ? entry.Value.Catalog : null;
         }
@@ -30,7 +30,7 @@ internal sealed class ParameterCache
 
     public IReadOnlyCollection<long>? FindIds(SourceId source, DocumentVersion? version, ParameterKey key)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _catalogs.TryGetValue(source, out var entry) && Same(entry.Version, version)
                                                                  && entry.Value.Ids.TryGetValue(key, out var ids)
@@ -45,7 +45,7 @@ internal sealed class ParameterCache
         IReadOnlyList<ParameterInfo> catalog,
         IReadOnlyDictionary<ParameterKey, IReadOnlyCollection<long>> ids)
     {
-        lock (_gate)
+        lock (_lock)
         {
             _catalogs[source] = new Stamped<CatalogEntry>(version, new CatalogEntry(catalog, ids));
         }
@@ -53,7 +53,7 @@ internal sealed class ParameterCache
 
     public ValueEntry? FindValues(SourceId source, ParameterKey parameter, IEnumerable<long> groups, DocumentVersion? version)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _values.TryGetValue(KeyOf(source, parameter, groups), out var entry) && Same(entry.Version, version)
                 ? entry.Value
@@ -64,7 +64,7 @@ internal sealed class ParameterCache
     public void StoreValues(SourceId source, ParameterKey parameter, IEnumerable<long> groups, DocumentVersion? version,
         ValueEntry values)
     {
-        lock (_gate)
+        lock (_lock)
         {
             _values[KeyOf(source, parameter, groups)] = new Stamped<ValueEntry>(version, values);
         }
@@ -76,7 +76,7 @@ internal sealed class ParameterCache
         IEnumerable<long> groups,
         DocumentVersion? version)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _resolved.TryGetValue(KeyOf(source, parameter, groups), out var entry) && Same(entry.Version, version)
                 ? entry.Value
@@ -91,7 +91,7 @@ internal sealed class ParameterCache
         DocumentVersion? version,
         IReadOnlyList<ResolvedParameter> resolved)
     {
-        lock (_gate)
+        lock (_lock)
         {
             _resolved[KeyOf(source, parameter, groups)] = new Stamped<IReadOnlyList<ResolvedParameter>>(version, resolved);
         }
@@ -105,7 +105,7 @@ internal sealed class ParameterCache
         out bool cached)
     {
         var key = new CandidateKey(source, new GroupSet(groups));
-        lock (_gate)
+        lock (_lock)
         {
             if (_candidates.TryGetValue(key, out var entry) && Same(entry.Version, version))
             {
@@ -115,7 +115,7 @@ internal sealed class ParameterCache
         }
 
         var candidates = collect();
-        lock (_gate)
+        lock (_lock)
         {
             _candidates[key] = new Stamped<CandidateSet>(version, candidates);
         }
@@ -126,7 +126,7 @@ internal sealed class ParameterCache
 
     public void Invalidate(SourceId source)
     {
-        lock (_gate)
+        lock (_lock)
         {
             _catalogs.Remove(source);
             DropValues(source);
@@ -135,7 +135,7 @@ internal sealed class ParameterCache
 
     public void InvalidateValues(SourceId source)
     {
-        lock (_gate)
+        lock (_lock)
         {
             DropValues(source);
         }
@@ -150,7 +150,7 @@ internal sealed class ParameterCache
             return;
         }
 
-        lock (_gate)
+        lock (_lock)
         {
             Remove(_values, key => key.Source == source, (_, _) => true);
             Remove(_candidates, key => key.Source == source,

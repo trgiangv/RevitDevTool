@@ -19,7 +19,7 @@ internal static class CategoryIsolation
             SetShown(view, category.Id, keep.Contains(category.Id) && !stayHidden.Contains(category.Id), hidden);
         }
 
-        foreach (var id in ElementReader.OwnedCategoryIds(model))
+        foreach (var id in ElementReader.UsedCategoryIds(model))
         {
             if (Category.GetCategory(model, id)?.Parent is { } parent && keep.Contains(parent.Id))
             {

@@ -1,6 +1,6 @@
 namespace DevTools.ModelsContext.Explorer;
 
-public enum RowEye
+public enum HideState
 {
     None,
     Shown,

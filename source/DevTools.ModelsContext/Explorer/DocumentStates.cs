@@ -31,12 +31,12 @@ internal sealed class DocumentStates(VisibilityController visibility)
             var hidden = visibility.HiddenIds(document);
             var overrides = OverrideTally.Count(document.Snapshot,
                 visibility.OverridesOf(document.Key).Where(pair => document.InScope(pair.Key)));
-            var outside = ScopeCounter.Count(document.Snapshot, hidden.Where(id => !document.InScope(id)));
-            var unseen = UnseenOf(data, document, hidden, visibility.View);
+            var hiddenElsewhere = ScopeCounter.Count(document.Snapshot, hidden.Where(id => !document.InScope(id)));
+            var dimmed = DimmedOf(data, document, hidden, visibility.View);
             var notDrawn = ScopeCounter.Count(document.Snapshot, visibility.NotDrawnIds(document.Key)
                 .Where(id => document.InScope(id) && !hidden.Contains(id)));
-            _states[document.Key] = new DocumentState(hidden, ScopeCounter.Count(document.Snapshot, hidden), outside,
-                overrides, unseen, ScopeCounter.Count(document.Snapshot, unseen))
+            _states[document.Key] = new DocumentState(hidden, ScopeCounter.Count(document.Snapshot, hidden), hiddenElsewhere,
+                overrides, dimmed, ScopeCounter.Count(document.Snapshot, dimmed))
             {
                 NotDrawn = notDrawn
             };
@@ -58,38 +58,38 @@ internal sealed class DocumentStates(VisibilityController visibility)
         }
     }
 
-    private static HashSet<long> UnseenOf(ContextData data, DocumentScope document, HashSet<long> hidden, ViewInfo? view)
+    private static HashSet<long> DimmedOf(ContextData data, DocumentScope document, HashSet<long> hidden, ViewInfo? view)
     {
         if (data.Scope != ScopeKind.ActiveView)
         {
             return [];
         }
 
-        var unseen = new HashSet<long>(document.OutsideIds(view));
-        unseen.ExceptWith(hidden);
-        return unseen;
+        var dimmed = new HashSet<long>(document.UndrawnIds(view));
+        dimmed.ExceptWith(hidden);
+        return dimmed;
     }
 }
 
 internal sealed class DocumentState(
     HashSet<long> hiddenIds,
     CountNode hidden,
-    CountNode outside,
+    CountNode hiddenElsewhere,
     OverrideTally overrides,
-    HashSet<long> unseenIds,
-    CountNode unseen)
+    HashSet<long> dimmedIds,
+    CountNode dimmed)
 {
     public HashSet<long> HiddenIds { get; } = hiddenIds;
 
     public CountNode Hidden { get; } = hidden;
 
-    public CountNode Outside { get; } = outside;
+    public CountNode HiddenElsewhere { get; } = hiddenElsewhere;
 
     public OverrideTally Overrides { get; } = overrides;
 
-    public HashSet<long> UnseenIds { get; } = unseenIds;
+    public HashSet<long> DimmedIds { get; } = dimmedIds;
 
-    public CountNode Unseen { get; } = unseen;
+    public CountNode Dimmed { get; } = dimmed;
 
     public CountNode NotDrawn { get; init; } = new(-1);
 

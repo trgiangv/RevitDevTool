@@ -75,7 +75,7 @@ internal sealed class ExplorerRows(
             await tree.ExpandBranchAsync(root);
         }
 
-        await ReadHiddenAsync();
+        await ReadBackAsync();
         Publish();
         if (timer.IsEnabled)
         {
@@ -111,9 +111,9 @@ internal sealed class ExplorerRows(
         await RepublishIfHiddenChangedAsync();
     }
 
-    public async Task<bool> ReadHiddenAsync()
+    public async Task<bool> ReadBackAsync()
     {
-        var changed = await visibility.ReadBackAsync(tree.Token);
+        var changed = await visibility.ReadBackAsync(false, tree.Token);
         if (changed)
         {
             ComputeStates();
@@ -155,7 +155,7 @@ internal sealed class ExplorerRows(
 
     private async Task RepublishIfHiddenChangedAsync()
     {
-        if (await ReadHiddenAsync())
+        if (await ReadBackAsync())
         {
             Publish();
         }

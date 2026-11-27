@@ -58,11 +58,11 @@ public sealed class SubcategoryRowTests
     {
         using var fixture = await PanelFixture.OpenAsync(WithToposolid());
 
-        await Item(fixture, "Toposolid").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Toposolid").ToggleHiddenCommand.ExecuteAsync(null);
 
         var ids = fixture.Actions.ExecutedPlans.Single().Steps.Cast<CategoryStep>().Select(step => step.CategoryId);
         CollectionAssert.AreEquivalent(new[] { Toposolid, SubDivisions }, ids.ToList());
-        Assert.IsTrue(Item(fixture, SubDivisionName).IsHiddenInView);
+        Assert.IsTrue(Item(fixture, SubDivisionName).IsHidden);
     }
 
     [TestMethod]
@@ -70,11 +70,11 @@ public sealed class SubcategoryRowTests
     {
         using var fixture = await PanelFixture.OpenAsync(WithToposolid());
 
-        await Item(fixture, SubDivisionName).ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, SubDivisionName).ToggleHiddenCommand.ExecuteAsync(null);
 
         var step = (CategoryStep)fixture.Actions.ExecutedPlans.Single().Steps.Single();
         Assert.AreEqual(SubDivisions, step.CategoryId);
-        Assert.IsFalse(Item(fixture, "Toposolid").IsHiddenInView);
+        Assert.IsFalse(Item(fixture, "Toposolid").IsHidden);
     }
 
     [TestMethod]

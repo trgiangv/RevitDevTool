@@ -3,6 +3,7 @@ using DevTools.ModelsContext.Selection;
 using DevTools.ModelsContext.Tests.Shared;
 using DevTools.ModelsContext.Visibility;
 using DevTools.Presentation.Views.ModelsContext.Explorer;
+using DevTools.Presentation.Views.ModelsContext.Panel;
 using FlaUI.Core.AutomationElements;
 using FlaUI.Core.Definitions;
 
@@ -159,15 +160,15 @@ public sealed class ExplorerViewTests
     }
 
     [TestMethod]
-    public void HiddenCountShowsInActiveView()
+    public void DimmedCountShowsInActiveView()
     {
         using var ui = PanelUi.Open();
         ui.ShowView("ModelContext.Scope.ActiveView");
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.HiddenCount > 0)), "No row counts hidden elements.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.DimmedCount > 0)), "No row counts hidden elements.");
 
         var row = ui.Host.Row("Ducts");
 
-        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Has(row, "Explorer.Row.HiddenCount")), "The Ducts row has no hidden count.");
+        Assert.IsTrue(ThemeHost.WaitForUi(() => ui.Has(row, "Explorer.Row.DimmedCount")), "The Ducts row has no hidden count.");
     }
 
     [TestMethod]
@@ -175,16 +176,16 @@ public sealed class ExplorerViewTests
     {
         using var ui = PanelUi.Open();
         ui.ShowView("ModelContext.Scope.ActiveView");
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.HiddenCount > 0)), "No row counts hidden elements.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.DimmedCount > 0)), "No row counts hidden elements.");
         List<TreeRow> dimmed = [];
         WpfSta.Run(async () =>
         {
             var explorer = ui.Panel.Explorer;
             var ducts = explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" } && row.Document == FakeModelGenerator.Current);
             await explorer.ExpandAsync(ducts);
-            var family = explorer.Rows.First(row => row.Parent == ducts && row is { HiddenCount: > 1, Count: > 0 });
+            var family = explorer.Rows.First(row => row.Parent == ducts && row is { DimmedCount: > 1, Count: > 0 });
             await explorer.ExpandAsync(family);
-            var type = explorer.Rows.First(row => row.Parent == family && row is { HiddenCount: > 1, Count: > 0 });
+            var type = explorer.Rows.First(row => row.Parent == family && row is { DimmedCount: > 1, Count: > 0 });
             await explorer.ExpandAsync(type);
             dimmed = explorer.Rows.Where(row => row.Parent == type && row.IsDimmed).Take(2).ToList();
         });
@@ -200,7 +201,7 @@ public sealed class ExplorerViewTests
 
         Assert.IsTrue(ThemeHost.WaitFor(() => RowOpacity(ui, dimmed[0]) == 1), $"The selected dimmed row reads opacity {WpfSta.Invoke(() => RowOpacity(ui, dimmed[0]))}.");
         Assert.AreEqual(0.55, WpfSta.Invoke(() => RowOpacity(ui, dimmed[1])), 0.001, "The unselected dimmed row is not dimmed.");
-        Assert.AreEqual(RowEye.Hidden, dimmed[0].Eye);
+        Assert.AreEqual(HideState.Hidden, dimmed[0].HideState);
     }
 
     [TestMethod]
@@ -247,6 +248,37 @@ public sealed class ExplorerViewTests
 
         Assert.IsTrue(ThemeHost.WaitFor(() => !ducts.IsExpanded), "Double-click did not close the group.");
         Assert.IsEmpty(ui.Actions.Zoomed);
+    }
+
+    [TestMethod]
+    public void BusyEyeSwallowsClick()
+    {
+        using var ui = PanelUi.Open();
+        var (ducts, other) = WpfSta.Invoke(() => (
+            ui.Panel.Explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" }),
+            ui.Panel.Explorer.Rows.First(row => row is { Kind: TreeRowKind.Group } && row.Text != "Ducts")));
+        WpfSta.Invoke(ui.Model.HoldScopes);
+        WpfSta.Invoke(() => { _ = ui.Panel.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts); });
+        Assert.IsTrue(ThemeHost.WaitFor(() => WpfSta.Invoke(() => ui.Model.HeldScopes) > 0), "The hide never started.");
+
+        var (enabled, found, onText) = WpfSta.Invoke(() =>
+        {
+            var list = RowList(ui);
+            list.UpdateLayout();
+            var item = (System.Windows.Controls.ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(other);
+            var presenter = FindPresenter(item)!;
+            var eye = (System.Windows.Controls.Primitives.ButtonBase)presenter.ContentTemplate.FindName("Eye", presenter);
+            var center = eye.TranslatePoint(new System.Windows.Point(eye.ActualWidth / 2, eye.ActualHeight / 2), item);
+            var text = new System.Windows.Point(item.ActualWidth / 3, item.ActualHeight / 2);
+            return (eye.IsEnabled, ReferenceEquals(RowButtons.ButtonAt(item, center), eye), RowButtons.ButtonAt(item, text));
+        });
+        WpfSta.Invoke(ui.Model.ReleaseScopes);
+        Assert.IsTrue(ThemeHost.WaitFor(() => WpfSta.Invoke(() => !ui.Panel.Explorer.ToggleHiddenCommand.IsRunning)),
+            "The hide did not finish.");
+
+        Assert.IsFalse(enabled, "The eye stays enabled while the hide runs.");
+        Assert.IsTrue(found, "The hit test misses the disabled eye, so its click would select the row.");
+        Assert.IsNull(onText, "The row text reads as a button.");
     }
 
     [TestMethod]
@@ -348,16 +380,16 @@ public sealed class ExplorerViewTests
     {
         using var ui = PanelUi.Open();
         ui.ShowView("ModelContext.Scope.ActiveView");
-        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.HiddenCount > 0)), "No row counts hidden elements.");
+        Assert.IsTrue(ThemeHost.WaitFor(() => ui.Panel.Explorer.Rows.Any(row => row.DimmedCount > 0)), "No row counts hidden elements.");
         TreeRow? type = null;
         WpfSta.Run(async () =>
         {
             var explorer = ui.Panel.Explorer;
             var ducts = explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" } && row.Document == FakeModelGenerator.Current);
             await explorer.ExpandAsync(ducts);
-            var family = explorer.Rows.First(row => row.Parent == ducts && row is { HiddenCount: > 0, Count: > 0 });
+            var family = explorer.Rows.First(row => row.Parent == ducts && row is { DimmedCount: > 0, Count: > 0 });
             await explorer.ExpandAsync(family);
-            type = explorer.Rows.First(row => row.Parent == family && row is { HiddenCount: > 0, Count: > 0 }
+            type = explorer.Rows.First(row => row.Parent == family && row is { DimmedCount: > 0, Count: > 0 }
                                               && explorer.Rows.Count(other => other.Text == row.Text) == 1);
         });
 

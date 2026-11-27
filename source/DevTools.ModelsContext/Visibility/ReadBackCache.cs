@@ -5,9 +5,9 @@ namespace DevTools.ModelsContext.Visibility;
 
 internal sealed class ReadBackCache(PanelRuntime runtime)
 {
-    private readonly Dictionary<(DocumentKey Model, string ViewId), ReadBack> _readBacks = [];
     private readonly Dictionary<(DocumentKey Model, string ViewId), HashSet<long>> _touched = [];
     private readonly List<Func<IEnumerable<ElementRef>>> _watched = [];
+    private ReadBackState? _state;
 
     public static (DocumentKey Model, string ViewId) KeyOf(ViewInfo view)
     {
@@ -21,29 +21,30 @@ internal sealed class ReadBackCache(PanelRuntime runtime)
 
     public void Clear()
     {
-        _readBacks.Clear();
+        _state = null;
     }
 
-    public void Drop(ViewInfo view)
+    public void Forget(ViewInfo view)
     {
-        _readBacks.Remove(KeyOf(view));
-    }
-
-    public void DropSource(SourceId source)
-    {
-        foreach (var key in _readBacks.Keys
-                     .Where(key => runtime.Store.Find(key.Model) is { } info && info.Source == source)
-                     .ToList())
+        if (_state?.Key == KeyOf(view))
         {
-            _readBacks.Remove(key);
+            _state = null;
+        }
+    }
+
+    public void ForgetSource(SourceId source)
+    {
+        if (_state is { } state && runtime.Store.Find(state.Key.Model) is { } info && info.Source == source)
+        {
+            _state = null;
         }
     }
 
     public void ForgetModel(DocumentKey document)
     {
-        foreach (var key in _readBacks.Keys.Where(key => key.Model.ModelId == document.ModelId).ToList())
+        if (_state?.Key.Model.ModelId == document.ModelId)
         {
-            _readBacks.Remove(key);
+            _state = null;
         }
 
         foreach (var key in _touched.Keys.Where(key => key.Model.ModelId == document.ModelId).ToList())
@@ -54,17 +55,12 @@ internal sealed class ReadBackCache(PanelRuntime runtime)
 
     public HashSet<long>? HiddenOf(ViewInfo? view, DocumentKey document)
     {
-        return view is { } current && current.Model.CurrentModel == document
-                                   && _readBacks.TryGetValue(KeyOf(current), out var readBack)
-            ? readBack.Hidden
-            : null;
+        return view is { } current && StateOf(current, document) is { } state ? state.Hidden : null;
     }
 
-    public HashSet<long>? CheckedOf(ViewInfo view, DocumentKey document)
+    public HashSet<long>? ReadOf(ViewInfo view, DocumentKey document)
     {
-        return view.Model.CurrentModel == document && _readBacks.TryGetValue(KeyOf(view), out var readBack)
-            ? readBack.Checked
-            : null;
+        return StateOf(view, document)?.Read;
     }
 
     public void Touch(ViewInfo view, VisibilityPlan plan)
@@ -82,47 +78,54 @@ internal sealed class ReadBackCache(PanelRuntime runtime)
         }
     }
 
-    public HiddenProbe ProbeOf(ViewInfo view)
+    public ReadBackRequest RequestFor(ViewInfo view)
     {
         var document = view.Model.CurrentModel;
-        return new HiddenProbe(document, [.. CandidatesOf(KeyOf(view), document)]);
+        return new ReadBackRequest(document, [.. CandidatesOf(KeyOf(view), document)]);
     }
 
-    public void Seed(ViewInfo view, HiddenRead read)
+    public void Store(ViewInfo view, ReadBackResult? result)
     {
-        if (read.Document != view.Model.CurrentModel)
+        if (result is null || result.Document != view.Model.CurrentModel)
         {
+            _state = null;
             return;
         }
 
-        var readBack = new ReadBack();
-        readBack.Checked.UnionWith(read.Checked);
-        readBack.Hidden.UnionWith(read.Hidden);
-        _readBacks[KeyOf(view)] = readBack;
+        var state = new ReadBackState(KeyOf(view));
+        state.Read.UnionWith(result.Read);
+        state.Hidden.UnionWith(result.Hidden);
+        _state = state;
     }
 
-    public async Task<bool> ReadAsync(ViewInfo view, CancellationToken cancellationToken)
+    public async Task<bool> ReadBackAsync(ViewInfo view, CancellationToken cancellationToken)
     {
         var document = view.Model.CurrentModel;
         var key = KeyOf(view);
-        if (!_readBacks.TryGetValue(key, out var readBack))
+        if (_state is not { } state || state.Key != key)
         {
-            readBack = new ReadBack();
-            _readBacks.Add(key, readBack);
+            state = new ReadBackState(key);
+            _state = state;
         }
 
         var candidates = CandidatesOf(key, document);
-        candidates.ExceptWith(readBack.Checked);
+        candidates.ExceptWith(state.Read);
         if (candidates.Count == 0)
         {
             return false;
         }
 
-        var hidden = await runtime.Services.ViewActions.ReadHiddenAsync(document, candidates, cancellationToken);
-        readBack.Checked.UnionWith(candidates);
-        var before = readBack.Hidden.Count;
-        readBack.Hidden.UnionWith(hidden);
-        return readBack.Hidden.Count != before;
+        var result = await runtime.Services.ViewActions.ReadBackAsync(
+            new ReadBackRequest(document, [.. candidates]), cancellationToken);
+        state.Read.UnionWith(candidates);
+        var before = state.Hidden.Count;
+        state.Hidden.UnionWith(result.Hidden);
+        return state.Hidden.Count != before;
+    }
+
+    private ReadBackState? StateOf(ViewInfo view, DocumentKey document)
+    {
+        return view.Model.CurrentModel == document && _state is { } state && state.Key == KeyOf(view) ? state : null;
     }
 
     private HashSet<long> CandidatesOf((DocumentKey Model, string ViewId) key, DocumentKey document)
@@ -138,9 +141,11 @@ internal sealed class ReadBackCache(PanelRuntime runtime)
         return candidates;
     }
 
-    private sealed class ReadBack
+    private sealed class ReadBackState((DocumentKey Model, string ViewId) key)
     {
-        public HashSet<long> Checked { get; } = [];
+        public (DocumentKey Model, string ViewId) Key { get; } = key;
+
+        public HashSet<long> Read { get; } = [];
 
         public HashSet<long> Hidden { get; } = [];
     }

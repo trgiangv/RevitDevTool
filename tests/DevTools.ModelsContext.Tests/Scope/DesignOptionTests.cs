@@ -21,7 +21,7 @@ public sealed class DesignOptionTests
         Assert.AreEqual(2, snapshot.Counts.Count);
         Assert.AreEqual(2, SnapshotAggregator.Aggregate(snapshot).Count);
         Assert.IsTrue(snapshot.Contains(Secondary));
-        Assert.IsFalse(snapshot.InModel(Secondary));
+        Assert.IsFalse(snapshot.InWholeModel(Secondary));
         CollectionAssert.AreEquivalent(new[] { Main, Primary }, snapshot.ModelIdsUnder(group).ToList());
         CollectionAssert.AreEquivalent(new[] { Main, Primary, Secondary }, snapshot.IdsUnder(group).ToList());
     }
@@ -60,8 +60,8 @@ public sealed class DesignOptionTests
             [new ElementRecord(Primary, 10, 0, 0, true), new ElementRecord(Secondary, 10, 0, 0)], []));
 
         Assert.AreEqual(2, snapshot.Counts.Count);
-        Assert.IsFalse(snapshot.InModel(Primary));
-        Assert.IsTrue(snapshot.InModel(Secondary));
+        Assert.IsFalse(snapshot.InWholeModel(Primary));
+        Assert.IsTrue(snapshot.InWholeModel(Secondary));
     }
 
     [TestMethod]
@@ -73,7 +73,7 @@ public sealed class DesignOptionTests
 
         Assert.AreEqual(2, snapshot.Counts.Count);
         Assert.IsTrue(snapshot.Contains(4));
-        Assert.IsFalse(snapshot.InModel(4));
+        Assert.IsFalse(snapshot.InWholeModel(4));
     }
 
     private static DocumentSnapshot Snapshot()

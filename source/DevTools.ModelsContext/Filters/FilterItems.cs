@@ -232,12 +232,12 @@ public sealed partial class CategoryItemViewModel : ObservableObject
     }
 
     [ObservableProperty]
-    public partial bool IsHiddenInView { get; internal set; }
+    public partial bool IsHidden { get; internal set; }
 
     [ObservableProperty]
-    public partial string? EyeToolTip { get; internal set; }
+    public partial string? HideHint { get; internal set; }
 
-    internal Func<CategoryItemViewModel, Task>? Eye { get; set; }
+    internal Func<CategoryItemViewModel, Task>? ToggleHidden { get; set; }
 
     internal long ParentId => Parent?.GroupId ?? GroupRow.TopLevel;
 
@@ -301,9 +301,9 @@ public sealed partial class CategoryItemViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private Task ToggleEyeAsync()
+    private Task ToggleHiddenAsync()
     {
-        return Eye?.Invoke(this) ?? Task.CompletedTask;
+        return ToggleHidden?.Invoke(this) ?? Task.CompletedTask;
     }
 
     public override string ToString()

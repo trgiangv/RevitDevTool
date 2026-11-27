@@ -222,13 +222,13 @@ public sealed partial class ContextMenuViewModel : ObservableObject
             || data.Find(element.Document) is not { } document
             || !document.InScope(element.Id)
             || _visibility.IsHidden(element)
-            || _visibility.HidByPanel(element))
+            || _visibility.Hides(element))
         {
             return false;
         }
 
         return !document.Snapshot.TryGetRow(element.Id, out var row)
-               || !_visibility.IsCategoryHidden(document.Snapshot.Groups[row.GroupIndex].GroupId);
+               || !_visibility.HidesCategory(document.Snapshot.Groups[row.GroupIndex].GroupId);
     }
 
     private static ElementRef? SingleElementOf(MenuTarget target)

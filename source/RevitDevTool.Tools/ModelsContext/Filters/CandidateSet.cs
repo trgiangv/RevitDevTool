@@ -13,14 +13,14 @@ internal sealed class CandidateSet(long[] ids, HashSet<long> secondary, HashSet<
 
     public long[] Ids { get; } = ids;
 
-    public long[] ModelIds => field ??= secondary.Count == 0 && viewOwned.Count == 0 ? Ids : Ids.Where(InModel).ToArray();
+    public long[] ModelIds => field ??= secondary.Count == 0 && viewOwned.Count == 0 ? Ids : Ids.Where(InWholeModel).ToArray();
 
     public bool Contains(long id)
     {
         return (_ids ??= [.. Ids]).Contains(id);
     }
 
-    public bool InModel(long id)
+    public bool InWholeModel(long id)
     {
         return !secondary.Contains(id) && !viewOwned.Contains(id);
     }

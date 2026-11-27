@@ -188,7 +188,7 @@ public partial class ExplorerTabView : UserControl
 
     private void OnEyeMouseEnter(object sender, MouseEventArgs e)
     {
-        _panel?.Explorer.HighlightEyeTargets(((FrameworkElement)sender).DataContext as TreeRow);
+        _panel?.Explorer.HighlightTargets(((FrameworkElement)sender).DataContext as TreeRow);
     }
 
     private void OnEyeMouseLeave(object sender, MouseEventArgs e)
@@ -222,10 +222,16 @@ public partial class ExplorerTabView : UserControl
         }
     }
 
+    private void OnRowPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        RowButtons.SwallowDisabledClick(sender, e);
+    }
+
     private async void OnRowDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (_panel is null || e.ChangedButton != MouseButton.Left || sender is not ListBoxItem { DataContext: TreeRow row }
-            || IsInButton(e.OriginalSource as DependencyObject))
+        if (_panel is null || e.ChangedButton != MouseButton.Left || sender is not ListBoxItem { DataContext: TreeRow row } item
+            || IsInButton(e.OriginalSource as DependencyObject)
+            || RowButtons.ButtonAt(item, e.GetPosition(item)) is { IsEnabled: false })
         {
             return;
         }

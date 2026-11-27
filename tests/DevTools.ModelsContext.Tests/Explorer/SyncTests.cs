@@ -18,7 +18,7 @@ public sealed class SyncTests
         using var fixture = await PanelFixture.OpenAsync();
         var (walls, host) = await SelectWallsAsync(fixture);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         fixture.Settle();
 
         await AssertSelectionKeptAsync(fixture, walls, host);

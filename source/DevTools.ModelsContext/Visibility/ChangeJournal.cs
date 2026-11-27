@@ -16,12 +16,12 @@ public sealed record JournalPage(int ChangeCount, IReadOnlyList<LinkHide> LinkHi
 public sealed class ChangeJournal
 {
     private const int JoinedBatch = 0;
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly Dictionary<(DocumentKey Model, string ViewId), Page> _pages = [];
 
     public void AddChange(DocumentKey model, string viewId, bool keepConverts)
     {
-        lock (_gate)
+        lock (_lock)
         {
             var page = PageOf(model.CurrentModel, viewId);
             if (keepConverts)
@@ -37,7 +37,7 @@ public sealed class ChangeJournal
 
     public void Keep(DocumentKey model, string viewId)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (_pages.TryGetValue((model.CurrentModel, viewId), out var page))
             {
@@ -54,7 +54,7 @@ public sealed class ChangeJournal
 
     public void Rename(ModelRename rename)
     {
-        lock (_gate)
+        lock (_lock)
         {
             foreach (var pair in _pages.Where(pair => pair.Key.Model.ModelId == rename.OldId).ToList())
             {
@@ -75,7 +75,7 @@ public sealed class ChangeJournal
 
     public void AddLinkHides(DocumentKey model, string viewId, IEnumerable<LinkHide> hides, bool joinsChange)
     {
-        lock (_gate)
+        lock (_lock)
         {
             var page = PageOf(model.CurrentModel, viewId);
             var batch = joinsChange ? JoinedBatch : ++page.Batches;
@@ -91,7 +91,7 @@ public sealed class ChangeJournal
 
     public void EndIsolateRest(DocumentKey model, string viewId)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (!_pages.TryGetValue((model.CurrentModel, viewId), out var page))
             {
@@ -107,7 +107,7 @@ public sealed class ChangeJournal
 
     public bool HasLinkHide(DocumentKey model, string viewId, ElementRef element)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _pages.TryGetValue((model.CurrentModel, viewId), out var page) && page.Hides.ContainsKey(element);
         }
@@ -115,7 +115,7 @@ public sealed class ChangeJournal
 
     public HashSet<long> LinkHideIds(DocumentKey model, string viewId, DocumentKey document)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _pages.TryGetValue((model.CurrentModel, viewId), out var page)
                 ? [.. page.Hides.Keys.Where(element => element.Document == document).Select(element => element.Id)]
@@ -125,7 +125,7 @@ public sealed class ChangeJournal
 
     public JournalPage Get(DocumentKey model, string viewId)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (!_pages.TryGetValue((model.CurrentModel, viewId), out var page))
             {
@@ -146,7 +146,7 @@ public sealed class ChangeJournal
 
     public void ClearChanges(DocumentKey model, string viewId)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (_pages.TryGetValue((model.CurrentModel, viewId), out var page))
             {
@@ -159,7 +159,7 @@ public sealed class ChangeJournal
 
     public void Remove(DocumentKey model, string viewId, IEnumerable<ElementRef> elements)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (!_pages.TryGetValue((model.CurrentModel, viewId), out var page))
             {
@@ -177,7 +177,7 @@ public sealed class ChangeJournal
 
     public void ClearModel(DocumentKey model)
     {
-        lock (_gate)
+        lock (_lock)
         {
             foreach (var key in _pages.Keys.Where(key => key.Model.ModelId == model.ModelId).ToList())
             {
@@ -188,7 +188,7 @@ public sealed class ChangeJournal
 
     public void ClearLink(DocumentKey link)
     {
-        lock (_gate)
+        lock (_lock)
         {
             foreach (var page in _pages.Where(pair => pair.Key.Model.ModelId == link.ModelId).Select(pair => pair.Value))
             {
@@ -202,7 +202,7 @@ public sealed class ChangeJournal
 
     public void MarkStale(DocumentKey model)
     {
-        lock (_gate)
+        lock (_lock)
         {
             foreach (var pair in _pages.Where(pair => pair.Key.Model.ModelId == model.ModelId))
             {

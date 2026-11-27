@@ -8,19 +8,19 @@ using System.Diagnostics;
 
 namespace RevitDevTool.Tools.ModelsContext.Filters;
 
-internal sealed class SilentReader(ParameterKey key, ResolvedParameter item, long[] unseen)
+internal sealed class SilentReader(ParameterKey key, ResolvedParameter item, long[] ids)
 {
     private readonly List<long> _empty = [];
     private readonly List<long> _filled = [];
     private readonly HashSet<long> _typed = [.. item.Types.TypesFor(FilterOperator.Defined)];
 
-    public int Count => unseen.Length;
+    public int Count => ids.Length;
 
     public static SilentReader For(Document document, ICollection<ElementId> categories, ParameterKey key, ResolvedParameter item)
     {
         try
         {
-            return new SilentReader(key, item, ParameterPresence.UnseenIds(document, categories, item));
+            return new SilentReader(key, item, ParameterPresence.SilentIds(document, categories, item));
         }
         catch (Exception exception)
         {
@@ -35,9 +35,9 @@ internal sealed class SilentReader(ParameterKey key, ResolvedParameter item, lon
         var index = start;
         try
         {
-            while (index < unseen.Length && watch.Elapsed < ElementReader.SliceTime)
+            while (index < ids.Length && watch.Elapsed < ElementReader.SliceTime)
             {
-                if (document.GetElement(unseen[index].ToElementId()) is { } element)
+                if (document.GetElement(ids[index].ToElementId()) is { } element)
                 {
                     Read(element);
                 }
@@ -48,7 +48,7 @@ internal sealed class SilentReader(ParameterKey key, ResolvedParameter item, lon
         catch (Exception exception)
         {
             RevitProfiler.Logger.Swallowed(exception, "Parameter silent slice", $"{document.Title} {key.Name}");
-            return unseen.Length;
+            return ids.Length;
         }
 
         return index;
@@ -57,7 +57,7 @@ internal sealed class SilentReader(ParameterKey key, ResolvedParameter item, lon
     public ResolvedParameter ToResolved()
     {
         var silent = _filled.Count + _empty.Count == 0 ? SilentElements.None : new SilentElements(_filled.ToArray(), _empty.ToArray());
-        return item with { Silent = silent, SilentChecked = true };
+        return item with { Silent = silent, SilentRead = true };
     }
 
     private void Read(Element element)

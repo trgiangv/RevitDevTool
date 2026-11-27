@@ -61,7 +61,7 @@ public sealed class LifecycleTests
     public async Task ClosingDropsSession()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         var builds = fixture.Model.BuildCount;
 
         fixture.Model.RaiseDocumentClosing(Current);
@@ -208,7 +208,7 @@ public sealed class LifecycleTests
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
         var isolate = menu[MenuAction.Isolate].DisabledReason;
         var zoom = menu[MenuAction.Zoom].IsEnabled;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         var message = fixture.Panel.Message;
         fixture.Model.SetBusy(false);
         fixture.Settle();
@@ -368,7 +368,7 @@ public sealed class LifecycleTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         var hides = fixture.Panel.Journal.LinkHides;
         Assert.IsNotEmpty(hides);
@@ -386,7 +386,7 @@ public sealed class LifecycleTests
         fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
         fixture.Settle();
 
-        Assert.AreEqual(RowEye.Partly, fixture.Group(Current, "Ducts").Eye);
+        Assert.AreEqual(HideState.Partly, fixture.Group(Current, "Ducts").HideState);
     }
 
     [TestMethod]
@@ -395,7 +395,7 @@ public sealed class LifecycleTests
         using var fixture = await PanelFixture.OpenAsync();
         var ducts = fixture.Group(Current, "Ducts");
         await fixture.Explorer.ExpandAsync(ducts);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts);
 
         fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
         fixture.Settle();
@@ -405,19 +405,92 @@ public sealed class LifecycleTests
         Assert.Contains(row, fixture.Explorer.Rows);
         Assert.IsTrue(row.HasChildren);
         Assert.IsTrue(row.IsExpanded);
-        Assert.AreEqual(RowEye.Hidden, row.Eye);
+        Assert.AreEqual(HideState.Hidden, row.HideState);
     }
 
     [TestMethod]
-    public async Task EmptyDeltaReloadsActiveView()
+    public async Task ChangedViewUpdatesCount()
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
-        var ducts = fixture.Group(Current, "Ducts");
+        var source = fixture.Model.Data.SourceOf(Current);
+        var ducts = source.Types.Where(type => type.GroupName == "Ducts").Select(type => type.TypeId).ToHashSet();
+        var hidden = source.Elements.First(element => element.Id % 3 == 0 && ducts.Contains(element.TypeId));
+        var before = fixture.Group(Current, "Ducts").Count;
+        fixture.Model.ViewHiddenElements.Add(new ElementRef(Current, hidden.Id));
 
         fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
         fixture.Settle();
 
-        Assert.AreNotSame(ducts, fixture.Group(Current, "Ducts"));
+        Assert.AreEqual(before - 1, fixture.Group(Current, "Ducts").Count);
+    }
+
+    [TestMethod]
+    public async Task OverlappingBuildsListRowsOnce()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        var row = fixture.Group(Current, "Ducts");
+        while (true)
+        {
+            await fixture.Explorer.ExpandAsync(row);
+            var child = fixture.Explorer.Rows.First(candidate => candidate.Parent == row);
+            if (child.Kind == TreeRowKind.Instance)
+            {
+                break;
+            }
+
+            row = child;
+        }
+
+        fixture.Model.HoldNames();
+        var reload = fixture.Panel.RefreshAsync();
+        fixture.Explorer.Categories.Picker.Items.First(item => item.Name == "Walls").IsChecked = false;
+        fixture.Settle();
+        Assert.IsGreaterThanOrEqualTo(2, fixture.Model.HeldNames);
+        var published = 0;
+        fixture.Explorer.Rows.CollectionChanged += (_, _) => published++;
+        fixture.Model.ReleaseNames();
+        await reload;
+        fixture.Settle();
+
+        var rows = fixture.Explorer.Rows;
+        Assert.AreEqual(rows.Count, rows.Distinct().Count());
+        foreach (var listed in rows.Where(listed => listed.Parent is not null))
+        {
+            Assert.AreEqual(1, listed.Parent!.Children!.Count(child => ReferenceEquals(child, listed)), listed.Text);
+        }
+
+        Assert.IsTrue(rows.Any(listed => listed.Kind == TreeRowKind.Instance));
+        Assert.IsFalse(rows.Any(listed => listed is { Kind: TreeRowKind.Group, Text: "Walls" }), "An unchecked category is listed.");
+        Assert.AreEqual(1, published, "A stale build published rows.");
+    }
+
+    [TestMethod]
+    [DataRow(TreeRowKind.CurrentModelHeader)]
+    [DataRow(TreeRowKind.LinkModel)]
+    public async Task SameReloadKeepsRows(TreeRowKind kind)
+    {
+        using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
+        fixture.Model.ViewLinks.Add(Mep);
+        fixture.Panel.ContextBar.Check([Current, Mep]);
+        await fixture.Panel.RefreshAsync();
+        var first = fixture.Explorer.Rows[0];
+        var target = fixture.Explorer.Rows.First(row => row.Kind == kind);
+        var resets = 0;
+        var updating = 0;
+        fixture.Explorer.Rows.CollectionChanged += (_, e) => resets += e.Action == System.Collections.Specialized.NotifyCollectionChangedAction.Reset ? 1 : 0;
+        fixture.Panel.PropertyChanged += (_, e) => updating += e.PropertyName == nameof(ModelContextViewModel.IsUpdating) && fixture.Panel.IsUpdating ? 1 : 0;
+
+        for (var click = 0; click < 6; click++)
+        {
+            await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(target);
+            fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
+            fixture.Settle();
+        }
+
+        Assert.AreSame(first, fixture.Explorer.Rows[0]);
+        Assert.AreSame(target, fixture.Explorer.Rows.First(row => row.Kind == kind));
+        Assert.AreEqual(0, resets);
+        Assert.AreEqual(0, updating);
     }
 
     [TestMethod]
@@ -426,14 +499,14 @@ public sealed class LifecycleTests
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var explorer = fixture.Explorer;
         await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
-        fixture.Actions.HiddenReads.Clear();
+        fixture.Actions.ReadBacks.Clear();
 
         fixture.Model.RaiseViewActivated(new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan));
         fixture.Settle();
-        var collapsed = fixture.Actions.HiddenReads.Sum(read => read.Count);
+        var collapsed = fixture.Actions.ReadBacks.Sum(read => read.Count);
         await explorer.ToggleExpandCommand.ExecuteAsync(explorer.Rows.First(row => row.Kind == TreeRowKind.CurrentModelHeader));
 
-        var asked = fixture.Actions.HiddenReads.SelectMany(read => read).ToHashSet();
+        var asked = fixture.Actions.ReadBacks.SelectMany(read => read).ToHashSet();
         var inView = (await fixture.Model.CollectScopeAsync(Current, ScopeKind.ActiveView, CancellationToken.None))
             .ToHashSet();
         Assert.AreEqual(0, collapsed);

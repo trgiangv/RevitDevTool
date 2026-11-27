@@ -3,14 +3,14 @@ using DevTools.ModelsContext.Panel;
 
 namespace DevTools.ModelsContext.Selection;
 
-public sealed class SelectionGuard(IClock clock, TimeSpan window)
+public sealed class SentSelectionEcho(IClock clock, TimeSpan window)
 {
     public static readonly TimeSpan DefaultWindow = TimeSpan.FromSeconds(2);
 
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly List<(HashSet<ElementRef> Elements, DateTimeOffset SentAt)> _sent = [];
 
-    public SelectionGuard(IClock clock)
+    public SentSelectionEcho(IClock clock)
         : this(clock, DefaultWindow)
     {
     }
@@ -19,7 +19,7 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
     {
         get
         {
-            lock (_gate)
+            lock (_lock)
             {
                 Prune();
                 return _sent.Count > 0;
@@ -29,7 +29,7 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
 
     public void RecordSent(IEnumerable<ElementRef> elements)
     {
-        lock (_gate)
+        lock (_lock)
         {
             Prune();
             _sent.Add(([.. elements], clock.Now));
@@ -38,7 +38,7 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
 
     public bool ShouldDrop(IEnumerable<ElementRef> incoming)
     {
-        lock (_gate)
+        lock (_lock)
         {
             Prune();
             var set = incoming.ToList();
@@ -55,7 +55,7 @@ public sealed class SelectionGuard(IClock clock, TimeSpan window)
 
     public void Clear()
     {
-        lock (_gate)
+        lock (_lock)
         {
             _sent.Clear();
         }

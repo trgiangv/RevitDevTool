@@ -18,7 +18,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         var asked = fixture.Panel.TemporaryBar.IsConfirmingKeep;
@@ -34,7 +34,7 @@ public sealed class PanelBarsTests
     public async Task KeepRunsAtOnceWithoutLinks()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
 
@@ -47,7 +47,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         var bar = fixture.Panel.TemporaryBar;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         var shown = bar.IsVisible;
         var changes = bar.ChangeCount;
 
@@ -130,8 +130,8 @@ public sealed class PanelBarsTests
         Assert.AreEqual(kept.Count, step.KeptIds.Count);
         Assert.IsNotEmpty(journaled);
         Assert.IsFalse(journaled.Any(kept.Contains));
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Pipes").Eye);
-        Assert.AreEqual(RowEye.Shown, ducts.Eye);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Mep, "Pipes").HideState);
+        Assert.AreEqual(HideState.Shown, ducts.HideState);
     }
 
     [TestMethod]
@@ -180,7 +180,7 @@ public sealed class PanelBarsTests
 
         CollectionAssert.AreEquivalent(rest, fixture.Actions.ShownLinked.Single().ToList());
         Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Pipes").Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Mep, "Pipes").HideState);
     }
 
     [TestMethod]
@@ -188,7 +188,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Actions.LinkedNotShown = true;
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
@@ -210,13 +210,13 @@ public sealed class PanelBarsTests
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
         var rest = fixture.Panel.Journal.LinkHides.Select(hide => hide.Element).ToList();
         var walls = fixture.Group(Current, "Walls");
-        Assert.AreEqual(RowEye.Hidden, walls.Eye);
+        Assert.AreEqual(HideState.Hidden, walls.HideState);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(walls);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(walls);
 
         CollectionAssert.AreEquivalent(rest, fixture.Actions.ShownLinked.Single().ToList());
         Assert.IsEmpty(fixture.Panel.Journal.LinkHides);
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Pipes").Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Mep, "Pipes").HideState);
     }
 
     [TestMethod]
@@ -228,7 +228,7 @@ public sealed class PanelBarsTests
         await fixture.Panel.ContextMenu[MenuAction.Isolate].Command.ExecuteAsync(null);
         fixture.Actions.LinkedNotShown = true;
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         Assert.AreEqual(VisibilityText.LinkedStayHidden, fixture.Panel.Message);
         Assert.IsEmpty(fixture.Panel.Journal.LinkHides);
@@ -259,12 +259,12 @@ public sealed class PanelBarsTests
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Halftone].Command.ExecuteAsync(null);
         var walls = fixture.Group(Current, "Walls");
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(walls);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(walls);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(walls);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(walls);
 
         Assert.AreEqual(1, fixture.Actions.ResetCount);
-        Assert.HasCount(1, fixture.Actions.ExecutedPlans.Where(plan => plan.UsesLinkFilter));
+        Assert.HasCount(1, fixture.Actions.ExecutedPlans.Where(plan => plan.UsesLinkFilter()));
     }
 
     [TestMethod]
@@ -275,14 +275,14 @@ public sealed class PanelBarsTests
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.ContextMenu[MenuAction.Halftone].Command.ExecuteAsync(null);
         var walls = fixture.Group(Current, "Walls");
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(walls);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(walls);
         fixture.Model.RaiseDocumentClosing(Mep);
         fixture.Settle();
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         Assert.AreEqual(1, fixture.Actions.ResetCount);
-        Assert.IsFalse(fixture.Actions.ExecutedPlans.Any(plan => plan.UsesLinkFilter));
+        Assert.IsFalse(fixture.Actions.ExecutedPlans.Any(plan => plan.UsesLinkFilter()));
     }
 
     [TestMethod]
@@ -307,7 +307,7 @@ public sealed class PanelBarsTests
         fixture.Panel.ContextBar.Check([Mep]);
         var ducts = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Ducts")]);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         Assert.IsTrue(fixture.Actions.ExecutedPlans.Single().UsesLinkHide);
         CollectionAssert.AreEquivalent(ducts.ToList(),
@@ -322,18 +322,18 @@ public sealed class PanelBarsTests
         fixture.Panel.ContextBar.Check([Mep]);
         var ducts = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Ducts")]);
         var pipes = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Pipes")]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Pipes"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Pipes"));
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         Assert.IsNull(fixture.Panel.Message);
         CollectionAssert.AreEquivalent(ducts.ToList(), fixture.Actions.ShownLinked.Single().ToList());
         CollectionAssert.AreEquivalent(pipes.ToList(),
             fixture.Panel.Journal.LinkHides.Select(hide => hide.Element).ToList());
         Assert.AreEqual(0, fixture.Actions.ResetCount);
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Pipes").Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Mep, "Ducts").HideState);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Mep, "Pipes").HideState);
     }
 
     [TestMethod]
@@ -341,7 +341,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync(WithoutUnhide());
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         fixture.Explorer.OpenMenu(fixture.Group(Mep, "Ducts"));
 
@@ -357,7 +357,7 @@ public sealed class PanelBarsTests
         fixture.Panel.ContextBar.Check([Mep]);
         var group = fixture.Group(Mep, "Ducts");
         var ducts = fixture.Explorer.ElementsOf([group]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(group);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(group);
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
@@ -371,7 +371,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Actions.ResetError = "Reset failed in the host.";
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
@@ -384,7 +384,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Actions.ResetError = "Reset failed in the host.";
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
@@ -398,13 +398,13 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync(WithoutUnhide());
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
         Assert.IsEmpty(fixture.Actions.ShownLinked);
         Assert.IsNotEmpty(fixture.Panel.Journal.LinkHides);
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Mep, "Ducts").HideState);
     }
 
     [TestMethod]
@@ -412,7 +412,7 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
@@ -428,13 +428,13 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
 
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
-        Assert.IsTrue(fixture.Group(Mep, "Ducts").IsHiddenInView);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Mep, "Ducts").HideState);
+        Assert.IsTrue(fixture.Group(Mep, "Ducts").IsLinkHidden);
     }
 
     [TestMethod]
@@ -442,15 +442,15 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Current, Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
 
         Assert.IsEmpty(fixture.Actions.ShownLinked);
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Mep, "Ducts").HideState);
     }
 
     [TestMethod]
@@ -458,14 +458,14 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
         await fixture.Panel.TemporaryBar.ConfirmKeepCommand.ExecuteAsync(null);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
         Assert.IsNotEmpty(fixture.Actions.ShownLinked);
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Mep, "Ducts").HideState);
         Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
     }
 
@@ -474,17 +474,17 @@ public sealed class PanelBarsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Doors"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Doors"));
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         Assert.AreEqual(1, fixture.Actions.ResetCount);
         Assert.IsFalse(fixture.Actions.ExecutedPlans.Any(plan => plan.UsesLinkHide));
         Assert.IsEmpty(fixture.Actions.ShownLinked);
         Assert.IsNotEmpty(fixture.Panel.Journal.LinkHides);
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Mep, "Ducts").Eye);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Mep, "Ducts").HideState);
         Assert.AreEqual(2, fixture.Panel.TemporaryBar.ChangeCount);
     }
 
@@ -518,7 +518,7 @@ public sealed class PanelBarsTests
         using var fixture = await PanelFixture.OpenAsync();
         var menu = fixture.Panel.ContextMenu;
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Ducts"));
 
         Assert.AreEqual("Show", menu[MenuAction.HideShow].Text);
@@ -682,7 +682,7 @@ public sealed class PanelBarsTests
         fixture.Model.RaiseViewActivated(fixture.Model.View);
         fixture.Settle();
         fixture.Model.ViewLinksGate = null;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
 
         Assert.AreEqual("view-2", fixture.Actions.ExecutedPlans.Single().ViewId);
     }

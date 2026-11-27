@@ -30,7 +30,7 @@ internal static class RailingParts
 
     public static List<long> DrawnWith(Document target, View view, ICollection<ElementId> drawn)
     {
-        var shown = Parts.Where(part => !HiddenChecks.IsCategoryHidden(view, new ElementId(part))).ToList();
+        var shown = Parts.Where(part => !HiddenChecks.IsCategoryOff(view, new ElementId(part))).ToList();
         var found = new List<long>();
         if (shown.Count == 0 || drawn.Count == 0)
         {

@@ -28,24 +28,26 @@ unchanged (L2 and L3 stay green).
 
 | Concept | Today | Target |
 |---|---|---|
-| Ask Revit which Current model ids are hidden in the active view | `HiddenProbe`, probe, `ProbeOf`, `VisibilityPlan.ReadBack`, `readBack` parameter | `ReadBackRequest`, `RequestFor` |
-| Its answer | `HiddenRead`, `PlanOutcome.ReadBack`, `_read`, `TakeRead`, `Seed` | `ReadBackResult`, `TakeReadBack`, `Store` |
-| Ids already read | `Checked`, `CheckedOf`, `checkedIds`, `SilentChecked` | `ReadIds`, `ReadOf`, `SilentRead` |
-| Run the read-back | `ReadAsync`, `ReadBackAsync`, `RefreshHiddenAsync`, `ReadHiddenAsync` ×2 | `ReadBackAsync` at every layer |
+| Ask Revit which Current model ids are hidden in the active view | `HiddenProbe`, probe, `ProbeOf`, `VisibilityPlan.ReadBack`, `readBack` parameter | `ReadBackRequest(Document, Ids)` on `VisibilityPlan.ReadBack`, `RequestFor` |
+| Its answer | `HiddenRead`, `PlanOutcome.ReadBack`, `_read`, `TakeRead`, `Seed` | `ReadBackResult(Document, Read, Hidden)` on `PlanOutcome.ReadBack`, `TakeReadBack`, `Store` |
+| Ids already read | `Checked`, `CheckedOf`, `checkedIds`, `SilentChecked` | `Read`, `ReadOf`, `SilentRead` |
+| Run the read-back | `ReadAsync`, `ReadBackAsync`, `RefreshHiddenAsync`, `ReadHiddenAsync` ×2 | `ReadBackAsync` at every layer; the port takes a `ReadBackRequest` and returns a `ReadBackResult` |
 | Inner cache entry | `ReadBackCache.ReadBack` | `ReadBackState` |
-| Drawable but not in the view collector | `OutsideIds` | `UndrawnCandidateIds` |
+| Drawable but not in the view collector | `OutsideIds` | `UndrawnIds` |
 | Rows shown dimmed | `Unseen*`, `TreeRow.HiddenCount` | `Dimmed*`, `DimmedCount` (AutomationId follows; update UI tests) |
-| Hidden but out of scope | `DocumentState.Outside` | `HiddenOutOfScope` |
+| Hidden but out of scope | `DocumentState.Outside` | `HiddenElsewhere` |
 | Parameter no rule can see | `Silent*`, `ParameterPresence.UnseenIds` | `Silent*` only (`SilentIds`) |
 | No owner view, primary option | `InWholeModel`, `InModel`, `modelOnly`, `FreeFilter` | `InWholeModel`, `wholeModelOnly`, `NoOwnerViewFilter` |
-| Listed categories / with elements | `ListedSet`, `OwnedCategoryIds`, `modelCategories` | `ListedCategorySet`, `CategoriesWithElements` |
-| Panel hid it | `HiddenElements/Categories/Links`, `HidByPanel`, `IsCategoryHidden` (controller) | `PanelHidden*`, `IsHiddenByPanel` |
+| Listed categories / with elements | `ListedSet`, `OwnedCategoryIds`, `modelCategories` | `ListedCategorySet`, `UsedCategoryIds` |
+| Panel hid it | `HiddenElements/Categories/Links`, `HidByPanel`, `IsCategoryHidden` (controller) | `ViewLedger.HiddenElements/HiddenCategories/HiddenLinks` (kept: `Categories` beside `CategoryOverrides` reads ambiguous); ledger `Hides(element, categoryId)` (hidden by id, category, link or isolation) and `HidesCategory(id)` (hidden or isolated out); controller `Hides(element)` (by id or isolation, plus linked hides) and `HidesCategory(id)` (hidden categories) |
 | Revit V/G has it off | `IsCategoryOff`, `HiddenChecks.IsCategoryHidden` | "category off" for the Revit cause only |
-| Ids the panel took from the view collector | `CategoryOffIds`, `HiddenInViewIds` | `TakenFromViewIds` |
-| Eye state for a document | `HiddenIds` | `EyeClosedIds` |
-| Load/action race | `ActionVersion`, `PanelRuntime.Actions`, `Drop()` | `RunningActions`, `TryRefreshNowOrDefer()` |
+| Ids the panel took from the view collector | `CategoryOffIds`, `HiddenInViewIds` | `TakenIds`; ledger `CategoryTaken`, `ElementTaken` (`DocumentIds.Add(document, ids)`) |
+| Eye state for a document | `HiddenIds` | `HiddenIds` (code names behavior; "eye" is UI wording only) |
+| Row hide/show state and toggle | `RowEye`, `TreeRow.Eye`, `EyeOf`, `ToggleEyeAsync`, `EyeToolTip`, `HighlightEyeTargets` | `HideState` (enum and `TreeRow.HideState`), `StateOf`, `ToggleHiddenAsync`, `HideHint`, `ToggleHidden`, `HighlightTargets`; `TreeRow.IsLinkHidden`, `CategoryItemViewModel.IsHidden`, `ClearSelectedInside`, `IsSending`; XAML names, AutomationIds and code-behind handlers keep "Eye" |
+| Load/action race | `ActionVersion`, `PanelRuntime.Actions`, `Drop()` | `RunningActions` (`Version`), `Defer()` (false when idle) |
 | Sent-selection echo | `SelectionGuard`, `PanelRuntime.Guard` | `SentSelectionEcho`, `SentSelection` |
 | Lock objects | `_gate` | `_lock` |
+| Forget cached or planned state | `ReadBackCache.Drop`, `DropSource`, `DropReadBack`, `DropLinkFilters` | `Forget`, `ForgetSource`, `ForgetReadBack`, `ForgetLinkFilters` ("Drop" leaves Visibility) |
 
 ## Scope
 
@@ -78,7 +80,7 @@ In scope, wave 2 (structure):
 Out of scope until a live trace shows the need:
 
 - `ReadBackCache._touched` growth.
-- Merging `SelectionGuard` and `IsLocalSelectionPending`.
+- Merging `SentSelectionEcho` and `IsSending`.
 
 ## Approach
 
@@ -98,7 +100,10 @@ Out of scope until a live trace shows the need:
 
 - [x] Independent review (2026-11-27).
 - [ ] Race fix and eye-selection work committed.
-- [ ] Wave 1.
+- [x] Wave 1 (2026-11-27, uncommitted): renames, dead members, single-slot
+  `ReadBackCache`, one `Touch` per attempt, `ReadBackAsync` at every layer,
+  `PanelRuntime.cs`, `ViewDraws.Draws`. Core 653, views 183, UI rules 7 pass.
+- [x] Wave 1b (2026-11-27, uncommitted): short names (`Hides`, `TakenIds`, `Defer`, `UndrawnIds`, `ReadBack` records); the read-back request is built per attempt for the view that ran.
 - [ ] Wave 1 reviewed.
 - [ ] Wave 2 and live runs.
 

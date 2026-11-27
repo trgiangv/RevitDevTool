@@ -223,12 +223,12 @@ public sealed class CategoryBoxTests
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
 
         var step = (CategoryStep)fixture.Actions.ExecutedPlans.Single().Steps.Single();
         Assert.AreEqual(TestModel.Ducts, step.CategoryId);
-        Assert.IsTrue(Item(fixture, "Ducts").IsHiddenInView);
-        Assert.IsFalse(Item(fixture, "Walls").IsHiddenInView);
+        Assert.IsTrue(Item(fixture, "Ducts").IsHidden);
+        Assert.IsFalse(Item(fixture, "Walls").IsHidden);
     }
 
     [TestMethod]
@@ -236,7 +236,7 @@ public sealed class CategoryBoxTests
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        var tip = Item(fixture, "Ducts").EyeToolTip!;
+        var tip = Item(fixture, "Ducts").HideHint!;
 
         StringAssert.StartsWith(tip, "Hide in view: Current model + 3 links (By Host View)");
         StringAssert.Contains(tip, ExplorerCategories.NotReachedNote);
@@ -245,7 +245,7 @@ public sealed class CategoryBoxTests
     [TestMethod]
     public void TipWithoutLinksIsShort()
     {
-        Assert.AreEqual("Show in view: Current model", ExplorerCategories.EyeTipOf(true, 0));
+        Assert.AreEqual("Show in view: Current model", ExplorerCategories.HideTipOf(true, 0));
     }
 
     private static void CheckOnly(PanelFixture fixture, params string[] names)

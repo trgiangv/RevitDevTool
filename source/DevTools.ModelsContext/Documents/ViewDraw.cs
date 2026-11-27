@@ -51,6 +51,11 @@ public static class ViewDraws
                                 && id == row.OwnerViewId;
         }
 
-        return (row.Draw & (view is null ? ViewDraw.Model : Of(view.Kind))) != 0;
+        return view is null ? (row.Draw & ViewDraw.Model) != 0 : Draws(row.Draw, view.Kind);
+    }
+
+    public static bool Draws(ViewDraw draw, ViewKind kind)
+    {
+        return (draw & Of(kind)) != 0;
     }
 }

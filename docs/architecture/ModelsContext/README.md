@@ -237,8 +237,8 @@ count.
     subcategory hidden under a hidden parent. The
     subcategory id works unchanged in view filters, temporary hide and category isolate (live 2026:
     `OST_Subdivision`, `OST_RailingTopRail` and `OST_StairsRailingBaluster` are filterable and can be
-    hidden in `{3D}`). `OwnedCategoryIds` narrows the candidates to subcategories that own elements with
-    one collector pass; per-category loops (`ParameterPresence.UnseenIds`) and category Isolate use it.
+    hidden in `{3D}`). `UsedCategoryIds` narrows the candidates to subcategories that own elements with
+    one collector pass; per-category loops (`ParameterPresence.SilentIds`) and category Isolate use it.
 30. **Temporary category hide does not reach inside links either.** Live on Revit 2026 (Snowdon HVAC,
     `{3D}`, every link By Host View, 2026-11-24): `HideCategoriesTemporary({OST_Toposolid,
     OST_Subdivision})` left the Site link's 10 Toposolid elements drawn, and `HideCategoriesTemporary
@@ -254,7 +254,7 @@ count.
     Custom keep their own settings* when the view has such a link.
     The view collector skips elements of a category hidden this way (by Hide or by Isolate), so the Active
     view count dropped to 0 a moment later (live, 2026-11-24). When a category Hide or Isolate runs, the
-    controller records the Active view ids it takes away (`ViewLedger.CategoryOffIds`), and
+    controller records the Active view ids it takes away (`ViewLedger.CategoryTaken`), and
     `ContextLoader` adds back the ones whose category is still off. The row keeps its count and reads hidden.
     In Whole model or Selection scope the controller reads the Active view ids once per scoped document just
     before a category Hide or Isolate (one guarded view collector call each, never after a view switch in the
@@ -270,7 +270,7 @@ DevTools.ModelsContext                  core: no Revit API, no WPF
                DeltaApplier, ChangeClassifier, VersionRule, IModelSource, IModelEvents
   Scope/       ScopeKind, CountNode, ScopeCounter, SnapshotAggregator, ContextData,
                CategoryPicker and ScopeOption view models
-  Explorer/    TreeRow, RowPath, RowEye, RowOverride, ExplorerTabViewModel,
+  Explorer/    TreeRow, RowPath, HideState, RowOverride, ExplorerTabViewModel,
                ExplorerTree, RowSelectionSync, RowPainter, ExplorerRows, ExplorerSearch,
                RowFactory, TreeReveal, RowTargets, DocumentStates, VisibleIds,
                RowOverrides, ExplorerSelection, ExplorerCategories, ExplorerPick
@@ -285,8 +285,8 @@ DevTools.ModelsContext                  core: no Revit API, no WPF
                PlanExecutor, ViewLedger, ChangeJournal, ReadBackCache, OverrideTally,
                IViewActions (PlanOutcome, ActiveView), TemporaryBar,
                HiddenReason, WhyHidden, IVisibilityExplainer, WhyHiddenStripViewModel
-  Selection/   SelectionGuard, ISelectionPort, PickResult, PickController
-  Panel/       ModelContextViewModel, ModelContextServices, PanelSession, ContextBar,
+  Selection/   SentSelectionEcho, ISelectionPort, PickResult, PickController
+  Panel/       ModelContextViewModel, ModelContextServices, PanelRuntime, RunningActions, PanelSession, ContextBar,
                ContextMenu, IClock, IScheduler, Debouncer,
                ContextLoader, SessionSwitcher, SelectionSync, HostEventRelay
   Diagnostics/ ModelContextLog, TraceTimer, FailureTally
@@ -381,7 +381,7 @@ Debounce lives in the core (`Debouncer` on `IScheduler`); the views implement
 | 200 ms | Explorer Selection sync to Revit |
 | 300 ms | Filter Selection sync to Revit |
 
-`SelectionGuard` remembers each selection the panel sent for 2 s and drops the
+`SentSelectionEcho` (`PanelRuntime.SentSelection`) remembers each selection the panel sent for 2 s and drops the
 matching `SelectionChanged` echo, so the panel never reacts to its own change.
 
 ### Selection sync versus refresh
@@ -432,7 +432,7 @@ Each tier is one plan step (`PlanSteps.cs`), named by what it acts on:
 | T4 | `LinkFilterStep` (rule view filter) | `LinkFilters` |
 
 Every step but `CategoryStep` is a `DocumentStep`. `VisibilityPlan.UsesLinkHide` is true for
-T3 steps, `UsesLinkFilter` for T4. `VisibilityPlanner.Plan` builds the steps;
+T3 steps; tests read T4 through the `UsesLinkFilter` helper in `DevTools.ModelsContext.Tests.Shared`. `VisibilityPlanner.Plan` builds the steps;
 `VisibilityPlanner.Check` is the same pass without id expansion and returns an `ActionState`
 (disabled reason and tooltip note) for the menu. Every sentence the user reads after a
 visibility action lives in `VisibilityText`; the link limits (`MaxRules`, `MaxIsolateRest`)
@@ -517,7 +517,7 @@ live in `LinkRules`.
 - When a visible loaded link is By Linked View or Custom, the `PlanOutcome` notice is
   *Links By Linked View or Custom keep their own settings.*, shown as the panel
   message.
-- Current model read-back (`HiddenSlice`) counts an element hidden when its
+- Current model read-back (`ReadBackSlice`) counts an element hidden when its
   category is one the isolate hid in that view while the mode is on.
 
 ### Linked hide and show (`LinkHideShow`)
@@ -606,33 +606,35 @@ linked elements asked for, the adapter throws `LinkedNotShownException` and the 
 catches that type (no message matching). `IViewActions` is the one port to the host view:
 `ExecuteAsync`, `ShowLinkedAsync`, `KeepAsync`, `ResetAsync`, `ZoomAsync`,
 `SectionBoxAsync`, `ReadActiveViewAsync` (`ActiveView`: the view and whether a
-temporary mode is on) and `ReadHiddenAsync`. On the Current model `NestedComponents.AddWithNested` adds
+temporary mode is on) and `ReadBackAsync`. On the Current model `NestedComponents.AddWithNested` adds
 shared nested instances before T0 isolate, hide and overrides (gotcha 23).
 
 An eye or menu action reads the Current model back in the same Revit call that changes the
-view: the controller sends `ReadBackCache.ProbeOf` (the watched and touched ids) as
-`VisibilityPlan.ReadBack` or the `ResetAsync` probe, the adapter runs one `HiddenSlice` after
-the commit and returns a `HiddenRead`, and the last call of the plan seeds the cache. Only ids
-past that slice cost a second, queued trip, which waits behind Revit's redraw.
+view: the controller sends `ReadBackCache.RequestFor` (the watched and touched ids) as a
+`ReadBackRequest` (`Ids`) on `VisibilityPlan.ReadBack` or to `ResetAsync`, the adapter runs one
+`ReadBackSlice` after the commit and returns a `ReadBackResult` (`Read`, `Hidden`) on `PlanOutcome.ReadBack`, and the
+last call of the plan stores it (`ReadBackCache.Store`). The cache holds one entry, for the
+active view. Only ids past that slice cost a second, queued trip (`ReadBackAsync`, the same request and result records, one name
+at every layer), which waits behind Revit's redraw. When the view changes during an action, the retry on the new view builds its own request.
 
 **What the panel hid stays in the Active view scope.** A Hide or Isolate first takes the Current
 model ids the view drew (`InViewBeforeAsync`: the scope ids in Active view, one view collector
 call in the other scopes). After the read-back, those that read hidden go to
-`ViewLedger.PanelHiddenIds`, and ids the read-back checked and found shown leave it (Show, Reset
-removes the ledger, Keep clears the set). `HiddenInViewIds` adds them to the Current model scope
-ids on every load, beside link Hide in View ids and category-off ids, so a row the panel hid
+`ViewLedger.ElementTaken`, and ids the read-back read and found shown leave it (Show, Reset
+removes the ledger, Keep clears the set). `TakenIds` adds them to the Current model scope
+ids on every load, beside link Hide in View ids and `ViewLedger.CategoryTaken`, so a row the panel hid
 keeps its count with a closed eye. Elements Revit hides itself (Visibility/Graphics, filters,
 view range, a Revit Hide in View) still leave the scope and count as *+N hidden*.
 
 A link hidden whole (`ViewLedger.HiddenLinks`) or outside an isolation marks only the link rows
-the view can draw (in scope or `DocumentScope.OutsideIds`) in `VisibilityController.HiddenIds`,
+the view can draw (in scope or `DocumentScope.UndrawnIds`) in `VisibilityController.HiddenIds`,
 so a hidden link lists no Sheets, Project Information, Rooms or Spaces rows.
 
-**A load never wins over a later action.** `PanelRuntime.Actions` (`ActionVersion`) moves at the
+**A load never wins over a later action.** `PanelRuntime.RunningActions` moves at the
 start and end of every visibility action (`RunAsync`, `KeepAsync`, `ResetAsync`).
 `ContextLoader.LoadAsync` takes the version first and drops its result, before it assigns
 `Data` and again after the Explorer load, when an action ran or is running (`Context load
-dropped` at Trace). A dropped load asks for one `RefreshAsync`: at once when no action runs,
+dropped` at Trace). A dropped load asks for one `RefreshAsync` (`RunningActions.Defer` is false): at once when no action runs,
 else when the last action ends (`VisibilityController.RefreshNeeded`). While the Explorer
 builds its tree (`LoadAsync`, `BuildTreeAsync`), `OnVisibilityChanged` only marks a repaint and
 runs it when the build ends, so an action never publishes a half-built (empty) tree.
@@ -640,10 +642,10 @@ runs it when the build ends, so an action never publishes a half-built (empty) t
 ### Hidden rows
 
 In Active view `DocumentStates` keeps, per document, the ids the view can draw but its
-collector leaves out (`UnseenIds`, `DocumentScope.OutsideIds`). `RowPainter` puts their count
-in `TreeRow.HiddenText` (*+N hidden*, plain text, `WarningBrush` unless the row is selected) and
-paints an unseen instance dimmed with the Hidden eye. `ExplorerTree.InstanceRowsAsync` always
-merges the scope ids, the hidden ids and the unseen ids under the row into one id-sorted list
+collector leaves out (`DimmedIds`, from `DocumentScope.UndrawnIds`). `RowPainter` puts their count
+in `TreeRow.DimmedCount` and `DimmedText` (*+N hidden*, plain text, `WarningBrush` unless the row is selected) and
+paints a dimmed instance with the Hidden eye. `DocumentState.HiddenElsewhere` counts hidden ids outside the scope. `ExplorerTree.InstanceRowsAsync` always
+merges the scope ids, the hidden ids and the dimmed ids under the row into one id-sorted list
 and pages it like any other (`AppendPageAsync`, 200 names at a time), so an expand builds only
 the first page. `ExplorerSearch` lists dimmed rows like the others. There is no toggle.
 
@@ -655,7 +657,7 @@ supports and terminations whose category is on in the view). `ScopeCache` keeps 
 
 `ContextMenuViewModel` enables *Why hidden?* for one element only when the panel reads it as
 not drawn: in Active view, out of the scope ids, hidden by the read-back or the journal, hidden
-or isolated out by the panel (`HidByPanel`), or its category hidden by the panel. Otherwise
+or isolated out by the panel (`VisibilityController.Hides`), or its category hidden by the panel (`HidesCategory`). Otherwise
 the reason is `VisibilityText.ShownInView`. Whole model and Selection have no view ids, so the
 item stays enabled there.
 
@@ -707,7 +709,7 @@ Message catalog (`HiddenReasons`; Show is offered only where the table says so):
 | None | *No view setting hides it* | Revit draws the element | no | explainer |
 | None | *Not a model view* | the active view is a sheet, schedule or other non-model view | no | explainer | The panel's own journal adds *Hidden in view* for a linked
 element it hid (`WithJournal`). `CanShow` stays only for a
-Current model element the panel's ledger hid (`VisibilityController.HidByPanel`:
+Current model element the panel's ledger hid (`VisibilityController.Hides`:
 hidden by id, or outside the panel's isolate) and a journaled linked hide;
 `WithJournal` clears it otherwise, because Show resets every temporary mode of the
 view. The strip's Show runs through `VisibilityController` and then explains again.
@@ -756,7 +758,7 @@ link stays listed and keeps its entries); Undo and Redo mark the pages stale.
 | Active model switched | Park the old session in memory, with an unsaved custom filter as a draft; show the new model's session (built on first show). |
 | `DocumentClosing` | Drop that session, its journal pages and its snapshots (shared link snapshots by user count). |
 | Save As, or the first save of a new model (the model id is its path) | `RevitModelEvents` keeps the id from `DocumentSaving` / `DocumentSavingAs`; when `DocumentSaved` / `DocumentSavedAs` gives another id it re-keys the adapter (`RevitViewActions` recorded overrides and category isolate, the `LinkViewFilters` registry, tracked ids, the active model), drops the scope and parameter caches of the old source, and posts `IModelEvents.ModelRenamed` (`ModelRename`: old and new id and source). The core moves the session, checks, journal pages, view ledgers (with their plans), the view and the snapshot store to the new key, then refreshes. |
-| Elements changed (debounced deltas) | Apply them to the snapshots and reload the context. When no delta changes an element (a temporary hide or a V/G edit only touches the view) and none is an undo or redo, outside Active view scope only the hidden read-back runs (`VisibilityController.RefreshHiddenAsync`), so the rows stay the same objects with their expansion; a full reload there replaced every row after the panel was already idle (UI-16, L1 `EmptyDeltaKeepsRows`). Active view scope still reloads, since the view decides its scope. |
+| Elements changed (debounced deltas) | Apply them to the snapshots and reload the context. When no delta changes an element (a temporary hide or a V/G edit only touches the view) and none is an undo or redo, outside Active view scope only the hidden read-back runs (`VisibilityController.ReadBackAsync`, raising `Changed` when it finds more), so the rows stay the same objects with their expansion; a full reload there replaced every row after the panel was already idle (UI-16, L1 `EmptyDeltaKeepsRows`). Active view scope still reloads, since the view decides its scope; the rebuild reuses each row object whose parent, key, kind, text and path are unchanged (`ExplorerTree.Reuse`, released in `EndBuild`; each `Build` starts a generation, and an older build stops at its next await with `StaleBuildException` without touching rows or the pool), so a reload that lists the same rows sends no `Rows` reset and only repaints changed values (L1 `SameReloadKeepsRows`). `IsUpdating` (the progress bar) turns on only after `ModelContextViewModel.UpdatingDelay` (600 ms), so a quick reload never shows it. |
 | Link unloaded | Rows disable with the reason; the snapshot is kept until a reload decides by version. |
 | Revit busy (modal command, edit mode, no open model) | Actions disable with "Revit is busy."; nothing is queued. |
 | Family document | Works as a Current model without links. |

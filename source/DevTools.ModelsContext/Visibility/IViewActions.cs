@@ -10,7 +10,7 @@ public interface IViewActions
 
     Task KeepAsync(string? viewId, CancellationToken cancellationToken);
 
-    Task<HiddenRead?> ResetAsync(string? viewId, HiddenProbe? readBack, CancellationToken cancellationToken);
+    Task<ReadBackResult?> ResetAsync(string? viewId, ReadBackRequest? request, CancellationToken cancellationToken);
 
     Task ZoomAsync(IReadOnlyCollection<ElementRef> elements, CancellationToken cancellationToken);
 
@@ -18,19 +18,16 @@ public interface IViewActions
 
     Task<ActiveView?> ReadActiveViewAsync(CancellationToken cancellationToken);
 
-    Task<IReadOnlyCollection<long>> ReadHiddenAsync(
-        DocumentKey document,
-        IReadOnlyCollection<long> candidates,
-        CancellationToken cancellationToken);
+    Task<ReadBackResult> ReadBackAsync(ReadBackRequest request, CancellationToken cancellationToken);
 }
 
-public sealed record PlanOutcome(IReadOnlyList<ElementRef> LinkHides, string? Notice = null, HiddenRead? ReadBack = null)
-{
-    public static PlanOutcome None { get; } = new([]);
-}
+public sealed record PlanOutcome(IReadOnlyList<ElementRef> LinkHides, string? Notice = null, ReadBackResult? ReadBack = null);
 
-public sealed record HiddenProbe(DocumentKey Document, IReadOnlyList<long> Candidates);
+public sealed record ReadBackRequest(DocumentKey Document, IReadOnlyList<long> Ids);
 
-public sealed record HiddenRead(DocumentKey Document, IReadOnlyCollection<long> Checked, IReadOnlyCollection<long> Hidden);
+/// <param name="Document">The Current model the call read.</param>
+/// <param name="Read">The ids the call covered: every requested id on the queued path, the first slice inline.</param>
+/// <param name="Hidden">The covered ids Revit hides in the active view.</param>
+public sealed record ReadBackResult(DocumentKey Document, IReadOnlyCollection<long> Read, IReadOnlyCollection<long> Hidden);
 
 public sealed record ActiveView(ViewInfo View, bool IsTemporary);

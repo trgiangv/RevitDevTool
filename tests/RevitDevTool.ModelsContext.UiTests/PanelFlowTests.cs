@@ -212,12 +212,12 @@ public sealed class PanelFlowTests : RecordedTest
                 var gone = _panel.Gone("Temporary.Text");
                 var shown = LinkEye(category).Properties.ItemStatus.Value;
                 _panel.Shot("reset");
-                Evidence.Values($"eye {nameof(RowEye.Hidden)}, temporary bar with 1 change; then eye {nameof(RowEye.Shown)}, no bar",
+                Evidence.Values($"eye {nameof(HideState.Hidden)}, temporary bar with 1 change; then eye {nameof(HideState.Shown)}, no bar",
                     $"eye {hidden}, '{bar}'; then eye {shown}, {(gone ? "no bar" : "bar still shown")}");
 
-                Assert.AreEqual(nameof(RowEye.Hidden), hidden);
+                Assert.AreEqual(nameof(HideState.Hidden), hidden);
                 StringAssert.Contains(bar, "1");
-                Assert.AreEqual(nameof(RowEye.Shown), shown);
+                Assert.AreEqual(nameof(HideState.Shown), shown);
                 Assert.IsTrue(gone, "Reset left the temporary bar.");
             }
             finally
@@ -252,7 +252,7 @@ public sealed class PanelFlowTests : RecordedTest
                 var message = _panel.NewMessage(stale);
                 var typeEye = EyeAt(type);
                 var eyes = LinkEyes(link, others);
-                var hidden = others.Where(name => eyes.GetValueOrDefault(name) == nameof(RowEye.Hidden)).ToList();
+                var hidden = others.Where(name => eyes.GetValueOrDefault(name) == nameof(HideState.Hidden)).ToList();
                 Evidence.Step("Eyes after Isolate: " + string.Join(", ", others.Select(name => $"{name} {eyes.GetValueOrDefault(name) ?? "off screen"}")) + ".");
                 _panel.Shot("after");
 
@@ -260,14 +260,14 @@ public sealed class PanelFlowTests : RecordedTest
                 Evidence.Step("Invoked Temporary.Reset.");
                 var gone = _panel.Gone("Temporary.Text");
                 var after = LinkEyes(link, hidden);
-                var back = hidden.Where(name => after.GetValueOrDefault(name) != nameof(RowEye.Shown)).ToList();
+                var back = hidden.Where(name => after.GetValueOrDefault(name) != nameof(HideState.Shown)).ToList();
                 _panel.Shot("reset");
-                Evidence.Values($"bar with a count, no error, type eye {nameof(RowEye.Shown)}, another category {nameof(RowEye.Hidden)}; then all {nameof(RowEye.Shown)}, no bar",
-                    $"'{bar}', error '{message}', type eye {typeEye}, {hidden.Count} of {others.Count} categories {nameof(RowEye.Hidden)}; then {(back.Count == 0 ? "all shown" : "still hidden: " + string.Join(", ", back))}, {(gone ? "no bar" : "bar still shown")}");
+                Evidence.Values($"bar with a count, no error, type eye {nameof(HideState.Shown)}, another category {nameof(HideState.Hidden)}; then all {nameof(HideState.Shown)}, no bar",
+                    $"'{bar}', error '{message}', type eye {typeEye}, {hidden.Count} of {others.Count} categories {nameof(HideState.Hidden)}; then {(back.Count == 0 ? "all shown" : "still hidden: " + string.Join(", ", back))}, {(gone ? "no bar" : "bar still shown")}");
 
                 Assert.IsTrue(bar.Any(char.IsDigit), $"The temporary bar shows no change count: '{bar}'.");
                 Assert.AreEqual(string.Empty, message);
-                Assert.AreEqual(nameof(RowEye.Shown), typeEye);
+                Assert.AreEqual(nameof(HideState.Shown), typeEye);
                 Assert.IsNotEmpty(hidden, "No other link category reads Hidden after Isolate.");
                 Assert.IsEmpty(back, "Reset left link categories hidden: " + string.Join(", ", back));
                 Assert.IsTrue(gone, "Reset left the temporary bar.");

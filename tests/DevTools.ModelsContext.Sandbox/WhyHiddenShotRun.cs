@@ -28,7 +28,7 @@ internal static class WhyHiddenShotRun
             await Settle(1500);
 
             var ducts = panel.Explorer.Rows.First(row => row.Document == FakeModelGenerator.Current && row.Text == "Ducts");
-            await panel.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
+            await panel.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts);
             var elements = panel.Explorer.ElementsOf([ducts]).OrderBy(element => element.Id).ToList();
             var prefix = $"{ThemeManager.Current.ActualApplicationTheme}-{(int)window.Width}";
 

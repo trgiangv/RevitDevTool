@@ -47,14 +47,13 @@ public class Command : IExternalCommand
     private static string Write(string folder, string name, string source, Document document)
     {
         var categories = ListedCategoryIds(document);
-        var modelCategories = new HashSet<long>(categories.Select(Value));
         var types = new StringBuilder();
         var rows = new StringBuilder();
         var knownTypes = new HashSet<long>();
         foreach (var element in new FilteredElementCollector(document).WherePasses(ModelFilter(document, categories)))
         {
             var category = element.Category;
-            if (category == null || !modelCategories.Contains(Value(category.Id)))
+            if (category == null)
             {
                 continue;
             }

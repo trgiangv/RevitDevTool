@@ -22,9 +22,9 @@ public sealed class HiddenRowsTests
 
         var ducts = fixture.Group(Current, "Ducts");
 
-        Assert.IsGreaterThan(0, ducts.HiddenCount);
-        Assert.AreEqual(total - ducts.Count, ducts.HiddenCount);
-        Assert.AreEqual(string.Format(CultureInfo.CurrentCulture, "+{0:N0} hidden", ducts.HiddenCount), ducts.HiddenText);
+        Assert.IsGreaterThan(0, ducts.DimmedCount);
+        Assert.AreEqual(total - ducts.Count, ducts.DimmedCount);
+        Assert.AreEqual(string.Format(CultureInfo.CurrentCulture, "+{0:N0} hidden", ducts.DimmedCount), ducts.DimmedText);
     }
 
     [TestMethod]
@@ -32,7 +32,7 @@ public sealed class HiddenRowsTests
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        Assert.IsTrue(fixture.Explorer.Rows.All(row => row.HiddenCount == 0));
+        Assert.IsTrue(fixture.Explorer.Rows.All(row => row.DimmedCount == 0));
     }
 
     [TestMethod]
@@ -43,8 +43,8 @@ public sealed class HiddenRowsTests
 
         var children = fixture.Explorer.Rows.Where(row => row.Parent == type && row.Kind == TreeRowKind.Instance).ToList();
 
-        Assert.IsTrue(children.Any(row => row is { IsDimmed: true, Eye: RowEye.Hidden }));
-        Assert.IsTrue(children.Any(row => row is { IsDimmed: false, Eye: RowEye.Shown }));
+        Assert.IsTrue(children.Any(row => row is { IsDimmed: true, HideState: HideState.Hidden }));
+        Assert.IsTrue(children.Any(row => row is { IsDimmed: false, HideState: HideState.Shown }));
         CollectionAssert.AreEqual(children.Select(row => row.Id).OrderBy(id => id).ToList(),
             children.Select(row => row.Id).ToList());
     }
@@ -101,11 +101,11 @@ public sealed class HiddenRowsTests
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var type = await HiddenTypeAsync(fixture);
         var shown = fixture.Explorer.Rows.First(row => row.Parent == type && row is { Kind: TreeRowKind.Instance, IsDimmed: false });
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(shown);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(shown);
 
         fixture.Explorer.OpenMenu(shown);
 
-        Assert.AreEqual(RowEye.Hidden, shown.Eye);
+        Assert.AreEqual(HideState.Hidden, shown.HideState);
         Assert.IsTrue(fixture.Panel.ContextMenu[MenuAction.WhyHidden].IsEnabled);
     }
 
@@ -127,7 +127,7 @@ public sealed class HiddenRowsTests
         var ducts = fixture.Group(Current, "Ducts");
         var visible = ducts.Count;
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts);
 
         var step = (ElementsStep)fixture.Actions.ExecutedPlans.Single().Steps.Single();
         Assert.HasCount(visible, step.Ids);
@@ -175,16 +175,16 @@ public sealed class HiddenRowsTests
 
         var row = fixture.Explorer.Rows.Single(row => row.Kind == TreeRowKind.Instance && row.Id == id);
         Assert.IsTrue(row.IsDimmed);
-        Assert.AreEqual(RowEye.Hidden, row.Eye);
+        Assert.AreEqual(HideState.Hidden, row.HideState);
     }
 
     private static async Task<TreeRow> HiddenTypeAsync(PanelFixture fixture)
     {
         var ducts = fixture.Group(Current, "Ducts");
         await fixture.Explorer.ExpandAsync(ducts);
-        var family = fixture.Explorer.Rows.First(row => row.Parent == ducts && row is { HiddenCount: > 0, Count: > 0 });
+        var family = fixture.Explorer.Rows.First(row => row.Parent == ducts && row is { DimmedCount: > 0, Count: > 0 });
         await fixture.Explorer.ExpandAsync(family);
-        var type = fixture.Explorer.Rows.First(row => row.Parent == family && row is { HiddenCount: > 0, Count: > 0 });
+        var type = fixture.Explorer.Rows.First(row => row.Parent == family && row is { DimmedCount: > 0, Count: > 0 });
         await fixture.Explorer.ExpandAsync(type);
         return type;
     }

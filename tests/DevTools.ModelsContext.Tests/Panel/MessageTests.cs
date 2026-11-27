@@ -70,7 +70,7 @@ public sealed class MessageTests
     {
         var fixture = await PanelFixture.OpenAsync();
         fixture.Actions.Refusal = Refusal;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
         fixture.Actions.Refusal = null;
         Assert.AreEqual(Refusal, fixture.Panel.Message);
         return fixture;

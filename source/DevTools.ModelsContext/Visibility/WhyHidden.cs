@@ -49,14 +49,14 @@ public sealed record WhyHidden(IReadOnlyList<HiddenReason> Reasons, double Elaps
         return new WhyHidden([ordered.FirstOrDefault() ?? HiddenReasons.None], elapsedMs);
     }
 
-    public WhyHidden WithJournal(JournalPage journal, ElementRef element, bool hidByPanel)
+    public WhyHidden WithJournal(JournalPage journal, ElementRef element, bool hiddenByPanel)
     {
         if (journal.AllLinkHides.Any(hide => hide.Element == element))
         {
             return Of([HiddenReasons.LinkElement, .. Reasons], ElapsedMs);
         }
 
-        return hidByPanel || Reasons.All(reason => !reason.CanShow)
+        return hiddenByPanel || Reasons.All(reason => !reason.CanShow)
             ? this
             : new WhyHidden(Reasons.Select(reason => reason with { CanShow = false }).ToList(), ElapsedMs);
     }

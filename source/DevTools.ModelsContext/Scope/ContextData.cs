@@ -10,8 +10,8 @@ public sealed class DocumentScope(
     IReadOnlyCollection<long>? ids)
 {
     private HashSet<long>? _idSet;
-    private HashSet<long>? _outside;
-    private ViewInfo? _outsideView;
+    private HashSet<long>? _undrawn;
+    private ViewInfo? _undrawnView;
 
     public DocumentInfo Info { get; } = info;
 
@@ -25,40 +25,41 @@ public sealed class DocumentScope(
 
     public CountNode Counts { get; } = ids is null ? snapshot.Counts : ScopeCounter.Count(snapshot, ids);
 
+
     public bool InScope(long id)
     {
         if (Ids is null)
         {
-            return Snapshot.InModel(id);
+            return Snapshot.InWholeModel(id);
         }
 
         _idSet ??= Ids as HashSet<long> ?? [.. Ids];
         return _idSet.Contains(id);
     }
 
-    public HashSet<long> OutsideIds(ViewInfo? view)
+    public HashSet<long> UndrawnIds(ViewInfo? view)
     {
-        if (_outside is not null && _outsideView == view)
+        if (_undrawn is not null && _undrawnView == view)
         {
-            return _outside;
+            return _undrawn;
         }
 
-        _outside = [];
-        _outsideView = view;
+        _undrawn = [];
+        _undrawnView = view;
         if (Ids is null)
         {
-            return _outside;
+            return _undrawn;
         }
 
         foreach (var row in Snapshot.Rows)
         {
             if (!row.SecondaryOption && !InScope(row.Id) && ViewDraws.CanDraw(view, row, Key.IsCurrentModel))
             {
-                _outside.Add(row.Id);
+                _undrawn.Add(row.Id);
             }
         }
 
-        return _outside;
+        return _undrawn;
     }
 
     public IEnumerable<long> IdsUnder(RowPath path)
@@ -107,6 +108,7 @@ public sealed class ContextData(
 
     public HashSet<SourceId> KnownSources { get; } =
         [.. (known ?? documents.Select(document => document.Info)).Select(info => info.Source)];
+
 
     public DocumentScope? Find(DocumentKey key)
     {

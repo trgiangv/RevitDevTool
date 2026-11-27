@@ -1,4 +1,5 @@
 using DevTools.ModelsContext.Filters;
+using DevTools.Presentation.Views.ModelsContext.Panel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -65,6 +66,11 @@ public partial class CategorySection : UserControl
         {
             e.Handled = true;
         }
+    }
+
+    private void OnRowPreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        RowButtons.SwallowDisabledClick(sender, e);
     }
 
     private void OnListRightButtonDown(object sender, MouseButtonEventArgs e)

@@ -66,11 +66,11 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
     public bool CanShowInExplorer =>
         IsSelectionSyncVisible && _selection.Elements.Any(element => _runtime.Data.Find(element.Document) is null);
 
-    public bool IsLocalSelectionPending => _sendDebouncer.IsPending || _sendsInFlight > 0;
+    public bool IsSending => _sendDebouncer.IsPending || _sendsInFlight > 0;
 
     private bool IsSyncActive => IsSelectionSyncOn && IsSelectionSyncVisible;
 
-    private bool CountsHost => IsSelectionSyncing && !IsLocalSelectionPending;
+    private bool CountsHost => IsSelectionSyncing && !IsSending;
 
     private IReadOnlyList<ElementRef> RowElements => _rowElements ??= _runtime.Data.ElementsOf(_selection.Rows);
 
@@ -88,7 +88,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
         _selection.ReplaceRows(rows);
         if (IsSyncActive && !_runtime.IsBusy)
         {
-            _tree.ClearBadges();
+            _tree.ClearSelectedInside();
             _sendDebouncer.Trigger();
         }
 
@@ -116,7 +116,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
                 ExplorerTabViewModel.OpenPathLimit));
         }
 
-        await _rows.ReadHiddenAsync();
+        await _rows.ReadBackAsync();
         RaiseSelectionCounts();
         OnPropertyChanged(nameof(IsSelectionSyncVisible));
         OnPropertyChanged(nameof(IsSelectionSyncing));
@@ -127,7 +127,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
 
     public async Task ApplyHostSelectionAsync(IReadOnlyCollection<ElementRef> incoming)
     {
-        if (IsLocalSelectionPending)
+        if (IsSending)
         {
             return;
         }
@@ -278,7 +278,7 @@ internal sealed partial class RowSelectionSync : ObservableObject, IDisposable
     {
         _selection.ReplaceRows(revealed);
         RaiseSelectionCounts();
-        await _rows.ReadHiddenAsync();
+        await _rows.ReadBackAsync();
         _rows.Publish();
         RaiseRowSelectionChanged();
     }

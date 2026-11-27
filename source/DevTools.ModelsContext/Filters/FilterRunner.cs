@@ -20,7 +20,7 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
 
     private readonly Func<FilterJob?> _job;
     private readonly Debouncer _sync;
-    private readonly Func<CancellationToken, Task> _readHidden;
+    private readonly Func<CancellationToken, Task> _readBack;
     private readonly PanelRuntime _runtime;
     private HashSet<ElementRef> _baseline = [];
     private ContextData _data = ContextData.Empty;
@@ -28,11 +28,11 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
     private bool _isSelectionSyncOn = true;
     private CancellationToken _token;
 
-    internal FilterRunner(PanelRuntime runtime, Func<FilterJob?> job, Func<CancellationToken, Task> readHidden)
+    internal FilterRunner(PanelRuntime runtime, Func<FilterJob?> job, Func<CancellationToken, Task> readBack)
     {
         _runtime = runtime;
         _job = job;
-        _readHidden = readHidden;
+        _readBack = readBack;
         _sync = new Debouncer(runtime.Scheduler, SelectionSyncDelay, () => _ = _runtime.RunAsync(() => EvaluateAsync(true)));
     }
 
@@ -137,7 +137,7 @@ public sealed partial class FilterRunner : ObservableObject, IDisposable
             await SelectResultAsync(name, result, token);
         }
 
-        await _readHidden(token);
+        await _readBack(token);
     }
 
     private async Task SelectResultAsync(string name, IReadOnlyList<ElementRef> result, CancellationToken token)

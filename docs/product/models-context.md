@@ -32,8 +32,10 @@ From top to bottom:
 4. **Why hidden strip**, only while it is open.
 5. **Temporary bar** (yellow), only while the view is in a temporary mode.
 
-A thin progress bar shows under the context bar while counts rebuild. A
-one-line message shows when something fails; the panel never throws into Revit.
+A thin progress bar shows under the context bar while counts rebuild, once a
+rebuild runs longer than a moment; a quick refresh after an eye or menu action
+shows no bar and leaves the rows as they are. A one-line message shows when
+something fails; the panel never throws into Revit.
 The message stays while the context stays and goes away when the scope, the
 checked documents, the tab, the active model or the active view changes.
 With no open model, and while a Pick runs, actions are disabled with "Revit is

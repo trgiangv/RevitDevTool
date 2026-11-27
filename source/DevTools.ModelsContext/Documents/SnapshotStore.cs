@@ -8,14 +8,14 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 {
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
     private readonly Dictionary<DocumentKey, DocumentInfo> _documents = [];
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly Dictionary<SourceId, Task<DocumentSnapshot>> _snapshots = [];
 
     public IReadOnlyList<DocumentInfo> Documents
     {
         get
         {
-            lock (_gate)
+            lock (_lock)
             {
                 return _documents.Values.ToList();
             }
@@ -24,7 +24,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public IReadOnlyList<SourceId> SetDocuments(IEnumerable<DocumentInfo> documents)
     {
-        lock (_gate)
+        lock (_lock)
         {
             var list = documents.ToList();
             var models = list.Select(document => document.Key.ModelId).ToHashSet(StringComparer.Ordinal);
@@ -44,7 +44,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public IReadOnlyList<SourceId> DropModel(string modelId)
     {
-        lock (_gate)
+        lock (_lock)
         {
             foreach (var key in _documents.Keys.Where(key => key.ModelId == modelId).ToList())
             {
@@ -57,7 +57,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public void Rename(ModelRename rename)
     {
-        lock (_gate)
+        lock (_lock)
         {
             foreach (var pair in _documents.Where(pair => pair.Key.ModelId == rename.OldId).ToList())
             {
@@ -82,7 +82,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public int UsersOf(SourceId id)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _documents.Values
                 .Where(document => document.Source == id)
@@ -94,7 +94,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public bool Holds(SourceId id)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _snapshots.ContainsKey(id);
         }
@@ -102,7 +102,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public DocumentInfo? Find(DocumentKey key)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _documents.TryGetValue(key, out var info) ? info : null;
         }
@@ -113,7 +113,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
         IProgress<SnapshotProgress>? progress,
         CancellationToken cancellationToken)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (!_documents.TryGetValue(key, out var info) || !info.IsLoaded)
             {
@@ -135,7 +135,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public DocumentSnapshot? TryGet(DocumentKey key)
     {
-        lock (_gate)
+        lock (_lock)
         {
             return _documents.TryGetValue(key, out var info) ? Completed(info.Source) : null;
         }
@@ -149,7 +149,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
     public DeltaOutcome Apply(ElementDelta delta)
     {
         DocumentSnapshot? snapshot;
-        lock (_gate)
+        lock (_lock)
         {
             snapshot = Completed(delta.Source);
         }
@@ -159,7 +159,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public void MarkDirty(SourceId id)
     {
-        lock (_gate)
+        lock (_lock)
         {
             Completed(id)?.MarkDirty();
         }
@@ -167,7 +167,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
 
     public void Drop(SourceId id)
     {
-        lock (_gate)
+        lock (_lock)
         {
             _snapshots.Remove(id);
         }
@@ -199,7 +199,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
     private async Task<ReloadOutcome> ReloadCoreAsync(SourceId id, CancellationToken cancellationToken)
     {
         DocumentSnapshot? snapshot;
-        lock (_gate)
+        lock (_lock)
         {
             snapshot = Completed(id);
         }
@@ -235,7 +235,7 @@ public sealed class SnapshotStore(IModelSource source, ILogger? logger = null)
     public async Task<bool> VerifyAsync(SourceId id, CancellationToken cancellationToken)
     {
         DocumentSnapshot? snapshot;
-        lock (_gate)
+        lock (_lock)
         {
             snapshot = Completed(id);
         }

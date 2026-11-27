@@ -7,7 +7,7 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
 {
     public List<VisibilityPlan> ExecutedPlans { get; } = [];
 
-    public List<IReadOnlyList<long>> HiddenReads { get; } = [];
+    public List<IReadOnlyList<long>> ReadBacks { get; } = [];
 
     public List<IReadOnlyList<ElementRef>> ShownLinked { get; } = [];
 
@@ -92,7 +92,7 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
 
     public string? ResetError { get; set; }
 
-    public Task<HiddenRead?> ResetAsync(string? viewId, HiddenProbe? readBack, CancellationToken cancellationToken)
+    public Task<ReadBackResult?> ResetAsync(string? viewId, ReadBackRequest? request, CancellationToken cancellationToken)
     {
         if (ResetError is { } error)
         {
@@ -104,20 +104,20 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         ExecutedPlans.Clear();
         model.ViewHiddenCategories.Clear();
         model.ViewKeptCategories = null;
-        return Task.FromResult(ReadBackOf(readBack));
+        return Task.FromResult(ReadBackOf(request));
     }
 
     public int ActionReads { get; private set; }
 
-    private HiddenRead? ReadBackOf(HiddenProbe? probe)
+    private ReadBackResult? ReadBackOf(ReadBackRequest? request)
     {
-        if (probe is not { Candidates.Count: > 0 })
+        if (request is not { Ids.Count: > 0 })
         {
             return null;
         }
 
         ActionReads++;
-        return new HiddenRead(probe.Document, probe.Candidates, HiddenOf(probe.Document, probe.Candidates));
+        return new ReadBackResult(request.Document, request.Ids, HiddenOf(request.Document, request.Ids));
     }
 
     private void RequireView(string? viewId)
@@ -146,21 +146,18 @@ public sealed class FakeViewActions(FakeModel model) : IViewActions
         return Task.FromResult<ActiveView?>(new ActiveView(model.View, ExecutedPlans.Count > 0));
     }
 
-    public TaskCompletionSource<bool>? NextHiddenReadGate { get; set; }
+    public TaskCompletionSource<bool>? HoldNextReadBack { get; set; }
 
-    public async Task<IReadOnlyCollection<long>> ReadHiddenAsync(
-        DocumentKey document,
-        IReadOnlyCollection<long> candidates,
-        CancellationToken cancellationToken)
+    public async Task<ReadBackResult> ReadBackAsync(ReadBackRequest request, CancellationToken cancellationToken)
     {
-        HiddenReads.Add(candidates.ToList());
-        if (NextHiddenReadGate is { } gate)
+        ReadBacks.Add(request.Ids.ToList());
+        if (HoldNextReadBack is { } hold)
         {
-            NextHiddenReadGate = null;
-            await gate.Task;
+            HoldNextReadBack = null;
+            await hold.Task;
         }
 
-        return HiddenOf(document, candidates);
+        return new ReadBackResult(request.Document, request.Ids, HiddenOf(request.Document, request.Ids));
     }
 
     private IReadOnlyCollection<long> HiddenOf(DocumentKey document, IReadOnlyCollection<long> candidates)

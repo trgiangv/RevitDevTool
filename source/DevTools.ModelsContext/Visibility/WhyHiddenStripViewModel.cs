@@ -188,7 +188,7 @@ public sealed partial class WhyHiddenStripViewModel : ObservableObject
                 return null;
             }
 
-            result = result.WithJournal(_visibility.Journal, element, _visibility.HidByPanel(element));
+            result = result.WithJournal(_visibility.Journal, element, _visibility.Hides(element));
             Display(result.Reasons, result.First.Text);
             return result;
         }

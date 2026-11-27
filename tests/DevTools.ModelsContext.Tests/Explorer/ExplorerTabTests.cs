@@ -205,12 +205,12 @@ public sealed class ExplorerTabTests
         using var fixture = await PanelFixture.OpenAsync();
         var ducts = fixture.Group(Current, "Ducts");
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
-        var hidden = fixture.Group(Current, "Ducts").Eye;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts);
+        var hidden = fixture.Group(Current, "Ducts").HideState;
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
 
-        Assert.AreEqual(RowEye.Hidden, hidden);
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Current, "Ducts").Eye);
+        Assert.AreEqual(HideState.Hidden, hidden);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Current, "Ducts").HideState);
         Assert.AreEqual(1, fixture.Actions.ResetCount);
     }
 
@@ -219,32 +219,32 @@ public sealed class ExplorerTabTests
     {
         using var fixture = await PanelFixture.OpenAsync();
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
-        var hidden = ModelRow(fixture).Eye;
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ModelRow(fixture));
+        var hidden = ModelRow(fixture).HideState;
         var steps = fixture.Actions.ExecutedPlans.SelectMany(plan => plan.Steps).ToList();
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ModelRow(fixture));
 
-        Assert.AreEqual(RowEye.Hidden, hidden);
+        Assert.AreEqual(HideState.Hidden, hidden);
         Assert.AreEqual(Current, ((ElementsStep)steps.Single()).Document);
-        Assert.AreEqual(RowEye.Shown, ModelRow(fixture).Eye);
+        Assert.AreEqual(HideState.Shown, ModelRow(fixture).HideState);
         Assert.IsTrue(fixture.Explorer.Rows.Where(row => row.Kind == TreeRowKind.LinkModel)
-            .All(row => row.Eye == RowEye.Shown));
+            .All(row => row.HideState == HideState.Shown));
     }
 
     [TestMethod]
     public async Task ModelEyeReadsInSameCall()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        fixture.Actions.HiddenReads.Clear();
+        fixture.Actions.ReadBacks.Clear();
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
-        var hidden = ModelRow(fixture).Eye;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ModelRow(fixture));
+        var hidden = ModelRow(fixture).HideState;
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ModelRow(fixture));
 
-        Assert.AreEqual(RowEye.Hidden, hidden);
-        Assert.AreEqual(RowEye.Shown, ModelRow(fixture).Eye);
+        Assert.AreEqual(HideState.Hidden, hidden);
+        Assert.AreEqual(HideState.Shown, ModelRow(fixture).HideState);
         Assert.AreEqual(2, fixture.Actions.ActionReads);
-        Assert.IsEmpty(fixture.Actions.HiddenReads);
+        Assert.IsEmpty(fixture.Actions.ReadBacks);
     }
 
     [TestMethod]
@@ -252,19 +252,19 @@ public sealed class ExplorerTabTests
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var count = ModelRow(fixture).Count;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ModelRow(fixture));
         var ids = ((ElementsStep)fixture.Actions.ExecutedPlans.Single().Steps.Single()).Ids;
         fixture.Model.ViewHiddenElements.UnionWith(ids.Select(id => new ElementRef(Current, id)));
         fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
         fixture.Settle();
         var reloaded = ModelRow(fixture);
-        var hidden = (reloaded.Eye, reloaded.Count);
+        var hidden = (reloaded.HideState, reloaded.Count);
         fixture.Model.ViewHiddenElements.Clear();
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ModelRow(fixture));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ModelRow(fixture));
 
-        Assert.AreEqual((RowEye.Hidden, count), hidden);
-        Assert.AreEqual(RowEye.Shown, ModelRow(fixture).Eye);
+        Assert.AreEqual((HideState.Hidden, count), hidden);
+        Assert.AreEqual(HideState.Shown, ModelRow(fixture).HideState);
         Assert.AreEqual(count, ModelRow(fixture).Count);
     }
 
@@ -287,10 +287,10 @@ public sealed class ExplorerTabTests
         using var fixture = await PanelFixture.OpenAsync();
         var ducts = fixture.Explorer.Categories.Picker.Items.First(item => item.Name == "Ducts");
 
-        await ducts.ToggleEyeCommand.ExecuteAsync(null);
+        await ducts.ToggleHiddenCommand.ExecuteAsync(null);
 
-        Assert.IsTrue(ducts.IsHiddenInView);
-        Assert.AreEqual(RowEye.HiddenByCategory, fixture.Group(Current, "Ducts").Eye);
+        Assert.IsTrue(ducts.IsHidden);
+        Assert.AreEqual(HideState.HiddenByCategory, fixture.Group(Current, "Ducts").HideState);
     }
 
     [TestMethod]
@@ -301,7 +301,7 @@ public sealed class ExplorerTabTests
         await fixture.Explorer.ExpandAsync(ducts);
         var walls = fixture.Group(Current, "Walls");
 
-        fixture.Explorer.HighlightEyeTargets(ducts);
+        fixture.Explorer.HighlightTargets(ducts);
         var lit = fixture.Explorer.Rows.Where(row => row.IsHighlighted).ToList();
         fixture.Explorer.ClearHighlight();
 
@@ -494,8 +494,8 @@ public sealed class ExplorerTabTests
         await fixture.Explorer.RunToolAsync(ducts, MenuAction.Color);
         await fixture.Panel.ContextMenu.ApplyColorCommand.ExecuteAsync(new RgbColor(255, 0, 0));
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         Assert.AreEqual(new RgbColor(255, 0, 0), fixture.Group(Current, "Ducts").OverrideColor);
     }

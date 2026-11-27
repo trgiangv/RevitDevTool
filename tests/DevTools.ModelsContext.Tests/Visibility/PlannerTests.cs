@@ -76,7 +76,7 @@ public sealed class PlannerTests
             var plan = planner.Plan(request);
             var check = planner.Check(request);
             Assert.AreEqual(plan.DisabledReason, check.DisabledReason);
-            Assert.AreEqual(ActionState.NoteOf(plan.UsesLinkFilter, plan.UsesLinkHide), check.Note);
+            Assert.AreEqual(ActionState.NoteOf(plan.UsesLinkFilter(), plan.UsesLinkHide), check.Note);
         }
     }
 
@@ -138,7 +138,7 @@ public sealed class PlannerTests
 
         var step = (LinkFilterStep)plan.Steps.Single();
         Assert.IsEmpty(step.Filter.Root.Children);
-        Assert.IsTrue(plan.UsesLinkFilter);
+        Assert.IsTrue(plan.UsesLinkFilter());
     }
 
     [TestMethod]

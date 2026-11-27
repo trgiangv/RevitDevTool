@@ -4,14 +4,14 @@ namespace RevitDevTool.ModelsContext.LiveTests;
 
 internal sealed class TraceLines : ILogger
 {
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly List<string> _lines = [];
 
     public IReadOnlyList<string> Lines
     {
         get
         {
-            lock (_gate)
+            lock (_lock)
             {
                 return _lines.ToList();
             }
@@ -32,7 +32,7 @@ internal sealed class TraceLines : ILogger
         Func<TState, Exception?, string> formatter)
     {
         var line = formatter(state, exception);
-        lock (_gate)
+        lock (_lock)
         {
             _lines.Add(line);
         }

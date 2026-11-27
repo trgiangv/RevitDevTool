@@ -2,7 +2,7 @@ namespace DevTools.ModelsContext.Panel;
 
 public sealed class Debouncer(IScheduler scheduler, TimeSpan delay, Action action) : IDisposable
 {
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private IDisposable? _pending;
     private int _generation;
 
@@ -10,7 +10,7 @@ public sealed class Debouncer(IScheduler scheduler, TimeSpan delay, Action actio
     {
         get
         {
-            lock (_gate)
+            lock (_lock)
             {
                 return _pending is not null;
             }
@@ -19,7 +19,7 @@ public sealed class Debouncer(IScheduler scheduler, TimeSpan delay, Action actio
 
     public void Trigger()
     {
-        lock (_gate)
+        lock (_lock)
         {
             _pending?.Dispose();
             var generation = ++_generation;
@@ -29,7 +29,7 @@ public sealed class Debouncer(IScheduler scheduler, TimeSpan delay, Action actio
 
     public void Cancel()
     {
-        lock (_gate)
+        lock (_lock)
         {
             _pending?.Dispose();
             _pending = null;
@@ -44,7 +44,7 @@ public sealed class Debouncer(IScheduler scheduler, TimeSpan delay, Action actio
 
     private void Fire(int generation)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (generation != _generation)
             {

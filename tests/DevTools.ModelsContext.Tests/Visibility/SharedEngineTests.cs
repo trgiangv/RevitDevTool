@@ -21,7 +21,7 @@ public sealed class SharedEngineTests
         var selected = fixture.Explorer.ElementsOf([ducts]).Select(element => element.Id).ToList();
         var whole = fixture.Model.SnapshotOf(Current).IdsUnder(ducts.Path).Count();
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(ducts);
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts);
 
         var step = (ElementsStep)fixture.Actions.ExecutedPlans.Single().Steps.Single();
         CollectionAssert.AreEquivalent(selected, step.Ids.ToList());
@@ -34,20 +34,20 @@ public sealed class SharedEngineTests
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
 
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Current, "Ducts").Eye);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Current, "Ducts").HideState);
     }
 
     [TestMethod]
     public async Task ScopedShowRestoresBranch()
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
 
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Current, "Ducts").Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Current, "Ducts").HideState);
     }
 
     [TestMethod]

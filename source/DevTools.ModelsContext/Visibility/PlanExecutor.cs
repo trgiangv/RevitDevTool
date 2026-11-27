@@ -6,18 +6,18 @@ namespace DevTools.ModelsContext.Visibility;
 internal sealed class PlanExecutor(PanelRuntime runtime)
 {
     private string? _notice;
-    private HiddenProbe? _probe;
-    private HiddenRead? _read;
+    private ReadBackRequest? _request;
+    private ReadBackResult? _result;
 
     public async Task<string?> ApplyAsync(
         ViewInfo view,
         ViewLedger ledger,
         VisibilityPlan plan,
-        HiddenProbe? probe,
+        ReadBackRequest? request,
         CancellationToken cancellationToken)
     {
-        _probe = probe;
-        _read = null;
+        _request = request;
+        _result = null;
         if (plan.Action == VisibilityAction.Show)
         {
             return await ShowAsync(view, ledger, plan, cancellationToken);
@@ -129,7 +129,7 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
             .Where(hide => hide.IsIsolateRest && CanUnhide(hide.Element.Document))
             .Select(hide => hide.Element)
             .ToList();
-        _read = await runtime.Services.ViewActions.ResetAsync(view.ViewId, _probe, cancellationToken);
+        _result = await runtime.Services.ViewActions.ResetAsync(view.ViewId, _request, cancellationToken);
         ledger.Remove(plan);
         ledger.Isolation = null;
         _notice = rest.Count > 0 ? await ShowRestAsync(view, rest, cancellationToken) : null;
@@ -144,19 +144,19 @@ internal sealed class PlanExecutor(PanelRuntime runtime)
         return notice;
     }
 
-    public HiddenRead? TakeRead()
+    public ReadBackResult? TakeReadBack()
     {
-        var read = _read;
-        _read = null;
-        _probe = null;
-        return read;
+        var result = _result;
+        _result = null;
+        _request = null;
+        return result;
     }
 
     private async Task<PlanOutcome> ExecuteAsync(ViewInfo view, VisibilityPlan plan, CancellationToken cancellationToken)
     {
         var outcome = await runtime.Services.ViewActions.ExecuteAsync(
-            plan with { ViewId = view.ViewId, ReadBack = _probe }, cancellationToken);
-        _read = outcome.ReadBack;
+            plan with { ViewId = view.ViewId, ReadBack = _request }, cancellationToken);
+        _result = outcome.ReadBack;
         return outcome;
     }
 

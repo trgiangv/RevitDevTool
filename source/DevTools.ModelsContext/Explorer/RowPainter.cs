@@ -35,14 +35,14 @@ internal sealed class RowPainter(
         }
     }
 
-    private static RowEye EyeOf(int hidden, int total)
+    private static HideState StateOf(int hidden, int total)
     {
         if (hidden <= 0)
         {
-            return RowEye.Shown;
+            return HideState.Shown;
         }
 
-        return hidden >= total ? RowEye.Hidden : RowEye.Partly;
+        return hidden >= total ? HideState.Hidden : HideState.Partly;
     }
 
     private static long? GroupIdOf(TreeRow row)
@@ -75,7 +75,7 @@ internal sealed class RowPainter(
                 ApplyInstanceState(row, document, stale);
                 break;
             default:
-                row.Eye = RowEye.None;
+                row.HideState = HideState.None;
                 break;
         }
     }
@@ -88,16 +88,16 @@ internal sealed class RowPainter(
             .Where(group => categories.Lists(snapshot.Groups[group.Key].GroupId))
             .Sum(group => group.Count);
         row.SelectedInside = state.Selected.Count;
-        row.Eye = stale
-            ? RowEye.Unknown
-            : EyeOf(state.Hidden.Count, scope.Counts.Count + state.Outside.Count - state.NotDrawn.Count);
+        row.HideState = stale
+            ? HideState.Unknown
+            : StateOf(state.Hidden.Count, scope.Counts.Count + state.HiddenElsewhere.Count - state.NotDrawn.Count);
     }
 
     private void ApplyHeaderState(TreeRow row, DocumentScope scope, bool stale)
     {
         var snapshot = scope.Snapshot;
         var state = states[scope.Key];
-        row.Branches = RowFactory.KeysOf(scope.Counts, state.Hidden, state.Unseen)
+        row.Branches = RowFactory.KeysOf(scope.Counts, state.Hidden, state.Dimmed)
             .Where(index => categories.Lists(snapshot.Groups[index].GroupId))
             .OrderBy(index => index)
             .Select(RowPath.ForGroup)
@@ -121,30 +121,30 @@ internal sealed class RowPainter(
         var hidden = paths.Sum(branch.Hidden.CountAt);
         row.Count = paths.Sum(scope.Counts.CountAt);
         row.SelectedInside = paths.Sum(branch.Selected.CountAt);
-        row.HiddenCount = paths.Sum(branch.Unseen.CountAt);
-        row.IsDimmed = row.Count == 0 && hidden == 0 && row.HiddenCount > 0;
-        row.Eye = row.IsDimmed
-            ? RowEye.None
-            : InheritedEye(row, stale)
-              ?? EyeOf(hidden, row.Count + paths.Sum(branch.Outside.CountAt) - paths.Sum(branch.NotDrawn.CountAt));
+        row.DimmedCount = paths.Sum(branch.Dimmed.CountAt);
+        row.IsDimmed = row.Count == 0 && hidden == 0 && row.DimmedCount > 0;
+        row.HideState = row.IsDimmed
+            ? HideState.None
+            : InheritedState(row, stale)
+              ?? StateOf(hidden, row.Count + paths.Sum(branch.HiddenElsewhere.CountAt) - paths.Sum(branch.NotDrawn.CountAt));
     }
 
     private void ApplyInstanceState(TreeRow row, DocumentScope scope, bool stale)
     {
         var state = states[scope.Key];
         row.SelectedInside = selection.Elements.Contains(new ElementRef(scope.Key, row.Id)) ? 1 : 0;
-        row.IsDimmed = state.UnseenIds.Contains(row.Id);
-        row.Eye = InheritedEye(row, stale)
-                  ?? (row.IsDimmed || state.HiddenIds.Contains(row.Id) ? RowEye.Hidden : RowEye.Shown);
+        row.IsDimmed = state.DimmedIds.Contains(row.Id);
+        row.HideState = InheritedState(row, stale)
+                  ?? (row.IsDimmed || state.HiddenIds.Contains(row.Id) ? HideState.Hidden : HideState.Shown);
     }
 
-    private RowEye? InheritedEye(TreeRow row, bool stale)
+    private HideState? InheritedState(TreeRow row, bool stale)
     {
-        if (GroupIdOf(row) is { } group && visibility.IsCategoryHidden(group))
+        if (GroupIdOf(row) is { } group && visibility.HidesCategory(group))
         {
-            return RowEye.HiddenByCategory;
+            return HideState.HiddenByCategory;
         }
 
-        return stale && row.IsInsideLink ? RowEye.Unknown : null;
+        return stale && row.IsInsideLink ? HideState.Unknown : null;
     }
 }

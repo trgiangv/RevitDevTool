@@ -41,7 +41,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
         }
     }
 
-    public static bool IsCategoryHidden(View view, ElementId categoryId)
+    public static bool IsCategoryOff(View view, ElementId categoryId)
     {
         try
         {
@@ -90,7 +90,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
     {
         for (var category = LineStyleOf(element) ?? element.Category; category is not null; category = category.Parent)
         {
-            if (HostCategoryId(category) is { } id && IsCategoryHidden(view, id))
+            if (HostCategoryId(category) is { } id && IsCategoryOff(view, id))
             {
                 return HiddenReasons.Category(category.Parent is { } parent ? $"{parent.Name}: {category.Name}" : category.Name);
             }
@@ -275,7 +275,7 @@ internal sealed class HiddenChecks(Document model, View view, Element element, R
             return HiddenReasons.NoGeometry;
         }
 
-        return (draw & ViewDraws.Of(ElementDrawing.KindOf(view))) == 0 ? HiddenReasons.NotInViewType : null;
+        return ViewDraws.Draws(draw, ElementDrawing.KindOf(view)) ? null : HiddenReasons.NotInViewType;
     }
 
     private HiddenReason? ViewRange()

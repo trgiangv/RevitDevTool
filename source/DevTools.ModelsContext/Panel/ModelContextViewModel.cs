@@ -20,6 +20,8 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
 
     public static readonly TimeSpan EventDelay = TimeSpan.FromMilliseconds(200);
 
+    public static readonly TimeSpan UpdatingDelay = TimeSpan.FromMilliseconds(600);
+
     private readonly HostEventRelay _events;
     private readonly ContextLoader _loader;
     private readonly PanelRuntime _runtime;
@@ -266,7 +268,13 @@ public sealed partial class ModelContextViewModel : ObservableObject, IDisposabl
     private async Task LoadContextAsync(JobTicket ticket)
     {
         var timer = TraceTimer.Start(_runtime.Logger);
-        IsUpdating = true;
+        using var updating = _runtime.Scheduler.Schedule(UpdatingDelay, () =>
+        {
+            if (IsCurrent(ticket))
+            {
+                IsUpdating = true;
+            }
+        });
         try
         {
             var scope = ContextBar.Scope;

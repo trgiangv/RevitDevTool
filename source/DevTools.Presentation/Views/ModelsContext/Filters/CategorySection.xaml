@@ -40,7 +40,7 @@
                     <DataTrigger Binding="{Binding ShowEye, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
                         <Setter Property="Visibility" Value="Visible" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding IsHiddenInView}" Value="True">
+                    <DataTrigger Binding="{Binding IsHidden}" Value="True">
                         <Setter Property="hc:IconElement.Geometry" Value="{StaticResource EyeCloseGeometry}" />
                         <Setter Property="AutomationProperties.ItemStatus" Value="Hidden" />
                     </DataTrigger>
@@ -68,6 +68,7 @@
                 <Setter Property="hc:BorderElement.CornerRadius" Value="0" />
                 <Setter Property="hc:VisualElement.StaysHighlighted" Value="True" />
                 <EventSetter Event="GotKeyboardFocus" Handler="OnRowGotKeyboardFocus" />
+                <EventSetter Event="PreviewMouseLeftButtonDown" Handler="OnRowPreviewMouseDown" />
                 <Style.Triggers>
                     <Trigger Property="IsSelected" Value="True">
                         <Setter Property="Background" Value="Transparent" />
@@ -136,15 +137,15 @@
                     <Button Grid.Column="4"
                             AutomationProperties.AutomationId="{Binding AutomationPrefix, RelativeSource={RelativeSource AncestorType=UserControl}, StringFormat={}{0}.CategoryEye}"
                             AutomationProperties.Name="{Binding Name}"
-                            Command="{Binding ToggleEyeCommand}"
+                            Command="{Binding ToggleHiddenCommand}"
                             Style="{StaticResource EyeButtonStyle}"
-                            ToolTip="{Binding EyeToolTip}" />
+                            ToolTip="{Binding HideHint}" />
                 </Grid>
                 <DataTemplate.Triggers>
                     <DataTrigger Binding="{Binding ShowEye, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
                         <Setter TargetName="CountText" Property="Margin" Value="8,0,4,0" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding IsHiddenInView}" Value="True">
+                    <DataTrigger Binding="{Binding IsHidden}" Value="True">
                         <Setter TargetName="ItemGrid" Property="Opacity" Value="0.55" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding HasChildren}" Value="True">

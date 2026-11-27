@@ -79,7 +79,7 @@ public sealed class ParentOverrideTests
     {
         using var fixture = await OpenAsync(Current);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Toposolid"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Toposolid"));
 
         Assert.HasCount(ToposolidCount + SubDivisionCount, ((ElementsStep)LastStep(fixture)).Ids);
     }
@@ -175,9 +175,9 @@ public sealed class ParentOverrideTests
     {
         using var fixture = await OpenAsync(Current);
         var picker = fixture.Explorer.Categories.Picker;
-        await picker.Items.First(item => item.Name == "Toposolid").ToggleEyeCommand.ExecuteAsync(null);
+        await picker.Items.First(item => item.Name == "Toposolid").ToggleHiddenCommand.ExecuteAsync(null);
 
-        await picker.Items.First(item => item.Name == SubDivisionName).ToggleEyeCommand.ExecuteAsync(null);
+        await picker.Items.First(item => item.Name == SubDivisionName).ToggleHiddenCommand.ExecuteAsync(null);
 
         Assert.AreEqual(ExplorerCategories.ParentHiddenReason, fixture.Panel.Message);
         Assert.HasCount(1, fixture.Actions.ExecutedPlans);

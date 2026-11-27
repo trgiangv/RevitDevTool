@@ -41,7 +41,7 @@ were counted under Walls (1,138 instead of 1,120).
 **Design options.** Each row carries `SecondaryOption` (the element's
 `DesignOption` is not primary). Secondary rows are in the snapshot so a view or
 a selection that shows them can count them, but they stay out of `Counts`,
-`InModel` and `ModelIdsUnder`, which is what Whole model reads. So Walls is
+`InWholeModel` and `ModelIdsUnder`, which is what Whole model reads. So Walls is
 1,120 in Whole model while `OfCategory(OST_Walls)` returns 1,128 (8 walls in
 "Continuous Bleachers no Stairs"); the Architectural link snapshot has 7,764
 rows, 18 of them secondary, and 7,746 counted. Active view and Selection count

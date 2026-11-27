@@ -18,18 +18,18 @@ public sealed class TimingTests
     public async Task SelfCausedSelectionIsDropped()
     {
         var clock = new FakeClock();
-        var guard = new SelectionGuard(clock);
+        var echo = new SentSelectionEcho(clock);
         var model = new FakeModel(TestModel.SmallData);
         var handled = new List<IReadOnlyCollection<ElementRef>>();
         model.SelectionChanged += (_, selection) =>
         {
-            if (!guard.ShouldDrop(selection))
+            if (!echo.ShouldDrop(selection))
             {
                 handled.Add(selection);
             }
         };
 
-        guard.RecordSent(Sent);
+        echo.RecordSent(Sent);
         await model.SelectAsync(Sent, CancellationToken.None);
         model.RaiseSelectionChanged(Sent);
 
@@ -39,27 +39,27 @@ public sealed class TimingTests
     [TestMethod]
     public void OlderEchoIsDropped()
     {
-        var guard = new SelectionGuard(new FakeClock());
+        var echo = new SentSelectionEcho(new FakeClock());
         ElementRef[] next = [new(FakeModelGenerator.Current, 3)];
 
-        guard.RecordSent(Sent);
-        guard.RecordSent(next);
+        echo.RecordSent(Sent);
+        echo.RecordSent(next);
 
-        Assert.IsTrue(guard.ShouldDrop(Sent));
-        Assert.IsTrue(guard.ShouldDrop(next));
-        Assert.IsFalse(guard.ShouldDrop(Sent));
+        Assert.IsTrue(echo.ShouldDrop(Sent));
+        Assert.IsTrue(echo.ShouldDrop(next));
+        Assert.IsFalse(echo.ShouldDrop(Sent));
     }
 
     [TestMethod]
-    public void ExpiredGuardDropsNothing()
+    public void ExpiredEchoDropsNothing()
     {
         var clock = new FakeClock();
-        var guard = new SelectionGuard(clock, TimeSpan.FromSeconds(1));
+        var echo = new SentSelectionEcho(clock, TimeSpan.FromSeconds(1));
 
-        guard.RecordSent(Sent);
+        echo.RecordSent(Sent);
         clock.Advance(TimeSpan.FromSeconds(2));
 
-        Assert.IsFalse(guard.ShouldDrop(Sent));
+        Assert.IsFalse(echo.ShouldDrop(Sent));
     }
 
     [TestMethod]

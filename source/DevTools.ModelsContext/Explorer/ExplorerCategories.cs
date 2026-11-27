@@ -48,7 +48,7 @@ public sealed partial class ExplorerCategories : ObservableObject
 
     internal IReadOnlyList<long> Checked => Picker.Checked();
 
-    public static string EyeTipOf(bool hidden, int links)
+    public static string HideTipOf(bool hidden, int links)
     {
         var verb = hidden ? "Show in view: " : "Hide in view: ";
         var scope = links switch
@@ -76,7 +76,7 @@ public sealed partial class ExplorerCategories : ObservableObject
         foreach (var document in data.Documents)
         {
             var snapshot = document.Snapshot;
-            foreach (var group in snapshot.Groups.Where(group => _visibility.IsCategoryHidden(group.GroupId)))
+            foreach (var group in snapshot.Groups.Where(group => _visibility.HidesCategory(group.GroupId)))
             {
                 if (!groups.ContainsKey(group.GroupId))
                 {
@@ -141,10 +141,10 @@ public sealed partial class ExplorerCategories : ObservableObject
         Picker.Rebuild(_groups);
         foreach (var item in Picker.Items)
         {
-            var hidden = _visibility.IsCategoryHidden(item.GroupId);
-            item.IsHiddenInView = hidden;
-            item.EyeToolTip = EyeTipOf(hidden, links);
-            item.Eye = ToggleEyeAsync;
+            var hidden = _visibility.HidesCategory(item.GroupId);
+            item.IsHidden = hidden;
+            item.HideHint = HideTipOf(hidden, links);
+            item.ToggleHidden = ToggleHiddenAsync;
         }
     }
 
@@ -157,10 +157,10 @@ public sealed partial class ExplorerCategories : ObservableObject
     private bool IsParentHidden(long groupId)
     {
         return _groups.FirstOrDefault(group => group.GroupId == groupId) is { ParentId: not GroupRow.TopLevel } child
-               && _visibility.IsCategoryHidden(child.ParentId);
+               && _visibility.HidesCategory(child.ParentId);
     }
 
-    private List<TreeRow> EyeRowsOf(CategoryItemViewModel item)
+    private List<TreeRow> HideRowsOf(CategoryItemViewModel item)
     {
         var current = _runtime.Data.CurrentModel ?? _bar.CurrentModel;
         if (current is not { } key)
@@ -202,17 +202,17 @@ public sealed partial class ExplorerCategories : ObservableObject
             .ToList();
     }
 
-    private Task ToggleEyeAsync(CategoryItemViewModel item)
+    private Task ToggleHiddenAsync(CategoryItemViewModel item)
     {
         return _runtime.RunAsync(async () =>
         {
-            var rows = EyeRowsOf(item);
+            var rows = HideRowsOf(item);
             if (rows.Count == 0)
             {
                 return;
             }
 
-            var action = item.IsHiddenInView ? VisibilityAction.Show : VisibilityAction.Hide;
+            var action = item.IsHidden ? VisibilityAction.Show : VisibilityAction.Hide;
             if (action == VisibilityAction.Show && IsParentHidden(item.GroupId))
             {
                 _report(ParentHiddenReason);

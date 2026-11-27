@@ -555,7 +555,7 @@ public sealed class BoxAndBarTests : RecordedTest
         _panel.Settle();
         var row = RowUnder(link, name);
         var left = _panel.Item(row, cf => cf.ByAutomationId("Explorer.Row.Text")).BoundingRectangle.Right;
-        foreach (var id in new[] { "Explorer.Row.Count", "Explorer.Row.HiddenCount" })
+        foreach (var id in new[] { "Explorer.Row.Count", "Explorer.Row.DimmedCount" })
         {
             if (row.FindFirstDescendant(cf => cf.ByAutomationId(id)) is { IsOffscreen: false } part)
             {

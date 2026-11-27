@@ -23,12 +23,12 @@ public sealed class HideCountTests
         var count = Header(fixture).Count;
         var categories = fixture.Explorer.Categories.Picker.Items.Count;
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(Header(fixture));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(Header(fixture));
         HideInHost(fixture);
         Reload(fixture);
 
         Assert.AreEqual(count, Header(fixture).Count);
-        Assert.AreEqual(RowEye.Hidden, Header(fixture).Eye);
+        Assert.AreEqual(HideState.Hidden, Header(fixture).HideState);
         Assert.AreEqual(categories, fixture.Explorer.Categories.Picker.Items.Count);
     }
 
@@ -46,7 +46,7 @@ public sealed class HideCountTests
         Reload(fixture);
 
         Assert.AreEqual(walls, fixture.Group(Current, "Walls").Count);
-        Assert.AreEqual(RowEye.Hidden, fixture.Group(Current, "Walls").Eye);
+        Assert.AreEqual(HideState.Hidden, fixture.Group(Current, "Walls").HideState);
     }
 
     [TestMethod]
@@ -68,8 +68,8 @@ public sealed class HideCountTests
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var count = Header(fixture).Count;
-        var unseen = Header(fixture).HiddenCount;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(Header(fixture));
+        var dimmed = Header(fixture).DimmedCount;
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(Header(fixture));
         HideInHost(fixture);
         Reload(fixture);
         fixture.Model.HoldScopes();
@@ -77,7 +77,7 @@ public sealed class HideCountTests
         fixture.Settle();
         var held = fixture.Model.HeldScopes;
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(Header(fixture));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(Header(fixture));
         fixture.Model.ViewHiddenElements.Clear();
         fixture.Model.ReleaseScopes();
         fixture.Settle();
@@ -85,9 +85,9 @@ public sealed class HideCountTests
         var header = Header(fixture);
         Assert.IsGreaterThan(0, held);
         Assert.AreEqual(count, header.Count);
-        Assert.AreEqual(RowEye.Shown, header.Eye);
+        Assert.AreEqual(HideState.Shown, header.HideState);
         Assert.IsFalse(header.IsDimmed);
-        Assert.AreEqual(unseen, header.HiddenCount);
+        Assert.AreEqual(dimmed, header.DimmedCount);
     }
 
     [TestMethod]
@@ -95,26 +95,26 @@ public sealed class HideCountTests
     {
         using var fixture = await PanelFixture.OpenAsync(scope: ScopeKind.ActiveView);
         var count = fixture.Group(Current, "Ducts").Count;
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         HideInHost(fixture);
         var sizes = new List<int>();
         fixture.Explorer.Rows.CollectionChanged += (_, _) => sizes.Add(fixture.Explorer.Rows.Count);
-        var gate = new TaskCompletionSource<bool>();
-        fixture.Actions.NextHiddenReadGate = gate;
+        var hold = new TaskCompletionSource<bool>();
+        fixture.Actions.HoldNextReadBack = hold;
         fixture.Model.RaiseElementsChanged(ElementDelta.DeletedOnly(FakeModelGenerator.CurrentSource, []));
         fixture.Settle();
-        var holding = fixture.Actions.NextHiddenReadGate is null;
+        var holding = fixture.Actions.HoldNextReadBack is null;
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Ducts"));
         fixture.Model.ViewHiddenElements.Clear();
-        gate.SetResult(true);
+        hold.SetResult(true);
         fixture.Settle();
 
         var ducts = fixture.Group(Current, "Ducts");
         Assert.IsTrue(holding);
         Assert.DoesNotContain(0, sizes);
         Assert.AreEqual(count, ducts.Count);
-        Assert.AreEqual(RowEye.Shown, ducts.Eye);
+        Assert.AreEqual(HideState.Shown, ducts.HideState);
     }
 
     [TestMethod]
@@ -123,10 +123,10 @@ public sealed class HideCountTests
         using var fixture = await OpenWithLinkAsync(WithUndrawnLinkRows());
         var groups = LinkGroups(fixture);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(LinkRow(fixture));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(LinkRow(fixture));
         Reload(fixture);
 
-        Assert.AreEqual(RowEye.Hidden, LinkRow(fixture).Eye);
+        Assert.AreEqual(HideState.Hidden, LinkRow(fixture).HideState);
         Assert.IsNotEmpty(groups);
         CollectionAssert.AreEqual(groups, LinkGroups(fixture));
     }
@@ -135,12 +135,12 @@ public sealed class HideCountTests
     public async Task ViewLinkShowOpensEye()
     {
         using var fixture = await OpenWithLinkAsync(TestModel.SmallData);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
 
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Ducts").Eye);
-        Assert.AreEqual(RowEye.Shown, LinkRow(fixture).Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Mep, "Ducts").HideState);
+        Assert.AreEqual(HideState.Shown, LinkRow(fixture).HideState);
     }
 
     private static TreeRow Header(PanelFixture fixture)

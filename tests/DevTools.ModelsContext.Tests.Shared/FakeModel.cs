@@ -20,6 +20,7 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
     private readonly Dictionary<SourceId, FakeSource> _sources = [];
     private string _active;
     private List<TaskCompletionSource<bool>>? _scopeGates;
+    private List<TaskCompletionSource<bool>>? _nameGates;
     private IReadOnlyCollection<ElementRef> _selection = [];
     private TaskCompletionSource<bool>? _snapshotGate;
 
@@ -157,7 +158,14 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
                 ? new InstanceName(id, $"{snapshot.TypeName(row.TypeIndex)} [{id}]")
                 : new InstanceName(id, $"[{id}]"))
             .ToList();
-        return Task.FromResult(names);
+        if (_nameGates is not { } gates)
+        {
+            return Task.FromResult(names);
+        }
+
+        var gate = new TaskCompletionSource<bool>();
+        gates.Add(gate);
+        return AfterAsync(gate.Task, names);
     }
 
     public Task<IReadOnlyList<GroupCount>> CountGroupsAsync(
@@ -468,6 +476,23 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         }
     }
 
+    public int HeldNames => _nameGates?.Count ?? 0;
+
+    public void HoldNames()
+    {
+        _nameGates = [];
+    }
+
+    public void ReleaseNames()
+    {
+        var gates = _nameGates ?? [];
+        _nameGates = null;
+        foreach (var gate in gates)
+        {
+            gate.TrySetResult(true);
+        }
+    }
+
     public void HoldSnapshots()
     {
         _snapshotGate = new TaskCompletionSource<bool>();
@@ -564,7 +589,7 @@ public sealed class FakeModel : IModelSource, IModelEvents, ISelectionPort, IFil
         return new ElementDelta(source, [], added, modified, deleted);
     }
 
-    private static async Task<IReadOnlyCollection<long>> AfterAsync(Task gate, IReadOnlyCollection<long> ids)
+    private static async Task<T> AfterAsync<T>(Task gate, T ids)
     {
         await gate.ConfigureAwait(false);
         return ids;

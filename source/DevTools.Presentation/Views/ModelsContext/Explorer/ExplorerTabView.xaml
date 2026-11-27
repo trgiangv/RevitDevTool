@@ -26,6 +26,7 @@
                    TargetType="ListBoxItem">
                 <Setter Property="AutomationProperties.Name" Value="{Binding Text, Mode=OneTime}" />
                 <EventSetter Event="MouseDoubleClick" Handler="OnRowDoubleClick" />
+                <EventSetter Event="PreviewMouseLeftButtonDown" Handler="OnRowPreviewMouseDown" />
             </Style>
 
             <Style x:Key="RowBadgeStyle"
@@ -120,12 +121,12 @@
                                    Opacity="0.6"
                                    Text="{Binding CountText}"
                                    TextAlignment="Right" />
-                        <TextBlock x:Name="HiddenCount"
+                        <TextBlock x:Name="DimmedCount"
                                    Margin="4,0,0,0"
                                    VerticalAlignment="Center"
-                                   AutomationProperties.AutomationId="Explorer.Row.HiddenCount"
+                                   AutomationProperties.AutomationId="Explorer.Row.DimmedCount"
                                    FontSize="11"
-                                   Text="{Binding HiddenText}"
+                                   Text="{Binding DimmedText}"
                                    Visibility="Collapsed" />
                     </StackPanel>
 
@@ -197,9 +198,9 @@
                             Grid.Column="8"
                             hc:IconElement.Geometry="{StaticResource EyeOpenGeometry}"
                             AutomationProperties.AutomationId="Explorer.Row.Eye"
-                            AutomationProperties.ItemStatus="{Binding Eye}"
+                            AutomationProperties.ItemStatus="{Binding HideState}"
                             AutomationProperties.Name="{Binding ToolTip, RelativeSource={RelativeSource Self}}"
-                            Command="{Binding Path=DataContext.Explorer.ToggleEyeCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
+                            Command="{Binding Path=DataContext.Explorer.ToggleHiddenCommand, RelativeSource={RelativeSource AncestorType={x:Type c:FlatTreeList}}}"
                             CommandParameter="{Binding}"
                             MouseEnter="OnEyeMouseEnter"
                             MouseLeave="OnEyeMouseLeave"
@@ -247,27 +248,27 @@
                     <DataTrigger Binding="{Binding HasCount}" Value="False">
                         <Setter TargetName="CountText" Property="Visibility" Value="Collapsed" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding IsHiddenInView}" Value="True">
+                    <DataTrigger Binding="{Binding IsLinkHidden}" Value="True">
                         <Setter TargetName="LinkDot" Property="Visibility" Value="Visible" />
                     </DataTrigger>
 
-                    <DataTrigger Binding="{Binding Eye}" Value="None">
+                    <DataTrigger Binding="{Binding HideState}" Value="None">
                         <Setter TargetName="Eye" Property="Visibility" Value="Hidden" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Eye}" Value="Hidden">
+                    <DataTrigger Binding="{Binding HideState}" Value="Hidden">
                         <Setter TargetName="Eye" Property="hc:IconElement.Geometry" Value="{StaticResource EyeCloseGeometry}" />
                         <Setter TargetName="Eye" Property="ToolTip" Value="Show" />
                         <Setter TargetName="RowGrid" Property="Opacity" Value="0.55" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Eye}" Value="Partly">
+                    <DataTrigger Binding="{Binding HideState}" Value="Partly">
                         <Setter TargetName="Eye" Property="Opacity" Value="0.55" />
                         <Setter TargetName="Eye" Property="ToolTip" Value="Partly hidden · click to hide" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Eye}" Value="Unknown">
+                    <DataTrigger Binding="{Binding HideState}" Value="Unknown">
                         <Setter TargetName="Eye" Property="Opacity" Value="0.35" />
                         <Setter TargetName="Eye" Property="ToolTip" Value="State unknown" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding Eye}" Value="HiddenByCategory">
+                    <DataTrigger Binding="{Binding HideState}" Value="HiddenByCategory">
                         <Setter TargetName="Eye" Property="hc:IconElement.Geometry" Value="{StaticResource EyeCloseGeometry}" />
                         <Setter TargetName="Eye" Property="IsEnabled" Value="False" />
                         <Setter TargetName="Eye" Property="ToolTip" Value="Hidden by its category" />
@@ -276,11 +277,11 @@
                     <DataTrigger Binding="{Binding IsDimmed}" Value="True">
                         <Setter TargetName="RowGrid" Property="Opacity" Value="0.55" />
                     </DataTrigger>
-                    <DataTrigger Binding="{Binding HasHidden}" Value="True">
-                        <Setter TargetName="HiddenCount" Property="Visibility" Value="Visible" />
+                    <DataTrigger Binding="{Binding HasDimmed}" Value="True">
+                        <Setter TargetName="DimmedCount" Property="Visibility" Value="Visible" />
                     </DataTrigger>
                     <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="False">
-                        <Setter TargetName="HiddenCount" Property="Foreground" Value="{DynamicResource WarningBrush}" />
+                        <Setter TargetName="DimmedCount" Property="Foreground" Value="{DynamicResource WarningBrush}" />
                     </DataTrigger>
 
                     <DataTrigger Binding="{Binding IsHighlighted}" Value="True">

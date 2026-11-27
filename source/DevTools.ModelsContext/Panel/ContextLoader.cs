@@ -9,7 +9,7 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
 {
     public async Task<int> LoadAsync(JobTicket ticket, ScopeKind scope)
     {
-        var version = runtime.Actions.Value;
+        var version = runtime.RunningActions.Version;
         var keys = await KeysInScopeAsync(scope, ticket.Token);
         if (!owner.IsCurrent(ticket) || !await ShowQuickCountsAsync(ticket, scope, keys))
         {
@@ -35,13 +35,13 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
 
     private bool Dropped(int version)
     {
-        if (!runtime.Actions.IsStale(version))
+        if (!runtime.RunningActions.IsStale(version))
         {
             return false;
         }
 
         runtime.Logger.LoadDropped();
-        if (runtime.Actions.Drop())
+        if (!runtime.RunningActions.Defer())
         {
             _ = owner.RefreshAsync();
         }
@@ -138,7 +138,7 @@ internal sealed class ContextLoader(PanelRuntime runtime, ModelContextViewModel 
         var ids = scope == ScopeKind.WholeModel
             ? null
             : await runtime.Services.Source.CollectScopeAsync(key, scope, ticket.Token);
-        if (scope == ScopeKind.ActiveView && ids is not null && visibility.HiddenInViewIds(key) is { Count: > 0 } hidden)
+        if (scope == ScopeKind.ActiveView && ids is not null && visibility.TakenIds(key) is { Count: > 0 } hidden)
         {
             ids = [.. ids.Union(hidden)];
         }

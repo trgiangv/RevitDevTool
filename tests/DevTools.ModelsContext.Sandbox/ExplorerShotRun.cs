@@ -36,7 +36,7 @@ internal static class ExplorerShotRun
 
             section.IsOpen = true;
             var hidden = explorer.Categories.Picker.Items.First(item => item.Name == "Ducts");
-            await hidden.ToggleEyeCommand.ExecuteAsync(null);
+            await hidden.ToggleHiddenCommand.ExecuteAsync(null);
             explorer.Categories.Picker.Items.First(item => item.Name == "Doors").IsChecked = false;
             await Settle(800);
             Save(window, directory, $"{theme}-explorer-categories.png");
@@ -87,15 +87,15 @@ internal static class ExplorerShotRun
         }
 
         TreeRow? best = null;
-        foreach (var group in current.Children!.Where(row => row is { HiddenCount: > 0, Count: > 0 }).ToList())
+        foreach (var group in current.Children!.Where(row => row is { DimmedCount: > 0, Count: > 0 }).ToList())
         {
             await explorer.ExpandAsync(group);
-            foreach (var family in group.Children!.Where(row => row is { HiddenCount: > 0, Count: > 0 }).ToList())
+            foreach (var family in group.Children!.Where(row => row is { DimmedCount: > 0, Count: > 0 }).ToList())
             {
                 await explorer.ExpandAsync(family);
-                foreach (var type in family.Children!.Where(row => row is { HiddenCount: > 0, Count: > 0 }))
+                foreach (var type in family.Children!.Where(row => row is { DimmedCount: > 0, Count: > 0 }))
                 {
-                    if (best is null || type.Count + type.HiddenCount < best.Count + best.HiddenCount)
+                    if (best is null || type.Count + type.DimmedCount < best.Count + best.DimmedCount)
                     {
                         best = type;
                     }

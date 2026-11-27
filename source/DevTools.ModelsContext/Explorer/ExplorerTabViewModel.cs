@@ -31,6 +31,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private readonly VisibilityController _visibility;
     private readonly Action<string?> _report;
     private ExplorerState? _pending;
+
     private int _building;
     private bool _repaintPending;
 
@@ -122,7 +123,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
 
     public bool HasSelection => _sync.HasSelection;
 
-    internal bool IsLocalSelectionPending => _sync.IsLocalSelectionPending;
+    internal bool IsSending => _sync.IsSending;
 
     public string StatusText => _sync.StatusText;
 
@@ -166,7 +167,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         return Data.ElementsOf(rows);
     }
 
-    public void HighlightEyeTargets(TreeRow? row)
+    public void HighlightTargets(TreeRow? row)
     {
         _targets.Highlight(row, Rows);
     }
@@ -221,7 +222,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _pending = state;
         ClearHighlight();
         Data = ContextData.Empty;
-        _tree.Clear();
+        _tree.Forget();
         _states.Clear();
         _search.Clear();
         _sync.Reset(state.IsSelectionSyncOn);
@@ -250,7 +251,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         return BuildingAsync(async () =>
         {
             _tree.Clear();
-            await _rows.ReadHiddenAsync();
+            await _rows.ReadBackAsync();
             await Categories.ReadCheckedAsync(data, cancellationToken);
             Categories.Rebuild(data);
             Pick.Refresh();
@@ -286,10 +287,30 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         _selection.Rows.Clear();
         _tree.Clear();
         _rows.ComputeStates();
-        _tree.Build();
-        foreach (var root in _tree.Roots.Where(root => state.Expanded.Contains(root.Key) || !state.Roots.Contains(root.Key)))
+        var generation = _tree.Build();
+        try
         {
-            await _tree.RestoreAsync(root, state.Expanded);
+            await RestoreAsync(state, generation);
+            await _sync.CompleteLoadAsync();
+        }
+        catch (StaleBuildException)
+        {
+        }
+    }
+
+    private async Task RestoreAsync(ExplorerState state, int generation)
+    {
+        try
+        {
+            foreach (var root in _tree.Roots.Where(root => state.Expanded.Contains(root.Key) || !state.Roots.Contains(root.Key)).ToList())
+            {
+                await _tree.RestoreAsync(root, state.Expanded);
+                _tree.EnsureCurrent(generation);
+            }
+        }
+        finally
+        {
+            _tree.EndBuild(generation);
         }
 
         _pending = null;
@@ -297,9 +318,8 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         if (text.Length > 0)
         {
             await _search.CollectAsync(text);
+            _tree.EnsureCurrent(generation);
         }
-
-        await _sync.CompleteLoadAsync();
     }
 
     internal Task ApplyHostSelectionAsync(IReadOnlyCollection<ElementRef> incoming)
@@ -345,9 +365,9 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
-    private Task ToggleEyeAsync(TreeRow? row)
+    private Task ToggleHiddenAsync(TreeRow? row)
     {
-        return Run(() => ToggleRowEyeAsync(row));
+        return Run(() => ToggleRowHiddenAsync(row));
     }
 
     [RelayCommand]
@@ -397,21 +417,21 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         await ExpandAsync(row);
     }
 
-    private async Task ToggleRowEyeAsync(TreeRow? row)
+    private async Task ToggleRowHiddenAsync(TreeRow? row)
     {
-        if (row is null || row.Eye is RowEye.None or RowEye.HiddenByCategory)
+        if (row is null || row.HideState is HideState.None or HideState.HiddenByCategory)
         {
             return;
         }
 
-        var action = row.Eye == RowEye.Hidden ? VisibilityAction.Show : VisibilityAction.Hide;
+        var action = row.HideState == HideState.Hidden ? VisibilityAction.Show : VisibilityAction.Hide;
         _report(await _visibility.RunAsync(VisibilityRequest.ForRows(action, _targets.TargetsFor(row))));
     }
 
     private async Task ApplySearchAsync()
     {
         await _search.CollectAsync(SearchText.Trim());
-        await _rows.ReadHiddenAsync();
+        await _rows.ReadBackAsync();
         _rows.Publish();
     }
 
@@ -440,7 +460,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     {
         var dimmed = _selection.Rows
             .Where(row => row is { Kind: TreeRowKind.Instance, Document: not null }
-                          && (row.IsDimmed || row.Eye == RowEye.Hidden))
+                          && (row.IsDimmed || row.HideState == HideState.Hidden))
             .Take(2)
             .ToList();
         SelectedDimmedElement = dimmed.Count == 1 ? new ElementRef(dimmed[0].Document!.Value, dimmed[0].Id) : null;

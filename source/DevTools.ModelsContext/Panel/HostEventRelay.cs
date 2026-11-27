@@ -10,7 +10,7 @@ internal sealed class HostEventRelay : IDisposable
     private readonly List<ElementDelta> _deltas = [];
     private readonly Debouncer _deltaDebouncer;
     private readonly Debouncer _documentsDebouncer;
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly ModelContextViewModel _owner;
     private readonly PanelRuntime _runtime;
     private readonly SessionSwitcher _sessions;
@@ -71,7 +71,7 @@ internal sealed class HostEventRelay : IDisposable
         _viewDebouncer.Cancel();
         _sessions.Active?.Cancel();
         List<ElementDelta> deltas;
-        lock (_gate)
+        lock (_lock)
         {
             deltas = [.. _deltas];
             _deltas.Clear();
@@ -85,7 +85,7 @@ internal sealed class HostEventRelay : IDisposable
 
     public void ClearView()
     {
-        lock (_gate)
+        lock (_lock)
         {
             _incomingView = null;
         }
@@ -100,7 +100,7 @@ internal sealed class HostEventRelay : IDisposable
     private void Invalidate(ElementDelta delta)
     {
         _runtime.Values.Invalidate(delta.Source);
-        _visibility.DropReadBack(delta.Source);
+        _visibility.ForgetReadBack(delta.Source);
         if (delta.IsUndoRedo && _sessions.Active is { } session)
         {
             _runtime.Journal.MarkStale(session.Model);
@@ -123,7 +123,7 @@ internal sealed class HostEventRelay : IDisposable
             return;
         }
 
-        lock (_gate)
+        lock (_lock)
         {
             _deltas.Add(delta);
         }
@@ -138,7 +138,7 @@ internal sealed class HostEventRelay : IDisposable
 
     private void OnViewActivated(object? sender, ViewInfo view)
     {
-        lock (_gate)
+        lock (_lock)
         {
             _incomingView = view;
         }
@@ -189,7 +189,7 @@ internal sealed class HostEventRelay : IDisposable
 
     private void OnModelRenamed(object? sender, ModelRename rename)
     {
-        lock (_gate)
+        lock (_lock)
         {
             if (_incomingView is { } view)
             {
@@ -207,13 +207,13 @@ internal sealed class HostEventRelay : IDisposable
 
     private void OnViewFiltersRemoved(object? sender, DocumentKey model)
     {
-        _visibility.DropLinkFilters(model);
+        _visibility.ForgetLinkFilters(model);
     }
 
     private async Task OnElementsSettledAsync()
     {
         List<ElementDelta> deltas;
-        lock (_gate)
+        lock (_lock)
         {
             deltas = [.. _deltas];
             _deltas.Clear();
@@ -234,7 +234,7 @@ internal sealed class HostEventRelay : IDisposable
         if (_owner.ContextBar.Scope != ScopeKind.ActiveView
             && deltas.TrueForAll(delta => delta.ChangedCount == 0 && !delta.IsUndoRedo))
         {
-            await _visibility.RefreshHiddenAsync(CancellationToken.None);
+            await _visibility.ReadBackAsync(true, CancellationToken.None);
             return;
         }
 
@@ -244,7 +244,7 @@ internal sealed class HostEventRelay : IDisposable
     private async Task OnViewSettledAsync()
     {
         ViewInfo? view;
-        lock (_gate)
+        lock (_lock)
         {
             view = _incomingView;
             _incomingView = null;

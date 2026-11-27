@@ -198,7 +198,7 @@ public sealed class WhyHiddenViewTests
 
         public void HideDucts()
         {
-            WpfSta.Run(() => Panel.Explorer.ToggleEyeCommand.ExecuteAsync(Ducts()));
+            WpfSta.Run(() => Panel.Explorer.ToggleHiddenCommand.ExecuteAsync(Ducts()));
         }
 
         public void Open(IReadOnlyList<HiddenReason>? reasons)

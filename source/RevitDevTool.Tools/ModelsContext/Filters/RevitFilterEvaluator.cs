@@ -95,7 +95,7 @@ internal sealed class RevitFilterEvaluator(ParameterCache cache) : IFilterEvalua
         var parameters = located.Done
             ? located.Parameters
             : await CompleteAsync(document, filter, categories, key, located, cancellationToken).ConfigureAwait(false);
-        if (needsPresence && parameters.Any(parameter => !parameter.SilentChecked))
+        if (needsPresence && parameters.Any(parameter => !parameter.SilentRead))
         {
             parameters = await SilentAsync(document, key, filter.Groups, categories, located, parameters, cancellationToken)
                 .ConfigureAwait(false);
@@ -155,7 +155,7 @@ internal sealed class RevitFilterEvaluator(ParameterCache cache) : IFilterEvalua
         var updated = new List<ResolvedParameter>();
         foreach (var parameter in parameters)
         {
-            if (parameter.SilentChecked)
+            if (parameter.SilentRead)
             {
                 updated.Add(parameter);
                 continue;

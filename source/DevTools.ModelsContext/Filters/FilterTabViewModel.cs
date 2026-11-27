@@ -28,7 +28,7 @@ public sealed partial class FilterTabViewModel : ObservableObject, IFilterEditor
         _menu = menu;
         Categories = new CategoryPickerViewModel(() => IsReadOnly, OnCategoriesChanged,
             emptyMatchesAll: () => Library is { Current.IsCustom: false } || Root is { Children.Count: > 0 });
-        Runner = new FilterRunner(runtime, Job, visibility.RefreshHiddenAsync);
+        Runner = new FilterRunner(runtime, Job, token => visibility.ReadBackAsync(true, token));
         visibility.Watch(() => Runner.Result);
         Library = new FilterLibraryViewModel(runtime, Runner, this);
         Root = new RuleSetViewModel(this, true);

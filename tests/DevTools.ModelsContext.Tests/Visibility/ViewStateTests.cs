@@ -17,7 +17,7 @@ public sealed class ViewStateTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.View = new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         Assert.IsNull(fixture.Panel.Message);
         Assert.AreEqual("view-2", fixture.Actions.ExecutedPlans.Single().ViewId);
@@ -28,7 +28,7 @@ public sealed class ViewStateTests
     public async Task StaleViewResetRunsOnActive()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
         fixture.Model.View = new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan);
 
         await fixture.Panel.TemporaryBar.ResetCommand.ExecuteAsync(null);
@@ -41,7 +41,7 @@ public sealed class ViewStateTests
     public async Task StaleViewKeepRunsOnActive()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
         fixture.Model.View = new ViewInfo(Current, "view-2", "Level 2", ViewKind.Plan);
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
@@ -56,7 +56,7 @@ public sealed class ViewStateTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Model.View = new ViewInfo(DocumentKey.Current("other-model"), "view-2", "Level 2", ViewKind.Plan);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         Assert.AreEqual(VisibilityText.ViewChanged, fixture.Panel.Message);
         Assert.IsEmpty(fixture.Actions.ExecutedPlans);
@@ -72,10 +72,10 @@ public sealed class ViewStateTests
         await fixture.Panel.ContextMenu[MenuAction.Halftone].Command.ExecuteAsync(null);
 
         fixture.Model.RaiseViewFiltersRemoved(Current);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
-        Assert.IsFalse(fixture.Actions.ExecutedPlans.Any(plan => plan.UsesLinkFilter));
+        Assert.IsFalse(fixture.Actions.ExecutedPlans.Any(plan => plan.UsesLinkFilter()));
         Assert.IsFalse(fixture.Group(Mep, "Ducts").IsHalftone);
     }
 
@@ -84,7 +84,7 @@ public sealed class ViewStateTests
     {
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Current, Mep]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Model.RemoveDocument(Mep);
         fixture.Settle();
 
@@ -114,7 +114,7 @@ public sealed class ViewStateTests
     public async Task KeepClearsElementHide()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
 
@@ -127,7 +127,7 @@ public sealed class ViewStateTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Panel.ContextBar.Check([Current, Mep]);
         var ducts = fixture.Explorer.ElementsOf([fixture.Group(Mep, "Ducts")]);
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Mep, "Ducts"));
         fixture.Explorer.OpenMenu(fixture.Group(Current, "Walls"));
         await fixture.Panel.ContextMenu[MenuAction.Halftone].Command.ExecuteAsync(null);
 
@@ -151,7 +151,7 @@ public sealed class ViewStateTests
         fixture.Model.PickGate = new TaskCompletionSource<bool>();
         var picking = fixture.Explorer.Pick.PickCommand.ExecuteAsync(null);
 
-        await fixture.Explorer.ToggleEyeCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
+        await fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(fixture.Group(Current, "Walls"));
         fixture.Model.PickGate.SetResult(true);
         await picking;
 

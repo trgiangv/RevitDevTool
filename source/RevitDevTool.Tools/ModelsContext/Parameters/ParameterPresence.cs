@@ -83,7 +83,7 @@ internal static class ParameterPresence
             : votes.OrderByDescending(vote => vote.Count).ThenBy(vote => vote.Meaning).First().Meaning;
     }
 
-    public static long[] UnseenIds(Document document, ICollection<ElementId> categories, ResolvedParameter item)
+    public static long[] SilentIds(Document document, ICollection<ElementId> categories, ResolvedParameter item)
     {
         var id = item.ElementId;
         var holds = RevitRuleFactory.Holds(id, item.Storage);
@@ -96,7 +96,7 @@ internal static class ParameterPresence
             return [];
         }
 
-        var carrying = (categories.Count > 0 ? categories : ElementReader.OwnedCategoryIds(document))
+        var carrying = (categories.Count > 0 ? categories : ElementReader.UsedCategoryIds(document))
             .Where(category => document.CollectElements()
                 .WherePasses(ElementReader.AnyOptionFilter(document, [category]))
                 .WherePasses(seenFilter.Value)

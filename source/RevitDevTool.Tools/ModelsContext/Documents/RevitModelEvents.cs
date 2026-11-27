@@ -17,7 +17,7 @@ internal sealed class RevitModelEvents(
     ParameterCache parameterCache,
     RevitViewActions viewActions,
     Dispatcher dispatcher)
-    : IRevitModelEvents
+    : IModelEvents
 {
     private UIControlledApplication? _application;
     private readonly Dictionary<string, TrackedIds> _keys = new(StringComparer.Ordinal);

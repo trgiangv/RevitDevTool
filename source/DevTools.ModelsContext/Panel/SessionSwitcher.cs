@@ -6,7 +6,7 @@ namespace DevTools.ModelsContext.Panel;
 
 internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController visibility, ModelContextViewModel owner)
 {
-    private readonly object _gate = new();
+    private readonly object _lock = new();
     private readonly HashSet<SourceId> _reloadedSources = [];
     private readonly Dictionary<string, PanelSession> _sessions = new(StringComparer.Ordinal);
 
@@ -122,7 +122,7 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
         _sessions.Remove(rename.OldId);
         session.Rename(rename);
         _sessions[rename.NewId] = session;
-        lock (_gate)
+        lock (_lock)
         {
             if (_reloadedSources.Remove(rename.OldSource))
             {
@@ -133,7 +133,7 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
 
     public void AddReloaded(SourceId source)
     {
-        lock (_gate)
+        lock (_lock)
         {
             _reloadedSources.Add(source);
         }
@@ -255,7 +255,7 @@ internal sealed class SessionSwitcher(PanelRuntime runtime, VisibilityController
     private async Task ApplyReloadedLinksAsync(CancellationToken cancellationToken)
     {
         List<SourceId> sources;
-        lock (_gate)
+        lock (_lock)
         {
             sources = [.. _reloadedSources];
             _reloadedSources.Clear();

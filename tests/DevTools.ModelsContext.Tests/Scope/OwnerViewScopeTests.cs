@@ -20,7 +20,7 @@ public sealed class OwnerViewScopeTests
         Assert.AreEqual(1, snapshot.Counts.Count);
         Assert.AreEqual(1, SnapshotAggregator.Aggregate(snapshot).Count);
         Assert.IsTrue(snapshot.Contains(Tag));
-        Assert.IsFalse(snapshot.InModel(Tag));
+        Assert.IsFalse(snapshot.InWholeModel(Tag));
         CollectionAssert.AreEquivalent(new[] { Grid }, snapshot.ModelIdsUnder(RowPath.ForGroup(0)).ToList());
     }
 

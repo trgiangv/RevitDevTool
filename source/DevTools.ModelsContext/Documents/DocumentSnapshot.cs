@@ -97,7 +97,7 @@ public sealed class DocumentSnapshot
         return _rowIndex.ContainsKey(id);
     }
 
-    public bool InModel(long id)
+    public bool InWholeModel(long id)
     {
         return TryGetRow(id, out var row) && row.InWholeModel;
     }
@@ -195,11 +195,11 @@ public sealed class DocumentSnapshot
         return IdsUnder(branch, true);
     }
 
-    private IEnumerable<long> IdsUnder(RowPath branch, bool modelOnly)
+    private IEnumerable<long> IdsUnder(RowPath branch, bool wholeModelOnly)
     {
         if (branch.ElementId != RowPath.Unset)
         {
-            if (TryGetRow(branch.ElementId, out var element) && (!modelOnly || element.InWholeModel))
+            if (TryGetRow(branch.ElementId, out var element) && (!wholeModelOnly || element.InWholeModel))
             {
                 yield return branch.ElementId;
             }
@@ -209,7 +209,7 @@ public sealed class DocumentSnapshot
 
         foreach (var row in _rows)
         {
-            if ((!modelOnly || row.InWholeModel) && IsUnder(row, branch))
+            if ((!wholeModelOnly || row.InWholeModel) && IsUnder(row, branch))
             {
                 yield return row.Id;
             }

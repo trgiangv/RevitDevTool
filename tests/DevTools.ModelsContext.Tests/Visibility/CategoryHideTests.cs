@@ -10,23 +10,23 @@ public sealed class CategoryHideTests
     public async Task KeepLeavesCategoryHidden()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
 
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
 
-        Assert.IsTrue(Item(fixture, "Ducts").IsHiddenInView);
+        Assert.IsTrue(Item(fixture, "Ducts").IsHidden);
     }
 
     [TestMethod]
     public async Task ShowAfterKeepPlansShow()
     {
         using var fixture = await PanelFixture.OpenAsync();
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
         await fixture.Panel.TemporaryBar.KeepCommand.ExecuteAsync(null);
 
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
 
-        Assert.IsFalse(Item(fixture, "Ducts").IsHiddenInView);
+        Assert.IsFalse(Item(fixture, "Ducts").IsHidden);
     }
 
     [TestMethod]
@@ -35,7 +35,7 @@ public sealed class CategoryHideTests
         using var fixture = await PanelFixture.OpenAsync();
         fixture.Actions.Notice = VisibilityText.LinksKeepOwnSettings;
 
-        await Item(fixture, "Ducts").ToggleEyeCommand.ExecuteAsync(null);
+        await Item(fixture, "Ducts").ToggleHiddenCommand.ExecuteAsync(null);
 
         Assert.AreEqual(VisibilityText.LinksKeepOwnSettings, fixture.Panel.Message);
     }

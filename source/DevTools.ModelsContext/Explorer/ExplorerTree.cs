@@ -7,6 +7,9 @@ namespace DevTools.ModelsContext.Explorer;
 internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, ExplorerCategories categories)
 {
     private readonly Dictionary<TreeRow, long[]> _instanceIds = [];
+    private readonly Dictionary<(TreeRow? Parent, string Key), TreeRow> _reusable = [];
+    private List<TreeRow> _previous = [];
+    private int _generation;
 
     public List<TreeRow> Roots { get; private set; } = [];
 
@@ -16,15 +19,58 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
 
     public void Clear()
     {
+        if (Roots.Count > 0)
+        {
+            _previous = Roots;
+        }
+
         Roots = [];
         _instanceIds.Clear();
     }
 
-    public void Build()
+    public void Forget()
     {
+        Clear();
+        _previous = [];
+        _reusable.Clear();
+        _generation++;
+    }
+
+    public int Build()
+    {
+        _generation++;
+        _reusable.Clear();
+        Visit(_previous, row => _reusable.TryAdd((row.Parent, row.Key), row));
+        _previous = [];
         Roots = Data.Documents.OrderBy(document => !document.Key.IsCurrentModel)
-            .Select(document => RowFactory.RootRow(document.Key, document.Label))
+            .Select(document => Reuse(RowFactory.RootRow(document.Key, document.Label)))
             .ToList();
+        return _generation;
+    }
+
+    public void EnsureCurrent(int generation)
+    {
+        if (generation != _generation)
+        {
+            throw new StaleBuildException();
+        }
+    }
+
+    public void EndBuild(int generation)
+    {
+        if (generation != _generation)
+        {
+            return;
+        }
+
+        _reusable.Clear();
+        Visit(Roots, row =>
+        {
+            if (row.IsExpanded && !row.ChildrenLoaded)
+            {
+                row.IsExpanded = false;
+            }
+        });
     }
 
     public List<TreeRow> ShowQuickCounts(IReadOnlyList<QuickDocument> documents, ExplorerState state)
@@ -83,12 +129,14 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
 
         var existing = (parent.Children ?? []).Where(child => child.Kind == TreeRowKind.Instance).ToList();
         var take = ids.Skip(existing.Count).Take(ExplorerTabViewModel.InstancePageSize).ToList();
+        var generation = _generation;
         var names = await runtime.Services.Source.GetInstanceNamesAsync(key, take, Token);
-        var page = names.Select(name => RowFactory.Instance(parent, key, name)).ToList();
+        EnsureCurrent(generation);
+        var page = names.Select(name => Reuse(RowFactory.Instance(parent, key, name))).ToList();
         var shown = existing.Count + take.Count;
         if (shown < ids.Length)
         {
-            page.Add(RowFactory.MorePage(parent, key, shown, ids.Length));
+            page.Add(Reuse(RowFactory.MorePage(parent, key, shown, ids.Length)));
         }
 
         parent.Children = (parent.Subgroups ?? []).Concat(existing).Concat(page).ToList();
@@ -148,9 +196,24 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
         Visit(Roots, row => row.IsExpanded = false);
     }
 
-    public void ClearBadges()
+    public void ClearSelectedInside()
     {
         Visit(Roots, row => row.SelectedInside = 0);
+    }
+
+    private TreeRow Reuse(TreeRow fresh)
+    {
+        if (!_reusable.Remove((fresh.Parent, fresh.Key), out var row)
+            || row.Kind != fresh.Kind || row.Text != fresh.Text || row.Path != fresh.Path || row.Id != fresh.Id
+            || row.Document != fresh.Document)
+        {
+            return fresh;
+        }
+
+        row.Children = null;
+        row.Subgroups = null;
+        row.HasChildren = fresh.HasChildren;
+        return row;
     }
 
     private static void Visit(IEnumerable<TreeRow> rows, Action<TreeRow> action)
@@ -190,7 +253,7 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
     {
         var snapshot = scope.Snapshot;
         var state = states[scope.Key];
-        var listed = RowFactory.KeysOf(scope.Counts, state.Hidden, state.Unseen)
+        var listed = RowFactory.KeysOf(scope.Counts, state.Hidden, state.Dimmed)
             .Where(index => categories.Lists(snapshot.Groups[index].GroupId))
             .ToList();
         var tops = listed.Where(index => !snapshot.Groups[index].IsSubgroup)
@@ -206,15 +269,15 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
         return rows;
     }
 
-    private static TreeRow GroupRow(TreeRow parent, DocumentScope scope, int index)
+    private TreeRow GroupRow(TreeRow parent, DocumentScope scope, int index)
     {
         var groupId = scope.Snapshot.Groups[index].GroupId;
-        return new TreeRow(TreeRowKind.Group, scope.Snapshot.GroupName(index), parent, path: RowPath.ForGroup(index),
-            id: groupId)
+        return Reuse(new TreeRow(TreeRowKind.Group, scope.Snapshot.GroupName(index), parent,
+            path: RowPath.ForGroup(index), id: groupId)
         {
             HasChildren = true,
             Key = RowFactory.RowKey(TreeRowKind.Group, scope.Key, groupId)
-        };
+        });
     }
 
     private List<TreeRow> FamilyRows(TreeRow parent, DocumentScope scope)
@@ -224,14 +287,14 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
         var groupId = scope.Snapshot.Groups[group].GroupId;
         var state = states[scope.Key];
         return RowFactory.Sorted(RowFactory.KeysOf(scope.Counts.Find(keys), state.Hidden.Find(keys),
-                state.Unseen.Find(keys))
-            .Select(family =>
+                state.Dimmed.Find(keys))
+            .Select(family => Reuse(
                 new TreeRow(TreeRowKind.Family, scope.Snapshot.Names[family], parent,
                     path: RowPath.ForFamily(group, family))
                 {
                     HasChildren = true,
                     Key = RowFactory.RowKey(TreeRowKind.Family, scope.Key, groupId, scope.Snapshot.Names[family])
-                }));
+                })));
     }
 
     private List<TreeRow> TypeRows(TreeRow parent, DocumentScope scope)
@@ -242,14 +305,14 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
         var family = parent.Path.Family == RowPath.Any ? string.Empty : snapshot.Names[parent.Path.Family];
         var state = states[scope.Key];
         return RowFactory.Sorted(RowFactory.KeysOf(scope.Counts.Find(keys), state.Hidden.Find(keys),
-                state.Unseen.Find(keys))
-            .Select(type =>
+                state.Dimmed.Find(keys))
+            .Select(type => Reuse(
                 new TreeRow(TreeRowKind.Type, snapshot.TypeName(type), parent,
                     path: RowPath.ForType(parent.Path.Group, parent.Path.Family, type))
                 {
                     HasChildren = true,
                     Key = RowFactory.RowKey(TreeRowKind.Type, scope.Key, groupId, family, snapshot.Types[type].TypeId)
-                }));
+                })));
     }
 
     private async Task<IReadOnlyList<TreeRow>> InstanceRowsAsync(TreeRow parent, DocumentScope scope)
@@ -257,7 +320,7 @@ internal sealed class ExplorerTree(PanelRuntime runtime, DocumentStates states, 
         var state = states[scope.Key];
         var snapshot = scope.Snapshot;
         var ids = new HashSet<long>(scope.IdsUnder(parent.Path));
-        foreach (var id in state.HiddenIds.Concat(state.UnseenIds))
+        foreach (var id in state.HiddenIds.Concat(state.DimmedIds))
         {
             if (snapshot.TryGetRow(id, out var row) && snapshot.IsUnder(row, parent.Path))
             {

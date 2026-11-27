@@ -46,7 +46,7 @@ internal sealed class ValueReader(ParameterKey parameter, CandidateSet candidate
             return;
         }
 
-        if (candidates.InModel(id))
+        if (candidates.InWholeModel(id))
         {
             _counts[text] = _counts.TryGetValue(text, out var count) ? count + 1 : 1;
         }

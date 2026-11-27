@@ -85,7 +85,7 @@ internal static class LinkElements
         return view.IsTemporaryHideIsolateActive()
                && model.GetElement(linkInstanceId) is RevitLinkInstance { Category: { } category } instance
                && !instance.IsHidden(view)
-               && !HiddenChecks.IsCategoryHidden(view, category.Id);
+               && !HiddenChecks.IsCategoryOff(view, category.Id);
     }
 
     internal static bool ShowsLinks(View view)

@@ -159,7 +159,7 @@ Policy lives in 0062, [product/models-context.md](../../product/models-context.m
 and [architecture/ModelsContext](../../architecture/ModelsContext/README.md). Task-local:
 
 - 2026-11-13: groups are `long GroupId`; All models rows carry the Current model
-  `DocumentKey`; the planner returns no partial plans; `SelectionGuard` records
+  `DocumentKey`; the planner returns no partial plans; `SentSelectionEcho` records
   expire after 2 s on `IClock`; rule values are text and the adapter parses units.
 - 2026-11-13: default scope Active view, Selection sync on; an empty custom filter
   matches nothing and Live sends nothing; Duplicate drops unsupported rules and

@@ -32,8 +32,8 @@ public sealed class LinkIsolateRefusalTests
 
         Assert.AreEqual(refusal, fixture.Panel.Message);
         Assert.AreEqual(JournalPage.Empty, fixture.Panel.Journal);
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Mep, "Pipes").Eye);
-        Assert.AreEqual(RowEye.Shown, fixture.Group(Current, "Walls").Eye);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Mep, "Pipes").HideState);
+        Assert.AreEqual(HideState.Shown, fixture.Group(Current, "Walls").HideState);
     }
 
     [TestMethod]
