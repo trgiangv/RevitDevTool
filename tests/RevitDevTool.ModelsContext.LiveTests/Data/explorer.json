@@ -189,13 +189,15 @@
           "OST_IOSDetailGroups",
           "OST_Lines",
           "OST_DetailComponents",
-          "OST_RasterImages"
+          "OST_RasterImages",
+          "OST_Sheets",
+          "OST_ProjectInformation"
         ]
       },
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 and open the Model Context panel; Scope 'Whole model', check 'Current model' only.",
         "On the Explorer tab read: Grids 15, Levels 11, Reference Planes 7, Elevations 12, Scope Boxes 5, Guide Grid 1.",
-        "No tag, Text Notes, Title Blocks, Viewports, Detail Groups, Lines, Detail Items, Raster Images, Automatic Sketch Dimensions or Section Boxes row appears."
+        "No tag, Text Notes, Title Blocks, Viewports, Detail Groups, Lines, Detail Items, Raster Images, Automatic Sketch Dimensions, Section Boxes, Sheets or Project Information row appears."
       ]
     }
   ]

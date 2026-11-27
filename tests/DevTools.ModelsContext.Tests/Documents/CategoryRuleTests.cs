@@ -45,6 +45,16 @@ public sealed class CategoryRuleTests
     }
 
     [TestMethod]
+    [DataRow("OST_Sheets")]
+    [DataRow("OST_ProjectInformation")]
+    public void SheetsAndProjectInfoLeftOut(string builtIn)
+    {
+        Assert.IsFalse(CategoryRule.Lists(CategoryKind.Model, true, builtIn));
+        Assert.IsFalse(CategoryRule.Lists(CategoryKind.Annotation, true, builtIn));
+        Assert.IsFalse(CategoryRule.Lists(CategoryKind.Model, true, builtIn, true));
+    }
+
+    [TestMethod]
     public void DetailGroupsAreListed()
     {
         Assert.IsTrue(CategoryRule.Lists(CategoryKind.Other, true, "OST_IOSDetailGroups"));

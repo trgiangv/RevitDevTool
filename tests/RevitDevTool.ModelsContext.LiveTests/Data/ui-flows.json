@@ -46,7 +46,7 @@
       "images": ["before", "paused", "after"],
       "manualSteps": [
         "Check only the Architectural link. Filter tab: + New filter, open Categories, click All.",
-        "The count reads 9,743. The Selection sync toggle stays on, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
+        "The count reads 9,687. The Selection sync toggle stays on, and the line under the count reads 'Paused: over 5,000 matches'. The Revit selection did not change.",
         "Click None: the count reads 0 and the line is gone."
       ]
     },

@@ -18,7 +18,9 @@ public static class CategoryRule
         "OST_WeakDims",
         "OST_SectionBox",
         "OST_RvtLinks",
-        "OST_Materials"
+        "OST_Materials",
+        "OST_Sheets",
+        "OST_ProjectInformation"
     };
 
     public static bool Lists(CategoryKind kind, bool visibleInUi, string builtIn, bool inLink = false)

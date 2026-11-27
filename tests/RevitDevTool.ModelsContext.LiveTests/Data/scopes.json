@@ -6,14 +6,14 @@
       "docs": "Host",
       "scope": "WholeModel",
       "filter": {},
-      "expected": 2928,
+      "expected": 2910,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
         "In the document list check only 'Current model'.",
         "Open the Filter tab and click + (New custom filter).",
         "Leave Categories empty (every listed category counts).",
-        "Read the number before 'matches' in the result row: it must be 2928.",
+        "Read the number before 'matches' in the result row: it must be 2910.",
         "Check without the panel: Revit has no single count of every listed element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
       ]
     },
@@ -23,14 +23,14 @@
       "docs": "Arch",
       "scope": "WholeModel",
       "filter": {},
-      "expected": 9743,
+      "expected": 9687,
       "manualSteps": [
         "Open 'Snowdon Towers Sample HVAC.rvt' in Revit 2026 with the 'Snowdon Towers Sample Architectural' link loaded, and open the Model Context panel (RevitDevTool tab > Model Context).",
         "Choose Scope 'Whole model' in the panel.",
         "In the document list check only the 'Architectural' link (uncheck 'Current model').",
         "Open the Filter tab and click + (New custom filter).",
         "Leave Categories empty (every listed category counts).",
-        "Read the number before 'matches' in the result row: it must be 9743.",
+        "Read the number before 'matches' in the result row: it must be 9687.",
         "Check without the panel: Revit has no single count of every listed element. Add up the per-category counts on the panel's Explorer tab (same scope and documents) and compare; the oracle recounts it with a plain element collector."
       ]
     },

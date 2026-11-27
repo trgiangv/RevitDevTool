@@ -45,7 +45,8 @@ heaviest sample in about 105 ms with no call over 50 ms.
 1. **The rule is what the user can find in Visibility/Graphics.** Explorer
    lists Model and Annotation categories with `IsVisibleInUI`, plus Detail
    Groups. It never lists Automatic Sketch Dimensions, Section Boxes, Views,
-   Schedules (the view element; Schedule Graphics on a sheet stay), Work Plane
+   Schedules (the view element; Schedule Graphics on a sheet stay), Sheets and
+   Project Information (views and settings, not drawn elements), Work Plane
    Grid, Shared Site, or any category hidden from the UI. A built-in
    subcategory follows the same test, and the existing subcategory rules
    (Center line, Site, Lines, Topography) stay. Detail Groups are not in the

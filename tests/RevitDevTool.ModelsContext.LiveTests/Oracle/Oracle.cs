@@ -22,7 +22,9 @@ internal static class Oracle
         BuiltInCategory.OST_WeakDims,
         BuiltInCategory.OST_SectionBox,
         BuiltInCategory.OST_Views,
-        BuiltInCategory.OST_Schedules
+        BuiltInCategory.OST_Schedules,
+        BuiltInCategory.OST_Sheets,
+        BuiltInCategory.OST_ProjectInformation
     ];
 
     private static readonly HashSet<BuiltInCategory> NoSubcategoryRows =
