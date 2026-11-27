@@ -425,6 +425,31 @@ public sealed class LifecycleTests
     }
 
     [TestMethod]
+    public async Task HideKeepsOtherEyesEnabled()
+    {
+        using var fixture = await PanelFixture.OpenAsync();
+        fixture.Panel.ContextBar.Check([Current, Mep]);
+        await fixture.Panel.RefreshAsync();
+        var ducts = fixture.Group(Current, "Ducts");
+        var walls = fixture.Group(Current, "Walls");
+        var link = fixture.Explorer.Rows.First(row => row.Kind == TreeRowKind.LinkModel);
+        fixture.Model.HoldScopes();
+
+        var hide = fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts);
+        Assert.AreEqual(1, fixture.Model.HeldScopes);
+        var enabled = (fixture.Explorer.ToggleHiddenCommand.CanExecute(walls), fixture.Explorer.ToggleHiddenCommand.CanExecute(link));
+        var second = fixture.Explorer.ToggleHiddenCommand.ExecuteAsync(walls);
+        fixture.Model.ReleaseScopes();
+        await hide;
+        await second;
+
+        Assert.AreEqual((true, true), enabled, "Other rows' hide toggles turned off while one hide ran.");
+        Assert.HasCount(1, fixture.Actions.ExecutedPlans);
+        Assert.AreEqual(HideState.Hidden, ducts.HideState);
+        Assert.AreEqual(HideState.Shown, walls.HideState);
+    }
+
+    [TestMethod]
     public async Task OverlappingBuildsListRowsOnce()
     {
         using var fixture = await PanelFixture.OpenAsync();

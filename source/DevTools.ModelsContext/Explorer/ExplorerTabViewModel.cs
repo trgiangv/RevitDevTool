@@ -33,6 +33,7 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
     private ExplorerState? _pending;
 
     private int _building;
+    private bool _hiding;
     private bool _repaintPending;
 
     internal ExplorerTabViewModel(
@@ -364,10 +365,23 @@ public sealed partial class ExplorerTabViewModel : ObservableObject, IDisposable
         return Run(() => _rows.LoadMoreAsync(more));
     }
 
-    [RelayCommand]
-    private Task ToggleHiddenAsync(TreeRow? row)
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task ToggleHiddenAsync(TreeRow? row)
     {
-        return Run(() => ToggleRowHiddenAsync(row));
+        if (_hiding)
+        {
+            return;
+        }
+
+        _hiding = true;
+        try
+        {
+            await Run(() => ToggleRowHiddenAsync(row));
+        }
+        finally
+        {
+            _hiding = false;
+        }
     }
 
     [RelayCommand]

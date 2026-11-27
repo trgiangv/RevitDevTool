@@ -251,36 +251,56 @@ public sealed class ExplorerViewTests
     }
 
     [TestMethod]
-    public void BusyEyeSwallowsClick()
+    public void BusyHideKeepsOtherEyes()
     {
         using var ui = PanelUi.Open();
-        var (ducts, other) = WpfSta.Invoke(() => (
-            ui.Panel.Explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" }),
-            ui.Panel.Explorer.Rows.First(row => row is { Kind: TreeRowKind.Group } && row.Text != "Ducts")));
+        var (ducts, other) = Groups(ui);
         WpfSta.Invoke(ui.Model.HoldScopes);
         WpfSta.Invoke(() => { _ = ui.Panel.Explorer.ToggleHiddenCommand.ExecuteAsync(ducts); });
         Assert.IsTrue(ThemeHost.WaitFor(() => WpfSta.Invoke(() => ui.Model.HeldScopes) > 0), "The hide never started.");
 
-        var (enabled, found, onText) = WpfSta.Invoke(() =>
+        var enabled = WpfSta.Invoke(() => EyeOf(ui, other).IsEnabled);
+        WpfSta.Invoke(ui.Model.ReleaseScopes);
+        Assert.IsTrue(ThemeHost.WaitFor(() => WpfSta.Invoke(() => ducts.HideState == HideState.Hidden)), "The hide did not finish.");
+
+        Assert.IsTrue(enabled, "Another row's eye turned off while one hide ran.");
+    }
+
+    [TestMethod]
+    public void DisabledButtonSwallowsClick()
+    {
+        using var ui = PanelUi.Open();
+        var (_, other) = Groups(ui);
+
+        var (found, onText) = WpfSta.Invoke(() =>
         {
-            var list = RowList(ui);
-            list.UpdateLayout();
-            var item = (System.Windows.Controls.ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(other);
-            var presenter = FindPresenter(item)!;
-            var eye = (System.Windows.Controls.Primitives.ButtonBase)presenter.ContentTemplate.FindName("Eye", presenter);
+            var eye = EyeOf(ui, other);
+            eye.IsEnabled = false;
+            var item = (System.Windows.Controls.ListBoxItem)RowList(ui).ItemContainerGenerator.ContainerFromItem(other);
             var center = eye.TranslatePoint(new System.Windows.Point(eye.ActualWidth / 2, eye.ActualHeight / 2), item);
             var text = new System.Windows.Point(item.ActualWidth / 3, item.ActualHeight / 2);
-            return (eye.IsEnabled, ReferenceEquals(RowButtons.ButtonAt(item, center), eye), RowButtons.ButtonAt(item, text));
+            return (ReferenceEquals(RowButtons.ButtonAt(item, center), eye), RowButtons.ButtonAt(item, text));
         });
-        WpfSta.Invoke(ui.Model.ReleaseScopes);
-        Assert.IsTrue(ThemeHost.WaitFor(() => WpfSta.Invoke(() => !ui.Panel.Explorer.ToggleHiddenCommand.IsRunning)),
-            "The hide did not finish.");
 
-        Assert.IsFalse(enabled, "The eye stays enabled while the hide runs.");
-        Assert.IsTrue(found, "The hit test misses the disabled eye, so its click would select the row.");
+        Assert.IsTrue(found, "The hit test misses a disabled button, so its click would select the row.");
         Assert.IsNull(onText, "The row text reads as a button.");
     }
 
+    private static (TreeRow Ducts, TreeRow Other) Groups(PanelUi ui)
+    {
+        return WpfSta.Invoke(() => (
+            ui.Panel.Explorer.Rows.First(row => row is { Kind: TreeRowKind.Group, Text: "Ducts" }),
+            ui.Panel.Explorer.Rows.First(row => row is { Kind: TreeRowKind.Group } && row.Text != "Ducts")));
+    }
+
+    private static System.Windows.Controls.Primitives.ButtonBase EyeOf(PanelUi ui, TreeRow row)
+    {
+        var list = RowList(ui);
+        list.UpdateLayout();
+        var item = (System.Windows.Controls.ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(row);
+        var presenter = FindPresenter(item)!;
+        return (System.Windows.Controls.Primitives.ButtonBase)presenter.ContentTemplate.FindName("Eye", presenter);
+    }
     [TestMethod]
     public void DoubleClickOnEyeSkipsRow()
     {
